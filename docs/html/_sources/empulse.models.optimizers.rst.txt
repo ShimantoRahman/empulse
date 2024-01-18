@@ -1,0 +1,21 @@
+empulse.models.optimizers package
+=================================
+
+Submodules
+----------
+
+empulse.models.optimizers.optimizer module
+------------------------------------------
+
+.. automodule:: empulse.models.optimizers.optimizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: empulse.models.optimizers
+   :members:
+   :undoc-members:
+   :show-inheritance:

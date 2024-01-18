@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Scoring Metrics &mdash; Empulse 0.0.13 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=9fc46840"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Other Metrics" href="other_metrics.html" />
+    <link rel="prev" title="Churn Metrics" href="churn_metrics.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="metrics.html">Metrics</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="general_metrics.html">General Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="acquisition_metrics.html">Acquisition Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="churn_metrics.html">Churn Metrics</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Credit Scoring Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.empcs"><code class="docutils literal notranslate"><span class="pre">empcs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.empcs_score"><code class="docutils literal notranslate"><span class="pre">empcs_score()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.mpcs"><code class="docutils literal notranslate"><span class="pre">mpcs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.mpcs_score"><code class="docutils literal notranslate"><span class="pre">mpcs_score()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="other_metrics.html">Other Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="helper_functions.html">Helper Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="metrics.html">Metrics</a></li>
+      <li class="breadcrumb-item active">Credit Scoring Metrics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/credit_scoring_metrics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="credit-scoring-metrics">
+<h1>Credit Scoring Metrics<a class="headerlink" href="#credit-scoring-metrics" title="Link to this heading"></a></h1>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empcs_score</span></code></a>(y_true, y_pred, *[, ...])</p></td>
+<td><p>Convenience function around <cite>empcs()</cite> only returning EMPCS score</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#empulse.metrics.mpcs_score" title="empulse.metrics.mpcs_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpcs_score</span></code></a>(y_true, y_pred, *[, ...])</p></td>
+<td><p>Convenience function around <cite>mpcs()</cite> only returning MPCS score</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function" id="module-empulse.metrics">
+<dt class="sig sig-object py" id="empulse.metrics.empcs">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">empcs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">success_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.55</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2644</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/credit_scoring/stochastic.html#empcs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.empcs" title="Link to this definition"></a></dt>
+<dd><section id="expected-maximum-profit-measure-for-credit-scoring">
+<h2>Expected Maximum Profit measure for Credit Scoring<a class="headerlink" href="#expected-maximum-profit-measure-for-credit-scoring" title="Link to this heading"></a></h2>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>success_rate<span class="classifier">float, default=0.55</span></dt><dd><p>Probability that the entire loan is paid back.</p>
+</dd>
+<dt>default_rate<span class="classifier">float, default=0.1</span></dt><dd><p>Probability that the entire loan is lost.</p>
+</dd>
+<dt>roi<span class="classifier">float, default=0.2644</span></dt><dd><p>Return on investment on the loan (roi ≥ 0).</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h3>Returns<a class="headerlink" href="#returns" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>(empcs, threshold)<span class="classifier">tuple[float, float, float]</span></dt><dd><p>Expected Maximum Profit measure for customer Credit Scoring and
+the threshold η at which the expected maximum profit is achieved.</p>
+</dd>
+</dl>
+</section>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h3>
+<p>The EMP measure for Credit Scoring is defined as <a href="#id24"><span class="problematic" id="id1">[1]_</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\int_0^1 \lambda \pi_0 F_0(T) - ROI \pi_1 F_1(T) \cdot h(\lambda) d\lambda\]</div>
+<p>The EMP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘default’: 1, ‘no default’: 0).</p>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Verbraken, T., Bravo, C., Weber, R., &amp; Baesens, B. (2014).
+Development and application of consumer credit scoring models using profit-based classification measures.
+European Journal of Operational Research, 238(2), 505-513.</p>
+</aside>
+</aside>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">empcs</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empcs</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">(0.09747017050000001, 0.32434500000000005)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.empcs_score">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">empcs_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">success_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.55</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2644</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/credit_scoring/stochastic.html#empcs_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.empcs_score" title="Link to this definition"></a></dt>
+<dd><p>Convenience function around <cite>empcs()</cite> only returning EMPCS score</p>
+<section id="id3">
+<h2>Parameters<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>success_rate<span class="classifier">float, default=0.55</span></dt><dd><p>Probability that the entire loan is paid back.</p>
+</dd>
+<dt>default_rate<span class="classifier">float, default=0.1</span></dt><dd><p>Probability that the entire loan is lost.</p>
+</dd>
+<dt>roi<span class="classifier">float, default=0.2644</span></dt><dd><p>Return on investment on the loan (roi ≥ 0).</p>
+</dd>
+</dl>
+</section>
+<section id="id4">
+<h2>Returns<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>empcs<span class="classifier">float</span></dt><dd><p>Expected Maximum Profit measure for customer Credit Scoring.</p>
+</dd>
+</dl>
+</section>
+<section id="id5">
+<h2>Notes<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<p>The EMP measure for Credit Scoring is defined as <a href="#id25"><span class="problematic" id="id6">[1]_</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\int_0^1 \lambda \pi_0 F_0(T) - ROI \pi_1 F_1(T) \cdot h(\lambda) d\lambda\]</div>
+<p>The EMP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘default’: 1, ‘no default’: 0).</p>
+</section>
+<section id="id7">
+<h2>References<a class="headerlink" href="#id7" title="Link to this heading"></a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id8" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Verbraken, T., Bravo, C., Weber, R., &amp; Baesens, B. (2014).
+Development and application of consumer credit scoring models using profit-based classification measures.
+European Journal of Operational Research, 238(2), 505-513.</p>
+</aside>
+</aside>
+</section>
+<section id="id9">
+<h2>Examples<a class="headerlink" href="#id9" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">empcs_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empcs_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">0.09747017050000001</span>
+</pre></div>
+</div>
+<p>Using scorer:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">make_classification</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">cross_val_score</span><span class="p">,</span> <span class="n">StratifiedKFold</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">make_scorer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">empcs_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">StratifiedKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">empcs_score</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">needs_proba</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">roi</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">success_rate</span><span class="o">=</span><span class="mf">0.5</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">default_rate</span><span class="o">=</span><span class="mf">0.1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cross_val_score</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">))</span>
+<span class="go">0.14904</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.mpcs">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">mpcs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loan_lost_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.275</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2644</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/credit_scoring/deterministic.html#mpcs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.mpcs" title="Link to this definition"></a></dt>
+<dd><section id="maximum-profit-measure-for-credit-scoring">
+<h2>Maximum Profit measure for Credit Scoring<a class="headerlink" href="#maximum-profit-measure-for-credit-scoring" title="Link to this heading"></a></h2>
+<section id="id10">
+<h3>Parameters<a class="headerlink" href="#id10" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>loan_lost_rate<span class="classifier">float, default=0.275</span></dt><dd><p>The fraction (λ) of the loan amount which is lost after default (λ ≥ 0).</p>
+</dd>
+<dt>roi<span class="classifier">float, default=0.2644</span></dt><dd><p>Return on investment on the loan (roi ≥ 0).</p>
+</dd>
+</dl>
+</section>
+<section id="id11">
+<h3>Returns<a class="headerlink" href="#id11" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>(mpcs, threshold)<span class="classifier">tuple[float, float]</span></dt><dd><p>Maximum Profit measure for customer Credit Scoring and
+the threshold η at which the maximum profit is achieved.</p>
+</dd>
+</dl>
+</section>
+<section id="id12">
+<h3>Notes<a class="headerlink" href="#id12" title="Link to this heading"></a></h3>
+<p>The MP measure for Credit Scoring is defined as <a href="#id26"><span class="problematic" id="id13">[1]_</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\max_t \lambda \pi_0 F_0(t) - ROI \pi_1 F_1(t)\]</div>
+<p>The MP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘default’: 1, ‘no default’: 0).</p>
+</section>
+<section id="id14">
+<h3>References<a class="headerlink" href="#id14" title="Link to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id15" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Verbraken, T., Bravo, C., Weber, R., &amp; Baesens, B. (2014).
+Development and application of consumer credit scoring models using profit-based classification measures.
+European Journal of Operational Research, 238(2), 505-513.</p>
+</aside>
+</aside>
+</section>
+<section id="id16">
+<h3>Examples<a class="headerlink" href="#id16" title="Link to this heading"></a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">mpcs</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mpcs</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">(0.038349999999999995, 0.875)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.mpcs_score">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">mpcs_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loan_lost_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.275</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2644</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/credit_scoring/deterministic.html#mpcs_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.mpcs_score" title="Link to this definition"></a></dt>
+<dd><p>Convenience function around <cite>mpcs()</cite> only returning MPCS score</p>
+<section id="id17">
+<h2>Parameters<a class="headerlink" href="#id17" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>loan_lost_rate<span class="classifier">float, default=0.275</span></dt><dd><p>The fraction (λ) of the loan amount which is lost after default (λ ≥ 0).</p>
+</dd>
+<dt>roi<span class="classifier">float, default=0.2644</span></dt><dd><p>Return on investment on the loan (roi ≥ 0).</p>
+</dd>
+</dl>
+</section>
+<section id="id18">
+<h2>Returns<a class="headerlink" href="#id18" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>mpcs<span class="classifier">float</span></dt><dd><p>Maximum Profit measure for customer Credit Scoring.</p>
+</dd>
+</dl>
+</section>
+<section id="id19">
+<h2>Notes<a class="headerlink" href="#id19" title="Link to this heading"></a></h2>
+<p>The MP measure for Credit Scoring is defined as <a href="#id27"><span class="problematic" id="id20">[1]_</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\max_t \lambda \pi_0 F_0(t) - ROI \pi_1 F_1(t)\]</div>
+<p>The MP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘default’: 1, ‘no default’: 0).</p>
+</section>
+<section id="id21">
+<h2>References<a class="headerlink" href="#id21" title="Link to this heading"></a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id22" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Verbraken, T., Bravo, C., Weber, R., &amp; Baesens, B. (2014).
+Development and application of consumer credit scoring models using profit-based classification measures.
+European Journal of Operational Research, 238(2), 505-513.</p>
+</aside>
+</aside>
+</section>
+<section id="id23">
+<h2>Examples<a class="headerlink" href="#id23" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">mpcs_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mpcs_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">0.038349999999999995</span>
+</pre></div>
+</div>
+<p>Using scorer:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">make_classification</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">cross_val_score</span><span class="p">,</span> <span class="n">StratifiedKFold</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">make_scorer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">mpcs_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">StratifiedKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">mpcs_score</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">needs_proba</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">roi</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">loan_lost_rate</span><span class="o">=</span><span class="mf">0.25</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cross_val_score</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">))</span>
+<span class="go">0.123</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="churn_metrics.html" class="btn btn-neutral float-left" title="Churn Metrics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="other_metrics.html" class="btn btn-neutral float-right" title="Other Metrics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

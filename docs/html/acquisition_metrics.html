@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acquisition Metrics &mdash; Empulse 0.0.13 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=9fc46840"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Churn Metrics" href="churn_metrics.html" />
+    <link rel="prev" title="General Metrics" href="general_metrics.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="metrics.html">Metrics</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="general_metrics.html">General Metrics</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Acquisition Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.create_objective_acquisition"><code class="docutils literal notranslate"><span class="pre">create_objective_acquisition()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.empa"><code class="docutils literal notranslate"><span class="pre">empa()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.mpa"><code class="docutils literal notranslate"><span class="pre">mpa()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.metrics.mpa_cost_score"><code class="docutils literal notranslate"><span class="pre">mpa_cost_score()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="churn_metrics.html">Churn Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credit_scoring_metrics.html">Credit Scoring Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="other_metrics.html">Other Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="helper_functions.html">Helper Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="metrics.html">Metrics</a></li>
+      <li class="breadcrumb-item active">Acquisition Metrics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/acquisition_metrics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="acquisition-metrics">
+<h1>Acquisition Metrics<a class="headerlink" href="#acquisition-metrics" title="Link to this heading"></a></h1>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">empa_score</span></code>(y_true, y_pred, *[, alpha, beta, ...])</p></td>
+<td><p>Convenience function around <cite>empa()</cite> only returning EMPA score</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpa_score</span></code>(y_true, y_pred, *[, contribution, ...])</p></td>
+<td><p>Convenience function around <cite>mpa()</cite> only returning MPA score</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function" id="module-empulse.metrics">
+<dt class="sig sig-object py" id="empulse.metrics.create_objective_acquisition">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">create_objective_acquisition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sales_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_selling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/acquisition/cost.html#create_objective_acquisition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.create_objective_acquisition" title="Link to this definition"></a></dt>
+<dd><p>Create a custom objective function for XGBoost to maximize the profit of an acquisition model.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>contribution<span class="classifier">float, default=7000</span></dt><dd><p>Average contribution of a new customer (contribution ≥ 0).</p>
+</dd>
+<dt>sales_cost<span class="classifier">float, default=500</span></dt><dd><p>Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).</p>
+</dd>
+<dt>contact_cost<span class="classifier">float, default=50</span></dt><dd><p>Average contact cost of targeted leads (contact_cost ≥ 0).</p>
+</dd>
+<dt>direct_selling<span class="classifier">float, default=1</span></dt><dd><p>Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
+direct_selling = 0 for indirect channel.
+direct_selling = 1 for direct channel.</p>
+</dd>
+<dt>commission<span class="classifier">float, default=0.1</span></dt><dd><p>Fraction of contribution paid to the intermediaries (0 ≤ commission ≤ 1).</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h2>Returns<a class="headerlink" href="#returns" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>objective<span class="classifier">Callable</span></dt><dd><p>A custom objective function for XGBoost.</p>
+</dd>
+</dl>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id1" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Janssens, B., Bogaert, M., Bagué, A., &amp; Van den Poel, D. (2022).
+B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+Annals of Operations Research, 1-27.</p>
+</aside>
+</aside>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.empa">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">empa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0015</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sales_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_selling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/acquisition/stochastic.html#empa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.empa" title="Link to this definition"></a></dt>
+<dd><section id="expected-maximum-profit-measure-for-customer-acquisition-empa">
+<h2>Expected Maximum Profit measure for customer Acquisition (EMPA)<a class="headerlink" href="#expected-maximum-profit-measure-for-customer-acquisition-empa" title="Link to this heading"></a></h2>
+<section id="id2">
+<h3>Parameters<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>alpha<span class="classifier">float, default=10</span></dt><dd><p>Shape parameter of the gamma distribution of the average contribution of a new customer.</p>
+</dd>
+<dt>beta<span class="classifier">float, default=10</span></dt><dd><p>Rate parameter of the gamma distribution of the average contribution of a new customer.</p>
+</dd>
+<dt>sales_cost<span class="classifier">float, default=500</span></dt><dd><p>Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).</p>
+</dd>
+<dt>contact_cost<span class="classifier">float, default=50</span></dt><dd><p>Average contact cost of targeted leads (contact_cost ≥ 0).</p>
+</dd>
+<dt>direct_selling<span class="classifier">float, default=1</span></dt><dd><p>Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
+direct_selling = 0 for indirect channel.
+direct_selling = 1 for direct channel.</p>
+</dd>
+<dt>commission<span class="classifier">float, default=0.1</span></dt><dd><p>Fraction of contribution paid to the intermedaries (0 ≤ commission ≤ 1).</p>
+</dd>
+</dl>
+</section>
+<section id="id3">
+<h3>Returns<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>(empa, threshold)<span class="classifier">tuple[float]</span></dt><dd><p>Expected Maximum Profit measure for customer Acquisition and
+the threshold η at which the maximum profit is achieved.</p>
+</dd>
+</dl>
+</section>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h3>
+<p>The EMPA is defined as <a href="#id14"><span class="problematic" id="id4">[1]_</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\int_{R} [[ \rho(R-c-S)+(1-\rho)(\gamma R - c)] \pi_0 F_0(t) - c \pi_1 F_1(t)] \cdot g(CLV) \, dCLV\]</div>
+<p>The EMPA requires that the acquisition class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h3>
+<p>Direct channel (rho = 1):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">empa</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empa</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">direct_selling</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">(3706.2500000052773, 0.8749999997947746)</span>
+</pre></div>
+</div>
+<p>Indirect channel (rho = 0):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">empa</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empa</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">direct_selling</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">(356.25, 0.875)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.mpa">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">mpa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sales_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_selling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/acquisition/deterministic.html#mpa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.mpa" title="Link to this definition"></a></dt>
+<dd><section id="maximum-profit-measure-for-customer-acquisition-mpa">
+<h2>Maximum Profit measure for customer Acquisition (MPA)<a class="headerlink" href="#maximum-profit-measure-for-customer-acquisition-mpa" title="Link to this heading"></a></h2>
+<section id="id5">
+<h3>Parameters<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>y_true<span class="classifier">array-like of shape (n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">array-like of shape (n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt>contribution<span class="classifier">float, default=8000</span></dt><dd><p>Average contribution of a new customer (contribution ≥ 0).</p>
+</dd>
+<dt>sales_cost<span class="classifier">float, default=500</span></dt><dd><p>Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).</p>
+</dd>
+<dt>contact_cost<span class="classifier">float, default=50</span></dt><dd><p>Average contact cost of targeted leads (contact_cost ≥ 0).</p>
+</dd>
+<dt>direct_selling<span class="classifier">float, default=1</span></dt><dd><p>Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
+direct_selling = 0 for indirect channel.
+direct_selling = 1 for direct channel.</p>
+</dd>
+<dt>commission<span class="classifier">float, default=0.1</span></dt><dd><p>Fraction of contribution paid to the intermedaries (0 ≤ commission ≤ 1).</p>
+</dd>
+</dl>
+</section>
+<section id="id6">
+<h3>Returns<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>(mpa, threshold)<span class="classifier">tuple[float, float, float]</span></dt><dd><p>Maximum Profit measure for customer Acquisition and
+the threshold η at which the maximum profit is achieved.</p>
+</dd>
+</dl>
+</section>
+<section id="id7">
+<h3>Examples<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">mpa</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mpa</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">(3706.25, 0.875)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.mpa_cost_score">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">mpa_cost_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contribution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sales_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_selling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/empulse/metrics/acquisition/cost.html#mpa_cost_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.mpa_cost_score" title="Link to this definition"></a></dt>
+<dd><section id="id8">
+<h2>Parameters<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>y_true<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘churn’: 1, ‘no churn’: 0).</p>
+</dd>
+<dt>y_pred<span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, must be probability estimates.</p>
+</dd>
+<dt>contribution<span class="classifier">float, default=7000</span></dt><dd><p>Average contribution of a new customer (contribution ≥ 0).</p>
+</dd>
+<dt>sales_cost<span class="classifier">float, default=500</span></dt><dd><p>Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).</p>
+</dd>
+<dt>contact_cost<span class="classifier">float, default=50</span></dt><dd><p>Average contact cost of targeted leads (contact_cost ≥ 0).</p>
+</dd>
+<dt>direct_selling<span class="classifier">float, default=1</span></dt><dd><p>Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
+direct_selling = 0 for indirect channel.
+direct_selling = 1 for direct channel.</p>
+</dd>
+<dt>commission<span class="classifier">float, default=0.1</span></dt><dd><p>Fraction of contribution paid to the intermediaries (0 ≤ commission ≤ 1).</p>
+</dd>
+</dl>
+</section>
+<section id="id9">
+<h2>Returns<a class="headerlink" href="#id9" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>empa_cost<span class="classifier">float</span></dt><dd><p>Instance-specific cost function according to the EMPA measure.</p>
+</dd>
+</dl>
+</section>
+<section id="id10">
+<h2>Notes<a class="headerlink" href="#id10" title="Link to this heading"></a></h2>
+<p>The instance-specific cost function for customer churn is defined as <a href="#id15"><span class="problematic" id="id11">[1]_</span></a>:</p>
+<p>TODO: put equation here</p>
+<p>The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘churn’: 1, ‘no churn’: 0).</p>
+</section>
+<section id="id12">
+<h2>References<a class="headerlink" href="#id12" title="Link to this heading"></a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id13" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Janssens et al (2022).
+TODO: put reference</p>
+</aside>
+</aside>
+</section>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="general_metrics.html" class="btn btn-neutral float-left" title="General Metrics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="churn_metrics.html" class="btn btn-neutral float-right" title="Churn Metrics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

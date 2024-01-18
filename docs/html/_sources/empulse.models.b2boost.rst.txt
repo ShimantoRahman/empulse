@@ -1,0 +1,21 @@
+empulse.models.b2boost package
+==============================
+
+Submodules
+----------
+
+empulse.models.b2boost.b2boost module
+-------------------------------------
+
+.. automodule:: empulse.models.b2boost.b2boost
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: empulse.models.b2boost
+   :members:
+   :undoc-members:
+   :show-inheritance:
