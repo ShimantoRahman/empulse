@@ -1,7 +1,0 @@
-empulse
-=======
-
-.. toctree::
-   :maxdepth: 4
-
-   empulse
