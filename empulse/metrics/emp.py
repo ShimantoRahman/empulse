@@ -34,50 +34,50 @@ def emp_score(
         Weighted probability density function (PDF) of the joint distribution of the benefits and costs.
         The weighted PDF is defined as the product of the PDF and the step size of the benefits and costs.
         Function takes in the following arguments:
-            b0: float
-                Benefit for true positive prediction.
-            b1: float
-                Benefit for true negative prediction.
-            c0: float
-                Cost for false negative prediction.
-            c1: float
-                Cost for false positive prediction.
-            step_size_b0: float
-                Step size of the benefit for true positive prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if tp_benefits is a scalar.
-            step_size_b1: float
-                Step size of the benefit for true negative prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if tn_benefit is a scalar.
-            step_size_c0: float
-                Step size of the cost for false negative prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if fn_cost is a scalar.
-            step_size_c1: float
-                Step size of the cost for false positive prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if fp_cost is a scalar.
+
+        - `b0` (``float``): benefit for true positive prediction.
+
+        - `b1` (``float``): benefit for true negative prediction.
+
+        - `c0` (``float``): cost for false negative prediction.
+
+        - `c1` (``float``): cost for false positive prediction.
+
+        - `step_size_b0` (``float``): step size of the benefit for true positive prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `tp_benefit` is a scalar.
+
+        - `step_size_b1` (``float``): step size of the benefit for true negative prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `tn_benefit` is a scalar.
+
+        - `step_size_c0` (``float``): step size of the cost for false negative prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `fn_cost` is a scalar.
+
+        - `step_size_c1` (``float``): step size of the cost for false positive prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if fp_cost is a scalar.
 
     tp_benefit : float or tuple[float, float], default=0.0
         Benefit attributed to true positive predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     tn_benefit : float or tuple[float, float], default=0.0
         Benefit attributed to true negative predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     fn_cost : float or tuple[float, float], default=0.0
         Cost attributed to false negative predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     fp_cost : float or tuple[float, float], default=0.0
         Cost attributed to false positive predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     n_buckets : int, default=100
         Number of buckets to use for the numerical integration per parameter.
@@ -178,65 +178,68 @@ def emp(
         Weighted probability density function (PDF) of the joint distribution of the benefits and costs.
         The weighted PDF is defined as the product of the PDF and the step size of the benefits and costs.
         Function takes in the following arguments:
-            b0: float
-                Benefit for true positive prediction.
-            b1: float
-                Benefit for true negative prediction.
-            c0: float
-                Cost for false negative prediction.
-            c1: float
-                Cost for false positive prediction.
-            step_size_b0: float
-                Step size of the benefit for true positive prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if tp_benefits is a scalar.
-            step_size_b1: float
-                Step size of the benefit for true negative prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if tn_benefit is a scalar.
-            step_size_c0: float
-                Step size of the cost for false negative prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if fn_cost is a scalar.
-            step_size_c1: float
-                Step size of the cost for false positive prediction for numerical integration.
-                Step size is defined as (max_val - min_val) / n_buckets.
-                Step size is 0 if fp_cost is a scalar.
+
+        - `b0` (``float``): benefit for true positive prediction.
+
+        - `b1` (``float``): benefit for true negative prediction.
+
+        - `c0` (``float``): cost for false negative prediction.
+
+        - `c1` (``float``): cost for false positive prediction.
+
+        - `step_size_b0` (``float``): step size of the benefit for true positive prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `tp_benefit` is a scalar.
+
+        - `step_size_b1` (``float``): step size of the benefit for true negative prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `tn_benefit` is a scalar.
+
+        - `step_size_c0` (``float``): step size of the cost for false negative prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if `fn_cost` is a scalar.
+
+        - `step_size_c1` (``float``): step size of the cost for false positive prediction for numerical integration.
+          Step size is defined as ``(max_val - min_val) / n_buckets``.
+          Step size is 0 if fp_cost is a scalar.
 
     tp_benefit : float or tuple[float, float], default=0.0
         Benefit attributed to true positive predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     tn_benefit : float or tuple[float, float], default=0.0
         Benefit attributed to true negative predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     fn_cost : float or tuple[float, float], default=0.0
         Cost attributed to false negative predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     fp_cost : float or tuple[float, float], default=0.0
         Cost attributed to false positive predictions.
-        If float, deterministic parameter defined by a scalar.
-        If tuple, stochastic parameter defined by an upper and lower bound.
+        If ``float``, deterministic parameter defined by a scalar.
+        If ``tuple``, stochastic parameter defined by an upper and lower bound.
 
     n_buckets : int, default=100
         Number of buckets to use for the numerical integration per parameter.
         Note that the computational complexity of the algorithm is exponential in the number of buckets.
         For instance if you have 4 parameters with 100 buckets each, the algorithm will have to compute
-        the weighted PDF for 100^4 = 100_000_000 combinations.
+        the weighted PDF for 100^4 = 100.000.000 combinations.
 
     Returns
     -------
-    (emp, threshold) : tuple[float, float]
-        Expected Maximum Profit and the threshold η at which the maximum profit is achieved.
+    emp : float
+        Expected Maximum Profit
 
-    See Also
-    --------
-    empulse.metrics.emp_score : Convenience function around :func:`~empulse.metrics.emp()` only returning EMP score
+    threshold : float
+        Threshold at which the expected maximum profit is achieved
+
+    .. seealso::
+        :func:`~empulse.metrics.emp_score` : Convenience function around :func:`~empulse.metrics.emp()`
+        only returning EMP score
 
     Notes
     -----

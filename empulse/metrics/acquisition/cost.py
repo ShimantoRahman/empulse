@@ -78,8 +78,11 @@ def _objective(
 
     Returns
     -------
-    gradient, hessian : tuple[np.ndarray, np.ndarray]
-        Gradient and hessian of the objective function.
+    gradient  : np.ndarray
+        Gradient of the objective function.
+
+    hessian : np.ndarray
+        Hessian of the objective function.
     """
 
     if isinstance(dtrain, np.ndarray):
@@ -117,21 +120,21 @@ def mpa_cost_score(
         Target scores, must be probability estimates.
 
     contribution : float, default=7000
-        Average contribution of a new customer (contribution ≥ 0).
+        Average contribution of a new customer (`contribution` ≥ 0).
 
     sales_cost : float, default=500
-        Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).
+        Average sale conversion cost of targeted leads handled by the company (`sales_cost` ≥ 0).
 
     contact_cost : float, default=50
-        Average contact cost of targeted leads (contact_cost ≥ 0).
+        Average contact cost of targeted leads (`contact_cost` ≥ 0).
 
     direct_selling : float, default=1
-        Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
-        direct_selling = 0 for indirect channel.
-        direct_selling = 1 for direct channel.
+        Fraction of leads sold to directly (0 ≤ `direct_selling` ≤ 1).
+        `direct_selling` = 0 for indirect channel.
+        `direct_selling` = 1 for direct channel.
 
     commission : float, default=0.1
-        Fraction of contribution paid to the intermediaries (0 ≤ commission ≤ 1).
+        Fraction of contribution paid to the intermediaries (0 ≤ `commission` ≤ 1).
 
     Returns
     -------

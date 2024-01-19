@@ -28,8 +28,9 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "numpydoc",
 #    "sphinx.ext.napoleon",
-#   "sphinx_copybutton",
+    "sphinx_copybutton",
 ]
 
 autodoc_typehints = "none"

@@ -38,18 +38,18 @@ def empa_score(
         Rate parameter of the gamma distribution of the average contribution of a new customer.
 
     sales_cost : float, default=500
-        Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).
+        Average sale conversion cost of targeted leads handled by the company (`sales_cost` ≥ 0).
 
     contact_cost : float, default=50
-        Average contact cost of targeted leads (contact_cost ≥ 0).
+        Average contact cost of targeted leads (`contact_cost` ≥ 0).
 
     direct_selling : float, default=1
-        Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
-        direct_selling = 0 for indirect channel.
-        direct_selling = 1 for direct channel.
+        Fraction of leads sold to directly (0 ≤ `direct_selling` ≤ 1).
+        `direct_selling` = 0 for indirect channel.
+        `direct_selling` = 1 for direct channel.
 
     commission : float, default=0.1
-        Fraction of contribution paid to the intermedaries (0 ≤ commission ≤ 1).
+        Fraction of contribution paid to the intermedaries (0 ≤ `commission` ≤ 1).
 
     Returns
     -------
@@ -144,24 +144,26 @@ def empa(
         Rate parameter of the gamma distribution of the average contribution of a new customer.
 
     sales_cost : float, default=500
-        Average sale conversion cost of targeted leads handled by the company (sales_cost ≥ 0).
+        Average sale conversion cost of targeted leads handled by the company (`sales_cost` ≥ 0).
 
     contact_cost : float, default=50
-        Average contact cost of targeted leads (contact_cost ≥ 0).
+        Average contact cost of targeted leads (`contact_cost` ≥ 0).
 
     direct_selling : float, default=1
-        Fraction of leads sold to directly (0 ≤ direct_selling ≤ 1).
-        direct_selling = 0 for indirect channel.
-        direct_selling = 1 for direct channel.
+        Fraction of leads sold to directly (0 ≤ `direct_selling` ≤ 1).
+        `direct_selling` = 0 for indirect channel.
+        `direct_selling` = 1 for direct channel.
 
     commission : float, default=0.1
-        Fraction of contribution paid to the intermedaries (0 ≤ commission ≤ 1).
+        Fraction of contribution paid to the intermedaries (0 ≤ `commission` ≤ 1).
 
     Returns
     -------
-    (empa, threshold) : tuple[float]
-        Expected Maximum Profit measure for customer Acquisition and
-        the threshold η at which the maximum profit is achieved.
+    empa : float
+        Expected Maximum Profit measure for customer Acquisition
+
+    threshold : float
+        Threshold at which the expected maximum profit is achieved
 
     Notes
     -----

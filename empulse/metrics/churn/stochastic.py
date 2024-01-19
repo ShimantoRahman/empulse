@@ -32,20 +32,21 @@ def empc_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (alpha > 1).
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (beta > 1).
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If clv is a float: constant customer lifetime value per retained customer (clv > d).
-        If clv is an array: invidivualized customer lifetime value of each customer when retained (mean(clv) > d).
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (d > 0).
+        Constant cost of retention offer (`incentive_cost` > 0).
 
     contact_cost : float, default=1
-        Constant cost of contact (f > 0).
+        Constant cost of contact (`contact_cost` > 0).
 
     Returns
     -------
@@ -142,26 +143,29 @@ def empc(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (alpha > 1).
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (beta > 1).
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If clv is a float: constant customer lifetime value per retained customer (clv > d).
-        If clv is an array: invidivualized customer lifetime value of each customer when retained (mean(clv) > d).
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (d > 0).
+        Constant cost of retention offer (`incentive_cost` > 0).
 
     contact_cost : float, default=1
-        Constant cost of contact (f > 0).
+        Constant cost of contact (`contact_cost` > 0).
 
     Returns
     -------
-    (empc, threshold) : tuple[float, float]
-        Expected Maximum Profit Measure for Customer Churn and
-        the threshold η at which the expected maximum profit is achieved.
+    empc : float
+        Expected Maximum Profit Measure for Customer Churn
+
+    threshold : float
+        Threshold at which the expected maximum profit is achieved
 
     Notes
     -----

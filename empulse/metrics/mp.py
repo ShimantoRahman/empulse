@@ -117,8 +117,11 @@ def mp(
 
     Returns
     -------
-    (mp, threshold) : tuple[float, float]
-        Maximum Profit and the threshold η at which the maximum profit is achieved.
+    mp : float
+        Maximum Profit
+
+    threshold : float
+        Threshold at which the maximum profit is achieved
 
     Notes
     -----

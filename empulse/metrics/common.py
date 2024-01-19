@@ -11,7 +11,6 @@ def classification_threshold(y_true: ArrayLike, y_pred: ArrayLike, customer_thre
 
     Parameters
     ----------
-
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
@@ -23,9 +22,18 @@ def classification_threshold(y_true: ArrayLike, y_pred: ArrayLike, customer_thre
 
     Returns
     -------
-
     threshold : float
         Classification threshold for given customer threshold.
+
+    Examples
+    --------
+    >>> from empulse.metrics import classification_threshold
+    >>> from empulse.metrics import empc
+    >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
+    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> score, threshold = empc(y_true, y_pred)
+    >>> classification_threshold(y_true, y_pred, threshold)
+    0.2
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)

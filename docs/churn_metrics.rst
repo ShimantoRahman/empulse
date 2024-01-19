@@ -10,6 +10,6 @@ Churn Metrics
     mpc_score
 
 .. automodule:: empulse.metrics
-    :members: empc, mpc, compute_profit_churn, create_objective_churn, mpc_cost_score
+    :members: empc, mpc, create_objective_churn, mpc_cost_score
 
 

@@ -29,17 +29,18 @@ def mpc_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
-        Probability that a churner accepts the retention offer (gamma > 0).
+        Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If clv is a float: constant customer lifetime value per retained customer (clv > d).
-        If clv is an array: invidivualized customer lifetime value of each customer when retained (mean(clv) > d).
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
 
     incentive_cost : float, default=10
-        Constant cost of the retention offer offered to potention churners (d > 0).
+        Constant cost of retention offer (`incentive_cost` > 0).
 
     contact_cost : float, default=1
-        Constant cost of contacting a customer (f > 0).
+        Constant cost of contact (`contact_cost` > 0).
 
     Returns
     -------
@@ -52,23 +53,23 @@ def mpc_score(
 
     .. math::  CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T)
 
-    The MPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [3]_ p37).
+    The MPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [2]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
-    An equivalent R implementation is available in [2]_.
+    An equivalent R implementation is available in [3]_.
 
     References
     ----------
-    .. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+    .. [1]_ Verbraken, T., Verbeke, W. and Baesens, B. (2013).
         A Novel Profit Maximizing Metric for Measuring Classification
         Performance of Customer Churn Prediction Models. IEEE Transactions on
         Knowledge and Data Engineering, 25(5), 961-973. Available Online:
         http://ieeexplore.ieee.org/iel5/69/6486492/06165289.pdf?arnumber=6165289
-    .. [2] Bravo, C. and Vanden Broucke, S. and Verbraken, T. (2019).
+    .. [2]_ Bravo, C. and Vanden Broucke, S. and Verbraken, T. (2019).
         EMP: Expected Maximum Profit Classification Performance Measure.
         R package version 2.0.5. Available Online:
         http://cran.r-project.org/web/packages/EMP/index.html
-    .. [3] Verbraken, T. (2013). Business-Oriented Data Analytics:
+    .. [3]_ Verbraken, T. (2013). Business-Oriented Data Analytics:
         Theory and Case Studies. Ph.D. dissertation, Dept. LIRIS, KU Leuven,
         Leuven, Belgium, 2013.
 
@@ -128,23 +129,26 @@ def mpc(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
-        Probability that a churner accepts the retention offer (gamma > 0).
+        Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If clv is a float: constant customer lifetime value per retained customer (clv > d).
-        If clv is an array: invidivualized customer lifetime value of each customer when retained (mean(clv) > d).
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer offered to potential churners (d > 0).
+        Constant cost of retention offer (`incentive_cost` > 0).
 
     contact_cost : float, default=1
-        Constant cost of contacting a customer (f > 0).
+        Constant cost of contact (`contact_cost` > 0).
 
     Returns
     -------
-    (empc, threshold) : tuple[float, float]
-        Maximum Profit Measure for Customer Churn and
-        the threshold η at which the maximum profit is achieved.
+    empc : float
+        Maximum Profit Measure for Customer Churn
+
+    threshold : float
+        Threshold at which the maximum profit is achieved
 
     Notes
     -----

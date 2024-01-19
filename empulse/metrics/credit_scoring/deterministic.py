@@ -24,10 +24,10 @@ def mpcs_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
-        The fraction (λ) of the loan amount which is lost after default (λ ≥ 0).
+        The fraction of the loan amount which is lost after default (`loan_lost_rate` ≥ 0).
 
     roi : float, default=0.2644
-        Return on investment on the loan (roi ≥ 0).
+        Return on investment on the loan (`roi` ≥ 0).
 
     Returns
     -------
@@ -103,16 +103,18 @@ def mpcs(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
-        The fraction (λ) of the loan amount which is lost after default (λ ≥ 0).
+        The fraction of the loan amount which is lost after default (`loan_lost_rate` ≥ 0).
 
     roi : float, default=0.2644
-        Return on investment on the loan (roi ≥ 0).
+        Return on investment on the loan (`roi` ≥ 0).
 
     Returns
     -------
-    (mpcs, threshold) : tuple[float, float]
-        Maximum Profit measure for customer Credit Scoring and
-        the threshold η at which the maximum profit is achieved.
+    mpcs : float
+        Maximum Profit measure for customer Credit Scoring
+
+    threshold : float
+        Threshold at which the maximum profit is achieved
 
     Notes
     -----

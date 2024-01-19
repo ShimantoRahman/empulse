@@ -28,13 +28,13 @@ def empcs_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
-        Probability that the entire loan is paid back.
+        Probability that the entire loan is paid back (0 ≤ `succes_rate` ≤ 1).
 
     default_rate : float, default=0.1
-        Probability that the entire loan is lost.
+        Probability that the entire loan is lost (0 ≤ `default_rate` ≤ 1).
 
     roi : float, default=0.2644
-        Return on investment on the loan (roi ≥ 0).
+        Return on investment on the loan (`roi` ≥ 0).
 
     Returns
     -------
@@ -112,19 +112,21 @@ def empcs(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
-        Probability that the entire loan is paid back.
+        Probability that the entire loan is paid back (0 ≤ `succes_rate` ≤ 1).
 
     default_rate : float, default=0.1
-        Probability that the entire loan is lost.
+        Probability that the entire loan is lost (0 ≤ `default_rate` ≤ 1).
 
     roi : float, default=0.2644
-        Return on investment on the loan (roi ≥ 0).
+        Return on investment on the loan (`roi` ≥ 0).
 
     Returns
     -------
-    (empcs, threshold) : tuple[float, float, float]
-        Expected Maximum Profit measure for customer Credit Scoring and
-        the threshold η at which the expected maximum profit is achieved.
+    empcs : float
+        Expected Maximum Profit measure for customer Credit Scoring
+
+    threshold : float
+        Threshold at which the expected maximum profit is achieved
 
     Notes
     -----
