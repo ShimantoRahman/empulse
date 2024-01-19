@@ -36,5 +36,7 @@ jobs:
           cd docs/
           make html
       - name: Run ghp-import
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ghp-import -n -p -f docs/_build/html
