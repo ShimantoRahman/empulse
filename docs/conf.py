@@ -9,7 +9,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('./empulse'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 project = 'Empulse'
 copyright = '2024, Shimanto Rahman'
