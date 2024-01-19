@@ -4,6 +4,11 @@ General Metrics
 
 .. currentmodule:: empulse.metrics
 
+.. autosummary::
+
+    emp_score
+    mp_score
+
 .. automodule:: empulse.metrics
-    :members: emp_score, emp, mp_score, mp
+    :members: emp, mp
 

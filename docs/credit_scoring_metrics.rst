@@ -10,5 +10,5 @@ Credit Scoring Metrics
     mpcs_score
 
 .. automodule:: empulse.metrics
-	:members: empcs_score, empcs, mpcs_score, mpcs, compute_profit_credit_scoring
+	:members: empcs, mpcs, compute_profit_credit_scoring
 

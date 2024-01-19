@@ -10,4 +10,4 @@ Acquisition Metrics
     mpa_score
 
 .. automodule:: empulse.metrics
-	:members: empa, mpa, compute_profit_acquisition, create_objective_acquisition, mpa_cost_score
+    :members: empa, mpa, compute_profit_acquisition, create_objective_acquisition, mpa_cost_score
