@@ -9,10 +9,11 @@
 import os
 import sys
 
-# sys.path.insert(0, os.path.abspath('../..'))
-project_root = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-empulse_path = os.path.join(project_root, 'empulse')
-sys.path.insert(0, os.path.abspath(empulse_path))
+sys.path.insert(0, os.path.abspath("../empulse"))
+sys.path.insert(0, os.path.abspath(".."))
+
+print(sys.path)
+import empulse  # noqa: E402 F401
 
 project = 'Empulse'
 copyright = '2024, Shimanto Rahman'
