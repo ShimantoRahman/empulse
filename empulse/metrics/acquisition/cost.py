@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
 import xgboost as xgb
@@ -12,7 +12,7 @@ def create_objective_acquisition(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
-) -> Callable[[np.ndarray, xgb.DMatrix | np.ndarray], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
     """
     Create a custom objective function for XGBoost to maximize the profit of an acquisition model.
 
@@ -59,7 +59,7 @@ def create_objective_acquisition(
 
 def _objective(
         y_pred: np.ndarray,
-        dtrain: xgb.DMatrix | np.ndarray,
+        dtrain: Union[xgb.DMatrix, np.ndarray],
         contribution: float = 7_000,
         contact_cost: float = 50,
         sales_cost: float = 500,
@@ -138,19 +138,6 @@ def mpa_cost_score(
     empa_cost : float
         Instance-specific cost function according to the EMPA measure.
 
-    Notes
-    -----
-    The instance-specific cost function for customer churn is defined as [1]_:
-
-    TODO: put equation here
-
-    The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
-    However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
-
-    References
-    ----------
-    .. [1] Janssens et al (2022).
-        TODO: put reference
 
     """
     y_true = np.asarray(y_true)

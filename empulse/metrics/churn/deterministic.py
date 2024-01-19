@@ -18,7 +18,7 @@ def mpc_score(
         contact_cost: float = 1,
 ) -> float:
     """
-    Convenience function around `mpc()` only returning MPC score
+    Convenience function around :func:`~empulse.metrics.mpc()` only returning MPC score
 
     Parameters
     ----------

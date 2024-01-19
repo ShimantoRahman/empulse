@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from numpy.typing import ArrayLike
 from xgboost import XGBClassifier
@@ -37,7 +37,7 @@ class B2BoostClassifier(XGBClassifier):
     def __init__(
             self,
             *,
-            clv: float | ArrayLike = 200,
+            clv: Union[float, ArrayLike] = 200,
             d: float = 10,
             f: float = 1,
             gamma: float = 0.3,

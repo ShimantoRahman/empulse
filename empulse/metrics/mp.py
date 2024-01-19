@@ -14,9 +14,7 @@ def mp_score(
         fp_cost: float = 0.0,
 ) -> float:
     """
-    Maximum Profit Measure (MP)
-    ===========================
-    Compute the maximum profit.
+    Convenience function around :func:`~empulse.metrics.mp()` only returning MP score
 
     Parameters
     ----------

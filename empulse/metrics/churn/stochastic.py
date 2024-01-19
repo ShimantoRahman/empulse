@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -15,12 +16,12 @@ def empc_score(
         *,
         alpha: float = 6,
         beta: float = 14,
-        clv: float | ArrayLike = 200,
+        clv: Union[float, ArrayLike] = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
 ) -> float:
     """
-    Convenience function around `empc()` only returning EMPC score
+    Convenience function around :func:`~empulse.metrics.empc()` only returning EMPC score
 
     Parameters
     ----------
@@ -124,7 +125,7 @@ def empc(
         *,
         alpha: float = 6,
         beta: float = 14,
-        clv: float | ArrayLike = 200,
+        clv: Union[float, ArrayLike] = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
 ) -> tuple[float, float]:

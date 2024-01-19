@@ -18,7 +18,7 @@ def mpa_score(
         commission: float = 0.1,
 ) -> float:
     """
-    Convenience function around `mpa()` only returning MPA score
+    Convenience function around :func:`~empulse.metrics.mpa()` only returning MPA score
 
     Parameters
     ----------

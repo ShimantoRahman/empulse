@@ -13,7 +13,7 @@ def mpcs_score(
         roi: float = 0.2644
 ) -> float:
     """
-    Convenience function around `mpcs()` only returning MPCS score
+    Convenience function around :func:`~empulse.metrics.mpcs()` only returning MPCS score
 
     Parameters
     ----------

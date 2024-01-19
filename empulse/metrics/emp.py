@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Callable, Generator, Iterable
+from typing import Callable, Generator, Iterable, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -13,16 +13,14 @@ def emp_score(
         y_pred: ArrayLike,
         *,
         weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-        tp_benefit: float | tuple[float, float] = 0.0,
-        tn_benefit: float | tuple[float, float] = 0.0,
-        fn_cost: float | tuple[float, float] = 0.0,
-        fp_cost: float | tuple[float, float] = 0.0,
+        tp_benefit: Union[float, tuple[float, float]] = 0.0,
+        tn_benefit: Union[float, tuple[float, float]] = 0.0,
+        fn_cost: Union[float, tuple[float, float]] = 0.0,
+        fp_cost: Union[float, tuple[float, float]] = 0.0,
         n_buckets: int = 100,
 ) -> float:
     """
-    Expected Maximum Profit Measure (EMP)
-    =====================================
-    Compute the expected maximum profit (EMP).
+    Convenience function around :func:`~empulse.metrics.emp()` only returning EMP score
 
     Parameters
     ----------
@@ -157,10 +155,10 @@ def emp(
         y_pred: ArrayLike,
         *,
         weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-        tp_benefit: float | tuple[float, float] = 0.0,
-        tn_benefit: float | tuple[float, float] = 0.0,
-        fn_cost: float | tuple[float, float] = 0.0,
-        fp_cost: float | tuple[float, float] = 0.0,
+        tp_benefit: Union[float, tuple[float, float]] = 0.0,
+        tn_benefit: Union[float, tuple[float, float]] = 0.0,
+        fn_cost: Union[float, tuple[float, float]] = 0.0,
+        fp_cost: Union[float, tuple[float, float]] = 0.0,
         n_buckets: int = 100,
 ) -> tuple[float, float]:
     """
@@ -235,6 +233,10 @@ def emp(
     -------
     (emp, threshold) : tuple[float, float]
         Expected Maximum Profit and the threshold η at which the maximum profit is achieved.
+
+    See Also
+    --------
+    empulse.metrics.emp_score : Convenience function around :func:`~empulse.metrics.emp()` only returning EMP score
 
     Notes
     -----

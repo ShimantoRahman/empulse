@@ -21,7 +21,7 @@ def empa_score(
         commission: float = 0.1,
 ) -> float:
     """
-    Convenience function around `empa()` only returning EMPA score
+    Convenience function around :func:`~empulse.metrics.empa()` only returning EMPA score
 
     Parameters
     ----------

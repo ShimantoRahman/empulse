@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 from sklearn.utils import column_or_1d
 from numpy.typing import ArrayLike
@@ -48,12 +50,12 @@ def _check_variance(array: np.ndarray) -> None:
                          f"got unique values {unique_values} instead.")
 
 
-def _check_positive(var: float | int, var_name: str) -> None:
+def _check_positive(var: Union[float, int], var_name: str) -> None:
     if var < 0:
         raise ValueError(f"{var_name} should be positive, got a value of {var} instead.")
 
 
-def _check_gt_one(var: float | int, var_name: str) -> None:
+def _check_gt_one(var: Union[float, int], var_name: str) -> None:
     if var < 0:
         raise ValueError(f"{var_name} should be greater than 1, got a value of {var} instead.")
 

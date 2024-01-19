@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
 import xgboost as xgb
@@ -8,8 +8,8 @@ from numpy.typing import ArrayLike
 
 def create_objective_churn(
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
-        incentive_cost: float | ArrayLike = 10,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_cost: Union[float, ArrayLike] = 10,
         contact_cost: float = 1,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
@@ -47,10 +47,10 @@ def create_objective_churn(
 
 def _objective(
         y_pred: np.ndarray,
-        dtrain: xgb.DMatrix | np.ndarray,
+        dtrain: Union[xgb.DMatrix, np.ndarray],
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
-        incentive_cost: float | ArrayLike = 10,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_cost: Union[float, ArrayLike] = 10,
         contact_cost: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -88,8 +88,8 @@ def mpc_cost_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
-        incentive_cost: float | ArrayLike = 10,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_cost: Union[float, ArrayLike] = 10,
         contact_cost: float = 1,
 ) -> float:
     """

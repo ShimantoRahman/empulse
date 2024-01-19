@@ -1,5 +1,5 @@
 import numbers
-from typing import overload
+from typing import overload, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -32,10 +32,10 @@ def _validate_input(
 def _validate_input(
         y_true: ArrayLike,
         y_pred: ArrayLike,
-        clv: float | ArrayLike,
+        clv: Union[float, ArrayLike],
         d: float,
         f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[np.ndarray, np.ndarray, Union[np.ndarray, float]]:
     y_true = _check_y_true(y_true)
     y_pred = _check_y_pred(y_pred)
     _check_shape(y_true, y_pred)
@@ -57,10 +57,10 @@ def _validate_input_emp(
         y_pred: ArrayLike,
         alpha: float,
         beta: float,
-        clv: float | ArrayLike,
+        clv: Union[float, ArrayLike],
         d: float,
         f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[np.ndarray, np.ndarray, Union[np.ndarray, float]]:
     _check_gt_one(alpha, 'alpha')
     _check_gt_one(beta, 'beta')
     return _validate_input(y_true, y_pred, clv, d, f)
@@ -70,9 +70,9 @@ def _validate_input_mp(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         gamma: float,
-        clv: float | ArrayLike,
+        clv: Union[float, ArrayLike],
         d: float,
         f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[np.ndarray, np.ndarray, Union[np.ndarray, float]]:
     _check_fraction(gamma, 'gamma')
     return _validate_input(y_true, y_pred, clv, d, f)
