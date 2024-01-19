@@ -17,7 +17,7 @@ def empcs_score(
         roi: float = 0.2644
 ) -> float:
     """
-    Convenience function around `empcs()` only returning EMPCS score
+    Convenience function around :func:`~empulse.metrics.empcs()` only returning EMPCS score
 
     Parameters
     ----------
