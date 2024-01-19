@@ -12,10 +12,6 @@ Install `empulse` via pip with
 pip install empulse
 ```
 
-## Documentation
-
-TODO: add documentation
-
 ## Usage
 
 We offer custom metrics and models.
