@@ -11,11 +11,19 @@ Installation Guide
 
 .. code-block:: console
 
-  pip install empulse
+    pip install empulse
 
 .. toctree::
-   :maxdepth: 2
-   :caption: API Reference:
+    :maxdepth: 2
+    :caption: API Reference:
 
-   metrics
-   models
+    reference/metrics
+    reference/models
+
+.. toctree::
+    :maxdepth: 2
+    :caption: User Guide:
+
+    guide/proflogit
+    guide/cost_functions
+    guide/user_defined_value_metric

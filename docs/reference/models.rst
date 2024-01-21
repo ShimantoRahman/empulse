@@ -5,7 +5,7 @@ Models
 .. currentmodule:: empulse.models
 
 .. automodule:: empulse.models
-    :members: B2BoostClassifier
+    :members: B2BoostClassifier, ProfLogitClassifier
     :exclude-members: set_fit_request, set_predict_proba_request, set_predict_request, set_score_request
 
 
