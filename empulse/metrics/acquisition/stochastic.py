@@ -167,7 +167,7 @@ def empa(
 
     Notes
     -----
-    The EMPA is defined as [1]_:
+    The EMPA is defined as:
 
     .. math::
 
