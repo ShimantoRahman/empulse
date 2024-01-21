@@ -80,7 +80,7 @@ def _objective(
     ----------
     y_pred : np.ndarray
         Predicted values.
-    dtrain : xgb.DMatrix
+    dtrain : xgb.DMatrix or np.ndarray
         Training data.
 
     Returns

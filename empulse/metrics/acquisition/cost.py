@@ -73,7 +73,7 @@ def _objective(
     ----------
     y_pred : np.ndarray
         Predicted values.
-    dtrain : xgb.DMatrix
+    dtrain : xgb.DMatrix or np.ndarray
         Training data.
 
     Returns
@@ -91,6 +91,7 @@ def _objective(
         y_true = dtrain.get_label()
     else:
         raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
+
     y_pred = 1 / (1 + np.exp(-y_pred))
     cost = y_true * (direct_selling * (contact_cost + sales_cost - contribution) + (1 - direct_selling) * (
             contact_cost - (1 - commission) * contribution
