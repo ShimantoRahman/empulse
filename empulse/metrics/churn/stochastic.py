@@ -169,7 +169,7 @@ def empc(
 
     Notes
     -----
-    The EMPC is defined as [1]_:
+    The EMPC is defined as [1]_:  # TODO : fix formula
 
     .. math:: \int_\gamma CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T) d\gamma
 
@@ -203,6 +203,9 @@ def empc(
     (23.875593418348124, 0.8743700763487141)
     """
     y_true, y_pred, clv = _validate_input_emp(y_true, y_pred, alpha, beta, clv, incentive_cost, contact_cost)
+
+    if isinstance(clv, np.ndarray):
+        clv = clv.mean()
 
     delta = incentive_cost / clv
     phi = contact_cost / clv
@@ -253,16 +256,126 @@ def _compute_gamma_bounds(
     return np.append(gamma_bounds[gamma_bounds < 1], [1])
 
 
-def empb(
+def empb_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         clv: ArrayLike,
         alpha: float = 6,
         beta: float = 14,
         contact_cost: float = 15,
-        delta: float = 0.05,
+        incentive_cost_fraction: float = 0.05,
         n_buckets: int = 250
 ) -> float:
+    """
+    Convenience function around :func:`~empulse.metrics.empb()` only returning EMPB score
+
+    Parameters
+    ----------
+    y_true : 1D array-like, shape=(n_samples,)
+        Binary target values ('churn': 1, 'no churn': 0).
+
+    y_pred : 1D array-like, shape=(n_samples,)
+        Target scores, can either be probability estimates or non-thresholded decision values.
+
+    alpha : float, default=6
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+
+    beta : float, default=14
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+
+    clv : float or 1D array-like, shape=(n_samples), default=200
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
+
+    incentive_cost_fraction : float, default=10
+        Fraction of the customer lifetime value that is used as the incentive cost (`incentive_cost_fraction` > 0).
+
+    contact_cost : float, default=1
+        Constant cost of contact (`contact_cost` > 0).
+
+    n_buckets : int, default=250
+        Number of buckets to use for the calculation of the EMPB.
+
+    Returns
+    -------
+    empb : float
+        Expected Maximum Profit Measure for B2B Customer Churn [1]_
+
+    References
+    ----------
+    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+        B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+        Annals of Operations Research, 1-27.
+    """
+    return empb(
+        y_true,
+        y_pred,
+        alpha=alpha,
+        beta=beta,
+        clv=clv,
+        contact_cost=contact_cost,
+        incentive_cost_fraction=incentive_cost_fraction,
+        n_buckets=n_buckets
+    )[0]
+
+
+def empb(
+        y_true: ArrayLike,
+        y_pred: ArrayLike,
+        *,
+        clv: ArrayLike,
+        alpha: float = 6,
+        beta: float = 14,
+        contact_cost: float = 15,
+        incentive_cost_fraction: float = 0.05,
+        n_buckets: int = 250
+) -> tuple[float, float]:
+    """
+    Expected Maximum Profit Measure for B2B Customer Churn (EMPB) [1]_
+
+    Parameters
+    ----------
+    y_true : 1D array-like, shape=(n_samples,)
+        Binary target values ('churn': 1, 'no churn': 0).
+
+    y_pred : 1D array-like, shape=(n_samples,)
+        Target scores, can either be probability estimates or non-thresholded decision values.
+
+    alpha : float, default=6
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+
+    beta : float, default=14
+        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+
+    clv : float or 1D array-like, shape=(n_samples), default=200
+        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``array``: individualized customer lifetime value of each customer when retained
+        (mean(`clv`) > `incentive_cost`).
+
+    incentive_cost_fraction : float, default=10
+        Fraction of the customer lifetime value that is used as the incentive cost (`incentive_cost_fraction` > 0).
+
+    contact_cost : float, default=1
+        Constant cost of contact (`contact_cost` > 0).
+
+    n_buckets : int, default=250
+        Number of buckets to use for the calculation of the EMPB.
+
+    Returns
+    -------
+    empb : float
+        Expected Maximum Profit Measure for B2B Customer Churn
+
+    threshold : float
+        Threshold at which the expected maximum profit is achieved
+
+    References
+    ----------
+    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+        B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+        Annals of Operations Research, 1-27.
+    """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     clv = np.asarray(clv)
@@ -274,6 +387,7 @@ def empb(
     sorted_indices = y_pred.argsort()[::-1]
 
     emp = -np.inf
+    threshold = 0
     for fraction_targeted in _range(0, 1, 0.005):
         n_targeted = round(fraction_targeted * len(sorted_indices))
         targeted_indices = sorted_indices[0:n_targeted]
@@ -283,15 +397,16 @@ def empb(
         benefit = np.sum(
             np.sum(
                 np.expand_dims(gamma_weights, axis=1) *
-                ((1 - delta) * np.expand_dims(clv_targets, axis=0) - contact_cost),
+                ((1 - incentive_cost_fraction) * np.expand_dims(clv_targets, axis=0) - contact_cost),
                 axis=0) * targets
         )
-        cost = np.sum((-contact_cost - delta * clv_targets) * (1 - targets))
+        cost = np.sum((-contact_cost - incentive_cost_fraction * clv_targets) * (1 - targets))
         profit = benefit + cost
 
         if profit > emp:
             emp = profit
+            threshold = fraction_targeted
 
-    return emp
+    return emp, threshold
 
 
