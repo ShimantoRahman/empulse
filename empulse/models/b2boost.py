@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 from numpy.typing import ArrayLike
 from xgboost import XGBClassifier
 
-from ...metrics.churn.cost import create_objective_churn
+from ..metrics import create_objective_churn
 
 
 class B2BoostClassifier(XGBClassifier):
