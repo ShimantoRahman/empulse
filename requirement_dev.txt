@@ -4,5 +4,6 @@ sphinx_rtd_theme>=2.0.0
 sphinx-copybutton>=0.5.2
 numpydoc>=1.6.0
 setuptools>=67.3.2
+twine>=4.0.2
 
 
