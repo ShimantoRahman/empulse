@@ -2,7 +2,7 @@
 
 Empulse is a package aimed to enable value-driven analysis in Python.
 The package implements popular value-driven metrics and algorithms in accordance to sci-kit learn conventions.
-This allows the measures to seamlessly integrate into existing ML workflows..
+This allows the measures to seamlessly integrate into existing ML workflows.
 
 ## Installation
 
@@ -24,16 +24,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.datasets import make_classification
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import make_scorer
-from sklearn.linear_model import LogisticRegression
 
 # the stuff we add
 from empulse.metrics import empc_score
+from empulse.models import ProfLogitClassifier
 
 X, y = make_classification()
 
 pipeline = Pipeline([
     ("scale", StandardScaler()),
-    ("model", LogisticRegression())
+    ("model", ProfLogitClassifier())
 ])
 
 cross_val_score(pipeline, X, y, scoring=make_scorer(empc_score, needs_proba=True))
