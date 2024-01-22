@@ -37,7 +37,7 @@ For instance, if you want to use the RGA for a set number of time, you can do th
 
                 start = perf_counter()
                 for _ in rga.optimize(objective, bounds):
-                    if perf_counter() - start > max_iter:
+                    if perf_counter() - start > max_time:
                         rga.result.message = "Maximum time reached."
                         rga.result.success = True
                         break
