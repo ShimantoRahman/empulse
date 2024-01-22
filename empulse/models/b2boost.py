@@ -5,7 +5,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y
 from xgboost import XGBClassifier
 
-from ..metrics import create_objective_churn, empb_score
+from ..metrics import create_objective_churn, mpc_cost_score
 
 
 class B2BoostClassifier(BaseEstimator, ClassifierMixin):
@@ -129,10 +129,9 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             self,
             X: ArrayLike,
             y: ArrayLike,
-            alpha=6,
-            beta=14,
+            accept_rate: float = None,
             clv=None,
-            incentive_cost_fraction=None,
+            incentive_cost=None,
             contact_cost=None
     ) -> float:
         """
@@ -144,19 +143,17 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             Features.
         y : 1D numpy.ndarray, shape=(n_samples,)
             Labels.
-        alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
 
-        beta : float, default=14
-            Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+        accept_rate : float, default=self.accept_rate
+            Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
 
         clv : float or 1D array-like, shape=(n_samples), default=self.clv
             If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
             If ``array``: individualized customer lifetime value of each customer when retained
             (mean(`clv`) > `incentive_cost`).
 
-        incentive_cost_fraction : float, default=self.incentive_cost / np.mean(clv)
-            Fraction of the customer lifetime value that is used as the incentive cost (`incentive_cost_fraction` > 0).
+        incentive_cost : float, default=self.incentive_cost
+            Constant cost of retention offer (`incentive_cost` > 0).
 
         contact_cost : float, default=self.contact_cost
             Constant cost of contact (`contact_cost` > 0).
@@ -167,12 +164,11 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             Model score.
         """
         X, y = check_X_y(X, y)
-        return empb_score(
+        return mpc_cost_score(
             y,
             self.predict_proba(X)[:, 1],
-            alpha=alpha,
-            beta=beta,
+            accept_rate=accept_rate or self.accept_rate,
             clv=clv or self.clv,
-            incentive_cost_fraction=incentive_cost_fraction or self.incentive_cost / np.mean(clv),
+            incentive_cost=incentive_cost or self.incentive_cost,
             contact_cost=contact_cost or self.contact_cost,
         )
