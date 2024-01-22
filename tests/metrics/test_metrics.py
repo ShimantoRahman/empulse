@@ -17,7 +17,7 @@ class Metric(Protocol):
 # wrap with empty class to avoid unittest discovery
 class BaseTestMetric:
     class TestMetric(unittest.TestCase):
-        path_predictions = "data/predictions.dat"
+        path_predictions = "../data/predictions.dat"
         parameters = {}
         expected_values = {}
 
