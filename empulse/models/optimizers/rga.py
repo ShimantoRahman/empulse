@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Callable
 
 import numpy as np
-from joblib import Parallel, delayed  # TODO: add joblib to requirements
+from joblib import Parallel, delayed
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
