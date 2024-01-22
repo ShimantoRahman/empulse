@@ -5,7 +5,7 @@ from typing import Callable, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y, check_array
 
 from ..metrics import empc_score
@@ -14,7 +14,7 @@ from .optimizers import RGA
 LossFn = Callable[[np.ndarray, np.ndarray], float]
 
 
-class ProfLogitClassifier(BaseEstimator):
+class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
     """
     ProfLogit for Customer Churn Prediction
     =======================================
@@ -101,34 +101,14 @@ class ProfLogitClassifier(BaseEstimator):
         self.loss = loss
         self.n_jobs = n_jobs
         self.default_bounds = default_bounds
+        self.classes_ = None
 
         self.n_dim = None
         self.result = None
+        self.optimize_kwargs = kwargs
         if optimize_fn is None:
-            def optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
-                rga = RGA(**kwargs)
-                previous_score = np.inf
-                iter_stagnant = 0
-
-                for _ in islice(rga.optimize(objective, bounds), max_iter):
-                    score = rga.result.fun
-                    relative_improvement = (score - previous_score) / previous_score \
-                        if previous_score != np.inf else np.inf
-                    previous_score = score
-                    if relative_improvement < tolerance:
-                        if (iter_stagnant := iter_stagnant + 1) >= patience:
-                            rga.result.message = "Converged."
-                            rga.result.success = True
-                            break
-                    else:
-                        iter_stagnant = 0
-                else:
-                    rga.result.message = "Maximum number of iterations reached."
-                    rga.result.success = False
-                return rga.result
-
-            optimize_fn = optimize
-        self.optimize_fn = partial(optimize_fn, **kwargs)
+            optimize_fn = _optimize
+        self.optimize_fn = optimize_fn
 
     def fit(self, X, y) -> 'ProfLogitClassifier':
         """
@@ -147,16 +127,18 @@ class ProfLogitClassifier(BaseEstimator):
             Fitted ProfLogit model.
         """
         X, y = check_X_y(X, y)
+        self.classes_ = np.unique(y)
 
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
         self.n_dim = X.shape[1]
 
-        if 'bounds' not in self.optimize_fn.keywords:
-            self.optimize_fn = partial(self.optimize_fn, bounds=[self.default_bounds] * self.n_dim)
-        elif len(self.optimize_fn.keywords['bounds']) != self.n_dim:
+        optimize_fn = partial(self.optimize_fn, **self.optimize_kwargs)
+        if 'bounds' not in optimize_fn.keywords:
+            optimize_fn = partial(optimize_fn, bounds=[self.default_bounds] * self.n_dim)
+        elif len(optimize_fn.keywords['bounds']) != self.n_dim:
             raise ValueError(
-                f"Number of bounds ({len(self.optimize_fn.keywords['bounds'])}) "
+                f"Number of bounds ({len(optimize_fn.keywords['bounds'])}) "
                 f"must match number of features ({self.n_dim})."
             )
 
@@ -169,7 +151,7 @@ class ProfLogitClassifier(BaseEstimator):
             soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept
         )
-        self.result = self.optimize_fn(objective)
+        self.result = optimize_fn(objective)
 
         return self
 
@@ -257,3 +239,26 @@ def _objective(weights, X, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return loss - penalty
+
+
+def _optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
+    rga = RGA(**kwargs)
+    previous_score = np.inf
+    iter_stagnant = 0
+
+    for _ in islice(rga.optimize(objective, bounds), max_iter):
+        score = rga.result.fun
+        relative_improvement = (score - previous_score) / previous_score \
+            if previous_score != np.inf else np.inf
+        previous_score = score
+        if relative_improvement < tolerance:
+            if (iter_stagnant := iter_stagnant + 1) >= patience:
+                rga.result.message = "Converged."
+                rga.result.success = True
+                break
+        else:
+            iter_stagnant = 0
+    else:
+        rga.result.message = "Maximum number of iterations reached."
+        rga.result.success = False
+    return rga.result
