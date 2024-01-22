@@ -110,15 +110,15 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             optimize_fn = _optimize
         self.optimize_fn = optimize_fn
 
-    def fit(self, X, y) -> 'ProfLogitClassifier':
+    def fit(self, X: ArrayLike, y: ArrayLike) -> 'ProfLogitClassifier':
         """
         Fit ProfLogit model.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
             Training data.
-        y : 1D numpy.ndarray, shape=(n_samples,)
+        y : 1D array-like, shape=(n_samples,)
             Target values.
 
         Returns
@@ -161,7 +161,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
             Features.
 
         Returns
@@ -188,7 +188,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
 
         Parameters
         ----------
-        X : 2D Array, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
             Features.
 
         Returns
@@ -198,16 +198,18 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         """
         return np.argmax(self.predict_proba(X), axis=1)
 
-    def score(self, X: ArrayLike, y: ArrayLike) -> float:
+    def score(self, X: ArrayLike, y: ArrayLike, sample_weight=None) -> float:
         """
         Compute model score.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
             Features.
-        y : 1D numpy.ndarray, shape=(n_samples,)
+        y : 1D array-like, shape=(n_samples,)
             Labels.
+        sample_weight : 1D array-like, shape=(n_samples,), default=None
+            Sample weights (ignored).
 
         Returns
         -------
