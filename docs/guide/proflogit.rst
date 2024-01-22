@@ -75,7 +75,7 @@ To use a different metric, simply pass the metric function to the
     from empulse.models import ProflogitClassifier
     from empulse.metrics import empa_score
 
-    proflogit = Proflogit(loss=empa_score)
+    proflogit = Proflogit(loss_fn=empa_score)
 
 Custom Optimization Algorithms
 ------------------------------
