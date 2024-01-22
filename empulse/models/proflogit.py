@@ -1,3 +1,4 @@
+import inspect
 from functools import partial
 from itertools import islice
 from typing import Callable, Optional
@@ -42,7 +43,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
     loss_fn : Callable, default=:func:`empulse.metrics.empc_score`
-        Loss function. Should be a Callable with signature ``loss(y_true, y_pred)``.
+        Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ```loss(y_true, y_pred)``.
         See :func:`empulse.metrics.empc_score` for an example.
 
     optimize_fn : Callable, default=None
@@ -237,10 +238,20 @@ def _objective(weights, X, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
 
     logits = np.dot(X, weights)
     y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
-    loss = loss_fn(y_pred=y_pred)
+    loss = _call_loss_fn(loss_fn, y_pred)
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return loss - penalty
+
+
+def _call_loss_fn(loss_fn, y_pred):
+    sig = inspect.signature(loss_fn)
+    if 'y_pred' in sig.parameters:
+        return loss_fn(y_pred=y_pred)
+    elif 'y_score' in sig.parameters:
+        return loss_fn(y_score=y_pred)
+    else:
+        raise ValueError("loss_fn does not have 'y_pred' or 'y_score' parameter")
 
 
 def _optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
