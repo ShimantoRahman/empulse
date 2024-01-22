@@ -41,7 +41,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         For ``l1_ratio = 1`` it is an L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : Callable, default=:func:`empulse.metrics.empc_score`
+    loss_fn : Callable, default=:func:`empulse.metrics.empc_score`
         Loss function. Should be a Callable with signature ``loss(y_true, y_pred)``.
         See :func:`empulse.metrics.empc_score` for an example.
 
@@ -87,7 +87,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             fit_intercept: bool = True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
-            loss: LossFn = empc_score,
+            loss_fn: LossFn = empc_score,
             optimize_fn: Optional[Callable[[LossFn, tuple[float, float], ...], OptimizeResult]] = None,
             default_bounds: tuple[float, float] = (-3, 3),
             n_jobs: Optional[int] = None,
@@ -98,7 +98,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         self.fit_intercept = fit_intercept
         self.soft_threshold = soft_threshold
         self.l1_ratio = l1_ratio
-        self.loss = loss
+        self.loss_fn = loss_fn
         self.n_jobs = n_jobs
         self.default_bounds = default_bounds
         self.classes_ = None
@@ -145,7 +145,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         objective = partial(
             _objective,
             X=X,
-            loss_fn=partial(self.loss, y_true=y),
+            loss_fn=partial(self.loss_fn, y_true=y),
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
@@ -217,7 +217,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             Model score.
         """
         X, y = check_X_y(X, y)
-        return self.loss(y, self.predict_proba(X)[:, 1])
+        return self.loss_fn(y, self.predict_proba(X)[:, 1])
 
 
 def _objective(weights, X, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
