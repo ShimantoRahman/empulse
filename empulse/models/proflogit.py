@@ -88,7 +88,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
             loss: LossFn = empc_score,
-            optimize_fn: Optional[Callable[[LossFn, np.ndarray, tuple[float, float], ...], OptimizeResult]] = None,
+            optimize_fn: Optional[Callable[[LossFn, tuple[float, float], ...], OptimizeResult]] = None,
             default_bounds: tuple[float, float] = (-3, 3),
             n_jobs: Optional[int] = None,
             **kwargs
