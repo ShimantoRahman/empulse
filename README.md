@@ -1,5 +1,6 @@
 [![Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
 ![](https://img.shields.io/github/license/shimantorahman/empulse)
+![](https://img.shields.io/pypi/pyversions/empulse)
 
 # Empulse
 
