@@ -51,8 +51,8 @@ def _compute_convex_hull(
     convex_hull_fpr = fpr[ind]
     convex_hull_tpr = tpr[ind]
     ind_upper_triangle = convex_hull_fpr < convex_hull_tpr  # only consider points above the 45° line
-    convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])
-    convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])
+    convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])  # type: ignore
+    convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])  # type: ignore
     ind = np.argsort(convex_hull_fpr)  # sort along the x-axis
     convex_hull_fpr = convex_hull_fpr[ind]
     convex_hull_tpr = convex_hull_tpr[ind]
