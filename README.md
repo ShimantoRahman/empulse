@@ -1,4 +1,7 @@
-# empulse
+[![Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
+[![License](https://img.shields.io/github/license/shimantorahman/empulse)]
+
+# Empulse
 
 Empulse is a package aimed to enable value-driven analysis in Python.
 The package implements popular value-driven metrics and algorithms in accordance to sci-kit learn conventions.
@@ -11,6 +14,9 @@ Install `empulse` via pip with
 ```bash
 pip install empulse
 ```
+
+## Documentation
+You can find the documentation [here](https://shimantorahman.github.io/empulse/).
 
 ## Usage
 
