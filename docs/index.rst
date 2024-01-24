@@ -21,7 +21,7 @@ Installation Guide
     reference/models
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: User Guide:
 
     guide/proflogit
