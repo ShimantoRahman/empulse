@@ -1,4 +1,4 @@
-.PHONY: clean build
+.PHONY: clean build help
 
 clean:
 	powershell Remove-Item -Recurse -Force dist\*
@@ -19,14 +19,15 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = docs/_build
 
-# Put it first so that "make" without argument is like "make help".
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-.PHONY: help Makefile
-
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 # "make html" will build the html docs
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+
+help:
+	@echo clean 	remove all build artifacts
+	@echo build 	build the project
+	@echo upload 	upload the project to pypi
+	@echo html 	build the html docs
