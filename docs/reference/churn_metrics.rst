@@ -1,6 +1,6 @@
-=============
-Churn Metrics
-=============
+======================
+Customer Churn Metrics
+======================
 
 .. currentmodule:: empulse.metrics
 

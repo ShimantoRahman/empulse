@@ -1,6 +1,6 @@
-===================
-Acquisition Metrics
-===================
+===========================
+Customer Acquisition Metrics
+===========================
 
 .. currentmodule:: empulse.metrics
 
