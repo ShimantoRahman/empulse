@@ -6,7 +6,7 @@ import xgboost as xgb
 from numpy.typing import ArrayLike
 
 
-def create_objective_acquisition(
+def make_objective_acquisition(
         contribution: float = 7_000,
         contact_cost: float = 50,
         sales_cost: float = 500,

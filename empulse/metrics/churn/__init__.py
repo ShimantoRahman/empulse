@@ -1,6 +1,6 @@
 from .stochastic import empc, empc_score, empb, empb_score
 from .deterministic import mpc, mpc_score, compute_profit_churn
-from .cost import create_objective_churn, mpc_cost_score
+from .cost import make_objective_churn, mpc_cost_score
 
 __all__ = [
     empc,
@@ -8,6 +8,6 @@ __all__ = [
     mpc,
     mpc_score,
     compute_profit_churn,
-    create_objective_churn,
+    make_objective_churn,
     mpc_cost_score
 ]

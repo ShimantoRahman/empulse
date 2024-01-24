@@ -6,7 +6,7 @@ import xgboost as xgb
 from numpy.typing import ArrayLike
 
 
-def create_objective_churn(
+def make_objective_churn(
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
         incentive_cost: Union[float, ArrayLike] = 10,

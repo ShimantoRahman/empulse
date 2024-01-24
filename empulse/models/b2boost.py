@@ -5,7 +5,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y
 from xgboost import XGBClassifier
 
-from ..metrics import create_objective_churn, mpc_cost_score
+from ..metrics import make_objective_churn, mpc_cost_score
 
 
 class B2BoostClassifier(BaseEstimator, ClassifierMixin):
@@ -64,9 +64,23 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         self.incentive_cost = incentive_cost
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
-        self.model = None
-        self.classes_ = None
-        self.kwargs = kwargs
+        objective = make_objective_churn(
+            clv=self.clv,
+            incentive_cost=self.incentive_cost,
+            contact_cost=self.contact_cost,
+            accept_rate=self.accept_rate
+        )
+        self.model = XGBClassifier(objective=objective, **kwargs)
+
+    def __getattr__(self, attr):
+        """
+        If the attribute is not found in B2BoostClassifier,
+        it checks if it is present in `self.model` and if it is, returns that.
+        """
+        if hasattr(self.model, attr):
+            return getattr(self.model, attr)
+        else:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
     def fit(self, X, y):
         """
@@ -84,15 +98,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
-        objective = create_objective_churn(
-            clv=self.clv,
-            incentive_cost=self.incentive_cost,
-            contact_cost=self.contact_cost,
-            accept_rate=self.accept_rate
-        )
-        self.model = XGBClassifier(objective=objective, **self.kwargs)
         self.model.fit(X, y)
-        self.classes_ = self.model.classes_
         return self
 
     def predict_proba(self, X):
