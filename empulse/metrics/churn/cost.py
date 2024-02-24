@@ -100,9 +100,6 @@ def _objective(
         raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
     y_pred = 1 / (1 + np.exp(-y_pred))
 
-    # TODO: check if this is correct
-    # delta = incentive_cost / clv
-    # profits = contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate))
     profits = contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     )
@@ -171,9 +168,6 @@ def mpc_cost_score(
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 
-    # TODO: check if this is correct
-    # delta = incentive_cost / clv
-    # profits = y_pred * (contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate)))
     profits = y_pred * (contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     ))
