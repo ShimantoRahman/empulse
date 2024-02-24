@@ -27,3 +27,4 @@ Installation Guide
     guide/proflogit
     guide/cost_functions
     guide/user_defined_value_metric
+    guide/instance_based_cv
