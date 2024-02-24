@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Callable
+from typing import Optional, Callable, Generator
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -9,9 +9,9 @@ from sklearn.utils import check_random_state
 from empulse.models.optimizers import Optimizer
 
 
-class RGA(Optimizer):
+class Generation(Optimizer):
     """
-    Real-coded Genetic Algorithm (RGA).
+    Generation of a real-coded Genetic Algorithm (RGA).
 
     Parameters
     ----------
@@ -159,7 +159,24 @@ class RGA(Optimizer):
         self.delta_bounds = None
         self.n_dim = None
 
-    def optimize(self, objective, bounds):
+    def optimize(self, objective: Callable, bounds: list[tuple[float, float]]) -> Generator['Generation', None, None]:
+        """
+        Optimize the objective function.
+
+        Parameters
+        ----------
+        objective : Callable
+            Objective function to optimize.
+            Should be of signature ``objective(weights) -> float``.
+        bounds : list[tuple[float, float]]
+            List of tuples of lower and upper bounds for each weight.
+
+        Yields
+        ------
+        self : Generation
+            Current instance of the optimizer.
+        """
+
         # Check bounds
         bounds = list(bounds)
         if not all(
