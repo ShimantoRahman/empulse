@@ -11,7 +11,7 @@ from empulse.optimizers import Optimizer
 
 class Generation(Optimizer):
     """
-    Generation of a real-coded Genetic Algorithm (RGA).
+    Generation of a Real-coded Genetic Algorithm (RGA).
 
     Parameters
     ----------
