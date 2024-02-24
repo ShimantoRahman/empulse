@@ -100,8 +100,12 @@ def _objective(
         raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
     y_pred = 1 / (1 + np.exp(-y_pred))
 
-    delta = incentive_cost / clv
-    profits = contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate))
+    # TODO: check if this is correct
+    # delta = incentive_cost / clv
+    # profits = contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate))
+    profits = contact_cost + incentive_cost + y_true * (
+            accept_rate * incentive_cost - incentive_cost - clv * accept_rate
+    )
     gradient = y_pred * (1 - y_pred) * profits
     hessian = abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
@@ -110,6 +114,7 @@ def _objective(
 def mpc_cost_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
+        *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
         incentive_cost: Union[float, ArrayLike] = 10,
@@ -166,6 +171,10 @@ def mpc_cost_score(
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 
-    delta = incentive_cost / clv
-    profits = y_pred * (contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate)))
+    # TODO: check if this is correct
+    # delta = incentive_cost / clv
+    # profits = y_pred * (contact_cost + (delta * clv) + y_true * (clv * (accept_rate * delta - delta - accept_rate)))
+    profits = y_pred * (contact_cost + incentive_cost + y_true * (
+            accept_rate * incentive_cost - incentive_cost - clv * accept_rate
+    ))
     return float(np.mean(profits))
