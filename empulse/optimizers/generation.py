@@ -6,7 +6,7 @@ from joblib import Parallel, delayed
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
-from empulse.models.optimizers import Optimizer
+from empulse.optimizers import Optimizer
 
 
 class Generation(Optimizer):

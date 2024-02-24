@@ -2,7 +2,7 @@ from itertools import islice
 
 import pytest
 import numpy as np
-from empulse.models.optimizers import Generation
+from empulse.optimizers import Generation
 
 
 @pytest.fixture()

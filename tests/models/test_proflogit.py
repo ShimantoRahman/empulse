@@ -135,7 +135,7 @@ def test_works_in_ensemble(X, y):
 
 
 def test_works_with_time_stopping_condition(X, y):
-    from empulse.models.optimizers import Generation
+    from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
     from time import perf_counter
 

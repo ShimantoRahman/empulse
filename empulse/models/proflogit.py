@@ -11,7 +11,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y, check_array
 
 from ..metrics import empc_score
-from .optimizers import Generation
+from empulse.optimizers import Generation
 
 
 class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
