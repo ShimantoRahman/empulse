@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empulse"
-version = "0.1.0"
+version = "0.1.1"
 description = "Value-driven metrics and models for scikit-learn"
 readme = "README.md"
 authors = [
@@ -65,6 +65,4 @@ include = ["empulse*"]
 exclude = [
     "docs",
     "tests",
-    "empulse/models/samplers",
-    "empulse/models/reweighting.py",
 ]
