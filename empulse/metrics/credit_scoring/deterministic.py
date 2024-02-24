@@ -24,10 +24,10 @@ def mpcs_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
-        The fraction of the loan amount which is lost after default (`loan_lost_rate` ≥ 0).
+        The fraction of the loan amount which is lost after default (``loan_lost_rate ≥ 0``).
 
     roi : float, default=0.2644
-        Return on investment on the loan (`roi` ≥ 0).
+        Return on investment on the loan (``roi ≥ 0``).
 
     Returns
     -------
@@ -103,10 +103,10 @@ def mpcs(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
-        The fraction of the loan amount which is lost after default (`loan_lost_rate` ≥ 0).
+        The fraction of the loan amount which is lost after default (``loan_lost_rate ≥ 0``).
 
     roi : float, default=0.2644
-        Return on investment on the loan (`roi` ≥ 0).
+        Return on investment on the loan (``roi ≥ 0``).
 
     Returns
     -------

@@ -28,22 +28,22 @@ def mpa_score(
     y_pred : array-like of shape (n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
-    contribution : float, default=8000
-        Average contribution of a new customer (`contribution` ≥ 0).
+    contribution : float, default=7000
+        Average contribution of a new customer (``contribution ≥ 0``).
 
     sales_cost : float, default=500
-        Average sale conversion cost of targeted leads handled by the company (`sales_cost` ≥ 0).
+        Average sale conversion cost of targeted leads handled by the company (``sales_cost ≥ 0``).
 
     contact_cost : float, default=50
-        Average contact cost of targeted leads (`contact_cost` ≥ 0).
+        Average contact cost of targeted leads (``contact_cost ≥ 0``).
 
     direct_selling : float, default=1
-        Fraction of leads sold to directly (0 ≤ `direct_selling` ≤ 1).
-        `direct_selling` = 0 for indirect channel.
-        `direct_selling` = 1 for direct channel.
+        Fraction of leads sold to directly (``0 ≤ direct_selling ≤ 1``).
+        ``direct_selling = 0`` for indirect channel.
+        ``direct_selling = 1`` for direct channel.
 
     commission : float, default=0.1
-        Fraction of contribution paid to the intermediaries (0 ≤ commission ≤ 1).
+        Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
 
     Returns
     -------
@@ -117,22 +117,22 @@ def mpa(
     y_pred : array-like of shape (n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
-    contribution : float, default=8000
-        Average contribution of a new customer (`contribution` ≥ 0).
+    contribution : float, default=7000
+        Average contribution of a new customer (``contribution ≥ 0``).
 
     sales_cost : float, default=500
-        Average sale conversion cost of targeted leads handled by the company (`sales_cost` ≥ 0).
+        Average sale conversion cost of targeted leads handled by the company (``sales_cost ≥ 0``).
 
     contact_cost : float, default=50
-        Average contact cost of targeted leads (`contact_cost` ≥ 0).
+        Average contact cost of targeted leads (``contact_cost ≥ 0``).
 
     direct_selling : float, default=1
-        Fraction of leads sold to directly (0 ≤ `direct_selling` ≤ 1).
-        `direct_selling` = 0 for indirect channel.
-        `direct_selling` = 1 for direct channel.
+        Fraction of leads sold to directly (``0 ≤ direct_selling ≤ 1``).
+        ``direct_selling = 0`` for indirect channel.
+        ``direct_selling = 1`` for direct channel.
 
     commission : float, default=0.1
-        Fraction of contribution paid to the intermedaries (0 ≤ commission ≤ 1).
+        Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
 
     Returns
     -------

@@ -18,18 +18,18 @@ def make_objective_churn(
     Parameters
     ----------
     accept_rate : float, default=0.3
-        Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+        Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (`incentive_cost` > 0).
+        Constant cost of retention offer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     Returns
     -------
@@ -131,18 +131,18 @@ def mpc_cost_score(
         Target scores, must be probability estimates.
 
     accept_rate : float, default=0.3
-        Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+        Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv` > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (`incentive_cost` > 0).
+        Constant cost of retention offer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     Returns
     -------

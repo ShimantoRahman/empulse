@@ -19,15 +19,15 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (`incentive_cost` > 0).
+        Constant cost of retention offer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     params : dict[str, Any], default=None
         Other parameters passed to `XGBClassifier` init.
@@ -154,18 +154,18 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             Sample weights.
 
         accept_rate : float, default=0.3
-            Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+            Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
         clv : float or 1D array-like, shape=(n_samples), default=200
-            If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+            If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
             If ``array``: individualized customer lifetime value of each customer when retained
-            (mean(`clv`) > `incentive_cost`).
+            (``mean(clv) > incentive_cost``).
 
         incentive_cost : float, default=10
-            Constant cost of retention offer (`incentive_cost` > 0).
+            Constant cost of retention offer (``incentive_cost > 0``).
 
         contact_cost : float, default=1
-            Constant cost of contact (`contact_cost` > 0).
+            Constant cost of contact (``contact_cost > 0``).
 
         Returns
         -------
@@ -232,18 +232,18 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             Labels.
 
         accept_rate : float, default=self.accept_rate
-            Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+            Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
         clv : float or 1D array-like, shape=(n_samples), default=self.clv
-            If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+            If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
             If ``array``: individualized customer lifetime value of each customer when retained
-            (mean(`clv`) > `incentive_cost`).
+            (``mean(clv) > incentive_cost```).
 
         incentive_cost : float, default=self.incentive_cost
-            Constant cost of retention offer (`incentive_cost` > 0).
+            Constant cost of retention offer (``incentive_cost > 0``).
 
         contact_cost : float, default=self.contact_cost
-            Constant cost of contact (`contact_cost` > 0).
+            Constant cost of contact (``contact_cost > 0``).
 
         Returns
         -------

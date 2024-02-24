@@ -32,21 +32,23 @@ def empc_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``alpha > 1``).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (`incentive_cost` > 0).
+        Constant cost of retention offer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     Returns
     -------
@@ -143,21 +145,23 @@ def empc(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``alpha > 1``).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (`incentive_cost` > 0).
+        Constant cost of retention offer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     Returns
     -------
@@ -281,21 +285,23 @@ def empb_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``alpha > 1``).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost_fraction : float, default=10
-        Fraction of the customer lifetime value that is used as the incentive cost (`incentive_cost_fraction` > 0).
+        Fraction of the customer lifetime value that is used as the incentive cost (``incentive_cost_fraction > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     n_buckets : int, default=250
         Number of buckets to use for the calculation of the EMPB.
@@ -346,21 +352,23 @@ def empb(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`alpha` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``alpha > 1``).
 
     beta : float, default=14
-        Shape parameter of the beta distribution of the probability that a churner accepts the incentive (`beta` > 1).
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        (``mean(clv) > incentive_cost``).
 
     incentive_cost_fraction : float, default=10
-        Fraction of the customer lifetime value that is used as the incentive cost (`incentive_cost_fraction` > 0).
+        Fraction of the customer lifetime value that is used as the incentive cost (``incentive_cost_fraction > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (`contact_cost` > 0).
+        Constant cost of contact (``contact_cost > 0``).
 
     n_buckets : int, default=250
         Number of buckets to use for the calculation of the EMPB.

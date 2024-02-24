@@ -28,13 +28,13 @@ def empcs_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
-        Probability that the entire loan is paid back (0 ≤ `succes_rate` ≤ 1).
+        Probability that the entire loan is paid back (``0 ≤ succes_rate ≤ 1``).
 
     default_rate : float, default=0.1
-        Probability that the entire loan is lost (0 ≤ `default_rate` ≤ 1).
+        Probability that the entire loan is lost (``0 ≤ default_rate ≤ 1``).
 
     roi : float, default=0.2644
-        Return on investment on the loan (`roi` ≥ 0).
+        Return on investment on the loan (``roi ≥ 0``).
 
     Returns
     -------
@@ -115,13 +115,13 @@ def empcs(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
-        Probability that the entire loan is paid back (0 ≤ `succes_rate` ≤ 1).
+        Probability that the entire loan is paid back (``0 ≤ succes_rate ≤ 1``).
 
     default_rate : float, default=0.1
-        Probability that the entire loan is lost (0 ≤ `default_rate` ≤ 1).
+        Probability that the entire loan is lost (``0 ≤ default_rate ≤ 1``).
 
     roi : float, default=0.2644
-        Return on investment on the loan (`roi` ≥ 0).
+        Return on investment on the loan (``roi ≥ 0``).
 
     Returns
     -------
