@@ -1,2 +1,2 @@
 from .optimizer import Optimizer
-from .rga import RGA
+from .generation import Generation
