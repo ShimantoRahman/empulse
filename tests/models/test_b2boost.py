@@ -6,9 +6,17 @@ from sklearn.utils.validation import check_is_fitted, NotFittedError
 
 
 @pytest.fixture(scope='module')
-def clf():
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
+def X():
+    return np.arange(20).reshape(10, 2)
+
+
+@pytest.fixture(scope='module')
+def y():
+    return np.array([0, 1] * 5)
+
+
+@pytest.fixture(scope='module')
+def clf(X, y):
     clf = B2BoostClassifier(n_estimators=2)
     clf.fit(X, y)
     return clf
@@ -39,9 +47,7 @@ def test_b2boost_with_different_parameters():
     assert clf.model.random_state == 42
 
 
-def test_b2boost_fit():
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
+def test_b2boost_fit(X, y):
     clf = B2BoostClassifier()
     clf.fit(X, y)
     assert isinstance(clf.model, XGBClassifier)
@@ -52,23 +58,19 @@ def test_b2boost_fit():
         pytest.fail("XGBClassifier is not fitted")
 
 
-def test_b2boost_predict_proba(clf):
-    X = np.random.rand(10, 2)
+def test_b2boost_predict_proba(clf, X):
     y_pred = clf.predict_proba(X)
     assert y_pred.shape == (10, 2)
     assert np.all((y_pred >= 0) & (y_pred <= 1))
 
 
-def test_b2boost_predict(clf):
-    X = np.random.rand(10, 2)
+def test_b2boost_predict(clf, X):
     y_pred = clf.predict(X)
     assert y_pred.shape == (10,)
     assert np.all((y_pred == 0) | (y_pred == 1))
 
 
-def test_b2boost_score(clf):
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
+def test_b2boost_score(clf, X, y):
     score = clf.score(X, y)
     assert isinstance(score, float)
 
@@ -81,10 +83,8 @@ def test_cloneable_by_sklearn():
     assert clf.get_params() == clf_clone.get_params()
 
 
-def test_works_in_cross_validation():
+def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
     clf = B2BoostClassifier(n_estimators=2)
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
@@ -92,24 +92,21 @@ def test_works_in_cross_validation():
     assert np.all(scores.astype(np.float64) == scores)
 
 
-def test_works_in_pipeline():
+def test_works_in_pipeline(X, y):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
     clf = B2BoostClassifier(n_estimators=2)
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y)
     assert isinstance(pipe.named_steps['scaler'], StandardScaler)
     assert isinstance(pipe.named_steps['clf'], B2BoostClassifier)
     assert isinstance(pipe.score(X, y), float)
-    assert isinstance(pipe.predict(X), np.ndarray)
+    assert isinstance((pred := pipe.predict(X)), np.ndarray)
+    assert np.all(~np.isnan(pred))
 
 
-def test_works_in_ensemble():
+def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
-    X = np.random.rand(10, 2)
-    y = np.random.randint(0, 2, 10)
     clf = B2BoostClassifier(n_estimators=2)
     bagging = BaggingClassifier(clf, n_estimators=2)
     bagging.fit(X, y)
