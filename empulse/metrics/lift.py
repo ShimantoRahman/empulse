@@ -15,7 +15,7 @@ def _validate_input(y_true: ArrayLike, y_pred: ArrayLike, fraction: float) -> tu
     return y_true, y_pred
 
 
-def lift_score(y_true: ArrayLike, y_pred: ArrayLike, fraction: float = 0.1) -> float:
+def lift_score(y_true: ArrayLike, y_pred: ArrayLike, *, fraction: float = 0.1) -> float:
     """
     Compute the lift score for the top fraction of predictions.
 
