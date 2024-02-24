@@ -18,7 +18,7 @@ import empulse  # noqa: E402 F401
 project = 'Empulse'
 copyright = '2024, Shimanto Rahman'
 author = 'Shimanto Rahman'
-release = '0.0.13'
+release = empulse.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -29,19 +29,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "numpydoc",
-#    "sphinx.ext.napoleon",
     "sphinx_copybutton",
 ]
 
 autodoc_typehints = "none"
-#napoleon_google_docstring = False
-#napoleon_numpy_docstring = True
-#napoleon_use_param = False
-#napoleon_use_ivar = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
 
 
 # -- Options for HTML output -------------------------------------------------
