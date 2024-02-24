@@ -1,4 +1,5 @@
-from typing import Any, Union
+from collections import defaultdict
+from typing import Any, Union, Optional
 
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -28,7 +29,10 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
     contact_cost : float, default=1
         Constant cost of contact (`contact_cost` > 0).
 
-    kwargs : dict
+    params : dict[str, Any], default=None
+        Other parameters passed to `XGBClassifier` init.
+
+    **kwargs
         Other parameters passed to `XGBClassifier` init.
 
     Notes
@@ -58,19 +62,22 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             clv: Union[float, ArrayLike] = 200,
             incentive_cost: float = 10,
             contact_cost: float = 1,
-            **kwargs: Any,
+            params: Optional[dict[str, Any]] = None,
+            **kwargs,
     ) -> None:
         self.clv = clv
         self.incentive_cost = incentive_cost
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
-        objective = make_objective_churn(
-            clv=self.clv,
-            incentive_cost=self.incentive_cost,
-            contact_cost=self.contact_cost,
-            accept_rate=self.accept_rate
-        )
-        self.model = XGBClassifier(objective=objective, **kwargs)
+
+        # necessary to have params because sklearn.clone does not clone **kwargs
+        if params is None:
+            params = {}
+        if kwargs:
+            params.update(kwargs)
+        self.params = params
+
+        self.model = XGBClassifier(**params)
 
     def __getattr__(self, attr):
         """
@@ -82,7 +89,56 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
-    def fit(self, X, y):
+    def set_params(self, **params):
+        """Set the parameters of this estimator.
+
+        The method works on simple estimators as well as on nested objects
+        (such as :class:`~sklearn.pipeline.Pipeline`). The latter have
+        parameters of the form ``<component>__<parameter>`` so that it's
+        possible to update each component of a nested object.
+
+        Parameters
+        ----------
+        **params : dict
+            Estimator parameters.
+
+        Returns
+        -------
+        self : estimator instance
+            Estimator instance.
+        """
+        if not params:
+            # Simple optimization to gain speed (inspect is slow)
+            return self
+        valid_params = self.get_params(deep=True)
+        valid_params_xgb = self.model.get_params(deep=True)
+
+        nested_params = defaultdict(dict)  # grouped by prefix
+        for key, value in params.items():
+            key, delim, sub_key = key.partition("__")
+            if key not in valid_params and key not in valid_params_xgb:
+                local_valid_params = self._get_param_names()
+                raise ValueError(
+                    f"Invalid parameter {key!r} for estimator {self}. "
+                    f"Valid parameters are: {local_valid_params!r}."
+                )
+            if key not in valid_params and key in valid_params_xgb:
+                self.model.set_params(**{key: value})
+                self.params[key] = value
+                continue
+
+            if delim:
+                nested_params[key][sub_key] = value
+            else:
+                setattr(self, key, value)
+                valid_params[key] = value
+
+        for key, sub_params in nested_params.items():
+            valid_params[key].set_params(**sub_params)
+
+        return self
+
+    def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_cost=None, contact_cost=None):
         """
         Fit the model.
 
@@ -90,15 +146,40 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_dim)
             Training data.
+
         y : 1D numpy.ndarray, shape=(n_samples,)
             Target values.
+
+        sample_weights : 1D numpy.ndarray, shape=(n_samples,), default=None
+            Sample weights.
+
+        accept_rate : float, default=0.3
+            Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+
+        clv : float or 1D array-like, shape=(n_samples), default=200
+            If ``float``: constant customer lifetime value per retained customer (`clv` > `incentive_cost`).
+            If ``array``: individualized customer lifetime value of each customer when retained
+            (mean(`clv`) > `incentive_cost`).
+
+        incentive_cost : float, default=10
+            Constant cost of retention offer (`incentive_cost` > 0).
+
+        contact_cost : float, default=1
+            Constant cost of contact (`contact_cost` > 0).
 
         Returns
         -------
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
-        self.model.fit(X, y)
+        objective = make_objective_churn(
+            clv=self.clv if clv is None else clv,
+            incentive_cost=self.incentive_cost if incentive_cost is None else incentive_cost,
+            contact_cost=self.contact_cost if contact_cost is None else contact_cost,
+            accept_rate=self.accept_rate if accept_rate is None else accept_rate,
+        )
+        self.model = XGBClassifier(objective=objective, **self.params)
+        self.model.fit(X, y, sample_weight=sample_weights)
         return self
 
     def predict_proba(self, X):
