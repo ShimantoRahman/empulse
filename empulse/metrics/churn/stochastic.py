@@ -176,6 +176,7 @@ def empc(
     The EMPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [3]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
+    Code adapted from [4]_.
     An equivalent R implementation is available in [2]_.
 
     References
@@ -192,6 +193,7 @@ def empc(
     .. [3] Verbraken, T. (2013). Business-Oriented Data Analytics:
         Theory and Case Studies. Ph.D. dissertation, Dept. LIRIS, KU Leuven,
         Leuven, Belgium, 2013.
+    .. [4] https://github.com/estripling/proflogit/blob/master/proflogit/empc.py
 
     Examples
     --------
