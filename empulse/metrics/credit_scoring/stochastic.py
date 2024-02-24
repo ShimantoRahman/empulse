@@ -50,11 +50,14 @@ def empcs_score(
     The EMP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('default': 1, 'no default': 0).
 
+    Code adapted from [2]_.
+
     References
     ----------
     .. [1] Verbraken, T., Bravo, C., Weber, R., & Baesens, B. (2014).
         Development and application of consumer credit scoring models using profit-based classification measures.
         European Journal of Operational Research, 238(2), 505-513.
+    .. [2] https://github.com/Banking-Analytics-Lab/EMP-Py/blob/main/EMP/metrics.py
 
     Examples
     --------
