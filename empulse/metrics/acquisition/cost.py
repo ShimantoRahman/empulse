@@ -104,6 +104,7 @@ def _objective(
 def mpa_cost_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
+        *,
         contribution: float = 7_000,
         contact_cost: float = 50,
         sales_cost: float = 500,
