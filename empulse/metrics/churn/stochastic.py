@@ -259,6 +259,7 @@ def _compute_gamma_bounds(
 def empb_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
+        *,
         clv: ArrayLike,
         alpha: float = 6,
         beta: float = 14,
