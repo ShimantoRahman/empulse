@@ -1,4 +1,4 @@
-.PHONY: clean build help
+.PHONY: clean build help test
 
 clean:
 	powershell Remove-Item -Recurse -Force dist\*
@@ -10,6 +10,9 @@ build: clean
 
 upload: build
 	twine upload dist/*
+
+test:
+	pytest --cov-report term --cov=empulse tests/
 
 # Content from the docs directory Makefile
 # You can set these variables from the command line, and also
