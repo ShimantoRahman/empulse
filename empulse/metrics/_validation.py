@@ -10,6 +10,7 @@ def _check_y_true(y_true: ArrayLike) -> np.ndarray:
     y_true = column_or_1d(y_true)
     _check_numeric(y_true)
     _check_nan(y_true)
+    _check_inf(y_true)
     _check_binary(y_true)
     _check_variance(y_true)
     return y_true
@@ -19,12 +20,18 @@ def _check_y_pred(y_pred: ArrayLike) -> np.ndarray:
     y_pred = np.asarray(y_pred)
     y_pred = column_or_1d(y_pred)
     _check_nan(y_pred)
+    _check_inf(y_pred)
     return y_pred
 
 
 def _check_nan(array: np.ndarray) -> None:
     if np.isnan(array).any():
         raise ValueError(f"The array should not contain NaN values, got {np.sum(np.isnan(array))} instead.")
+
+
+def _check_inf(array: np.ndarray) -> None:
+    if np.isinf(array).any():
+        raise ValueError(f"The array should not contain Inf values, got {np.sum(np.isinf(array))} instead.")
 
 
 def _check_shape(y_true: np.ndarray, y_pred: np.ndarray) -> None:
