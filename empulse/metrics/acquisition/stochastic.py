@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as st
 from numpy.typing import ArrayLike
 
-from ._validation import _validate_input
+from ._validation import _validate_input_stochastic
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from .._convex_hull import _compute_convex_hull
 
@@ -197,7 +197,16 @@ def empa(
     (356.25, 0.875)
     """
 
-    y_true, y_pred = _validate_input(y_true, y_pred, contact_cost, sales_cost, direct_selling, commission)
+    y_true, y_pred = _validate_input_stochastic(
+        y_true,
+        y_pred,
+        alpha,
+        beta,
+        contact_cost,
+        sales_cost,
+        direct_selling,
+        commission
+    )
 
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 

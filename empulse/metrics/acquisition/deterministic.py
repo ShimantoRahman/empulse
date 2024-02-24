@@ -3,7 +3,7 @@ from functools import lru_cache
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._validation import _validate_input
+from ._validation import _validate_input_deterministic
 from ..common import _compute_profits
 
 
@@ -174,7 +174,15 @@ def compute_profit_acquisition(
         direct_selling: float = 1,
         commission: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray]:
-    y_true, y_pred = _validate_input(y_true, y_pred, contact_cost, sales_cost, direct_selling, commission)
+    y_true, y_pred = _validate_input_deterministic(
+        y_true,
+        y_pred,
+        contribution,
+        contact_cost,
+        sales_cost,
+        direct_selling,
+        commission
+    )
     cost_benefits = _compute_cost_benefits(contribution, contact_cost, sales_cost, direct_selling, commission)
     return _compute_profits(y_true, y_pred, cost_benefits)
 
