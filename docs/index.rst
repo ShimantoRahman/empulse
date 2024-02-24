@@ -19,6 +19,7 @@ Installation Guide
 
     reference/metrics
     reference/models
+    reference/optimizers
 
 .. toctree::
     :maxdepth: 1
