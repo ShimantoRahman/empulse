@@ -1,7 +1,8 @@
 import inspect
+import warnings
 from functools import partial
 from itertools import islice
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,9 +11,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y, check_array
 
 from ..metrics import empc_score
-from .optimizers import RGA
-
-LossFn = Callable[[np.ndarray, np.ndarray], float]
+from .optimizers import Generation
 
 
 class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
@@ -59,6 +58,9 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
         ``-1`` means using all processors.
 
+    optimizer_params : dict[str, Any], default=None
+        Additional keyword arguments passed to `optimize_fn`.
+
     **kwargs
         Additional keyword arguments passed to `optimize_fn`.
 
@@ -88,11 +90,12 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             fit_intercept: bool = True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
-            loss_fn: LossFn = empc_score,
-            optimize_fn: Optional[Callable[[LossFn, tuple[float, float], ...], OptimizeResult]] = None,
+            loss_fn: Callable = empc_score,
+            optimize_fn: Optional[Callable] = None,
             default_bounds: tuple[float, float] = (-3, 3),
             n_jobs: Optional[int] = None,
-            **kwargs
+            optimizer_params: Optional[dict[str, Any]] = None,
+            **kwargs,
     ):
         super().__init__()
         self.C = C
@@ -106,12 +109,17 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
 
         self.n_dim = None
         self.result = None
-        self.optimize_kwargs = kwargs
+        # necessary to have optimizer_params because sklearn.clone does not clone **kwargs
+        if optimizer_params is None:
+            optimizer_params = {}
+        if kwargs:
+            optimizer_params.update(kwargs)
+        self.optimizer_params = optimizer_params
         if optimize_fn is None:
             optimize_fn = _optimize
         self.optimize_fn = optimize_fn
 
-    def fit(self, X: ArrayLike, y: ArrayLike) -> 'ProfLogitClassifier':
+    def fit(self, X: ArrayLike, y: ArrayLike, **loss_params) -> 'ProfLogitClassifier':
         """
         Fit ProfLogit model.
 
@@ -134,7 +142,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
         self.n_dim = X.shape[1]
 
-        optimize_fn = partial(self.optimize_fn, **self.optimize_kwargs)
+        optimize_fn = partial(self.optimize_fn, **self.optimizer_params)
         if 'bounds' not in optimize_fn.keywords:
             optimize_fn = partial(optimize_fn, bounds=[self.default_bounds] * self.n_dim)
         elif len(optimize_fn.keywords['bounds']) != self.n_dim:
@@ -146,7 +154,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         objective = partial(
             _objective,
             X=X,
-            loss_fn=partial(self.loss_fn, y_true=y),
+            loss_fn=partial(self.loss_fn, y_true=y, **loss_params),
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
@@ -177,7 +185,9 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         assert X.shape[1] == self.n_dim
         theta = self.result.x
         logits = np.dot(X, theta)
-        y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
+        with warnings.catch_warnings():  # TODO: look into this
+            warnings.simplefilter("ignore")
+            y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
 
         # create 2D array with complementary probabilities
         y_pred = np.vstack((1 - y_pred, y_pred)).T
@@ -255,7 +265,7 @@ def _call_loss_fn(loss_fn, y_pred):
 
 
 def _optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
-    rga = RGA(**kwargs)
+    rga = Generation(**kwargs)
     previous_score = np.inf
     iter_stagnant = 0
 
