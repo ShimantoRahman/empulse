@@ -172,6 +172,6 @@ def mp(
               (tn_benefit + fp_cost) * pi1 * f1 + \
               tn_benefit * pi1 - fn_cost * pi0
     best_index = np.argmax(profits)
-    maximum_profit = profits[best_index]
-    customer_threshold = f0[best_index] * pi0 + f1[best_index] * pi1
+    maximum_profit = float(profits[best_index])
+    customer_threshold = float(f0[best_index] * pi0 + f1[best_index] * pi1)
     return maximum_profit, customer_threshold
