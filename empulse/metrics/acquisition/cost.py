@@ -156,8 +156,6 @@ def mpa_cost_score(
         direct_selling,
         commission
     )
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
 
     costs = y_true * y_pred * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
             contact_cost - (1 - commission) * contribution
