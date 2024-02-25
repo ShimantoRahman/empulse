@@ -99,7 +99,7 @@ def _objective(
             contact_cost - (1 - commission) * contribution
     )) + (1 - y_true) * contact_cost
     gradient = y_pred * (1 - y_pred) * cost
-    hessian = abs((1 - 2 * y_pred) * gradient)
+    hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
 
 

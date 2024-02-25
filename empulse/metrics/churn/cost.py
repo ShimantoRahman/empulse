@@ -106,7 +106,7 @@ def _objective(
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     )
     gradient = y_pred * (1 - y_pred) * profits
-    hessian = abs((1 - 2 * y_pred) * gradient)
+    hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
 
 
