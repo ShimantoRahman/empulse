@@ -5,7 +5,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy import stats as st
 
-from ._validation import _validate_input_emp
+from ._validation import _validate_input_emp, _validate_input_empb
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs, _range
 from .._convex_hull import _compute_convex_hull
 
@@ -387,9 +387,7 @@ def empb(
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
-    clv = np.asarray(clv)
+    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_cost_fraction, contact_cost)
     step_size = 1 / n_buckets
 
     gammas = np.arange(0, 1, step_size)
