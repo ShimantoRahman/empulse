@@ -2,7 +2,7 @@ import random
 from typing import Generator
 
 from empulse.metrics import empc, mpc
-from .test_metrics import BaseTestMetric, Metric, BaseTestRelationMetrics
+from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 
 class TestEMPC(BaseTestMetric.TestMetric):
@@ -38,7 +38,7 @@ class TestEMPC(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Metric:
+    def metric(self):
         return empc
 
     def test_bad_parameters(self):
@@ -87,7 +87,7 @@ class TestMPC(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Metric:
+    def metric(self):
         return mpc
 
     def test_bad_parameters(self):
@@ -108,11 +108,11 @@ class TestMPC(BaseTestMetric.TestMetric):
 class TestRelationChurnMetrics(BaseTestRelationMetrics.TestRelationshipMetrics):
 
     @property
-    def stochastic_metric(self) -> Metric:
+    def stochastic_metric(self):
         return empc
 
     @property
-    def deterministic_metric(self) -> Metric:
+    def deterministic_metric(self):
         return mpc
 
     def generate_parameters(self) -> Generator[dict, None, None]:

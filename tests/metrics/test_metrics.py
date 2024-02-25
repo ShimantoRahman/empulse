@@ -1,15 +1,9 @@
 import unittest
 import random
 from itertools import islice
-from typing import Generator, Any, Protocol
+from typing import Generator
 
 import numpy as np
-from numpy.typing import ArrayLike
-
-
-class Metric(Protocol):
-    def __call__(self, y_true: ArrayLike, y_pred: ArrayLike, **kwargs: Any) -> tuple[float, float]:
-        ...
 
 
 # wrap with empty class to avoid unittest discovery
@@ -20,7 +14,7 @@ class BaseTestMetric:
         expected_values = {}
 
         @property
-        def metric(self) -> Metric:
+        def metric(self):
             return ...
 
         def assertAlmostEqualMetric(self, generated: tuple[float, float], expected: tuple[float, float]):
@@ -115,11 +109,11 @@ class BaseTestRelationMetrics:
     class TestRelationshipMetrics(unittest.TestCase):
 
         @property
-        def stochastic_metric(self) -> Metric:
+        def stochastic_metric(self):
             return ...
 
         @property
-        def deterministic_metric(self) -> Metric:
+        def deterministic_metric(self):
             return ...
 
         def generate_data(self) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:

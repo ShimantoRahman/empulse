@@ -1,6 +1,4 @@
-from typing import Callable
-
-from .test_metrics import BaseTestMetric, Metric
+from .test_metrics import BaseTestMetric
 
 from empulse.metrics import empcs, mpcs
 
@@ -31,7 +29,7 @@ class TestEMPCS(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Callable:
+    def metric(self):
         return empcs
 
     def test_bad_parameters(self):
@@ -71,7 +69,7 @@ class TestMPCS(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Metric:
+    def metric(self):
         return mpcs
 
     def test_bad_parameters(self):

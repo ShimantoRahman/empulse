@@ -1,7 +1,7 @@
 import random
-from typing import Callable, Generator
+from typing import Generator
 
-from .test_metrics import BaseTestMetric, BaseTestRelationMetrics, Metric
+from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 from empulse.metrics import empa, mpa
 
@@ -44,7 +44,7 @@ class TestEMPA(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Callable:
+    def metric(self):
         return empa
 
     def test_bad_parameters(self):
@@ -102,7 +102,7 @@ class TestMPA(BaseTestMetric.TestMetric):
     }
 
     @property
-    def metric(self) -> Metric:
+    def metric(self):
         return mpa
 
     def test_bad_parameters(self):
@@ -125,11 +125,11 @@ class TestMPA(BaseTestMetric.TestMetric):
 class TestRelationAcquisitionMetrics(BaseTestRelationMetrics.TestRelationshipMetrics):
 
     @property
-    def stochastic_metric(self) -> Metric:
+    def stochastic_metric(self):
         return empa
 
     @property
-    def deterministic_metric(self) -> Metric:
+    def deterministic_metric(self):
         return mpa
 
     def generate_parameters(self) -> Generator[dict, None, None]:
