@@ -5,6 +5,8 @@ import numpy as np
 import xgboost as xgb
 from numpy.typing import ArrayLike
 
+from empulse.metrics.churn._validation import _validate_input_mp
+
 
 def make_objective_churn(
         accept_rate: float = 0.3,
@@ -165,8 +167,7 @@ def mpc_cost_score(
         Annals of Operations Research, 1-27.
 
     """
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, accept_rate, clv, incentive_cost, contact_cost)
 
     profits = y_pred * (contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate

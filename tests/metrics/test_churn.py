@@ -1,12 +1,11 @@
 import random
 from typing import Generator
 
-from empulse.metrics import empc, mpc
+from empulse.metrics import empc, mpc, mpc_cost_score
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 
 class TestEMPC(BaseTestMetric.TestMetric):
-
     parameters = [
         {},  # default
         {"alpha": 2},
@@ -57,7 +56,6 @@ class TestEMPC(BaseTestMetric.TestMetric):
 
 
 class TestMPC(BaseTestMetric.TestMetric):
-
     parameters = [
         {},  # default
         {"accept_rate": 0.2},
@@ -82,7 +80,6 @@ class TestMPC(BaseTestMetric.TestMetric):
             (1.9095022624434383, 0.12669683257918551),
             (8.316742081447961, 0.4434389140271493),
             (46.380090497737555, 0.4434389140271493),
-            (23.8505727106226, 0.4360480478313282),
         ],
     }
 
@@ -138,3 +135,78 @@ class TestRelationChurnMetrics(BaseTestRelationMetrics.TestRelationshipMetrics):
         del deterministic_params["alpha"]
         del deterministic_params["beta"]
         return deterministic_params
+
+
+class TestMPCScore(BaseTestMetric.TestMetric):
+    parameters = [
+        {},  # default
+        {"accept_rate": 0.2},
+        {"clv": 50},
+        {"incentive_cost": 100},
+        {"contact_cost": 15},
+        {
+            "accept_rate": 0.9,
+            "clv": 300,
+            "incentive_cost": 50,
+            "contact_cost": 25,
+        },
+    ]
+    expected_values = {
+        "perfect_prediction": -28.0,
+        "incorrect_prediction": 5.5,
+        "different_parameters": [
+            -10.080448865102996,
+            -6.089389456506361,
+            -0.6279397394793896,
+            9.35838608395974,
+            -4.998083663446319,
+            -30.53837710803111,
+        ],
+    }
+
+    def assertAlmostEqualMetric(self, generated: float, expected: float):
+        self.assertAlmostEqual(generated, expected)
+
+    @property
+    def metric(self):
+        return mpc_cost_score
+
+    def test_half_correct_prediction(self):
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [1, 1] * 10),
+            -22.5
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [1, 1] * 10),
+            -22.5
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [0, 0] * 10),
+            0.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [0, 0] * 10),
+            0.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [0.5, 0.5] * 10),
+            -11.25
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [0.5, 0.5] * 10),
+            -11.25
+        )
+
+    def test_bad_parameters(self):
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], accept_rate=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], accept_rate=2)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], clv=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], clv=1)  # clv < incentive_cost
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], incentive_cost=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], contact_cost=-1)
