@@ -1,12 +1,12 @@
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.utils import column_or_1d
-from ._validation import _check_shape, _check_binary, _check_fraction, _check_variance
+from ._validation import _check_shape, _check_binary, _check_fraction, _check_variance, _check_y_true, _check_y_pred
 
 
 def _validate_input(y_true: ArrayLike, y_pred: ArrayLike, fraction: float) -> tuple[np.ndarray, np.ndarray]:
-    y_true = column_or_1d(np.asarray(y_true))
-    y_pred = column_or_1d(np.asarray(y_pred))
+    y_true = _check_y_true(y_true)
+    y_pred = _check_y_pred(y_pred)
+    _check_shape(y_true, y_pred)
     _check_binary(y_true)
     _check_variance(y_true)
     _check_shape(y_true, y_pred)

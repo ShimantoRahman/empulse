@@ -23,34 +23,55 @@ class BaseTestMetric:
             self.assertAlmostEqual(generated[1], expected[1])
 
         def test_perfect_prediction(self):
-            self.assertAlmostEqualMetric(self.metric([0, 1], [0, 1]), self.expected_values["perfect_prediction"])
-            self.assertAlmostEqualMetric(self.metric([1, 0], [1, 0]), self.expected_values["perfect_prediction"])
+            self.assertAlmostEqualMetric(
+                self.metric([0, 1] * 10, [0, 1] * 10),
+                self.expected_values["perfect_prediction"]
+            )
+            self.assertAlmostEqualMetric(
+                self.metric([1, 0] * 10, [1, 0] * 10),
+                self.expected_values["perfect_prediction"]
+            )
 
         def test_incorrect_prediction(self):
-            self.assertAlmostEqualMetric(self.metric([0, 1], [1, 0]), self.expected_values["incorrect_prediction"])
+            self.assertAlmostEqualMetric(
+                self.metric([0, 1] * 10, [1, 0] * 10),
+                self.expected_values["incorrect_prediction"]
+            )
 
         def test_half_correct_prediction(self):
-            self.assertAlmostEqualMetric(self.metric([0, 1], [1, 1]), self.expected_values["half_correct_prediction"])
-            self.assertAlmostEqualMetric(self.metric([1, 0], [1, 1]), self.expected_values["half_correct_prediction"])
-            self.assertAlmostEqualMetric(self.metric([0, 1], [0, 0]), self.expected_values["half_correct_prediction"])
-            self.assertAlmostEqualMetric(self.metric([1, 0], [0, 0]), self.expected_values["half_correct_prediction"])
             self.assertAlmostEqualMetric(
-                self.metric([0, 1], [0.5, 0.5]),
+                self.metric([0, 1] * 10, [1, 1] * 10),
                 self.expected_values["half_correct_prediction"]
             )
             self.assertAlmostEqualMetric(
-                self.metric([1, 0], [0.5, 0.5]),
+                self.metric([1, 0] * 10, [1, 1] * 10),
+                self.expected_values["half_correct_prediction"]
+            )
+            self.assertAlmostEqualMetric(
+                self.metric([0, 1] * 10, [0, 0] * 10),
+                self.expected_values["half_correct_prediction"]
+            )
+            self.assertAlmostEqualMetric(
+                self.metric([1, 0] * 10, [0, 0] * 10),
+                self.expected_values["half_correct_prediction"]
+            )
+            self.assertAlmostEqualMetric(
+                self.metric([0, 1] * 10, [0.5, 0.5] * 10),
+                self.expected_values["half_correct_prediction"]
+            )
+            self.assertAlmostEqualMetric(
+                self.metric([1, 0] * 10, [0.5, 0.5] * 10),
                 self.expected_values["half_correct_prediction"]
             )
 
         def test_arraylikes(self):
             import pandas as pd
             self.assertAlmostEqualMetric(
-                self.metric((0, 1), (0, 1)),
+                self.metric((0, 1) * 10, (0, 1) * 10),
                 self.expected_values["perfect_prediction"]
             )
             self.assertAlmostEqualMetric(
-                self.metric(pd.Series([0, 1]), pd.Series([0, 1])),
+                self.metric(pd.Series([0, 1] * 10), pd.Series([0, 1] * 10)),
                 self.expected_values["perfect_prediction"]
             )
 
