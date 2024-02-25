@@ -154,11 +154,11 @@ def mp(
     >>> d = 10
     >>> f = 1
     >>> gamma = 0.3
-    >>> tp_benefit = clv * (gamma * (1 - (d / clv) - (f / clv)))
+    >>> tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
     >>> fp_cost = d + f
     >>>
     >>> mp(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
-    (24.708, 0.5800000000000001)
+    (23.875, 0.875)
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
