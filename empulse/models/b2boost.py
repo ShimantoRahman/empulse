@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Union, Optional, overload
+from typing import Any, Union, Optional
 
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -89,7 +89,6 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
-    @overload
     def set_params(self, **params):
         """Set the parameters of this estimator.
 
