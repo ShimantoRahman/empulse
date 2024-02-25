@@ -5,6 +5,8 @@ import numpy as np
 import xgboost as xgb
 from numpy.typing import ArrayLike
 
+from empulse.metrics.acquisition._validation import _validate_input_deterministic
+
 
 def make_objective_acquisition(
         contribution: float = 7_000,
@@ -145,6 +147,15 @@ def mpa_cost_score(
 
 
     """
+    y_true, y_pred = _validate_input_deterministic(
+        y_true,
+        y_pred,
+        contribution,
+        contact_cost,
+        sales_cost,
+        direct_selling,
+        commission
+    )
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 

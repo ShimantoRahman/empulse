@@ -3,7 +3,7 @@ from typing import Generator
 
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
-from empulse.metrics import empa, mpa
+from empulse.metrics import empa, mpa, mpa_cost_score
 
 
 class TestEMPA(BaseTestMetric.TestMetric):
@@ -151,3 +151,87 @@ class TestRelationAcquisitionMetrics(BaseTestRelationMetrics.TestRelationshipMet
         del deterministic_params["alpha"]
         del deterministic_params["beta"]
         return deterministic_params
+
+
+class TestMPAScore(BaseTestMetric.TestMetric):
+
+    parameters = [
+        {},  # default
+        {"contribution": 2_000},
+        {"contact_cost": 100},
+        {"sales_cost": 1000},
+        {"direct_selling": 0.5},
+        {
+            "direct_selling": 0.0,
+            "commission": 0.5
+        },
+        {
+            "contribution": 12_000,
+            "contact_cost": 80,
+            "sales_cost": 400,
+            "direct_selling": 0.3,
+            "commission": 0.2,
+        },
+    ]
+    expected_values = {
+        "perfect_prediction": -3225.0,
+        "incorrect_prediction": 25.0,
+        "different_parameters": [
+            -1347.2111249651123,
+            -296.93233322915586,
+            -1329.0598206734812,
+            -1242.1832457915164,
+            -1326.2055491303931,
+            -717.0438499235383,
+            -2113.5266482747415,
+        ],
+    }
+
+    def assertAlmostEqualMetric(self, generated: float, expected: float):
+        self.assertAlmostEqual(generated, expected)
+
+    @property
+    def metric(self):
+        return mpa_cost_score
+
+    def test_half_correct_prediction(self):
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [1, 1] * 10),
+            -3200.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [1, 1] * 10),
+            -3200.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [0, 0] * 10),
+            0.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [0, 0] * 10),
+            0.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([0, 1] * 10, [0.5, 0.5] * 10),
+            -1600.0
+        )
+        self.assertAlmostEqualMetric(
+            self.metric([1, 0] * 10, [0.5, 0.5] * 10),
+            -1600.0
+        )
+
+    def test_bad_parameters(self):
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], contribution=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], sales_cost=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], contact_cost=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], direct_selling=5)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], direct_selling=-1)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], commission=5)
+        with self.assertRaises(ValueError):
+            self.metric([0, 1], [0.25, 0.75], commission=-1)
