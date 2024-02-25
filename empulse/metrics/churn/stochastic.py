@@ -244,8 +244,8 @@ def empc(
 
 
 def _compute_gamma_bounds(
-        tpr_coef: np.ndarray,
-        fpr_coef: np.ndarray,
+        tpr_coef: float,
+        fpr_coef: float,
         delta: float,
         tpr_diff: np.ndarray,
         fpr_diff: np.ndarray,
