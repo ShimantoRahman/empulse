@@ -20,11 +20,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+
+==
+
+Empulse contains code that is licensed by third-party developers.
+
 ==
 SciPy
 
 
-Empulse contains the codes from SciPy project.
+The Empulse contains the codes from SciPy project.
 
 
 Copyright (c) 2001-2002 Enthought, Inc. 2003-2022, SciPy Developers.
