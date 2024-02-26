@@ -107,7 +107,6 @@ def mpa(
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for customer Acquisition (MPA)
-    =====================================================
 
     Parameters
     ----------

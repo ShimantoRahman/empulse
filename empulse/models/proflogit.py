@@ -16,8 +16,7 @@ from empulse.optimizers import Generation
 
 class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
     """
-    ProfLogit for Customer Churn Prediction
-    =======================================
+    Logistic classifier to optimize profit-driven loss functions.
 
     Maximizing empirical EMP for churn by optimizing
     the regression coefficients of the logistic model through

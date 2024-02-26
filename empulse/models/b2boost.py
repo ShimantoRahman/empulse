@@ -11,7 +11,9 @@ from ..metrics import make_objective_churn, mpc_cost_score
 
 class B2BoostClassifier(BaseEstimator, ClassifierMixin):
     """
-    `XGBoostClassifier` [1]_ wrapper with instance-specific cost function for customer churn [2]_.
+    `XGBoostClassifier` wrapper with instance-specific cost function for customer churn
+
+    For details about the parameters, see `XGBClassifier` [1]_.
 
     Parameters
     ----------
@@ -43,6 +45,8 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
 
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
+
+    Originally, the B2Boost model was introduced in [2]_ as a profit-driven model for customer churn.
 
     .. seealso::
         :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function

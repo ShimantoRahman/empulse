@@ -1,11 +1,13 @@
-======
+.. module:: empulse.models
+
 Models
 ======
 
-.. currentmodule:: empulse.models
+The :mod:`~empulse.models` module contains a collection of profit-driven models.
 
-.. automodule:: empulse.models
-    :members: B2BoostClassifier, ProfLogitClassifier
-    :exclude-members: set_fit_request, set_predict_proba_request, set_predict_request, set_score_request
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
 
-
+   B2BoostClassifier
+   ProfLogitClassifier

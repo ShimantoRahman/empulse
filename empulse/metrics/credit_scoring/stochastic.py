@@ -104,7 +104,6 @@ def empcs(
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for Credit Scoring
-    ==================================================
 
     Parameters
     ----------

@@ -163,8 +163,6 @@ def emp(
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure (EMP)
-    =====================================
-    Compute the expected maximum profit (EMP) and the expected threshold at which the maximum profit is achieved.
 
     Parameters
     ----------

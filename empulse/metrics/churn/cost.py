@@ -15,7 +15,7 @@ def make_objective_churn(
         contact_cost: float = 1,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
-    Create a custom objective function for `XGBoostClassifier` [1]_ to maximize the profit of a churn model.
+    Create an objective function for `XGBoostClassifier` for customer churn
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ def make_objective_churn(
     Returns
     -------
     objective : Callable
-        A custom objective function for XGBoost.
+        A custom objective function for XGBoost [1]_.
 
     Notes
     -----
@@ -120,6 +120,8 @@ def mpc_cost_score(
         contact_cost: float = 1,
 ) -> float:
     """
+    Profit-driven cost function for customer churn
+
     Parameters
     ----------
 

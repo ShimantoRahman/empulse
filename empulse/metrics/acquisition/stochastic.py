@@ -127,7 +127,6 @@ def empa(
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for customer Acquisition (EMPA)
-    ===============================================================
 
     Parameters
     ----------

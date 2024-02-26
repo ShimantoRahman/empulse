@@ -134,7 +134,6 @@ def empc(
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for Customer Churn (EMPC)
-    =========================================================
 
     Parameters
     ----------
@@ -173,7 +172,7 @@ def empc(
 
     Notes
     -----
-    The EMPC is defined as [1]_:  # TODO : fix formula
+    The EMPC is defined as [1]_:
 
     .. math:: \int_\gamma CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T) d\gamma
 

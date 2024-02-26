@@ -92,7 +92,6 @@ def mpcs(
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for Credit Scoring
-    =========================================
 
     Parameters
     ----------

@@ -69,7 +69,7 @@ def _objective(
         commission: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Objective function for XGBoost to maximize the profit of an acquisition model.
+    Create an objective function for `XGBoostClassifier` for customer acquisition
 
     Parameters
     ----------
@@ -114,6 +114,8 @@ def mpa_cost_score(
         commission: float = 0.1,
 ) -> float:
     """
+    Profit-driven cost function for customer acquisition
+
     Parameters
     ----------
 

@@ -118,7 +118,6 @@ def mpc(
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure for Customer Churn (MPC)
-    ===============================================
 
     Parameters
     ----------

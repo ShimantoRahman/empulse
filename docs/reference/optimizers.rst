@@ -1,8 +1,14 @@
-==========
+.. module:: empulse.optimizers
+
 Optimizers
 ==========
 
-.. currentmodule:: empulse.optimizers
+The :mod:`~empulse.optimizers` module contains the optimizers used to
+optimize models in the :mod:`empulse.models` module.
 
-.. automodule:: empulse.optimizers
-    :members: Optimizer, Generation
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+
+   Optimizer
+   Generation

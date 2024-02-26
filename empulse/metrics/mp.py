@@ -92,8 +92,6 @@ def mp(
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure (MP)
-    ===========================
-    Compute the maximum profit (MP) and the expected threshold at which the maximum profit is achieved.
 
     Parameters
     ----------
