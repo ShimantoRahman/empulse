@@ -1,5 +1,5 @@
-[![Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
-![](https://img.shields.io/github/license/shimantorahman/empulse)
+[![Python Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ShimantoRahman/empulse)
 ![](https://img.shields.io/pypi/pyversions/empulse)
 ![Tests](https://github.com/ShimantoRahman/empulse/actions/workflows/tests.yml/badge.svg)
 
