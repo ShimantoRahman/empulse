@@ -185,7 +185,6 @@ def mpc(
     >>> mpc(y_true, y_pred)
     (23.874999999999996, 0.875)
     """
-    # TODO: add support for individualized clv
     profits, customer_thresholds = compute_profit_churn(y_true, y_pred, clv, incentive_cost, contact_cost, accept_rate)
     max_profit_index = np.argmax(profits)
 
@@ -195,12 +194,14 @@ def mpc(
 def compute_profit_churn(
         y_true: ArrayLike,
         y_pred: ArrayLike,
-        clv: float = 200,
+        clv: Union[ArrayLike, float] = 200,
         d: float = 10,
         f: float = 1,
         gamma: float = 0.3
 ) -> tuple[np.ndarray, np.ndarray]:
     y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, gamma, clv, d, f)
+    if isinstance(clv, np.ndarray):
+        clv = np.mean(clv)
     cost_benefits = _compute_cost_benefits(gamma, clv, d, f)
     return _compute_profits(y_true, y_pred, cost_benefits)
 
