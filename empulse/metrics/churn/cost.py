@@ -100,9 +100,7 @@ def _objective(
         y_true = dtrain.get_label()
     else:
         raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
-    if isinstance(clv, ArrayLike):
-        clv = np.asarray(clv)
-    y_pred: np.ndarray = 1 / (1 + np.exp(-y_pred))
+    y_pred = 1 / (1 + np.exp(-y_pred))
 
     profits = contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
