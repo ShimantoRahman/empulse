@@ -1,49 +1,49 @@
 .. _proflogit:
 
 =====================
-Customizing Proflogit
+Customizing ProfLogit
 =====================
 
-By default Proflogit will uses the EMPC metric as its loss function and
-optimized by a real-coded genetic algorithm (RGA).
-The RGA goes for 1000 iterations, stopping early if the loss converges.
-However, Proflogit can be customized to have different stopping conditions, use other loss functions and
-optimization algorithms quite easily.
+ProfLogit, by default,
+utilizes the EMPC metric as its loss function and is optimized by a real-coded genetic algorithm (RGA).
+The RGA runs for 1000 iterations, but it can stop early if the loss converges.
+However, ProfLogit offers flexibility in terms of customization.
+You can modify the stopping conditions, use different loss functions, and even change the optimization algorithms.
+
 
 Custom Stopping Conditions
 --------------------------
+The number of iterations, relative tolerance level,
+or the number of iterations without improvement can be easily adjusted.
+You just need to pass the desired values to the :class:`~empulse.models.ProfLogitClassifier` initializer.
 
-To change the number of iterations, relative tolerance level or number of iterations without improvement,
-simply pass the desired values to the :class:`~empulse.models.ProflogitClassifier` initializer.
-:class:`~empulse.models.ProflogitClassifier` initializer.
+.. code-block:: python
+
+    from empulse.models import ProfLogitClassifier
+
+    proflogit = ProfLogitClassifier(max_iter=10000, tolerance=1e-3, patience=100)
+
+For more advanced customization of the stopping conditions,
+you can pass an optimize function to the :class:`~empulse.models.ProfLogitClassifier` initializer.
+For example, if you want to use the RGA for a set amount of time, you can do the following:
 
 .. code-block:: python
 
     from empulse.models import ProflogitClassifier
-
-    proflogit = ProflogitClassifier(max_iter=10000, tolerance=1e-3, patience=100)
-
-To customize the stopping conditions even further, you can pass a optimize function to the
-:class:`~empulse.models.ProflogitClassifier` initializer.
-
-For instance, if you want to use the RGA for a set number of time, you can do the following:
-
-.. code-block:: python
-
-    from empulse.models import ProflogitClassifier
+    from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
     from time import perf_counter
 
     def optimize(objective, bounds, max_time=5, **kwargs) -> OptimizeResult:
-                rga = RGA(**kwargs)
+                generation = Generation(**kwargs)
 
                 start = perf_counter()
-                for _ in rga.optimize(objective, bounds):
+                for _ in generation.optimize(objective, bounds):
                     if perf_counter() - start > max_time:
-                        rga.result.message = "Maximum time reached."
-                        rga.result.success = True
+                        generation.result.message = "Maximum time reached."
+                        generation.result.success = True
                         break
-                return rga.result
+                return generation.result
 
     proflogit = ProfLogitClassifier(optimize_fn=optimize, max_time=10)
 
@@ -51,38 +51,42 @@ Or you can stop the RGA after a set number of fitness evaluations:
 
 .. code-block:: python
 
-    from empulse.models import ProflogitClassifier
+    from empulse.models import ProfLogitClassifier
+    from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
 
     def optimize(objective, bounds, max_evals=10000, **kwargs) -> OptimizeResult:
-                rga = RGA(**kwargs)
+                generation = Generation(**kwargs)
 
                 for _ in rga.optimize(objective, bounds):
-                    if rga.result.nfev > max_evals:
-                        rga.result.message = "Maximum number of evaluations reached."
-                        rga.result.success = True
+                    if generation.result.nfev > max_evals:
+                        generation.result.message = "Maximum number of evaluations reached."
+                        generation.result.success = True
                         break
-                return rga.result
+                return generation.result
 
     proflogit = ProfLogitClassifier(optimize_fn=optimize, max_evals=10000)
 
 Custom Loss Functions
 ---------------------
-Any of the metrics defined in the :mod:`empulse.metrics` module can be used.
-To use a different metric, simply pass the metric function to the
-:class:`~empulse.models.ProflogitClassifier` initializer.
+
+ProfLogit allows the use of any metrics defined in the :mod:`empulse.metrics` module as the loss function.
+To use a different metric,
+simply pass the metric function to the :class:`~empulse.models.ProfLogitClassifier` initializer.
 
 .. code-block:: python
 
-    from empulse.models import ProflogitClassifier
+    from empulse.models import ProfLogitClassifier
     from empulse.metrics import empa_score
 
-    proflogit = Proflogit(loss_fn=empa_score)
+    proflogit = ProfLogitClassifier(loss_fn=empa_score)
 
 Custom Optimization Algorithms
 ------------------------------
-Other algorithms can be used to optimize the loss function if you can fit them in an optimize function.
-For instance if you want to use the L-BFGS-B algorithm from scipy.optimize, you can do the following:
+
+ProfLogit also supports the use of other optimization algorithms.
+If you can fit them in an optimize function, you can use them to optimize the loss function.
+For instance, if you want to use the L-BFGS-B algorithm from scipy.optimize, you can do the following:
 
 .. code-block:: python
 

@@ -1,17 +1,27 @@
-============================================
+.. _instance_based_cv:
+
 Cross-Validation with Instance Based Metrics
 ============================================
 
-Some of the value metrics (e.g., :func:`empulse.metrics.empb_score`)
-allow users to pass instance based weights for the metrics.
-This is usually no issue when just doing a simple train-val-test split.
-However, when using cross-validation, the weights per for fold change.
-As of scikit-learn 1.4.0, some cross-validation methods allow for
-`metadata routing <https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_metadata_routing.html>`_
-which enables passing instance based weights to scorers that are also split accordingly.
-To see which cross-validation methods support metadata routing, see
-`here <https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models>`_.
-This is an experimental feature and currently has to be enabled manually.
+Instance-based metrics in the empulse library,
+such as :func:`empulse.metrics.empb_score`,
+provide the flexibility to incorporate instance-based weights into the metrics.
+This feature is particularly useful when dealing with imbalanced datasets or
+when different instances have different importance.
+
+In a simple train-validation-test split scenario,
+using instance-based weights is straightforward.
+However, when performing cross-validation, the weights for each fold change, which requires special handling.
+
+As of scikit-learn 1.4.0,
+some cross-validation methods support
+`metadata routing <https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_metadata_routing.html>`_.
+This feature allows instance-based weights to be passed to scorers,
+and these weights are split accordingly for each fold.
+For a list of cross-validation methods that support metadata routing,
+refer to `this link <https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models>`_.
+Please note that metadata routing is an experimental feature and needs to be enabled manually.
+
 
 .. code-block:: python
 
@@ -19,8 +29,9 @@ This is an experimental feature and currently has to be enabled manually.
 
     set_config(enable_metadata_routing=True)
 
-After enabling metarouting for scikit-learn, the following example shows how to use
-instance based weights with cross-validation.
+The above code snippet enables metadata routing in scikit-learn.
+Once this is done, instance-based weights can be used with cross-validation.
+The following example demonstrates this.
 
 .. code-block:: python
 
@@ -57,3 +68,15 @@ instance based weights with cross-validation.
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     cross_val_score(estimator, X, y, cv=cv, scoring=scoring, params={"clv": clv})  # pass clv to cross_val_score
+
+In the above example, we first create a classification dataset using `make_classification`.
+We then split the dataset into training and testing sets. We define an estimator using `LogisticRegression`.
+
+Next, we define the parameters for the :func:`~empulse.metrics.empb_score` metric,
+including ``clv``, ``alpha``, ``beta``, ``incentive_cost_fraction``, and ``contact_cost``.
+We create a scorer using :py:func:`~sklearn:sklearn.metrics.make_scorer` and
+set ``clv=True`` to enable the passing of ``clv`` to the scorer.
+
+Finally, we perform cross-validation using :py:class:`~sklearn:sklearn.model_selection.StratifiedKFold` and
+compute the cross-validation score using :py:func:`~sklearn:sklearn.model_selection.cross_val_score`,
+passing ``clv`` as a parameter.

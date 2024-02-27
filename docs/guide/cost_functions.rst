@@ -1,9 +1,10 @@
-=======================================
+.. _cost_functions:
+
 Boosting Algorithms With Cost Functions
 =======================================
 
-Empulse provides a number of cost functions for use with XGBoost.
-The :mod:`empulse.models` module defines the :class:`empulse.models.B2BoostClassifier` as convenience,
+Empulse provides a number of cost functions for use with the :class:`xgboost:xgboost.XGBClassifier`.
+The :mod:`empulse.models` module defines the :class:`empulse.models.B2BoostClassifier` as a convenience,
 but you can use any of the cost functions.
 
 For example, to use the :func:`empulse.metrics.make_objective_acquisition` with xgboost, you can do the following:

@@ -81,7 +81,7 @@ gamma will need to be derived from the benefits and costs.
     \gamma &= \frac{b_0 + f}{(CLV - d)} \\
 
 To compute :math:`h(\gamma)`, we need to compute the PDF of :math:`\gamma`,
-which can be done through the :func:`scipy.stats.beta.pdf` function.
+which can be done through the :meth:`scipy.stats.beta.pdf` function.
 
 To compute :math:`\Delta \gamma`, we need to compute the step size of :math:`\gamma`.
 Assume two consecutive values of :math:`\gamma` are :math:`\gamma_0` and :math:`\gamma_1`.
