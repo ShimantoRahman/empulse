@@ -11,7 +11,7 @@ from ..metrics import make_objective_churn, mpc_cost_score
 
 class B2BoostClassifier(BaseEstimator, ClassifierMixin):
     """
-    :class:`xgboost:xgboost.XGBClassifier` wrapper with instance-specific cost function for customer churn
+    :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
 
     Parameters
     ----------
@@ -30,12 +30,10 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         Constant cost of contact (``contact_cost > 0``).
 
     params : dict[str, Any], default=None
-        Other parameters passed to `XGBClassifier` init.
-        For details about the parameters, see :class:`xgboost:xgboost.XGBClassifier`.
+        Other parameters passed to :class:`xgboost:xgboost.XGBClassifier` initializer.
 
     **kwargs
-        Other parameters passed to `XGBClassifier` init.
-        For details about the parameters, see :class:`xgboost:xgboost.XGBClassifier`.
+        Other parameters passed to :class:`xgboost:xgboost.XGBClassifier` initializer.
 
     Notes
     -----
@@ -94,7 +92,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         """Set the parameters of this estimator.
 
         The method works on simple estimators as well as on nested objects
-        (such as :class:`~sklearn.pipeline.Pipeline`). The latter have
+        (such as :class:`sklearn:sklearn.pipeline.Pipeline`). The latter have
         parameters of the form ``<component>__<parameter>`` so that it's
         possible to update each component of a nested object.
 

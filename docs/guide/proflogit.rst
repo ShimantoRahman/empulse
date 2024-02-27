@@ -1,3 +1,5 @@
+.. _proflogit:
+
 =====================
 Customizing Proflogit
 =====================
@@ -12,8 +14,8 @@ Custom Stopping Conditions
 --------------------------
 
 To change the number of iterations, relative tolerance level or number of iterations without improvement,
-simply pass the desired values to the :class:`proflogit.ProflogitClassifier` initializer.
-:class:`proflogit.ProflogitClassifier` initializer.
+simply pass the desired values to the :class:`~empulse.models.ProflogitClassifier` initializer.
+:class:`~empulse.models.ProflogitClassifier` initializer.
 
 .. code-block:: python
 
@@ -22,7 +24,7 @@ simply pass the desired values to the :class:`proflogit.ProflogitClassifier` ini
     proflogit = ProflogitClassifier(max_iter=10000, tolerance=1e-3, patience=100)
 
 To customize the stopping conditions even further, you can pass a optimize function to the
-:class:`proflogit.ProflogitClassifier` initializer.
+:class:`~empulse.models.ProflogitClassifier` initializer.
 
 For instance, if you want to use the RGA for a set number of time, you can do the following:
 
@@ -66,9 +68,9 @@ Or you can stop the RGA after a set number of fitness evaluations:
 
 Custom Loss Functions
 ---------------------
-Any of the metrics defined in the :mod:`proflogit.metrics` module can be used.
+Any of the metrics defined in the :mod:`empulse.metrics` module can be used.
 To use a different metric, simply pass the metric function to the
-:class:`proflogit.ProflogitClassifier` initializer.
+:class:`~empulse.models.ProflogitClassifier` initializer.
 
 .. code-block:: python
 

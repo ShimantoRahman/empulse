@@ -16,7 +16,7 @@ from empulse.optimizers import Generation
 
 class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
     """
-    Logistic classifier to optimize profit-driven loss functions.
+    Logistic classifier to optimize profit-driven loss functions
 
     Maximizing empirical EMP for churn by optimizing
     the regression coefficients of the logistic model through
@@ -40,13 +40,13 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         For ``l1_ratio = 1`` it is an L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss_fn : Callable, default=:func:`empulse.metrics.empc_score`
-        Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ```loss(y_true, y_pred)``.
+    loss_fn : Callable, default= :func:`empulse.metrics.empc_score`
+        Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ``loss(y_true, y_score)``.
         See :func:`empulse.metrics.empc_score` for an example.
 
     optimize_fn : Callable, default=None
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, bounds)``.
-        See :class:`empulse.models.optimizers.Optimizer` for more information.
+        See :ref:`proflogit` for more information.
 
     default_bounds : tuple, default=(-3, 3)
         Bounds for every regression parameter. Use the `bounds` parameter
@@ -63,12 +63,22 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
     **kwargs
         Additional keyword arguments passed to `optimize_fn`.
 
+        By default, the optimizer is a Real-coded Genetic Algorithm (RGA) with the following parameters:
+
+        - ``max_iter`` : int, default=1000
+            Maximum number of iterations.
+        - ``patience`` : int, default=250
+            Number of iterations with no improvement to wait before stopping the optimization.
+        - ``tolerance`` : float, default=1e-4
+            Relative tolerance to declare convergence.
+        - all other parameters are passed to the :class:`~empulse.optimizers.Generation` initializer.
+
     Attributes
     ----------
     n_dim : int
         Number of features.
 
-    result : :func:`scipy.optimize.OptimizeResult`
+    result : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
 
     Notes
