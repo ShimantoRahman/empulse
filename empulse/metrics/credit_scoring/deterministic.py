@@ -38,7 +38,7 @@ def mpcs_score(
     -----
     The MP measure for Credit Scoring is defined as [1]_:
 
-    .. math:: \max_t \lambda \pi_0 F_0(t) - ROI \pi_1 F_1(t)
+    .. math:: \\max_t \\lambda \\pi_0 F_0(t) - ROI \\pi_1 F_1(t)
 
     The MP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('default': 1, 'no default': 0).
@@ -119,7 +119,7 @@ def mpcs(
     -----
     The MP measure for Credit Scoring is defined as [1]_:
 
-    .. math:: \max_t \lambda \pi_0 F_0(t) - ROI \pi_1 F_1(t)
+    .. math:: \\max_t \\lambda \\pi_0 F_0(t) - ROI \\pi_1 F_1(t)
 
     The MP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('default': 1, 'no default': 0).

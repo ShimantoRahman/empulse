@@ -58,11 +58,11 @@ def empa_score(
 
     Notes
     -----
-    The EMPA is defined as [1]_:
+    The EMPA is defined as:
 
     .. math::
 
-        \int_{R} [[ \\rho(R-c-S)+(1-\\rho)(\\gamma R - c)] \\pi_0 F_0(t) - c \\pi_1 F_1(t)] \cdot g(CLV) \, dCLV
+        \\int_{R} [[ \\rho(R-c-S)+(1-\\rho)(\\gamma R - c)] \\pi_0 F_0(t) - c \\pi_1 F_1(t)] \\cdot g(CLV) \\, dCLV
 
     The EMPA requires that the acquisition class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('acquisition': 1, 'no acquisition': 0).
@@ -170,7 +170,7 @@ def empa(
 
     .. math::
 
-        \int_{R} [[ \\rho(R-c-S)+(1-\\rho)(\\gamma R - c)] \\pi_0 F_0(t) - c \\pi_1 F_1(t)] \cdot g(CLV) \, dCLV
+        \\int_{R} [[ \\rho(R-c-S)+(1-\\rho)(\\gamma R - c)] \\pi_0 F_0(t) - c \\pi_1 F_1(t)] \\cdot g(CLV) \\, dCLV
 
     The EMPA requires that the acquisition class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('acquisition': 1, 'no acquisition': 0).

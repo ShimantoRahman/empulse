@@ -51,7 +51,7 @@ def mpc_score(
     -----
     The MPC is defined as [1]_:
 
-    .. math::  CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T)
+    .. math::  CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - CLV (\\delta + \\phi) \\pi_1 F_1(T)
 
     The MPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [2]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
@@ -153,7 +153,7 @@ def mpc(
     -----
     The MPC is defined as [1]_:
 
-    .. math::  CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T)
+    .. math::  CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - CLV (\\delta + \\phi) \\pi_1 F_1(T)
 
     The MPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [3]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).

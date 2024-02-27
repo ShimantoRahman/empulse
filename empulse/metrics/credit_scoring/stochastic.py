@@ -45,7 +45,7 @@ def empcs_score(
     -----
     The EMP measure for Credit Scoring is defined as [1]_:
 
-    .. math:: \int_0^1 \lambda \pi_0 F_0(T) - ROI \pi_1 F_1(T) \cdot h(\lambda) d\lambda
+    .. math:: \\int_0^1 \\lambda \\pi_0 F_0(T) - ROI \\pi_1 F_1(T) \\cdot h(\\lambda) d\\lambda
 
     The EMP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('default': 1, 'no default': 0).
@@ -134,7 +134,7 @@ def empcs(
     -----
     The EMP measure for Credit Scoring is defined as [1]_:
 
-    .. math:: \int_0^1 \lambda \pi_0 F_0(T) - ROI \pi_1 F_1(T) \cdot h(\lambda) d\lambda
+    .. math:: \\int_0^1 \\lambda \\pi_0 F_0(T) - ROI \\pi_1 F_1(T) \\cdot h(\\lambda) d\\lambda
 
     The EMP measure for Credit Scoring requires that the default class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('default': 1, 'no default': 0).
