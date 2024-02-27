@@ -7,6 +7,8 @@ __all__ = [
     empc_score,
     mpc,
     mpc_score,
+    empb,
+    empb_score,
     compute_profit_churn,
     make_objective_churn,
     mpc_cost_score
