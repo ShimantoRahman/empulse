@@ -19,8 +19,8 @@ General Metrics
    mp_score
    lift_score
 
-Acquisition Metrics
--------------------
+Customer Acquisition Metrics
+----------------------------
 
 .. autosummary::
    :toctree: generated/

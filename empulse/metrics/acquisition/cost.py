@@ -16,7 +16,7 @@ def make_objective_acquisition(
         commission: float = 0.1,
 ) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
     """
-    Create a custom objective function for XGBoost to maximize the profit of an acquisition model.
+    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition
 
     Parameters
     ----------

@@ -15,7 +15,7 @@ def make_objective_churn(
         contact_cost: float = 1,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
-    Create an objective function for `XGBoostClassifier` for customer churn
+    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn
 
     Parameters
     ----------

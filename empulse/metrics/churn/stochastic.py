@@ -340,7 +340,7 @@ def empb(
         n_buckets: int = 250
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit Measure for B2B Customer Churn (EMPB) [1]_
+    Expected Maximum Profit Measure for B2B Customer Churn (EMPB)
 
     Parameters
     ----------
@@ -379,6 +379,11 @@ def empb(
 
     threshold : float
         Threshold at which the expected maximum profit is achieved
+
+
+    Notes
+    -----
+    Based on the following paper [1]_.
 
     References
     ----------

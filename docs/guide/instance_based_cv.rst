@@ -43,8 +43,8 @@ The following example demonstrates this.
 
     from empulse.metrics import empb_score
 
-    X, y = make_classification(n_samples=100, n_features=10, n_informative=2, n_redundant=0, random_state=42)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, stratify=y, random_state=42)
+    X, y = make_classification()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, stratify=y)
 
     estimator = LogisticRegression()
 
@@ -69,8 +69,10 @@ The following example demonstrates this.
 
     cross_val_score(estimator, X, y, cv=cv, scoring=scoring, params={"clv": clv})  # pass clv to cross_val_score
 
-In the above example, we first create a classification dataset using `make_classification`.
-We then split the dataset into training and testing sets. We define an estimator using `LogisticRegression`.
+In the above example, we first create a classification dataset using
+:py:func:`~sklearn:sklearn.datasets.make_classification`.
+We then split the dataset into training and testing sets.
+We define an estimator using :py:class:`~sklearn:sklearn.linear_model.LogisticRegression`.
 
 Next, we define the parameters for the :func:`~empulse.metrics.empb_score` metric,
 including ``clv``, ``alpha``, ``beta``, ``incentive_cost_fraction``, and ``contact_cost``.
