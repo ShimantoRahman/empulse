@@ -60,16 +60,16 @@ def mpc_score(
 
     References
     ----------
-    .. [1]_ Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+    .. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
         A Novel Profit Maximizing Metric for Measuring Classification
         Performance of Customer Churn Prediction Models. IEEE Transactions on
         Knowledge and Data Engineering, 25(5), 961-973. Available Online:
         http://ieeexplore.ieee.org/iel5/69/6486492/06165289.pdf?arnumber=6165289
-    .. [2]_ Bravo, C. and Vanden Broucke, S. and Verbraken, T. (2019).
+    .. [2] Bravo, C. and Vanden Broucke, S. and Verbraken, T. (2019).
         EMP: Expected Maximum Profit Classification Performance Measure.
         R package version 2.0.5. Available Online:
         http://cran.r-project.org/web/packages/EMP/index.html
-    .. [3]_ Verbraken, T. (2013). Business-Oriented Data Analytics:
+    .. [3] Verbraken, T. (2013). Business-Oriented Data Analytics:
         Theory and Case Studies. Ph.D. dissertation, Dept. LIRIS, KU Leuven,
         Leuven, Belgium, 2013.
 
