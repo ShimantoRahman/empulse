@@ -11,9 +11,7 @@ from ..metrics import make_objective_churn, mpc_cost_score
 
 class B2BoostClassifier(BaseEstimator, ClassifierMixin):
     """
-    `XGBoostClassifier` wrapper with instance-specific cost function for customer churn
-
-    For details about the parameters, see `XGBClassifier` [1]_.
+    :class:`xgboost:xgboost.XGBClassifier` wrapper with instance-specific cost function for customer churn
 
     Parameters
     ----------
@@ -33,20 +31,20 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
 
     params : dict[str, Any], default=None
         Other parameters passed to `XGBClassifier` init.
+        For details about the parameters, see :class:`xgboost:xgboost.XGBClassifier`.
 
     **kwargs
         Other parameters passed to `XGBClassifier` init.
+        For details about the parameters, see :class:`xgboost:xgboost.XGBClassifier`.
 
     Notes
     -----
-    The instance-specific cost function for customer churn is defined as [2]_:
+    The instance-specific cost function for customer churn is defined as [1]_:
 
     .. math:: C(s_i) = y_i[s_i(f-\\gamma (1-\\delta )CLV_i] + (1-y_i)[s_i(\\delta CLV_i + f)]
 
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
-
-    Originally, the B2Boost model was introduced in [2]_ as a profit-driven model for customer churn.
 
     .. seealso::
         :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function
@@ -54,8 +52,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
 
     References
     ----------
-    .. [1] https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.XGBClassifier
-    .. [2] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
