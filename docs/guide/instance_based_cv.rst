@@ -52,7 +52,7 @@ The following example demonstrates this.
     clv = np.random.rand(100) * 200
     alpha = 6
     beta = 14
-    incentive_cost_fraction = 0.05
+    incentive_fraction = 0.05
     contact_cost = 15
 
     scoring = make_scorer(
@@ -61,7 +61,7 @@ The following example demonstrates this.
         response_method='predict_proba',
         alpha=alpha,  # pass fixed EMPB parameters to scorer
         beta=beta,
-        incentive_cost_fraction=incentive_cost_fraction,
+        incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
     ).set_score_request(clv=True)  # enable passing of clv to scorer
 
@@ -75,7 +75,7 @@ We then split the dataset into training and testing sets.
 We define an estimator using :py:class:`~sklearn:sklearn.linear_model.LogisticRegression`.
 
 Next, we define the parameters for the :func:`~empulse.metrics.empb_score` metric,
-including ``clv``, ``alpha``, ``beta``, ``incentive_cost_fraction``, and ``contact_cost``.
+including ``clv``, ``alpha``, ``beta``, ``incentive_fraction``, and ``contact_cost``.
 We create a scorer using :py:func:`~sklearn:sklearn.metrics.make_scorer` and
 set ``clv=True`` to enable the passing of ``clv`` to the scorer.
 

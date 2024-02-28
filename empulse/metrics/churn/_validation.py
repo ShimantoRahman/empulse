@@ -87,7 +87,7 @@ def _validate_input_empb(
         clv: ArrayLike,
         alpha: float,
         beta: float,
-        incentive_cost_fraction: float,
+        incentive_fraction: float,
         contact_cost: float
 ) -> tuple[np.ndarray, np.ndarray, Union[np.ndarray, float]]:
     y_true = _check_y_true(y_true)
@@ -96,7 +96,7 @@ def _validate_input_empb(
     clv = np.asarray(clv)
     _check_positive(alpha, 'alpha')
     _check_positive(beta, 'beta')
-    _check_fraction(incentive_cost_fraction, 'incentive_cost_fraction')
+    _check_fraction(incentive_fraction, 'incentive_fraction')
     _check_positive(contact_cost, 'contact_cost')
 
     return y_true, y_pred, clv

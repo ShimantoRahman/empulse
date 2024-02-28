@@ -218,12 +218,12 @@ class TestEMPB(BaseTestMetric.TestMetric):
         {},  # default
         {"alpha": 2},
         {"beta": 5},
-        {"incentive_cost_fraction": 0.9},
+        {"incentive_fraction": 0.9},
         {"contact_cost": 15},
         {
             "alpha": 10,
             "beta": 7,
-            "incentive_cost_fraction": 0.02,
+            "incentive_fraction": 0.02,
             "contact_cost": 25,
         },
     ]
@@ -355,8 +355,8 @@ class TestEMPB(BaseTestMetric.TestMetric):
         with self.assertRaises(ValueError):
             self.metric([0, 1], [0.25, 0.75], clv=[10, 20], beta=-1)
         with self.assertRaises(ValueError):
-            self.metric([0, 1], [0.25, 0.75], clv=[10, 20], incentive_cost_fraction=-1)
+            self.metric([0, 1], [0.25, 0.75], clv=[10, 20], incentive_fraction=-1)
         with self.assertRaises(ValueError):
-            self.metric([0, 1], [0.25, 0.75], clv=[10, 20], incentive_cost_fraction=2)
+            self.metric([0, 1], [0.25, 0.75], clv=[10, 20], incentive_fraction=2)
         with self.assertRaises(ValueError):
             self.metric([0, 1], [0.25, 0.75], clv=[10, 20], contact_cost=-1)
