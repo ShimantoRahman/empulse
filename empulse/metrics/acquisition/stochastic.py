@@ -21,7 +21,20 @@ def empa_score(
         commission: float = 0.1,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.empa()` only returning EMPA score
+    :func:`~empulse.metrics.empa()` but only returning the EMPA score
+
+    EMPA presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The contribution of a successful acquisition is modeled as a :math:`Gamma(\\alpha, \\beta)` distribution.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empa` : to also return the fraction of the leads
+        that should be targeted to maximize profit.
+
+        :func:`~empulse.metrics.mpa_score` : for a deterministic version of this metric.
 
     Parameters
     ----------
@@ -50,6 +63,9 @@ def empa_score(
 
     commission : float, default=0.1
         Fraction of contribution paid to the intermedaries (``0 ≤ commission ≤ 1``).
+
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
     Returns
     -------
@@ -128,6 +144,18 @@ def empa(
     """
     Expected Maximum Profit measure for customer Acquisition (EMPA)
 
+    EMPA presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The contribution of a successful acquisition is modeled as a :math:`Gamma(\\alpha, \\beta)` distribution.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empa_score` : to only return the EMPA score.
+
+        :func:`~empulse.metrics.mpa` : for a deterministic version of this metric.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -156,13 +184,16 @@ def empa(
     commission : float, default=0.1
         Fraction of contribution paid to the intermedaries (``0 ≤ commission ≤ 1``).
 
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
+
     Returns
     -------
     empa : float
         Expected Maximum Profit measure for customer Acquisition
 
     threshold : float
-        Threshold at which the expected maximum profit is achieved
+        Fraction of the leads that should be targeted to maximize profit
 
     Notes
     -----

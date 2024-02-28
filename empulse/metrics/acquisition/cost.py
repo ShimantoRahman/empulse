@@ -18,6 +18,12 @@ def make_objective_acquisition(
     """
     Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition
 
+    The objective function presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The company gains a contribution from a successful acquisition.
+
     Parameters
     ----------
     contribution : float, default=7000
@@ -37,10 +43,26 @@ def make_objective_acquisition(
     commission : float, default=0.1
         Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
 
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
+
     Returns
     -------
     objective : Callable
         A custom objective function for XGBoost.
+
+
+    Examples
+    --------
+    .. code-block::  python
+
+        import xgboost as xgb
+        from empulse.metrics import make_objective_acquisition
+
+        objective = make_objective_acquisition()
+        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
 
     References
     ----------
@@ -116,6 +138,12 @@ def mpa_cost_score(
     """
     Profit-driven cost function for customer acquisition
 
+    The cost function presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The company gains a contribution from a successful acquisition.
+
     Parameters
     ----------
 
@@ -141,6 +169,9 @@ def mpa_cost_score(
 
     commission : float, default=0.1
         Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
+
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
     Returns
     -------

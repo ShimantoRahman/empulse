@@ -17,7 +17,22 @@ def empcs_score(
         roi: float = 0.2644
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.empcs()` only returning EMPCS score
+    :func:`~empulse.metrics.empcs()` but only returning the EMPCS score
+
+    EMPCS presumes a situation where a company is considering whether to grant a loan to a customer.
+    Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
+    identifying non-defaulters as defaulters results in a loss of the loan amount.
+    The degree to which the loan is lost is determined by the probability that
+    the entire loan is lost (``default_rate``), probability that the entire loan is paid back (``success_rate``),
+    and a uniform distribution of partial loan losses (``1 - default_rate - success_rate``).
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empcs` : to also return the fraction of loan applications that
+        should be accepted to maximize profit.
+
+        :func:`~empulse.metrics.mpcs_score` : for a deterministic version of this metric.
 
     Parameters
     ----------
@@ -105,6 +120,20 @@ def empcs(
     """
     Expected Maximum Profit measure for Credit Scoring
 
+    EMPCS presumes a situation where a company is considering whether to grant a loan to a customer.
+    Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
+    identifying non-defaulters as defaulters results in a loss of the loan amount.
+    The degree to which the loan is lost is determined by the probability that
+    the entire loan is lost (``default_rate``), probability that the entire loan is paid back (``success_rate``),
+    and a uniform distribution of partial loan losses (``1 - default_rate - success_rate``).
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empcs_score` : to only return the EMPCS score.
+
+        :func:`~empulse.metrics.mpcs` : for a deterministic version of this metric.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -128,7 +157,7 @@ def empcs(
         Expected Maximum Profit measure for customer Credit Scoring
 
     threshold : float
-        Threshold at which the expected maximum profit is achieved
+        Fraction of loan applications that should be accepted to maximize profit
 
     Notes
     -----

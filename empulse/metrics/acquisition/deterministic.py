@@ -18,7 +18,20 @@ def mpa_score(
         commission: float = 0.1,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.mpa()` only returning MPA score
+    :func:`~empulse.metrics.mpa()` but only returning the MPA score
+
+    MPA presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The company gains a contribution from a successful acquisition.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpa` : to also return the fraction of the leads
+        that should be targeted to maximize profit.
+
+        :func:`~empulse.metrics.empa_score` : for a stochastic version of this metric.
 
     Parameters
     ----------
@@ -44,6 +57,9 @@ def mpa_score(
 
     commission : float, default=0.1
         Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
+
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
     Returns
     -------
@@ -108,6 +124,18 @@ def mpa(
     """
     Maximum Profit measure for customer Acquisition (MPA)
 
+    MPA presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The company gains a contribution from a successful acquisition.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpa_score` : to only return the EMPA score.
+
+        :func:`~empulse.metrics.empa` : for a stochastic version of this metric.
+
     Parameters
     ----------
     y_true : array-like of shape (n_samples,)
@@ -133,13 +161,16 @@ def mpa(
     commission : float, default=0.1
         Fraction of contribution paid to the intermediaries (``0 ≤ commission ≤ 1``).
 
+        .. note::
+            The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
+
     Returns
     -------
     mpa : float
         Maximum Profit measure for customer Acquisition
 
     threshold : float
-        Threshold at which the maximum profit is achieved
+        Fraction of the leads that should be targeted to maximize profit
 
     Examples
     --------

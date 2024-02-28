@@ -17,6 +17,14 @@ def make_objective_churn(
     """
     Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn
 
+    The objective function presumes a situation where identified churners are
+    contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+        :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.
+
     Parameters
     ----------
     accept_rate : float, default=0.3
@@ -36,24 +44,20 @@ def make_objective_churn(
     Returns
     -------
     objective : Callable
-        A custom objective function for XGBoost [1]_.
+        A custom objective function for :class:`xgboost:xgboost.XGBClassifier`.
 
     Notes
     -----
-    The instance-specific cost function for customer churn is defined as [2]_:
+    The instance-specific cost function for customer churn is defined as [1]_:
 
     .. math:: C(s_i) = y_i[s_i(f-\\gamma (1-\\delta )CLV_i] + (1-y_i)[s_i(\\delta CLV_i + f)]
 
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
-    .. seealso::
-        :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.
-
     References
     ----------
-    .. [1] https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.XGBClassifier
-    .. [2] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
 
@@ -122,6 +126,11 @@ def mpc_cost_score(
     """
     Profit-driven cost function for customer churn
 
+    The cost function presumes a situation where identified churners are
+    contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer.
+    For detailed information, consult the paper [1]_.
+
     Parameters
     ----------
 
@@ -158,6 +167,21 @@ def mpc_cost_score(
 
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
+
+    Examples
+    --------
+
+    Examples
+    --------
+    .. code-block::  python
+
+        import xgboost as xgb
+        from empulse.metrics import make_objective_churn
+
+        objective = make_objective_churn()
+        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
 
     .. seealso::
         :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.

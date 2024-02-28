@@ -21,7 +21,22 @@ def empc_score(
         contact_cost: float = 1,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.empc()` only returning EMPC score
+    :func:`~empulse.metrics.empc()` but only returning the EMPC score
+
+    EMPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer,
+    this fraction is described by a :math:`Beta(\\alpha, \\beta)` distribution.
+    As opposed to :func:`~empulse.metrics.empb`, the incentive cost is a fixed value,
+    rather than a fraction of the customer lifetime value. For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empc` : to also return the fraction of the customer base
+        that should be targeted to maximize profit.
+
+        :func:`~empulse.metrics.mpc_score` : for a deterministic version of this metric.
+
+        :func:`~empulse.metrics.empb_score` : for a similar metric, but with a variable incentive cost.
 
     Parameters
     ----------
@@ -40,15 +55,18 @@ def empc_score(
         that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
+        If ``float``: average customer lifetime value of retained customers (``clv > incentive_cost``).
+        If ``array``: customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
+        .. note::
+            Passing a CLV array is equivalent to passing a float with the average CLV of that array.
+
     incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+        Cost of incentive offered to a customer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+        Cost of contacting a customer (``contact_cost > 0``).
 
     Returns
     -------
@@ -135,6 +153,20 @@ def empc(
     """
     Expected Maximum Profit Measure for Customer Churn (EMPC)
 
+    EMPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer,
+    this fraction is described by a :math:`Beta(\\alpha, \\beta)` distribution.
+    As opposed to :func:`~empulse.metrics.empb`, the incentive cost is a fixed value,
+    rather than a fraction of the customer lifetime value. For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empc_score` : to only return the EMPC score.
+
+        :func:`~empulse.metrics.mpc` : for a deterministic version of this metric.
+
+        :func:`~empulse.metrics.empb` : for a similar metric, but with a variable incentive cost.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -152,15 +184,18 @@ def empc(
         that a churner accepts the incentive (``beta > 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
+        If ``float``: average customer lifetime value of retained customers (``clv > incentive_cost``).
+        If ``array``: customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
+        .. note::
+            Passing a CLV array is equivalent to passing a float with the average CLV of that array.
+
     incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+        Cost of incentive offered to a customer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+        Cost of contacting a customer (``contact_cost > 0``).
 
     Returns
     -------
@@ -168,7 +203,7 @@ def empc(
         Expected Maximum Profit Measure for Customer Churn
 
     threshold : float
-        Threshold at which the expected maximum profit is achieved
+        Fraction of the customer base that should be targeted to maximize profit
 
     Notes
     -----
@@ -268,12 +303,25 @@ def empb_score(
         clv: ArrayLike,
         alpha: float = 6,
         beta: float = 14,
+        incentive_fraction: float = 0.05,
         contact_cost: float = 15,
-        incentive_cost_fraction: float = 0.05,
         n_buckets: int = 250
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.empb()` only returning EMPB score
+    :func:`~empulse.metrics.empb()` but only returning the EMPB score
+
+    EMPB presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer,
+    this fraction is described by a :math:`Beta(\\alpha, \\beta)` distribution.
+    As opposed to :func:`~empulse.metrics.empc`, the incentive cost is a fraction of the customer lifetime value,
+    rather than a fixed value. For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empb` : to also return the fraction of the customer base
+        that should be targeted to maximize profit.
+
+        :func:`~empulse.metrics.empc_score` : for a similar metric, but with a fixed incentive cost.
 
     Parameters
     ----------
@@ -291,24 +339,25 @@ def empb_score(
         Shape parameter of the beta distribution of the probability
         that a churner accepts the incentive (``beta > 1``).
 
-    clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
-        (``mean(clv) > incentive_cost``).
+    clv : float or 1D array-like, shape=(n_samples)
+        If ``float``: average customer lifetime value of retained customers.
+        If ``array``: customer lifetime value of each customer when retained.
 
-    incentive_cost_fraction : float, default=10
-        Fraction of the customer lifetime value that is used as the incentive cost (``incentive_cost_fraction > 0``).
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
 
-    contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+    contact_cost : float, default=15
+        Cost of contacting a customer (``contact_cost > 0``).
 
     n_buckets : int, default=250
-        Number of buckets to use for the calculation of the EMPB.
+        Number of buckets used for numerical integration.
+        More buckets result in higher precision, but slower computation time.
 
     Returns
     -------
     empb : float
-        Expected Maximum Profit Measure for B2B Customer Churn [1]_
+        Expected Maximum Profit Measure for B2B Customer Churn
 
     References
     ----------
@@ -323,7 +372,7 @@ def empb_score(
         beta=beta,
         clv=clv,
         contact_cost=contact_cost,
-        incentive_cost_fraction=incentive_cost_fraction,
+        incentive_fraction=incentive_fraction,
         n_buckets=n_buckets
     )[0]
 
@@ -335,12 +384,24 @@ def empb(
         clv: ArrayLike,
         alpha: float = 6,
         beta: float = 14,
+        incentive_fraction: float = 0.05,
         contact_cost: float = 15,
-        incentive_cost_fraction: float = 0.05,
         n_buckets: int = 250
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for B2B Customer Churn (EMPB)
+
+    EMPB presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer,
+    this fraction is described by a :math:`Beta(\\alpha, \\beta)` distribution.
+    As opposed to :func:`~empulse.metrics.empc`, the incentive cost is a fraction of the customer lifetime value,
+    rather than a fixed value. For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empb_score` : to only return the EMPB score.
+
+        :func:`~empulse.metrics.empc` : for a similar metric, but with a fixed incentive cost.
 
     Parameters
     ----------
@@ -358,19 +419,20 @@ def empb(
         Shape parameter of the beta distribution of the probability
         that a churner accepts the incentive (``beta > 1``).
 
-    clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
-        (``mean(clv) > incentive_cost``).
+    clv : float or 1D array-like, shape=(n_samples)
+        If ``float``: average customer lifetime value of retained customers.
+        If ``array``: customer lifetime value of each customer when retained.
 
-    incentive_cost_fraction : float, default=10
-        Fraction of the customer lifetime value that is used as the incentive cost (``incentive_cost_fraction > 0``).
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
 
-    contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+    contact_cost : float, default=15
+        Cost of contacting a customer (``contact_cost > 0``).
 
     n_buckets : int, default=250
-        Number of buckets to use for the calculation of the EMPB.
+        Number of buckets used for numerical integration.
+        More buckets result in higher precision, but slower computation time.
 
     Returns
     -------
@@ -378,12 +440,7 @@ def empb(
         Expected Maximum Profit Measure for B2B Customer Churn
 
     threshold : float
-        Threshold at which the expected maximum profit is achieved
-
-
-    Notes
-    -----
-    Based on the following paper [1]_.
+        Fraction of the customer base that should be targeted to maximize profit
 
     References
     ----------
@@ -391,7 +448,7 @@ def empb(
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
-    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_cost_fraction, contact_cost)
+    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
     step_size = 1 / n_buckets
 
     gammas = np.arange(0, 1, step_size)
@@ -410,10 +467,10 @@ def empb(
         benefit = np.sum(
             np.sum(
                 np.expand_dims(gamma_weights, axis=1) *
-                ((1 - incentive_cost_fraction) * np.expand_dims(clv_targets, axis=0) - contact_cost),
+                ((1 - incentive_fraction) * np.expand_dims(clv_targets, axis=0) - contact_cost),
                 axis=0) * targets
         )
-        cost = np.sum((-contact_cost - incentive_cost_fraction * clv_targets) * (1 - targets))
+        cost = np.sum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
         profit = benefit + cost
 
         if profit > emp:

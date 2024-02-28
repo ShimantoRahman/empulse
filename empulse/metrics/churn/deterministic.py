@@ -18,7 +18,18 @@ def mpc_score(
         contact_cost: float = 1,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.mpc()` only returning MPC score
+    :func:`~empulse.metrics.mpc()` but only returning the MPC score
+
+    MPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpc_score` : to also return the fraction of the customer base
+        that should be targeted to maximize profit.
+
+        :func:`~empulse.metrics.empc_score` : for a stochastic version of this metric.
 
     Parameters
     ----------
@@ -29,18 +40,21 @@ def mpc_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
-        Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
+        Probability of a customer accepting the retention offer (``0 < accept_rate < 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
+        If ``float``: average customer lifetime value of retained customers (``clv > incentive_cost``).
+        If ``array``: customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
+        .. note::
+            Passing a CLV array is equivalent to passing a float with the average CLV of that array.
+
     incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+        Cost of incentive offered to a customer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+        Cost of contacting a customer (``contact_cost > 0``).
 
     Returns
     -------
@@ -119,6 +133,16 @@ def mpc(
     """
     Maximum Profit Measure for Customer Churn (MPC)
 
+    MPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpc_score` : to only return the MPC score.
+
+        :func:`~empulse.metrics.empc` : for a stochastic version of this metric.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -128,18 +152,21 @@ def mpc(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
-        Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
+        Probability of a customer accepting the retention offer (``0 < accept_rate < 1``).
 
     clv : float or 1D array-like, shape=(n_samples), default=200
-        If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-        If ``array``: individualized customer lifetime value of each customer when retained
-        (mean(`clv`) > `incentive_cost`).
+        If ``float``: average customer lifetime value of retained customers (``clv > incentive_cost``).
+        If ``array``: customer lifetime value of each customer when retained
+        (``mean(clv) > incentive_cost``).
+
+        .. note::
+            Passing a CLV array is equivalent to passing a float with the average CLV of that array.
 
     incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+        Cost of incentive offered to a customer (``incentive_cost > 0``).
 
     contact_cost : float, default=1
-        Constant cost of contact (``contact_cost > 0``).
+        Cost of contacting a customer (``contact_cost > 0``).
 
     Returns
     -------
@@ -147,7 +174,7 @@ def mpc(
         Maximum Profit Measure for Customer Churn
 
     threshold : float
-        Threshold at which the maximum profit is achieved
+        Fraction of the customer base that should be targeted to maximize profit
 
     Notes
     -----

@@ -13,7 +13,19 @@ def mpcs_score(
         roi: float = 0.2644
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.mpcs()` only returning MPCS score
+    :func:`~empulse.metrics.mpcs()` but only returning the MPCS score
+
+    MPCS presumes a situation where a company is considering whether to grant a loan to a customer.
+    Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
+    identifying non-defaulters as defaulters results in a fraction of the loan amount being lost.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpcs` : to also return the fraction of loan applications that
+        should be accepted to maximize profit.
+
+        :func:`~empulse.metrics.empcs_score` : for a stochastic version of this metric.
 
     Parameters
     ----------
@@ -32,7 +44,7 @@ def mpcs_score(
     Returns
     -------
     mpcs : float
-        Maximum Profit measure for customer Credit Scoring.
+        Maximum Profit measure for Credit Scoring.
 
     Notes
     -----
@@ -93,6 +105,17 @@ def mpcs(
     """
     Maximum Profit measure for Credit Scoring
 
+    MPCS presumes a situation where a company is considering whether to grant a loan to a customer.
+    Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
+    identifying non-defaulters as defaulters results in a fraction of the loan amount being lost.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.mpcs_score` : to only return the MPCS score.
+
+        :func:`~empulse.metrics.empcs` : for a stochastic version of this metric.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -110,10 +133,10 @@ def mpcs(
     Returns
     -------
     mpcs : float
-        Maximum Profit measure for customer Credit Scoring
+        Maximum Profit measure for Credit Scoring
 
     threshold : float
-        Threshold at which the maximum profit is achieved
+        Fraction of loan applications that should be accepted to maximize profit
 
     Notes
     -----
