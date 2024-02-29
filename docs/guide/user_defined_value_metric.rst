@@ -3,7 +3,7 @@ User-Defined Value Metric
 =========================
 
 Empulse allows users to define their own value metric, following the Expected Maximum Profit (EMP) specification.
-This is useful for when the default value metric is not appropriate for the user's application.
+This is useful for when the default metrics are not appropriate for the user's application.
 The user-defined value metric can be either deterministic or stochastic,
 using the :func:`empulse.metrics.mp` and :func:`empulse.metrics.emp` functions, respectively.
 
@@ -60,7 +60,7 @@ Implementing the EMPC measure
 The biggest difference between the Maximum Profit function :func:`empulse.metrics.mp`
 and the Expected Maximum Profit function :func:`empulse.metrics.emp`
 is that the latter requires the user to define a weighted probability density function (PDF)
-of the joint distribution of the benefits and costs.
+of the joint distribution of the stochastic benefits and costs.
 The weighted PDF is defined as the product of the PDF and the step size of the benefits and costs.
 
 In the case of customer churn, there is only one stochastic variable,
@@ -81,7 +81,7 @@ gamma will need to be derived from the benefits and costs.
     \gamma &= \frac{b_0 + f}{(CLV - d)} \\
 
 To compute :math:`h(\gamma)`, we need to compute the PDF of :math:`\gamma`,
-which can be done through the :meth:`scipy.stats.beta.pdf` function.
+which can be done through the ``pdf()`` method of :data:`scipy:scipy.stats.beta`.
 
 To compute :math:`\Delta \gamma`, we need to compute the step size of :math:`\gamma`.
 Assume two consecutive values of :math:`\gamma` are :math:`\gamma_0` and :math:`\gamma_1`.
@@ -105,7 +105,7 @@ The weighted PDF function can now be implemented as follows:
         return beta.pdf(gamma, a=6, b=14) * gamma_step
 
 Since the true positive is stochastic since it depends on :math:`\gamma`,
-the value for `tp_benefit` should be set to a range of values, with a minimum and maximum value.
+the value for ``tp_benefit`` should be set to a range of values, with a minimum and maximum value.
 The minimum value is the benefit when :math:`\gamma = 0` and the maximum value is the benefit when :math:`\gamma = 1`.
 
 For :math:`\gamma = 0`:
