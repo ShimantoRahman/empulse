@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.models.ProfLogitClassifier &mdash; Empulse 0.1.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=92734c54"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Optimizers" href="../optimizers.html" />
+    <link rel="prev" title="empulse.models.B2BoostClassifier" href="empulse.models.B2BoostClassifier.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../metrics.html">Metrics</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.B2BoostClassifier.html">empulse.models.B2BoostClassifier</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">empulse.models.ProfLogitClassifier</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#empulse.models.ProfLogitClassifier"><code class="docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#empulse.models.ProfLogitClassifier.__init__"><code class="docutils literal notranslate"><span class="pre">ProfLogitClassifier.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optimizers.html">Optimizers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../models.html">Models</a></li>
+      <li class="breadcrumb-item active">empulse.models.ProfLogitClassifier</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/reference/generated/empulse.models.ProfLogitClassifier.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="empulse-models-proflogitclassifier">
+<h1>empulse.models.ProfLogitClassifier<a class="headerlink" href="#empulse-models-proflogitclassifier" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="empulse.models.ProfLogitClassifier">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">empulse.models.</span></span><span class="sig-name descname"><span class="pre">ProfLogitClassifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_intercept=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soft_threshold=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l1_ratio=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn=&lt;function</span> <span class="pre">empc_score&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimize_fn=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_bounds=(-3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">3)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/proflogit.html#ProfLogitClassifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.ProfLogitClassifier" title="Link to this definition"></a></dt>
+<dd><p>Logistic classifier to optimize profit-driven loss functions</p>
+<p>Maximizing empirical EMP for churn by optimizing
+the regression coefficients of the logistic model through
+a Real-coded Genetic Algorithm (RGA).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>C</strong><span class="classifier">float, default=1.0</span></dt><dd><p>Inverse of regularization strength; must be a positive <code class="docutils literal notranslate"><span class="pre">float</span></code>.
+Like in support vector machines, smaller values specify stronger regularization.</p>
+</dd>
+<dt><strong>fit_intercept</strong><span class="classifier">bool, default=True</span></dt><dd><p>Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.</p>
+</dd>
+<dt><strong>soft_threshold</strong><span class="classifier">bool, default=True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, apply soft-thresholding to the regression coefficients.</p>
+</dd>
+<dt><strong>l1_ratio</strong><span class="classifier">float, default=1.0</span></dt><dd><p>The ElasticNet mixing parameter, with <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">l1_ratio</span> <span class="pre">&lt;=</span> <span class="pre">1</span></code>.
+For <code class="docutils literal notranslate"><span class="pre">l1_ratio</span> <span class="pre">=</span> <span class="pre">0</span></code> the penalty is an L2 penalty.
+For <code class="docutils literal notranslate"><span class="pre">l1_ratio</span> <span class="pre">=</span> <span class="pre">1</span></code> it is an L1 penalty.
+For <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">l1_ratio</span> <span class="pre">&lt;</span> <span class="pre">1</span></code>, the penalty is a combination of L1 and L2.</p>
+</dd>
+<dt><strong>loss_fn</strong><span class="classifier">Callable, default= <a class="reference internal" href="empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empulse.metrics.empc_score()</span></code></a></span></dt><dd><p>Loss function. Should be a Callable with signature <code class="docutils literal notranslate"><span class="pre">loss(y_true,</span> <span class="pre">y_pred)</span></code> or <code class="docutils literal notranslate"><span class="pre">loss(y_true,</span> <span class="pre">y_score)</span></code>.
+See <a class="reference internal" href="empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empulse.metrics.empc_score()</span></code></a> for an example.</p>
+</dd>
+<dt><strong>optimize_fn</strong><span class="classifier">Callable, default=None</span></dt><dd><p>Optimization algorithm. Should be a Callable with signature <code class="docutils literal notranslate"><span class="pre">optimize(objective,</span> <span class="pre">bounds)</span></code>.
+See <a class="reference internal" href="../../guide/proflogit.html#proflogit"><span class="std std-ref">Customizing ProfLogit</span></a> for more information.</p>
+</dd>
+<dt><strong>default_bounds</strong><span class="classifier">tuple, default=(-3, 3)</span></dt><dd><p>Bounds for every regression parameter. Use the <cite>bounds</cite> parameter
+through <cite>optimize_fn</cite> for individual specifications.</p>
+</dd>
+<dt><strong>n_jobs</strong><span class="classifier">int, default=None</span></dt><dd><p>Number of parallel jobs to run.
+<code class="docutils literal notranslate"><span class="pre">None</span></code> means 1 unless in a <code class="xref py py-obj docutils literal notranslate"><span class="pre">joblib.parallel_backend</span></code> context.
+<code class="docutils literal notranslate"><span class="pre">-1</span></code> means using all processors.</p>
+</dd>
+<dt><strong>optimizer_params</strong><span class="classifier">dict[str, Any], default=None</span></dt><dd><p>Additional keyword arguments passed to <cite>optimize_fn</cite>.</p>
+</dd>
+<dt><strong>**kwargs</strong></dt><dd><p>Additional keyword arguments passed to <cite>optimize_fn</cite>.</p>
+<p>By default, the optimizer is a Real-coded Genetic Algorithm (RGA) with the following parameters:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">max_iter</span></code><span class="classifier">int, default=1000</span></dt><dd><p>Maximum number of iterations.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">patience</span></code><span class="classifier">int, default=250</span></dt><dd><p>Number of iterations with no improvement to wait before stopping the optimization.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">tolerance</span></code><span class="classifier">float, default=1e-4</span></dt><dd><p>Relative tolerance to declare convergence.</p>
+</dd>
+</dl>
+</li>
+<li><p>all other parameters are passed to the <a class="reference internal" href="empulse.optimizers.Generation.html#empulse.optimizers.Generation" title="empulse.optimizers.Generation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generation</span></code></a> initializer.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Original implementation of ProfLogit <a class="reference internal" href="#r27bcdcbb83c1-3" id="id1">[3]</a> in Python.</p>
+<p class="rubric">References</p>
+<div role="list" class="citation-list">
+<div class="citation" id="r27bcdcbb83c1-1" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
+Snoeck, M. (2017). Profit Maximizing Logistic Model for
+Customer Churn Prediction Using Genetic Algorithms.
+Swarm and Evolutionary Computation.</p>
+</div>
+<div class="citation" id="r27bcdcbb83c1-2" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<p>Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
+Snoeck, M. (2015). Profit Maximizing Logistic Regression Modeling for
+Customer Churn Prediction. IEEE International Conference on
+Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.</p>
+</div>
+<div class="citation" id="r27bcdcbb83c1-3" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://github.com/estripling/proflogit/tree/master">https://github.com/estripling/proflogit/tree/master</a></p>
+</div>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>n_dim</strong><span class="classifier">int</span></dt><dd><p>Number of features.</p>
+</dd>
+<dt><strong>result</strong><span class="classifier"><a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult" title="(in SciPy v1.12.0)"><code class="docutils literal notranslate"><span class="pre">scipy.optimize.OptimizeResult</span></code></a></span></dt><dd><p>Optimization result.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(X, y, **loss_params)</p></td>
+<td><p>Fit ProfLogit model.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata_routing</span></code>()</p></td>
+<td><p>Get metadata routing of this object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_params</span></code>([deep])</p></td>
+<td><p>Get parameters for this estimator.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code>(X)</p></td>
+<td><p>Compute predicted labels.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_proba</span></code>(X)</p></td>
+<td><p>Compute predicted probabilities.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">score</span></code>(X, y[, sample_weight])</p></td>
+<td><p>Compute model score.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**params)</p></td>
+<td><p>Set the parameters of this estimator.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_score_request</span></code>(*[, sample_weight])</p></td>
+<td><p>Request metadata passed to the <code class="docutils literal notranslate"><span class="pre">score</span></code> method.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.ProfLogitClassifier.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_intercept=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">soft_threshold=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l1_ratio=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn=&lt;function</span> <span class="pre">empc_score&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimize_fn=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_bounds=(-3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">3)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/proflogit.html#ProfLogitClassifier.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.ProfLogitClassifier.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empulse.models.ProfLogitClassifier.__init__" title="empulse.models.ProfLogitClassifier.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>([C, fit_intercept, soft_threshold, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(X, y, **loss_params)</p></td>
+<td><p>Fit ProfLogit model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata_routing</span></code>()</p></td>
+<td><p>Get metadata routing of this object.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_params</span></code>([deep])</p></td>
+<td><p>Get parameters for this estimator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code>(X)</p></td>
+<td><p>Compute predicted labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_proba</span></code>(X)</p></td>
+<td><p>Compute predicted probabilities.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">score</span></code>(X, y[, sample_weight])</p></td>
+<td><p>Compute model score.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**params)</p></td>
+<td><p>Set the parameters of this estimator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_score_request</span></code>(*[, sample_weight])</p></td>
+<td><p>Request metadata passed to the <code class="docutils literal notranslate"><span class="pre">score</span></code> method.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="empulse.models.B2BoostClassifier.html" class="btn btn-neutral float-left" title="empulse.models.B2BoostClassifier" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../optimizers.html" class="btn btn-neutral float-right" title="Optimizers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

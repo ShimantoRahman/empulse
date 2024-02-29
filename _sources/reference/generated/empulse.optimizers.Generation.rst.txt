@@ -1,0 +1,23 @@
+﻿empulse.optimizers.Generation
+=============================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: Generation
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Generation.__init__
+      ~Generation.optimize
+   
+   
+
+   
+   
+   

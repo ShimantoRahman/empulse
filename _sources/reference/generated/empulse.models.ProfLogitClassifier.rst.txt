@@ -1,0 +1,30 @@
+﻿empulse.models.ProfLogitClassifier
+==================================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: ProfLogitClassifier
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ProfLogitClassifier.__init__
+      ~ProfLogitClassifier.fit
+      ~ProfLogitClassifier.get_metadata_routing
+      ~ProfLogitClassifier.get_params
+      ~ProfLogitClassifier.predict
+      ~ProfLogitClassifier.predict_proba
+      ~ProfLogitClassifier.score
+      ~ProfLogitClassifier.set_params
+      ~ProfLogitClassifier.set_score_request
+   
+   
+
+   
+   
+   

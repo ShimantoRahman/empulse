@@ -1,0 +1,31 @@
+﻿empulse.models.B2BoostClassifier
+================================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: B2BoostClassifier
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~B2BoostClassifier.__init__
+      ~B2BoostClassifier.fit
+      ~B2BoostClassifier.get_metadata_routing
+      ~B2BoostClassifier.get_params
+      ~B2BoostClassifier.predict
+      ~B2BoostClassifier.predict_proba
+      ~B2BoostClassifier.score
+      ~B2BoostClassifier.set_fit_request
+      ~B2BoostClassifier.set_params
+      ~B2BoostClassifier.set_score_request
+   
+   
+
+   
+   
+   
