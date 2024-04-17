@@ -5,14 +5,14 @@ import numpy as np
 import xgboost as xgb
 from numpy.typing import ArrayLike
 
-from empulse.metrics.churn._validation import _validate_input_mp
+from empulse.metrics.churn._validation import _validate_input_mpc
 
 
 def make_objective_churn(
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
-        incentive_cost: Union[float, ArrayLike] = 10,
-        contact_cost: float = 1,
+        incentive_fraction: Union[float, ArrayLike] = 0.05,
+        contact_cost: float = 15,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
     Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn
@@ -35,8 +35,9 @@ def make_objective_churn(
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
-    incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
@@ -66,7 +67,7 @@ def make_objective_churn(
         _objective,
         accept_rate=accept_rate,
         clv=clv,
-        incentive_cost=incentive_cost,
+        incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
     )
 
@@ -76,7 +77,7 @@ def _objective(
         dtrain: Union[xgb.DMatrix, np.ndarray],
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
-        incentive_cost: Union[float, ArrayLike] = 10,
+        incentive_fraction: Union[float, ArrayLike] = 0.05,
         contact_cost: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -106,6 +107,7 @@ def _objective(
         raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
     y_pred = 1 / (1 + np.exp(-y_pred))
 
+    incentive_cost = incentive_fraction * clv
     profits = contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     )
@@ -120,7 +122,7 @@ def mpc_cost_score(
         *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
-        incentive_cost: Union[float, ArrayLike] = 10,
+        incentive_fraction: Union[float, ArrayLike] = 0.05,
         contact_cost: float = 1,
 ) -> float:
     """
@@ -148,8 +150,9 @@ def mpc_cost_score(
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
-    incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
@@ -193,8 +196,16 @@ def mpc_cost_score(
         Annals of Operations Research, 1-27.
 
     """
-    y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, accept_rate, clv, incentive_cost, contact_cost)
+    y_true, y_pred, clv = _validate_input_mpc(
+        y_true,
+        y_pred,
+        clv=clv,
+        accept_rate=accept_rate,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost
+    )
 
+    incentive_cost = incentive_fraction * clv
     profits = y_pred * (contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     ))

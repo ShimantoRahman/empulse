@@ -23,8 +23,9 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
 
-    incentive_cost : float, default=10
-        Constant cost of retention offer (``incentive_cost > 0``).
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
@@ -59,13 +60,13 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             *,
             accept_rate: float = 0.3,
             clv: Union[float, ArrayLike] = 200,
-            incentive_cost: float = 10,
-            contact_cost: float = 1,
+            incentive_fraction: float = 0.05,
+            contact_cost: float = 15,
             params: Optional[dict[str, Any]] = None,
             **kwargs,
     ) -> None:
         self.clv = clv
-        self.incentive_cost = incentive_cost
+        self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
 
@@ -137,7 +138,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_cost=None, contact_cost=None):
+    def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
         """
         Fit the model.
 
@@ -160,8 +161,9 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             If ``array``: individualized customer lifetime value of each customer when retained
             (``mean(clv) > incentive_cost``).
 
-        incentive_cost : float, default=10
-            Constant cost of retention offer (``incentive_cost > 0``).
+        incentive_fraction : float, default=10
+            Cost of incentive offered to a customer, as a fraction of customer lifetime value
+            (``0 < incentive_fraction < 1``).
 
         contact_cost : float, default=1
             Constant cost of contact (``contact_cost > 0``).
@@ -173,7 +175,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         """
         objective = make_objective_churn(
             clv=self.clv if clv is None else clv,
-            incentive_cost=self.incentive_cost if incentive_cost is None else incentive_cost,
+            incentive_fraction=self.incentive_fraction if incentive_fraction is None else incentive_fraction,
             contact_cost=self.contact_cost if contact_cost is None else contact_cost,
             accept_rate=self.accept_rate if accept_rate is None else accept_rate,
         )
@@ -217,7 +219,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             y: ArrayLike,
             accept_rate: float = None,
             clv=None,
-            incentive_cost=None,
+            incentive_fraction=None,
             contact_cost=None
     ) -> float:
         """
@@ -238,8 +240,9 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             If ``array``: individualized customer lifetime value of each customer when retained
             (``mean(clv) > incentive_cost```).
 
-        incentive_cost : float, default=self.incentive_cost
-            Constant cost of retention offer (``incentive_cost > 0``).
+        incentive_fraction : float, default=self.incentive_cost
+            Cost of incentive offered to a customer, as a fraction of customer lifetime value
+            (``0 < incentive_fraction < 1``).
 
         contact_cost : float, default=self.contact_cost
             Constant cost of contact (``contact_cost > 0``).
@@ -255,6 +258,6 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             self.predict_proba(X)[:, 1],
             accept_rate=accept_rate or self.accept_rate,
             clv=clv or self.clv,
-            incentive_cost=incentive_cost or self.incentive_cost,
+            incentive_fraction=incentive_fraction or self.incentive_fraction,
             contact_cost=contact_cost or self.contact_cost,
         )

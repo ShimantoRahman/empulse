@@ -143,14 +143,15 @@ class TestMPCScore(BaseTestMetric.TestMetric):
         {},  # default
         {"accept_rate": 0.2},
         {"clv": 50},
-        {"incentive_cost": 100},
+        {"incentive_fraction": 0.5},
         {"contact_cost": 15},
         {
             "accept_rate": 0.9,
             "clv": 300,
-            "incentive_cost": 50,
+            "incentive_fraction": 0.1,
             "contact_cost": 25,
         },
+        {"clv": np.arange(221)}  # array-like clv
     ]
     expected_values = {
         "perfect_prediction": -28.0,
@@ -158,10 +159,11 @@ class TestMPCScore(BaseTestMetric.TestMetric):
         "different_parameters": [
             -10.080448865102996,
             -6.089389456506361,
-            -0.6279397394793896,
+            -2.247842651901284,
             9.35838608395974,
             -4.998083663446319,
-            -30.53837710803111,
+            -37.37878730798912,
+            -6.02363958556662,
         ],
     }
 
@@ -204,11 +206,9 @@ class TestMPCScore(BaseTestMetric.TestMetric):
         with self.assertRaises(ValueError):
             self.metric([0, 1], [0.25, 0.75], accept_rate=2)
         with self.assertRaises(ValueError):
-            self.metric([0, 1], [0.25, 0.75], clv=-1)
+            self.metric([0, 1], [0.25, 0.75], incentive_fraction=-1)
         with self.assertRaises(ValueError):
-            self.metric([0, 1], [0.25, 0.75], clv=1)  # clv < incentive_cost
-        with self.assertRaises(ValueError):
-            self.metric([0, 1], [0.25, 0.75], incentive_cost=-1)
+            self.metric([0, 1], [0.25, 0.75], incentive_fraction=2)
         with self.assertRaises(ValueError):
             self.metric([0, 1], [0.25, 0.75], contact_cost=-1)
 

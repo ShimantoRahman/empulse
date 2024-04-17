@@ -25,22 +25,22 @@ def clf(X, y):
 def test_b2boost_init():
     clf = B2BoostClassifier()
     assert clf.clv == 200
-    assert clf.incentive_cost == 10
-    assert clf.contact_cost == 1
+    assert clf.incentive_fraction == 0.05
+    assert clf.contact_cost == 15
     assert clf.accept_rate == 0.3
 
 
 def test_b2boost_with_different_parameters():
     clf = B2BoostClassifier(
         clv=100,
-        incentive_cost=5,
+        incentive_fraction=0.1,
         contact_cost=0.5,
         accept_rate=0.1,
         n_jobs=1,
         random_state=42
     )
     assert clf.clv == 100
-    assert clf.incentive_cost == 5
+    assert clf.incentive_fraction == 0.1
     assert clf.contact_cost == 0.5
     assert clf.accept_rate == 0.1
     assert clf.model.n_jobs == 1
