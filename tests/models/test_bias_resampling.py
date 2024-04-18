@@ -1,8 +1,7 @@
-import pytest
-
 import numpy as np
-from sklearn.utils.validation import check_is_fitted, NotFittedError
+import pytest
 from sklearn.linear_model import LogisticRegression
+from sklearn.utils.validation import NotFittedError, check_is_fitted
 
 from empulse.models import BiasResamplingClassifier
 
@@ -18,9 +17,14 @@ def y():
 
 
 @pytest.fixture(scope='module')
-def clf(X, y):
+def protected_attr():
+    return np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+
+
+@pytest.fixture(scope='module')
+def clf(X, y, protected_attr):
     clf = BiasResamplingClassifier(estimator=LogisticRegression(), strategy='statistical parity')
-    clf.fit(X, y)
+    clf.fit(X, y, protected_attr=protected_attr)
     return clf
 
 
@@ -43,9 +47,9 @@ def test_resampling_with_different_parameters():
     assert clf.strategy == 'demographic parity'
 
 
-def test_resampling_fit(X, y):
+def test_resampling_fit(X, y, protected_attr):
     clf = BiasResamplingClassifier(estimator=LogisticRegression())
-    clf.fit(X, y)
+    clf.fit(X, y, protected_attr=protected_attr)
     assert clf.classes_ is not None
     try:
         check_is_fitted(clf.estimator)
@@ -92,12 +96,12 @@ def test_works_in_cross_validation(X, y):
     assert np.all(scores.astype(np.float64) == scores)
 
 
-def test_works_in_pipeline(X, y):
+def test_works_in_pipeline(X, y, protected_attr):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
     clf = BiasResamplingClassifier(estimator=LogisticRegression())
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
-    pipe.fit(X, y)
+    pipe.fit(X, y, clf__protected_attr=protected_attr)
     assert isinstance(pipe.named_steps['scaler'], StandardScaler)
     assert isinstance(pipe.named_steps['clf'], BiasResamplingClassifier)
     assert isinstance(pipe.score(X, y), float)
@@ -113,3 +117,22 @@ def test_works_in_ensemble(X, y):
     assert isinstance(bagging.estimators_[0], BiasResamplingClassifier)
     assert isinstance(bagging.score(X, y), float)
     assert isinstance(bagging.predict(X), np.ndarray)
+
+
+def test_metadatarouting(X, y, protected_attr):
+    from sklearn import config_context
+    from sklearn.model_selection import GridSearchCV
+
+    param_grid = {'estimator__C': [1, 2]}
+
+    with config_context(enable_metadata_routing=True):
+        model = BiasResamplingClassifier(estimator=LogisticRegression())
+        model.set_fit_request(protected_attr=True)
+        search = GridSearchCV(model, param_grid=param_grid)
+        search.fit(X, y, protected_attr=protected_attr)
+        try:
+            check_is_fitted(search)
+        except NotFittedError:
+            pytest.fail("GridSearchCV is not fitted")
+        assert isinstance(search.score(X, y), float)
+        assert isinstance(search.predict(X), np.ndarray)
