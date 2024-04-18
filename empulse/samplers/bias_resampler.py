@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator
 from sklearn.utils import check_random_state, _safe_indexing
 
-from ._strategies import _independent_weights, Strategy
+from ._strategies import _independent_weights, Strategy, StrategyFn
 
 _XT = TypeVar('_XT', bound=ArrayLike)
 _YT = TypeVar('_YT', bound=ArrayLike)
@@ -29,7 +29,7 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
     """
     _estimator_type = "sampler"
 
-    strategy_mapping = {
+    strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_weights,
         'demographic parity': _independent_weights,
     }

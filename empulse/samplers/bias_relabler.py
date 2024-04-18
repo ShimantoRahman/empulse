@@ -5,7 +5,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator, clone
 from sklearn.utils import _safe_indexing
 
-from empulse.samplers._strategies import Strategy
+from empulse.samplers._strategies import Strategy, StrategyFn
 
 _XT = TypeVar('_XT', bound=ArrayLike)
 
@@ -49,7 +49,7 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
     """
     _estimator_type = "sampler"
 
-    strategy_mapping = {
+    strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_pairs,
         'demographic parity': _independent_pairs,
     }
@@ -106,12 +106,12 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         probas_unprotected = y_pred[unprotected_indices]
         probas_protected = y_pred[protected_indices]
 
-        self.demotion_candidates = _get_demotion_candidates(
+        demotion_candidates = _get_demotion_candidates(
             probas_unprotected,
             _safe_indexing(y, unprotected_indices),
             n_pairs
         )
-        self.promotion_candidates = _get_promotion_candidates(
+        promotion_candidates = _get_promotion_candidates(
             probas_protected,
             _safe_indexing(y, protected_indices),
             n_pairs
@@ -119,8 +119,8 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
 
         # map promotion and demotion candidates to original indices
         indices = np.arange(len(y))
-        demotion_candidates = indices[unprotected_indices][self.demotion_candidates]
-        promotion_candidates = indices[protected_indices][self.promotion_candidates]
+        demotion_candidates = indices[unprotected_indices][demotion_candidates]
+        promotion_candidates = indices[protected_indices][promotion_candidates]
 
         # relabel the data
         relabled_y = np.asarray(y).copy()
