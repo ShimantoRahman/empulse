@@ -11,3 +11,6 @@ The :mod:`~empulse.models` module contains a collection of profit-driven models.
 
    B2BoostClassifier
    ProfLogitClassifier
+   BiasRelabelingClassifier
+   BiasResamplingClassifier
+   BiasReweighingClassifier
