@@ -14,18 +14,26 @@ _YT = TypeVar('_YT', bound=ArrayLike)
 
 class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
     """
-    Sampler which resamples instances to remove bias against a subgroup.
+    Sampler which resamples instances to remove bias against a subgroup
 
     Parameters
     ----------
-    strategy : Literal or Callable, default = 'statistical parity'
-        Function which computes the group weights based on the target and protected attribute.
-        if ``Literal`` group weights are computed so:
-            - `'statistical_parity'` or `'demographic parity'`: probability of positive predictions
-            are equal between subgroups of protected attribute.
-            - other strategies coming in future versions.
-    transform_attr : Optional[Callable], default = None
-        Function which transforms protected attribute before computing sample weights.
+   strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
+        Determines how the group weights are computed.
+        Group weights determine how much to over or undersample each combination of target and protected attribute.
+        For example, a weight of 2 for the pair (y_true == 1, protected_attr == 0) means that the resampled dataset
+        should have twice as many instances with y_true == 1 and protected_attr == 0 compared to the original dataset.
+
+        - ``'statistical_parity'`` or ``'demographic parity'``: \
+        probability of positive predictions are equal between subgroups of protected attribute.
+
+        - ``Callable``: function which computes the group weights based on the target and protected attribute. \
+        Callable accepts two arguments: y_true and protected_attr and returns the group weights. \
+        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
+        protected attribute. \
+        The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
+    transform_attr : Optional[Callable], default=None
+        Function which transforms protected attribute before resampling the training data.
     """
     _estimator_type = "sampler"
 
@@ -57,6 +65,7 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
+
         Parameters
         ----------
         X : ArrayLike
@@ -65,6 +74,7 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
             Target values.
         protected_attr : Optional[ArrayLike]
             Protected attribute used to determine the number of promotion and demotion pairs.
+
         Returns
         -------
         X : ArrayLike
