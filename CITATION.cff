@@ -4,6 +4,12 @@ authors:
   - family-names: Rahman
     given-names: Shimanto
     orcid: https://orcid.org/0000-0001-8636-8970
+  - family-names: Bram
+    given-names: Janssens
+    orcid: https://orcid.org/0000-0003-3078-7919
+  - family-names: Matthias
+    given-names: Bogaert
+    orcid: https://orcid.org/0000-0002-4502-0764
 title: "Empulse"
 version: 0.3.1
 identifiers:
