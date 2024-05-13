@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.optimizers.generation &mdash; Empulse 0.3.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=cbd0ad0a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=4621528c"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/samplers.html">Samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/optimizers.html">Optimizers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.optimizers.generation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.optimizers.generation</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">OptimizeResult</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils</span> <span class="kn">import</span> <span class="n">check_random_state</span>
+
+
+<div class="viewcode-block" id="Generation">
+<a class="viewcode-back" href="../../../reference/optimizers/Generation.html#empulse.optimizers.Generation">[docs]</a>
+<span class="k">class</span> <span class="nc">Generation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A single generation of a Real-coded Genetic Algorithm (RGA)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    population_size : int or None, default=None</span>
+<span class="sd">        Number of individuals in the population.</span>
+<span class="sd">        If ``None``, population size is set to ``10 * n_dim``.</span>
+
+<span class="sd">    crossover_rate : float, default=0.8</span>
+<span class="sd">        Probability of crossover. Must be in [0, 1].</span>
+
+<span class="sd">    mutation_rate : float, default=0.1</span>
+<span class="sd">        Probability of mutation. Must be in [0, 1].</span>
+
+<span class="sd">    elitism : float, default=0.05</span>
+<span class="sd">        Fraction of the population that is considered elite.</span>
+<span class="sd">        Must be in [0, 1].</span>
+
+<span class="sd">    verbose : bool, default=False</span>
+<span class="sd">        If ``True``, print status messages.</span>
+
+<span class="sd">    logging_fn : callable, default=print</span>
+<span class="sd">        Function to use for logging.</span>
+
+<span class="sd">    random_state : int or None, default=None</span>
+<span class="sd">        Random seed.</span>
+
+<span class="sd">    n_jobs : int or None, default=1</span>
+<span class="sd">        Number of jobs to run in parallel.</span>
+<span class="sd">        If ``-1``, use all available processors.</span>
+<span class="sd">        If ``None``, use 1 processor.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of the optimizer.</span>
+
+<span class="sd">    population : ndarray, shape (population_size, n_dim)</span>
+<span class="sd">        Current population.</span>
+
+<span class="sd">    population_size : int</span>
+<span class="sd">        Number of individuals in the population.</span>
+
+<span class="sd">    crossover_rate : float</span>
+<span class="sd">        Probability of crossover.</span>
+
+<span class="sd">    mutation_rate : float</span>
+<span class="sd">        Probability of mutation.</span>
+
+<span class="sd">    elitism : float</span>
+<span class="sd">        Fraction of the population that is considered elite.</span>
+
+<span class="sd">    verbose : bool</span>
+<span class="sd">        If ``True``, print status messages.</span>
+
+<span class="sd">    logging_fn : callable</span>
+<span class="sd">        Function to use for logging.</span>
+
+<span class="sd">    rng : RandomState</span>
+<span class="sd">        Random state object.</span>
+
+<span class="sd">    n_jobs : int</span>
+<span class="sd">        Number of jobs to run in parallel.</span>
+<span class="sd">        If ``-1``, use all available processors.</span>
+<span class="sd">        If ``None``, use 1 processor.</span>
+
+<span class="sd">    fx_best : list</span>
+<span class="sd">        List of best fitness values.</span>
+
+<span class="sd">    fitness : ndarray, shape (population_size,)</span>
+<span class="sd">        Fitness values of the current population.</span>
+
+<span class="sd">    result : OptimizeResult</span>
+<span class="sd">        Result of the optimization.</span>
+
+<span class="sd">    lower_bounds : ndarray, shape (n_dim,)</span>
+<span class="sd">        Lower bounds of the search space.</span>
+
+<span class="sd">    upper_bounds : ndarray, shape (n_dim,)</span>
+<span class="sd">        Upper bounds of the search space.</span>
+
+<span class="sd">    delta_bounds : ndarray, shape (n_dim,)</span>
+<span class="sd">        Difference between upper and lower bounds.</span>
+
+<span class="sd">    n_dim : int</span>
+<span class="sd">        Number of dimensions.</span>
+
+<span class="sd">    _n_mating_pairs : int</span>
+<span class="sd">        Number of mating pairs.</span>
+
+<span class="sd">    elite_pool : list</span>
+<span class="sd">        List of elite individuals.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">population_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">crossover_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span>
+            <span class="n">mutation_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+            <span class="n">elitism</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">logging_fn</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="nb">print</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;RGA&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">population_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">population_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;`pop_size` must be an int.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">population_size</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`pop_size` must be &gt;= 10.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="o">=</span> <span class="n">population_size</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">crossover_rate</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`crossover_rate` must be in [0, 1].&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crossover_rate</span> <span class="o">=</span> <span class="n">crossover_rate</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">mutation_rate</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`mutation_rate` must be in [0, 1].&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutation_rate</span> <span class="o">=</span> <span class="n">mutation_rate</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">elitism</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`elitism` must be in [0, 1].&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elitism</span> <span class="o">=</span> <span class="n">elitism</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_fn</span> <span class="o">=</span> <span class="n">logging_fn</span>
+
+        <span class="c1"># Get random state object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
+
+        <span class="c1"># Attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_mating_pairs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elite_pool</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fx_best</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">OptimizeResult</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nfev</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fun</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_bounds</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Generation.optimize">
+<a class="viewcode-back" href="../../../reference/optimizers/Generation.html#empulse.optimizers.Generation.optimize">[docs]</a>
+    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">bounds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="s1">&#39;Generation&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Optimize the objective function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        objective : Callable</span>
+<span class="sd">            Objective function to optimize.</span>
+<span class="sd">            Should be of signature ``objective(weights) -&gt; float``.</span>
+<span class="sd">        bounds : list[tuple[float, float]]</span>
+<span class="sd">            List of tuples of lower and upper bounds for each weight.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        self : Generation</span>
+<span class="sd">            Current instance of the optimizer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check bounds</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+                <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+                <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">bounds</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).&quot;</span><span class="p">)</span>
+        <span class="n">array_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">=</span> <span class="n">array_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">=</span> <span class="n">array_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
+
+        <span class="c1"># Check population size</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span> <span class="o">*</span> <span class="mi">10</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">elitism</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">elitism</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_mating_pairs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># Constant for crossover</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_population</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate</span><span class="p">(</span><span class="n">objective</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_elite_pool</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_start</span><span class="p">()</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="bp">self</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_progress</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_select</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_crossover</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mutate</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate</span><span class="p">(</span><span class="n">objective</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_insert_elites</span><span class="p">()</span>  <span class="c1"># survivor selection: overlapping-generation model</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_elite_pool</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_generate_population</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">population</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">+</span> <span class="n">population</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta_bounds</span>
+
+    <span class="k">def</span> <span class="nf">_evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">fitness_values</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span><span class="p">)(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_fitness</span><span class="p">)(</span><span class="n">objective</span><span class="p">,</span> <span class="n">ix</span><span class="p">)</span> <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fitness_values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_update_fitness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="n">fitness_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">fitness_value</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">nfev</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">objective</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fitness_value</span>
+
+    <span class="k">def</span> <span class="nf">_crossover</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform local arithmetic crossover&quot;&quot;&quot;</span>
+        <span class="c1"># Make iterator for pairs</span>
+        <span class="n">match_parents</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">rnd_pair</span> <span class="k">for</span> <span class="n">rnd_pair</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_mating_pairs</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Crossover parents</span>
+        <span class="k">for</span> <span class="n">ix1</span><span class="p">,</span> <span class="n">ix2</span> <span class="ow">in</span> <span class="n">match_parents</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">crossover_rate</span><span class="p">:</span>
+                <span class="n">parent1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix1</span><span class="p">]</span>  <span class="c1"># Pass-by-ref</span>
+                <span class="n">parent2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix2</span><span class="p">]</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span><span class="p">)</span>
+                <span class="n">child1</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">parent1</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">parent2</span>
+                <span class="n">child2</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">parent2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">parent1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix1</span><span class="p">]</span> <span class="o">=</span> <span class="n">child1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix2</span><span class="p">]</span> <span class="o">=</span> <span class="n">child2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">ix1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">ix2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">def</span> <span class="nf">_mutate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform uniform random mutation&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mutation_rate</span><span class="p">:</span>
+                <span class="n">mutant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>  <span class="c1"># inplace</span>
+                <span class="n">rnd_gene</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_dim</span><span class="p">)</span>
+                <span class="n">rnd_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span>
+                    <span class="n">low</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="n">rnd_gene</span><span class="p">],</span> <span class="n">high</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="n">rnd_gene</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="n">mutant</span><span class="p">[</span><span class="n">rnd_gene</span><span class="p">]</span> <span class="o">=</span> <span class="n">rnd_val</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">def</span> <span class="nf">_select</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform linear scaling selection&quot;&quot;&quot;</span>
+        <span class="n">fitness_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">)</span>
+        <span class="n">min_fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">fitness_values</span><span class="p">)</span>
+        <span class="n">avg_fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fitness_values</span><span class="p">)</span>
+        <span class="n">max_fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">fitness_values</span><span class="p">)</span>
+
+        <span class="c1"># Linear scaling</span>
+        <span class="k">if</span> <span class="n">min_fitness</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">fitness_values</span> <span class="o">-=</span> <span class="n">min_fitness</span>
+            <span class="n">min_fitness</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">min_fitness</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">avg_fitness</span> <span class="o">-</span> <span class="n">max_fitness</span><span class="p">):</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">max_fitness</span> <span class="o">-</span> <span class="n">avg_fitness</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">avg_fitness</span> <span class="o">/</span> <span class="p">(</span><span class="n">denominator</span> <span class="k">if</span> <span class="n">denominator</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1e-10</span><span class="p">)</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_fitness</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">avg_fitness</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">avg_fitness</span> <span class="o">-</span> <span class="n">min_fitness</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">avg_fitness</span> <span class="o">/</span> <span class="p">(</span><span class="n">denominator</span> <span class="k">if</span> <span class="n">denominator</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1e-10</span><span class="p">)</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="o">-</span><span class="n">min_fitness</span> <span class="o">*</span> <span class="n">a</span>
+        <span class="n">scaled_fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">fitness_values</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+
+        <span class="c1"># Normalize</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">normalization_factor</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">scaled_fitness</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">relative_fitness</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span>  <span class="c1"># Uniform distribution</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">relative_fitness</span> <span class="o">=</span> <span class="n">scaled_fitness</span> <span class="o">/</span> <span class="n">normalization_factor</span>
+
+        <span class="c1"># Select individuals</span>
+        <span class="n">select_ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">relative_fitness</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">select_ix</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">select_ix</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_sorted_non_nan_ix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get indices sorted according to non-nan fitness values&quot;&quot;&quot;</span>
+        <span class="n">non_nan_fx</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">ix</span><span class="p">,</span> <span class="n">fx</span><span class="p">)</span> <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">fx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">)</span> <span class="k">if</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">fx</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">sorted_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">non_nan_fx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">sorted_list</span>
+
+    <span class="k">def</span> <span class="nf">_insert_elites</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update population by replacing the worst solutions of the current</span>
+<span class="sd">        with the ones from the elite pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">fx</span><span class="p">)</span> <span class="k">for</span> <span class="n">fx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">):</span>
+            <span class="n">sorted_fx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sorted_non_nan_ix</span><span class="p">()</span>
+            <span class="n">worst_ix</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sorted_fx</span><span class="p">][:</span> <span class="bp">self</span><span class="o">.</span><span class="n">elitism</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">worst_ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">)[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">elitism</span><span class="p">]</span>  <span class="c1"># TODO: replace with argpartition</span>
+            <span class="c1"># worst_ix = np.argpartition(self.fitness, self.elitism)[: self.elitism]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">worst_ix</span><span class="p">):</span>
+            <span class="n">elite</span><span class="p">,</span> <span class="n">fitness_elite</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">elite_pool</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span> <span class="o">=</span> <span class="n">elite</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span> <span class="o">=</span> <span class="n">fitness_elite</span>
+
+    <span class="k">def</span> <span class="nf">_update_elite_pool</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">fx</span><span class="p">)</span> <span class="k">for</span> <span class="n">fx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">):</span>
+            <span class="n">sorted_fx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sorted_non_nan_ix</span><span class="p">()</span>
+            <span class="n">elite_ix</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sorted_fx</span><span class="p">][</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">elitism</span><span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">elite_ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">)[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">elitism</span><span class="p">:]</span>  <span class="c1"># TODO: replace with argpartition</span>
+            <span class="c1"># elite_ix = np.argpartition(self.fitness, -self.elitism)[-self.elitism:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elite_pool</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span> <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="n">elite_ix</span>
+        <span class="p">]</span>
+        <span class="c1"># Append best solution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fx_best</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitness</span><span class="p">[</span><span class="n">elite_ix</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="n">elite_ix</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">fun</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fx_best</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">nit</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fx_best</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_log_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_fn</span><span class="p">(</span>
+            <span class="s2">&quot;# ---  </span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)  --- #&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%a</span><span class="s2"> %b </span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_log_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">status_msg</span> <span class="o">=</span> <span class="s2">&quot;Iter = </span><span class="si">{:5d}</span><span class="s2">; nfev = </span><span class="si">{:6d}</span><span class="s2">; fx = </span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">nit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">nfev</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fx_best</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_fn</span><span class="p">(</span><span class="n">status_msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_log_end</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stop_time</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_fn</span><span class="p">(</span><span class="s2">&quot;# ---  </span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)  --- #&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">stop_time</span><span class="p">))</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

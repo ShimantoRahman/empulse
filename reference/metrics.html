@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metrics &mdash; Empulse 0.3.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=cbd0ad0a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=4621528c"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="empulse.metrics.emp" href="generated/empulse.metrics.emp.html" />
+    <link rel="prev" title="Empulse" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-metrics">General Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.emp.html">empulse.metrics.emp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.emp_score.html">empulse.metrics.emp_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mp.html">empulse.metrics.mp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mp_score.html">empulse.metrics.mp_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.lift_score.html">empulse.metrics.lift_score</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#customer-acquisition-metrics">Customer Acquisition Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empa.html">empulse.metrics.empa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empa_score.html">empulse.metrics.empa_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpa.html">empulse.metrics.mpa</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpa_score.html">empulse.metrics.mpa_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpa_cost_score.html">empulse.metrics.mpa_cost_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.make_objective_acquisition.html">empulse.metrics.make_objective_acquisition</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#customer-churn-metrics">Customer Churn Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empc.html">empulse.metrics.empc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empc_score.html">empulse.metrics.empc_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpc.html">empulse.metrics.mpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpc_score.html">empulse.metrics.mpc_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empb.html">empulse.metrics.empb</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empb_score.html">empulse.metrics.empb_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpc_cost_score.html">empulse.metrics.mpc_cost_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.make_objective_churn.html">empulse.metrics.make_objective_churn</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#credit-scoring-metrics">Credit Scoring Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empcs.html">empulse.metrics.empcs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.empcs_score.html">empulse.metrics.empcs_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpcs.html">empulse.metrics.mpcs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.mpcs_score.html">empulse.metrics.mpcs_score</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#helper-functions">Helper Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/empulse.metrics.classification_threshold.html">empulse.metrics.classification_threshold</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="samplers.html">Samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimizers.html">Optimizers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Metrics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/reference/metrics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="metrics">
+<span id="module-empulse.metrics"></span><h1>Metrics<a class="headerlink" href="#metrics" title="Link to this heading"></a></h1>
+<p>The <a class="reference internal" href="#module-empulse.metrics" title="empulse.metrics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">metrics</span></code></a> module contains a collection of metrics for evaluating the performance of
+models in the context of customer churn, credit scoring, and acquisition.</p>
+<section id="general-metrics">
+<h2>General Metrics<a class="headerlink" href="#general-metrics" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.emp.html#empulse.metrics.emp" title="empulse.metrics.emp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">emp</span></code></a></p></td>
+<td><p>Expected Maximum Profit Measure (EMP)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.emp_score.html#empulse.metrics.emp_score" title="empulse.metrics.emp_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">emp_score</span></code></a></p></td>
+<td><p>Convenience function around <a class="reference internal" href="generated/empulse.metrics.emp.html#empulse.metrics.emp" title="empulse.metrics.emp"><code class="xref py py-func docutils literal notranslate"><span class="pre">emp()</span></code></a> only returning EMP score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mp.html#empulse.metrics.mp" title="empulse.metrics.mp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mp</span></code></a></p></td>
+<td><p>Maximum Profit Measure (MP)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.mp_score.html#empulse.metrics.mp_score" title="empulse.metrics.mp_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mp_score</span></code></a></p></td>
+<td><p>Convenience function around <a class="reference internal" href="generated/empulse.metrics.mp.html#empulse.metrics.mp" title="empulse.metrics.mp"><code class="xref py py-func docutils literal notranslate"><span class="pre">mp()</span></code></a> only returning MP score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.lift_score.html#empulse.metrics.lift_score" title="empulse.metrics.lift_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lift_score</span></code></a></p></td>
+<td><p>Compute the lift score for the top fraction of predictions.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="customer-acquisition-metrics">
+<h2>Customer Acquisition Metrics<a class="headerlink" href="#customer-acquisition-metrics" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.empa.html#empulse.metrics.empa" title="empulse.metrics.empa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empa</span></code></a></p></td>
+<td><p>Expected Maximum Profit measure for customer Acquisition (EMPA)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.empa_score.html#empulse.metrics.empa_score" title="empulse.metrics.empa_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empa_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.empa.html#empulse.metrics.empa" title="empulse.metrics.empa"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa()</span></code></a> but only returning the EMPA score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mpa.html#empulse.metrics.mpa" title="empulse.metrics.mpa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpa</span></code></a></p></td>
+<td><p>Maximum Profit measure for customer Acquisition (MPA)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.mpa_score.html#empulse.metrics.mpa_score" title="empulse.metrics.mpa_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpa_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.mpa.html#empulse.metrics.mpa" title="empulse.metrics.mpa"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpa()</span></code></a> but only returning the MPA score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mpa_cost_score.html#empulse.metrics.mpa_cost_score" title="empulse.metrics.mpa_cost_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpa_cost_score</span></code></a></p></td>
+<td><p>Profit-driven cost function for customer acquisition</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.make_objective_acquisition.html#empulse.metrics.make_objective_acquisition" title="empulse.metrics.make_objective_acquisition"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_objective_acquisition</span></code></a></p></td>
+<td><p>Create an objective function for the <a class="reference external" href="https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBClassifier" title="(in xgboost v2.1.0-dev)"><code class="docutils literal notranslate"><span class="pre">xgboost.XGBClassifier</span></code></a> customer acquisition</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="customer-churn-metrics">
+<h2>Customer Churn Metrics<a class="headerlink" href="#customer-churn-metrics" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.empc.html#empulse.metrics.empc" title="empulse.metrics.empc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empc</span></code></a></p></td>
+<td><p>Expected Maximum Profit Measure for Customer Churn (EMPC)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empc_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.empc.html#empulse.metrics.empc" title="empulse.metrics.empc"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc()</span></code></a> but only returning the EMPC score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mpc.html#empulse.metrics.mpc" title="empulse.metrics.mpc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpc</span></code></a></p></td>
+<td><p>Maximum Profit Measure for Customer Churn (MPC)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpc_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.mpc.html#empulse.metrics.mpc" title="empulse.metrics.mpc"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc()</span></code></a> but only returning the MPC score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.empb.html#empulse.metrics.empb" title="empulse.metrics.empb"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empb</span></code></a></p></td>
+<td><p>Expected Maximum Profit Measure for B2B Customer Churn (EMPB)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empb_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.empb.html#empulse.metrics.empb" title="empulse.metrics.empb"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb()</span></code></a> but only returning the EMPB score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mpc_cost_score.html#empulse.metrics.mpc_cost_score" title="empulse.metrics.mpc_cost_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpc_cost_score</span></code></a></p></td>
+<td><p>Profit-driven cost function for customer churn</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.make_objective_churn.html#empulse.metrics.make_objective_churn" title="empulse.metrics.make_objective_churn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_objective_churn</span></code></a></p></td>
+<td><p>Create an objective function for the <a class="reference external" href="https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBClassifier" title="(in xgboost v2.1.0-dev)"><code class="docutils literal notranslate"><span class="pre">xgboost.XGBClassifier</span></code></a> for customer churn</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="credit-scoring-metrics">
+<h2>Credit Scoring Metrics<a class="headerlink" href="#credit-scoring-metrics" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.empcs.html#empulse.metrics.empcs" title="empulse.metrics.empcs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empcs</span></code></a></p></td>
+<td><p>Expected Maximum Profit measure for Credit Scoring</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">empcs_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.empcs.html#empulse.metrics.empcs" title="empulse.metrics.empcs"><code class="xref py py-func docutils literal notranslate"><span class="pre">empcs()</span></code></a> but only returning the EMPCS score</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.mpcs.html#empulse.metrics.mpcs" title="empulse.metrics.mpcs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpcs</span></code></a></p></td>
+<td><p>Maximum Profit measure for Credit Scoring</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/empulse.metrics.mpcs_score.html#empulse.metrics.mpcs_score" title="empulse.metrics.mpcs_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpcs_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="generated/empulse.metrics.mpcs.html#empulse.metrics.mpcs" title="empulse.metrics.mpcs"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpcs()</span></code></a> but only returning the MPCS score</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="helper-functions">
+<h2>Helper Functions<a class="headerlink" href="#helper-functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">classification_threshold</span></code></a></p></td>
+<td><p>Returns classification threshold for given customer threshold.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Empulse" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="generated/empulse.metrics.emp.html" class="btn btn-neutral float-right" title="empulse.metrics.emp" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

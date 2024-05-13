@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.metrics.mpc &mdash; Empulse 0.3.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=cbd0ad0a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=4621528c"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="empulse.metrics.mpc_score" href="empulse.metrics.mpc_score.html" />
+    <link rel="prev" title="empulse.metrics.empc_score" href="empulse.metrics.empc_score.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Empulse
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../metrics.html">Metrics</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../metrics.html#general-metrics">General Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics.html#customer-acquisition-metrics">Customer Acquisition Metrics</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../metrics.html#customer-churn-metrics">Customer Churn Metrics</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.empc.html">empulse.metrics.empc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.empc_score.html">empulse.metrics.empc_score</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">empulse.metrics.mpc</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#empulse.metrics.mpc"><code class="docutils literal notranslate"><span class="pre">mpc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.mpc_score.html">empulse.metrics.mpc_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.empb.html">empulse.metrics.empb</a></li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.empb_score.html">empulse.metrics.empb_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.mpc_cost_score.html">empulse.metrics.mpc_cost_score</a></li>
+<li class="toctree-l3"><a class="reference internal" href="empulse.metrics.make_objective_churn.html">empulse.metrics.make_objective_churn</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics.html#credit-scoring-metrics">Credit Scoring Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics.html#helper-functions">Helper Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../samplers.html">Samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimizers.html">Optimizers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../metrics.html">Metrics</a></li>
+      <li class="breadcrumb-item active">empulse.metrics.mpc</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/reference/generated/empulse.metrics.mpc.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="empulse-metrics-mpc">
+<h1>empulse.metrics.mpc<a class="headerlink" href="#empulse-metrics-mpc" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.mpc">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">mpc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accept_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incentive_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/metrics/churn/deterministic.html#mpc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.mpc" title="Link to this definition"></a></dt>
+<dd><p>Maximum Profit Measure for Customer Churn (MPC)</p>
+<p>MPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+Only a fraction of churners accepts the incentive offer.
+For detailed information, consult the paper <a class="reference internal" href="#r0fe16fdcd8a4-1" id="id1">[1]</a>.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc_score()</span></code></a> : to only return the MPC score.</p>
+<p><a class="reference internal" href="empulse.metrics.empc.html#empulse.metrics.empc" title="empulse.metrics.empc"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc()</span></code></a> : for a stochastic version of this metric.</p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>y_true</strong><span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘churn’: 1, ‘no churn’: 0).</p>
+</dd>
+<dt><strong>y_pred</strong><span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt><strong>accept_rate</strong><span class="classifier">float, default=0.3</span></dt><dd><p>Probability of a customer accepting the retention offer (<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">accept_rate</span> <span class="pre">&lt;</span> <span class="pre">1</span></code>).</p>
+</dd>
+<dt><strong>clv</strong><span class="classifier">float or 1D array-like, shape=(n_samples), default=200</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">float</span></code>: average customer lifetime value of retained customers (<code class="docutils literal notranslate"><span class="pre">clv</span> <span class="pre">&gt;</span> <span class="pre">incentive_cost</span></code>).
+If <code class="docutils literal notranslate"><span class="pre">array</span></code>: customer lifetime value of each customer when retained
+(<code class="docutils literal notranslate"><span class="pre">mean(clv)</span> <span class="pre">&gt;</span> <span class="pre">incentive_cost</span></code>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Passing a CLV array is equivalent to passing a float with the average CLV of that array.</p>
+</div>
+</dd>
+<dt><strong>incentive_cost</strong><span class="classifier">float, default=10</span></dt><dd><p>Cost of incentive offered to a customer (<code class="docutils literal notranslate"><span class="pre">incentive_cost</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>).</p>
+</dd>
+<dt><strong>contact_cost</strong><span class="classifier">float, default=1</span></dt><dd><p>Cost of contacting a customer (<code class="docutils literal notranslate"><span class="pre">contact_cost</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>empc</strong><span class="classifier">float</span></dt><dd><p>Maximum Profit Measure for Customer Churn</p>
+</dd>
+<dt><strong>threshold</strong><span class="classifier">float</span></dt><dd><p>Fraction of the customer base that should be targeted to maximize profit</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The MPC is defined as <a class="reference internal" href="#r0fe16fdcd8a4-1" id="id2">[1]</a>:</p>
+<div class="math notranslate nohighlight">
+\[CLV (\gamma (1 - \delta) - \phi) \pi_0 F_0(T) - CLV (\delta + \phi) \pi_1 F_1(T)\]</div>
+<p>The MPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see <a class="reference internal" href="#r0fe16fdcd8a4-3" id="id3">[3]</a> p37).
+However, this implementation assumes the standard notation (‘churn’: 1, ‘no churn’: 0).</p>
+<p>An equivalent R implementation is available in <a class="reference internal" href="#r0fe16fdcd8a4-2" id="id4">[2]</a>.</p>
+<p class="rubric">References</p>
+<div role="list" class="citation-list">
+<div class="citation" id="r0fe16fdcd8a4-1" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id2">2</a>)</span>
+<p>Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+A Novel Profit Maximizing Metric for Measuring Classification
+Performance of Customer Churn Prediction Models. IEEE Transactions on
+Knowledge and Data Engineering, 25(5), 961-973. Available Online:
+<a class="reference external" href="http://ieeexplore.ieee.org/iel5/69/6486492/06165289.pdf?arnumber=6165289">http://ieeexplore.ieee.org/iel5/69/6486492/06165289.pdf?arnumber=6165289</a></p>
+</div>
+<div class="citation" id="r0fe16fdcd8a4-2" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">2</a><span class="fn-bracket">]</span></span>
+<p>Bravo, C. and Vanden Broucke, S. and Verbraken, T. (2019).
+EMP: Expected Maximum Profit Classification Performance Measure.
+R package version 2.0.5. Available Online:
+<a class="reference external" href="http://cran.r-project.org/web/packages/EMP/index.html">http://cran.r-project.org/web/packages/EMP/index.html</a></p>
+</div>
+<div class="citation" id="r0fe16fdcd8a4-3" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>Verbraken, T. (2013). Business-Oriented Data Analytics:
+Theory and Case Studies. Ph.D. dissertation, Dept. LIRIS, KU Leuven,
+Leuven, Belgium, 2013.</p>
+</div>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">empulse.metrics</span> <span class="kn">import</span> <span class="n">mpc</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mpc</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+<span class="go">(23.874999999999996, 0.875)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="empulse.metrics.empc_score.html" class="btn btn-neutral float-left" title="empulse.metrics.empc_score" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="empulse.metrics.mpc_score.html" class="btn btn-neutral float-right" title="empulse.metrics.mpc_score" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
