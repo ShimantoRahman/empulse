@@ -2,6 +2,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ShimantoRahman/empulse)
 ![](https://img.shields.io/pypi/pyversions/empulse)
 ![Tests](https://github.com/ShimantoRahman/empulse/actions/workflows/tests.yml/badge.svg)
+[![DOI](https://zenodo.org/badge/654945788.svg)](https://zenodo.org/doi/10.5281/zenodo.11185663)
 
 # Empulse
 
