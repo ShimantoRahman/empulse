@@ -6,12 +6,10 @@ from joblib import Parallel, delayed
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
-from empulse.optimizers import Optimizer
 
-
-class Generation(Optimizer):
+class Generation:
     """
-    Generation of a Real-coded Genetic Algorithm (RGA)
+    A single generation of a Real-coded Genetic Algorithm (RGA)
 
     Parameters
     ----------

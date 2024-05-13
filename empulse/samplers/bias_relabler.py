@@ -5,7 +5,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator, clone
 from sklearn.utils import _safe_indexing
 
-from empulse.samplers._strategies import Strategy
+from empulse.samplers._strategies import Strategy, StrategyFn
 
 _XT = TypeVar('_XT', bound=ArrayLike)
 
@@ -32,24 +32,30 @@ def _independent_pairs(y_true: ArrayLike, protected_attr: np.ndarray) -> int:
 
 class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
     """
-    Sampler which relabels instances to remove bias against a subgroup.
+    Sampler which relabels instances to remove bias against a subgroup
 
     Parameters
     ----------
     estimator : Estimator instance
         Base estimator which is used to determine the number of promotion and demotion pairs.
-    strategy : Literal or Callable, default = 'statistical parity'
-        Function which computes the group weights based on the target and protected attribute.
-        if ``Literal`` group weights are computed so:
-            - `'statistical_parity'` or `'demographic parity'`: probability of positive predictions
-            are equal between subgroups of protected attribute.
-            - other strategies coming in future versions.
-    transform_attr : Optional[Callable], default = None
-        Function which transforms protected attribute before computing sample weights.
+    strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
+        Determines how the group weights are computed.
+        Group weights determine how many instances to relabel for each combination of target and protected attribute.
+
+        - ``'statistical_parity'`` or ``'demographic parity'``: \
+        probability of positive predictions are equal between subgroups of protected attribute.
+
+        - ``Callable``: function which computes the group weights based on the target and protected attribute. \
+        Callable accepts two arguments: y_true and protected_attr and returns the group weights. \
+        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
+        protected attribute. \
+        The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
+    transform_attr : Optional[Callable], default=None
+        Function which transforms protected attribute before resampling the training data.
     """
     _estimator_type = "sampler"
 
-    strategy_mapping = {
+    strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_pairs,
         'demographic parity': _independent_pairs,
     }
@@ -76,6 +82,7 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
     ) -> tuple[_XT, np.ndarray]:
         """
         Fit the estimator and relabel the data according to the strategy.
+
         Parameters
         ----------
         X : ArrayLike
@@ -84,6 +91,7 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
             Target values.
         protected_attr : Optional[ArrayLike]
             Protected attribute used to determine the number of promotion and demotion pairs.
+
         Returns
         -------
         X : ArrayLike
@@ -106,12 +114,12 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         probas_unprotected = y_pred[unprotected_indices]
         probas_protected = y_pred[protected_indices]
 
-        self.demotion_candidates = _get_demotion_candidates(
+        demotion_candidates = _get_demotion_candidates(
             probas_unprotected,
             _safe_indexing(y, unprotected_indices),
             n_pairs
         )
-        self.promotion_candidates = _get_promotion_candidates(
+        promotion_candidates = _get_promotion_candidates(
             probas_protected,
             _safe_indexing(y, protected_indices),
             n_pairs
@@ -119,8 +127,8 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
 
         # map promotion and demotion candidates to original indices
         indices = np.arange(len(y))
-        demotion_candidates = indices[unprotected_indices][self.demotion_candidates]
-        promotion_candidates = indices[protected_indices][self.promotion_candidates]
+        demotion_candidates = indices[unprotected_indices][demotion_candidates]
+        promotion_candidates = indices[protected_indices][promotion_candidates]
 
         # relabel the data
         relabled_y = np.asarray(y).copy()

@@ -6,9 +6,8 @@ Optimizers
 The :mod:`~empulse.optimizers` module contains the optimizers used to
 optimize models in the :mod:`empulse.models` module.
 
-.. autosummary::
-   :toctree: generated/
-   :nosignatures:
+.. list-table::
+   :widths: 25 75
 
-   Optimizer
-   Generation
+   * - :class:`Generation`
+     - A single generation of a Real-coded Genetic Algorithm (RGA)

@@ -1,11 +1,10 @@
-import pytest
-
 import numpy as np
-from sklearn.utils.validation import check_is_fitted, NotFittedError
+import pytest
 from sklearn.linear_model import LogisticRegression
+from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.models.bias_reweighing import _independent_sample_weights
 from empulse.models import BiasReweighingClassifier
+from empulse.models.bias_reweighing import _independent_sample_weights
 
 
 def test_independent_sample_weights():
@@ -14,8 +13,10 @@ def test_independent_sample_weights():
     weights = _independent_sample_weights(y_true, protected_attr)
     assert np.allclose(
         weights,
-        np.array([0.375, 0.375, 0.375, 0.375, 1,
-                  0.33333333, 0.33333333, 0.75, 0.33333333, 0.75])  # divided by 2 because of the normalization
+        np.array(
+            [0.375, 0.375, 0.375, 0.375, 1,
+             0.33333333, 0.33333333, 0.75, 0.33333333, 0.75]
+        )  # divided by 2 because of the normalization
     )
 
 
@@ -130,3 +131,22 @@ def test_works_in_ensemble(X, y):
     assert isinstance(bagging.estimators_[0], BiasReweighingClassifier)
     assert isinstance(bagging.score(X, y), float)
     assert isinstance(bagging.predict(X), np.ndarray)
+
+
+def test_metadatarouting(X, y, protected_attr):
+    from sklearn import config_context
+    from sklearn.model_selection import GridSearchCV
+
+    param_grid = {'estimator__C': [1, 2]}
+
+    with config_context(enable_metadata_routing=True):
+        model = BiasReweighingClassifier(estimator=LogisticRegression())
+        model.set_fit_request(protected_attr=True)
+        search = GridSearchCV(model, param_grid=param_grid)
+        search.fit(X, y, protected_attr=protected_attr)
+        try:
+            check_is_fitted(search)
+        except NotFittedError:
+            pytest.fail("GridSearchCV is not fitted")
+        assert isinstance(search.score(X, y), float)
+        assert isinstance(search.predict(X), np.ndarray)
