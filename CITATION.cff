@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: Shimanto
-    given-names: Rahman
+  - family-names: Rahman
+    given-names: Shimanto
     orcid: https://orcid.org/0000-0001-8636-8970
 title: "Empulse"
 version: 0.3.1
