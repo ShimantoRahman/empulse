@@ -1,15 +1,16 @@
-from collections import defaultdict
 from typing import Any, Union, Optional
+from collections import defaultdict
 
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_X_y
 from xgboost import XGBClassifier
 
+from .wrapper import WrapperMixin
 from ..metrics import make_objective_churn, mpc_cost_score
 
 
-class B2BoostClassifier(BaseEstimator, ClassifierMixin):
+class B2BoostClassifier(BaseEstimator, ClassifierMixin, WrapperMixin):
     """
     :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
 
@@ -54,6 +55,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
+
     def __init__(
             self,
             *,
@@ -76,66 +78,8 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             params.update(kwargs)
         self.params = params
 
-        self.model = XGBClassifier(**params)
+        self.estimator = XGBClassifier(**params)
 
-    def __getattr__(self, attr):
-        """
-        If the attribute is not found in B2BoostClassifier,
-        it checks if it is present in `self.model` and if it is, returns that.
-        """
-        if hasattr(self.model, attr):
-            return getattr(self.model, attr)
-        else:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
-
-    def set_params(self, **params):
-        """Set the parameters of this estimator.
-
-        The method works on simple estimators as well as on nested objects
-        (such as :class:`sklearn:sklearn.pipeline.Pipeline`). The latter have
-        parameters of the form ``<component>__<parameter>`` so that it's
-        possible to update each component of a nested object.
-
-        Parameters
-        ----------
-        **params : dict
-            Estimator parameters.
-
-        Returns
-        -------
-        self : estimator instance
-            Estimator instance.
-        """
-        if not params:
-            # Simple optimization to gain speed (inspect is slow)
-            return self
-        valid_params = self.get_params(deep=True)
-        valid_params_xgb = self.model.get_params(deep=True)
-
-        nested_params = defaultdict(dict)  # grouped by prefix
-        for key, value in params.items():
-            key, delim, sub_key = key.partition("__")
-            if key not in valid_params and key not in valid_params_xgb:
-                local_valid_params = self._get_param_names()
-                raise ValueError(
-                    f"Invalid parameter {key!r} for estimator {self}. "
-                    f"Valid parameters are: {local_valid_params!r}."
-                )
-            if key not in valid_params and key in valid_params_xgb:
-                self.model.set_params(**{key: value})
-                self.params[key] = value
-                continue
-
-            if delim:
-                nested_params[key][sub_key] = value
-            else:
-                setattr(self, key, value)
-                valid_params[key] = value
-
-        for key, sub_params in nested_params.items():
-            valid_params[key].set_params(**sub_params)
-
-        return self
 
     def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_cost=None, contact_cost=None):
         """
@@ -177,8 +121,8 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
             contact_cost=self.contact_cost if contact_cost is None else contact_cost,
             accept_rate=self.accept_rate if accept_rate is None else accept_rate,
         )
-        self.model = XGBClassifier(objective=objective, **self.params)
-        self.model.fit(X, y, sample_weight=sample_weights)
+        self.estimator = XGBClassifier(objective=objective, **self.params)
+        self.estimator.fit(X, y, sample_weight=sample_weights)
         return self
 
     def predict_proba(self, X):
@@ -194,7 +138,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
             Predicted class probabilities.
         """
-        return self.model.predict_proba(X)
+        return self.estimator.predict_proba(X)
 
     def predict(self, X):
         """
@@ -209,7 +153,7 @@ class B2BoostClassifier(BaseEstimator, ClassifierMixin):
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
             Predicted class labels.
         """
-        return self.model.predict(X)
+        return self.estimator.predict(X)
 
     def score(
             self,

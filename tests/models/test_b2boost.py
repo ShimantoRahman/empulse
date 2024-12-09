@@ -43,17 +43,17 @@ def test_b2boost_with_different_parameters():
     assert clf.incentive_cost == 5
     assert clf.contact_cost == 0.5
     assert clf.accept_rate == 0.1
-    assert clf.model.n_jobs == 1
-    assert clf.model.random_state == 42
+    assert clf.estimator.n_jobs == 1
+    assert clf.estimator.random_state == 42
 
 
 def test_b2boost_fit(X, y):
     clf = B2BoostClassifier()
     clf.fit(X, y)
-    assert isinstance(clf.model, XGBClassifier)
+    assert isinstance(clf.estimator, XGBClassifier)
     assert clf.classes_ is not None
     try:
-        check_is_fitted(clf.model)
+        check_is_fitted(clf.estimator)
     except NotFittedError:
         pytest.fail("XGBClassifier is not fitted")
 
