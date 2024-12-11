@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from scipy.optimize import OptimizeResult
+from sklearn.utils.validation import NotFittedError, check_is_fitted
 
 from empulse.models import ProfLogitClassifier
 
@@ -57,6 +58,10 @@ def test_proflogit_fit(clf):
 def test_proflogit_fit_no_intercept(X, y):
     clf = ProfLogitClassifier(fit_intercept=False, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
+    try:
+        check_is_fitted(clf)
+    except NotFittedError:
+        pytest.fail("ProfLogitClassifier is not fitted")
     assert clf.n_dim == 2
     assert isinstance(clf.result, OptimizeResult)
 
