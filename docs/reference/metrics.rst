@@ -47,6 +47,7 @@ Customer Churn Metrics
    mpc_score
    empb
    empb_score
+   auepc_score
    mpc_cost_score
    make_objective_churn
 
