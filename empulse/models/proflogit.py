@@ -1,4 +1,3 @@
-import inspect
 import warnings
 from functools import partial
 from itertools import islice
@@ -168,7 +167,8 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         objective = partial(
             _objective,
             X=X,
-            loss_fn=partial(self.loss_fn, y_true=y, **loss_params),
+            y=y,
+            loss_fn=partial(self.loss_fn, **loss_params),
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
@@ -245,7 +245,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
         return self.loss_fn(y, self.predict_proba(X)[:, 1])
 
 
-def _objective(weights, X, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
+def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
     """ProfLogit's objective function (maximization problem)."""
 
     # b is the vector holding the regression coefficients (no intercept)
@@ -262,20 +262,10 @@ def _objective(weights, X, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
 
     logits = np.dot(X, weights)
     y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
-    loss = _call_loss_fn(loss_fn, y_pred)
+    loss = loss_fn(y, y_pred)
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return loss - penalty
-
-
-def _call_loss_fn(loss_fn, y_pred):
-    sig = inspect.signature(loss_fn)
-    if 'y_pred' in sig.parameters:
-        return loss_fn(y_pred=y_pred)
-    elif 'y_score' in sig.parameters:
-        return loss_fn(y_score=y_pred)
-    else:
-        raise ValueError("loss_fn does not have 'y_pred' or 'y_score' parameter")
 
 
 def _optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
