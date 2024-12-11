@@ -19,6 +19,7 @@ Installation Guide
 
     reference/metrics
     reference/models
+    reference/samplers
     reference/optimizers
 
 .. toctree::

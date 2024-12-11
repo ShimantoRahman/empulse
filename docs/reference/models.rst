@@ -5,9 +5,17 @@ Models
 
 The :mod:`~empulse.models` module contains a collection of profit-driven models.
 
-.. autosummary::
-   :toctree: generated/
-   :nosignatures:
+.. list-table::
+   :widths: 25 75
 
-   B2BoostClassifier
-   ProfLogitClassifier
+   * - :class:`B2BoostClassifier`
+     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
+   * - :class:`BiasRelabelingClassifier`
+     - Classifier which relabels instances during training to remove bias against a subgroup
+   * - :class:`BiasResamplingClassifier`
+     - Classifier which resamples instances during training to remove bias against a subgroup
+   * - :class:`BiasReweighingClassifier`
+     - Classifier which reweighs instances during training to remove bias against a subgroup
+   * - :class:`ProfLogitClassifier`
+     - Logistic classifier to optimize profit-driven loss functions
+

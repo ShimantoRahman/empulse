@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel", "pybind11>=2.10.0"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "empulse"
-version = "0.2.5"
+version = "0.3.1"
 description = "Value-driven metrics and models for scikit-learn"
 readme = "README.md"
 authors = [
@@ -67,7 +67,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["empulse*", "cpp*"]
+include = ["empulse*"]
 exclude = [
     "docs",
     "tests",

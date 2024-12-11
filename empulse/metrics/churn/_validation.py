@@ -81,6 +81,25 @@ def _validate_input_mp(
     return _validate_input(y_true, y_pred, clv, d, f)
 
 
+def _validate_input_mpc(
+        y_true: ArrayLike,
+        y_pred: ArrayLike,
+        clv: ArrayLike,
+        accept_rate: float,
+        incentive_fraction: float,
+        contact_cost: float
+) -> tuple[np.ndarray, np.ndarray, Union[np.ndarray, float]]:
+    y_true = _check_y_true(y_true)
+    y_pred = _check_y_pred(y_pred)
+    _check_shape(y_true, y_pred)
+    clv = np.asarray(clv)
+    _check_fraction(accept_rate, 'accept_rate')
+    _check_fraction(incentive_fraction, 'incentive_fraction')
+    _check_positive(contact_cost, 'contact_cost')
+
+    return y_true, y_pred, clv
+
+
 def _validate_input_empb(
         y_true: ArrayLike,
         y_pred: ArrayLike,
