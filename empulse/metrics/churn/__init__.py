@@ -1,4 +1,4 @@
-from .stochastic import empc, empc_score, empb, empb_score
+from .stochastic import empc, empc_score, empb, empb_score, auepc_score
 from .deterministic import mpc, mpc_score, compute_profit_churn
 from .cost import make_objective_churn, mpc_cost_score
 

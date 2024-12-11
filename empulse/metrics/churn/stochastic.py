@@ -485,7 +485,7 @@ def auepc_score(
 
     .. seealso::
 
-        :func:`~empulse.metrics.empb_score` : to only return the EMPB score.
+        :func:`~empulse.metrics.empb` : to return the maximum profit and threshold.
 
     Parameters
     ----------
