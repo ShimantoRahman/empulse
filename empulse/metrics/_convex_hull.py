@@ -3,10 +3,10 @@ from scipy.spatial import ConvexHull, QhullError
 
 from sklearn.metrics import roc_curve
 
-try:
-    from _empulse import convex_hull, roc_curve
-except ImportError:
-    raise ImportError("The C++ extension could not be loaded")
+# try:
+#     from _empulse import convex_hull, roc_curve
+# except ImportError:
+#     raise ImportError("The C++ extension could not be loaded")
 
 
 def _compute_convex_hull(
@@ -33,46 +33,46 @@ def _compute_convex_hull(
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
-    # fpr, tpr, _ = roc_curve(y_true, y_pred, pos_label=1, drop_intermediate=True)
-    # if fpr[0] != 0 or tpr[0] != 0:
-    #     fpr = np.concatenate([[0], fpr])
-    #     tpr = np.concatenate([[0], tpr])
-    # if fpr[-1] != 1 or tpr[-1] != 1:
-    #     fpr = np.concatenate([fpr, [1]])
-    #     tpr = np.concatenate([tpr, [1]])
-    #
-    # is_finite = np.isfinite(fpr) & np.isfinite(tpr)
-    # fpr = fpr[is_finite]
-    # tpr = tpr[is_finite]
-    # if fpr.shape[0] < 2:
-    #     raise ValueError("Too few distinct predictions for ROCCH")
-    #
-    # points = np.c_[fpr, tpr]  # concatenate into matrix with two columns
-    # try:
-    #     ind = ConvexHull(points).vertices  # indices of the points on the convex hull
-    # except QhullError:
-    #     return np.array([0, 1]), np.array([0, 1])
-    #
-    # convex_hull_fpr = fpr[ind]
-    # convex_hull_tpr = tpr[ind]
-    # ind_upper_triangle = convex_hull_fpr < convex_hull_tpr  # only consider points above the 45° line
-    # convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])  # type: ignore
-    # convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])  # type: ignore
-    # ind = np.argsort(convex_hull_fpr)  # sort along the x-axis
-    # convex_hull_fpr = convex_hull_fpr[ind]
-    # convex_hull_tpr = convex_hull_tpr[ind]
+    fpr, tpr, _ = roc_curve(y_true, y_pred, pos_label=1, drop_intermediate=True)
+    if fpr[0] != 0 or tpr[0] != 0:
+        fpr = np.concatenate([[0], fpr])
+        tpr = np.concatenate([[0], tpr])
+    if fpr[-1] != 1 or tpr[-1] != 1:
+        fpr = np.concatenate([fpr, [1]])
+        tpr = np.concatenate([tpr, [1]])
 
-    # convert y_true and y_pred to a lists
-    y_true = y_true.tolist()
-    y_pred = y_pred.tolist()
+    is_finite = np.isfinite(fpr) & np.isfinite(tpr)
+    fpr = fpr[is_finite]
+    tpr = tpr[is_finite]
+    if fpr.shape[0] < 2:
+        raise ValueError("Too few distinct predictions for ROCCH")
 
-    roc = roc_curve(y_true, y_pred)
-    hull = convex_hull(roc)
+    points = np.c_[fpr, tpr]  # concatenate into matrix with two columns
+    try:
+        ind = ConvexHull(points).vertices  # indices of the points on the convex hull
+    except QhullError:
+        return np.array([0, 1]), np.array([0, 1])
 
-    # convert list of tuple to two arrays
-    convex_hull_fpr, convex_hull_tpr = zip(*hull)
-    convex_hull_fpr = np.array(convex_hull_fpr)
-    convex_hull_tpr = np.array(convex_hull_tpr)
+    convex_hull_fpr = fpr[ind]
+    convex_hull_tpr = tpr[ind]
+    ind_upper_triangle = convex_hull_fpr < convex_hull_tpr  # only consider points above the 45° line
+    convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])  # type: ignore
+    convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])  # type: ignore
+    ind = np.argsort(convex_hull_fpr)  # sort along the x-axis
+    convex_hull_fpr = convex_hull_fpr[ind]
+    convex_hull_tpr = convex_hull_tpr[ind]
+
+    # # convert y_true and y_pred to a lists
+    # y_true = y_true.tolist()
+    # y_pred = y_pred.tolist()
+    #
+    # roc = roc_curve(y_true, y_pred)
+    # hull = convex_hull(roc)
+    #
+    # # convert list of tuple to two arrays
+    # convex_hull_fpr, convex_hull_tpr = zip(*hull)
+    # convex_hull_fpr = np.array(convex_hull_fpr)
+    # convex_hull_tpr = np.array(convex_hull_tpr)
 
     if expand_dims:
         convex_hull_tpr = np.expand_dims(convex_hull_tpr, axis=1)
