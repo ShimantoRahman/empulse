@@ -36,8 +36,8 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
 
     l1_ratio : float, default=1.0
         The ElasticNet mixing parameter, with ``0 <= l1_ratio <= 1``.
-        For ``l1_ratio = 0`` the penalty is an L2 penalty.
-        For ``l1_ratio = 1`` it is an L1 penalty.
+        For ``l1_ratio = 0`` the penalty is a L2 penalty.
+        For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
     loss_fn : Callable, default= :func:`empulse.metrics.empc_score`
