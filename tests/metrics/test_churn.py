@@ -228,15 +228,15 @@ class TestEMPB(BaseTestMetric.TestMetric):
         },
     ]
     expected_values = {
-        "perfect_prediction": (525.0, 0.475),
-        "incorrect_prediction": (325.0, 0.975),
+        "perfect_prediction": (525.0, 0.5),
+        "incorrect_prediction": (325.0, 1.0),
         "different_parameters": [
-            (1202.3649999999961, 0.445),
-            (297.00623162923307, 0.15),
-            (2748.0045454553197, 0.445),
+            (1202.3649999999961, 0.4434389140271493),
+            (297.00625, 0.1493212669683258),
+            (2748.0045454553197, 0.4434389140271493),
             (0.0, 0.0),
-            (1202.3649999999961, 0.445),
-            (2541.7823529411744, 0.445),
+            (1202.3649999999961, 0.4434389140271493),
+            (2541.7823529411744, 0.4434389140271493),
         ],
     }
 
@@ -263,27 +263,27 @@ class TestEMPB(BaseTestMetric.TestMetric):
     def test_half_correct_prediction(self):
         self.assertAlmostEqualMetric(
             self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10),
-            (345.0, 0.925)
+            (345.0, 0.95)
         )
         self.assertAlmostEqualMetric(
             self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10),
-            (325.0, 0.975)
+            (325.0, 1.0)
         )
         self.assertAlmostEqualMetric(
             self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10),
-            (345.0, 0.925)
+            (345.0, 0.95)
         )
         self.assertAlmostEqualMetric(
             self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10),
-            (325.0, 0.975)
+            (325.0, 1.0)
         )
         self.assertAlmostEqualMetric(
             self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10),
-            (345.0, 0.925)
+            (345.0, 0.95)
         )
         self.assertAlmostEqualMetric(
             self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10),
-            (325.0, 0.975)
+            (325.0, 1.0)
         )
 
     def test_arraylikes(self):

@@ -305,7 +305,6 @@ def empb_score(
         beta: float = 14,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
-        n_buckets: int = 250
 ) -> float:
     """
     :func:`~empulse.metrics.empb()` but only returning the EMPB score
@@ -350,10 +349,6 @@ def empb_score(
     contact_cost : float, default=15
         Cost of contacting a customer (``contact_cost > 0``).
 
-    n_buckets : int, default=250
-        Number of buckets used for numerical integration.
-        More buckets result in higher precision, but slower computation time.
-
     Returns
     -------
     empb : float
@@ -373,7 +368,6 @@ def empb_score(
         clv=clv,
         contact_cost=contact_cost,
         incentive_fraction=incentive_fraction,
-        n_buckets=n_buckets
     )[0]
 
 
@@ -386,7 +380,6 @@ def empb(
         beta: float = 14,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
-        n_buckets: int = 250
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for B2B Customer Churn (EMPB)
@@ -430,10 +423,6 @@ def empb(
     contact_cost : float, default=15
         Cost of contacting a customer (``contact_cost > 0``).
 
-    n_buckets : int, default=250
-        Number of buckets used for numerical integration.
-        More buckets result in higher precision, but slower computation time.
-
     Returns
     -------
     empb : float
@@ -449,34 +438,24 @@ def empb(
         Annals of Operations Research, 1-27.
     """
     y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
-    step_size = 1 / n_buckets
+    gamma = alpha / (alpha + beta)
 
-    gammas = np.arange(0, 1, step_size)
-    gamma_weights = st.beta.pdf(gammas, alpha, beta) * gammas * step_size
+    # Sort by predicted probabilities
+    sorted_indices = np.argsort(y_pred)[::-1]
+    sorted_y_true = y_true[sorted_indices]
+    sorted_clv = clv[sorted_indices]
 
-    sorted_indices = y_pred.argsort()[::-1]
+    # Calculate cumulative sums for benefits and costs
+    cumulative_benefits = np.cumsum(gamma * ((1 - incentive_fraction) * sorted_clv - contact_cost) * sorted_y_true)
+    cumulative_costs = np.cumsum((-contact_cost - incentive_fraction * sorted_clv) * (1 - sorted_y_true))
+    cumulative_profits = cumulative_benefits + cumulative_costs
 
-    emp = -np.inf
-    threshold = 0
-    for fraction_targeted in _range(0, 1, 0.005):
-        n_targeted = round(fraction_targeted * len(sorted_indices))
-        targeted_indices = sorted_indices[0:n_targeted]
-        targets = y_true[targeted_indices]
-        clv_targets = clv[targeted_indices]
+    # Add a zero at the beginning to indicate not contacting anyone
+    cumulative_profits = np.insert(cumulative_profits, 0, 0)
 
-        benefit = np.sum(
-            np.sum(
-                np.expand_dims(gamma_weights, axis=1) *
-                ((1 - incentive_fraction) * np.expand_dims(clv_targets, axis=0) - contact_cost),
-                axis=0) * targets
-        )
-        cost = np.sum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
-        profit = benefit + cost
+    # Find the maximum profit and corresponding threshold
+    max_profit_index = np.argmax(cumulative_profits)
+    max_profit = cumulative_profits[max_profit_index]
+    threshold = max_profit_index / len(y_pred)
 
-        if profit > emp:
-            emp = profit
-            threshold = fraction_targeted
-
-    return emp, threshold
-
-
+    return float(max_profit), float(threshold)
