@@ -126,7 +126,7 @@ def test_works_in_pipeline(X, y, protected_attr):
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
     clf = BiasReweighingClassifier(estimator=LogisticRegression())
-    bagging = BaggingClassifier(clf, n_estimators=2)
+    bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)  # no option to pass protected_attr
     assert isinstance(bagging.estimators_[0], BiasReweighingClassifier)
     assert isinstance(bagging.score(X, y), float)

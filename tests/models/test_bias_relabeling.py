@@ -112,7 +112,7 @@ def test_works_in_pipeline(X, y, protected_attr):
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
-    bagging = BaggingClassifier(clf, n_estimators=2)
+    bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
     assert isinstance(bagging.estimators_[0], BiasRelabelingClassifier)
     assert isinstance(bagging.score(X, y), float)

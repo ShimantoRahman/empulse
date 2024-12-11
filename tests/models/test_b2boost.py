@@ -110,7 +110,7 @@ def test_works_in_pipeline(X, y):
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
     clf = B2BoostClassifier(n_estimators=2)
-    bagging = BaggingClassifier(clf, n_estimators=2)
+    bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
     assert isinstance(bagging.estimators_[0], B2BoostClassifier)
     assert isinstance(bagging.score(X, y), float)
