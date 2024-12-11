@@ -459,3 +459,112 @@ def empb(
     threshold = max_profit_index / len(y_pred)
 
     return float(max_profit), float(threshold)
+
+
+def auepc_score(
+        y_true: ArrayLike,
+        y_pred: ArrayLike,
+        *,
+        clv: ArrayLike,
+        alpha: float = 6,
+        beta: float = 14,
+        incentive_fraction: float = 0.05,
+        contact_cost: float = 15,
+        normalize: bool = True,
+) -> float:
+    """
+    Area Under the Expected Profit Curve (AUEPC)
+
+    Calculate the area under the ratio of the expected profit of the model and the perfect model.
+    The expected profit is based on the EMPB's definition of profit.
+
+    AUEPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
+    Only a fraction of churners accepts the incentive offer,
+    this fraction is described by a :math:`Beta(\\alpha, \\beta)` distribution.
+    For detailed information, consult the paper [1]_.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.empb_score` : to only return the EMPB score.
+
+    Parameters
+    ----------
+    y_true : 1D array-like, shape=(n_samples,)
+        Binary target values ('churn': 1, 'no churn': 0).
+
+    y_pred : 1D array-like, shape=(n_samples,)
+        Target scores, can either be probability estimates or non-thresholded decision values.
+
+    alpha : float, default=6
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``alpha > 1``).
+
+    beta : float, default=14
+        Shape parameter of the beta distribution of the probability
+        that a churner accepts the incentive (``beta > 1``).
+
+    clv : float or 1D array-like, shape=(n_samples)
+        If ``float``: average customer lifetime value of retained customers.
+        If ``array``: customer lifetime value of each customer when retained.
+
+    incentive_fraction : float, default=0.05
+        Cost of incentive offered to a customer, as a fraction of customer lifetime value
+        (``0 < incentive_fraction < 1``).
+
+    contact_cost : float, default=15
+        Cost of contacting a customer (``contact_cost > 0``).
+
+    normalize : bool, default=True
+        Whether to normalize the AUEPC score. If True, the score is 1 when the model is perfect.
+        This parameter is only useful if a part of the expected profit curve is negative.
+
+    Returns
+    -------
+    empb : float
+        Expected Maximum Profit Measure for B2B Customer Churn
+
+    threshold : float
+        Fraction of the customer base that should be targeted to maximize profit
+
+    References
+    ----------
+    .. [1] Rahman, S., Janssens, B., Bogaert, M. (2025).
+        Profit-Driven Pre-Processing in B2B Customer Churn Modeling using Fairness Techniques.
+        Journal of Business Research.
+    """
+    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+    if clv.ndim > 1:
+        clv = clv[:, 0]
+
+    accept_rate = alpha / (alpha + beta)
+
+    # Calculate the expected profit vector for the perfect model
+    perfect_pred_indices = np.argsort(np.where(y_true == 1, 1, -1) * clv)[::-1]
+    perfect_targets = y_true[perfect_pred_indices]
+    perfect_clv_targets = clv[perfect_pred_indices]
+
+    perfect_benefits = np.cumsum(
+        accept_rate * ((1 - incentive_fraction) * perfect_clv_targets - contact_cost) * perfect_targets
+    )
+    perfect_costs = np.cumsum((-contact_cost - incentive_fraction * perfect_clv_targets) * (1 - perfect_targets))
+    perfect_profits = perfect_benefits + perfect_costs
+
+    # Calculate the expected profit vector for the perfect model
+    sorted_indices = y_pred.argsort()[::-1]
+    targets = y_true[sorted_indices]
+    clv_targets = clv[sorted_indices]
+
+    benefits = np.cumsum(
+        accept_rate * ((1 - incentive_fraction) * clv_targets - contact_cost) * targets
+    )
+    costs = np.cumsum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
+    profits = benefits + costs
+
+    # Stop at the point where perfect profits become negative
+    stop_index = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)
+
+    # Calculate the AUEPC
+    score = np.trapz(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))
+    if normalize:
+        score /= (stop_index - 1) / len(profits)
+    return score
