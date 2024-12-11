@@ -3,11 +3,6 @@ from scipy.spatial import ConvexHull, QhullError
 
 from sklearn.metrics import roc_curve
 
-# try:
-#     from _empulse import convex_hull, roc_curve
-# except ImportError:
-#     raise ImportError("The C++ extension could not be loaded")
-
 
 def _compute_convex_hull(
         y_true: np.ndarray,
@@ -61,18 +56,6 @@ def _compute_convex_hull(
     ind = np.argsort(convex_hull_fpr)  # sort along the x-axis
     convex_hull_fpr = convex_hull_fpr[ind]
     convex_hull_tpr = convex_hull_tpr[ind]
-
-    # # convert y_true and y_pred to a lists
-    # y_true = y_true.tolist()
-    # y_pred = y_pred.tolist()
-    #
-    # roc = roc_curve(y_true, y_pred)
-    # hull = convex_hull(roc)
-    #
-    # # convert list of tuple to two arrays
-    # convex_hull_fpr, convex_hull_tpr = zip(*hull)
-    # convex_hull_fpr = np.array(convex_hull_fpr)
-    # convex_hull_tpr = np.array(convex_hull_tpr)
 
     if expand_dims:
         convex_hull_tpr = np.expand_dims(convex_hull_tpr, axis=1)
