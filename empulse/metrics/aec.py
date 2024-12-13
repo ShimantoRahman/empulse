@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -9,10 +9,10 @@ from ._validation import _check_consistent_length, _check_y_true, _check_y_pred
 def _compute_expected_cost(
         y_true: ArrayLike,
         y_pred: ArrayLike,
-        tp_costs: Optional[ArrayLike] = None,
-        tn_costs: Optional[ArrayLike] = None,
-        fn_costs: Optional[ArrayLike] = None,
-        fp_costs: Optional[ArrayLike] = None,
+        tp_costs: Union[ArrayLike, float] = 0.0,
+        tn_costs: Union[ArrayLike, float] = 0.0,
+        fn_costs: Union[ArrayLike, float] = 0.0,
+        fp_costs: Union[ArrayLike, float] = 0.0,
         validation: bool = True,
 ) -> NDArray:
     """
@@ -24,14 +24,14 @@ def _compute_expected_cost(
         True labels.
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
-    tp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true positive predictions.
-    tn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true negative predictions.
-    fn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false negative predictions.
-    fp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false positive predictions.
+    tp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true positive predictions.
+    tn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true negative predictions.
+    fn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false negative predictions.
+    fp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false positive predictions.
     validation : bool, default=True
         Perform input validation. Turning off improves performance
 
@@ -44,27 +44,17 @@ def _compute_expected_cost(
         y_true = _check_y_true(y_true)
         y_pred = _check_y_pred(y_pred)
 
-        if all(costs is None for costs in (tp_costs, tn_costs, fn_costs, fp_costs)):
-            raise ValueError("At least one of tp_costs, tn_costs, fn_costs, fp_costs must be provided.")
     else:
         y_true = np.asarray(y_true)
         y_pred = np.asarray(y_pred)
 
-    if tp_costs is None:
-        tp_costs = 0.0
-    else:
+    if not isinstance(tp_costs, float):
         tp_costs = np.asarray(tp_costs)
-    if tn_costs is None:
-        tn_costs = 0.0
-    else:
+    if not isinstance(tn_costs, float):
         tn_costs = np.asarray(tn_costs)
-    if fn_costs is None:
-        fn_costs = 0.0
-    else:
+    if not isinstance(fn_costs, float):
         fn_costs = np.asarray(fn_costs)
-    if fp_costs is None:
-        fp_costs = 0.0
-    else:
+    if not isinstance(fp_costs, float):
         fp_costs = np.asarray(fp_costs)
 
     if validation:
@@ -81,10 +71,10 @@ def aec_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
-        tp_costs: Optional[ArrayLike] = None,
-        tn_costs: Optional[ArrayLike] = None,
-        fn_costs: Optional[ArrayLike] = None,
-        fp_costs: Optional[ArrayLike] = None,
+        tp_costs: Union[ArrayLike, float] = 0.0,
+        tn_costs: Union[ArrayLike, float] = 0.0,
+        fn_costs: Union[ArrayLike, float] = 0.0,
+        fp_costs: Union[ArrayLike, float] = 0.0,
         validation: bool = True
 ) -> float:
     """
@@ -96,14 +86,14 @@ def aec_score(
         True labels.
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
-    tp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true positive predictions.
-    tn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true negative predictions.
-    fn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false negative predictions.
-    fp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false positive predictions.
+    tp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true positive predictions.
+    tn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true negative predictions.
+    fn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false negative predictions.
+    fp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false positive predictions.
     validation : bool, default=True
         Perform input validation. Turning off improves performance.
 
@@ -120,10 +110,10 @@ def log_aec_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
-        tp_costs: Optional[ArrayLike] = None,
-        tn_costs: Optional[ArrayLike] = None,
-        fn_costs: Optional[ArrayLike] = None,
-        fp_costs: Optional[ArrayLike] = None,
+        tp_costs: Union[ArrayLike, float] = 0.0,
+        tn_costs: Union[ArrayLike, float] = 0.0,
+        fn_costs: Union[ArrayLike, float] = 0.0,
+        fp_costs: Union[ArrayLike, float] = 0.0,
         validation: bool = True,
 ) -> float:
     """
@@ -135,14 +125,14 @@ def log_aec_score(
         True labels.
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
-    tp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true positive predictions.
-    tn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for true negative predictions.
-    fn_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false negative predictions.
-    fp_costs : 1D array-like, shape=(n_samples,), optional
-        Costs for false positive predictions.
+    tp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true positive predictions.
+    tn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for true negative predictions.
+    fn_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false negative predictions.
+    fp_costs : float or 1D array-like, shape=(n_samples,), optional
+        Cost(s) for false positive predictions.
     validation : bool, default=True
         Perform input validation. Turning off improves performance.
 

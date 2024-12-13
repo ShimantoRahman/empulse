@@ -120,15 +120,6 @@ def test_equal_sparse_costs_two():
     assert log_avg_expected_cost == pytest.approx(2.0015918919125615)
 
 
-def test_no_costs_raises_value_error():
-    y_true = np.array([1, 0, 1, 0])
-    y_pred = np.array([0.9, 0.1, 0.8, 0.2])
-    with pytest.raises(ValueError):
-        _compute_expected_cost(y_true, y_pred)
-    with pytest.raises(ValueError):
-        aec_score(y_true, y_pred)
-
-
 def test_only_tp_costs():
     y_true = np.array([1, 0, 1, 0])
     y_pred = np.array([1.0, 0.0, 0.0, 1.0])
