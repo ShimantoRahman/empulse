@@ -2,7 +2,7 @@ from typing import Union
 
 import numpy as np
 from sklearn.utils import column_or_1d
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 
 def _check_y_true(y_true: ArrayLike) -> np.ndarray:
@@ -38,6 +38,27 @@ def _check_shape(y_true: np.ndarray, y_pred: np.ndarray) -> None:
     if y_true.shape != y_pred.shape:
         raise ValueError(f"The shapes of the true label and predictions should match, "
                          f"got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead.")
+
+
+def _check_consistent_length(*arrays: NDArray) -> None:
+    """
+    Check that all arrays have consistent first dimensions.
+
+    Checks whether all objects in arrays have the same shape or length.
+
+    Parameters
+    ----------
+    *arrays : list or tuple of input objects.
+        Objects that will be checked for consistent length.
+    """
+
+    lengths = [len(X) for X in arrays if X is not None]
+    uniques = np.unique(lengths)
+    if len(uniques) > 1:
+        raise ValueError(
+            "Found input variables with inconsistent numbers of samples: %r"
+            % [int(l) for l in lengths]
+        )
 
 
 def _check_numeric(y_true: np.ndarray) -> None:
