@@ -5,3 +5,4 @@ from .credit_scoring import empcs, empcs_score, mpcs, mpcs_score
 from .emp import emp, emp_score
 from .lift import lift_score
 from .mp import mp, mp_score
+from .aec import aec_score, log_aec_score

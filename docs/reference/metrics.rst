@@ -19,6 +19,7 @@ General Metrics
    mp_score
    lift_score
    aec_score
+   log_aec_score
 
 Customer Acquisition Metrics
 ----------------------------
