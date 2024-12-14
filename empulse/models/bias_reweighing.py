@@ -26,7 +26,7 @@ def _independent_sample_weights(y_true: np.ndarray, protected_attr: np.ndarray) 
     return _to_sample_weights(group_weights, y_true, protected_attr)
 
 
-class BiasReweighingClassifier(BaseEstimator, ClassifierMixin, WrapperMixin):
+class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
     """
     Classifier which reweighs instances during training to remove bias against a subgroup.
 

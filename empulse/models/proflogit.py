@@ -13,7 +13,7 @@ from ..metrics import empc_score
 from empulse.optimizers import Generation
 
 
-class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
+class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
     """
     Logistic classifier to optimize profit-driven loss functions
 
@@ -42,6 +42,7 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
     loss_fn : Callable, default= :func:`empulse.metrics.empc_score`
         Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ``loss(y_true, y_score)``.
         See :func:`empulse.metrics.empc_score` for an example.
+        By default, expects a loss function to maximize, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, default=None
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, bounds)``.
@@ -142,6 +143,8 @@ class ProfLogitClassifier(BaseEstimator, ClassifierMixin):
             Training data.
         y : 1D array-like, shape=(n_samples,)
             Target values.
+        loss_params : dict
+            Additional keyword arguments passed to `loss_fn`.
 
         Returns
         -------

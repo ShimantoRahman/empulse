@@ -9,7 +9,7 @@ from ..samplers import BiasResampler
 from ._wrapper import WrapperMixin
 
 
-class BiasResamplingClassifier(BaseEstimator, ClassifierMixin, WrapperMixin):
+class BiasResamplingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
 

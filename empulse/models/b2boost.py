@@ -9,7 +9,7 @@ from .wrapper import WrapperMixin
 from ..metrics import make_objective_churn, mpc_cost_score
 
 
-class B2BoostClassifier(BaseEstimator, ClassifierMixin, WrapperMixin):
+class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
     """
     :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
 

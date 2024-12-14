@@ -9,7 +9,7 @@ from ..samplers import BiasRelabler
 from ._wrapper import WrapperMixin
 
 
-class BiasRelabelingClassifier(BaseEstimator, ClassifierMixin, WrapperMixin):
+class BiasRelabelingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
     """
     Classifier which relabels instances during training to remove bias against a subgroup.
 
