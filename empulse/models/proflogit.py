@@ -1,16 +1,14 @@
-import inspect
 import warnings
 from functools import partial
 from itertools import islice
-from typing import Callable, Optional, Any, Union
+from typing import Callable, Optional, Any
 
 import numpy as np
-from numpy.random import RandomState
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data, check_is_fitted, check_random_state
+from sklearn.utils.validation import validate_data, check_is_fitted
 
 from empulse.optimizers import Generation
 from ..metrics import empc_score

@@ -4,8 +4,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from ._validation import _validate_input_emp
-from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from .._convex_hull import _compute_convex_hull
+from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
 
 def empcs_score(
@@ -234,7 +234,7 @@ def empcs(
                                 (positive_class_prob * true_positive_rates +
                                  negative_class_prob * false_positive_rates)) + \
                          default_rate * (positive_class_prob * true_positive_rates[-1] +
-                                negative_class_prob * false_positive_rates[-1])
+                                         negative_class_prob * false_positive_rates[-1])
 
     return empcs, customer_threshold
 

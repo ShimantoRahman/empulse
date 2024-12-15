@@ -85,13 +85,11 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         self.transform_attr = transform_attr
         self.strategy = strategy
 
-
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.estimator_type = "sampler"
         tags.requires_fit = False
         return tags
-
 
     def fit(self, X: ArrayLike, y: ArrayLike) -> 'BiasRelabler':
         """Check inputs and statistics of the sampler.

@@ -4,8 +4,8 @@ from typing import Callable, Generator, Iterable, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .common import _range
 from ._convex_hull import _compute_convex_hull
+from .common import _range
 
 
 def emp_score(

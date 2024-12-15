@@ -31,4 +31,3 @@ def _independent_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.n
     joint_prob = np.histogram2d(y_true, protected_attr, bins=(2, 2))[0] / len(y_true)
     epsilon = np.finfo(float).eps  # to avoid division by zero
     return (1 / (joint_prob + epsilon)) * prior_protected_attr * prior_y
-

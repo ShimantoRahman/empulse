@@ -6,8 +6,8 @@ from numpy.typing import ArrayLike
 from scipy import stats as st
 
 from ._validation import _validate_input_emp, _validate_input_empb
-from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs, _range
 from .._convex_hull import _compute_convex_hull
+from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
 
 def empc_score(
