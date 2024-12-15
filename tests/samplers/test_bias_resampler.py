@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+
 from empulse.samplers.bias_resampler import BiasResampler
 
 
@@ -46,3 +48,25 @@ def test_bias_resampler_balanced():  # no resampling needed
     X_re, y_re = BiasResampler().fit_resample(X, y, protected_attr=X[:, 0])
     assert np.array_equal(X_re, X)
     assert np.array_equal(y_re, y)
+
+
+def test_no_protected_attr():
+    X = np.array([[[1, 0]] * 5 + [[0, 0]] * 5]).reshape(10, 2)  # first feature is protected attribute
+    y = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0])
+    protected_attr = np.array([0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0])
+    with pytest.warns(UserWarning, match="protected_attribute only contains one class, no resampling is performed."):
+        X_re, y_re = BiasResampler().fit_resample(X, y, protected_attr=protected_attr)
+        assert np.array_equal(X_re, X)
+        assert np.array_equal(y_re, y)
+
+
+def test_all_protected_attr():
+    X = np.array([[[1, 0]] * 5 + [[0, 0]] * 5]).reshape(10, 2)  # first feature is protected attribute
+    y = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0])
+    protected_attr = np.array([1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1])
+    with pytest.warns(UserWarning, match="protected_attribute only contains one class, no resampling is performed."):
+        X_re, y_re = BiasResampler().fit_resample(X, y, protected_attr=protected_attr)
+        assert np.array_equal(X_re, X)
+        assert np.array_equal(y_re, y)

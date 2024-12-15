@@ -1,9 +1,12 @@
+import warnings
 from typing import Union, Callable, Optional, TypeVar
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator, clone
 from sklearn.utils import _safe_indexing
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data
 
 from empulse.samplers._strategies import Strategy, StrategyFn
 
@@ -20,6 +23,11 @@ def _independent_pairs(y_true: ArrayLike, protected_attr: np.ndarray) -> int:
     n_protected = len(protected_indices)
     n_unprotected = len(unprotected_indices)
     n = n_protected + n_unprotected
+
+    # no swapping needed if one of the groups is empty
+    if n_protected == 0 or n_unprotected == 0:
+        warnings.warn("protected_attribute only contains one class, no relabeling is performed.", UserWarning)
+        return 0
 
     pos_ratio_protected = np.sum(_safe_indexing(y_true, protected_indices)) / n_protected
     pos_ratio_unprotected = np.sum(_safe_indexing(y_true, unprotected_indices)) / n_unprotected
@@ -52,6 +60,12 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
     transform_attr : Optional[Callable], default=None
         Function which transforms protected attribute before resampling the training data.
+
+
+    Attributes
+    ----------
+    estimator_ : Estimator instance
+        Fitted estimator.
     """
     _estimator_type = "sampler"
 
@@ -67,11 +81,34 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
             strategy: Union[Callable, Strategy] = 'statistical parity',
             transform_attr: Optional[Callable] = None,
     ):
-        self.estimator = clone(estimator)
+        self.estimator = estimator
         self.transform_attr = transform_attr
-        if isinstance(strategy, str):
-            strategy = self.strategy_mapping[strategy]
         self.strategy = strategy
+
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.estimator_type = "sampler"
+        tags.requires_fit = False
+        return tags
+
+
+    def fit(self, X: ArrayLike, y: ArrayLike) -> 'BiasRelabler':
+        """Check inputs and statistics of the sampler.
+
+        You should use ``fit_resample`` in all cases.
+
+        Parameters
+        ----------
+        X : 2D array-like, shape=(n_samples, n_features)
+        y : 1D array-like, shape=(n_samples,)
+
+        Returns
+        -------
+        self : BiasRelabler
+        """
+        X, y = validate_data(self, X, y)
+        return self
 
     def fit_resample(
             self,
@@ -85,27 +122,39 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : ArrayLike
-            Training data.
-        y : ArrayLike
-            Target values.
-        protected_attr : Optional[ArrayLike]
+        X : 2D array-like, shape=(n_samples, n_features)
+        y : 1D array-like, shape=(n_samples,)
+        protected_attr : 1D array-like, shape=(n_samples,)
             Protected attribute used to determine the number of promotion and demotion pairs.
 
         Returns
         -------
-        X : ArrayLike
-            Training data.
+        X : 2D array-like, shape=(n_samples, n_features)
+            Original training data.
         y : np.ndarray
             Relabeled target values.
         """
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
+
         if self.transform_attr is not None:
             protected_attr = self.transform_attr(protected_attr)
 
-        self.estimator.fit(X, y)
-        y_pred = self.estimator.predict_proba(X)[:, 1]
+        self.estimator_ = clone(self.estimator)
+        self.estimator_.fit(X, y)
+        y_pred = self.estimator_.predict_proba(X)[:, 1]
 
-        n_pairs = self.strategy(y, protected_attr)
+        if isinstance(self.strategy, str):
+            strategy = self.strategy_mapping[self.strategy]
+        else:
+            strategy = self.strategy
+
+        n_pairs = strategy(y, protected_attr)
         if n_pairs <= 0:
             return X, np.asarray(y)
 

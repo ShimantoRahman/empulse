@@ -1,12 +1,13 @@
-from typing import Callable, Union, Optional
 from itertools import product
+from typing import Callable, Union, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import ClassifierMixin, BaseEstimator, clone
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data, check_is_fitted
 
 from ..samplers._strategies import _independent_weights, Strategy, StrategyFn
-from ._wrapper import WrapperMixin
 
 
 def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, protected_attr: np.ndarray):
@@ -26,7 +27,7 @@ def _independent_sample_weights(y_true: np.ndarray, protected_attr: np.ndarray) 
     return _to_sample_weights(group_weights, y_true, protected_attr)
 
 
-class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
+class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
     """
     Classifier which reweighs instances during training to remove bias against a subgroup.
 
@@ -170,6 +171,12 @@ class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         self.strategy = strategy
         self.transform_attr = transform_attr
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.classifier_tags.poor_score = True
+        return tags
+
     def fit(
             self,
             X: ArrayLike,
@@ -183,10 +190,8 @@ class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Training data.
+        X : 2D array-like, shape=(n_samples, n_features)
         y : 1D array-like, shape=(n_samples,)
-            Target values.
         protected_attr : 1D array-like, shape=(n_samples,), default = None
             Protected attribute used to determine the sample weights.
         fit_params : dict
@@ -196,9 +201,20 @@ class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         -------
         self : BiasReweighingClassifier
         """
-        X, y = np.asarray(X), np.asarray(y)
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
+        self.classes_ = np.unique(y)
+        if len(self.classes_) == 1:
+            raise ValueError("Classifier can't train when only one class is present.")
+
         if protected_attr is None:
-            self.estimator.fit(X, y, **fit_params)
+            self.estimator_ = clone(self.estimator)
+            self.estimator_.fit(X, y, **fit_params)
             return self
         protected_attr = np.asarray(protected_attr)
 
@@ -211,8 +227,41 @@ class BiasReweighingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
             protected_attr = self.transform_attr(protected_attr)
 
         sample_weights = strategy_fn(y, protected_attr)
-        self.estimator = clone(self.estimator)
-        self.estimator.fit(X, y, sample_weight=sample_weights, **fit_params)
+        self.estimator_ = clone(self.estimator)
+        self.estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
 
         return self
 
+    def predict_proba(self, X):
+        """
+        Predict class probabilities for X.
+
+        Parameters
+        ----------
+        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+
+        Returns
+        -------
+        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
+            Predicted class probabilities.
+        """
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
+        return self.estimator_.predict_proba(X)
+
+    def predict(self, X):
+        """
+        Predict class labels for X.
+
+        Parameters
+        ----------
+        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+
+        Returns
+        -------
+        y_pred : 1D numpy.ndarray, shape=(n_samples,)
+            Predicted class labels.
+        """
+        y_pred = self.predict_proba(X)
+        return self.classes_[np.argmax(y_pred, axis=1)]

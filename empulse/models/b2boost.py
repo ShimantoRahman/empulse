@@ -1,20 +1,25 @@
-from typing import Any, Union, Optional
+from typing import Union, Optional
 
+import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils import check_X_y
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, clone
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data, check_is_fitted
 from xgboost import XGBClassifier
 
-from .wrapper import WrapperMixin
 from ..metrics import make_objective_churn, mpc_cost_score
 
 
-class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
+class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
     """
     :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
 
     Parameters
     ----------
+    estimator : `xgboost:xgboost.XGBClassifier`, optional
+        XGBoost classifier to be fit with desired hyperparameters.
+        If not provided, a XGBoost classifier with default hyperparameters is used.
+
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
 
@@ -30,11 +35,13 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
 
-    params : dict[str, Any], default=None
-        Other parameters passed to :class:`xgboost:xgboost.XGBClassifier` initializer.
+    Attributes
+    ----------
+    classes_ : numpy.ndarray, shape=(n_classes,)
+        Unique classes in the target.
 
-    **kwargs
-        Other parameters passed to :class:`xgboost:xgboost.XGBClassifier` initializer.
+    estimator_ : `xgboost:xgboost.XGBClassifier`
+        Fitted XGBoost classifier.
 
     Notes
     -----
@@ -58,28 +65,24 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
 
     def __init__(
             self,
+            estimator: Optional[XGBClassifier] = None,
             *,
             accept_rate: float = 0.3,
             clv: Union[float, ArrayLike] = 200,
             incentive_fraction: float = 0.05,
             contact_cost: float = 15,
-            params: Optional[dict[str, Any]] = None,
-            **kwargs,
     ) -> None:
+        self.estimator = estimator
         self.clv = clv
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
 
-        # necessary to have params because sklearn.clone does not clone **kwargs
-        if params is None:
-            params = {}
-        if kwargs:
-            params.update(kwargs)
-        self.params = params
-
-        self.estimator = XGBClassifier(**params)
-
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.classifier_tags.poor_score = True
+        return tags
 
     def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
         """
@@ -88,10 +91,7 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         Parameters
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_dim)
-            Training data.
-
         y : 1D numpy.ndarray, shape=(n_samples,)
-            Target values.
 
         sample_weights : 1D numpy.ndarray, shape=(n_samples,), default=None
             Sample weights.
@@ -116,14 +116,31 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
+        self.classes_ = np.unique(y)
+        if len(self.classes_) == 1:
+            raise ValueError("Classifier can't train when only one class is present.")
+        y = np.where(y == self.classes_[1], 1, 0)
+
         objective = make_objective_churn(
             clv=self.clv if clv is None else clv,
             incentive_fraction=self.incentive_fraction if incentive_fraction is None else incentive_fraction,
             contact_cost=self.contact_cost if contact_cost is None else contact_cost,
             accept_rate=self.accept_rate if accept_rate is None else accept_rate,
         )
-        self.estimator = XGBClassifier(objective=objective, **self.params)
-        self.estimator.fit(X, y, sample_weight=sample_weights)
+        if self.estimator is None:
+            self.estimator_ = XGBClassifier(objective=objective)
+        else:
+            if not isinstance(self.estimator, XGBClassifier):
+                raise ValueError("estimator must be an instance of XGBClassifier")
+            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        self.estimator_.fit(X, y, sample_weight=sample_weights)
         return self
 
     def predict_proba(self, X):
@@ -139,7 +156,10 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
             Predicted class probabilities.
         """
-        return self.estimator.predict_proba(X)
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
+        return self.estimator_.predict_proba(X)
 
     def predict(self, X):
         """
@@ -154,7 +174,8 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
             Predicted class labels.
         """
-        return self.estimator.predict(X)
+        y_pred = self.predict_proba(X)
+        return self.classes_[np.argmax(y_pred, axis=1)]
 
     def score(
             self,
@@ -195,7 +216,8 @@ class B2BoostClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         score : float
             Model score.
         """
-        X, y = check_X_y(X, y)
+        X, y = validate_data(self, X, y, reset=False)
+        y = np.where(y == self.classes_[1], 1, 0)
         return mpc_cost_score(
             y,
             self.predict_proba(X)[:, 1],

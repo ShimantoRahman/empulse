@@ -3,13 +3,14 @@ from typing import Callable, Union, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import ClassifierMixin, BaseEstimator, clone
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data, check_is_fitted
 
-from ..samplers._strategies import Strategy, StrategyFn
 from ..samplers import BiasResampler
-from ._wrapper import WrapperMixin
+from ..samplers._strategies import Strategy, StrategyFn
 
 
-class BiasResamplingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
+class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
 
@@ -33,6 +34,14 @@ class BiasResamplingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
     transform_attr : Optional[Callable], default=None
         Function which transforms protected attribute before resampling the training data.
+
+    Attributes
+    ----------
+    classes_ : numpy.ndarray, shape=(n_classes,)
+        Unique classes in the target.
+
+    estimator_ : Estimator instance
+        Fitted base estimator.
 
     Examples
     --------
@@ -151,6 +160,12 @@ class BiasResamplingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         self.strategy = strategy
         self.transform_attr = transform_attr
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.classifier_tags.poor_score = True
+        return tags
+
     def fit(
             self,
             X: ArrayLike,
@@ -177,16 +192,59 @@ class BiasResamplingClassifier(ClassifierMixin, WrapperMixin, BaseEstimator):
         -------
         self : BiasResamplingClassifier
         """
-        X, y = np.asarray(X), np.asarray(y)
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
+        self.classes_ = np.unique(y)
+        if len(self.classes_) == 1:
+            raise ValueError("Classifier can't train when only one class is present.")
         if protected_attr is None:
-            self.estimator.fit(X, y, **fit_params)
+            self.estimator_ = clone(self.estimator)
+            self.estimator_.fit(X, y, **fit_params)
             return self
         protected_attr = np.asarray(protected_attr)
 
         sampler = BiasResampler(strategy=self.strategy, transform_attr=self.transform_attr)
         X, y = sampler.fit_resample(X, y, protected_attr=protected_attr)
-        self.estimator = clone(self.estimator)
-        self.estimator.fit(X, y, **fit_params)
+        self.estimator_ = clone(self.estimator)
+        self.estimator_.fit(X, y, **fit_params)
 
         return self
 
+    def predict_proba(self, X):
+        """
+        Predict class probabilities for X.
+
+        Parameters
+        ----------
+        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+
+        Returns
+        -------
+        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
+            Predicted class probabilities.
+        """
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
+        return self.estimator_.predict_proba(X)
+
+    def predict(self, X):
+        """
+        Predict class labels for X.
+
+        Parameters
+        ----------
+        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+
+        Returns
+        -------
+        y_pred : 1D numpy.ndarray, shape=(n_samples,)
+            Predicted class labels.
+        """
+        y_pred = self.predict_proba(X)
+        return self.classes_[np.argmax(y_pred, axis=1)]

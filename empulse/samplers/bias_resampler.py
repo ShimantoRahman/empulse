@@ -1,10 +1,14 @@
+import warnings
 from itertools import product
 from typing import Union, Callable, Optional, TypeVar
 
 import numpy as np
+from numpy.random import RandomState
 from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator
 from sklearn.utils import check_random_state, _safe_indexing
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data
 
 from ._strategies import _independent_weights, Strategy, StrategyFn
 
@@ -18,7 +22,7 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
 
     Parameters
     ----------
-   strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
+    strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
         Determines how the group weights are computed.
         Group weights determine how much to over or undersample each combination of target and protected attribute.
         For example, a weight of 2 for the pair (y_true == 1, protected_attr == 0) means that the resampled dataset
@@ -34,6 +38,13 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
         The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
     transform_attr : Optional[Callable], default=None
         Function which transforms protected attribute before resampling the training data.
+    random_state : int or :class:`numpy:numpy.random.RandomState`, optional
+        Random number generator seed for reproducibility.
+
+    Attributes
+    ----------
+    sample_indices_ : ndarray
+        Indices of the samples that were selected.
     """
     _estimator_type = "sampler"
 
@@ -47,14 +58,34 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
             *,
             strategy: Union[Callable, Strategy] = 'statistical parity',
             transform_attr: Optional[Callable] = None,
-            random_state=None
+            random_state: Optional[Union[RandomState, int]] = None
     ):
-        if isinstance(strategy, str):
-            strategy = self.strategy_mapping[strategy]
         self.strategy = strategy
         self.transform_attr = transform_attr
-        self.random_state = check_random_state(random_state)
-        self.sample_indices_ = None
+        self.random_state = random_state
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.estimator_type = "sampler"
+        tags.requires_fit = False
+        return tags
+
+    def fit(self, X: ArrayLike, y: ArrayLike) -> 'BiasResampler':
+        """Check inputs and statistics of the sampler.
+
+        You should use ``fit_resample`` in all cases.
+
+        Parameters
+        ----------
+        X : 2D array-like, shape=(n_samples, n_features)
+        y : 1D array-like, shape=(n_samples,)
+
+        Returns
+        -------
+        self : BiasResampler
+        """
+        X, y = validate_data(self, X, y)
+        return self
 
     def fit_resample(
             self,
@@ -68,34 +99,51 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : ArrayLike
-            Training data.
-        y : ArrayLike
-            Target values.
-        protected_attr : Optional[ArrayLike]
-            Protected attribute used to determine the number of promotion and demotion pairs.
+        X : 2D array-like, shape=(n_samples, n_features)
+        y : 1D array-like, shape=(n_samples,)
+        protected_attr : 1D array-like, shape=(n_samples,)
+            Protected attribute used to determine which instances to resample.
 
         Returns
         -------
-        X : ArrayLike
+        X : 2D array-like, shape=(n_samples, n_features)
             Resampled training data.
-        y : np.ndarray
+        y : 1D array-like, shape=(n_samples,)
             Resampled target values.
         """
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
+        random_state = check_random_state(self.random_state)
         if protected_attr is None:
             return X, y
 
         if self.transform_attr is not None:
             protected_attr = self.transform_attr(protected_attr)
 
-        class_weights = self.strategy(y, protected_attr)
+        if isinstance(self.strategy, str):
+            strategy = self.strategy_mapping[self.strategy]
+        else:
+            strategy = self.strategy
+        class_weights = strategy(y, protected_attr)
         # if class_weights are all 1, no resampling is needed
         if np.allclose(class_weights, np.ones(class_weights.shape)):
             return X, y
         indices = np.empty((0,), dtype=int)
 
+        unique_attr = np.unique(protected_attr)
+        if len(unique_attr) == 1:
+            warnings.warn(
+                "protected_attribute only contains one class, no resampling is performed.", UserWarning
+            )
+            return X, y
+
         # determine the number of samples to be drawn for each class and protected attribute value
-        for target_class, protected_val in product(np.unique(y), np.unique(protected_attr)):
+        for target_class, protected_val in product(np.unique(y), unique_attr):
             protected_val = int(protected_val)
             idx_class = np.flatnonzero(y == target_class)
             idx_protected_attr = np.flatnonzero(protected_attr == protected_val)
@@ -105,12 +153,12 @@ class BiasResampler(OneToOneFeatureMixin, BaseEstimator):
                 indices = np.concatenate((indices, idx_class_prot))
                 indices = np.concatenate((
                     indices,
-                    self.random_state.choice(idx_class_prot, n_samples - len(idx_class_prot), replace=True)
+                    random_state.choice(idx_class_prot, n_samples - len(idx_class_prot), replace=True)
                 ))
             else:  # undersampling
                 indices = np.concatenate((
                     indices,
-                    self.random_state.choice(idx_class_prot, n_samples, replace=False)
+                    random_state.choice(idx_class_prot, n_samples, replace=False)
                 ))
 
         self.sample_indices_ = indices

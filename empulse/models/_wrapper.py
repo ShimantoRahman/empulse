@@ -6,10 +6,10 @@ class WrapperMixin:
     def __getattr__(self, attr):
         """
         If the attribute is not found in class,
-        it checks if it is present in `self.estimator` and if it is, returns that.
+        it checks if it is present in `self.estimator_` and if it is, returns that.
         """
-        if hasattr(self.estimator, attr):
-            return getattr(self.estimator, attr)
+        if hasattr(self, 'estimator_') and hasattr(self.estimator_, attr):
+            return getattr(self.estimator_, attr)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 

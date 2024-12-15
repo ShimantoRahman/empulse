@@ -66,7 +66,7 @@ def test_reweighing_fit(X, y, protected_attr):
     clf.fit(X, y, protected_attr=protected_attr)
     assert clf.classes_ is not None
     try:
-        check_is_fitted(clf.estimator)
+        check_is_fitted(clf.estimator_)
     except NotFittedError:
         pytest.fail("BiasReweighingClassifier is not fitted")
 
@@ -142,7 +142,7 @@ def test_metadatarouting(X, y, protected_attr):
     with config_context(enable_metadata_routing=True):
         model = BiasReweighingClassifier(estimator=LogisticRegression())
         model.set_fit_request(protected_attr=True)
-        search = GridSearchCV(model, param_grid=param_grid)
+        search = GridSearchCV(model, param_grid=param_grid, cv=2)
         search.fit(X, y, protected_attr=protected_attr)
         try:
             check_is_fitted(search)

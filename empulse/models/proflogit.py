@@ -1,16 +1,19 @@
+import inspect
 import warnings
 from functools import partial
 from itertools import islice
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, Union
 
 import numpy as np
+from numpy.random import RandomState
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils import check_X_y, check_array
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data, check_is_fitted, check_random_state
 
-from ..metrics import empc_score
 from empulse.optimizers import Generation
+from ..metrics import empc_score
 
 
 class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
@@ -44,23 +47,11 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         See :func:`empulse.metrics.empc_score` for an example.
         By default, expects a loss function to maximize, customize behaviour in `optimize_fn`.
 
-    optimize_fn : Callable, default=None
+    optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, bounds)``.
         See :ref:`proflogit` for more information.
 
-    default_bounds : tuple, default=(-3, 3)
-        Bounds for every regression parameter. Use the `bounds` parameter
-        through `optimize_fn` for individual specifications.
-
-    n_jobs : int, default=None
-        Number of parallel jobs to run.
-        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-        ``-1`` means using all processors.
-
-    optimizer_params : dict[str, Any], default=None
-        Additional keyword arguments passed to `optimize_fn`.
-
-    **kwargs
+    optimizer_params : dict[str, Any], optional
         Additional keyword arguments passed to `optimize_fn`.
 
         By default, the optimizer is a Real-coded Genetic Algorithm (RGA) with the following parameters:
@@ -73,12 +64,23 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
             Relative tolerance to declare convergence.
         - all other parameters are passed to the :class:`~empulse.optimizers.Generation` initializer.
 
+    default_bounds : tuple, default=(-3, 3)
+        Bounds for every regression parameter. Use the `bounds` parameter
+        through `optimize_fn` for individual specifications.
+
+    n_jobs : int, optional
+        Number of parallel jobs to run.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors.
+
+
+
     Attributes
     ----------
-    n_dim : int
-        Number of features.
+    classes_ : numpy.ndarray
+        Unique classes in the target found during fit.
 
-    result : :class:`scipy:scipy.optimize.OptimizeResult`
+    result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
 
     Notes
@@ -106,10 +108,10 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
             l1_ratio: float = 1.0,
             loss_fn: Callable = empc_score,
             optimize_fn: Optional[Callable] = None,
+            optimizer_params: Optional[dict[str, Any]] = None,
             default_bounds: tuple[float, float] = (-3, 3),
             n_jobs: Optional[int] = None,
-            optimizer_params: Optional[dict[str, Any]] = None,
-            **kwargs,
+            # random_state: Optional[Union[int, RandomState]] = None
     ):
         super().__init__()
         self.C = C
@@ -119,19 +121,15 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         self.loss_fn = loss_fn
         self.n_jobs = n_jobs
         self.default_bounds = default_bounds
-        self.classes_ = None
-
-        self.n_dim = None
-        self.result = None
-        # necessary to have optimizer_params because sklearn.clone does not clone **kwargs
-        if optimizer_params is None:
-            optimizer_params = {}
-        if kwargs:
-            optimizer_params.update(kwargs)
         self.optimizer_params = optimizer_params
-        if optimize_fn is None:
-            optimize_fn = _optimize
         self.optimize_fn = optimize_fn
+        # self.random_state = random_state
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.classifier_tags.poor_score = True
+        return tags
 
     def fit(self, X: ArrayLike, y: ArrayLike, **loss_params) -> 'ProfLogitClassifier':
         """
@@ -139,10 +137,8 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Training data.
+        X : 2D array-like, shape=(n_samples, n_features)
         y : 1D array-like, shape=(n_samples,)
-            Target values.
         loss_params : dict
             Additional keyword arguments passed to `loss_fn`.
 
@@ -151,20 +147,36 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         self : ProfLogitClassifier
             Fitted ProfLogit model.
         """
-        X, y = check_X_y(X, y)
+        X, y = validate_data(self, X, y)
+        y_type = type_of_target(y, input_name='y', raise_unknown=True)
+        if y_type != 'binary':
+            raise ValueError(
+                'Only binary classification is supported. The type of the target '
+                f'is {y_type}.'
+            )
         self.classes_ = np.unique(y)
+        if len(self.classes_) == 1:
+            raise ValueError("Classifier can't train when only one class is present.")
+        y = np.where(y == self.classes_[1], 1, 0)
 
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
-        self.n_dim = X.shape[1]
+        n_dim = X.shape[1]
 
-        optimize_fn = partial(self.optimize_fn, **self.optimizer_params)
+        # random_state = check_random_state(self.random_state)
+
+        optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
+        optimize_fn = _optimize if self.optimize_fn is None else self.optimize_fn
+        # if ('random_state' not in self.optimizer_params and
+        #         'random_state' in inspect.signature(optimize_fn).parameters):
+        #     optimizer_params['random_state'] = random_state
+        optimize_fn = partial(optimize_fn, **optimizer_params)
         if 'bounds' not in optimize_fn.keywords:
-            optimize_fn = partial(optimize_fn, bounds=[self.default_bounds] * self.n_dim)
-        elif len(optimize_fn.keywords['bounds']) != self.n_dim:
+            optimize_fn = partial(optimize_fn, bounds=[self.default_bounds] * n_dim)
+        elif len(optimize_fn.keywords['bounds']) != n_dim:
             raise ValueError(
                 f"Number of bounds ({len(optimize_fn.keywords['bounds'])}) "
-                f"must match number of features ({self.n_dim})."
+                f"must match number of features ({n_dim})."
             )
 
         objective = partial(
@@ -177,7 +189,7 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
             soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept
         )
-        self.result = optimize_fn(objective)
+        self.result_ = optimize_fn(objective)
 
         return self
 
@@ -188,19 +200,17 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_dim)
-            Features.
 
         Returns
         -------
         y_pred : 2D numpy.ndarray, shape=(n_samples, 2)
-            Predicted probabilities.
         """
-        X = check_array(X)
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
-        assert X.ndim == 2
-        assert X.shape[1] == self.n_dim
-        theta = self.result.x
+        theta = self.result_.x
         logits = np.dot(X, theta)
         with warnings.catch_warnings():  # TODO: look into this
             warnings.simplefilter("ignore")
@@ -217,14 +227,13 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_dim)
-            Features.
 
         Returns
         -------
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
-            Predicted labels.
         """
-        return np.argmax(self.predict_proba(X), axis=1)
+        y_pred = self.predict_proba(X)
+        return self.classes_[np.argmax(y_pred, axis=1)]
 
     def score(self, X: ArrayLike, y: ArrayLike, sample_weight=None) -> float:
         """
@@ -233,9 +242,7 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_dim)
-            Features.
         y : 1D array-like, shape=(n_samples,)
-            Labels.
         sample_weight : 1D array-like, shape=(n_samples,), default=None
             Sample weights (ignored).
 
@@ -244,7 +251,8 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         score : float
             Model score.
         """
-        X, y = check_X_y(X, y)
+        X, y = validate_data(self, X, y, reset=False)
+        y = np.where(y == self.classes_[1], 1, 0)
         return self.loss_fn(y, self.predict_proba(X)[:, 1])
 
 

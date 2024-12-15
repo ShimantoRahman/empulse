@@ -52,7 +52,7 @@ def test_resampling_fit(X, y, protected_attr):
     clf.fit(X, y, protected_attr=protected_attr)
     assert clf.classes_ is not None
     try:
-        check_is_fitted(clf.estimator)
+        check_is_fitted(clf.estimator_)
     except NotFittedError:
         pytest.fail("BiasResamplingClassifier is not fitted")
 
@@ -119,6 +119,7 @@ def test_works_in_ensemble(X, y):
     assert isinstance(bagging.predict(X), np.ndarray)
 
 
+@pytest.mark.filterwarnings("ignore:protected_attribute only contains one class, no resampling is performed.")
 def test_metadatarouting(X, y, protected_attr):
     from sklearn import config_context
     from sklearn.model_selection import GridSearchCV
@@ -128,7 +129,7 @@ def test_metadatarouting(X, y, protected_attr):
     with config_context(enable_metadata_routing=True):
         model = BiasResamplingClassifier(estimator=LogisticRegression())
         model.set_fit_request(protected_attr=True)
-        search = GridSearchCV(model, param_grid=param_grid)
+        search = GridSearchCV(model, param_grid=param_grid, cv=2)
         search.fit(X, y, protected_attr=protected_attr)
         try:
             check_is_fitted(search)
