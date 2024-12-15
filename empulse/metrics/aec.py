@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -48,13 +48,13 @@ def _compute_expected_cost(
         y_true = np.asarray(y_true)
         y_pred = np.asarray(y_pred)
 
-    if not isinstance(tp_costs, float):
+    if not isinstance(tp_costs, (int, float)):
         tp_costs = np.asarray(tp_costs)
-    if not isinstance(tn_costs, float):
+    if not isinstance(tn_costs, (int, float)):
         tn_costs = np.asarray(tn_costs)
-    if not isinstance(fn_costs, float):
+    if not isinstance(fn_costs, (int, float)):
         fn_costs = np.asarray(fn_costs)
-    if not isinstance(fp_costs, float):
+    if not isinstance(fp_costs, (int, float)):
         fp_costs = np.asarray(fp_costs)
 
     if validation:
