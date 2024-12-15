@@ -13,7 +13,7 @@ def _compute_expected_cost(
         tn_costs: Union[ArrayLike, float] = 0.0,
         fn_costs: Union[ArrayLike, float] = 0.0,
         fp_costs: Union[ArrayLike, float] = 0.0,
-        validation: bool = True,
+        check_input: bool = True,
 ) -> NDArray:
     """
     Compute expected cost for binary classification.
@@ -32,18 +32,18 @@ def _compute_expected_cost(
         Cost(s) for false negative predictions.
     fp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false positive predictions.
-    validation : bool, default=True
-        Perform input validation. Turning off improves performance
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
     expected_costs : 1D numpy.ndarray, shape=(n_samples,)
         expected costs.
     """
-    if validation:
+    if check_input:
         y_true = _check_y_true(y_true)
         y_pred = _check_y_pred(y_pred)
-
     else:
         y_true = np.asarray(y_true)
         y_pred = np.asarray(y_pred)
@@ -57,7 +57,7 @@ def _compute_expected_cost(
     if not isinstance(fp_costs, (int, float)):
         fp_costs = np.asarray(fp_costs)
 
-    if validation:
+    if check_input:
         _check_consistent_length(
             *(array for array in
               (y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs) if isinstance(array, np.ndarray))
@@ -102,7 +102,7 @@ def aec_score(
     average_expected_cost : float
         Average expected cost.
     """
-    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, validation=validation)
+    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=validation)
     return aec.mean()
 
 
@@ -141,6 +141,6 @@ def log_aec_score(
     log_average_expected_cost : float
         Log average expected cost.
     """
-    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, validation=validation)
+    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=validation)
     epsilon = np.finfo(aec.dtype).eps  # avoid division by zero
     return np.log(aec + epsilon).mean()

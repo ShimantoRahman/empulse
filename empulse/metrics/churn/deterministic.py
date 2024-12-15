@@ -16,6 +16,7 @@ def mpc_score(
         clv: float = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
+        check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.mpc()` but only returning the MPC score
@@ -55,6 +56,10 @@ def mpc_score(
 
     contact_cost : float, default=1
         Cost of contacting a customer (``contact_cost > 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -117,8 +122,15 @@ def mpc_score(
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     42.08999999999999
     """
-    return \
-    mpc(y_true, y_pred, clv=clv, incentive_cost=incentive_cost, contact_cost=contact_cost, accept_rate=accept_rate)[0]
+    return mpc(
+        y_true,
+        y_pred,
+        clv=clv,
+        incentive_cost=incentive_cost,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+        check_input=check_input,
+    )[0]
 
 
 def mpc(
@@ -129,6 +141,7 @@ def mpc(
         clv: Union[ArrayLike, float] = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
+        check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure for Customer Churn (MPC)
@@ -167,6 +180,10 @@ def mpc(
 
     contact_cost : float, default=1
         Cost of contacting a customer (``contact_cost > 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -211,7 +228,15 @@ def mpc(
     >>> mpc(y_true, y_pred)
     (23.874999999999996, 0.875)
     """
-    profits, customer_thresholds = compute_profit_churn(y_true, y_pred, clv, incentive_cost, contact_cost, accept_rate)
+    profits, customer_thresholds = compute_profit_churn(
+        y_true,
+        y_pred,
+        clv,
+        incentive_cost,
+        contact_cost,
+        accept_rate,
+        check_input,
+    )
     max_profit_index = np.argmax(profits)
 
     return profits[max_profit_index], customer_thresholds[max_profit_index]
@@ -223,9 +248,15 @@ def compute_profit_churn(
         clv: Union[ArrayLike, float] = 200,
         d: float = 10,
         f: float = 1,
-        gamma: float = 0.3
+        gamma: float = 0.3,
+        check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
-    y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, gamma, clv, d, f)
+    if check_input:
+        y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, gamma, clv, d, f)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        clv = np.asarray(clv)
     if isinstance(clv, np.ndarray):
         clv = np.mean(clv)
     cost_benefits = _compute_cost_benefits(gamma, clv, d, f)

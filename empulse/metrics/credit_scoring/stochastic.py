@@ -14,7 +14,8 @@ def empcs_score(
         *,
         success_rate: float = 0.55,
         default_rate: float = 0.1,
-        roi: float = 0.2644
+        roi: float = 0.2644,
+        check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empcs()` but only returning the EMPCS score
@@ -50,6 +51,10 @@ def empcs_score(
 
     roi : float, default=0.2644
         Return on investment on the loan (``roi ≥ 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -106,7 +111,14 @@ def empcs_score(
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.14904
     """
-    return empcs(y_true, y_pred, success_rate=success_rate, default_rate=default_rate, roi=roi)[0]
+    return empcs(
+        y_true,
+        y_pred,
+        success_rate=success_rate,
+        default_rate=default_rate,
+        roi=roi,
+        check_input=check_input,
+    )[0]
 
 
 def empcs(
@@ -115,7 +127,8 @@ def empcs(
         *,
         success_rate: float = 0.55,
         default_rate: float = 0.1,
-        roi: float = 0.2644
+        roi: float = 0.2644,
+        check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for Credit Scoring
@@ -151,6 +164,10 @@ def empcs(
     roi : float, default=0.2644
         Return on investment on the loan (``roi ≥ 0``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empcs : float
@@ -184,7 +201,11 @@ def empcs(
     >>> empcs(y_true, y_pred)
     (0.09747017050000001, 0.32434500000000005)
     """
-    y_true, y_pred = _validate_input_emp(y_true, y_pred, success_rate, default_rate, roi)
+    if check_input:
+        y_true, y_pred = _validate_input_emp(y_true, y_pred, success_rate, default_rate, roi)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
 
     alpha = 1 - success_rate - default_rate
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)

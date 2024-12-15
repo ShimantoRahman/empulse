@@ -15,7 +15,7 @@ def _validate_input(y_true: ArrayLike, y_pred: ArrayLike, fraction: float) -> tu
     return y_true, y_pred
 
 
-def lift_score(y_true: ArrayLike, y_pred: ArrayLike, *, fraction: float = 0.1) -> float:
+def lift_score(y_true: ArrayLike, y_pred: ArrayLike, *, fraction: float = 0.1, check_input: bool = True) -> float:
     """
     Compute the lift score for the top fraction of predictions.
 
@@ -30,12 +30,20 @@ def lift_score(y_true: ArrayLike, y_pred: ArrayLike, *, fraction: float = 0.1) -
     fraction : float, optional, default: 0.1
         Fraction of data to consider. Must be between 0 and 1.
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     lift_score : float
         Lift score for the top fraction of the data.
     """
-    y_true, y_pred = _validate_input(y_true, y_pred, fraction)
+    if check_input:
+        y_true, y_pred = _validate_input(y_true, y_pred, fraction)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
 
     # Sort the predictions in descending order
     sorted_indices = np.argsort(y_pred)[::-1]

@@ -124,6 +124,7 @@ def mpc_cost_score(
         clv: Union[float, ArrayLike] = 200,
         incentive_fraction: Union[float, ArrayLike] = 0.05,
         contact_cost: float = 1,
+        check_input: bool = True
 ) -> float:
     """
     Profit-driven cost function for customer churn
@@ -156,6 +157,10 @@ def mpc_cost_score(
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -196,14 +201,19 @@ def mpc_cost_score(
         Annals of Operations Research, 1-27.
 
     """
-    y_true, y_pred, clv = _validate_input_mpc(
-        y_true,
-        y_pred,
-        clv=clv,
-        accept_rate=accept_rate,
-        incentive_fraction=incentive_fraction,
-        contact_cost=contact_cost
-    )
+    if check_input:
+        y_true, y_pred, clv = _validate_input_mpc(
+            y_true,
+            y_pred,
+            clv=clv,
+            accept_rate=accept_rate,
+            incentive_fraction=incentive_fraction,
+            contact_cost=contact_cost
+        )
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        clv = np.asarray(clv)
 
     incentive_cost = incentive_fraction * clv
     profits = y_pred * (contact_cost + incentive_cost + y_true * (

@@ -19,6 +19,7 @@ def empa_score(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True
 ) -> float:
     """
     :func:`~empulse.metrics.empa()` but only returning the EMPA score
@@ -66,6 +67,10 @@ def empa_score(
 
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -126,7 +131,8 @@ def empa_score(
         contact_cost=contact_cost,
         sales_cost=sales_cost,
         direct_selling=direct_selling,
-        commission=commission
+        commission=commission,
+        check_input=check_input,
     )[0]
 
 
@@ -140,6 +146,7 @@ def empa(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for customer Acquisition (EMPA)
@@ -187,6 +194,10 @@ def empa(
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empa : float
@@ -227,16 +238,20 @@ def empa(
     (356.25, 0.875)
     """
 
-    y_true, y_pred = _validate_input_stochastic(
-        y_true,
-        y_pred,
-        alpha,
-        beta,
-        contact_cost,
-        sales_cost,
-        direct_selling,
-        commission
-    )
+    if check_input:
+        y_true, y_pred = _validate_input_stochastic(
+            y_true,
+            y_pred,
+            alpha,
+            beta,
+            contact_cost,
+            sales_cost,
+            direct_selling,
+            commission
+        )
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
 
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 

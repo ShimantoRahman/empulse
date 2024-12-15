@@ -16,6 +16,7 @@ def mpa_score(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True
 ) -> float:
     """
     :func:`~empulse.metrics.mpa()` but only returning the MPA score
@@ -60,6 +61,10 @@ def mpa_score(
 
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -107,7 +112,8 @@ def mpa_score(
         contact_cost=contact_cost,
         sales_cost=sales_cost,
         direct_selling=direct_selling,
-        commission=commission
+        commission=commission,
+        check_input=check_input,
     )[0]
 
 
@@ -120,6 +126,7 @@ def mpa(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for customer Acquisition (MPA)
@@ -164,6 +171,10 @@ def mpa(
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     mpa : float
@@ -189,7 +200,8 @@ def mpa(
         contact_cost,
         sales_cost,
         direct_selling,
-        commission
+        commission,
+        check_input,
     )
     max_profit_index = np.argmax(profits)
     return profits[max_profit_index], customer_thresholds[max_profit_index]
@@ -203,16 +215,21 @@ def compute_profit_acquisition(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True
 ) -> tuple[np.ndarray, np.ndarray]:
-    y_true, y_pred = _validate_input_deterministic(
-        y_true,
-        y_pred,
-        contribution,
-        contact_cost,
-        sales_cost,
-        direct_selling,
-        commission
-    )
+    if check_input:
+        y_true, y_pred = _validate_input_deterministic(
+            y_true,
+            y_pred,
+            contribution,
+            contact_cost,
+            sales_cost,
+            direct_selling,
+            commission
+        )
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
     cost_benefits = _compute_cost_benefits(contribution, contact_cost, sales_cost, direct_selling, commission)
     return _compute_profits(y_true, y_pred, cost_benefits)
 

@@ -10,7 +10,8 @@ def mpcs_score(
         y_pred: ArrayLike,
         *,
         loan_lost_rate: float = 0.275,
-        roi: float = 0.2644
+        roi: float = 0.2644,
+        check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.mpcs()` but only returning the MPCS score
@@ -40,6 +41,10 @@ def mpcs_score(
 
     roi : float, default=0.2644
         Return on investment on the loan (``roi ≥ 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -92,7 +97,7 @@ def mpcs_score(
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.123
     """
-    return mpcs(y_true, y_pred, loan_lost_rate=loan_lost_rate, roi=roi)[0]
+    return mpcs(y_true, y_pred, loan_lost_rate=loan_lost_rate, roi=roi, check_input=check_input)[0]
 
 
 def mpcs(
@@ -100,7 +105,8 @@ def mpcs(
         y_pred: ArrayLike,
         *,
         loan_lost_rate: float = 0.275,
-        roi: float = 0.2644
+        roi: float = 0.2644,
+        check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for Credit Scoring
@@ -129,6 +135,10 @@ def mpcs(
 
     roi : float, default=0.2644
         Return on investment on the loan (``roi ≥ 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -163,7 +173,7 @@ def mpcs(
     >>> mpcs(y_true, y_pred)
     (0.038349999999999995, 0.875)
     """
-    profits, customer_thresholds = compute_profit_credit_scoring(y_true, y_pred, loan_lost_rate, roi)
+    profits, customer_thresholds = compute_profit_credit_scoring(y_true, y_pred, loan_lost_rate, roi, check_input)
     max_profit_index = np.argmax(profits)
 
     return profits[max_profit_index], customer_thresholds[max_profit_index]
@@ -173,8 +183,13 @@ def compute_profit_credit_scoring(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         frac_loan_lost: float = 0.275,
-        roi: float = 0.2644
+        roi: float = 0.2644,
+        check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
-    y_true, y_pred = _validate_input_mp(y_true, y_pred, frac_loan_lost, roi)
+    if check_input:
+        y_true, y_pred = _validate_input_mp(y_true, y_pred, frac_loan_lost, roi)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
     cost_benefits = np.array([frac_loan_lost, -roi])
     return _compute_profits(y_true, y_pred, cost_benefits)

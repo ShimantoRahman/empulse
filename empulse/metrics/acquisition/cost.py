@@ -134,6 +134,7 @@ def mpa_cost_score(
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        check_input: bool = True,
 ) -> float:
     """
     Profit-driven cost function for customer acquisition
@@ -173,6 +174,10 @@ def mpa_cost_score(
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empa_cost : float
@@ -180,15 +185,19 @@ def mpa_cost_score(
 
 
     """
-    y_true, y_pred = _validate_input_deterministic(
-        y_true,
-        y_pred,
-        contribution,
-        contact_cost,
-        sales_cost,
-        direct_selling,
-        commission
-    )
+    if check_input:
+        y_true, y_pred = _validate_input_deterministic(
+            y_true,
+            y_pred,
+            contribution,
+            contact_cost,
+            sales_cost,
+            direct_selling,
+            commission
+        )
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
 
     costs = y_true * y_pred * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
             contact_cost - (1 - commission) * contribution

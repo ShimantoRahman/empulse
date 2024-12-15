@@ -19,6 +19,7 @@ def empc_score(
         clv: Union[float, ArrayLike] = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
+        check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empc()` but only returning the EMPC score
@@ -67,6 +68,10 @@ def empc_score(
 
     contact_cost : float, default=1
         Cost of contacting a customer (``contact_cost > 0``).
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
@@ -137,6 +142,7 @@ def empc_score(
         clv=clv,
         incentive_cost=incentive_cost,
         contact_cost=contact_cost,
+        check_input=check_input,
     )[0]
 
 
@@ -149,6 +155,7 @@ def empc(
         clv: Union[float, ArrayLike] = 200,
         incentive_cost: float = 10,
         contact_cost: float = 1,
+        check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for Customer Churn (EMPC)
@@ -197,6 +204,10 @@ def empc(
     contact_cost : float, default=1
         Cost of contacting a customer (``contact_cost > 0``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empc : float
@@ -242,7 +253,12 @@ def empc(
     >>> empc(y_true, y_pred)
     (23.875593418348124, 0.8743700763487141)
     """
-    y_true, y_pred, clv = _validate_input_emp(y_true, y_pred, alpha, beta, clv, incentive_cost, contact_cost)
+    if check_input:
+        y_true, y_pred, clv = _validate_input_emp(y_true, y_pred, alpha, beta, clv, incentive_cost, contact_cost)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        clv = np.asarray(clv)
 
     if isinstance(clv, np.ndarray):
         clv = clv.mean()
@@ -305,6 +321,7 @@ def empb_score(
         beta: float = 14,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
+        check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empb()` but only returning the EMPB score
@@ -349,6 +366,10 @@ def empb_score(
     contact_cost : float, default=15
         Cost of contacting a customer (``contact_cost > 0``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empb : float
@@ -368,6 +389,7 @@ def empb_score(
         clv=clv,
         contact_cost=contact_cost,
         incentive_fraction=incentive_fraction,
+        check_input=check_input,
     )[0]
 
 
@@ -380,6 +402,7 @@ def empb(
         beta: float = 14,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
+        check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for B2B Customer Churn (EMPB)
@@ -423,6 +446,10 @@ def empb(
     contact_cost : float, default=15
         Cost of contacting a customer (``contact_cost > 0``).
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empb : float
@@ -437,7 +464,12 @@ def empb(
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
-    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+    if check_input:
+        y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        clv = np.asarray(clv)
     gamma = alpha / (alpha + beta)
 
     # Sort by predicted probabilities
@@ -471,6 +503,7 @@ def auepc_score(
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
         normalize: bool = True,
+        check_input: bool = True,
 ) -> float:
     """
     Area Under the Expected Profit Curve (AUEPC)
@@ -518,6 +551,10 @@ def auepc_score(
         Whether to normalize the AUEPC score. If True, the score is 1 when the model is perfect.
         This parameter is only useful if a part of the expected profit curve is negative.
 
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
     Returns
     -------
     empb : float
@@ -532,7 +569,12 @@ def auepc_score(
         Profit-Driven Pre-Processing in B2B Customer Churn Modeling using Fairness Techniques.
         Journal of Business Research.
     """
-    y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+    if check_input:
+        y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        clv = np.asarray(clv)
     if clv.ndim > 1:
         clv = clv[:, 0]
 
