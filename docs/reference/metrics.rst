@@ -18,8 +18,8 @@ General Metrics
    mp
    mp_score
    lift_score
-   aec_score
-   log_aec_score
+   aec_loss
+   log_aec_loss
    cost_loss
    savings_score
 
