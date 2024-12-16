@@ -149,6 +149,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             search.fit(X, y, protected_attr=high_clv)
     """
 
+    __metadata_request__fit = {'protected_attr': True}
+
     def __init__(
             self,
             estimator,

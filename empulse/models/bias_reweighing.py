@@ -155,6 +155,8 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             search.fit(X, y, protected_attr=high_clv)
     """
 
+    __metadata_request__fit = {'protected_attr': True}
+
     strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_sample_weights,
         'demographic parity': _independent_sample_weights,
