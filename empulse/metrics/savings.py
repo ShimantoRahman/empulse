@@ -3,7 +3,9 @@ from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike
+
 from ._validation import _check_y_true, _check_y_pred, _check_consistent_length
+
 
 def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost):
     y_true = _check_y_true(y_true)
@@ -22,7 +24,7 @@ def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost):
         fn_cost = np.asarray(fn_cost)
         arrays.append(fn_cost)
     _check_consistent_length(*arrays)
-    if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tp_cost)):
+    if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
         raise ValueError("All costs are zero. At least one cost must be non-zero.")
     return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
 
@@ -30,6 +32,7 @@ def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost):
 def cost_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
+        *,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
@@ -37,11 +40,11 @@ def cost_loss(
         check_input: bool = True,
 ) -> float:
     """
-    Cost classification loss.
+    Expected cost of a classifier.
 
-    This function calculates the cost of using y_pred on y_true with &
+    This function calculates the cost of using y_pred on y_true with a
     cost-matrix. It differs from traditional classification evaluation
-    measures since measures such as accuracy asing the same cost to different
+    measures since measures such as accuracy assume the same cost to different
     errors, but that is not the real case in several real-world classification
     problems as they are example-dependent cost-sensitive in nature, where the
     costs due to misclassification vary between examples.
@@ -54,7 +57,15 @@ def cost_loss(
         Binary target values ('positive': 1, 'negative': 0).
 
     y_pred : 1D array-like, shape=(n_samples,)
-        Predicted labels, not decision values or probabilities.
+        Predicted labels or calibrated probabilities.
+        If the predictions are calibrated probabilities,
+        the optimal decision threshold is calculated for each instance as [3]_:
+
+        .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
+
+        .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
+                  See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
+                  for more information.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -78,7 +89,7 @@ def cost_loss(
     Returns
     -------
     cost_loss : float
-        Cost of a using y_pred on y_true with cost-matrix cost-mat
+        Expected cost of a classifier.
 
     References
     ----------
@@ -90,6 +101,10 @@ def cost_loss(
            "Improving Credit Card Fraud Detection with Calibrated Probabilities",
            in Proceedings of the fourteenth SIAM International Conference on Data Mining,
            677-685, 2014.
+
+    .. [3] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
 
     See also
     --------
@@ -122,7 +137,12 @@ def cost_loss(
         if not isinstance(fn_cost, numbers.Number):
             fn_cost = np.asarray(fn_cost)
 
-    # TODO: if y_pred are probabilities, convert to binary through optimal threshold
+    # If the prediction is not binary, we need to find the optimal threshold
+    if not np.all((y_pred == 0) | (y_pred == 1)):
+        denominator = fp_cost - tn_cost + fn_cost - tp_cost
+        denominator = np.clip(denominator, np.finfo(float).eps, denominator)  # Avoid division by zero
+        optimal_thresholds = (fp_cost - tn_cost) / denominator
+        y_pred = (y_pred > optimal_thresholds).astype(int)
 
     cost = y_true * ((1 - y_pred) * fn_cost + y_pred * tp_cost)
     cost += (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
@@ -132,6 +152,7 @@ def cost_loss(
 def savings_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
+        *,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
@@ -139,7 +160,7 @@ def savings_score(
         check_input: bool = True,
 ) -> float:
     """
-    Savings score.
+    Expectd cost savings of a classifier compared to using no algorithm at all.
 
     This function calculates the savings cost of using y_pred on y_true with a
     cost-matrix, as the difference of y_pred and the cost_loss of a naive
@@ -153,7 +174,15 @@ def savings_score(
         Binary target values ('positive': 1, 'negative': 0).
 
     y_pred : 1D array-like, shape=(n_samples,)
-        Predicted labels, not decision values or probabilities.
+        Predicted labels or calibrated probabilities.
+        If the predictions are calibrated probabilities,
+        the optimal decision threshold is calculated for each instance as [2]_:
+
+        .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
+
+        .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
+                  See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
+                  for more information.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -182,7 +211,7 @@ def savings_score(
     Returns
     -------
     score : float
-        Savings of a using y_pred on y_true with cost-matrix.
+        Expectd cost savings of a classifier compared to using no algorithm at all.
 
         The best performance is 1.
 
@@ -192,6 +221,10 @@ def savings_score(
            "Improving Credit Card Fraud Detection with Calibrated Probabilities",
            in Proceedings of the fourteenth SIAM International Conference on Data Mining,
            677-685, 2014.
+
+    .. [2] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
 
     See also
     --------

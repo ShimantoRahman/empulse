@@ -20,6 +20,8 @@ General Metrics
    lift_score
    aec_score
    log_aec_score
+   cost_loss
+   savings_score
 
 Customer Acquisition Metrics
 ----------------------------
