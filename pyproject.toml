@@ -71,4 +71,5 @@ include = ["empulse*"]
 exclude = [
     "docs",
     "tests",
+    "notebooks",
 ]
