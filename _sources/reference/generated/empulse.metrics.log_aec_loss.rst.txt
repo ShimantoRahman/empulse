@@ -1,0 +1,6 @@
+﻿empulse.metrics.log\_aec\_loss
+==============================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: log_aec_loss

@@ -1,0 +1,6 @@
+﻿empulse.metrics.empb
+====================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: empb

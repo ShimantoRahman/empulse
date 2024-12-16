@@ -1,0 +1,6 @@
+﻿empulse.metrics.mpc
+===================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: mpc
