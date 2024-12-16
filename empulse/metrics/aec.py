@@ -67,7 +67,7 @@ def _compute_expected_cost(
         + (1 - y_true) * (y_pred * fp_costs + (1 - y_pred) * tn_costs)
 
 
-def aec_score(
+def aec_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -106,7 +106,7 @@ def aec_score(
     return aec.mean()
 
 
-def log_aec_score(
+def log_aec_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -122,7 +122,7 @@ def log_aec_score(
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
-        True labels.
+        Binary target values ('positive': 1, 'negative': 0).
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
     tp_costs : float or 1D array-like, shape=(n_samples,), optional
