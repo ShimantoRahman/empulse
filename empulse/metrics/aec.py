@@ -22,24 +22,36 @@ def _compute_expected_cost(
     ----------
     y_true : 1D array-like, shape=(n_samples,)
         True labels.
+
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
+
     tp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true positive predictions.
+
     tn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true negative predictions.
+
     fn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false negative predictions.
+
     fp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false positive predictions.
+
     check_input : bool, default=True
         Perform input validation.
         Turning off improves performance, useful when using this metric as a loss function.
 
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
+
     Returns
     -------
     expected_costs : 1D numpy.ndarray, shape=(n_samples,)
-        expected costs.
+        Average expected costs.
     """
     if check_input:
         y_true = _check_y_true(y_true)
@@ -84,16 +96,22 @@ def aec_loss(
     ----------
     y_true : 1D array-like, shape=(n_samples,)
         True labels.
+
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
+
     tp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true positive predictions.
+
     tn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true negative predictions.
+
     fn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false negative predictions.
+
     fp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false positive predictions.
+
     validation : bool, default=True
         Perform input validation. Turning off improves performance.
 
