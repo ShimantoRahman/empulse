@@ -5,6 +5,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import OneToOneFeatureMixin, BaseEstimator, clone
 from sklearn.utils import _safe_indexing
+from sklearn.utils._metadata_requests import MetadataRequest, RequestMethod
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data
 
@@ -68,6 +69,7 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         Fitted estimator.
     """
     _estimator_type = "sampler"
+    __metadata_request__fit_resample = {'protected_attr': True}
 
     strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_pairs,
@@ -84,6 +86,22 @@ class BiasRelabler(OneToOneFeatureMixin, BaseEstimator):
         self.estimator = estimator
         self.transform_attr = transform_attr
         self.strategy = strategy
+
+
+    def _get_metadata_request(self) -> MetadataRequest:
+        """
+        Get requested data properties.
+
+        Returns
+        -------
+        request : MetadataRequest
+            A :class:`sklearn:sklearn.utils.metadata_routing.MetadataRequest` instance.
+        """
+        routing = MetadataRequest(owner=self.__class__.__name__)
+        routing.fit_resample.add_request(param='protected_attr', alias=True)
+        return routing
+
+    set_fit_resample_request = RequestMethod('fit_resample', ['protected_attr'])
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
