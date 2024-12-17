@@ -66,10 +66,10 @@ from empulse.metrics.aec import aec_loss, log_aec_loss, _compute_expected_cost
     ])
 def test_aec(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, expected_cost, expected_avg_cost,
              expected_log_cost, check_input):
-    avg_expected_cost = aec_loss(y_true, y_pred, tp_costs=tp_costs, tn_costs=tn_costs,
-                                 fn_costs=fn_costs, fp_costs=fp_costs, check_input=check_input)
-    log_avg_expected_cost = log_aec_loss(y_true, y_pred, tp_costs=tp_costs, tn_costs=tn_costs,
-                                         fn_costs=fn_costs, fp_costs=fp_costs, check_input=check_input)
+    avg_expected_cost = aec_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs,
+                                 fn_cost=fn_costs, fp_cost=fp_costs, check_input=check_input)
+    log_avg_expected_cost = log_aec_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs,
+                                         fn_cost=fn_costs, fp_cost=fp_costs, check_input=check_input)
     assert np.isclose(expected_cost,
                       _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input)).all()
     assert avg_expected_cost == pytest.approx(expected_avg_cost)
@@ -82,26 +82,26 @@ def test_unequal_array_lengths():
     tp_costs = np.array([1, 1, 1])
 
     with pytest.raises(ValueError):
-        _compute_expected_cost(y_true, y_pred, tp_costs=tp_costs)
+        _compute_expected_cost(y_true, y_pred, tp_cost=tp_costs)
     with pytest.raises(ValueError):
-        aec_loss(y_true, y_pred, tp_costs=tp_costs)
+        aec_loss(y_true, y_pred, tp_cost=tp_costs)
     with pytest.raises(ValueError):
-        log_aec_loss(y_true, y_pred, tp_costs=tp_costs)
+        log_aec_loss(y_true, y_pred, tp_cost=tp_costs)
     with pytest.raises(ValueError):
-        _compute_expected_cost(y_true, y_pred, tn_costs=tp_costs)
+        _compute_expected_cost(y_true, y_pred, tn_cost=tp_costs)
     with pytest.raises(ValueError):
-        aec_loss(y_true, y_pred, tn_costs=tp_costs)
+        aec_loss(y_true, y_pred, tn_cost=tp_costs)
     with pytest.raises(ValueError):
-        log_aec_loss(y_true, y_pred, tn_costs=tp_costs)
+        log_aec_loss(y_true, y_pred, tn_cost=tp_costs)
     with pytest.raises(ValueError):
-        _compute_expected_cost(y_true, y_pred, fn_costs=tp_costs)
+        _compute_expected_cost(y_true, y_pred, fn_cost=tp_costs)
     with pytest.raises(ValueError):
-        aec_loss(y_true, y_pred, fn_costs=tp_costs)
+        aec_loss(y_true, y_pred, fn_cost=tp_costs)
     with pytest.raises(ValueError):
-        log_aec_loss(y_true, y_pred, fn_costs=tp_costs)
+        log_aec_loss(y_true, y_pred, fn_cost=tp_costs)
     with pytest.raises(ValueError):
-        _compute_expected_cost(y_true, y_pred, fp_costs=tp_costs)
+        _compute_expected_cost(y_true, y_pred, fp_cost=tp_costs)
     with pytest.raises(ValueError):
-        aec_loss(y_true, y_pred, fp_costs=tp_costs)
+        aec_loss(y_true, y_pred, fp_cost=tp_costs)
     with pytest.raises(ValueError):
-        log_aec_loss(y_true, y_pred, fp_costs=tp_costs)
+        log_aec_loss(y_true, y_pred, fp_cost=tp_costs)
