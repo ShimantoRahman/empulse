@@ -87,7 +87,7 @@ def aec_loss(
         tn_costs: Union[ArrayLike, float] = 0.0,
         fn_costs: Union[ArrayLike, float] = 0.0,
         fp_costs: Union[ArrayLike, float] = 0.0,
-        validation: bool = True
+        check_input: bool = True
 ) -> float:
     """
     Compute average expected cost for binary classification.
@@ -112,15 +112,16 @@ def aec_loss(
     fp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false positive predictions.
 
-    validation : bool, default=True
-        Perform input validation. Turning off improves performance.
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
     average_expected_cost : float
         Average expected cost.
     """
-    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=validation)
+    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=check_input)
     return aec.mean()
 
 
@@ -132,7 +133,7 @@ def log_aec_loss(
         tn_costs: Union[ArrayLike, float] = 0.0,
         fn_costs: Union[ArrayLike, float] = 0.0,
         fp_costs: Union[ArrayLike, float] = 0.0,
-        validation: bool = True,
+        check_input: bool = True,
 ) -> float:
     """
     Compute log average expected cost for binary classification.
@@ -141,24 +142,31 @@ def log_aec_loss(
     ----------
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
+
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted probabilities.
+
     tp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true positive predictions.
+
     tn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for true negative predictions.
+
     fn_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false negative predictions.
+
     fp_costs : float or 1D array-like, shape=(n_samples,), optional
         Cost(s) for false positive predictions.
-    validation : bool, default=True
-        Perform input validation. Turning off improves performance.
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
 
     Returns
     -------
     log_average_expected_cost : float
         Log average expected cost.
     """
-    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=validation)
+    aec = _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, check_input=check_input)
     epsilon = np.finfo(aec.dtype).eps  # avoid division by zero
     return np.log(aec + epsilon).mean()
