@@ -40,7 +40,7 @@ def cost_loss(
         check_input: bool = True,
 ) -> float:
     """
-    Expected cost of a classifier.
+    Cost of a classifier.
 
     This function calculates the cost of using y_pred on y_true with a
     cost-matrix. It differs from traditional classification evaluation
@@ -89,7 +89,7 @@ def cost_loss(
     Returns
     -------
     cost_loss : float
-        Expected cost of a classifier.
+        Cost of a classifier.
 
     References
     ----------

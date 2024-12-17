@@ -178,9 +178,6 @@ def mpc_cost_score(
 
     Examples
     --------
-
-    Examples
-    --------
     .. code-block::  python
 
         import xgboost as xgb
