@@ -1,4 +1,4 @@
-from functools import partial
+from functools import partial, update_wrapper
 from typing import Callable, Union
 
 import numpy as np
@@ -63,13 +63,15 @@ def make_objective_churn(
         Annals of Operations Research, 1-27.
 
     """
-    return partial(
+    objective = partial(
         _objective,
         accept_rate=accept_rate,
         clv=clv,
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
     )
+    update_wrapper(objective, _objective)
+    return objective
 
 
 def _objective(
