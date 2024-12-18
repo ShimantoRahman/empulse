@@ -7,26 +7,39 @@ from numpy.typing import ArrayLike
 from ._validation import _check_y_true, _check_y_pred, _check_consistent_length
 
 
-def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost):
-    y_true = _check_y_true(y_true)
-    y_pred = _check_y_pred(y_pred)
-    arrays = [y_true, y_pred]
-    if not isinstance(tp_cost, numbers.Number):
-        tp_cost = np.asarray(tp_cost)
-        arrays.append(tp_cost)
-    if not isinstance(fp_cost, numbers.Number):
-        fp_cost = np.asarray(fp_cost)
-        arrays.append(fp_cost)
-    if not isinstance(tn_cost, numbers.Number):
-        tn_cost = np.asarray(tn_cost)
-        arrays.append(tn_cost)
-    if not isinstance(fn_cost, numbers.Number):
-        fn_cost = np.asarray(fn_cost)
-        arrays.append(fn_cost)
-    _check_consistent_length(*arrays)
-    if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
-        raise ValueError("All costs are zero. At least one cost must be non-zero.")
-    return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
+def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input):
+    if check_input:
+        y_true = _check_y_true(y_true)
+        y_pred = _check_y_pred(y_pred)
+        arrays = [y_true, y_pred]
+        if not isinstance(tp_cost, numbers.Number):
+            tp_cost = np.asarray(tp_cost)
+            arrays.append(tp_cost)
+        if not isinstance(fp_cost, numbers.Number):
+            fp_cost = np.asarray(fp_cost)
+            arrays.append(fp_cost)
+        if not isinstance(tn_cost, numbers.Number):
+            tn_cost = np.asarray(tn_cost)
+            arrays.append(tn_cost)
+        if not isinstance(fn_cost, numbers.Number):
+            fn_cost = np.asarray(fn_cost)
+            arrays.append(fn_cost)
+        _check_consistent_length(*arrays)
+        if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
+            raise ValueError("All costs are zero. At least one cost must be non-zero.")
+        return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
+    else:
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        if not isinstance(tp_cost, numbers.Number):
+            tp_cost = np.asarray(tp_cost)
+        if not isinstance(fp_cost, numbers.Number):
+            fp_cost = np.asarray(fp_cost)
+        if not isinstance(tn_cost, numbers.Number):
+            tn_cost = np.asarray(tn_cost)
+        if not isinstance(fn_cost, numbers.Number):
+            fn_cost = np.asarray(fn_cost)
+        return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
 
 
 def cost_loss(
@@ -121,21 +134,9 @@ def cost_loss(
     >>> cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
     3
     """
-    if check_input:
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-            y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
-        )
-    else:
-        y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
+    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    )
 
     # If the prediction is not binary, we need to find the optimal threshold
     if not np.all((y_pred == 0) | (y_pred == 1)):
@@ -234,21 +235,9 @@ def expected_cost_loss(
     >>> cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
     3
     """
-    if check_input:
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-            y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
-        )
-    else:
-        y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
+    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    )
 
     cost = y_true * ((1 - y_pred) * fn_cost + y_pred * tp_cost)
     cost += (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
@@ -348,21 +337,9 @@ def savings_score(
     0.5
     """
 
-    if check_input:
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-            y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
-        )
-    else:
-        y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
+    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    )
 
     # Calculate the cost of naive prediction
     cost_base = min(
@@ -400,15 +377,7 @@ def expected_savings_score(
         Binary target values ('positive': 1, 'negative': 0).
 
     y_pred : 1D array-like, shape=(n_samples,)
-        Predicted labels or calibrated probabilities.
-        If the predictions are calibrated probabilities,
-        the optimal decision threshold is calculated for each instance as [2]_:
-
-        .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
-
-        .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
-                  See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
-                  for more information.
+        Predicted probabilities.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -451,29 +420,16 @@ def expected_savings_score(
     --------
     >>> import numpy as np
     >>> from empulse.metrics import expected_savings_score
-    >>> y_pred = [0, 1, 0, 0]
-    >>> y_true = [0.3, 0.8, 0.7, 0.2]
+    >>> y_pred = [0.4, 0.8, 0.75, 0.1]
+    >>> y_true = [0, 1, 1, 0]
     >>> fp_cost = np.array([4, 1, 2, 2])
     >>> fn_cost = np.array([1, 3, 3, 1])
     >>> expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    0.5
+    0.475
     """
-
-    if check_input:
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-            y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
-        )
-    else:
-        y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
+    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    )
 
     # Calculate the cost of naive prediction
     cost_base = min(
