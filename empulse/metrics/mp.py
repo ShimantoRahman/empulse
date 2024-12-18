@@ -14,7 +14,7 @@ def mp_score(
         fp_cost: float = 0.0,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.mp()` only returning MP score
+    :func:`~empulse.metrics.mp()` but only returning the MP score
 
     Parameters
     ----------
