@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from empulse.metrics.savings import cost_loss, savings_score, expected_cost_loss, expected_savings_score
+from empulse.metrics.savings import cost_loss, savings_score, expected_cost_loss, expected_savings_score, \
+    expected_log_cost_loss, _compute_expected_cost
 
 
 @pytest.mark.parametrize("check_input", [True, False])
@@ -65,6 +66,78 @@ def test_cost_loss_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_c
 def test_expected_cost_loss(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected, check_input):
     assert expected_cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
                               tn_cost=tn_cost, fn_cost=fn_cost, check_input=check_input) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("check_input", [True, False])
+@pytest.mark.parametrize(
+    "y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, expected_cost, expected_avg_cost, expected_log_cost",
+    [
+        (np.array([1, 0, 1, 0]), np.array([0.9, 0.1, 0.8, 0.2]),
+         np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]),
+         np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]),
+         np.array([1.0, 1.0, 1.0, 1.0]), 1.0, 0.0),
+
+        (np.array([1, 0, 1, 0]), np.array([0.9, 0.1, 0.8, 0.2]),
+         np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]),
+         np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]),
+         np.array([0.0, 0.0, 0.0, 0.0]), 0.0, -36.04365338911715),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         np.array([1, 1, 1, 1]), np.array([2, 2, 2, 2]),
+         np.array([4, 4, 4, 4]), np.array([8, 8, 8, 8]),
+         np.array([1.0, 2.0, 4.0, 8.0]), 3.75, 1.0397207708399179),
+
+        (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
+         np.array([1, 1, 1, 1]), np.array([2, 2, 2, 2]),
+         np.array([4, 4, 4, 4]), np.array([8, 8, 8, 8]),
+         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, 1.2628643221541278),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         np.exp(np.array([1, 1, 1, 1])), np.exp(np.array([2, 2, 2, 2])),
+         np.exp(np.array([4, 4, 4, 4])), np.exp(np.array([8, 8, 8, 8])),
+         np.exp(np.array([1.0, 2.0, 4.0, 8.0])), 761.4158687505656, 3.75),
+
+        (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
+         np.array([1, 0, 1, 0]), np.array([0, 2, 0, 2]),
+         np.array([4, 0, 4, 0]), np.array([0, 8, 0, 8]),
+         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, 1.2628643221541278),
+
+        (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
+         np.array([2, 0, 4, 0]), np.array([0, 2, 0, 8]),
+         np.array([4, 0, 16, 0]), np.array([0, 8, 0, 32]),
+         np.array([3.0, 5.0, 10.0, 20.0]), 9.5, 2.0015918919125615),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         np.array([1, 1, 1, 1]), 0.0,
+         0.0, 0.0,
+         np.array([1.0, 0.0, 0.0, 0.0]), 0.25, -27.032740041837865),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         0.0, np.array([1, 1, 1, 1]),
+         0.0, 0.0,
+         np.array([0.0, 1.0, 0.0, 0.0]), 0.25, -27.032740041837865),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         0.0, 0.0,
+         np.array([1, 1, 1, 1]), 0.0,
+         np.array([0.0, 0.0, 1.0, 0.0]), 0.25, -27.032740041837865),
+
+        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
+         0.0, 0.0,
+         0.0, np.array([1, 1, 1, 1]),
+         np.array([0.0, 0.0, 0.0, 1.0]), 0.25, -27.032740041837865),
+
+    ])
+def test_average_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, expected_cost, expected_avg_cost,
+             expected_log_cost, check_input):
+    avg_expected_cost = expected_cost_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs,
+                                 fn_cost=fn_costs, fp_cost=fp_costs, check_input=check_input, normalize=True)
+    log_avg_expected_cost = expected_log_cost_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs,
+                                         fn_cost=fn_costs, fp_cost=fp_costs, check_input=check_input, normalize=True)
+    assert np.isclose(expected_cost,
+                      _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs)).all()
+    assert avg_expected_cost == pytest.approx(expected_avg_cost)
+    assert log_avg_expected_cost == pytest.approx(expected_log_cost)
 
 
 @pytest.mark.parametrize("y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg", [

@@ -1,8 +1,11 @@
 import numbers
-from typing import Union
+from functools import partial, update_wrapper
+from typing import Union, Callable, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
+import xgboost as xgb
+from numpy.typing import ArrayLike, NDArray
+from scipy.special import expit
 
 from ._validation import _check_y_true, _check_y_pred, _check_consistent_length
 
@@ -42,6 +45,18 @@ def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_in
         return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
 
 
+def _compute_expected_cost(
+        y_true: NDArray,
+        y_pred: NDArray,
+        tp_cost: Union[NDArray, float] = 0.0,
+        tn_cost: Union[NDArray, float] = 0.0,
+        fn_cost: Union[NDArray, float] = 0.0,
+        fp_cost: Union[NDArray, float] = 0.0,
+) -> NDArray:
+    return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) \
+        + (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
+
+
 def cost_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
@@ -50,6 +65,7 @@ def cost_loss(
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
         fn_cost: Union[float, ArrayLike] = 0.0,
+        normalize: bool = False,
         check_input: bool = True,
 ) -> float:
     """
@@ -94,6 +110,10 @@ def cost_loss(
 
     fn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
+
+    normalize : bool, default=False
+        Normalize the cost by the number of samples.
+        If ``True``, return the average cost.
 
     check_input : bool, default=True
         Perform input validation.
@@ -145,8 +165,10 @@ def cost_loss(
         optimal_thresholds = (fp_cost - tn_cost) / denominator
         y_pred = (y_pred > optimal_thresholds).astype(int)
 
-    cost = y_true * ((1 - y_pred) * fn_cost + y_pred * tp_cost)
-    cost += (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
+    cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
+
+    if normalize:
+        return cost.mean()
     return np.sum(cost)
 
 
@@ -159,6 +181,7 @@ def expected_cost_loss(
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
         fn_cost: Union[float, ArrayLike] = 0.0,
+        normalize: bool = False,
         check_input: bool = True,
 ) -> float:
     """
@@ -195,6 +218,10 @@ def expected_cost_loss(
 
     fn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
+
+    normalize : bool, default=False
+        Normalize the cost by the number of samples.
+        If ``True``, return the average expected cost [3]_.
 
     check_input : bool, default=True
         Perform input validation.
@@ -239,9 +266,71 @@ def expected_cost_loss(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    cost = y_true * ((1 - y_pred) * fn_cost + y_pred * tp_cost)
-    cost += (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
+    cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
+
+    if normalize:
+        return cost.mean()
     return np.sum(cost)
+
+
+def expected_log_cost_loss(
+        y_true: ArrayLike,
+        y_pred: ArrayLike,
+        *,
+        tp_cost: Union[ArrayLike, float] = 0.0,
+        tn_cost: Union[ArrayLike, float] = 0.0,
+        fn_cost: Union[ArrayLike, float] = 0.0,
+        fp_cost: Union[ArrayLike, float] = 0.0,
+        normalize: bool = False,
+        check_input: bool = True,
+) -> float:
+    """
+    Expected log cost of a classifier.
+
+    Parameters
+    ----------
+    y_true : 1D array-like, shape=(n_samples,)
+        Binary target values ('positive': 1, 'negative': 0).
+
+    y_pred : 1D array-like, shape=(n_samples,)
+        Predicted probabilities.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+
+    normalize : bool, default=False
+        Normalize the cost by the number of samples.
+        If ``True``, return the log average expected cost.
+
+    check_input : bool, default=True
+        Perform input validation.
+        Turning off improves performance, useful when using this metric as a loss function.
+
+    Returns
+    -------
+    log_expected_cost : float
+        Log expected cost.
+    """
+    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    )
+    cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
+    epsilon = np.finfo(cost.dtype).eps
+    if normalize:
+        return np.log(cost + epsilon).mean()
+    return np.log(cost + epsilon).sum()
 
 
 def savings_score(
@@ -442,3 +531,179 @@ def expected_savings_score(
     cost = expected_cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     return 1.0 - cost / cost_base
+
+
+
+def make_objective_aec(
+        model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'],
+        *,
+        tp_cost: Union[ArrayLike, float] = 0.0,
+        tn_cost: Union[ArrayLike, float] = 0.0,
+        fn_cost: Union[ArrayLike, float] = 0.0,
+        fp_cost: Union[ArrayLike, float] = 0.0,
+) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
+    """
+    Create an objective function for the Average Expected Cost (AEC) measure.
+
+    The objective function presumes a situation where leads are targeted either directly or indirectly.
+    Directly targeted leads are contacted and handled by the internal sales team.
+    Indirectly targeted leads are contacted and then referred to intermediaries,
+    which receive a commission.
+    The company gains a contribution from a successful acquisition.
+
+    Parameters
+    ----------
+    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit'}
+        The model for which the objective function is created.
+
+        - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
+        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
+        - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
+        - 'csboost' : :class:`~empulse.models.CSBoostClassifier`
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+
+    Returns
+    -------
+    objective : Callable
+        A custom objective function for the specified model.
+
+
+    Examples
+    --------
+    .. code-block::  python
+
+        import xgboost as xgb
+        from empulse.metrics import make_objective_aec
+
+        objective = make_objective_aec()
+        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
+    """
+
+    if model == 'xgboost':
+        objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_xgboost)
+    elif model == 'lightgbm':
+        objective = partial(_objective_lightgbm, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_lightgbm)
+    elif model == 'catboost':
+        objective = partial(_objective_catboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_catboost)
+    elif model == 'cslogit':
+        objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_cslogit)
+    elif model == 'csboost':
+        objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_xgboost)
+    else:
+        raise ValueError(f"Expected model to be one of 'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost', "
+                         f"got {model} instead.")
+
+    return objective
+
+
+def _objective_cslogit(
+        weights: np.ndarray,
+        y_true: np.ndarray,
+        tp_cost: float = 0.0,
+        tn_cost: float = 0.0,
+        fn_cost: float = 0.0,
+        fp_cost: float = 0.0,
+) -> tuple[float, np.ndarray]:
+    y_pred = expit(weights)
+    average_expected_cost = expected_cost_loss(
+        y_true,
+        y_pred,
+        tp_cost=tp_cost,
+        tn_cost=tn_cost,
+        fn_cost=fn_cost,
+        fp_cost=fp_cost,
+        normalize=True,
+        check_input=False
+    )
+    gradient = y_pred * (1 - y_pred) * (y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost))
+    return average_expected_cost, gradient
+
+
+def _objective_xgboost(
+        y_pred: np.ndarray,
+        dtrain: Union[xgb.DMatrix, np.ndarray],
+        tp_cost: float = 0.0,
+        tn_cost: float = 0.0,
+        fn_cost: float = 0.0,
+        fp_cost: float = 0.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Create an objective function for the AEC measure.
+
+    Parameters
+    ----------
+    y_pred : np.ndarray
+        Predicted values.
+    dtrain : xgb.DMatrix or np.ndarray
+        Training data.
+
+    Returns
+    -------
+    gradient  : np.ndarray
+        Gradient of the objective function.
+
+    hessian : np.ndarray
+        Hessian of the objective function.
+    """
+
+    if isinstance(dtrain, np.ndarray):
+        y_true = dtrain
+    elif isinstance(dtrain, xgb.DMatrix):
+        y_true = dtrain.get_label()
+    else:
+        raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
+
+    y_pred = expit(y_pred)
+    cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
+    gradient = y_pred * (1 - y_pred) * cost
+    hessian = np.abs((1 - 2 * y_pred) * gradient)
+    return gradient, hessian
+
+
+def _objective_lightgbm(
+        y_pred,
+        train_data,
+        tp_cost=0.0,
+        tn_cost=0.0,
+        fn_cost=0.0,
+        fp_cost=0.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    raise NotImplementedError("Objective function for LightGBM is not implemented yet.")
+
+def _objective_catboost(
+        y_pred,
+        train_data,
+        tp_cost=0.0,
+        tn_cost=0.0,
+        fn_cost=0.0,
+        fp_cost=0.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    raise NotImplementedError("Objective function for CatBoost is not implemented yet.")
