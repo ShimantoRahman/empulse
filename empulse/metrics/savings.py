@@ -172,7 +172,6 @@ def cost_loss(
     return np.sum(cost)
 
 
-
 def expected_cost_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
@@ -529,9 +528,8 @@ def expected_savings_score(
     )
 
     cost = expected_cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
-                     tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+                              tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     return 1.0 - cost / cost_base
-
 
 
 def make_objective_aec(
@@ -576,6 +574,7 @@ def make_objective_aec(
 
     fn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
 
     Returns
     -------
@@ -625,14 +624,24 @@ def make_objective_aec(
 
 
 def _objective_cslogit(
+        features: np.ndarray,
         weights: np.ndarray,
         y_true: np.ndarray,
+        fit_intercept: bool,
         tp_cost: float = 0.0,
         tn_cost: float = 0.0,
         fn_cost: float = 0.0,
         fp_cost: float = 0.0,
 ) -> tuple[float, np.ndarray]:
-    y_pred = expit(weights)
+    # if fit_intercept:
+    #     features = np.hstack((np.ones((features.shape[0], 1)), features))
+    y_pred = expit(np.dot(weights, features.T))
+
+    if y_pred.ndim == 1:
+        y_pred = np.expand_dims(y_pred, axis=1)
+    if y_true.ndim == 1:
+        y_true = np.expand_dims(y_true, axis=1)
+
     average_expected_cost = expected_cost_loss(
         y_true,
         y_pred,
@@ -643,7 +652,11 @@ def _objective_cslogit(
         normalize=True,
         check_input=False
     )
-    gradient = y_pred * (1 - y_pred) * (y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost))
+    gradient = np.sum(
+        features * y_pred * (1 - y_pred) * (
+                y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
+        )
+        , axis=0) / len(y_true)
     return average_expected_cost, gradient
 
 
@@ -697,6 +710,7 @@ def _objective_lightgbm(
         fp_cost=0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     raise NotImplementedError("Objective function for LightGBM is not implemented yet.")
+
 
 def _objective_catboost(
         y_pred,
