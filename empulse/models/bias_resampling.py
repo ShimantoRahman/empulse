@@ -210,8 +210,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             return self
         protected_attr = np.asarray(protected_attr)
 
-        sampler = BiasResampler(strategy=self.strategy, transform_attr=self.transform_attr)
-        X, y = sampler.fit_resample(X, y, protected_attr=protected_attr)
+        sampler = BiasResampler(strategy=self.strategy, transform_feature=self.transform_attr)
+        X, y = sampler.fit_resample(X, y, sensitive_feature=protected_attr)
         self.estimator_ = clone(self.estimator)
         self.estimator_.fit(X, y, **fit_params)
 

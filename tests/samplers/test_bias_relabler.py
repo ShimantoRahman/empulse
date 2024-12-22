@@ -28,7 +28,7 @@ def test_no_protected_attr():
               1, 1, 1, 1, 0]
     protected_attr = np.array([0, 0, 0, 0, 0,
                                0, 0, 0, 0, 0])
-    with pytest.warns(UserWarning, match="protected_attribute only contains one class, no relabeling is performed."):
+    with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no relabeling is performed."):
         assert _independent_pairs(y_true, protected_attr) == 0
 
 
@@ -37,7 +37,7 @@ def test_all_protected_attr():
               1, 1, 1, 1, 0]
     protected_attr = np.array([1, 1, 1, 1, 1,
                                1, 1, 1, 1, 1])
-    with pytest.warns(UserWarning, match="protected_attribute only contains one class, no relabeling is performed."):
+    with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no relabeling is performed."):
         assert _independent_pairs(y_true, protected_attr) == 0
 
 
@@ -71,7 +71,7 @@ def test_bias_relabler():
     y = np.array([1, 1, 1, 1, 0, 0, 0, 1, 0, 1])
     protected_attr = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
     relabler = BiasRelabler(MockEstimator())
-    X, y = relabler.fit_resample(X, y, protected_attr=protected_attr)
+    X, y = relabler.fit_resample(X, y, sensitive_feature=protected_attr)
     assert np.all(y == np.array([0, 1, 1, 1, 0, 0, 0, 1, 1, 1]))
 
 
@@ -91,5 +91,5 @@ def test_bias_relabler_two():
     y = np.array([1, 1, 1, 1, 0, 0, 0, 1, 0, 1])
     protected_attr = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
     relabler = BiasRelabler(MockEstimator())
-    X, y = relabler.fit_resample(X, y, protected_attr=protected_attr)
+    X, y = relabler.fit_resample(X, y, sensitive_feature=protected_attr)
     assert np.all(y == np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1]))
