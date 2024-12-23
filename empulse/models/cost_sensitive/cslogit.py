@@ -220,7 +220,6 @@ class CSLogitClassifier(BaseLogitClassifier):
             objective,
             initial_weights,
             method="L-BFGS-B",
-            # jac=True,  TODO: allow loss function to return a tuple of loss and gradient
             options={
                 "maxiter": max_iter,
                 "maxls": 50,
