@@ -13,6 +13,12 @@ class CSBoostClassifier(BaseBoostClassifier):
     """
     :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function.
 
+    .. seealso::
+
+        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.
+
+        :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression.
+
     Parameters
     ----------
     estimator : `xgboost:xgboost.XGBClassifier`, optional
@@ -27,13 +33,11 @@ class CSBoostClassifier(BaseBoostClassifier):
     estimator_ : `xgboost:xgboost.XGBClassifier`
         Fitted XGBoost classifier.
 
-    .. seealso::
-        :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function
-        for customer churn.
-
     References
     ----------
-    .. [1] ...
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
     """
 
     def __init__(

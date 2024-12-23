@@ -1,9 +1,9 @@
-﻿empulse.models.CSBoostClassifier
+﻿empulse.models.CSLogitClassifier
 ================================
 
 .. currentmodule:: empulse.models
 
-.. autoclass:: CSBoostClassifier
+.. autoclass:: CSLogitClassifier
     :members:
     :inherited-members:
     :show-inheritance:

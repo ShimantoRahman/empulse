@@ -57,6 +57,23 @@ def _compute_expected_cost(
         + (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
 
 
+def _compute_log_expected_cost(
+        y_true: NDArray,
+        y_pred: NDArray,
+        tp_cost: Union[NDArray, float] = 0.0,
+        tn_cost: Union[NDArray, float] = 0.0,
+        fn_cost: Union[NDArray, float] = 0.0,
+        fp_cost: Union[NDArray, float] = 0.0,
+) -> NDArray:
+    epsilon = np.finfo(y_pred.dtype).eps
+    y_pred = np.clip(y_pred, epsilon, 1-epsilon)
+    inverse_y_pred = 1 - y_pred
+    log_y_pred = np.log(y_pred)
+    log_inv_y_pred = np.log(inverse_y_pred)
+    return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) \
+        + (1 - y_true) * (log_y_pred * fp_cost + log_inv_y_pred * tn_cost)
+
+
 def cost_loss(
         y_true: ArrayLike,
         y_pred: ArrayLike,
@@ -71,14 +88,33 @@ def cost_loss(
     """
     Cost of a classifier.
 
-    This function calculates the cost of using y_pred on y_true with a
-    cost-matrix. It differs from traditional classification evaluation
-    measures since measures such as accuracy assume the same cost to different
-    errors, but that is not the real case in several real-world classification
-    problems as they are example-dependent cost-sensitive in nature, where the
-    costs due to misclassification vary between examples.
+    The cost of a classifier is the sum of the costs of each instance.
+    This allows you to give attribute specific costs (or benefits in case of negative costs)
+    to each type of classification.
+    For example, in a credit card fraud detection problem,
+    the cost of a false negative (not detecting a fraudulent transaction) is higher than
+    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
 
-    Modified from `costcla.metrics.cost_loss`.
+    The cost of each instance :math:`C_i` is calculated as [3]_:
+
+    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+
+    where
+
+        - :math:`y_i` is the true label,
+        - :math:`\\hat y_i` is the predicted label,
+        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    Code modified from `costcla.metrics.cost_loss`.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
+
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using no algorithm at all.
 
     Parameters
     ----------
@@ -139,10 +175,6 @@ def cost_loss(
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
 
-    See also
-    --------
-    savings_score
-
     Examples
     --------
     >>> import numpy as np
@@ -186,14 +218,34 @@ def expected_cost_loss(
     """
     Expected cost of a classifier.
 
-    This function calculates the cost of using y_pred on y_true with a
-    cost-matrix. It differs from traditional classification evaluation
-    measures since measures such as accuracy assume the same cost to different
-    errors, but that is not the real case in several real-world classification
-    problems as they are example-dependent cost-sensitive in nature, where the
-    costs due to misclassification vary between examples.
+    The expected cost of a classifier is the sum of the expected costs of each instance.
+    This allows you to give attribute specific costs (or benefits in case of negative costs)
+    to each type of classification.
+    For example, in a credit card fraud detection problem,
+    the cost of a false negative (not detecting a fraudulent transaction) is higher than
+    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
 
-    Modified from `costcla.metrics.cost_loss`.
+    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [3]_:
+
+    .. math:: \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
+
+    where
+
+    - :math:`y_i` is the true label,
+    - :math:`s_i` is the predicted probability,
+    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    Code modified from `costcla.metrics.cost_loss`.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
+
+        :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
+        compared to using no algorithm at all.
 
     Parameters
     ----------
@@ -246,10 +298,6 @@ def expected_cost_loss(
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
 
-    See also
-    --------
-    savings_score
-
     Examples
     --------
     >>> import numpy as np
@@ -285,6 +333,33 @@ def expected_log_cost_loss(
 ) -> float:
     """
     Expected log cost of a classifier.
+
+    The expected log cost of a classifier is the sum of the expected log costs of each instance.
+    This allows you to give attribute specific costs (or benefits in case of negative costs)
+    to each type of classification.
+    For example, in a credit card fraud detection problem,
+    the cost of a false negative (not detecting a fraudulent transaction) is higher than
+    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
+
+    The expected log cost of each instance :math:`\\mathbb{E}[C^l_i]` is calculated as [3]_:
+
+    .. math:: \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))
+
+    where
+
+    - :math:`y_i` is the true label,
+    - :math:`s_i` is the predicted probability,
+    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,
+    the expected log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
 
     Parameters
     ----------
@@ -325,11 +400,10 @@ def expected_log_cost_loss(
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
-    cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
-    epsilon = np.finfo(cost.dtype).eps
+    cost = _compute_log_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
     if normalize:
-        return np.log(cost + epsilon).mean()
-    return np.log(cost + epsilon).sum()
+        return cost.mean()
+    return cost.sum()
 
 
 def savings_score(
@@ -350,6 +424,13 @@ def savings_score(
     classification model.
 
     Modified from `costcla.metrics.savings_score`.
+
+    .. seealso::
+
+        :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
+        compared to using no algorithm at all.
+
+        :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
 
     Parameters
     ----------
@@ -459,6 +540,12 @@ def expected_savings_score(
     cost-matrix, as the difference of y_pred and the cost_loss of a naive
     classification model.
 
+    .. seealso::
+
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using no algorithm at all.
+
+        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -551,12 +638,12 @@ def make_objective_aec(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit'}
+    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
-        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
-        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
+        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`  (not implemented yet)
+        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`  (not implemented yet)
         - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
         - 'csboost' : :class:`~empulse.models.CSBoostClassifier`
 

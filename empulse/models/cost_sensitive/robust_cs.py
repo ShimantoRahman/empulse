@@ -23,6 +23,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     Only the costs that are arrays and have a standard deviation greater than 0 are used for outlier detection.
     Hence, constant costs or costs with no variation are not imputed.
 
+    Code adapted from [1]_.
+
     Parameters
     ----------
     estimator : BaseEstimator
@@ -99,8 +101,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
 
         Returns
         -------
-        self
-
+        self : RobustCSLogitClassifier
+            Fitted RobustCSLogitClassifier model.
         """
 
         self.costs_ = {

@@ -75,57 +75,52 @@ def test_expected_cost_loss(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, 
         (np.array([1, 0, 1, 0]), np.array([0.9, 0.1, 0.8, 0.2]),
          np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]),
          np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]),
-         np.array([1.0, 1.0, 1.0, 1.0]), 1.0, 0.0),
+         np.array([1.0, 1.0, 1.0, 1.0]), 1.0, -2.120263536200091),
 
         (np.array([1, 0, 1, 0]), np.array([0.9, 0.1, 0.8, 0.2]),
          np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]),
          np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]),
-         np.array([0.0, 0.0, 0.0, 0.0]), 0.0, -36.04365338911715),
+         np.array([0.0, 0.0, 0.0, 0.0]), 0.0, 0.0),
 
         (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
          np.array([1, 1, 1, 1]), np.array([2, 2, 2, 2]),
          np.array([4, 4, 4, 4]), np.array([8, 8, 8, 8]),
-         np.array([1.0, 2.0, 4.0, 8.0]), 3.75, 1.0397207708399179),
+         np.array([1.0, 2.0, 4.0, 8.0]), 3.75, -135.16370020918933),
 
         (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
          np.array([1, 1, 1, 1]), np.array([2, 2, 2, 2]),
          np.array([4, 4, 4, 4]), np.array([8, 8, 8, 8]),
-         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, 1.2628643221541278),
-
-        (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
-         np.exp(np.array([1, 1, 1, 1])), np.exp(np.array([2, 2, 2, 2])),
-         np.exp(np.array([4, 4, 4, 4])), np.exp(np.array([8, 8, 8, 8])),
-         np.exp(np.array([1.0, 2.0, 4.0, 8.0])), 761.4158687505656, 3.75),
+         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, -5.19860385419959),
 
         (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
          np.array([1, 0, 1, 0]), np.array([0, 2, 0, 2]),
          np.array([4, 0, 4, 0]), np.array([0, 8, 0, 8]),
-         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, 1.2628643221541278),
+         np.array([2.5, 5.0, 2.5, 5.0]), 3.75, -5.19860385419959),
 
         (np.array([1, 0, 1, 0]), np.array([0.5, 0.5, 0.5, 0.5]),
          np.array([2, 0, 4, 0]), np.array([0, 2, 0, 8]),
          np.array([4, 0, 16, 0]), np.array([0, 8, 0, 32]),
-         np.array([3.0, 5.0, 10.0, 20.0]), 9.5, 2.0015918919125615),
+         np.array([3.0, 5.0, 10.0, 20.0]), 9.5, -13.16979643063896),
 
         (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
          np.array([1, 1, 1, 1]), 0.0,
          0.0, 0.0,
-         np.array([1.0, 0.0, 0.0, 0.0]), 0.25, -27.032740041837865),
+         np.array([1.0, 0.0, 0.0, 0.0]), 0.25, -9.010913347279288),
 
         (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
          0.0, np.array([1, 1, 1, 1]),
          0.0, 0.0,
-         np.array([0.0, 1.0, 0.0, 0.0]), 0.25, -27.032740041837865),
+         np.array([0.0, 1.0, 0.0, 0.0]), 0.25, -9.010913347279288),
 
         (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
          0.0, 0.0,
          np.array([1, 1, 1, 1]), 0.0,
-         np.array([0.0, 0.0, 1.0, 0.0]), 0.25, -27.032740041837865),
+         np.array([0.0, 0.0, 1.0, 0.0]), 0.25, -9.010913347279288),
 
         (np.array([1, 0, 1, 0]), np.array([1.0, 0.0, 0.0, 1.0]),
          0.0, 0.0,
          0.0, np.array([1, 1, 1, 1]),
-         np.array([0.0, 0.0, 0.0, 1.0]), 0.25, -27.032740041837865),
+         np.array([0.0, 0.0, 0.0, 1.0]), 0.25, -9.010913347279288),
 
     ])
 def test_average_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, expected_cost, expected_avg_cost,
@@ -138,6 +133,19 @@ def test_average_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_
                       _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs)).all()
     assert avg_expected_cost == pytest.approx(expected_avg_cost)
     assert log_avg_expected_cost == pytest.approx(expected_log_cost)
+
+
+def test_log_aec_cross_entropy():
+    from sklearn.metrics import log_loss
+
+    y_true = np.array([1, 0, 1, 0])
+    y_pred = np.array([0.9, 0.1, 0.8, 0.2])
+    tp_costs = -1
+    tn_costs = -1
+
+    assert log_loss(y_true, y_pred) == pytest.approx(
+        expected_log_cost_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs, normalize=True)
+    )
 
 
 @pytest.mark.parametrize("y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg", [

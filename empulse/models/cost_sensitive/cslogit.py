@@ -19,6 +19,11 @@ class CSLogitClassifier(BaseLogitClassifier):
     """
     Cost-Sensitive Logistic Regression Classifier.
 
+    .. seealso::
+
+        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.
+
+        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive XGBoost classifier.
 
     Parameters
     ----------
@@ -55,6 +60,12 @@ class CSLogitClassifier(BaseLogitClassifier):
 
     result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
     """
 
     def __init__(
