@@ -30,7 +30,6 @@ def test_proflogit_init():
     assert clf.soft_threshold is True
     assert clf.l1_ratio == 1.0
     assert clf.n_jobs is None
-    assert clf.default_bounds == (-3, 3)
 
 
 def test_proflogit_with_different_parameters():
@@ -40,14 +39,12 @@ def test_proflogit_with_different_parameters():
         soft_threshold=False,
         l1_ratio=0.5,
         n_jobs=1,
-        default_bounds=(-1, 1)
     )
     assert clf.C == 0.5
     assert clf.fit_intercept is False
     assert clf.soft_threshold is False
     assert clf.l1_ratio == 0.5
     assert clf.n_jobs == 1
-    assert clf.default_bounds == (-1, 1)
 
 
 def test_proflogit_fit(clf):
@@ -91,7 +88,7 @@ def test_proflogit_with_missing_values(X, y):
 
 
 def test_proflogit_with_different_bounds(clf, X, y):
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'bounds': [(-1, 1)] * 3})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'bounds': (-1, 1)})
     clf.fit(X, y)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.message == "Maximum number of iterations reached."
@@ -141,8 +138,9 @@ def test_works_with_time_stopping_condition(X, y):
     from scipy.optimize import OptimizeResult
     from time import perf_counter
 
-    def optimize(objective, bounds, max_time=0.1, **kwargs) -> OptimizeResult:
+    def optimize(objective, X, max_time=0.1, **kwargs) -> OptimizeResult:
         rga = Generation(**kwargs)
+        bounds = [(-5, 5)] * X.shape[1]
 
         start = perf_counter()
         for _ in rga.optimize(objective, bounds):
@@ -166,8 +164,8 @@ def test_works_with_different_optimizers_bfgs(X, y):
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
-    def optimize(objective, bounds, **kwargs) -> OptimizeResult:
-        initial_guess = np.zeros(len(bounds))
+    def optimize(objective, X, **kwargs) -> OptimizeResult:
+        initial_guess = np.zeros(X.shape[1])
         result = minimize(
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
@@ -188,8 +186,9 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
-    def optimize(objective, bounds, max_iter=10000, **kwargs) -> OptimizeResult:
-        initial_guess = np.zeros(len(bounds))
+    def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
+        initial_guess = np.zeros(X.shape[1])
+        bounds = [(-5, 5)] * X.shape[1]
         result = minimize(
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
@@ -213,7 +212,7 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
 
 def test_works_with_different_loss_empa(X, y):
     from empulse.metrics import empa_score
-    clf = ProfLogitClassifier(loss_fn=empa_score, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(loss=empa_score, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
@@ -222,7 +221,7 @@ def test_works_with_different_loss_empa(X, y):
 
 def test_works_with_different_loss_auc(X, y):
     from sklearn.metrics import roc_auc_score
-    clf = ProfLogitClassifier(loss_fn=roc_auc_score, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(loss=roc_auc_score, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
