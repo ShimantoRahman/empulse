@@ -627,14 +627,11 @@ def _objective_cslogit(
         features: np.ndarray,
         weights: np.ndarray,
         y_true: np.ndarray,
-        fit_intercept: bool,
         tp_cost: float = 0.0,
         tn_cost: float = 0.0,
         fn_cost: float = 0.0,
         fp_cost: float = 0.0,
 ) -> tuple[float, np.ndarray]:
-    # if fit_intercept:
-    #     features = np.hstack((np.ones((features.shape[0], 1)), features))
     y_pred = expit(np.dot(weights, features.T))
 
     if y_pred.ndim == 1:
