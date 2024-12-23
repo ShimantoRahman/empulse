@@ -4,7 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
 from empulse.models import BiasReweighingClassifier
-from empulse.models.bias_reweighing import _independent_sample_weights
+from empulse.models.bias_mitigation.bias_reweighing import _independent_sample_weights
 
 
 def test_independent_sample_weights():

@@ -6,8 +6,8 @@ from sklearn.base import ClassifierMixin, BaseEstimator, clone
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data, check_is_fitted
 
-from ..samplers import BiasRelabler
-from ..samplers._strategies import Strategy, StrategyFn
+from ...samplers import BiasRelabler
+from ...samplers._strategies import Strategy, StrategyFn
 
 
 class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):

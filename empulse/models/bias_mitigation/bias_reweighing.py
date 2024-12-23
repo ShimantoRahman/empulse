@@ -7,7 +7,7 @@ from sklearn.base import ClassifierMixin, BaseEstimator, clone
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data, check_is_fitted
 
-from ..samplers._strategies import _independent_weights, Strategy, StrategyFn
+from ...samplers._strategies import _independent_weights, Strategy, StrategyFn
 
 
 def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, protected_attr: np.ndarray):
