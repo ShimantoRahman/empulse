@@ -1,4 +1,4 @@
-from notebooks.testing import fp_cost[![Python Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
+[![Python Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ShimantoRahman/empulse)
 ![](https://img.shields.io/pypi/pyversions/empulse)
 ![Tests](https://github.com/ShimantoRahman/empulse/actions/workflows/tests.yml/badge.svg)
