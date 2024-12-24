@@ -1,4 +1,3 @@
-import warnings
 from functools import partial
 from itertools import islice
 from typing import Callable, Optional, Any
@@ -6,15 +5,14 @@ from typing import Callable, Optional, Any
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data, check_is_fitted
+from sklearn.utils.validation import validate_data
 
 from empulse.optimizers import Generation
+from ._base import BaseLogitClassifier
 from ..metrics import empc_score
 
 
-class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
+class ProfLogitClassifier(BaseLogitClassifier):
     """
     Logistic classifier to optimize profit-driven loss functions
 
@@ -40,13 +38,13 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss_fn : Callable, default= :func:`empulse.metrics.empc_score`
+    loss : Callable, default= :func:`empulse.metrics.empc_score`
         Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ``loss(y_true, y_score)``.
         See :func:`empulse.metrics.empc_score` for an example.
         By default, expects a loss function to maximize, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional
-        Optimization algorithm. Should be a Callable with signature ``optimize(objective, bounds)``.
+        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
         See :ref:`proflogit` for more information.
 
     optimizer_params : dict[str, Any], optional
@@ -60,11 +58,9 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
             Number of iterations with no improvement to wait before stopping the optimization.
         - ``tolerance`` : float, default=1e-4
             Relative tolerance to declare convergence.
+        - ``bounds`` : tuple[float, float], default=(-5, 5)
+            Lower and upper bounds for the regression coefficients.
         - all other parameters are passed to the :class:`~empulse.optimizers.Generation` initializer.
-
-    default_bounds : tuple, default=(-3, 3)
-        Bounds for every regression parameter. Use the `bounds` parameter
-        through `optimize_fn` for individual specifications.
 
     n_jobs : int, optional
         Number of parallel jobs to run.
@@ -104,30 +100,21 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
             fit_intercept: bool = True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
-            loss_fn: Callable = empc_score,
+            loss: Callable = empc_score,
             optimize_fn: Optional[Callable] = None,
             optimizer_params: Optional[dict[str, Any]] = None,
-            default_bounds: tuple[float, float] = (-3, 3),
             n_jobs: Optional[int] = None,
-            # random_state: Optional[Union[int, RandomState]] = None
     ):
-        super().__init__()
-        self.C = C
-        self.fit_intercept = fit_intercept
-        self.soft_threshold = soft_threshold
-        self.l1_ratio = l1_ratio
-        self.loss_fn = loss_fn
+        super().__init__(
+            C=C,
+            fit_intercept=fit_intercept,
+            soft_threshold=soft_threshold,
+            l1_ratio=l1_ratio,
+            loss=loss,
+            optimize_fn=optimize_fn,
+            optimizer_params=optimizer_params,
+        )
         self.n_jobs = n_jobs
-        self.default_bounds = default_bounds
-        self.optimizer_params = optimizer_params
-        self.optimize_fn = optimize_fn
-        # self.random_state = random_state
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
 
     def fit(self, X: ArrayLike, y: ArrayLike, **loss_params) -> 'ProfLogitClassifier':
         """
@@ -138,111 +125,44 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         X : 2D array-like, shape=(n_samples, n_features)
         y : 1D array-like, shape=(n_samples,)
         loss_params : dict
-            Additional keyword arguments passed to `loss_fn`.
+            Additional keyword arguments passed to `loss`.
 
         Returns
         -------
         self : ProfLogitClassifier
             Fitted ProfLogit model.
         """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
+        return super().fit(X, y, **loss_params)
 
-        if self.fit_intercept and not np.all(X[:, 0] == 1):
-            X = np.hstack((np.ones((X.shape[0], 1)), X))
-        n_dim = X.shape[1]
-
-        # random_state = check_random_state(self.random_state)
-
+    def _fit(self, X: np.ndarray, y: np.ndarray, **loss_params) -> 'ProfLogitClassifier':
         optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
         optimize_fn = _optimize if self.optimize_fn is None else self.optimize_fn
-        # if ('random_state' not in self.optimizer_params and
-        #         'random_state' in inspect.signature(optimize_fn).parameters):
-        #     optimizer_params['random_state'] = random_state
         optimize_fn = partial(optimize_fn, **optimizer_params)
-        if 'bounds' not in optimize_fn.keywords:
-            optimize_fn = partial(optimize_fn, bounds=[self.default_bounds] * n_dim)
-        elif len(optimize_fn.keywords['bounds']) != n_dim:
-            raise ValueError(
-                f"Number of bounds ({len(optimize_fn.keywords['bounds'])}) "
-                f"must match number of features ({n_dim})."
-            )
 
         objective = partial(
             _objective,
             X=X,
             y=y,
-            loss_fn=partial(self.loss_fn, **loss_params),
+            loss_fn=partial(self.loss, **loss_params),
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept
         )
-        self.result_ = optimize_fn(objective)
+        self.result_ = optimize_fn(objective, X)
 
         return self
 
-    def predict_proba(self, X: ArrayLike) -> np.ndarray:
+    def score(self, X: ArrayLike, y: ArrayLike, **loss_params) -> float:
         """
-        Compute predicted probabilities.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 2D numpy.ndarray, shape=(n_samples, 2)
-        """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-
-        if self.fit_intercept and not np.all(X[:, 0] == 1):
-            X = np.hstack((np.ones((X.shape[0], 1)), X))
-        theta = self.result_.x
-        logits = np.dot(X, theta)
-        with warnings.catch_warnings():  # TODO: look into this
-            warnings.simplefilter("ignore")
-            y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
-
-        # create 2D array with complementary probabilities
-        y_pred = np.vstack((1 - y_pred, y_pred)).T
-        return y_pred
-
-    def predict(self, X: ArrayLike) -> np.ndarray:
-        """
-        Compute predicted labels.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 1D numpy.ndarray, shape=(n_samples,)
-        """
-        y_pred = self.predict_proba(X)
-        return self.classes_[np.argmax(y_pred, axis=1)]
-
-    def score(self, X: ArrayLike, y: ArrayLike, sample_weight=None) -> float:
-        """
-        Compute model score.
+        Compute model score based on the loss function.
 
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_dim)
         y : 1D array-like, shape=(n_samples,)
-        sample_weight : 1D array-like, shape=(n_samples,), default=None
-            Sample weights (ignored).
+        loss_params : dict
+            Additional keyword arguments passed to `self.loss`.
 
         Returns
         -------
@@ -251,7 +171,7 @@ class ProfLogitClassifier(ClassifierMixin, BaseEstimator):
         """
         X, y = validate_data(self, X, y, reset=False)
         y = np.where(y == self.classes_[1], 1, 0)
-        return self.loss_fn(y, self.predict_proba(X)[:, 1])
+        return self.loss(y, self.predict_proba(X)[:, 1], **loss_params)
 
 
 def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
@@ -277,10 +197,11 @@ def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercep
     return loss - penalty
 
 
-def _optimize(objective, bounds, max_iter=1000, tolerance=1e-4, patience=250, **kwargs) -> OptimizeResult:
+def _optimize(objective, X, max_iter=1000, tolerance=1e-4, patience=250, bounds=(-5, 5), **kwargs) -> OptimizeResult:
     rga = Generation(**kwargs)
     previous_score = np.inf
     iter_stagnant = 0
+    bounds = [bounds] * X.shape[1]
 
     for _ in islice(rga.optimize(objective, bounds), max_iter):
         score = rga.result.fun

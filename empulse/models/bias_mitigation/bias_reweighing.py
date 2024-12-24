@@ -1,3 +1,4 @@
+from itertools import product
 from typing import Callable, Union, Optional
 
 import numpy as np
@@ -6,57 +7,63 @@ from sklearn.base import ClassifierMixin, BaseEstimator, clone
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data, check_is_fitted
 
-from ..samplers import BiasResampler
-from ..samplers._strategies import Strategy, StrategyFn
+from ...samplers._strategies import _independent_weights, Strategy, StrategyFn
 
 
-class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
+def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, protected_attr: np.ndarray):
+    """Convert group weights to sample weights."""
+    sample_weight = np.empty(len(y_true))
+    for target_class, protected_val in product(np.unique(y_true), np.unique(protected_attr)):
+        protected_val = int(protected_val)
+        idx_class = np.flatnonzero(y_true == target_class)
+        idx_prot_attr = np.flatnonzero(protected_attr == protected_val)
+        idx_class_prot = np.intersect1d(idx_class, idx_prot_attr)
+        sample_weight[idx_class_prot] = group_weights[target_class, protected_val]
+    return sample_weight / np.max(sample_weight)
+
+
+def _independent_sample_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.ndarray:
+    group_weights = _independent_weights(y_true, protected_attr)
+    return _to_sample_weights(group_weights, y_true, protected_attr)
+
+
+class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
     """
-    Classifier which resamples instances during training to remove bias against a subgroup.
+    Classifier which reweighs instances during training to remove bias against a subgroup.
 
     Parameters
     ----------
     estimator : Estimator instance
         Base estimator which is used for fitting and predicting.
+        Base estimator must accept `sample_weight` as an argument in its `fit` method.
     strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
-        Determines how the group weights are computed.
-        Group weights determine how much to over or undersample each combination of target and protected attribute.
-        For example, a weight of 2 for the pair (y_true == 1, protected_attr == 0) means that the resampled dataset
-        should have twice as many instances with y_true == 1 and protected_attr == 0 compared to the original dataset.
+        Determines how the sample weights are computed. Sample weights are passed to the estimator's `fit` method.
 
         - ``'statistical_parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of protected attribute.
 
-        - ``Callable``: function which computes the group weights based on the target and protected attribute. \
-        Callable accepts two arguments: y_true and protected_attr and returns the group weights. \
-        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
-        protected attribute. \
-        The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
+        - ``Callable``: function which computes the sample weights based on the target and protected attribute. \
+        Callable accepts two arguments: y_true and protected_attr and returns the sample weights. \
+        Sample weights are a numpy array where each represents the weight given to that respective instance. \
+        Sample weights should be normalized to fall between 0 and 1.
+
     transform_attr : Optional[Callable], default=None
-        Function which transforms protected attribute before resampling the training data.
-
-    Attributes
-    ----------
-    classes_ : numpy.ndarray, shape=(n_classes,)
-        Unique classes in the target.
-
-    estimator_ : Estimator instance
-        Fitted base estimator.
+        Function which transforms protected attribute before computing sample weights.
 
     Examples
     --------
-    1. Using the `BiasResamplingClassifier` with a logistic regression model:
+    1. Using the `BiasReweighingClassifier` with a logistic regression model:
 
     .. code-block:: python
 
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
-        from empulse.models import BiasResamplingClassifier
+        from empulse.models import BiasReweighingClassifier
 
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
-        model = BiasResamplingClassifier(estimator=LogisticRegression())
+        model = BiasReweighingClassifier(estimator=LogisticRegression())
         model.fit(X, y, protected_attr=high_clv)
 
     2. Converting a continuous attribute to a binary attribute:
@@ -65,12 +72,12 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
-        from empulse.models import BiasResamplingClassifier
+        from empulse.models import BiasReweighingClassifier
 
         X, y = make_classification()
         clv = np.random.rand(X.shape[0]) * 100
 
-        model = BiasResamplingClassifier(
+        model = BiasReweighingClassifier(
             estimator=LogisticRegression(),
             transform_attr=lambda clv: (clv > np.quantile(clv, 0.8)).astype(int)
         )
@@ -82,19 +89,18 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
-        from empulse.models import BiasResamplingClassifier
+        from empulse.models import BiasReweighingClassifier
 
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
         # Simple strategy to double the weight for the protected attribute
         def strategy(y_true, protected_attr):
-            return np.array([
-                [1, 2],
-                [1, 2]
-            ])
+            sample_weights = np.ones(len(protected_attr))
+            sample_weights[np.where(protected_attr == 0)] = 0.5
+            return sample_weights
 
-        model = BiasResamplingClassifier(
+        model = BiasReweighingClassifier(
             estimator=LogisticRegression(),
             strategy=strategy
         )
@@ -110,7 +116,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         from sklearn.model_selection import GridSearchCV
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        from empulse.models import BiasResamplingClassifier
+        from empulse.models import BiasReweighingClassifier
 
         with config_context(enable_metadata_routing=True):
             X, y = make_classification()
@@ -119,7 +125,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasResamplingClassifier(LogisticRegression()))
+                ('model', BiasReweighingClassifier(LogisticRegression()))
             ])
             search = GridSearchCV(pipeline, param_grid)
             search.fit(X, y, model__protected_attr=high_clv)
@@ -134,7 +140,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         from sklearn.model_selection import GridSearchCV
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        from empulse.models import BiasResamplingClassifier
+        from empulse.models import BiasReweighingClassifier
 
         with config_context(enable_metadata_routing=True):
             X, y = make_classification()
@@ -143,13 +149,18 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasResamplingClassifier(LogisticRegression()).set_fit_request(protected_attr=True))
+                ('model', BiasReweighingClassifier(LogisticRegression()).set_fit_request(protected_attr=True))
             ])
             search = GridSearchCV(pipeline, param_grid)
             search.fit(X, y, protected_attr=high_clv)
     """
 
     __metadata_request__fit = {'protected_attr': True}
+
+    strategy_mapping: dict[str, StrategyFn] = {
+        'statistical parity': _independent_sample_weights,
+        'demographic parity': _independent_sample_weights,
+    }
 
     def __init__(
             self,
@@ -175,24 +186,22 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             *,
             protected_attr: Optional[ArrayLike] = None,
             **fit_params
-    ) -> 'BiasResamplingClassifier':
+    ) -> 'BiasReweighingClassifier':
         """
-        Fit the estimator and resample the instances according to the strategy.
+        Fit the estimator and reweigh the instances according to the strategy.
 
         Parameters
         ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Training data.
+        X : 2D array-like, shape=(n_samples, n_features)
         y : 1D array-like, shape=(n_samples,)
-            Target values.
         protected_attr : 1D array-like, shape=(n_samples,), default = None
-            Protected attribute used to determine the group weights.
+            Protected attribute used to determine the sample weights.
         fit_params : dict
             Additional parameters passed to the estimator's `fit` method.
 
         Returns
         -------
-        self : BiasResamplingClassifier
+        self : BiasReweighingClassifier
         """
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
@@ -204,16 +213,24 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")
+
         if protected_attr is None:
             self.estimator_ = clone(self.estimator)
             self.estimator_.fit(X, y, **fit_params)
             return self
         protected_attr = np.asarray(protected_attr)
 
-        sampler = BiasResampler(strategy=self.strategy, transform_attr=self.transform_attr)
-        X, y = sampler.fit_resample(X, y, protected_attr=protected_attr)
+        if isinstance(self.strategy, str):
+            strategy_fn = self.strategy_mapping[self.strategy]
+        else:
+            strategy_fn = self.strategy
+
+        if self.transform_attr is not None:
+            protected_attr = self.transform_attr(protected_attr)
+
+        sample_weights = strategy_fn(y, protected_attr)
         self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X, y, **fit_params)
+        self.estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
 
         return self
 

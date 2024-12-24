@@ -8,7 +8,10 @@ from empulse.models import (
     ProfLogitClassifier,
     BiasReweighingClassifier,
     BiasResamplingClassifier,
-    BiasRelabelingClassifier
+    BiasRelabelingClassifier,
+    CSBoostClassifier,
+    CSLogitClassifier,
+    RobustCSClassifier
 )
 
 ESTIMATORS = (
@@ -16,7 +19,10 @@ ESTIMATORS = (
     ProfLogitClassifier(optimizer_params={'max_iter': 2}),
     BiasReweighingClassifier(estimator=LogisticRegression()),
     BiasResamplingClassifier(estimator=LogisticRegression()),
-    BiasRelabelingClassifier(estimator=LogisticRegression())
+    BiasRelabelingClassifier(estimator=LogisticRegression()),
+    CSBoostClassifier(),
+    CSLogitClassifier(),
+    RobustCSClassifier(estimator=CSLogitClassifier())
 )
 
 

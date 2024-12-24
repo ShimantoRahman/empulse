@@ -20,7 +20,7 @@ def emp_score(
         n_buckets: int = 100,
 ) -> float:
     """
-    Convenience function around :func:`~empulse.metrics.emp()` only returning EMP score
+    :func:`~empulse.metrics.emp()` but only returning the EMP score
 
     Parameters
     ----------

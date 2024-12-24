@@ -16,6 +16,9 @@ The :mod:`~empulse.models` module contains a collection of profit-driven models.
      - Classifier which resamples instances during training to remove bias against a subgroup
    * - :class:`BiasReweighingClassifier`
      - Classifier which reweighs instances during training to remove bias against a subgroup
+   * - :class:`CSBoostClassifier`
+     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function.
+   * - :class:`CSLogitClassifier`
+     - Logistic classifier with instance-specific cost function.
    * - :class:`ProfLogitClassifier`
-     - Logistic classifier to optimize profit-driven loss functions
-
+     - Logistic classifier to optimize profit-driven loss functions.

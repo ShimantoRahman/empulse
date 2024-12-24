@@ -1,4 +1,4 @@
-from functools import partial
+from functools import partial, update_wrapper
 from typing import Callable, Union
 
 import numpy as np
@@ -71,7 +71,7 @@ def make_objective_acquisition(
         Annals of Operations Research, 1-27.
     """
 
-    return partial(
+    objective = partial(
         _objective,
         contribution=contribution,
         contact_cost=contact_cost,
@@ -79,6 +79,8 @@ def make_objective_acquisition(
         direct_selling=direct_selling,
         commission=commission,
     )
+    update_wrapper(objective, _objective)
+    return objective
 
 
 def _objective(

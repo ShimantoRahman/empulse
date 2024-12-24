@@ -2,15 +2,15 @@ from typing import Union, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, clone
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data, check_is_fitted
+from sklearn.base import clone
+from sklearn.utils.validation import validate_data
 from xgboost import XGBClassifier
 
-from ..metrics import make_objective_churn, mpc_cost_score
+from .._base import BaseBoostClassifier
+from ...metrics import make_objective_churn, mpc_cost_score
 
 
-class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
+class B2BoostClassifier(BaseBoostClassifier):
     """
     :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
 
@@ -72,17 +72,11 @@ class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
             incentive_fraction: float = 0.05,
             contact_cost: float = 15,
     ) -> None:
-        self.estimator = estimator
+        super().__init__(estimator=estimator)
         self.clv = clv
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
 
     def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
         """
@@ -90,7 +84,7 @@ class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D numpy.ndarray, shape=(n_samples, n_features)
         y : 1D numpy.ndarray, shape=(n_samples,)
 
         sample_weights : 1D numpy.ndarray, shape=(n_samples,), default=None
@@ -116,23 +110,31 @@ class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
+        return super().fit(
+            X,
+            y,
+            sample_weights=sample_weights,
+            accept_rate=accept_rate,
+            clv=clv,
+            incentive_fraction=incentive_fraction,
+            contact_cost=contact_cost,
+        )
 
+    def _fit(
+            self,
+            X: np.ndarray,
+            y: np.ndarray,
+            sample_weights: ArrayLike = None,
+            accept_rate: float = None,
+            clv: Union[float, ArrayLike] = None,
+            incentive_fraction: float = None,
+            contact_cost: float = None,
+    ) -> 'B2BoostClassifier':
         objective = make_objective_churn(
-            clv=self.clv if clv is None else clv,
-            incentive_fraction=self.incentive_fraction if incentive_fraction is None else incentive_fraction,
-            contact_cost=self.contact_cost if contact_cost is None else contact_cost,
-            accept_rate=self.accept_rate if accept_rate is None else accept_rate,
+            clv=clv or self.clv,
+            incentive_fraction=incentive_fraction or self.incentive_fraction,
+            contact_cost=contact_cost or self.contact_cost,
+            accept_rate=accept_rate or self.accept_rate,
         )
         if self.estimator is None:
             self.estimator_ = XGBClassifier(objective=objective)
@@ -142,40 +144,6 @@ class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         self.estimator_.fit(X, y, sample_weight=sample_weights)
         return self
-
-    def predict_proba(self, X):
-        """
-        Predict class probabilities for X.
-
-        Parameters
-        ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
-            Predicted class probabilities.
-        """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-
-        return self.estimator_.predict_proba(X)
-
-    def predict(self, X):
-        """
-        Predict class labels for X.
-
-        Parameters
-        ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 1D numpy.ndarray, shape=(n_samples,)
-            Predicted class labels.
-        """
-        y_pred = self.predict_proba(X)
-        return self.classes_[np.argmax(y_pred, axis=1)]
 
     def score(
             self,
@@ -191,7 +159,7 @@ class B2BoostClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D numpy.ndarray, shape=(n_samples, n_features)
             Features.
         y : 1D numpy.ndarray, shape=(n_samples,)
             Labels.

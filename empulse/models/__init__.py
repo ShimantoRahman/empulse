@@ -1,5 +1,3 @@
-from .b2boost import B2BoostClassifier
-from .bias_relabeling import BiasRelabelingClassifier
-from .bias_resampling import BiasResamplingClassifier
-from .bias_reweighing import BiasReweighingClassifier
+from .bias_mitigation import BiasRelabelingClassifier, BiasResamplingClassifier, BiasReweighingClassifier
+from .cost_sensitive import B2BoostClassifier, CSBoostClassifier, CSLogitClassifier, RobustCSClassifier
 from .proflogit import ProfLogitClassifier

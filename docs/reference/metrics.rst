@@ -18,10 +18,12 @@ General Metrics
    mp
    mp_score
    lift_score
-   aec_loss
-   log_aec_loss
    cost_loss
+   expected_cost_loss
+   expected_log_cost_loss
+   make_objective_aec
    savings_score
+   expected_savings_score
 
 Customer Acquisition Metrics
 ----------------------------
