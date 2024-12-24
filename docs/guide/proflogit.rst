@@ -21,7 +21,7 @@ You just need to pass the desired values to the :class:`~empulse.models.ProfLogi
 
     from empulse.models import ProfLogitClassifier
 
-    proflogit = ProfLogitClassifier(max_iter=10000, tolerance=1e-3, patience=100)
+    proflogit = ProfLogitClassifier(optimizer_params={'max_iter': 10000, 'tolerance': 1e-3, 'patience': 100})
 
 For more advanced customization of the stopping conditions,
 you can pass an optimize function to the :class:`~empulse.models.ProfLogitClassifier` initializer.
@@ -34,16 +34,17 @@ For example, if you want to use the RGA for a set amount of time, you can do the
     from scipy.optimize import OptimizeResult
     from time import perf_counter
 
-    def optimize(objective, bounds, max_time=5, **kwargs) -> OptimizeResult:
-                generation = Generation(**kwargs)
+    def optimize(objective, X, max_time=5, **kwargs) -> OptimizeResult:
+        generation = Generation(**kwargs)
+        bounds = [(-5, 5)] * X.shape[1]
 
-                start = perf_counter()
-                for _ in generation.optimize(objective, bounds):
-                    if perf_counter() - start > max_time:
-                        generation.result.message = "Maximum time reached."
-                        generation.result.success = True
-                        break
-                return generation.result
+        start = perf_counter()
+        for _ in generation.optimize(objective, bounds):
+            if perf_counter() - start > max_time:
+                generation.result.message = "Maximum time reached."
+                generation.result.success = True
+                break
+        return generation.result
 
     proflogit = ProfLogitClassifier(optimize_fn=optimize, max_time=10)
 
@@ -55,15 +56,16 @@ Or you can stop the RGA after a set number of fitness evaluations:
     from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
 
-    def optimize(objective, bounds, max_evals=10000, **kwargs) -> OptimizeResult:
-                generation = Generation(**kwargs)
+    def optimize(objective, X, max_evals=10000, **kwargs) -> OptimizeResult:
+        generation = Generation(**kwargs)
+        bounds = [(-5, 5)] * X.shape[1]
 
-                for _ in rga.optimize(objective, bounds):
-                    if generation.result.nfev > max_evals:
-                        generation.result.message = "Maximum number of evaluations reached."
-                        generation.result.success = True
-                        break
-                return generation.result
+        for _ in rga.optimize(objective, bounds):
+            if generation.result.nfev > max_evals:
+                generation.result.message = "Maximum number of evaluations reached."
+                generation.result.success = True
+                break
+        return generation.result
 
     proflogit = ProfLogitClassifier(optimize_fn=optimize, max_evals=10000)
 
@@ -93,8 +95,9 @@ For instance, if you want to use the L-BFGS-B algorithm from scipy.optimize, you
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
-    def optimize(objective, bounds, max_iter=10000, **kwargs) -> OptimizeResult:
-        initial_guess = np.zeros(len(bounds))
+    def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
+        initial_guess = np.zeros(X.shape[1])
+        bounds = [(-5, 5)] * X.shape[1]
         result = minimize(
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
@@ -119,8 +122,8 @@ You can also use unbounded optimization algorithms like BFGS:
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
-    def optimize(objective, bounds, **kwargs) -> OptimizeResult:
-        initial_guess = np.zeros(len(bounds))
+    def optimize(objective, X, **kwargs) -> OptimizeResult:
+        initial_guess = np.zeros(X.shape[1])
         result = minimize(
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
