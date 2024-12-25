@@ -60,7 +60,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
             method='BFGS',
             options={
                 'maxiter': max_iter,
-                'ftol': 1e-4,
+                'gtol': 1e-4,
             },
             **kwargs
         )
