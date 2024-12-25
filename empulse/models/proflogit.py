@@ -75,6 +75,13 @@ class ProfLogitClassifier(BaseLogitClassifier):
     result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
 
+    coef_ : numpy.ndarray
+        Coefficients of the logit model.
+
+    intercept_ : float
+        Intercept of the logit model.
+        Only available when ``fit_intercept=True``.
+
     Notes
     -----
     Original implementation of ProfLogit [3]_ in Python.
@@ -148,6 +155,12 @@ class ProfLogitClassifier(BaseLogitClassifier):
             fit_intercept=self.fit_intercept
         )
         self.result_ = optimize_fn(objective, X)
+
+        if self.fit_intercept:
+            self.intercept_ = self.result_.x[0]
+            self.coef_ = self.result_.x[1:]
+        else:
+            self.coef_ = self.result_.x
 
         return self
 
