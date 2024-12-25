@@ -153,6 +153,13 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             ])
             search = GridSearchCV(pipeline, param_grid)
             search.fit(X, y, sensitive feature=high_clv)
+
+    References
+    ----------
+
+    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
+           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
     strategy_mapping: dict[str, StrategyFn] = {

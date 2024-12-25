@@ -86,6 +86,11 @@ class BiasRelabler(BaseSampler):
         and outputs the transformed sensitive feature as a numpy.ndarray.
         This can be useful if you want to transform a continuous variable to a binary variable at fit time.
 
+    Attributes
+    ----------
+    estimator_ : Estimator instance
+        Fitted estimator.
+
     Examples
     --------
 
@@ -158,10 +163,12 @@ class BiasRelabler(BaseSampler):
         grid_search = GridSearchCV(pipeline, param_grid=param_grid)
         grid_search.fit(X, y, sensitive_feature=high_clv)
 
-    Attributes
+    References
     ----------
-    estimator_ : Estimator instance
-        Fitted estimator.
+
+    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
+           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
     _estimator_type = "sampler"
     _sampling_type = 'bypass'
