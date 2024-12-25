@@ -78,7 +78,7 @@ class CSLogitClassifier(BaseLogitClassifier):
         from sklearn.datasets import make_classification
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)  # instance-dependent cost
+        fn_cost = np.random.rand(y.size)  # instance-dependent cost
         fp_cost = 5  # constant cost
 
         model = CSLogitClassifier(C=0.1)
@@ -100,7 +100,7 @@ class CSLogitClassifier(BaseLogitClassifier):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)
+        fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
         pipeline = Pipeline([
@@ -127,7 +127,7 @@ class CSLogitClassifier(BaseLogitClassifier):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)
+        fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
         pipeline = Pipeline([

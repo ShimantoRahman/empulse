@@ -3,11 +3,10 @@ from typing import Union, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
-from sklearn.utils.validation import validate_data
 from xgboost import XGBClassifier
 
 from .._base import BaseBoostClassifier
-from ...metrics import make_objective_churn, mpc_cost_score
+from ...metrics import make_objective_churn
 
 
 class B2BoostClassifier(BaseBoostClassifier):
@@ -70,7 +69,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         from sklearn.datasets import make_classification
 
         X, y = make_classification()
-        clv = np.random.rand(y.shape) * 100
+        clv = np.random.rand(y.size) * 100
 
         model = B2BoostClassifier()
         model.fit(X, y, clv=clv, incentive_fraction=0.1)
@@ -88,7 +87,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        clv = np.random.rand(y.shape) * 100
+        clv = np.random.rand(y.size) * 100
 
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
@@ -113,7 +112,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        clv = np.random.rand(y.shape) * 100
+        clv = np.random.rand(y.size) * 100
         contact_cost = 10
 
         pipeline = Pipeline([
@@ -159,7 +158,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
 
-    def fit(self, X, y, sample_weights=None, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
+    def fit(self, X, y, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
         """
         Fit the model.
 
@@ -167,9 +166,6 @@ class B2BoostClassifier(BaseBoostClassifier):
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_features)
         y : 1D numpy.ndarray, shape=(n_samples,)
-
-        sample_weights : 1D numpy.ndarray, shape=(n_samples,), default=None
-            Sample weights.
 
         accept_rate : float, default=0.3
             Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
@@ -194,7 +190,6 @@ class B2BoostClassifier(BaseBoostClassifier):
         return super().fit(
             X,
             y,
-            sample_weights=sample_weights,
             accept_rate=accept_rate,
             clv=clv,
             incentive_fraction=incentive_fraction,
@@ -205,14 +200,13 @@ class B2BoostClassifier(BaseBoostClassifier):
             self,
             X: np.ndarray,
             y: np.ndarray,
-            sample_weights: ArrayLike = None,
             accept_rate: float = None,
             clv: Union[float, ArrayLike] = None,
             incentive_fraction: float = None,
             contact_cost: float = None,
     ) -> 'B2BoostClassifier':
         objective = make_objective_churn(
-            clv=clv or self.clv,
+            clv=clv if clv is not None else self.clv,
             incentive_fraction=incentive_fraction or self.incentive_fraction,
             contact_cost=contact_cost or self.contact_cost,
             accept_rate=accept_rate or self.accept_rate,
@@ -223,55 +217,5 @@ class B2BoostClassifier(BaseBoostClassifier):
             if not isinstance(self.estimator, XGBClassifier):
                 raise ValueError("estimator must be an instance of XGBClassifier")
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        self.estimator_.fit(X, y, sample_weight=sample_weights)
+        self.estimator_.fit(X, y)
         return self
-
-    def score(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            accept_rate: float = None,
-            clv=None,
-            incentive_fraction=None,
-            contact_cost=None
-    ) -> float:
-        """
-        Compute EMPB score.
-
-        Parameters
-        ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_features)
-            Features.
-        y : 1D numpy.ndarray, shape=(n_samples,)
-            Labels.
-
-        accept_rate : float, default=self.accept_rate
-            Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
-
-        clv : float or 1D array-like, shape=(n_samples), default=self.clv
-            If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
-            If ``array``: individualized customer lifetime value of each customer when retained
-            (``mean(clv) > incentive_cost```).
-
-        incentive_fraction : float, default=self.incentive_cost
-            Cost of incentive offered to a customer, as a fraction of customer lifetime value
-            (``0 < incentive_fraction < 1``).
-
-        contact_cost : float, default=self.contact_cost
-            Constant cost of contact (``contact_cost > 0``).
-
-        Returns
-        -------
-        score : float
-            Model score.
-        """
-        X, y = validate_data(self, X, y, reset=False)
-        y = np.where(y == self.classes_[1], 1, 0)
-        return mpc_cost_score(
-            y,
-            self.predict_proba(X)[:, 1],
-            accept_rate=accept_rate or self.accept_rate,
-            clv=clv or self.clv,
-            incentive_fraction=incentive_fraction or self.incentive_fraction,
-            contact_cost=contact_cost or self.contact_cost,
-        )

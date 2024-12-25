@@ -60,7 +60,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         from sklearn.datasets import make_classification
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)  # instance-dependent cost
+        fn_cost = np.random.rand(y.size)  # instance-dependent cost
         fp_cost = 5  # constant cost
 
         model = RobustCSClassifier(CSLogitClassifier(C=0.1))
@@ -81,7 +81,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)
+        fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
         pipeline = Pipeline([
@@ -110,7 +110,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        fn_cost = np.random.rand(y.shape)
+        fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
         pipeline = Pipeline([
@@ -119,7 +119,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
                 CSLogitClassifier()
             ).set_fit_request(fn_cost=True, fp_cost=True))
         ])
-        param_grid = {'model__C': np.logspace(-5, 2, 10)}
+        param_grid = {'model__estimator__C': np.logspace(-5, 2, 10)}
         scorer = make_scorer(
             expected_cost_loss,
             response_method='predict_proba',
@@ -202,7 +202,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         elif self.n_treatments_ == 1:
             target = self.costs_[should_fit[0]]
             self.outlier_estimator_ = clone(
-                self.outlier_estimator if self.outlier_threshold is not None else HuberRegressor()
+                self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
             ).fit(X, target)
             cost_predictions = self.outlier_estimator_.predict(X)
             # outliers if the absolute value of the standardized residuals is greater than the threshold
@@ -246,11 +246,6 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     def predict_proba(self, X: ArrayLike) -> np.ndarray:
         check_is_fitted(self, "estimator_")
         return self.estimator_.predict_proba(X)
-
-    @available_if(_estimator_has("score"))
-    def score(self, X: ArrayLike, y: ArrayLike, **kwargs) -> float:
-        check_is_fitted(self, "estimator_")
-        return self.estimator_.score(X, y, **kwargs)
 
     @available_if(_estimator_has("decision_function"))
     def decision_function(self, X: ArrayLike) -> np.ndarray:

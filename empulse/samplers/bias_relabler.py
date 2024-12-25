@@ -141,7 +141,7 @@ class BiasRelabler(BaseSampler):
         set_config(enable_metadata_routing=True)
 
         X, y = make_classification()
-        clv = np.random.rand(y.shape)
+        clv = np.random.rand(y.size)
 
         def to_high_clv(clv: np.ndarray) -> np.ndarray:
             return (clv > np.median(clv)).astype(np.int8)
