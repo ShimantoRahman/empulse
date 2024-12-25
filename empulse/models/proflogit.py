@@ -6,7 +6,6 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
-from sklearn.utils.validation import validate_data
 
 from empulse.optimizers import Generation
 from ._base import BaseLogitClassifier
@@ -151,26 +150,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
         self.result_ = optimize_fn(objective, X)
 
         return self
-
-    def score(self, X: ArrayLike, y: ArrayLike, **loss_params) -> float:
-        """
-        Compute model score based on the loss function.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-        y : 1D array-like, shape=(n_samples,)
-        loss_params : dict
-            Additional keyword arguments passed to `self.loss`.
-
-        Returns
-        -------
-        score : float
-            Model score.
-        """
-        X, y = validate_data(self, X, y, reset=False)
-        y = np.where(y == self.classes_[1], 1, 0)
-        return self.loss(y, self.predict_proba(X)[:, 1], **loss_params)
 
 
 def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
