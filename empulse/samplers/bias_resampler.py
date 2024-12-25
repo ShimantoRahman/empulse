@@ -40,6 +40,9 @@ class BiasResampler(BaseSampler):
         The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).
     transform_feature : Optional[Callable], default=None
         Function which transforms sensitive_feature before resampling the training data.
+        The function takes in the sensitive feature in the form of a numpy.ndarray
+        and outputs the transformed sensitive feature as a numpy.ndarray.
+        This can be useful if you want to transform a continuous variable to a binary variable at fit time.
     random_state : int or :class:`numpy:numpy.random.RandomState`, optional
         Random number generator seed for reproducibility.
 
@@ -47,6 +50,75 @@ class BiasResampler(BaseSampler):
     ----------
     sample_indices_ : ndarray
         Indices of the samples that were selected.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.samplers import BiasResampler
+        from sklearn.datasets import make_classification
+        from sklearn.linear_model import LogisticRegression
+
+        X, y = make_classification()
+        high_clv = np.random.randint(0, 2, y.shape)
+
+        sampler = BiasResampler()
+        sampler.fit_resample(X, y, sensitive_feature=high_clv)
+
+    Example with passing high-clv indicator through cross-validation:
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.samplers import BiasResampler
+        from imblearn.pipeline import Pipeline
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import cross_val_score
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        high_clv = np.random.randint(0, 2, y.shape)
+
+        pipeline = Pipeline([
+            ('sampler', BiasResampler().set_fit_resample_request(sensitive_feature=True)),
+            ('model', LogisticRegression())
+        ])
+
+        cross_val_score(pipeline, X, y, params={'sensitive_feature': high_clv})
+
+    Example with passing clv through a grid search and dynamically determining high_clv customer based on training data:
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.samplers import BiasResampler
+        from imblearn.pipeline import Pipeline
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import GridSearchCV
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        clv = np.random.rand(y.shape)
+
+        def to_high_clv(clv: np.ndarray) -> np.ndarray:
+            return (clv > np.median(clv)).astype(np.int8)
+
+        pipeline = Pipeline([
+            ('sampler', BiasResampler(
+                transform_feature=to_high_clv
+            ).set_fit_resample_request(sensitive_feature=True)),
+            ('model', LogisticRegression())
+        ])
+        param_grid = {'model__C': np.logspace(-5, 2, 10)}
+
+        grid_search = GridSearchCV(pipeline, param_grid=param_grid)
+        grid_search.fit(X, y, sensitive_feature=high_clv)
     """
     _estimator_type = "sampler"
     _sampling_type = 'bypass'
@@ -68,7 +140,7 @@ class BiasResampler(BaseSampler):
             self,
             *,
             strategy: Union[Callable, Strategy] = 'statistical parity',
-            transform_feature: Optional[Callable] = None,
+            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
             random_state: Optional[Union[RandomState, int]] = None
     ):
         super().__init__()

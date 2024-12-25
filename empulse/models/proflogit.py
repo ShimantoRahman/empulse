@@ -67,8 +67,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
         ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
         ``-1`` means using all processors.
 
-
-
     Attributes
     ----------
     classes_ : numpy.ndarray

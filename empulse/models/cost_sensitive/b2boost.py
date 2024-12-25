@@ -22,18 +22,22 @@ class B2BoostClassifier(BaseBoostClassifier):
 
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (0 < `accept_rate` < 1).
+        Is overwritten if another `accept_rate` is passed to the ``fit`` method.
 
     clv : float or 1D array-like, shape=(n_samples), default=200
         If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
+        Is overwritten if another `clv` is passed to the ``fit`` method.
 
     incentive_fraction : float, default=0.05
         Cost of incentive offered to a customer, as a fraction of customer lifetime value
         (``0 < incentive_fraction < 1``).
+        Is overwritten if another `incentive_fraction` is passed to the ``fit`` method.
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
+        Is overwritten if another `contact_cost` is passed to the ``fit`` method.
 
     Attributes
     ----------
@@ -55,6 +59,83 @@ class B2BoostClassifier(BaseBoostClassifier):
     .. seealso::
         :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function
         for customer churn.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.models import B2BoostClassifier
+        from sklearn.datasets import make_classification
+
+        X, y = make_classification()
+        clv = np.random.rand(y.shape) * 100
+
+        model = B2BoostClassifier()
+        model.fit(X, y, clv=clv, incentive_fraction=0.1)
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.models import B2BoostClassifier
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import cross_val_score
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        clv = np.random.rand(y.shape) * 100
+
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', B2BoostClassifier(contact_cost=10).set_fit_request(clv=True))
+        ])
+
+        cross_val_score(pipeline, X, y, params={'clv': clv})
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.metrics import empb_score
+        from empulse.models import B2BoostClassifier
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import GridSearchCV
+        from sklearn.metrics import make_scorer
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+        from xgboost import XGBClassifier
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        clv = np.random.rand(y.shape) * 100
+        contact_cost = 10
+
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', B2BoostClassifier(
+                XGBClassifier(n_jobs=2),
+                contact_cost=contact_cost
+            ).set_fit_request(clv=True))
+        ])
+        param_grid = {
+            'model__estimator__learning_rate': np.logspace(-5, 0, 5),
+            'model__estimator__n_estimators': [10, 50, 200]
+        }
+        scorer = make_scorer(
+            empb_score,
+            response_method='predict_proba',
+            contact_cost=contact_cost
+        )
+        scorer = scorer.set_score_request(clv=True)
+
+        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
+        grid_search.fit(X, y, clv=clv)
 
     References
     ----------

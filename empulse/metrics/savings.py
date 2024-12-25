@@ -95,21 +95,6 @@ def cost_loss(
     the cost of a false negative (not detecting a fraudulent transaction) is higher than
     the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
 
-    The cost of each instance :math:`C_i` is calculated as [3]_:
-
-    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
-
-    where
-
-        - :math:`y_i` is the true label,
-        - :math:`\\hat y_i` is the predicted label,
-        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
-        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
-
-    Code modified from `costcla.metrics.cost_loss`.
-
     .. seealso::
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
@@ -159,6 +144,23 @@ def cost_loss(
     -------
     cost_loss : float
         Cost of a classifier.
+
+    Notes
+    -----
+    The cost of each instance :math:`C_i` is calculated as [3]_:
+
+    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+
+    where
+
+        - :math:`y_i` is the true label,
+        - :math:`\\hat y_i` is the predicted label,
+        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    Code modified from `costcla.metrics.cost_loss`.
 
     References
     ----------
@@ -225,21 +227,6 @@ def expected_cost_loss(
     the cost of a false negative (not detecting a fraudulent transaction) is higher than
     the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
 
-    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [3]_:
-
-    .. math:: \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
-
-    where
-
-    - :math:`y_i` is the true label,
-    - :math:`s_i` is the predicted probability,
-    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
-    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
-
-    Code modified from `costcla.metrics.cost_loss`.
-
     .. seealso::
 
         :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
@@ -282,6 +269,23 @@ def expected_cost_loss(
     -------
     cost_loss : float
         Cost of a classifier.
+
+    Notes
+    -----
+    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [3]_:
+
+    .. math:: \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
+
+    where
+
+    - :math:`y_i` is the true label,
+    - :math:`s_i` is the predicted probability,
+    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    Code modified from `costcla.metrics.cost_loss`.
 
     References
     ----------
@@ -419,9 +423,9 @@ def savings_score(
     """
     Cost savings of a classifier compared to using no algorithm at all.
 
-    This function calculates the savings cost of using y_pred on y_true with a
-    cost-matrix, as the difference of y_pred and the cost_loss of a naive
-    classification model.
+    The cost savings of a classifiers is the cost the classifiers saved over a naive classification model
+    (predicting all ones or zeros whichever is better).
+    With 1 being the perfect model, 0 being not better than the naive model.
 
     Modified from `costcla.metrics.savings_score`.
 
@@ -471,6 +475,27 @@ def savings_score(
         Cost matrix of the classification problem
         Where the columns represents the costs of: false positives, false negatives,
         true positives and true negatives, for each example.
+
+    Notes
+    -----
+    The cost of each instance :math:`C_i` is calculated as [3]_:
+
+    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+
+    The savings over a naive model is calculated as:
+
+    .. math::
+
+    where
+
+        - :math:`y_i` is the true label,
+        - :math:`\\hat y_i` is the predicted label,
+        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    Code modified from `costcla.metrics.cost_loss`.
 
     Returns
     -------

@@ -49,6 +49,88 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     n_treatments_ : int
         The number of costs which have been imputed.
 
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.models import CSLogitClassifier, RobustCSClassifier
+        from sklearn.datasets import make_classification
+
+        X, y = make_classification()
+        fn_cost = np.random.rand(y.shape)  # instance-dependent cost
+        fp_cost = 5  # constant cost
+
+        model = RobustCSClassifier(CSLogitClassifier(C=0.1))
+        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
+    Example with passing instance-dependent costs through cross-validation:
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.models import CSBoostClassifier, RobustCSClassifier
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import cross_val_score
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        fn_cost = np.random.rand(y.shape)
+        fp_cost = 5
+
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', RobustCSClassifier(
+                CSBoostClassifier()
+            ).set_fit_request(fn_cost=True, fp_cost=True))
+        ])
+
+        cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
+
+    Example with passing instance-dependent costs through a grid search:
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.metrics import expected_cost_loss
+        from empulse.models import CSLogitClassifier, RobustCSClassifier
+        from sklearn import set_config
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import GridSearchCV
+        from sklearn.metrics import make_scorer
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        set_config(enable_metadata_routing=True)
+
+        X, y = make_classification()
+        fn_cost = np.random.rand(y.shape)
+        fp_cost = 5
+
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', RobustCSClassifier(
+                CSLogitClassifier()
+            ).set_fit_request(fn_cost=True, fp_cost=True))
+        ])
+        param_grid = {'model__C': np.logspace(-5, 2, 10)}
+        scorer = make_scorer(
+            expected_cost_loss,
+            response_method='predict_proba',
+            greater_is_better=False,
+            normalize=True
+        )
+        scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)
+
+        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
+        grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
     References
     ----------
     .. [1] De Vos, S., Vanderschueren, T., Verdonck, T., & Verbeke, W. (2023).
