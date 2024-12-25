@@ -17,21 +17,21 @@ def y():
 
 
 @pytest.fixture(scope='module')
-def protected_attr():
+def sensitive_feature():
     return np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
 
 
 @pytest.fixture(scope='module')
-def clf(X, y, protected_attr):
+def clf(X, y, sensitive_feature):
     clf = BiasRelabelingClassifier(estimator=LogisticRegression(), strategy='statistical parity')
-    clf.fit(X, y, protected_attr=protected_attr)
+    clf.fit(X, y, sensitive_feature=sensitive_feature)
     return clf
 
 
 def test_relabeling_init():
     clf = BiasRelabelingClassifier(estimator=LogisticRegression(), strategy='statistical parity')
     assert isinstance(clf.estimator, LogisticRegression)
-    assert clf.transform_attr is None
+    assert clf.transform_feature is None
     assert clf.strategy == 'statistical parity'
 
 
@@ -39,17 +39,17 @@ def test_relabeling_with_different_parameters():
     clf = BiasRelabelingClassifier(
         estimator=LogisticRegression(),
         strategy='demographic parity',
-        transform_attr=lambda x: x
+        transform_feature=lambda x: x
     )
     assert isinstance(clf.estimator, LogisticRegression)
-    assert clf.transform_attr is not None
-    assert isinstance(clf.transform_attr, type(lambda x: x))
+    assert clf.transform_feature is not None
+    assert isinstance(clf.transform_feature, type(lambda x: x))
     assert clf.strategy == 'demographic parity'
 
 
-def test_relabeling_fit(X, y, protected_attr):
+def test_relabeling_fit(X, y, sensitive_feature):
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
-    clf.fit(X, y, protected_attr=protected_attr)
+    clf.fit(X, y, sensitive_feature=sensitive_feature)
     assert clf.classes_ is not None
     try:
         check_is_fitted(clf.estimator_)
@@ -96,12 +96,12 @@ def test_works_in_cross_validation(X, y):
     assert np.all(scores.astype(np.float64) == scores)
 
 
-def test_works_in_pipeline(X, y, protected_attr):
+def test_works_in_pipeline(X, y, sensitive_feature):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
-    pipe.fit(X, y, clf__protected_attr=protected_attr)
+    pipe.fit(X, y, clf__sensitive_feature=sensitive_feature)
     assert isinstance(pipe.named_steps['scaler'], StandardScaler)
     assert isinstance(pipe.named_steps['clf'], BiasRelabelingClassifier)
     assert isinstance(pipe.score(X, y), float)
@@ -119,8 +119,8 @@ def test_works_in_ensemble(X, y):
     assert isinstance(bagging.predict(X), np.ndarray)
 
 
-@pytest.mark.filterwarnings("ignore:protected_attribute only contains one class, no relabeling is performed.")
-def test_metadatarouting(X, y, protected_attr):
+@pytest.mark.filterwarnings("ignore:sensitive_feature only contains one class, no relabeling is performed.")
+def test_metadatarouting(X, y, sensitive_feature):
     from sklearn import config_context
     from sklearn.model_selection import GridSearchCV
 
@@ -128,9 +128,9 @@ def test_metadatarouting(X, y, protected_attr):
 
     with config_context(enable_metadata_routing=True):
         model = BiasRelabelingClassifier(estimator=LogisticRegression())
-        model.set_fit_request(protected_attr=True)
+        model.set_fit_request(sensitive_feature=True)
         search = GridSearchCV(model, param_grid=param_grid, cv=2)
-        search.fit(X, y, protected_attr=protected_attr)
+        search.fit(X, y, sensitive_feature=sensitive_feature)
         try:
             check_is_fitted(search)
         except NotFittedError:

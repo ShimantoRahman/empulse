@@ -10,21 +10,21 @@ from sklearn.utils.validation import validate_data, check_is_fitted
 from ...samplers._strategies import _independent_weights, Strategy, StrategyFn
 
 
-def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, protected_attr: np.ndarray):
+def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray):
     """Convert group weights to sample weights."""
     sample_weight = np.empty(len(y_true))
-    for target_class, protected_val in product(np.unique(y_true), np.unique(protected_attr)):
-        protected_val = int(protected_val)
+    for target_class, sensitive_val in product(np.unique(y_true), np.unique(sensitive_feature)):
+        sensitive_val = int(sensitive_val)
         idx_class = np.flatnonzero(y_true == target_class)
-        idx_prot_attr = np.flatnonzero(protected_attr == protected_val)
-        idx_class_prot = np.intersect1d(idx_class, idx_prot_attr)
-        sample_weight[idx_class_prot] = group_weights[target_class, protected_val]
+        idx_sensitive_feature = np.flatnonzero(sensitive_feature == sensitive_val)
+        idx_class_sensitive = np.intersect1d(idx_class, idx_sensitive_feature)
+        sample_weight[idx_class_sensitive] = group_weights[target_class, sensitive_val]
     return sample_weight / np.max(sample_weight)
 
 
-def _independent_sample_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.ndarray:
-    group_weights = _independent_weights(y_true, protected_attr)
-    return _to_sample_weights(group_weights, y_true, protected_attr)
+def _independent_sample_weights(y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
+    group_weights = _independent_weights(y_true, sensitive_feature)
+    return _to_sample_weights(group_weights, y_true, sensitive_feature)
 
 
 class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
@@ -40,15 +40,15 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         Determines how the sample weights are computed. Sample weights are passed to the estimator's `fit` method.
 
         - ``'statistical_parity'`` or ``'demographic parity'``: \
-        probability of positive predictions are equal between subgroups of protected attribute.
+        probability of positive predictions are equal between subgroups of sensitive feature.
 
-        - ``Callable``: function which computes the sample weights based on the target and protected attribute. \
-        Callable accepts two arguments: y_true and protected_attr and returns the sample weights. \
+        - ``Callable``: function which computes the sample weights based on the target and sensitive feature. \
+        Callable accepts two arguments: y_true and sensitive_feature and returns the sample weights. \
         Sample weights are a numpy array where each represents the weight given to that respective instance. \
         Sample weights should be normalized to fall between 0 and 1.
 
-    transform_attr : Optional[Callable], default=None
-        Function which transforms protected attribute before computing sample weights.
+    transform_feature : Optional[Callable], default=None
+        Function which transforms sensitive feature before computing sample weights.
 
     Examples
     --------
@@ -64,7 +64,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
         model = BiasReweighingClassifier(estimator=LogisticRegression())
-        model.fit(X, y, protected_attr=high_clv)
+        model.fit(X, y, sensitive_feature=high_clv)
 
     2. Converting a continuous attribute to a binary attribute:
 
@@ -79,9 +79,9 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
         model = BiasReweighingClassifier(
             estimator=LogisticRegression(),
-            transform_attr=lambda clv: (clv > np.quantile(clv, 0.8)).astype(int)
+            transform_feature=lambda clv: (clv > np.quantile(clv, 0.8)).astype(int)
         )
-        model.fit(X, y, protected_attr=clv)
+        model.fit(X, y, sensitive_feature=clv)
 
     3. Using a custom strategy function:
 
@@ -94,19 +94,19 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
-        # Simple strategy to double the weight for the protected attribute
-        def strategy(y_true, protected_attr):
-            sample_weights = np.ones(len(protected_attr))
-            sample_weights[np.where(protected_attr == 0)] = 0.5
+        # Simple strategy to double the weight for the sensitive feature
+        def strategy(y_true, sensitive_feature):
+            sample_weights = np.ones(len(sensitive_feature))
+            sample_weights[np.where(sensitive_feature == 0)] = 0.5
             return sample_weights
 
         model = BiasReweighingClassifier(
             estimator=LogisticRegression(),
             strategy=strategy
         )
-        model.fit(X, y, protected_attr=high_clv)
+        model.fit(X, y, sensitive_feature=high_clv)
 
-    4. Passing the protected attribute in a cross-validation grid search:
+    4. Passing the sensitive feature in a cross-validation grid search:
 
     .. code-block:: python
 
@@ -128,9 +128,9 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
                 ('model', BiasReweighingClassifier(LogisticRegression()))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, model__protected_attr=high_clv)
+            search.fit(X, y, model__sensitive_feature=high_clv)
 
-    5. Passing the protected attribute through metadata routing in a cross-validation grid search:
+    5. Passing the sensitive feature through metadata routing in a cross-validation grid search:
 
     .. code-block:: python
 
@@ -149,13 +149,11 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasReweighingClassifier(LogisticRegression()).set_fit_request(protected_attr=True))
+                ('model', BiasReweighingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, protected_attr=high_clv)
+            search.fit(X, y, sensitive feature=high_clv)
     """
-
-    __metadata_request__fit = {'protected_attr': True}
 
     strategy_mapping: dict[str, StrategyFn] = {
         'statistical parity': _independent_sample_weights,
@@ -167,11 +165,11 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             estimator,
             *,
             strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-            transform_attr: Optional[Callable[[np.ndarray], np.ndarray]] = None
+            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None
     ):
         self.estimator = estimator
         self.strategy = strategy
-        self.transform_attr = transform_attr
+        self.transform_feature = transform_feature
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -184,7 +182,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             X: ArrayLike,
             y: ArrayLike,
             *,
-            protected_attr: Optional[ArrayLike] = None,
+            sensitive_feature: Optional[ArrayLike] = None,
             **fit_params
     ) -> 'BiasReweighingClassifier':
         """
@@ -194,8 +192,8 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         ----------
         X : 2D array-like, shape=(n_samples, n_features)
         y : 1D array-like, shape=(n_samples,)
-        protected_attr : 1D array-like, shape=(n_samples,), default = None
-            Protected attribute used to determine the sample weights.
+        sensitive_feature : 1D array-like, shape=(n_samples,), default = None
+            Sensitive attribute used to determine the sample weights.
         fit_params : dict
             Additional parameters passed to the estimator's `fit` method.
 
@@ -214,21 +212,21 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")
 
-        if protected_attr is None:
+        if sensitive_feature is None:
             self.estimator_ = clone(self.estimator)
             self.estimator_.fit(X, y, **fit_params)
             return self
-        protected_attr = np.asarray(protected_attr)
+        sensitive_feature = np.asarray(sensitive_feature)
 
         if isinstance(self.strategy, str):
             strategy_fn = self.strategy_mapping[self.strategy]
         else:
             strategy_fn = self.strategy
 
-        if self.transform_attr is not None:
-            protected_attr = self.transform_attr(protected_attr)
+        if self.transform_feature is not None:
+            sensitive_feature = self.transform_feature(sensitive_feature)
 
-        sample_weights = strategy_fn(y, protected_attr)
+        sample_weights = strategy_fn(y, sensitive_feature)
         self.estimator_ = clone(self.estimator)
         self.estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
 

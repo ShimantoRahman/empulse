@@ -20,20 +20,20 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         Base estimator which is used for fitting and predicting.
     strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
         Determines how the group weights are computed.
-        Group weights determine how much to over or undersample each combination of target and protected attribute.
-        For example, a weight of 2 for the pair (y_true == 1, protected_attr == 0) means that the resampled dataset
-        should have twice as many instances with y_true == 1 and protected_attr == 0 compared to the original dataset.
+        Group weights determine how much to over or undersample each combination of target and sensitive feature.
+        For example, a weight of 2 for the pair (y_true == 1, sensitive_feature == 0) means that the resampled dataset
+        should have twice as many instances with y_true == 1 and sensitive_feature == 0 compared to the original dataset.
 
         - ``'statistical_parity'`` or ``'demographic parity'``: \
-        probability of positive predictions are equal between subgroups of protected attribute.
+        probability of positive predictions are equal between subgroups of sensitive feature.
 
-        - ``Callable``: function which computes the group weights based on the target and protected attribute. \
-        Callable accepts two arguments: y_true and protected_attr and returns the group weights. \
+        - ``Callable``: function which computes the group weights based on the target and sensitive feature. \
+        Callable accepts two arguments: y_true and sensitive_feature and returns the group weights. \
         Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
-        protected attribute. \
-        The element at position (i, j) is the weight for the pair (y_true == i, protected_attr == j).
-    transform_attr : Optional[Callable], default=None
-        Function which transforms protected attribute before resampling the training data.
+        sensitive feature. \
+        The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).
+    transform_feature : Optional[Callable], default=None
+        Function which transforms sensitive feature before resampling the training data.
 
     Attributes
     ----------
@@ -57,7 +57,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
         model = BiasResamplingClassifier(estimator=LogisticRegression())
-        model.fit(X, y, protected_attr=high_clv)
+        model.fit(X, y, sensitive_feature=high_clv)
 
     2. Converting a continuous attribute to a binary attribute:
 
@@ -72,9 +72,9 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
         model = BiasResamplingClassifier(
             estimator=LogisticRegression(),
-            transform_attr=lambda clv: (clv > np.quantile(clv, 0.8)).astype(int)
+            transform_feature=lambda clv: (clv > np.quantile(clv, 0.8)).astype(int)
         )
-        model.fit(X, y, protected_attr=clv)
+        model.fit(X, y, sensitive_feature=clv)
 
     3. Using a custom strategy function:
 
@@ -87,8 +87,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
-        # Simple strategy to double the weight for the protected attribute
-        def strategy(y_true, protected_attr):
+        # Simple strategy to double the weight for the sensitive feature
+        def strategy(y_true, sensitive_feature):
             return np.array([
                 [1, 2],
                 [1, 2]
@@ -98,9 +98,9 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             estimator=LogisticRegression(),
             strategy=strategy
         )
-        model.fit(X, y, protected_attr=high_clv)
+        model.fit(X, y, sensitive_feature=high_clv)
 
-    4. Passing the protected attribute in a cross-validation grid search:
+    4. Passing the sensitive feature in a cross-validation grid search:
 
     .. code-block:: python
 
@@ -122,9 +122,9 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
                 ('model', BiasResamplingClassifier(LogisticRegression()))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, model__protected_attr=high_clv)
+            search.fit(X, y, model__sensitive_feature=high_clv)
 
-    5. Passing the protected attribute through metadata routing in a cross-validation grid search:
+    5. Passing the sensitive feature through metadata routing in a cross-validation grid search:
 
     .. code-block:: python
 
@@ -143,24 +143,22 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasResamplingClassifier(LogisticRegression()).set_fit_request(protected_attr=True))
+                ('model', BiasResamplingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, protected_attr=high_clv)
+            search.fit(X, y, sensitive_feature=high_clv)
     """
-
-    __metadata_request__fit = {'protected_attr': True}
 
     def __init__(
             self,
             estimator,
             *,
             strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-            transform_attr: Optional[Callable[[np.ndarray], np.ndarray]] = None
+            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None
     ):
         self.estimator = estimator
         self.strategy = strategy
-        self.transform_attr = transform_attr
+        self.transform_feature = transform_feature
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -173,7 +171,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             X: ArrayLike,
             y: ArrayLike,
             *,
-            protected_attr: Optional[ArrayLike] = None,
+            sensitive_feature: Optional[ArrayLike] = None,
             **fit_params
     ) -> 'BiasResamplingClassifier':
         """
@@ -185,8 +183,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             Training data.
         y : 1D array-like, shape=(n_samples,)
             Target values.
-        protected_attr : 1D array-like, shape=(n_samples,), default = None
-            Protected attribute used to determine the group weights.
+        sensitive_feature : 1D array-like, shape=(n_samples,), default = None
+            Sensitive feature used to determine the group weights.
         fit_params : dict
             Additional parameters passed to the estimator's `fit` method.
 
@@ -204,14 +202,14 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")
-        if protected_attr is None:
+        if sensitive_feature is None:
             self.estimator_ = clone(self.estimator)
             self.estimator_.fit(X, y, **fit_params)
             return self
-        protected_attr = np.asarray(protected_attr)
+        sensitive_feature = np.asarray(sensitive_feature)
 
-        sampler = BiasResampler(strategy=self.strategy, transform_feature=self.transform_attr)
-        X, y = sampler.fit_resample(X, y, sensitive_feature=protected_attr)
+        sampler = BiasResampler(strategy=self.strategy, transform_feature=self.transform_feature)
+        X, y = sampler.fit_resample(X, y, sensitive_feature=sensitive_feature)
         self.estimator_ = clone(self.estimator)
         self.estimator_.fit(X, y, **fit_params)
 
