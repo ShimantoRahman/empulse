@@ -5,6 +5,7 @@ from typing import Callable, Optional, Any
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
+from scipy.special import expit
 from sklearn.utils.validation import validate_data
 
 from empulse.optimizers import Generation
@@ -188,7 +189,7 @@ def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercep
             b[~bool_nonzero] = 0
 
     logits = np.dot(X, weights)
-    y_pred = 1 / (1 + np.exp(-logits))  # Invert logit transformation
+    y_pred = expit(logits)  # Invert logit transformation
     loss = loss_fn(y, y_pred)
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
