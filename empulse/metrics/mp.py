@@ -16,6 +16,11 @@ def mp_score(
     """
     :func:`~empulse.metrics.mp()` but only returning the MP score
 
+    .. seealso::
+        :func:`~empulse.metrics.mp` : To also return the threshold at which the maximum profit is achieved.
+
+        :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -92,6 +97,11 @@ def mp(
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure (MP)
+
+    .. seealso::
+        :func:`~empulse.metrics.mp_score` : To only return the maximum profit score.
+
+        :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
 
     Parameters
     ----------

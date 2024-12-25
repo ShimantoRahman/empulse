@@ -345,22 +345,6 @@ def expected_log_cost_loss(
     the cost of a false negative (not detecting a fraudulent transaction) is higher than
     the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).
 
-    The expected log cost of each instance :math:`\\mathbb{E}[C^l_i]` is calculated as [3]_:
-
-    .. math:: \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))
-
-    where
-
-    - :math:`y_i` is the true label,
-    - :math:`s_i` is the predicted probability,
-    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
-    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
-
-    When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,
-    the expected log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
-
     .. seealso::
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
@@ -400,6 +384,37 @@ def expected_log_cost_loss(
     -------
     log_expected_cost : float
         Log expected cost.
+
+    Notes
+    -----
+    The expected log cost of each instance :math:`\\mathbb{E}[C^l_i]` is calculated as:
+
+    .. math:: \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))
+
+    where
+
+    - :math:`y_i` is the true label,
+    - :math:`s_i` is the predicted probability,
+    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+
+    When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,
+    the expected log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.metrics import expected_log_cost_loss
+        y_pred = [0.1, 0.9, 0.8, 0.2]
+        y_true = [0, 1, 1, 0]
+        fp_cost = np.array([4, 1, 2, 2])
+        fn_cost = np.array([1, 3, 3, 1])
+        expected_log_cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
@@ -421,9 +436,9 @@ def savings_score(
         check_input: bool = True,
 ) -> float:
     """
-    Cost savings of a classifier compared to using no algorithm at all.
+    Cost savings of a classifier compared to using a naive algorithm.
 
-    The cost savings of a classifiers is the cost the classifiers saved over a naive classification model
+    The cost savings of a classifiers is the cost the classifier saved over a naive classification model
     (predicting all ones or zeros whichever is better).
     With 1 being the perfect model, 0 being not better than the naive model.
 
@@ -432,7 +447,7 @@ def savings_score(
     .. seealso::
 
         :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
-        compared to using no algorithm at all.
+        compared to using a naive algorithm.
 
         :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
 
@@ -476,15 +491,20 @@ def savings_score(
         Where the columns represents the costs of: false positives, false negatives,
         true positives and true negatives, for each example.
 
+    Returns
+    -------
+    score : float
+        Cost savings of a classifier compared to using no algorithm at all.
+
     Notes
     -----
-    The cost of each instance :math:`C_i` is calculated as [3]_:
+    The cost of each instance :math:`C_i` is calculated as [1]_:
 
-    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+    .. math:: C_i(s_i) = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
 
     The savings over a naive model is calculated as:
 
-    .. math::
+    .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
 
     where
 
@@ -494,15 +514,22 @@ def savings_score(
         - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
         - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
         - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+        - :math:`N` is the number of samples.
 
     Code modified from `costcla.metrics.cost_loss`.
 
-    Returns
-    -------
-    score : float
-        Cost savings of a classifier compared to using no algorithm at all.
+    Examples
+    --------
 
-        The best performance is 1.
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.metrics import savings_score
+        y_pred = [0, 1, 0, 0]
+        y_true = [0, 1, 1, 0]
+        fp_cost = np.array([4, 1, 2, 2])
+        fn_cost = np.array([1, 3, 3, 1])
+        savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
 
     References
     ----------
@@ -514,21 +541,6 @@ def savings_score(
     .. [2] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
-
-    See also
-    --------
-    cost_loss
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from empulse.metrics import savings_score
-    >>> y_pred = [0, 1, 0, 0]
-    >>> y_true = [0, 1, 1, 0]
-    >>> fp_cost = np.array([4, 1, 2, 2])
-    >>> fn_cost = np.array([1, 3, 3, 1])
-    >>> savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    0.5
     """
 
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
@@ -559,15 +571,15 @@ def expected_savings_score(
         check_input: bool = True,
 ) -> float:
     """
-    Expected savings of a classifier compared to using no algorithm at all.
+    Expected savings of a classifier compared to using a naive algorithm.
 
-    This function calculates the expected savings cost of using y_pred on y_true with a
-    cost-matrix, as the difference of y_pred and the cost_loss of a naive
-    classification model.
+    The expected cost savings of a classifiers is the expected cost the classifier saved
+    over a naive classification model (predicting all ones or zeros whichever is better).
+    With 1 being the perfect model, 0 being not better than the naive model.
 
     .. seealso::
 
-        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using no algorithm at all.
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a naive algorithm.
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
 
@@ -603,29 +615,44 @@ def expected_savings_score(
     score : float
         Expected savings of a classifier compared to using no algorithm at all.
 
-        The best performance is 1.
+        Notes
+    -----
+    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [2]_:
 
-    References
-    ----------
+    .. math:: \\mathbb{E}[C_i(s_i)] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
 
-    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
-           Instance-dependent cost-sensitive learning for detecting transfer fraud.
-           European Journal of Operational Research, 297(1), 291-300.
+    The expected savings over a naive model is calculated as:
 
-    See also
-    --------
-    savings_score
+    .. math::  \\text{Expected Savings} = 1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
+
+    where
+
+        - :math:`y_i` is the true label,
+        - :math:`\\hat y_i` is the predicted label,
+        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
+        - :math:`N` is the number of samples.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> from empulse.metrics import expected_savings_score
-    >>> y_pred = [0.4, 0.8, 0.75, 0.1]
-    >>> y_true = [0, 1, 1, 0]
-    >>> fp_cost = np.array([4, 1, 2, 2])
-    >>> fn_cost = np.array([1, 3, 3, 1])
-    >>> expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    0.475
+
+    .. code-block:: python
+
+        import numpy as np
+        from empulse.metrics import expected_savings_score
+        y_pred = [0.4, 0.8, 0.75, 0.1]
+        y_true = [0, 1, 1, 0]
+        fp_cost = np.array([4, 1, 2, 2])
+        fn_cost = np.array([1, 3, 3, 1])
+        expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
@@ -717,8 +744,15 @@ def make_objective_aec(
         objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_xgboost)
     elif model == 'lightgbm':
-        objective = partial(_objective_lightgbm, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        update_wrapper(objective, _objective_lightgbm)
+        def objective(y_pred, train_data):
+            return _objective_lightgbm(
+                y_pred,
+                train_data,
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost
+            )
     elif model == 'catboost':
         objective = partial(_objective_catboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_catboost)
@@ -818,7 +852,18 @@ def _objective_lightgbm(
         fn_cost=0.0,
         fp_cost=0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    raise NotImplementedError("Objective function for LightGBM is not implemented yet.")
+    if hasattr(train_data, 'get_label'):
+        y_true = train_data.get_label()
+    elif isinstance(train_data, np.ndarray):
+        y_true = train_data
+    else:
+        raise TypeError(f"Invalid train data type, got {type(train_data)}.")
+
+    y_pred = expit(y_pred)
+    cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
+    gradient = y_pred * (1 - y_pred) * cost
+    hessian = np.abs((1 - 2 * y_pred) * gradient)
+    return gradient, hessian
 
 
 def _objective_catboost(

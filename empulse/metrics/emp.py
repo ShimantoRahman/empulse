@@ -22,6 +22,11 @@ def emp_score(
     """
     :func:`~empulse.metrics.emp()` but only returning the EMP score
 
+    .. seealso::
+        :func:`~empulse.metrics.emp` : To also return the threshold at which the EMP score is achieved.
+
+        :func:`~empulse.metrics.mp_score` : For a deterministic version of the EMP score.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -164,6 +169,11 @@ def emp(
     """
     Expected Maximum Profit Measure (EMP)
 
+    .. seealso::
+        :func:`~empulse.metrics.emp_score` : To only return the EMP score.
+
+        :func:`~empulse.metrics.mp` : For a deterministic version of the EMP.
+
     Parameters
     ----------
     y_true : 1D array-like, shape=(n_samples,)
@@ -230,14 +240,10 @@ def emp(
     Returns
     -------
     emp : float
-        Expected Maximum Profit
+        Expected Maximum Profit.
 
     threshold : float
-        Threshold at which the expected maximum profit is achieved
-
-    .. seealso::
-        :func:`~empulse.metrics.emp_score` : Convenience function around :func:`~empulse.metrics.emp()`
-        only returning EMP score
+        Threshold at which the expected maximum profit is achieved.
 
     Notes
     -----

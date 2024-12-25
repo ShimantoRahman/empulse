@@ -136,6 +136,9 @@ def mpc_cost_score(
     Only a fraction of churners accepts the incentive offer.
     For detailed information, consult the paper [1]_.
 
+    .. seealso::
+        :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.
+
     Parameters
     ----------
 
@@ -189,9 +192,6 @@ def mpc_cost_score(
         clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
-
-    .. seealso::
-        :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.
 
     References
     ----------
