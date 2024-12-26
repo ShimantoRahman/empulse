@@ -211,7 +211,6 @@ class BiasResampler(BaseSampler):
         y : 1D array-like, shape=(n_samples,)
             Resampled target values.
         """
-        X, y = validate_data(self, X, y, accept_sparse=['csr', 'csc', 'coo'])
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(

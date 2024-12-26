@@ -255,7 +255,6 @@ class BiasRelabler(BaseSampler):
         y : np.ndarray
             Relabeled target values.
         """
-        X, y = validate_data(self, X, y)
         sensitive_feature = np.asarray(sensitive_feature)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
