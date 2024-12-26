@@ -1,3 +1,4 @@
+[![PyPI Downloads](https://static.pepy.tech/badge/empulse)](https://pepy.tech/projects/empulse)
 [![Python Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ShimantoRahman/empulse)
 ![](https://img.shields.io/pypi/pyversions/empulse)
