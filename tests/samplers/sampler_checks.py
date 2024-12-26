@@ -1,48 +1,44 @@
+import sys
+import traceback
+from collections import Counter
 from functools import partial
 
-from imblearn.utils._test_common.instance_generator import _get_check_estimator_ids
-from imblearn.utils.estimator_checks import (
-    _maybe_mark, check_sampler_get_feature_names_out,
-    check_sampler_get_feature_names_out_pandas,
-    # check_samplers_2d_target,
-    check_samplers_fit,
-    # check_samplers_fit_resample,
-    # check_samplers_list,
-    # check_samplers_multiclass_ova,
-    check_samplers_nan,
-    check_samplers_one_label,
-    # check_samplers_pandas,
-    # check_samplers_pandas_sparse,
-    # check_samplers_preserve_dtype,
-    # check_samplers_sample_indices,
-    # check_samplers_sampling_strategy_fit_resample,
-    # check_samplers_sparse,
-    check_samplers_string,
-    check_target_type,
-    parametrize_with_checks
-)
-from sklearn.utils import get_tags
-from sklearn.base import clone
-from sklearn.datasets import make_classification
 import numpy as np
-from collections import Counter
-import pytest
+from imblearn.utils._test_common.instance_generator import _get_check_estimator_ids
+# from imblearn.utils.estimator_checks import (
+#     _maybe_mark,
+# check_sampler_get_feature_names_out,
+# check_sampler_get_feature_names_out_pandas,
+# check_samplers_2d_target,
+# check_samplers_fit,
+# check_samplers_fit_resample,
+# check_samplers_list,
+# check_samplers_multiclass_ova,
+# check_samplers_nan,
+# check_samplers_one_label,
+# check_samplers_pandas,
+# check_samplers_pandas_sparse,
+# check_samplers_preserve_dtype,
+# check_samplers_sample_indices,
+# check_samplers_sampling_strategy_fit_resample,
+# check_samplers_sparse,
+# check_samplers_string,
+# check_target_type,
+# parametrize_with_checks
+# )
+from numpy.testing import assert_array_equal
+from sklearn.base import clone
+from sklearn.datasets import make_classification, make_blobs
 from sklearn.linear_model import LogisticRegression
-from sklearn.utils._testing import assert_allclose
+from sklearn.preprocessing import StandardScaler
+from sklearn.utils import get_tags
+from sklearn.utils._testing import assert_allclose, set_random_state, raises, SkipTest
+from sklearn.utils.estimator_checks import _enforce_estimator_tags_X
 
-from empulse.samplers import BiasResampler, BiasRelabler, CostSensitiveSampler
-
-ESTIMATORS = (
-    BiasResampler(),
-    BiasRelabler(estimator=LogisticRegression()),
-    CostSensitiveSampler(),
-)
+from empulse.samplers import BiasRelabler, CostSensitiveSampler
 
 
-
-
-
-def parametrize_with_checks(estimators, *, legacy=True, expected_failed_checks=None):
+def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, expected_failed_checks=None):
     """Pytest specific decorator for parametrizing estimator checks.
 
     Checks are categorised into the following groups:
@@ -120,27 +116,22 @@ def parametrize_with_checks(estimators, *, legacy=True, expected_failed_checks=N
         )
         raise TypeError(msg)
 
-    def _checks_generator(estimators, legacy, expected_failed_checks):
-        for estimator in estimators:
-            args = {"estimator": estimator, "legacy": legacy, "mark": "xfail"}
+    def _checks_generator(estimators, fit_params, expected_failed_checks):
+        for estimator, fit_param in zip(estimators, fit_params):
+            args = {"estimator": estimator, "fit_params": fit_param, "mark": "xfail"}
             if callable(expected_failed_checks):
                 args["expected_failed_checks"] = expected_failed_checks(estimator)
             yield from estimator_checks_generator(**args)
 
     return pytest.mark.parametrize(
         "estimator, check",
-        _checks_generator(estimators, legacy, expected_failed_checks),
+        _checks_generator(estimators, fit_params, expected_failed_checks),
         ids=_get_check_estimator_ids,
     )
 
-@parametrize_with_checks(ESTIMATORS)
-def test_estimators(estimator, check):
-    """Check the compatibility with scikit-learn API"""
-    check(estimator)
-
 
 def estimator_checks_generator(
-        estimator, *, legacy=True, expected_failed_checks=None, mark=None
+        estimator, *, fit_params, expected_failed_checks=None, mark=None
 ):
     """Iteratively yield all check callables for an estimator.
 
@@ -174,14 +165,15 @@ def estimator_checks_generator(
 
     name = type(estimator).__name__
     for check in _yield_sampler_checks(estimator):
-        check_with_name = partial(check, name)
-        yield _maybe_mark(
-            estimator,
-            check_with_name,
-            expected_failed_checks=expected_failed_checks,
-            mark=mark,
-            pytest=pytest,
-        )
+        check_with_name = partial(check, name, fit_params)
+        # yield _maybe_mark(
+        #     estimator,
+        #     check_with_name,
+        #     expected_failed_checks=expected_failed_checks,
+        #     mark=mark,
+        #     pytest=pytest,
+        # )
+        yield estimator, check_with_name
 
 
 def _yield_sampler_checks(sampler):
@@ -228,24 +220,35 @@ def sample_dataset_generator():
     return X, y
 
 
-def check_samplers_fit_resample(name, sampler_orig):
+def check_samplers_fit(name, fit_params, sampler_orig):
+    sampler = clone(sampler_orig)
+    X, y = sample_dataset_generator()
+    sampler.fit_resample(X, y, **fit_params)
+    assert hasattr(
+        sampler, "sampling_strategy_"
+    ), "No fitted attribute sampling_strategy_"
+
+
+def check_samplers_fit_resample(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     X, y = sample_dataset_generator()
     target_stats = Counter(y)
-    X_res, y_res = sampler.fit_resample(X, y)
-    # if isinstance(sampler, BaseOverSampler):
-    #     n_samples = max(target_stats.values())
-    #     assert all(value >= n_samples for value in Counter(y_res).values())
-    # elif isinstance(sampler, BaseUnderSampler):
-    #     n_samples = min(target_stats.values())
-    #     assert all(value == n_samples for value in Counter(y_res).values())
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
+    if isinstance(sampler, CostSensitiveSampler) and sampler.method == 'oversampling':
+        n_samples = max(target_stats.values())
+        assert all(value >= n_samples for value in Counter(y_res).values())
+    elif isinstance(sampler, CostSensitiveSampler) and sampler.method == 'rejection sampling':
+        n_samples = min(target_stats.values())
+        assert all(value <= n_samples for value in Counter(y_res).values())
+    elif isinstance(sampler, BiasRelabler):
+        assert np.sum(y_res) == np.sum(y)  # relabeling should be symmetric
 
 
-def check_samplers_pandas(name, sampler_orig):
+def check_samplers_pandas(name, fit_params, sampler_orig):
     try:
         import pandas as pd
     except ImportError:
-        raise pytest.SkipTest(
+        raise SkipTest(
             "pandas is not installed: not checking column name consistency for pandas"
         )
     sampler = clone(sampler_orig)
@@ -255,9 +258,9 @@ def check_samplers_pandas(name, sampler_orig):
     y_df = pd.DataFrame(y)
     y_s = pd.Series(y, name="class")
 
-    X_res_df, y_res_s = sampler.fit_resample(X_df, y_s)
-    X_res_df, y_res_df = sampler.fit_resample(X_df, y_df)
-    X_res, y_res = sampler.fit_resample(X, y)
+    X_res_df, y_res_s = sampler.fit_resample(X_df, y_s, **fit_params)
+    X_res_df, y_res_df = sampler.fit_resample(X_df, y_df, **fit_params)
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
 
     # check that we return the same type for dataframes or series types
     assert isinstance(X_res_df, pd.DataFrame)
@@ -273,15 +276,15 @@ def check_samplers_pandas(name, sampler_orig):
     assert_allclose(y_res_s.to_numpy(), y_res)
 
 
-def check_samplers_list(name, sampler_orig):
+def check_samplers_list(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     # Check that the can samplers handle simple lists
     X, y = sample_dataset_generator()
     X_list = X.tolist()
     y_list = y.tolist()
 
-    X_res, y_res = sampler.fit_resample(X, y)
-    X_res_list, y_res_list = sampler.fit_resample(X_list, y_list)
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
+    X_res_list, y_res_list = sampler.fit_resample(X_list, y_list, **fit_params)
 
     assert isinstance(X_res_list, list)
     assert isinstance(y_res_list, list)
@@ -290,21 +293,21 @@ def check_samplers_list(name, sampler_orig):
     assert_allclose(y_res, y_res_list)
 
 
-def check_samplers_preserve_dtype(name, sampler_orig):
+def check_samplers_preserve_dtype(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     X, y = sample_dataset_generator()
     # Cast X and y to not default dtype
     X = X.astype(np.float32)
     y = y.astype(np.int32)
-    X_res, y_res = sampler.fit_resample(X, y)
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
     assert X.dtype == X_res.dtype, "X dtype is not preserved"
     assert y.dtype == y_res.dtype, "y dtype is not preserved"
 
 
-def check_samplers_sample_indices(name, sampler_orig):
+def check_samplers_sample_indices(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     X, y = sample_dataset_generator()
-    sampler.fit_resample(X, y)
+    sampler.fit_resample(X, y, **fit_params)
     tags = get_tags(sampler)
     if tags.sampler_tags.sample_indices:
         assert hasattr(sampler, "sample_indices_") is tags.sampler_tags.sample_indices
@@ -312,9 +315,172 @@ def check_samplers_sample_indices(name, sampler_orig):
         assert not hasattr(sampler, "sample_indices_")
 
 
-def check_samplers_2d_target(name, sampler_orig):
+def check_samplers_2d_target(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     X, y = sample_dataset_generator()
 
     y = y.reshape(-1, 1)  # Make the target 2d
-    sampler.fit_resample(X, y)
+    sampler.fit_resample(X, y, **fit_params)
+
+
+def check_sampler_get_feature_names_out(name, fit_params, sampler_orig):
+    tags = get_tags(sampler_orig)
+
+    two_d_array = tags.input_tags.two_d_array
+    no_validation = tags.no_validation
+
+    if not two_d_array or no_validation:
+        return
+
+    X, y = make_blobs(
+        n_samples=1000,
+        centers=[[0, 0, 0], [1, 1, 1]],
+        random_state=0,
+        n_features=2,
+        cluster_std=0.1,
+    )
+    X = StandardScaler().fit_transform(X)
+
+    sampler = clone(sampler_orig)
+    X = _enforce_estimator_tags_X(sampler, X)
+
+    n_features = X.shape[1]
+    set_random_state(sampler)
+
+    y_ = y
+    X_res, y_res = sampler.fit_resample(X, y=y_, **fit_params)
+    input_features = [f"feature{i}" for i in range(n_features)]
+
+    # input_features names is not the same length as n_features_in_
+    with raises(ValueError, match="input_features should have length equal"):
+        sampler.get_feature_names_out(input_features[::2])
+
+    feature_names_out = sampler.get_feature_names_out(input_features)
+    assert feature_names_out is not None
+    assert isinstance(feature_names_out, np.ndarray)
+    assert feature_names_out.dtype == object
+    assert all(isinstance(name, str) for name in feature_names_out)
+
+    n_features_out = X_res.shape[1]
+
+    assert (
+            len(feature_names_out) == n_features_out
+    ), f"Expected {n_features_out} feature names, got {len(feature_names_out)}"
+
+
+def check_sampler_get_feature_names_out_pandas(name, fit_params, sampler_orig):
+    try:
+        import pandas as pd
+    except ImportError:
+        raise SkipTest(
+            "pandas is not installed: not checking column name consistency for pandas"
+        )
+
+    tags = get_tags(sampler_orig)
+    two_d_array = tags.input_tags.two_d_array
+    no_validation = tags.no_validation
+
+    if not two_d_array or no_validation:
+        return
+
+    X, y = make_blobs(
+        n_samples=1000,
+        centers=[[0, 0, 0], [1, 1, 1]],
+        random_state=0,
+        n_features=2,
+        cluster_std=0.1,
+    )
+    X = StandardScaler().fit_transform(X)
+
+    sampler = clone(sampler_orig)
+    X = _enforce_estimator_tags_X(sampler, X)
+
+    n_features = X.shape[1]
+    set_random_state(sampler)
+
+    y_ = y
+    feature_names_in = [f"col{i}" for i in range(n_features)]
+    df = pd.DataFrame(X, columns=feature_names_in)
+    X_res, y_res = sampler.fit_resample(df, y=y_, **fit_params)
+
+    # error is raised when `input_features` do not match feature_names_in
+    invalid_feature_names = [f"bad{i}" for i in range(n_features)]
+    with raises(ValueError, match="input_features is not equal to feature_names_in_"):
+        sampler.get_feature_names_out(invalid_feature_names)
+
+    feature_names_out_default = sampler.get_feature_names_out()
+    feature_names_in_explicit_names = sampler.get_feature_names_out(feature_names_in)
+    assert_array_equal(feature_names_out_default, feature_names_in_explicit_names)
+
+    n_features_out = X_res.shape[1]
+
+    assert (
+            len(feature_names_out_default) == n_features_out
+    ), f"Expected {n_features_out} feature names, got {len(feature_names_out_default)}"
+
+
+def check_samplers_nan(name, fit_params, sampler_orig):
+    rng = np.random.RandomState(0)
+    sampler = clone(sampler_orig)
+    categories = np.array([0, 1, np.nan], dtype=np.float64)
+    n_samples = 100
+    X = rng.randint(low=0, high=3, size=n_samples).reshape(-1, 1)
+    X = categories[X]
+    y = rng.permutation([0] * 40 + [1] * 60)
+
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
+    assert X_res.dtype == np.float64
+    assert X_res.shape[0] == y_res.shape[0]
+    assert np.any(np.isnan(X_res.ravel()))
+
+
+def check_samplers_one_label(name, fit_params, sampler_orig):
+    sampler = clone(sampler_orig)
+    error_string_fit = "Sampler can't balance when only one class is present."
+    X = np.random.random((20, 2))
+    y = np.zeros(20)
+    try:
+        sampler.fit_resample(X, y, **fit_params)
+    except ValueError as e:
+        if "class" not in repr(e):
+            print(error_string_fit, sampler.__class__.__name__, e)
+            traceback.print_exc(file=sys.stdout)
+            raise e
+        else:
+            return
+    except Exception as exc:
+        print(error_string_fit, traceback, exc)
+        traceback.print_exc(file=sys.stdout)
+        raise exc
+    raise AssertionError(error_string_fit)
+
+
+def check_samplers_string(name, fit_params, sampler_orig):
+    rng = np.random.RandomState(0)
+    sampler = clone(sampler_orig)
+    categories = np.array(["A", "B", "C"], dtype=object)
+    n_samples = 30
+    X = rng.randint(low=0, high=3, size=n_samples).reshape(-1, 1)
+    X = categories[X]
+    y = rng.permutation([0] * 10 + [1] * 20)
+
+    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
+    assert X_res.dtype == object
+    assert X_res.shape[0] == y_res.shape[0]
+    assert_array_equal(np.unique(X_res.ravel()), categories)
+
+
+def check_target_type(name, fit_params, estimator_orig):
+    estimator = clone(estimator_orig)
+    # should raise warning if the target is continuous (we cannot raise error)
+    X = np.random.random((20, 2))
+    y = np.linspace(0, 1, 20)
+    msg = "Unknown label type:"
+    with raises(ValueError, err_msg=msg):
+        estimator.fit_resample(X, y, **fit_params)
+    # if the target is multilabel then we should raise an error
+    rng = np.random.RandomState(42)
+    y = rng.randint(2, size=(20, 3))
+    msg = "Multilabel and multioutput targets are not supported."
+    with raises(ValueError, err_msg=msg):
+        estimator.fit_resample(X, y, **fit_params)

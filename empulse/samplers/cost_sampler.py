@@ -3,9 +3,8 @@ from typing import Literal, TYPE_CHECKING
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import check_random_state
+from sklearn.utils import check_random_state, ClassifierTags
 from sklearn.utils._param_validation import Interval, Real, StrOptions
-from sklearn.utils.validation import validate_data
 
 
 class CostSensitiveSampler(BaseSampler):
@@ -93,6 +92,12 @@ class CostSensitiveSampler(BaseSampler):
         self.percentile_threshold = percentile_threshold
         self.random_state = random_state
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags = ClassifierTags(multi_class=False)
+        tags.sampler_tags.sample_indices = True
+        return tags
+
     def fit_resample(
             self,
             X: ArrayLike,
@@ -128,12 +133,11 @@ class CostSensitiveSampler(BaseSampler):
 
     def _fit_resample(
             self,
-            X: ArrayLike,
-            y: ArrayLike,
+            X: NDArray,
+            y: NDArray,
             fp_cost: float | ArrayLike = 0.0,
             fn_cost: float | ArrayLike = 0.0,
     ) -> tuple[NDArray, NDArray]:
-        X, y = validate_data(X, y)
         if isinstance(fp_cost, (int, float)):
             fp_cost = np.full_like(y, fp_cost)
         else:
@@ -156,7 +160,7 @@ class CostSensitiveSampler(BaseSampler):
 
         if self.method == 'rejection sampling':
             rejection_probability = rng.rand(n_samples)
-            self.sample_indices_ = rejection_probability <= normalized_costs
+            self.sample_indices_ = np.arange(len(y))[rejection_probability <= normalized_costs]
         elif self.method == 'oversampling':
             # repeat each sample based on the normalized costs
             sample_repeats = np.ceil(normalized_costs / self.oversampling_norm).astype(np.int64)
