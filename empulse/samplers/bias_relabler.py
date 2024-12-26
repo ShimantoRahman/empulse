@@ -8,7 +8,6 @@ from sklearn.base import clone
 from sklearn.utils import _safe_indexing, ClassifierTags
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data
 
 from empulse.samplers._strategies import Strategy, StrategyFn
 
@@ -17,12 +16,14 @@ if TYPE_CHECKING:
     y_arrays = [np.ndarray]
     try:
         import pandas as pd
+
         X_arrays.append(pd.DataFrame)
         y_arrays.append(pd.Series)
     except ImportError:
         pass
     try:
         import polars as pl
+
         X_arrays.append(pl.DataFrame)
         y_arrays.append(pl.Series)
     except ImportError:
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
 else:
     _XT = TypeVar('_XT', bound=ArrayLike)
     _YT = TypeVar('_YT', bound=ArrayLike)
-
 
 
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
@@ -203,7 +203,6 @@ class BiasRelabler(BaseSampler):
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
 
-
     def fit_resample(
             self,
             X: _XT,
@@ -229,7 +228,6 @@ class BiasRelabler(BaseSampler):
             Relabeled target values.
         """
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
-
 
     def _fit_resample(
             self,

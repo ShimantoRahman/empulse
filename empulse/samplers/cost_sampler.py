@@ -32,7 +32,7 @@ class CostSensitiveSampler(BaseSampler):
 
     Attributes
     ----------
-    sample_indices_ : ndarray
+    sample_indices_ : numpy.ndarray
         Indices of the samples that were selected.
 
     References
@@ -55,6 +55,7 @@ class CostSensitiveSampler(BaseSampler):
     .. code-block:: python
 
         import numpy as np
+        from empulse.samplers import CostSensitiveSampler
         from sklearn.datasets import make_classification
 
         X, y = make_classification()

@@ -10,7 +10,6 @@ from sklearn.utils import check_random_state, _safe_indexing
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.estimator_checks import ClassifierTags
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data
 
 from ._strategies import _independent_weights, Strategy, StrategyFn
 
@@ -48,7 +47,7 @@ class BiasResampler(BaseSampler):
 
     Attributes
     ----------
-    sample_indices_ : ndarray
+    sample_indices_ : numpy.ndarray
         Indices of the samples that were selected.
 
     Examples
@@ -59,7 +58,6 @@ class BiasResampler(BaseSampler):
         import numpy as np
         from empulse.samplers import BiasResampler
         from sklearn.datasets import make_classification
-        from sklearn.linear_model import LogisticRegression
 
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, y.shape)
