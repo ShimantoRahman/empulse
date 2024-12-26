@@ -158,6 +158,7 @@ class BiasResampler(BaseSampler):
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
+        tags.sampler_tags.sample_indices = True
         return tags
 
     def fit_resample(
@@ -219,11 +220,13 @@ class BiasResampler(BaseSampler):
             )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
+            self.sample_indices_ = np.arange(len(y))
             return X, y
         y_binarized = np.where(y == self.classes_[1], 1, 0)
 
         random_state = check_random_state(self.random_state)
         if sensitive_feature is None:
+            self.sample_indices_ = np.arange(len(y))
             return X, y
 
         if self.transform_feature is not None:
@@ -236,6 +239,7 @@ class BiasResampler(BaseSampler):
         class_weights = strategy(y_binarized, sensitive_feature)
         # if class_weights are all 1, no resampling is needed
         if np.allclose(class_weights, np.ones(class_weights.shape)):
+            self.sample_indices_ = np.arange(len(y))
             return X, y
         indices = np.empty((0,), dtype=int)
 
@@ -244,6 +248,7 @@ class BiasResampler(BaseSampler):
             warnings.warn(
                 "sensitive_feature only contains one class, no resampling is performed.", UserWarning
             )
+            self.sample_indices_ = np.arange(len(y))
             return X, y
 
         # determine the number of samples to be drawn for each class and sensitive_feature value
