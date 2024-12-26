@@ -11,7 +11,8 @@ from empulse.models import (
     BiasRelabelingClassifier,
     CSBoostClassifier,
     CSLogitClassifier,
-    RobustCSClassifier
+    RobustCSClassifier,
+    CostThresholdClassifier
 )
 
 ESTIMATORS = (
@@ -22,7 +23,8 @@ ESTIMATORS = (
     BiasRelabelingClassifier(estimator=LogisticRegression()),
     CSBoostClassifier(),
     CSLogitClassifier(),
-    RobustCSClassifier(estimator=CSLogitClassifier())
+    RobustCSClassifier(estimator=CSLogitClassifier()),
+    CostThresholdClassifier(estimator=LogisticRegression())
 )
 
 
