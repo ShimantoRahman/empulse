@@ -727,11 +727,14 @@ def make_objective_aec(
 
         import xgboost as xgb
         from empulse.metrics import make_objective_aec
+        from sklearn.datasets import make_classification
 
-        objective = make_objective_aec()
+        X, y = make_classification()
+        objective = make_objective_aec('xgboost', fp_cost=1, fn_cost=1)
+
         clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict(X_test)
+        clf.fit(X, y)
+        y_pred = clf.predict(X)
 
     References
     ----------
