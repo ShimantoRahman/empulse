@@ -11,7 +11,7 @@ authors:
     given-names: Matthias
     orcid: https://orcid.org/0000-0002-4502-0764
 title: "Empulse"
-version: 0.4.3
+version: 0.4.4
 identifiers:
   - type: doi
     value: 10.5281/zenodo.11185664
