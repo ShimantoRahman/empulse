@@ -1,11 +1,13 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
+# from imblearn.utils.estimator_checks import parametrize_with_checks
 
-from empulse.samplers import BiasResampler, BiasRelabler
+from empulse.samplers import BiasResampler, BiasRelabler, CostSensitiveSampler
 
 ESTIMATORS = (
     BiasResampler(),
     BiasRelabler(estimator=LogisticRegression()),
+    CostSensitiveSampler(),
 )
 
 
