@@ -1,24 +1,26 @@
 from numbers import Real
 from typing import Literal
 
-from sklearn import clone
-from sklearn.exceptions import NotFittedError
-from sklearn.metrics._scorer import _threshold_scores_to_class_labels
-from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
-from sklearn.model_selection import FixedThresholdClassifier
-from sklearn.utils._metadata_requests import process_routing, MetadataRouter, MethodMapping
-from sklearn.utils._param_validation import HasMethods
-from sklearn.utils._response import _get_response_values_binary
-from sklearn.utils.validation import check_is_fitted
-from sklearn.calibration import CalibratedClassifierCV
 import numpy as np
 from numpy.typing import ArrayLike
+from sklearn import clone
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.exceptions import NotFittedError
+from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
+from sklearn.utils._metadata_requests import MetadataRouter, MethodMapping, process_routing
+from sklearn.utils._param_validation import HasMethods, StrOptions
+from sklearn.utils.validation import check_is_fitted
 
-class CostThresholdClassifier(BaseThresholdClassifier):
+
+class CSThresholdClassifier(BaseThresholdClassifier):
 
     _parameter_constraints: dict = {
-        "estimator": [HasMethods(["fit", "predict_proba"]),],
-        "calibration": [bool],
+        "estimator": [HasMethods(["fit", "predict_proba"]), ],
+        "calibrator": [
+            HasMethods(["fit", "predict_proba"]),
+            StrOptions({"sigmoid", "isotonic"}),
+            None
+        ],
         "pos_label": [Real, str, "boolean", None],
     }
 
@@ -26,11 +28,11 @@ class CostThresholdClassifier(BaseThresholdClassifier):
             self,
             estimator,
             *,
-            calibration_method: Literal['sigmoid', 'isotonic', 'convex_hull'] | None = 'sigmoid',
+            calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
             pos_label=None,
     ):
         super().__init__(estimator, response_method='predict_proba')
-        self.calibration_method = calibration_method
+        self.calibrator = calibrator
         self.pos_label = pos_label
 
     @property
@@ -45,34 +47,21 @@ class CostThresholdClassifier(BaseThresholdClassifier):
                 "The underlying estimator is not fitted yet."
             ) from NotFittedError
 
-    def _calibrate(self, X, y, **params):
-        """Calibrate the classifier.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            Training data.
-
-        y : array-like of shape (n_samples,)
-            Target values.
-
-        **params : dict
-            Parameters to pass to the `fit` method of the underlying classifier.
-
-        Returns
-        -------
-        self : object
-            Returns an instance of self.
-        """
-        if self.calibration_method is None:
-            return self
-        if self.calibration_method == 'sigmoid':
-            self.estimator_ = CalibratedClassifierCV(self.estimator, method='sigmoid').fit(X, y, **params)
-        elif self.calibration_method == 'isotonic':
-            self.estimator_ = CalibratedClassifierCV(self.estimator, method='isotonic').fit(X, y, **params)
-        elif self.calibration_method == 'convex_hull':
-            ...
-        return self
+    def _get_calibrator(self, estimator):
+        if self.calibrator == 'sigmoid':
+            return CalibratedClassifierCV(
+                estimator,
+                method='sigmoid',
+                ensemble=False
+            )
+        elif self.calibrator == 'isotonic':
+            return CalibratedClassifierCV(
+                estimator,
+                method='isotonic',
+                ensemble=False
+            )
+        else:
+            return self.calibrator.set_params(estimator=estimator)
 
     def _fit(self, X, y, **params):
         """Fit the classifier.
@@ -94,7 +83,10 @@ class CostThresholdClassifier(BaseThresholdClassifier):
             Returns an instance of self.
         """
         routed_params = process_routing(self, "fit", **params)
-        self.estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
+        if self.calibrator is not None:
+            self.estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.estimator.fit)
+        else:
+            self.estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
         return self
 
     def predict(
