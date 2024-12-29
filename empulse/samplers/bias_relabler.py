@@ -203,6 +203,28 @@ class BiasRelabler(BaseSampler):
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
 
+    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
+        """
+        Fit the estimator and relabel the data according to the strategy.
+
+        Calls the fit_resample method to be compatible with the imbalance-learn API.
+
+        Parameters
+        ----------
+        X : 2D array-like, shape=(n_samples, n_features)
+        y : 1D array-like, shape=(n_samples,)
+        sensitive_feature : 1D array-like, shape=(n_samples,)
+            Sensitive feature used to determine the number of promotion and demotion pairs.
+
+        Returns
+        -------
+        X : 2D array-like, shape=(n_samples, n_features)
+            Original training data.
+        y : np.ndarray
+            Relabeled target values.
+        """
+        return self.fit_resample(X, y, sensitive_feature=sensitive_feature)
+
     def fit_resample(
             self,
             X: _XT,
