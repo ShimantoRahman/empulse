@@ -100,14 +100,14 @@ def empcs_score(
     >>>
     >>> X, y = make_classification(random_state=42)
     >>> model = LogisticRegression()
-    >>> cv = StratifiedKFold(n_splits=5, random_state=42)
+    >>> cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     >>> scorer = make_scorer(
-    >>>     empcs_score,
-    >>>     needs_proba=True,
-    >>>     roi=0.2,
-    >>>     success_rate=0.5
-    >>>     default_rate=0.1
-    >>> )
+    ...     empcs_score,
+    ...     response_method='predict_proba',
+    ...     roi=0.2,
+    ...     success_rate=0.5,
+    ...     default_rate=0.1
+    ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.14904
     """

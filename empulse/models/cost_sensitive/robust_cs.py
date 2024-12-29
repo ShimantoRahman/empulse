@@ -19,17 +19,12 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     The costs passed to the cost-sensitive classifier are a combination of the original costs (not non-outliers) and
     the imputed predicted costs (for outliers).
 
-    Only the costs that are arrays and have a standard deviation greater than 0 are used for outlier detection.
-    Hence, constant costs or costs with no variation are not imputed.
-
-    Code adapted from [1]_.
-
     Parameters
     ----------
-    estimator : BaseEstimator
+    estimator : Estimator
         The cost-sensitive classifier to fit.
         The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method.
-    outlier_estimator : BaseEstimator, optional
+    outlier_estimator : Estimator, optional
         The outlier estimator to fit to the costs.
         If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.
     outlier_threshold : float, default=2.5
@@ -39,15 +34,20 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
 
     Attributes
     ----------
-    estimator_ : BaseEstimator
+    estimator_ : Estimator
         The fitted cost-sensitive classifier.
-    outlier_estimator_ : BaseEstimator
+    outlier_estimator_ : Estimator
         The fitted outlier estimator. If multiple costs are passed, this is a MultiOutputRegressor.
     costs_ : dict
         The imputed costs for the cost-sensitive classifier.
     n_treatments_ : int
         The number of costs which have been imputed.
 
+    Notes
+    -----
+    Constant costs are not used for outlier detection and imputation.
+
+    Code adapted from [1]_.
 
     Examples
     --------

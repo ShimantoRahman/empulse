@@ -29,11 +29,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.doctest",
     "numpydoc",
     "sphinx_copybutton",
 ]
 
 autodoc_typehints = "none"
+doctest_test_doctest_blocks = 'default'
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

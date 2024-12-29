@@ -87,13 +87,13 @@ def mpcs_score(
     >>>
     >>> X, y = make_classification(random_state=42)
     >>> model = LogisticRegression()
-    >>> cv = StratifiedKFold(n_splits=5, random_state=42)
+    >>> cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     >>> scorer = make_scorer(
-    >>>     mpcs_score,
-    >>>     needs_proba=True,
-    >>>     roi=0.2,
-    >>>     loan_lost_rate=0.25
-    >>> )
+    ...     mpcs_score,
+    ...     response_method='predict_proba',
+    ...     roi=0.2,
+    ...     loan_lost_rate=0.25
+    ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.123
     """

@@ -129,18 +129,18 @@ def emp_score(
     >>> tp_benefit = (-f, clv * (1 - (d / clv) - (f / clv)))
     >>> fp_cost = d + f
     >>> def weighted_pdf(b0, b1, c0, c1, b0_step, b1_step, c0_step, c1_step):
-    >>>     gamma = (b0 + f) / (clv - d)
-    >>>     gamma_step = b0_step / (clv - d)
-    >>>     return beta.pdf(gamma, a=6, b=14) * gamma_step
+    ...     gamma = (b0 + f) / (clv - d)
+    ...     gamma_step = b0_step / (clv - d)
+    ...     return beta.pdf(gamma, a=6, b=14) * gamma_step
     >>>
     >>> emp_score(
-    >>>     y_true,
-    >>>     y_pred,
-    >>>     weighted_pdf=weighted_pdf,
-    >>>     tp_benefit=tp_benefit,
-    >>>     fp_cost=fp_cost,
-    >>>     n_buckets=1000
-    >>> )
+    ...     y_true,
+    ...     y_pred,
+    ...     weighted_pdf=weighted_pdf,
+    ...     tp_benefit=tp_benefit,
+    ...     fp_cost=fp_cost,
+    ...     n_buckets=1000
+    ... )
     23.87559333920785
     """
     return emp(
@@ -279,18 +279,18 @@ def emp(
     >>> tp_benefit = (-f, clv * (1 - (d / clv) - (f / clv)))
     >>> fp_cost = d + f
     >>> def weighted_pdf(b0, b1, c0, c1, b0_step, b1_step, c0_step, c1_step):
-    >>>     gamma = (b0 + f) / (clv - d)
-    >>>     gamma_step = b0_step / (clv - d)
-    >>>     return beta.pdf(gamma, a=6, b=14) * gamma_step
+    ...     gamma = (b0 + f) / (clv - d)
+    ...     gamma_step = b0_step / (clv - d)
+    ...     return beta.pdf(gamma, a=6, b=14) * gamma_step
     >>>
     >>> emp(
-    >>>     y_true,
-    >>>     y_pred,
-    >>>     weighted_pdf=weighted_pdf,
-    >>>     tp_benefit=tp_benefit,
-    >>>     fp_cost=fp_cost,
-    >>>     n_buckets=1000
-    >>> )
+    ...     y_true,
+    ...     y_pred,
+    ...     weighted_pdf=weighted_pdf,
+    ...     tp_benefit=tp_benefit,
+    ...     fp_cost=fp_cost,
+    ...     n_buckets=1000
+    ... )
     (23.87559333920785, 0.8743520452740654)
     """
     y_true = np.asarray(y_true)

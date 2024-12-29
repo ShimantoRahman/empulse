@@ -186,7 +186,7 @@ def cost_loss(
     >>> fp_cost = np.array([4, 1, 2, 2])
     >>> fn_cost = np.array([1, 3, 3, 1])
     >>> cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    3
+    3.0
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
@@ -311,7 +311,7 @@ def expected_cost_loss(
     >>> fp_cost = np.array([4, 1, 2, 2])
     >>> fn_cost = np.array([1, 3, 3, 1])
     >>> cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    3
+    3.0
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input

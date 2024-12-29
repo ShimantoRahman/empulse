@@ -110,18 +110,18 @@ def empa_score(
     >>>
     >>> X, y = make_classification(random_state=42)
     >>> model = LogisticRegression()
-    >>> cv = StratifiedKFold(n_splits=5, random_state=42)
+    >>> cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     >>> scorer = make_scorer(
-    >>>     empa_score,
-    >>>     needs_proba=True,
-    >>>     alpha=10,
-    >>>     beta=0.001,
-    >>>     sales_cost=2_000,
-    >>>     contact_cost=100,
-    >>>     direct_selling=0,
-    >>> )
+    ...     empa_score,
+    ...     response_method='predict_proba',
+    ...     alpha=10,
+    ...     beta=0.001,
+    ...     sales_cost=2_000,
+    ...     contact_cost=100,
+    ...     direct_selling=0,
+    ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
-    449.0
+    4449.0
     """
     return empa(
         y_true,
@@ -235,7 +235,7 @@ def empa(
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>> empa(y_true, y_pred, direct_selling=0)
-    (356.25, 0.875)
+    (3556.25, 0.875)
     """
 
     if check_input:

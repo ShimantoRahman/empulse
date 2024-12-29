@@ -81,7 +81,7 @@ def mp_score(
     >>> fp_cost = d + f
     >>>
     >>> mp_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
-    24.708
+    24.224999999999998
     """
     return mp(y_true, y_pred, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
 
@@ -166,7 +166,7 @@ def mp(
     >>> fp_cost = d + f
     >>>
     >>> mp(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
-    (23.875, 0.875)
+    (23.874999999999996, 0.875)
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)

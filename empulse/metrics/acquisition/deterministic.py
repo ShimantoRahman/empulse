@@ -93,17 +93,17 @@ def mpa_score(
     >>>
     >>> X, y = make_classification(random_state=42)
     >>> model = LogisticRegression()
-    >>> cv = StratifiedKFold(n_splits=5, random_state=42)
+    >>> cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     >>> scorer = make_scorer(
-    >>>     mpa_score,
-    >>>     needs_proba=True,
-    >>>     contribution=7_000,
-    >>>     sales_cost=2_000,
-    >>>     contact_cost=100,
-    >>>     direct_selling=0,
-    >>> )
+    ...     mpa_score,
+    ...     response_method='predict_proba',
+    ...     contribution=7_000,
+    ...     sales_cost=2_000,
+    ...     contact_cost=100,
+    ...     direct_selling=0,
+    ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
-    299.0
+    3099.0
     """
     return mpa(
         y_true,

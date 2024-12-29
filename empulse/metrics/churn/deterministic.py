@@ -112,13 +112,13 @@ def mpc_score(
     >>>
     >>> X, y = make_classification(random_state=42)
     >>> model = LogisticRegression()
-    >>> cv = StratifiedKFold(n_splits=5, random_state=42)
+    >>> cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     >>> scorer = make_scorer(
-    >>>     mpc_score,
-    >>>     needs_proba=True,
-    >>>     clv=300,
-    >>>     incentive_cost=15,
-    >>> )
+    ...     mpc_score,
+    ...     response_method='predict_proba',
+    ...     clv=300,
+    ...     incentive_cost=15,
+    ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     42.08999999999999
     """
