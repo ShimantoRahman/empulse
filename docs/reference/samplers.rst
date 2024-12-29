@@ -13,3 +13,5 @@ The samplers are used within the :mod:`~empulse.models` module, but can also be 
      - Sampler which relabels instances to remove bias against a subgroup.
    * - :class:`BiasResampler`
      - Sampler which resamples instances to remove bias against a subgroup.
+   * - :class:`CostSensitiveSampler`
+     - Sampler which performs cost-proportionate resampling.
