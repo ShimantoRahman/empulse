@@ -31,7 +31,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method.
     outlier_estimator : BaseEstimator, optional
         The outlier estimator to fit to the costs.
-        If not provided, a HuberRegressor is used with default settings.
+        If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.
     outlier_threshold : float, default=2.5
         The threshold for the standardized residuals to detect outliers.
         If the absolute value of the standardized residual is greater than the threshold,
