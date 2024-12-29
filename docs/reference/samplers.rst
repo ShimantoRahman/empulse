@@ -10,6 +10,6 @@ The samplers are used within the :mod:`~empulse.models` module, but can also be 
    :widths: 15 60
 
    * - :class:`BiasRelabler`
-     - Sampler which relabels instances to remove bias against a subgroup
+     - Sampler which relabels instances to remove bias against a subgroup.
    * - :class:`BiasResampler`
-     - Sampler which resamples instances to remove bias against a subgroup
+     - Sampler which resamples instances to remove bias against a subgroup.

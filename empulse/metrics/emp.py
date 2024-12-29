@@ -20,7 +20,7 @@ def emp_score(
         n_buckets: int = 100,
 ) -> float:
     """
-    :func:`~empulse.metrics.emp()` but only returning the EMP score
+    :func:`~empulse.metrics.emp()` but only returning the EMP score.
 
     .. seealso::
         :func:`~empulse.metrics.emp` : To also return the threshold at which the EMP score is achieved.
@@ -167,7 +167,7 @@ def emp(
         n_buckets: int = 100,
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit Measure (EMP)
+    Expected Maximum Profit Measure (EMP).
 
     .. seealso::
         :func:`~empulse.metrics.emp_score` : To only return the EMP score.

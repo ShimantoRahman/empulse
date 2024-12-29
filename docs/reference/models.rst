@@ -9,16 +9,18 @@ The :mod:`~empulse.models` module contains a collection of profit-driven models.
    :widths: 25 75
 
    * - :class:`B2BoostClassifier`
-     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
+     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost loss for customer churn.
    * - :class:`BiasRelabelingClassifier`
-     - Classifier which relabels instances during training to remove bias against a subgroup
+     - Classifier which relabels instances during training to remove bias against a subgroup.
    * - :class:`BiasResamplingClassifier`
-     - Classifier which resamples instances during training to remove bias against a subgroup
+     - Classifier which resamples instances during training to remove bias against a subgroup.
    * - :class:`BiasReweighingClassifier`
-     - Classifier which reweighs instances during training to remove bias against a subgroup
+     - Classifier which reweighs instances during training to remove bias against a subgroup.
    * - :class:`CSBoostClassifier`
-     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function.
+     - :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost loss.
    * - :class:`CSLogitClassifier`
-     - Logistic classifier with instance-specific cost function.
+     - Logistic classifier with instance-specific cost loss.
+   * - :class:`CSThresholdClassifier`
+     - Classifier which sets the decision threshold to minimize the cost loss.
    * - :class:`ProfLogitClassifier`
-     - Logistic classifier to optimize profit-driven loss functions.
+     - Logistic classifier to optimize profit-driven score.

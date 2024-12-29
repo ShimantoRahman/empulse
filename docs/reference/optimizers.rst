@@ -10,4 +10,4 @@ optimize models in the :mod:`empulse.models` module.
    :widths: 25 75
 
    * - :class:`Generation`
-     - A single generation of a Real-coded Genetic Algorithm (RGA)
+     - A single generation of a Real-coded Genetic Algorithm (RGA).

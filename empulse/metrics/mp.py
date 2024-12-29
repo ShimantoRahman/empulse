@@ -14,7 +14,7 @@ def mp_score(
         fp_cost: float = 0.0,
 ) -> float:
     """
-    :func:`~empulse.metrics.mp()` but only returning the MP score
+    :func:`~empulse.metrics.mp()` but only returning the MP score.
 
     .. seealso::
         :func:`~empulse.metrics.mp` : To also return the threshold at which the maximum profit is achieved.
@@ -96,7 +96,7 @@ def mp(
         fp_cost: float = 0.0,
 ) -> tuple[float, float]:
     """
-    Maximum Profit Measure (MP)
+    Maximum Profit Measure (MP).
 
     .. seealso::
         :func:`~empulse.metrics.mp_score` : To only return the maximum profit score.
