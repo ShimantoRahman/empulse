@@ -11,7 +11,7 @@ from ...metrics import make_objective_aec
 
 class CSBoostClassifier(BaseBoostClassifier):
     """
-    :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function.
+    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss.
 
     .. seealso::
 

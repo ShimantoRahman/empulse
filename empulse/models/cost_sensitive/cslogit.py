@@ -17,7 +17,7 @@ Loss = Literal["average expected cost"]
 
 class CSLogitClassifier(BaseLogitClassifier):
     """
-    Cost-Sensitive Logistic Regression Classifier.
+    Logistic classifier to optimize instance-specific cost loss.
 
     .. seealso::
 
@@ -43,7 +43,13 @@ class CSLogitClassifier(BaseLogitClassifier):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : ...
+        loss : {'average expected cost'} or Callable, default='average expected cost'
+        Loss function which should be minimized.
+        - If ``str``, then it should be one of the following:
+            - 'average expected cost' : Average Expected Cost loss function,
+            see :func:`~empulse.metrics.expected_cost_loss`.
+        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
+        By default, loss function is minimized, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
@@ -159,7 +165,7 @@ class CSLogitClassifier(BaseLogitClassifier):
             fit_intercept=True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
-            loss: Union[Loss, Callable] = 'average expected cost',
+            loss: Loss | Callable = 'average expected cost',
             optimize_fn: Optional[Callable] = None,
             optimizer_params: Optional[dict[str, Any]] = None,
     ):

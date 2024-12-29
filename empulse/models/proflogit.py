@@ -14,7 +14,7 @@ from ..metrics import empc_score
 
 class ProfLogitClassifier(BaseLogitClassifier):
     """
-    Logistic classifier to optimize profit-driven loss functions
+    Logistic classifier to optimize profit-driven score.
 
     Maximizing empirical EMP for churn by optimizing
     the regression coefficients of the logistic model through
@@ -39,8 +39,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
     loss : Callable, default= :func:`empulse.metrics.empc_score`
-        Loss function. Should be a Callable with signature ``loss(y_true, y_pred)`` or ``loss(y_true, y_score)``.
-        See :func:`empulse.metrics.empc_score` for an example.
+        Loss function. Should be a Callable with signature ``loss(y_true, y_score)``.
         By default, expects a loss function to maximize, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional

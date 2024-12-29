@@ -11,7 +11,7 @@ from ...metrics import make_objective_churn
 
 class B2BoostClassifier(BaseBoostClassifier):
     """
-    :class:`xgboost:xgboost.XGBClassifier` with instance-specific cost function for customer churn
+    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss for customer churn.
 
     Parameters
     ----------

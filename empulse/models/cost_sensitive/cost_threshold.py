@@ -18,7 +18,7 @@ class CSThresholdClassifier(BaseThresholdClassifier):
     """
     Cost-sensitive threshold classifier.
 
-    This classifier uses the optimal threshold to minimize the :func:`~empulse.metrics.cost_loss` function.
+    Classifier which sets the decision threshold to optimize the instance-specific cost loss.
 
     Parameters
     ----------

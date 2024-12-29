@@ -12,9 +12,8 @@ from sklearn.utils.validation import _estimator_has
 
 class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     """
-    Robust Cost-Sensitive Classifier
+    Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
 
-    This classifier fits a cost-sensitive classifier with costs adjusted for outliers.
     The costs are adjusted by fitting an outlier estimator to the costs and imputing the costs for the outliers.
     Outliers are detected by the standardized residuals of the cost and the predicted cost.
     The costs passed to the cost-sensitive classifier are a combination of the original costs (not non-outliers) and
