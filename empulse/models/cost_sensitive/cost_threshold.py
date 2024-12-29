@@ -1,3 +1,4 @@
+import warnings
 from numbers import Real
 from typing import Literal
 
@@ -9,10 +10,55 @@ from sklearn.exceptions import NotFittedError
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._metadata_requests import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.model_selection import StratifiedKFold
 
 
 class CSThresholdClassifier(BaseThresholdClassifier):
+    """
+    Cost-sensitive threshold classifier.
+
+    This classifier uses the optimal threshold to minimize the :func:`~empulse.metrics.cost_loss` function.
+
+    Parameters
+    ----------
+    estimator : object
+        A classifier with a `predict_proba` method.
+
+    calibrator : {'sigmoid', 'isotonic'}, Estimator or None, default='sigmoid'
+        The calibrator to use.
+            - If 'sigmoid', then a :class:`sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='sigmoid'`
+            and `ensemble=False` is used.
+            - If 'isotonic', then a :class:`sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='isotonic'`
+            and `ensemble=False` is used.
+            - If an Estimator, then it should have a `fit` and `predict_proba` method.
+            - If None, probabilities are assumed to be well-calibrated.
+
+    pos_label : int, str, 'boolean' or None, default=None
+        The positive label. If None, the positive label is assumed to be 1.
+
+    random_state : int or None, default=None
+        Random state for the calibrator. Ignored when `calibrator` is an Estimator.
+
+    Attributes
+    ----------
+    classes_ : numpy.ndarray of shape (n_classes,)
+        The classes labels.
+
+    estimator_ : Estimator
+        The fitted classifier.
+
+    Notes
+    -----
+    The optimal threshold is computed as [1]_:
+
+    .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
+
+    .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
+              Therefore, it is recommended to use a calibrator when the probabilities are not well-calibrated.
+              See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
+              for more information.
+    """
 
     _parameter_constraints: dict = {
         "estimator": [HasMethods(["fit", "predict_proba"]), ],
@@ -22,6 +68,7 @@ class CSThresholdClassifier(BaseThresholdClassifier):
             None
         ],
         "pos_label": [Real, str, "boolean", None],
+        "random_state": ["random_state"],
     }
 
     def __init__(
@@ -30,10 +77,12 @@ class CSThresholdClassifier(BaseThresholdClassifier):
             *,
             calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
             pos_label=None,
+            random_state=None,
     ):
         super().__init__(estimator, response_method='predict_proba')
         self.calibrator = calibrator
         self.pos_label = pos_label
+        self.random_state = random_state
 
     @property
     def classes_(self):
@@ -49,15 +98,19 @@ class CSThresholdClassifier(BaseThresholdClassifier):
 
     def _get_calibrator(self, estimator):
         if self.calibrator == 'sigmoid':
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(
                 estimator,
                 method='sigmoid',
+                cv=cv,
                 ensemble=False
             )
         elif self.calibrator == 'isotonic':
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(
                 estimator,
                 method='isotonic',
+                cv=cv,
                 ensemble=False
             )
         else:
@@ -82,6 +135,7 @@ class CSThresholdClassifier(BaseThresholdClassifier):
         self : object
             Returns an instance of self.
         """
+        X, y = validate_data(self, X, y)
         routed_params = process_routing(self, "fit", **params)
         if self.calibrator is not None:
             self.estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.estimator.fit)
@@ -97,7 +151,8 @@ class CSThresholdClassifier(BaseThresholdClassifier):
             fn_cost: ArrayLike | float = 0.0,
             fp_cost: ArrayLike | float = 0.0,
     ):
-        """Predict the target of new samples.
+        """
+        Predict the target of new samples.
 
         Parameters
         ----------
@@ -124,6 +179,10 @@ class CSThresholdClassifier(BaseThresholdClassifier):
         -------
         class_labels : ndarray of shape (n_samples,)
             The predicted class.
+
+        Notes
+        -----
+        If all costs are zero, then ``fp_cost=1`` and ``fn_cost=1`` are used to avoid division by zero.
         """
         check_is_fitted(self)
 
@@ -131,7 +190,12 @@ class CSThresholdClassifier(BaseThresholdClassifier):
 
         if (all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
                 sum((tp_cost, tn_cost, fn_cost, fp_cost)) == 0):
-            return estimator.predict(X)
+            warnings.warn(
+                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
+                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.predict() method.",
+                UserWarning)
+            fp_cost = 1
+            fn_cost = 1
 
         y_score = estimator.predict_proba(X)[:, 1]
 

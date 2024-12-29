@@ -12,7 +12,7 @@ from empulse.models import (
     CSBoostClassifier,
     CSLogitClassifier,
     RobustCSClassifier,
-    CostThresholdClassifier
+    CSThresholdClassifier
 )
 
 ESTIMATORS = (
@@ -24,7 +24,7 @@ ESTIMATORS = (
     CSBoostClassifier(),
     CSLogitClassifier(),
     RobustCSClassifier(estimator=CSLogitClassifier()),
-    CostThresholdClassifier(estimator=LogisticRegression())
+    CSThresholdClassifier(estimator=LogisticRegression(), random_state=42),
 )
 
 
@@ -35,7 +35,10 @@ def expected_failed_checks(estimator):
             'check_fit_idempotent': 'Sklearn does not set random_state properly in the test. Tested internally.',
             'check_supervised_y_2d': 'Sklearn does not set random_state properly in the test. Tested internally.'
         }
-
+    if isinstance(estimator, CSThresholdClassifier):
+        return {
+            'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'
+        }
     return {}
 
 
