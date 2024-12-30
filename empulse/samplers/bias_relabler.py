@@ -75,11 +75,9 @@ class BiasRelabler(BaseSampler):
         - ``'statistical_parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.
 
-        - ``Callable``: function which computes the group weights based on the target and sensitive feature. \
-        Callable accepts two arguments: y_true and sensitive_feature and returns the group weights. \
-        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
-        sensitive feature. \
-        The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).
+        - ``Callable``: function which computes the number of labels swaps based on the target and sensitive feature. \
+        Callable accepts two arguments:
+        y_true and sensitive_feature and returns the number of pairs needed to be swapped.
     transform_feature : Optional[Callable[[numpy.ndarray], numpy.ndarray]], default=None
         Function which transforms sensitive feature before resampling the training data.
         The function takes in the sensitive feature in the form of a numpy.ndarray
@@ -116,6 +114,7 @@ class BiasRelabler(BaseSampler):
         from imblearn.pipeline import Pipeline
         from sklearn import set_config
         from sklearn.datasets import make_classification
+        from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import cross_val_score
 
         set_config(enable_metadata_routing=True)
@@ -141,6 +140,7 @@ class BiasRelabler(BaseSampler):
         from imblearn.pipeline import Pipeline
         from sklearn import set_config
         from sklearn.datasets import make_classification
+        from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import GridSearchCV
 
         set_config(enable_metadata_routing=True)
@@ -161,7 +161,7 @@ class BiasRelabler(BaseSampler):
         param_grid = {'model__C': np.logspace(-5, 2, 10)}
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid)
-        grid_search.fit(X, y, sensitive_feature=high_clv)
+        grid_search.fit(X, y, sensitive_feature=clv)
 
     References
     ----------

@@ -305,13 +305,13 @@ def expected_cost_loss(
     Examples
     --------
     >>> import numpy as np
-    >>> from empulse.metrics import cost_loss
-    >>> y_pred = [0, 1, 0, 0]
+    >>> from empulse.metrics import expected_cost_loss
+    >>> y_pred = [0.2, 0.9, 0.1, 0.2]
     >>> y_true = [0, 1, 1, 0]
     >>> fp_cost = np.array([4, 1, 2, 2])
     >>> fn_cost = np.array([1, 3, 3, 1])
-    >>> cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-    3.0
+    >>> expected_cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+    4.2
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input

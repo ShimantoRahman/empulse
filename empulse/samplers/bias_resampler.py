@@ -74,6 +74,7 @@ class BiasResampler(BaseSampler):
         from imblearn.pipeline import Pipeline
         from sklearn import set_config
         from sklearn.datasets import make_classification
+        from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import cross_val_score
 
         set_config(enable_metadata_routing=True)
@@ -97,6 +98,7 @@ class BiasResampler(BaseSampler):
         from imblearn.pipeline import Pipeline
         from sklearn import set_config
         from sklearn.datasets import make_classification
+        from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import GridSearchCV
 
         set_config(enable_metadata_routing=True)
@@ -116,7 +118,7 @@ class BiasResampler(BaseSampler):
         param_grid = {'model__C': np.logspace(-5, 2, 10)}
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid)
-        grid_search.fit(X, y, sensitive_feature=high_clv)
+        grid_search.fit(X, y, sensitive_feature=clv)
 
     References
     ----------

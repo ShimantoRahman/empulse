@@ -25,11 +25,9 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
         - ``'statistical_parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.
 
-        - ``Callable``: function which computes the group weights based on the target and sensitive feature. \
-        Callable accepts two arguments: y_true and sensitive_feature and returns the group weights. \
-        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \
-        sensitive feature. \
-        The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).
+        - ``Callable``: function which computes the number of labels swaps based on the target and sensitive feature. \
+        Callable accepts two arguments:
+        y_true and sensitive_feature and returns the number of pairs needed to be swapped.
     transform_feature : Optional[Callable], default=None
         Function which transforms sensitive feature before resampling the training data.
 
@@ -47,6 +45,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasRelabelingClassifier
@@ -61,6 +60,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasRelabelingClassifier
@@ -78,6 +78,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasRelabelingClassifier
@@ -85,12 +86,9 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
         X, y = make_classification()
         high_clv = np.random.randint(0, 2, size=X.shape[0])
 
-        # Simple strategy to double the weight for the sensitive feature
+        # Simple strategy to swap 2 labels
         def strategy(y_true, sensitive_feature):
-            return np.array([
-                [1, 2],
-                [1, 2]
-            ])
+            return 2
 
         model = BiasRelabelingClassifier(
             estimator=LogisticRegression(),
@@ -102,6 +100,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn import config_context
         from sklearn.datasets import make_classification
         from sklearn.linear_model import LogisticRegression
@@ -117,15 +116,16 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasRelabelingClassifier(LogisticRegression()))
+                ('model', BiasRelabelingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, model__sensitive_feature=high_clv)
+            search.fit(X, y, sensitive_feature=high_clv)
 
     5. Passing the sensitive feature through metadata routing in a cross-validation grid search:
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn import config_context
         from sklearn.datasets import make_classification
         from sklearn.linear_model import LogisticRegression

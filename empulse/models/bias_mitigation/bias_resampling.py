@@ -49,6 +49,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasResamplingClassifier
@@ -63,6 +64,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasResamplingClassifier
@@ -80,6 +82,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.datasets import make_classification
         from empulse.models import BiasResamplingClassifier
@@ -104,6 +107,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn import config_context
         from sklearn.datasets import make_classification
         from sklearn.linear_model import LogisticRegression
@@ -119,15 +123,16 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
             param_grid = {'model__estimator__C': [0.1, 1, 10]}
             pipeline = Pipeline([
                 ('scaler', StandardScaler()),
-                ('model', BiasResamplingClassifier(LogisticRegression()))
+                ('model', BiasResamplingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))
             ])
             search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, model__sensitive_feature=high_clv)
+            search.fit(X, y, sensitive_feature=high_clv)
 
     5. Passing the sensitive feature through metadata routing in a cross-validation grid search:
 
     .. code-block:: python
 
+        import numpy as np
         from sklearn import config_context
         from sklearn.datasets import make_classification
         from sklearn.linear_model import LogisticRegression
