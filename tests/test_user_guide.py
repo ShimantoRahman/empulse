@@ -6,7 +6,11 @@ import traceback
 import pytest
 
 # Directory containing the user guide files
-GUIDE_DIR = '../docs/guide'
+GUIDE_DIR = 'docs/guide'
+
+# Adjust GUIDE_DIR if the current working directory is "tests/"
+if os.getcwd().endswith('tests'):
+    GUIDE_DIR = '../' + GUIDE_DIR
 
 # Regular expression to find code blocks
 CODE_BLOCK_RE = re.compile(r'\.\. code-block:: python\n\s*([\s\S]*?)(?=\n\S|$)')
