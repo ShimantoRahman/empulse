@@ -29,7 +29,7 @@ For example, if you want to use the RGA for a set amount of time, you can do the
 
 .. code-block:: python
 
-    from empulse.models import ProflogitClassifier
+    from empulse.models import ProfLogitClassifier
     from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
     from time import perf_counter
@@ -46,7 +46,7 @@ For example, if you want to use the RGA for a set amount of time, you can do the
                 break
         return generation.result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize, max_time=10)
+    proflogit = ProfLogitClassifier(optimize_fn=optimize, optimizer_params={'max_time': 10})
 
 Or you can stop the RGA after a set number of fitness evaluations:
 
@@ -56,7 +56,7 @@ Or you can stop the RGA after a set number of fitness evaluations:
     from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
 
-    def optimize(objective, X, max_evals=10000, **kwargs) -> OptimizeResult:
+    def optimize(objective, X, max_evals=10_000, **kwargs) -> OptimizeResult:
         generation = Generation(**kwargs)
         bounds = [(-5, 5)] * X.shape[1]
 
@@ -67,7 +67,7 @@ Or you can stop the RGA after a set number of fitness evaluations:
                 break
         return generation.result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize, max_evals=10000)
+    proflogit = ProfLogitClassifier(optimize_fn=optimize, optimizer_params={'max_evals': 10_000})
 
 Custom Loss Functions
 ---------------------
@@ -81,7 +81,7 @@ simply pass the metric function to the :class:`~empulse.models.ProfLogitClassifi
     from empulse.models import ProfLogitClassifier
     from empulse.metrics import empa_score
 
-    proflogit = ProfLogitClassifier(loss_fn=empa_score)
+    proflogit = ProfLogitClassifier(loss=empa_score)
 
 Custom Optimization Algorithms
 ------------------------------
@@ -92,6 +92,7 @@ For instance, if you want to use the L-BFGS-B algorithm from scipy.optimize, you
 
 .. code-block:: python
 
+    from empulse.models import ProfLogitClassifier
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
@@ -119,6 +120,7 @@ You can also use unbounded optimization algorithms like BFGS:
 
 .. code-block:: python
 
+    from empulse.models import ProfLogitClassifier
     from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
