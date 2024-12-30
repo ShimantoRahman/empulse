@@ -15,9 +15,11 @@ if os.getcwd().endswith('tests'):
 # Regular expression to find code blocks
 CODE_BLOCK_RE = re.compile(r'\.\. code-block:: python\n\s*([\s\S]*?)(?=\n\S|$)')
 
+
 def extract_code_blocks(file_content):
     """Extract code blocks from the file content."""
     return ['    ' + match.group(1) for match in CODE_BLOCK_RE.finditer(file_content)]
+
 
 def execute_code_blocks(code_blocks):
     """Execute each code block and report any errors."""
@@ -28,6 +30,7 @@ def execute_code_blocks(code_blocks):
             exec(code, exec_globals)
         except Exception as e:
             pytest.fail(f"Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}")
+
 
 @pytest.mark.parametrize("file_path", [
     os.path.join(root, file)
