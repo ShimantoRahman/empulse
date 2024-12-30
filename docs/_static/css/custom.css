@@ -2,3 +2,7 @@
 .wy-nav-content {
   max-width: 1200px;
 }
+.wy-side-nav-search,
+.wy-nav-top {
+  background: #f1f3f4;
+}
