@@ -58,6 +58,7 @@ docs = [
     "sphinx>=7.2.6",
     "sphinx_rtd_theme>=2.0.0",
     "sphinx-copybutton>=0.5.2",
+    "myst-parser>=4.0.0",
     "numpydoc>=1.6.0",
 ]
 
