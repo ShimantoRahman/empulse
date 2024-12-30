@@ -99,7 +99,7 @@ def cost_loss(
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
 
-        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using no algorithm at all.
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a naive algorithm.
 
     Parameters
     ----------
@@ -232,7 +232,7 @@ def expected_cost_loss(
         :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
 
         :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
-        compared to using no algorithm at all.
+        compared to using a naive algorithm.
 
     Parameters
     ----------
@@ -494,7 +494,7 @@ def savings_score(
     Returns
     -------
     score : float
-        Cost savings of a classifier compared to using no algorithm at all.
+        Cost savings of a classifier compared to using a naive algorithm.
 
     Notes
     -----
@@ -613,7 +613,7 @@ def expected_savings_score(
     Returns
     -------
     score : float
-        Expected savings of a classifier compared to using no algorithm at all.
+        Expected savings of a classifier compared to using a naive algorithm.
 
         Notes
     -----
