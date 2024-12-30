@@ -9,3 +9,9 @@
 .switch-menus {
   background: #2596be;
 }
+.version-switch {
+  color: #fcfcfc;
+}
+.version-switch::after {
+  color: #fcfcfc;
+}
