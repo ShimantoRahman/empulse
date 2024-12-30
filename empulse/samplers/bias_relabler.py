@@ -76,7 +76,7 @@ class BiasRelabler(BaseSampler):
         probability of positive predictions are equal between subgroups of sensitive feature.
 
         - ``Callable``: function which computes the number of labels swaps based on the target and sensitive feature. \
-        Callable accepts two arguments:
+        Callable accepts two arguments: \
         y_true and sensitive_feature and returns the number of pairs needed to be swapped.
     transform_feature : Optional[Callable[[numpy.ndarray], numpy.ndarray]], default=None
         Function which transforms sensitive feature before resampling the training data.
