@@ -21,7 +21,7 @@ pip install empulse
 ```
 
 ## Documentation
-You can find the documentation [here](https://shimantorahman.github.io/empulse/).
+You can find the documentation [here](https://empulse.readthedocs.io/en/latest/).
 
 ## Usage
 
