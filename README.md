@@ -7,7 +7,7 @@
 
 # Empulse
 
-<a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/image/empulse_logo.png" width="20%" height="20%" align="right" /></a>
+<a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/image/empulse_logo.png" width="25%" height="25%" align="right" /></a>
 
 Empulse is a package aimed to enable value-driven and cost-sensitive analysis in Python.
 The package implements popular value-driven and cost-sensitive metrics and algorithms 
