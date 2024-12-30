@@ -9,7 +9,7 @@
 .switch-menus {
   background: #2596be;
 }
-.version-switch select {
+.wy-side-nav-search>div.switch-menus>div.version-switch select {
   color: #fcfcfc;
 }
 .version-switch::after {
