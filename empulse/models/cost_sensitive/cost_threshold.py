@@ -98,7 +98,7 @@ class CSThresholdClassifier(BaseThresholdClassifier):
 
     def _get_calibrator(self, estimator):
         if self.calibrator == 'sigmoid':
-            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=self.random_state)
+            cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(
                 estimator,
                 method='sigmoid',
@@ -106,7 +106,7 @@ class CSThresholdClassifier(BaseThresholdClassifier):
                 ensemble=False
             )
         elif self.calibrator == 'isotonic':
-            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=self.random_state)
+            cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(
                 estimator,
                 method='isotonic',
