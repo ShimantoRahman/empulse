@@ -606,7 +606,7 @@ def auepc_score(
     stop_index = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)
 
     # Calculate the AUEPC
-    score = np.trapz(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))
+    score = np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))
     if normalize:
         score /= (stop_index - 1) / len(profits)
     return score
