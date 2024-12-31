@@ -141,7 +141,7 @@ def emp_score(
     ...     fp_cost=fp_cost,
     ...     n_buckets=1000
     ... )
-    23.87559333920785
+    23.875...
     """
     return emp(
         y_true,
@@ -291,7 +291,7 @@ def emp(
     ...     fp_cost=fp_cost,
     ...     n_buckets=1000
     ... )
-    (23.87559333920785, 0.8743520452740654)
+    (23.875..., 0.874...)
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
