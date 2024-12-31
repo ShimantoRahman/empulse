@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empulse"
-version = "0.4.5"
+version = "0.4.6"
 description = "Value-driven and cost-sensitive tools for scikit-learn"
 readme = "README.md"
 authors = [
@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [project.urls]
-documentation = "https://shimantorahman.github.io/empulse/"
+documentation = "https://empulse.readthedocs.io/en/latest/"
 repository = "https://github.com/ShimantoRahman/empulse"
 issue-tracker = "https://github.com/ShimantoRahman/empulse/issues"
 
@@ -58,6 +58,7 @@ docs = [
     "sphinx>=7.2.6",
     "sphinx_rtd_theme>=2.0.0",
     "sphinx-copybutton>=0.5.2",
+    "myst-parser>=4.0.0",
     "numpydoc>=1.6.0",
 ]
 

@@ -37,7 +37,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     estimator_ : Estimator
         The fitted cost-sensitive classifier.
     outlier_estimator_ : Estimator
-        The fitted outlier estimator. If multiple costs are passed, this is a MultiOutputRegressor.
+        The fitted outlier estimator. If multiple costs are passed, this is a
+        :class:`sklearn:sklearn.linear_model.MultiOutputRegressor` wrapping `outlier_estimator`.
     costs_ : dict
         The imputed costs for the cost-sensitive classifier.
     n_treatments_ : int
