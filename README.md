@@ -10,6 +10,8 @@
 
 <a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/image/empulse_logo.png" width="25%" height="25%" align="right" /></a>
 
+<!-- start-of-readme-intro -->
+
 Empulse is a package aimed to enable value-driven and cost-sensitive analysis in Python.
 The package implements popular value-driven and cost-sensitive metrics and algorithms 
 in accordance to sci-kit learn conventions.
@@ -23,8 +25,12 @@ Install `empulse` via pip with
 pip install empulse
 ```
 
+<!-- end-of-readme-install -->
+
 ## Documentation
 You can find the documentation [here](https://empulse.readthedocs.io/en/latest/).
+
+<!-- end-of-readme-intro -->
 
 ## Features
 
@@ -284,3 +290,5 @@ from sklearn.model_selection import FixedThresholdClassifier
 model = FixedThresholdClassifier(estimator=model, threshold=decision_threshold)
 model.predict(X)
 ```
+
+<!-- end-of-readme-usage -->
