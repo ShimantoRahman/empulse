@@ -1,6 +1,6 @@
-==========================
-What can you with Empulse?
-==========================
+=============================
+What can you do with Empulse?
+=============================
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_
