@@ -239,7 +239,7 @@ pipeline.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
 Empulse provides the 
 [`CSThresholdClassifier`](https://empulse.readthedocs.io/en/latest/reference/models/CSThresholdClassifier.html)
-which allows to find the optimal decision threshold for a given cost matrix to minimize the expected cost loss.
+which allows you to find the optimal decision threshold for a given cost matrix to minimize the expected cost loss.
 
 The meta-estimator changes the `predict` method of the base estimator to predict the class with the lowest expected cost.
 
