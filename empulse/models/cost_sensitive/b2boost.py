@@ -86,7 +86,7 @@ class B2BoostClassifier(BaseBoostClassifier):
 
         set_config(enable_metadata_routing=True)
 
-        X, y = make_classification()
+        X, y = make_classification(n_samples=50)
         clv = np.random.rand(y.size) * 100
 
         pipeline = Pipeline([
@@ -118,13 +118,12 @@ class B2BoostClassifier(BaseBoostClassifier):
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('model', B2BoostClassifier(
-                XGBClassifier(n_jobs=2),
+                XGBClassifier(n_jobs=2, n_estimators=10),
                 contact_cost=contact_cost
             ).set_fit_request(clv=True))
         ])
         param_grid = {
             'model__estimator__learning_rate': np.logspace(-5, 0, 5),
-            'model__estimator__n_estimators': [10, 50, 200]
         }
         scorer = make_scorer(
             empb_score,

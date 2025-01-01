@@ -92,19 +92,18 @@ class CSBoostClassifier(BaseBoostClassifier):
 
         set_config(enable_metadata_routing=True)
 
-        X, y = make_classification()
+        X, y = make_classification(n_samples=50)
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('model', CSBoostClassifier(
-                XGBClassifier(n_jobs=2)
+                XGBClassifier(n_jobs=2, n_estimators=10)
             ).set_fit_request(fn_cost=True, fp_cost=True))
         ])
         param_grid = {
             'model__estimator__learning_rate': np.logspace(-5, 0, 5),
-            'model__estimator__n_estimators': [10, 50, 200]
         }
         scorer = make_scorer(
             expected_cost_loss,

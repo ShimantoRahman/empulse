@@ -132,7 +132,7 @@ class CSLogitClassifier(BaseLogitClassifier):
 
         set_config(enable_metadata_routing=True)
 
-        X, y = make_classification()
+        X, y = make_classification(n_samples=50)
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
@@ -140,7 +140,7 @@ class CSLogitClassifier(BaseLogitClassifier):
             ('scaler', StandardScaler()),
             ('model', CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True))
         ])
-        param_grid = {'model__C': np.logspace(-5, 2, 10)}
+        param_grid = {'model__C': np.logspace(-5, 2, 5)}
         scorer = make_scorer(
             expected_cost_loss,
             response_method='predict_proba',
