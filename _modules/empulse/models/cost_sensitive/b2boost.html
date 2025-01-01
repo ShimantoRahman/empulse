@@ -1,0 +1,346 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.models.cost_sensitive.b2boost &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html">
+            
+              <img src="../../../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.models.cost_sensitive.b2boost</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.models.cost_sensitive.b2boost</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="kn">import</span> <span class="n">clone</span>
+<span class="kn">from</span> <span class="nn">xgboost</span> <span class="kn">import</span> <span class="n">XGBClassifier</span>
+
+<span class="kn">from</span> <span class="nn">.._base</span> <span class="kn">import</span> <span class="n">BaseBoostClassifier</span>
+<span class="kn">from</span> <span class="nn">...metrics</span> <span class="kn">import</span> <span class="n">make_objective_churn</span>
+
+
+<div class="viewcode-block" id="B2BoostClassifier">
+<a class="viewcode-back" href="../../../../reference/models/B2BoostClassifier.html#empulse.models.B2BoostClassifier">[docs]</a>
+<span class="k">class</span> <span class="nc">B2BoostClassifier</span><span class="p">(</span><span class="n">BaseBoostClassifier</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss for customer churn.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator : `xgboost:xgboost.XGBClassifier`, optional</span>
+<span class="sd">        XGBoost classifier to be fit with desired hyperparameters.</span>
+<span class="sd">        If not provided, a XGBoost classifier with default hyperparameters is used.</span>
+
+<span class="sd">    accept_rate : float, default=0.3</span>
+<span class="sd">        Probability of a customer responding to the retention offer (0 &lt; `accept_rate` &lt; 1).</span>
+<span class="sd">        Is overwritten if another `accept_rate` is passed to the ``fit`` method.</span>
+
+<span class="sd">    clv : float or 1D array-like, shape=(n_samples), default=200</span>
+<span class="sd">        If ``float``: constant customer lifetime value per retained customer (``clv &gt; incentive_cost``).</span>
+<span class="sd">        If ``array``: individualized customer lifetime value of each customer when retained</span>
+<span class="sd">        (``mean(clv) &gt; incentive_cost``).</span>
+<span class="sd">        Is overwritten if another `clv` is passed to the ``fit`` method.</span>
+
+<span class="sd">    incentive_fraction : float, default=0.05</span>
+<span class="sd">        Cost of incentive offered to a customer, as a fraction of customer lifetime value</span>
+<span class="sd">        (``0 &lt; incentive_fraction &lt; 1``).</span>
+<span class="sd">        Is overwritten if another `incentive_fraction` is passed to the ``fit`` method.</span>
+
+<span class="sd">    contact_cost : float, default=1</span>
+<span class="sd">        Constant cost of contact (``contact_cost &gt; 0``).</span>
+<span class="sd">        Is overwritten if another `contact_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    classes_ : numpy.ndarray, shape=(n_classes,)</span>
+<span class="sd">        Unique classes in the target.</span>
+
+<span class="sd">    estimator_ : `xgboost:xgboost.XGBClassifier`</span>
+<span class="sd">        Fitted XGBoost classifier.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The instance-specific cost function for customer churn is defined as [1]_:</span>
+
+<span class="sd">    .. math:: C(s_i) = y_i[s_i(f-\\gamma (1-\\delta )CLV_i] + (1-y_i)[s_i(\\delta CLV_i + f)]</span>
+
+<span class="sd">    The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.</span>
+<span class="sd">    However, this implementation assumes the standard notation (&#39;churn&#39;: 1, &#39;no churn&#39;: 0).</span>
+
+<span class="sd">    .. seealso::</span>
+<span class="sd">        :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function</span>
+<span class="sd">        for customer churn.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import B2BoostClassifier</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        clv = np.random.rand(y.size) * 100</span>
+
+<span class="sd">        model = B2BoostClassifier()</span>
+<span class="sd">        model.fit(X, y, clv=clv, incentive_fraction=0.1)</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import B2BoostClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import cross_val_score</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification(n_samples=50)</span>
+<span class="sd">        clv = np.random.rand(y.size) * 100</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, B2BoostClassifier(contact_cost=10).set_fit_request(clv=True))</span>
+<span class="sd">        ])</span>
+
+<span class="sd">        cross_val_score(pipeline, X, y, params={&#39;clv&#39;: clv})</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import empb_score</span>
+<span class="sd">        from empulse.models import B2BoostClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.metrics import make_scorer</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+<span class="sd">        from xgboost import XGBClassifier</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        clv = np.random.rand(y.size) * 100</span>
+<span class="sd">        contact_cost = 10</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, B2BoostClassifier(</span>
+<span class="sd">                XGBClassifier(n_jobs=2, n_estimators=10),</span>
+<span class="sd">                contact_cost=contact_cost</span>
+<span class="sd">            ).set_fit_request(clv=True))</span>
+<span class="sd">        ])</span>
+<span class="sd">        param_grid = {</span>
+<span class="sd">            &#39;model__estimator__learning_rate&#39;: np.logspace(-5, 0, 5),</span>
+<span class="sd">        }</span>
+<span class="sd">        scorer = make_scorer(</span>
+<span class="sd">            empb_score,</span>
+<span class="sd">            response_method=&#39;predict_proba&#39;,</span>
+<span class="sd">            contact_cost=contact_cost</span>
+<span class="sd">        )</span>
+<span class="sd">        scorer = scorer.set_score_request(clv=True)</span>
+
+<span class="sd">        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)</span>
+<span class="sd">        grid_search.fit(X, y, clv=clv)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Janssens, B., Bogaert, M., Bagué, A., &amp; Van den Poel, D. (2022).</span>
+<span class="sd">        B2Boost: Instance-dependent profit-driven modelling of B2B churn.</span>
+<span class="sd">        Annals of Operations Research, 1-27.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">estimator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">XGBClassifier</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">accept_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+            <span class="n">clv</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">ArrayLike</span><span class="p">]</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
+            <span class="n">incentive_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+            <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">estimator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clv</span> <span class="o">=</span> <span class="n">clv</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">incentive_fraction</span> <span class="o">=</span> <span class="n">incentive_fraction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contact_cost</span> <span class="o">=</span> <span class="n">contact_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">accept_rate</span> <span class="o">=</span> <span class="n">accept_rate</span>
+
+<div class="viewcode-block" id="B2BoostClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/models/B2BoostClassifier.html#empulse.models.B2BoostClassifier.fit">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">incentive_fraction</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : 2D numpy.ndarray, shape=(n_samples, n_features)</span>
+<span class="sd">        y : 1D numpy.ndarray, shape=(n_samples,)</span>
+
+<span class="sd">        accept_rate : float, default=0.3</span>
+<span class="sd">            Probability of a customer responding to the retention offer (``0 &lt; accept_rate &lt; 1``).</span>
+
+<span class="sd">        clv : float or 1D array-like, shape=(n_samples), default=200</span>
+<span class="sd">            If ``float``: constant customer lifetime value per retained customer (``clv &gt; incentive_cost``).</span>
+<span class="sd">            If ``array``: individualized customer lifetime value of each customer when retained</span>
+<span class="sd">            (``mean(clv) &gt; incentive_cost``).</span>
+
+<span class="sd">        incentive_fraction : float, default=10</span>
+<span class="sd">            Cost of incentive offered to a customer, as a fraction of customer lifetime value</span>
+<span class="sd">            (``0 &lt; incentive_fraction &lt; 1``).</span>
+
+<span class="sd">        contact_cost : float, default=1</span>
+<span class="sd">            Constant cost of contact (``contact_cost &gt; 0``).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : B2BoostClassifier</span>
+<span class="sd">            Fitted B2Boost model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">,</span>
+            <span class="n">accept_rate</span><span class="o">=</span><span class="n">accept_rate</span><span class="p">,</span>
+            <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">,</span>
+            <span class="n">incentive_fraction</span><span class="o">=</span><span class="n">incentive_fraction</span><span class="p">,</span>
+            <span class="n">contact_cost</span><span class="o">=</span><span class="n">contact_cost</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+            <span class="n">accept_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">clv</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">ArrayLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">incentive_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;B2BoostClassifier&#39;</span><span class="p">:</span>
+        <span class="n">objective</span> <span class="o">=</span> <span class="n">make_objective_churn</span><span class="p">(</span>
+            <span class="n">clv</span><span class="o">=</span><span class="n">clv</span> <span class="k">if</span> <span class="n">clv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">clv</span><span class="p">,</span>
+            <span class="n">incentive_fraction</span><span class="o">=</span><span class="n">incentive_fraction</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">incentive_fraction</span><span class="p">,</span>
+            <span class="n">contact_cost</span><span class="o">=</span><span class="n">contact_cost</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">contact_cost</span><span class="p">,</span>
+            <span class="n">accept_rate</span><span class="o">=</span><span class="n">accept_rate</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">accept_rate</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">XGBClassifier</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span> <span class="n">XGBClassifier</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;estimator must be an instance of XGBClassifier&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

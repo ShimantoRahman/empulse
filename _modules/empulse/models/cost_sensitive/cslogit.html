@@ -1,0 +1,642 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.models.cost_sensitive.cslogit &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html">
+            
+              <img src="../../../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.models.cost_sensitive.cslogit</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.models.cost_sensitive.cslogit</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numbers</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">OptimizeResult</span><span class="p">,</span> <span class="n">minimize</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">expit</span>
+<span class="kn">from</span> <span class="nn">sklearn.exceptions</span> <span class="kn">import</span> <span class="n">ConvergenceWarning</span>
+
+<span class="kn">from</span> <span class="nn">.._base</span> <span class="kn">import</span> <span class="n">BaseLogitClassifier</span>
+<span class="kn">from</span> <span class="nn">...metrics</span> <span class="kn">import</span> <span class="n">make_objective_aec</span>
+
+<span class="n">Loss</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;average expected cost&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="CSLogitClassifier">
+<a class="viewcode-back" href="../../../../reference/models/CSLogitClassifier.html#empulse.models.CSLogitClassifier">[docs]</a>
+<span class="k">class</span> <span class="nc">CSLogitClassifier</span><span class="p">(</span><span class="n">BaseLogitClassifier</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Logistic classifier to optimize instance-specific cost loss.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.</span>
+
+<span class="sd">        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive XGBoost classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    C : float, default=1.0</span>
+<span class="sd">        Inverse of regularization strength; must be a positive ``float``.</span>
+<span class="sd">        Like in support vector machines, smaller values specify stronger regularization.</span>
+
+<span class="sd">    fit_intercept : bool, default=True</span>
+<span class="sd">        Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.</span>
+
+<span class="sd">    soft_threshold : bool, default=True</span>
+<span class="sd">        If ``True``, apply soft-thresholding to the regression coefficients.</span>
+
+<span class="sd">    l1_ratio : float, default=1.0</span>
+<span class="sd">        The ElasticNet mixing parameter, with ``0 &lt;= l1_ratio &lt;= 1``.</span>
+<span class="sd">            - For ``l1_ratio = 0`` the penalty is a L2 penalty.</span>
+<span class="sd">            - For ``l1_ratio = 1`` it is a L1 penalty.</span>
+<span class="sd">            - For ``0 &lt; l1_ratio &lt; 1``, the penalty is a combination of L1 and L2.</span>
+
+<span class="sd">        loss : {&#39;average expected cost&#39;} or Callable, default=&#39;average expected cost&#39;</span>
+<span class="sd">        Loss function which should be minimized.</span>
+<span class="sd">        - If ``str``, then it should be one of the following:</span>
+<span class="sd">            - &#39;average expected cost&#39; : Average Expected Cost loss function,</span>
+<span class="sd">            see :func:`~empulse.metrics.expected_cost_loss`.</span>
+<span class="sd">        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.</span>
+<span class="sd">        By default, loss function is minimized, customize behaviour in `optimize_fn`.</span>
+
+<span class="sd">    optimize_fn : Callable, optional</span>
+<span class="sd">        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.</span>
+<span class="sd">        See :ref:`proflogit` for more information.</span>
+
+<span class="sd">    optimizer_params : dict[str, Any], optional</span>
+<span class="sd">        Additional keyword arguments passed to `optimize_fn`.</span>
+
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    classes_ : numpy.ndarray</span>
+<span class="sd">        Unique classes in the target found during fit.</span>
+
+<span class="sd">    result_ : :class:`scipy:scipy.optimize.OptimizeResult`</span>
+<span class="sd">        Optimization result.</span>
+
+<span class="sd">    coef_ : numpy.ndarray, shape=(n_features,)</span>
+<span class="sd">        Coefficients of the logit model.</span>
+
+<span class="sd">    intercept_ : float</span>
+<span class="sd">        Intercept of the logit model.</span>
+<span class="sd">        Only available when ``fit_intercept=True``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)  # instance-dependent cost</span>
+<span class="sd">        fp_cost = 5  # constant cost</span>
+
+<span class="sd">        model = CSLogitClassifier(C=0.1)</span>
+<span class="sd">        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+<span class="sd">        y_proba = model.predict_proba(X)</span>
+
+<span class="sd">    Example with passing instance-dependent costs through cross-validation:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import cross_val_score</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True))</span>
+<span class="sd">        ])</span>
+
+<span class="sd">        cross_val_score(pipeline, X, y, params={&#39;fn_cost&#39;: fn_cost, &#39;fp_cost&#39;: fp_cost})</span>
+
+<span class="sd">    Example with passing instance-dependent costs through a grid search:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import expected_cost_loss</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.metrics import make_scorer</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification(n_samples=50)</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True))</span>
+<span class="sd">        ])</span>
+<span class="sd">        param_grid = {&#39;model__C&#39;: np.logspace(-5, 2, 5)}</span>
+<span class="sd">        scorer = make_scorer(</span>
+<span class="sd">            expected_cost_loss,</span>
+<span class="sd">            response_method=&#39;predict_proba&#39;,</span>
+<span class="sd">            greater_is_better=False,</span>
+<span class="sd">            normalize=True</span>
+<span class="sd">        )</span>
+<span class="sd">        scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)</span>
+
+<span class="sd">        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)</span>
+<span class="sd">        grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">C</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">soft_threshold</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">loss</span><span class="p">:</span> <span class="n">Loss</span> <span class="o">|</span> <span class="n">Callable</span> <span class="o">=</span> <span class="s1">&#39;average expected cost&#39;</span><span class="p">,</span>
+            <span class="n">optimize_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">optimizer_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="n">soft_threshold</span><span class="o">=</span><span class="n">soft_threshold</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="o">=</span><span class="n">l1_ratio</span><span class="p">,</span>
+            <span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span>
+            <span class="n">optimize_fn</span><span class="o">=</span><span class="n">optimize_fn</span><span class="p">,</span>
+            <span class="n">optimizer_params</span><span class="o">=</span><span class="n">optimizer_params</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="CSLogitClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/models/CSLogitClassifier.html#empulse.models.CSLogitClassifier.fit">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">loss_params</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CSLogitClassifier&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape (n_samples, n_features)</span>
+
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+
+<span class="sd">        tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">        fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">        tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">        fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : CSLogitClassifier</span>
+<span class="sd">            Fitted model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="o">**</span><span class="n">loss_params</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">loss_params</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CSLogitClassifier&#39;</span><span class="p">:</span>
+        <span class="n">optimizer_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_params</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="c1"># Assume that the loss function takes the following parameters:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tp_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">tp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tn_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">tn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fn_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;tp_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tp_cost</span>
+        <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;tn_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tn_cost</span>
+        <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn_cost</span>
+        <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fp_cost</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">==</span> <span class="s1">&#39;average expected cost&#39;</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">make_objective_aec</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s1">&#39;cslogit&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">loss_params</span><span class="p">)</span>
+            <span class="n">objective</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span>
+                <span class="n">_objective_jacobian</span><span class="p">,</span>
+                <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+                <span class="n">loss_fn</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span>
+                <span class="n">C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+                <span class="n">l1_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span><span class="p">,</span>
+                <span class="n">soft_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">soft_threshold</span><span class="p">,</span>
+                <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimize_fn</span> <span class="o">=</span> <span class="n">_optimize_jacobian</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">optimize_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">result_</span> <span class="o">=</span> <span class="n">optimize_fn</span><span class="p">(</span>
+                <span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">,</span>
+                <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">optimizer_params</span>
+            <span class="p">)</span>
+        <span class="c1"># elif self.loss == &#39;cross_entropy&#39;:</span>
+        <span class="c1">#     loss = LinearModelLoss(</span>
+        <span class="c1">#         base_loss=HalfBinomialLoss(), fit_intercept=self.fit_intercept</span>
+        <span class="c1">#     )</span>
+        <span class="c1">#     func = loss.loss_gradient</span>
+        <span class="c1">#     l2_reg_strength = 1.0 / self.C</span>
+        <span class="c1">#     w0 = np.zeros(X.shape[1], order=&quot;F&quot;, dtype=X.dtype)</span>
+        <span class="c1">#     sample_weight = np.ones(X.shape[0], dtype=X.dtype)</span>
+        <span class="c1">#     self.result_ = minimize(</span>
+        <span class="c1">#         func,</span>
+        <span class="c1">#         w0,</span>
+        <span class="c1">#         method=&quot;L-BFGS-B&quot;,</span>
+        <span class="c1">#         jac=True,</span>
+        <span class="c1">#         args=(X, y, sample_weight, l2_reg_strength, 1),</span>
+        <span class="c1">#         options={</span>
+        <span class="c1">#             &quot;maxiter&quot;: 10_000,</span>
+        <span class="c1">#             &quot;maxls&quot;: 50,  # default is 20</span>
+        <span class="c1">#             &quot;gtol&quot;: 1e-4,</span>
+        <span class="c1">#             &quot;ftol&quot;: 64 * np.finfo(float).eps,</span>
+        <span class="c1">#         },</span>
+        <span class="c1">#     )</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Callable</span><span class="p">):</span>
+
+            <span class="n">objective</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span>
+                <span class="n">_objective_callable</span><span class="p">,</span>
+                <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+                <span class="n">loss_fn</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="o">**</span><span class="n">loss_params</span><span class="p">),</span>
+                <span class="n">C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+                <span class="n">l1_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span><span class="p">,</span>
+                <span class="n">soft_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">soft_threshold</span><span class="p">,</span>
+                <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimize_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimize</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">optimize_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">result_</span> <span class="o">=</span> <span class="n">optimize_fn</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="o">**</span><span class="n">optimizer_params</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid loss function: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_optimize</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OptimizeResult</span><span class="p">:</span>
+        <span class="n">initial_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+            <span class="n">objective</span><span class="p">,</span>
+            <span class="n">initial_weights</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;L-BFGS-B&quot;</span><span class="p">,</span>
+            <span class="n">options</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="n">max_iter</span><span class="p">,</span>
+                <span class="s2">&quot;maxls&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+                <span class="s2">&quot;gtol&quot;</span><span class="p">:</span> <span class="n">tolerance</span><span class="p">,</span>
+                <span class="s2">&quot;ftol&quot;</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">_check_optimize_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_optimize_jacobian</span><span class="p">(</span>
+        <span class="n">objective</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">,</span>
+        <span class="n">max_iter</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+        <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OptimizeResult</span><span class="p">:</span>
+    <span class="n">initial_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="n">objective</span><span class="p">,</span>
+        <span class="n">initial_weights</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;L-BFGS-B&quot;</span><span class="p">,</span>
+        <span class="n">jac</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;maxiter&quot;</span><span class="p">:</span> <span class="n">max_iter</span><span class="p">,</span>
+            <span class="s2">&quot;maxls&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+            <span class="s2">&quot;gtol&quot;</span><span class="p">:</span> <span class="n">tolerance</span><span class="p">,</span>
+            <span class="s2">&quot;ftol&quot;</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_check_optimize_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">_objective_jacobian</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">,</span> <span class="n">soft_threshold</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;compute the objective function and its gradient using elastic net regularization.&quot;&quot;&quot;</span>
+
+    <span class="c1"># b is the vector holding the regression coefficients (no intercept)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">copy</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="n">fit_intercept</span> <span class="k">else</span> <span class="n">weights</span>
+
+    <span class="k">if</span> <span class="n">soft_threshold</span><span class="p">:</span>
+        <span class="n">bool_nonzero</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="n">C</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">bool_nonzero</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">])</span> <span class="o">-</span> <span class="n">C</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">~</span><span class="n">bool_nonzero</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">[</span><span class="o">~</span><span class="n">bool_nonzero</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">regularization_term</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">l1_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">l1_ratio</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">penalty</span> <span class="o">=</span> <span class="n">regularization_term</span> <span class="o">/</span> <span class="n">C</span>
+    <span class="n">gradient_penalty</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">l1_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="n">b</span> <span class="o">+</span> <span class="n">l1_ratio</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fit_intercept</span><span class="p">:</span>
+        <span class="n">gradient_penalty</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span> <span class="n">gradient_penalty</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">+</span> <span class="n">gradient_penalty</span>
+
+
+<span class="k">def</span> <span class="nf">_objective_callable</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">,</span> <span class="n">soft_threshold</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;objective function (minimization problem).&quot;&quot;&quot;</span>
+
+    <span class="c1"># b is the vector holding the regression coefficients (no intercept)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">copy</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="n">fit_intercept</span> <span class="k">else</span> <span class="n">weights</span>
+
+    <span class="k">if</span> <span class="n">soft_threshold</span><span class="p">:</span>
+        <span class="n">bool_nonzero</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="n">C</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">bool_nonzero</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">bool_nonzero</span><span class="p">])</span> <span class="o">-</span> <span class="n">C</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">~</span><span class="n">bool_nonzero</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">[</span><span class="o">~</span><span class="n">bool_nonzero</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">logits</span><span class="p">)</span>
+    <span class="n">loss_output</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loss_output</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loss_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">=</span> <span class="n">loss_output</span>
+            <span class="k">return</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">_compute_penalty</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">),</span> <span class="n">gradient</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">loss_output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span><span class="p">,</span> <span class="n">hessian</span> <span class="o">=</span> <span class="n">loss_output</span>
+            <span class="k">return</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">_compute_penalty</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">),</span> <span class="n">gradient</span><span class="p">,</span> <span class="n">hessian</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid loss function output length: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">loss_output</span><span class="p">)</span><span class="si">}</span><span class="s2">, expected 1, 2 or 3. &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;(loss, gradient, hessian)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_output</span>
+        <span class="k">return</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">_compute_penalty</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_compute_penalty</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">):</span>
+    <span class="n">regularization_term</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">l1_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">l1_ratio</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">penalty</span> <span class="o">=</span> <span class="n">regularization_term</span> <span class="o">/</span> <span class="n">C</span>
+    <span class="k">return</span> <span class="n">penalty</span>
+
+
+<span class="k">def</span> <span class="nf">_check_optimize_result</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check the OptimizeResult for successful convergence</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    result : OptimizeResult</span>
+<span class="sd">       Result of the scipy.optimize.minimize function.</span>
+
+<span class="sd">    max_iter : int, default=None</span>
+<span class="sd">       Expected maximum number of iterations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># handle both scipy and scikit-learn solver names</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># The message is already decoded in scipy&gt;=1.6.0</span>
+            <span class="n">result_message</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;latin1&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">result_message</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span>
+        <span class="n">warning_msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;L-BFGS failed to converge (status=</span><span class="si">{}</span><span class="s2">):</span><span class="se">\n</span><span class="si">{}</span><span class="s2">.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;Increase the number of iterations (max_iter) &quot;</span>
+            <span class="s2">&quot;or scale the data as shown in:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;    https://scikit-learn.org/stable/modules/&quot;</span>
+            <span class="s2">&quot;preprocessing.html&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">result_message</span><span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">warning_msg</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># def transform_cost_matrix(x: NDArray, y: NDArray, cost_matrix: NDArray) -&gt; NDArray[np.float64]:</span>
+<span class="c1">#     # Transform cost matrix</span>
+<span class="c1">#     # create df: a merge of x, y and amount</span>
+<span class="c1">#     amounts = cost_matrix[:, 0, 1]</span>
+<span class="c1">#     df = pd.DataFrame(data=x)</span>
+<span class="c1">#     df[&#39;y&#39;] = y</span>
+<span class="c1">#     df[&#39;Amount&#39;] = amounts</span>
+<span class="c1">#</span>
+<span class="c1">#     # step 1: fit model on df, return df_enhanced</span>
+<span class="c1">#     df_enhanced = enhance_df(df)</span>
+<span class="c1">#     # step 2: replace conditionally outlying amounts with estimated amounts</span>
+<span class="c1">#     df = impute_amounts(df_enhanced)</span>
+<span class="c1">#     # step 3: return cost_matrix_transformed</span>
+<span class="c1">#     cost_matrix_transformed = get_cost_matrix(df[&#39;Amount&#39;])</span>
+<span class="c1">#     return cost_matrix_transformed</span>
+<span class="c1"># def get_cost_matrix(cost):</span>
+<span class="c1">#     cost_matrix = np.zeros((len(cost), 2, 2))  # cost_matrix [[TN, FN], [FP, TP]]</span>
+<span class="c1">#     cost_matrix[:, 0, 0] = 0</span>
+<span class="c1">#     cost_matrix[:, 0, 1] = cost</span>
+<span class="c1">#     cost_matrix[:, 1, 0] = cost</span>
+<span class="c1">#     cost_matrix[:, 1, 1] = 0</span>
+<span class="c1">#</span>
+<span class="c1">#     return cost_matrix</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># def enhance_df(df):</span>
+<span class="c1">#     model_0 = HuberRegressor(max_iter=1000)</span>
+<span class="c1">#     model_1 = HuberRegressor(max_iter=1000)</span>
+<span class="c1">#</span>
+<span class="c1">#     df_0 = df[df.y == 0]</span>
+<span class="c1">#     model_0.fit(df_0.loc[:, df_0.columns != &#39;Amount&#39;], df_0[&#39;Amount&#39;])</span>
+<span class="c1">#     Ahat_0_array = model_0.predict(df_0.loc[:, df_0.columns != &#39;Amount&#39;])</span>
+<span class="c1">#     Ahat_0_array[Ahat_0_array &lt; 0] = 0</span>
+<span class="c1">#</span>
+<span class="c1">#     df_1 = df[df.y == 1]</span>
+<span class="c1">#     model_1.fit(df_1.loc[:, df_1.columns != &#39;Amount&#39;], df_1[&#39;Amount&#39;])</span>
+<span class="c1">#     Ahat_1_array = model_1.predict(df_1.loc[:, df_1.columns != &#39;Amount&#39;])</span>
+<span class="c1">#     Ahat_1_array[Ahat_1_array &lt; 0] = 0</span>
+<span class="c1">#</span>
+<span class="c1">#     df_0[&#39;Amount_pred&#39;] = Ahat_0_array</span>
+<span class="c1">#     df_1[&#39;Amount_pred&#39;] = Ahat_1_array</span>
+<span class="c1">#     prediction = pd.concat([df_0, df_1])</span>
+<span class="c1">#     df[&#39;Amount_pred&#39;] = prediction[&#39;Amount_pred&#39;]</span>
+<span class="c1">#</span>
+<span class="c1">#     return df</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># # Function to detect and impute conditionally outlying amount</span>
+<span class="c1"># def impute_amounts(df):</span>
+<span class="c1">#     std = st.sem(df[&#39;Amount&#39;])</span>
+<span class="c1">#     df[&#39;resid&#39;] = df[&#39;Amount&#39;] - df[&#39;Amount_pred&#39;]</span>
+<span class="c1">#     df[&#39;resid_std&#39;] = df[&#39;resid&#39;] / std</span>
+<span class="c1">#     df[&#39;resid_std_abs&#39;] = abs(df[&#39;resid_std&#39;])</span>
+<span class="c1">#     df.loc[df.resid_std_abs &gt; 3, &#39;Amount&#39;] = df[&#39;Amount_pred&#39;]</span>
+<span class="c1">#     print(&quot;&quot;)</span>
+<span class="c1">#     df = df.drop(columns=[&#39;Amount_pred&#39;, &#39;resid&#39;, &#39;resid_std&#39;, &#39;resid_std_abs&#39;])</span>
+<span class="c1">#     return df</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

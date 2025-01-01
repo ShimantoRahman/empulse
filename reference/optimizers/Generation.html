@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.optimizers.Generation &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html">
+            
+              <img src="../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">empulse.optimizers.Generation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/reference/optimizers/Generation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="empulse-optimizers-generation">
+<h1>empulse.optimizers.Generation<a class="headerlink" href="#empulse-optimizers-generation" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="empulse.optimizers.Generation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">empulse.optimizers.</span></span><span class="sig-name descname"><span class="pre">Generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">population_size=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crossover_rate=0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mutation_rate=0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elitism=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logging_fn=&lt;built-in</span> <span class="pre">function</span> <span class="pre">print&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs=1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/optimizers/generation.html#Generation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.optimizers.Generation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A single generation of a Real-coded Genetic Algorithm (RGA)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>population_size</strong><span class="classifier">int or None, default=None</span></dt><dd><p>Number of individuals in the population.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, population size is set to <code class="docutils literal notranslate"><span class="pre">10</span> <span class="pre">*</span> <span class="pre">n_dim</span></code>.</p>
+</dd>
+<dt><strong>crossover_rate</strong><span class="classifier">float, default=0.8</span></dt><dd><p>Probability of crossover. Must be in [0, 1].</p>
+</dd>
+<dt><strong>mutation_rate</strong><span class="classifier">float, default=0.1</span></dt><dd><p>Probability of mutation. Must be in [0, 1].</p>
+</dd>
+<dt><strong>elitism</strong><span class="classifier">float, default=0.05</span></dt><dd><p>Fraction of the population that is considered elite.
+Must be in [0, 1].</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, default=False</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, print status messages.</p>
+</dd>
+<dt><strong>logging_fn</strong><span class="classifier">callable, default=print</span></dt><dd><p>Function to use for logging.</p>
+</dd>
+<dt><strong>random_state</strong><span class="classifier">int or None, default=None</span></dt><dd><p>Random seed.</p>
+</dd>
+<dt><strong>n_jobs</strong><span class="classifier">int or None, default=1</span></dt><dd><p>Number of jobs to run in parallel.
+If <code class="docutils literal notranslate"><span class="pre">-1</span></code>, use all available processors.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, use 1 processor.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Attributes<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>name</strong><span class="classifier">str</span></dt><dd><p>Name of the optimizer.</p>
+</dd>
+<dt><strong>population</strong><span class="classifier">ndarray, shape (population_size, n_dim)</span></dt><dd><p>Current population.</p>
+</dd>
+<dt><strong>population_size</strong><span class="classifier">int</span></dt><dd><p>Number of individuals in the population.</p>
+</dd>
+<dt><strong>crossover_rate</strong><span class="classifier">float</span></dt><dd><p>Probability of crossover.</p>
+</dd>
+<dt><strong>mutation_rate</strong><span class="classifier">float</span></dt><dd><p>Probability of mutation.</p>
+</dd>
+<dt><strong>elitism</strong><span class="classifier">float</span></dt><dd><p>Fraction of the population that is considered elite.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, print status messages.</p>
+</dd>
+<dt><strong>logging_fn</strong><span class="classifier">callable</span></dt><dd><p>Function to use for logging.</p>
+</dd>
+<dt><strong>rng</strong><span class="classifier">RandomState</span></dt><dd><p>Random state object.</p>
+</dd>
+<dt><strong>n_jobs</strong><span class="classifier">int</span></dt><dd><p>Number of jobs to run in parallel.
+If <code class="docutils literal notranslate"><span class="pre">-1</span></code>, use all available processors.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, use 1 processor.</p>
+</dd>
+<dt><strong>fx_best</strong><span class="classifier">list</span></dt><dd><p>List of best fitness values.</p>
+</dd>
+<dt><strong>fitness</strong><span class="classifier">ndarray, shape (population_size,)</span></dt><dd><p>Fitness values of the current population.</p>
+</dd>
+<dt><strong>result</strong><span class="classifier">OptimizeResult</span></dt><dd><p>Result of the optimization.</p>
+</dd>
+<dt><strong>lower_bounds</strong><span class="classifier">ndarray, shape (n_dim,)</span></dt><dd><p>Lower bounds of the search space.</p>
+</dd>
+<dt><strong>upper_bounds</strong><span class="classifier">ndarray, shape (n_dim,)</span></dt><dd><p>Upper bounds of the search space.</p>
+</dd>
+<dt><strong>delta_bounds</strong><span class="classifier">ndarray, shape (n_dim,)</span></dt><dd><p>Difference between upper and lower bounds.</p>
+</dd>
+<dt><strong>n_dim</strong><span class="classifier">int</span></dt><dd><p>Number of dimensions.</p>
+</dd>
+<dt><strong>_n_mating_pairs</strong><span class="classifier">int</span></dt><dd><p>Number of mating pairs.</p>
+</dd>
+<dt><strong>elite_pool</strong><span class="classifier">list</span></dt><dd><p>List of elite individuals.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#empulse.optimizers.Generation.optimize" title="empulse.optimizers.Generation.optimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimize</span></code></a>(objective, bounds)</p></td>
+<td><p>Optimize the objective function.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.optimizers.Generation.optimize">
+<span class="sig-name descname"><span class="pre">optimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objective</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/optimizers/generation.html#Generation.optimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.optimizers.Generation.optimize" title="Link to this definition"></a></dt>
+<dd><p>Optimize the objective function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>objective</strong><span class="classifier">Callable</span></dt><dd><p>Objective function to optimize.
+Should be of signature <code class="docutils literal notranslate"><span class="pre">objective(weights)</span> <span class="pre">-&gt;</span> <span class="pre">float</span></code>.</p>
+</dd>
+<dt><strong>bounds</strong><span class="classifier">list[tuple[float, float]]</span></dt><dd><p>List of tuples of lower and upper bounds for each weight.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Yields<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>self</strong><span class="classifier">Generation</span></dt><dd><p>Current instance of the optimizer.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

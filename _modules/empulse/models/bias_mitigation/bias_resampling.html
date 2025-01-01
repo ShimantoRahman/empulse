@@ -1,0 +1,394 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.models.bias_mitigation.bias_resampling &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html">
+            
+              <img src="../../../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.models.bias_mitigation.bias_resampling</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.models.bias_mitigation.bias_resampling</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="kn">import</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">clone</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils.multiclass</span> <span class="kn">import</span> <span class="n">type_of_target</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="kn">import</span> <span class="n">validate_data</span><span class="p">,</span> <span class="n">check_is_fitted</span>
+
+<span class="kn">from</span> <span class="nn">...samplers</span> <span class="kn">import</span> <span class="n">BiasResampler</span>
+<span class="kn">from</span> <span class="nn">...samplers._strategies</span> <span class="kn">import</span> <span class="n">Strategy</span><span class="p">,</span> <span class="n">StrategyFn</span>
+
+
+<div class="viewcode-block" id="BiasResamplingClassifier">
+<a class="viewcode-back" href="../../../../reference/models/BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier">[docs]</a>
+<span class="k">class</span> <span class="nc">BiasResamplingClassifier</span><span class="p">(</span><span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Classifier which resamples instances during training to remove bias against a subgroup.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator : Estimator instance</span>
+<span class="sd">        Base estimator which is used for fitting and predicting.</span>
+<span class="sd">    strategy : {&#39;statistical parity&#39;, &#39;demographic parity&#39;} or Callable, default=&#39;statistical parity&#39;</span>
+<span class="sd">        Determines how the group weights are computed.</span>
+<span class="sd">        Group weights determine how much to over or undersample each combination of target and sensitive feature.</span>
+<span class="sd">        For example, a weight of 2 for the pair (y_true == 1, sensitive_feature == 0) means that the resampled dataset</span>
+<span class="sd">        should have twice as many instances with y_true == 1 and sensitive_feature == 0 compared to the original dataset.</span>
+
+<span class="sd">        - ``&#39;statistical_parity&#39;`` or ``&#39;demographic parity&#39;``: \</span>
+<span class="sd">        probability of positive predictions are equal between subgroups of sensitive feature.</span>
+
+<span class="sd">        - ``Callable``: function which computes the group weights based on the target and sensitive feature. \</span>
+<span class="sd">        Callable accepts two arguments: y_true and sensitive_feature and returns the group weights. \</span>
+<span class="sd">        Group weights are a 2x2 matrix where the rows represent the target variable and the columns represent the \</span>
+<span class="sd">        sensitive feature. \</span>
+<span class="sd">        The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).</span>
+<span class="sd">    transform_feature : Optional[Callable], default=None</span>
+<span class="sd">        Function which transforms sensitive feature before resampling the training data.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    classes_ : numpy.ndarray, shape=(n_classes,)</span>
+<span class="sd">        Unique classes in the target.</span>
+
+<span class="sd">    estimator_ : Estimator instance</span>
+<span class="sd">        Fitted base estimator.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    1. Using the `BiasResamplingClassifier` with a logistic regression model:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from sklearn.linear_model import LogisticRegression</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from empulse.models import BiasResamplingClassifier</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        high_clv = np.random.randint(0, 2, size=X.shape[0])</span>
+
+<span class="sd">        model = BiasResamplingClassifier(estimator=LogisticRegression())</span>
+<span class="sd">        model.fit(X, y, sensitive_feature=high_clv)</span>
+
+<span class="sd">    2. Converting a continuous attribute to a binary attribute:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from sklearn.linear_model import LogisticRegression</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from empulse.models import BiasResamplingClassifier</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        clv = np.random.rand(X.shape[0]) * 100</span>
+
+<span class="sd">        model = BiasResamplingClassifier(</span>
+<span class="sd">            estimator=LogisticRegression(),</span>
+<span class="sd">            transform_feature=lambda clv: (clv &gt; np.quantile(clv, 0.8)).astype(int)</span>
+<span class="sd">        )</span>
+<span class="sd">        model.fit(X, y, sensitive_feature=clv)</span>
+
+<span class="sd">    3. Using a custom strategy function:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from sklearn.linear_model import LogisticRegression</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from empulse.models import BiasResamplingClassifier</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        high_clv = np.random.randint(0, 2, size=X.shape[0])</span>
+
+<span class="sd">        # Simple strategy to double the weight for the sensitive feature</span>
+<span class="sd">        def strategy(y_true, sensitive_feature):</span>
+<span class="sd">            return np.array([</span>
+<span class="sd">                [1, 2],</span>
+<span class="sd">                [1, 2]</span>
+<span class="sd">            ])</span>
+
+<span class="sd">        model = BiasResamplingClassifier(</span>
+<span class="sd">            estimator=LogisticRegression(),</span>
+<span class="sd">            strategy=strategy</span>
+<span class="sd">        )</span>
+<span class="sd">        model.fit(X, y, sensitive_feature=high_clv)</span>
+
+<span class="sd">    4. Passing the sensitive feature in a cross-validation grid search:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from sklearn import config_context</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.linear_model import LogisticRegression</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+<span class="sd">        from empulse.models import BiasResamplingClassifier</span>
+
+<span class="sd">        with config_context(enable_metadata_routing=True):</span>
+<span class="sd">            X, y = make_classification()</span>
+<span class="sd">            high_clv = np.random.randint(0, 2, size=X.shape[0])</span>
+
+<span class="sd">            param_grid = {&#39;model__estimator__C&#39;: [0.1, 1, 10]}</span>
+<span class="sd">            pipeline = Pipeline([</span>
+<span class="sd">                (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">                (&#39;model&#39;, BiasResamplingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))</span>
+<span class="sd">            ])</span>
+<span class="sd">            search = GridSearchCV(pipeline, param_grid)</span>
+<span class="sd">            search.fit(X, y, sensitive_feature=high_clv)</span>
+
+<span class="sd">    5. Passing the sensitive feature through metadata routing in a cross-validation grid search:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from sklearn import config_context</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.linear_model import LogisticRegression</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+<span class="sd">        from empulse.models import BiasResamplingClassifier</span>
+
+<span class="sd">        with config_context(enable_metadata_routing=True):</span>
+<span class="sd">            X, y = make_classification()</span>
+<span class="sd">            high_clv = np.random.randint(0, 2, size=X.shape[0])</span>
+
+<span class="sd">            param_grid = {&#39;model__estimator__C&#39;: [0.1, 1, 10]}</span>
+<span class="sd">            pipeline = Pipeline([</span>
+<span class="sd">                (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">                (&#39;model&#39;, BiasResamplingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))</span>
+<span class="sd">            ])</span>
+<span class="sd">            search = GridSearchCV(pipeline, param_grid)</span>
+<span class="sd">            search.fit(X, y, sensitive_feature=high_clv)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] Rahman, S., Janssens, B., &amp; Bogaert, M. (2025).</span>
+<span class="sd">           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.</span>
+<span class="sd">           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">estimator</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">strategy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">StrategyFn</span><span class="p">,</span> <span class="n">Strategy</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;statistical parity&#39;</span><span class="p">,</span>
+            <span class="n">transform_feature</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="n">estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">strategy</span> <span class="o">=</span> <span class="n">strategy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform_feature</span> <span class="o">=</span> <span class="n">transform_feature</span>
+
+    <span class="k">def</span> <span class="nf">__sklearn_tags__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__sklearn_tags__</span><span class="p">()</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">multi_class</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">poor_score</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">tags</span>
+
+<div class="viewcode-block" id="BiasResamplingClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/models/BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier.fit">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">sensitive_feature</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">fit_params</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BiasResamplingClassifier&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the estimator and resample the instances according to the strategy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : 2D array-like, shape=(n_samples, n_dim)</span>
+<span class="sd">            Training data.</span>
+<span class="sd">        y : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">            Target values.</span>
+<span class="sd">        sensitive_feature : 1D array-like, shape=(n_samples,), default = None</span>
+<span class="sd">            Sensitive feature used to determine the group weights.</span>
+<span class="sd">        fit_params : dict</span>
+<span class="sd">            Additional parameters passed to the estimator&#39;s `fit` method.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : BiasResamplingClassifier</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">validate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">y_type</span> <span class="o">=</span> <span class="n">type_of_target</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">input_name</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">raise_unknown</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_type</span> <span class="o">!=</span> <span class="s1">&#39;binary&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Only binary classification is supported. The type of the target &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;is </span><span class="si">{</span><span class="n">y_type</span><span class="si">}</span><span class="s1">.&#39;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Classifier can&#39;t train when only one class is present.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sensitive_feature</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="n">sensitive_feature</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sensitive_feature</span><span class="p">)</span>
+
+        <span class="n">sampler</span> <span class="o">=</span> <span class="n">BiasResampler</span><span class="p">(</span><span class="n">strategy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">strategy</span><span class="p">,</span> <span class="n">transform_feature</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform_feature</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">fit_resample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">sensitive_feature</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="BiasResamplingClassifier.predict_proba">
+<a class="viewcode-back" href="../../../../reference/models/BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier.predict_proba">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict class probabilities for X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : 2D numpy.ndarray, shape=(n_samples, n_dim)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)</span>
+<span class="sd">            Predicted class probabilities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">validate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="BiasResamplingClassifier.predict">
+<a class="viewcode-back" href="../../../../reference/models/BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier.predict">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict class labels for X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : 2D numpy.ndarray, shape=(n_samples, n_dim)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred : 1D numpy.ndarray, shape=(n_samples,)</span>
+<span class="sd">            Predicted class labels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

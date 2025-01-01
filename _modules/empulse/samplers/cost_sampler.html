@@ -1,0 +1,301 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.samplers.cost_sampler &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.samplers.cost_sampler</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.samplers.cost_sampler</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">imblearn.base</span> <span class="kn">import</span> <span class="n">BaseSampler</span>
+<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">NDArray</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils</span> <span class="kn">import</span> <span class="n">check_random_state</span><span class="p">,</span> <span class="n">ClassifierTags</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils._param_validation</span> <span class="kn">import</span> <span class="n">Interval</span><span class="p">,</span> <span class="n">Real</span><span class="p">,</span> <span class="n">StrOptions</span>
+
+
+<div class="viewcode-block" id="CostSensitiveSampler">
+<a class="viewcode-back" href="../../../reference/samplers/CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler">[docs]</a>
+<span class="k">class</span> <span class="nc">CostSensitiveSampler</span><span class="p">(</span><span class="n">BaseSampler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cost-proportionate sampling.</span>
+
+<span class="sd">    This method adjusts the sampling probability of each sample based on the cost of misclassification.</span>
+<span class="sd">    This is done either by rejection sampling [1]_ or oversampling [2]_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        method : {&#39;rejection sampling&#39;, &#39;oversampling&#39;}, default=&#39;rejection sampling&#39;</span>
+<span class="sd">            Method to perform the cost-proportionate sampling,</span>
+<span class="sd">            either &#39;RejectionSampling&#39; or &#39;OverSampling&#39;.</span>
+
+<span class="sd">        oversampling_norm: float, default=0.1</span>
+<span class="sd">            Oversampling norm for the cost.</span>
+
+<span class="sd">        percentile_threshold: float, default=97.5</span>
+<span class="sd">            Outlier adjustment for the cost.</span>
+<span class="sd">            Costs are normalized and cost values above the percentile_threshold&#39;th percentile are set to 1.</span>
+
+<span class="sd">        random_state : int or :class:`numpy:numpy.random.RandomState`, optional</span>
+<span class="sd">            Random number generator seed for reproducibility.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sample_indices_ : numpy.ndarray</span>
+<span class="sd">        Indices of the samples that were selected.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] B. Zadrozny, J. Langford, N. Naoki, &quot;Cost-sensitive learning by</span>
+<span class="sd">           cost-proportionate example weighting&quot;, in Proceedings of the</span>
+<span class="sd">           Third IEEE International Conference on Data Mining, 435-442, 2003.</span>
+
+<span class="sd">    .. [2] C. Elkan, &quot;The foundations of Cost-Sensitive Learning&quot;,</span>
+<span class="sd">           in Seventeenth International Joint Conference on Artificial Intelligence,</span>
+<span class="sd">           973-978, 2001.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    code modified from `costcla.sampling.cost_sampling`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.samplers import CostSensitiveSampler</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fp_cost = np.ones_like(y) * 10</span>
+<span class="sd">        fn_cost = np.ones_like(y)</span>
+
+<span class="sd">        sampler = CostSensitiveSampler(method=&#39;oversampling&#39;, random_state=42)</span>
+<span class="sd">        X_re, y_re = sampler.fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_sampling_type</span> <span class="o">=</span> <span class="s1">&#39;bypass&#39;</span>
+    <span class="n">_parameter_constraints</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">StrOptions</span><span class="p">({</span><span class="s1">&#39;oversampling&#39;</span><span class="p">,</span> <span class="s1">&#39;rejection sampling&#39;</span><span class="p">})],</span>
+        <span class="s1">&#39;oversampling_norm&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">Real</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">)],</span>
+        <span class="s1">&#39;percentile_threshold&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">Interval</span><span class="p">(</span><span class="n">Real</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">)],</span>
+        <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;random_state&#39;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+        <span class="c1"># BaseEstimator should dynamically generate the method signature at runtime</span>
+        <span class="k">def</span> <span class="nf">set_fit_resample_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;rejection sampling&#39;</span><span class="p">,</span> <span class="s1">&#39;oversampling&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;rejection sampling&#39;</span><span class="p">,</span>
+            <span class="n">oversampling_norm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+            <span class="n">percentile_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">97.5</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">oversampling_norm</span> <span class="o">=</span> <span class="n">oversampling_norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">percentile_threshold</span> <span class="o">=</span> <span class="n">percentile_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+
+    <span class="k">def</span> <span class="nf">__sklearn_tags__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__sklearn_tags__</span><span class="p">()</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span> <span class="o">=</span> <span class="n">ClassifierTags</span><span class="p">(</span><span class="n">multi_class</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">sampler_tags</span><span class="o">.</span><span class="n">sample_indices</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">tags</span>
+
+<div class="viewcode-block" id="CostSensitiveSampler.fit_resample">
+<a class="viewcode-back" href="../../../reference/samplers/CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler.fit_resample">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit_resample</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape (n_samples, n_features)</span>
+
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+
+<span class="sd">        fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">        fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_resampled : ndarray of shape (n_samples_new, n_features)</span>
+<span class="sd">            The array containing the resampled data.</span>
+
+<span class="sd">        y_resampled : ndarray of shape (n_samples_new,)</span>
+<span class="sd">            The corresponding label of `X_resampled`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit_resample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_fit_resample</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">)</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">check_random_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="n">misclassification_costs</span> <span class="o">=</span> <span class="n">fp_cost</span>
+        <span class="n">misclassification_costs</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn_cost</span><span class="p">[</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">normalized_costs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span>
+            <span class="n">misclassification_costs</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">misclassification_costs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">percentile_threshold</span><span class="p">),</span>
+            <span class="mi">1</span>
+        <span class="p">)</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;rejection sampling&#39;</span><span class="p">:</span>
+            <span class="n">rejection_probability</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sample_indices_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))[</span><span class="n">rejection_probability</span> <span class="o">&lt;=</span> <span class="n">normalized_costs</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;oversampling&#39;</span><span class="p">:</span>
+            <span class="c1"># repeat each sample based on the normalized costs</span>
+            <span class="n">sample_repeats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">normalized_costs</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">oversampling_norm</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sample_indices_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">sample_repeats</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Method not valid. Expected RejectionSampling or OverSampling, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="n">X_re</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_indices_</span><span class="p">]</span>
+        <span class="n">y_re</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_indices_</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">X_re</span><span class="p">,</span> <span class="n">y_re</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,389 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>empulse.models.cost_sensitive.robust_cs &mdash; Empulse 0.4.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=88361794" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=03f3338f"></script>
+      <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html">
+            
+              <img src="../../../../_static/empulse_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview/overview.html">What can you do with Empulse?</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/optimizers.html">Optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/samplers.html">Samplers</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/cost_functions.html">Boosting Algorithms With Cost Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/instance_based_cv.html">Cross-Validation with Instance Based Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/proflogit.html">Customizing ProfLogit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/user_defined_value_metric.html">User-Defined Value Metric</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Empulse</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">empulse.models.cost_sensitive.robust_cs</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for empulse.models.cost_sensitive.robust_cs</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="k">as</span> <span class="nn">st</span>
+<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span><span class="p">,</span> <span class="n">clone</span><span class="p">,</span> <span class="n">check_is_fitted</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">HuberRegressor</span>
+<span class="kn">from</span> <span class="nn">sklearn.multioutput</span> <span class="kn">import</span> <span class="n">MultiOutputRegressor</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils._available_if</span> <span class="kn">import</span> <span class="n">available_if</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="kn">import</span> <span class="n">_estimator_has</span>
+
+
+<div class="viewcode-block" id="RobustCSClassifier">
+<a class="viewcode-back" href="../../../../reference/models/RobustCSClassifier.html#empulse.models.RobustCSClassifier">[docs]</a>
+<span class="k">class</span> <span class="nc">RobustCSClassifier</span><span class="p">(</span><span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">MetaEstimatorMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.</span>
+
+<span class="sd">    The costs are adjusted by fitting an outlier estimator to the costs and imputing the costs for the outliers.</span>
+<span class="sd">    Outliers are detected by the standardized residuals of the cost and the predicted cost.</span>
+<span class="sd">    The costs passed to the cost-sensitive classifier are a combination of the original costs (not non-outliers) and</span>
+<span class="sd">    the imputed predicted costs (for outliers).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator : Estimator</span>
+<span class="sd">        The cost-sensitive classifier to fit.</span>
+<span class="sd">        The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method.</span>
+<span class="sd">    outlier_estimator : Estimator, optional</span>
+<span class="sd">        The outlier estimator to fit to the costs.</span>
+<span class="sd">        If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.</span>
+<span class="sd">    outlier_threshold : float, default=2.5</span>
+<span class="sd">        The threshold for the standardized residuals to detect outliers.</span>
+<span class="sd">        If the absolute value of the standardized residual is greater than the threshold,</span>
+<span class="sd">        the cost is an outlier and will be imputed with the predicted cost.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator_ : Estimator</span>
+<span class="sd">        The fitted cost-sensitive classifier.</span>
+<span class="sd">    outlier_estimator_ : Estimator</span>
+<span class="sd">        The fitted outlier estimator. If multiple costs are passed, this is a</span>
+<span class="sd">        :class:`sklearn:sklearn.linear_model.MultiOutputRegressor` wrapping `outlier_estimator`.</span>
+<span class="sd">    costs_ : dict</span>
+<span class="sd">        The imputed costs for the cost-sensitive classifier.</span>
+<span class="sd">    n_treatments_ : int</span>
+<span class="sd">        The number of costs which have been imputed.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Constant costs are not used for outlier detection and imputation.</span>
+
+<span class="sd">    Code adapted from [1]_.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSLogitClassifier, RobustCSClassifier</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)  # instance-dependent cost</span>
+<span class="sd">        fp_cost = 5  # constant cost</span>
+
+<span class="sd">        model = RobustCSClassifier(CSLogitClassifier(C=0.1))</span>
+<span class="sd">        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+
+<span class="sd">    Example with passing instance-dependent costs through cross-validation:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSBoostClassifier, RobustCSClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import cross_val_score</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, RobustCSClassifier(</span>
+<span class="sd">                CSBoostClassifier()</span>
+<span class="sd">            ).set_fit_request(fn_cost=True, fp_cost=True))</span>
+<span class="sd">        ])</span>
+
+<span class="sd">        cross_val_score(pipeline, X, y, params={&#39;fn_cost&#39;: fn_cost, &#39;fp_cost&#39;: fp_cost})</span>
+
+<span class="sd">    Example with passing instance-dependent costs through a grid search:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import expected_cost_loss</span>
+<span class="sd">        from empulse.models import CSLogitClassifier, RobustCSClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.metrics import make_scorer</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification(n_samples=50)</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, RobustCSClassifier(</span>
+<span class="sd">                CSLogitClassifier()</span>
+<span class="sd">            ).set_fit_request(fn_cost=True, fp_cost=True))</span>
+<span class="sd">        ])</span>
+<span class="sd">        param_grid = {&#39;model__estimator__C&#39;: np.logspace(-5, 2, 5)}</span>
+<span class="sd">        scorer = make_scorer(</span>
+<span class="sd">            expected_cost_loss,</span>
+<span class="sd">            response_method=&#39;predict_proba&#39;,</span>
+<span class="sd">            greater_is_better=False,</span>
+<span class="sd">            normalize=True</span>
+<span class="sd">        )</span>
+<span class="sd">        scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)</span>
+
+<span class="sd">        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)</span>
+<span class="sd">        grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] De Vos, S., Vanderschueren, T., Verdonck, T., &amp; Verbeke, W. (2023).</span>
+<span class="sd">           Robust instance-dependent cost-sensitive classification.</span>
+<span class="sd">           Advances in Data Analysis and Classification, 17(4), 1057-1079.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">outlier_estimator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">outlier_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.5</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="n">estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator</span> <span class="o">=</span> <span class="n">outlier_estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outlier_threshold</span> <span class="o">=</span> <span class="n">outlier_threshold</span>
+
+<div class="viewcode-block" id="RobustCSClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/models/RobustCSClassifier.html#empulse.models.RobustCSClassifier.fit">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ArrayLike</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">fit_params</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;RobustCSLogitClassifier&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the estimator with the adjusted costs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape (n_samples, n_features)</span>
+
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+
+<span class="sd">        tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">        fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">        tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">        fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">            Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">        fit_params : dict</span>
+<span class="sd">            Additional keyword arguments to pass to the estimator&#39;s fit method.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : RobustCSLogitClassifier</span>
+<span class="sd">            Fitted RobustCSLogitClassifier model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;tp_cost&#39;</span><span class="p">:</span> <span class="n">tp_cost</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">),</span>  <span class="c1"># take copy of the array</span>
+            <span class="s1">&#39;tn_cost&#39;</span><span class="p">:</span> <span class="n">tn_cost</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">),</span>
+            <span class="s1">&#39;fn_cost&#39;</span><span class="p">:</span> <span class="n">fn_cost</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">),</span>
+            <span class="s1">&#39;fp_cost&#39;</span><span class="p">:</span> <span class="n">fp_cost</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="c1"># only fit on the costs that are arrays and have a standard deviation greater than 0</span>
+        <span class="n">should_fit</span> <span class="o">=</span> <span class="p">[</span><span class="n">cost_name</span> <span class="k">for</span> <span class="n">cost_name</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span>
+                      <span class="nb">isinstance</span><span class="p">(</span><span class="n">cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">cost</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_treatments_</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">should_fit</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_treatments_</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># no outlier detection needed</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_treatments_</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">[</span><span class="n">should_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">HuberRegressor</span><span class="p">()</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+            <span class="n">cost_predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="c1"># outliers if the absolute value of the standardized residuals is greater than the threshold</span>
+            <span class="n">residuals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">cost_predictions</span><span class="p">)</span>
+            <span class="n">std_residuals</span> <span class="o">=</span> <span class="n">residuals</span> <span class="o">/</span> <span class="n">st</span><span class="o">.</span><span class="n">sem</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="c1"># TODO: check if this is correct</span>
+            <span class="c1"># std_residuals = residuals / residuals.std()</span>
+            <span class="n">outliers</span> <span class="o">=</span> <span class="n">std_residuals</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_threshold</span>
+            <span class="c1"># for the outliers impute the cost with the predicted cost</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">[</span><span class="n">should_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">outliers</span><span class="p">,</span> <span class="n">cost_predictions</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">[</span><span class="n">cost_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">cost_name</span> <span class="ow">in</span> <span class="n">should_fit</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator_</span> <span class="o">=</span> <span class="n">MultiOutputRegressor</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">HuberRegressor</span><span class="p">()</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+            <span class="n">cost_predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_estimator_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="n">residuals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">targets</span> <span class="o">-</span> <span class="n">cost_predictions</span><span class="p">)</span>
+            <span class="n">std_residuals</span> <span class="o">=</span> <span class="n">residuals</span> <span class="o">/</span> <span class="n">st</span><span class="o">.</span><span class="n">sem</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="c1"># TODO: check if this is correct</span>
+            <span class="c1"># std_residuals = residuals / residuals.std(axis=0)</span>
+            <span class="n">outliers</span> <span class="o">=</span> <span class="n">std_residuals</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_threshold</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cost_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">should_fit</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">[</span><span class="n">cost_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">outliers</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">cost_predictions</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">[</span><span class="n">cost_name</span><span class="p">])</span>
+
+        <span class="c1"># with the imputed costs fit the estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">costs_</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="p">,</span> <span class="s2">&quot;n_features_in_&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_features_in_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">n_features_in_</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="p">,</span> <span class="s2">&quot;feature_names_in_&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names_in_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">feature_names_in_</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="nd">@available_if</span><span class="p">(</span><span class="n">_estimator_has</span><span class="p">(</span><span class="s2">&quot;predict&quot;</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;estimator_&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="nd">@available_if</span><span class="p">(</span><span class="n">_estimator_has</span><span class="p">(</span><span class="s2">&quot;predict_proba&quot;</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;estimator_&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="nd">@available_if</span><span class="p">(</span><span class="n">_estimator_has</span><span class="p">(</span><span class="s2">&quot;decision_function&quot;</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">decision_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;estimator_&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">classes_</span>
+
+    <span class="k">def</span> <span class="nf">__sklearn_tags__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__sklearn_tags__</span><span class="p">()</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">multi_class</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">poor_score</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">tags</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Shimanto Rahman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
