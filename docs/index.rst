@@ -27,3 +27,10 @@ Empulse
 
     guide/*
 
+.. toctree::
+    :maxdepth: 1
+    :caption: Project Information:
+    :glob:
+
+    project/*
+
