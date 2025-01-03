@@ -1,3 +1,6 @@
+import numbers
+import warnings
+from numbers import Real
 from typing import Union, Literal
 
 import numpy as np
@@ -7,6 +10,8 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, clo
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils.validation import _estimator_has
+
+from empulse.models.cost_sensitive._parameter import Parameter
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 
@@ -25,18 +30,57 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
     estimator : Estimator
         The cost-sensitive classifier to fit.
         The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method.
+
     outlier_estimator : Estimator, optional
         The outlier estimator to fit to the costs.
+
         If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.
     outlier_threshold : float, default=2.5
         The threshold for the standardized residuals to detect outliers.
         If the absolute value of the standardized residual is greater than the threshold,
         the cost is an outlier and will be imputed with the predicted cost.
+
     detect_outliers_for : {'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', list}, default='all'
         The costs for which to detect outliers.
         By default, all instance-dependent costs are used for outlier detection.
         If a single cost is passed, only that cost is used for outlier detection.
         If a list of costs is passed, only those costs are used for outlier detection.
+        tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
 
     Attributes
     ----------
@@ -149,21 +193,29 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
             outlier_estimator=None,
             outlier_threshold: float = 2.5,
             detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
+            tp_cost: ArrayLike | float = 0.0,
+            tn_cost: ArrayLike | float = 0.0,
+            fn_cost: ArrayLike | float = 0.0,
+            fp_cost: ArrayLike | float = 0.0,
     ):
         super().__init__()
         self.estimator = estimator
         self.outlier_estimator = outlier_estimator
         self.outlier_threshold = outlier_threshold
         self.detect_outliers_for = detect_outliers_for
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
 
     def fit(
             self,
             X: ArrayLike,
             y: ArrayLike,
-            tp_cost: Union[ArrayLike, float] = 0.0,
-            tn_cost: Union[ArrayLike, float] = 0.0,
-            fn_cost: Union[ArrayLike, float] = 0.0,
-            fp_cost: Union[ArrayLike, float] = 0.0,
+            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
             **fit_params
     ) -> 'RobustCSLogitClassifier':
         """
@@ -175,19 +227,19 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
 
         y : array-like of shape (n_samples,)
 
-        tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
 
-        fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
 
-        tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
             If array-like, then it is the cost of each true negative classification.
 
-        fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
@@ -199,6 +251,23 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         self : RobustCSLogitClassifier
             Fitted RobustCSLogitClassifier model.
         """
+        if tp_cost is Parameter.UNCHANGED:
+            tp_cost = self.tp_cost
+        if tn_cost is Parameter.UNCHANGED:
+            tn_cost = self.tn_cost
+        if fn_cost is Parameter.UNCHANGED:
+            fn_cost = self.fn_cost
+        if fp_cost is Parameter.UNCHANGED:
+            fp_cost = self.fp_cost
+
+        if (all(isinstance(cost, numbers.Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
+                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
+            warnings.warn(
+                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
+                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit() method.",
+                UserWarning)
+            fp_cost = 1
+            fn_cost = 1
 
         self.costs_ = {
             'tp_cost': tp_cost if isinstance(tp_cost, (int, float)) else np.array(tp_cost),  # take copy of the array

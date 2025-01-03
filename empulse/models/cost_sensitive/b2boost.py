@@ -5,6 +5,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import clone
 from xgboost import XGBClassifier
 
+from ._parameter import Parameter
 from .._base import BaseBoostClassifier
 from ...metrics import make_objective_churn
 
@@ -28,6 +29,10 @@ class B2BoostClassifier(BaseBoostClassifier):
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
         Is overwritten if another `clv` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
 
     incentive_fraction : float, default=0.05
         Cost of incentive offered to a customer, as a fraction of customer lifetime value
@@ -157,7 +162,15 @@ class B2BoostClassifier(BaseBoostClassifier):
         self.contact_cost = contact_cost
         self.accept_rate = accept_rate
 
-    def fit(self, X, y, accept_rate=None, clv=None, incentive_fraction=None, contact_cost=None):
+    def fit(
+            self,
+            X,
+            y,
+            accept_rate: float | Parameter = Parameter.UNCHANGED,
+            clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            incentive_fraction: float | Parameter = Parameter.UNCHANGED,
+            contact_cost: float | Parameter = Parameter.UNCHANGED
+    ):
         """
         Fit the model.
 
@@ -204,11 +217,21 @@ class B2BoostClassifier(BaseBoostClassifier):
             incentive_fraction: float = None,
             contact_cost: float = None,
     ) -> 'B2BoostClassifier':
+
+        if accept_rate is Parameter.UNCHANGED:
+            accept_rate = self.accept_rate
+        if clv is Parameter.UNCHANGED:
+            clv = self.clv
+        if incentive_fraction is Parameter.UNCHANGED:
+            incentive_fraction = self.incentive_fraction
+        if contact_cost is Parameter.UNCHANGED:
+            contact_cost = self.contact_cost
+
         objective = make_objective_churn(
-            clv=clv if clv is not None else self.clv,
-            incentive_fraction=incentive_fraction or self.incentive_fraction,
-            contact_cost=contact_cost or self.contact_cost,
-            accept_rate=accept_rate or self.accept_rate,
+            clv=clv,
+            incentive_fraction=incentive_fraction,
+            contact_cost=contact_cost,
+            accept_rate=accept_rate,
         )
         if self.estimator is None:
             self.estimator_ = XGBClassifier(objective=objective)

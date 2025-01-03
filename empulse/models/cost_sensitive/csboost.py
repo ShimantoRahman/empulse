@@ -1,3 +1,5 @@
+import warnings
+from numbers import Real
 from typing import Union, Optional
 
 import numpy as np
@@ -5,6 +7,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import clone
 from xgboost import XGBClassifier
 
+from ._parameter import Parameter
 from .._base import BaseBoostClassifier
 from ...metrics import make_objective_aec
 
@@ -24,6 +27,42 @@ class CSBoostClassifier(BaseBoostClassifier):
     estimator : `xgboost:xgboost.XGBClassifier`, optional
         XGBoost classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
 
     Attributes
     ----------
@@ -126,17 +165,26 @@ class CSBoostClassifier(BaseBoostClassifier):
     def __init__(
             self,
             estimator: Optional[XGBClassifier] = None,
+            tp_cost: ArrayLike | float = 0.0,
+            tn_cost: ArrayLike | float = 0.0,
+            fn_cost: ArrayLike | float = 0.0,
+            fp_cost: ArrayLike | float = 0.0,
     ) -> None:
         super().__init__(estimator=estimator)
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
 
     def fit(
             self,
             X: ArrayLike,
             y: ArrayLike,
-            tp_cost: Union[ArrayLike, float] = 0.0,
-            tn_cost: Union[ArrayLike, float] = 0.0,
-            fn_cost: Union[ArrayLike, float] = 0.0,
-            fp_cost: Union[ArrayLike, float] = 0.0,
+            *,
+            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
             **fit_params
     ) -> 'CSBoostClassifier':
         """
@@ -148,19 +196,19 @@ class CSBoostClassifier(BaseBoostClassifier):
 
         y : array-like of shape (n_samples,)
 
-        tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
 
-        fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
 
-        tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
             If array-like, then it is the cost of each true negative classification.
 
-        fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
@@ -178,12 +226,32 @@ class CSBoostClassifier(BaseBoostClassifier):
             self,
             X: np.ndarray,
             y: np.ndarray,
-            tp_cost: Union[ArrayLike, float] = 0.0,
-            tn_cost: Union[ArrayLike, float] = 0.0,
-            fn_cost: Union[ArrayLike, float] = 0.0,
-            fp_cost: Union[ArrayLike, float] = 0.0,
+            *,
+            tp_cost: ArrayLike | float = 0.0,
+            tn_cost: ArrayLike | float = 0.0,
+            fn_cost: ArrayLike | float = 0.0,
+            fp_cost: ArrayLike | float = 0.0,
             **fit_params
     ) -> 'CSBoostClassifier':
+
+        if tp_cost is Parameter.UNCHANGED:
+            tp_cost = self.tp_cost
+        if tn_cost is Parameter.UNCHANGED:
+            tn_cost = self.tn_cost
+        if fn_cost is Parameter.UNCHANGED:
+            fn_cost = self.fn_cost
+        if fp_cost is Parameter.UNCHANGED:
+            fp_cost = self.fp_cost
+
+        if (all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
+                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
+            warnings.warn(
+                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
+                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit() method.",
+                UserWarning)
+            fp_cost = 1
+            fn_cost = 1
+
         objective = make_objective_aec(
             'csboost',
             tp_cost=tp_cost,
