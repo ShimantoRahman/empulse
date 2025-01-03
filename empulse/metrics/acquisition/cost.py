@@ -16,7 +16,7 @@ def make_objective_acquisition(
         commission: float = 0.1,
 ) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
     """
-    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition
+    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition.
 
     The objective function presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.
@@ -93,7 +93,7 @@ def _objective(
         commission: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Create an objective function for `XGBoostClassifier` for customer acquisition
+    Create an objective function for `XGBoostClassifier` for customer acquisition.
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ def _objective(
     return gradient, hessian
 
 
-def mpa_cost_score(
+def expected_cost_loss_acquisition (
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -139,7 +139,7 @@ def mpa_cost_score(
         check_input: bool = True,
 ) -> float:
     """
-    Profit-driven cost function for customer acquisition
+    Expected cost of a classifier for customer acquisition.
 
     The cost function presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.

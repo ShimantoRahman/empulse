@@ -26,7 +26,7 @@ def empc_score(
         check_input: bool = True,
 ) -> float:
     """
-    :func:`~empulse.metrics.empc()` but only returning the EMPC score
+    :func:`~empulse.metrics.empc()` but only returning the EMPC score.
 
     EMPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer,
@@ -162,7 +162,7 @@ def empc(
         check_input: bool = True,
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit Measure for Customer Churn (EMPC)
+    Expected Maximum Profit Measure for Customer Churn (EMPC).
 
     EMPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer,
@@ -328,7 +328,7 @@ def empb_score(
         check_input: bool = True,
 ) -> float:
     """
-    :func:`~empulse.metrics.empb()` but only returning the EMPB score
+    :func:`~empulse.metrics.empb()` but only returning the EMPB score.
 
     EMPB presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer,
@@ -409,7 +409,7 @@ def empb(
         check_input: bool = True,
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit Measure for B2B Customer Churn (EMPB)
+    Expected Maximum Profit Measure for B2B Customer Churn (EMPB).
 
     EMPB presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer,
@@ -510,7 +510,7 @@ def auepc_score(
         check_input: bool = True,
 ) -> float:
     """
-    Area Under the Expected Profit Curve (AUEPC)
+    Area Under the Expected Profit Curve (AUEPC).
 
     Calculate the area under the ratio of the expected profit of the model and the perfect model.
     The expected profit is based on the EMPB's definition of profit.

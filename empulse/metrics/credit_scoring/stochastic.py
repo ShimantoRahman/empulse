@@ -18,7 +18,7 @@ def empcs_score(
         check_input: bool = True,
 ) -> float:
     """
-    :func:`~empulse.metrics.empcs()` but only returning the EMPCS score
+    :func:`~empulse.metrics.empcs()` but only returning the EMPCS score.
 
     EMPCS presumes a situation where a company is considering whether to grant a loan to a customer.
     Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
@@ -131,7 +131,7 @@ def empcs(
         check_input: bool = True,
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit measure for Credit Scoring
+    Expected Maximum Profit measure for Credit Scoring.
 
     EMPCS presumes a situation where a company is considering whether to grant a loan to a customer.
     Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly

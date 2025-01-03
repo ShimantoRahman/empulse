@@ -25,7 +25,7 @@ def emp_score(
     .. seealso::
         :func:`~empulse.metrics.emp` : To also return the threshold at which the EMP score is achieved.
 
-        :func:`~empulse.metrics.mp_score` : For a deterministic version of the EMP score.
+        :func:`~empulse.metrics.max_profit_score` : For a deterministic version of the EMP score.
 
     Parameters
     ----------
@@ -172,7 +172,7 @@ def emp(
     .. seealso::
         :func:`~empulse.metrics.emp_score` : To only return the EMP score.
 
-        :func:`~empulse.metrics.mp` : For a deterministic version of the EMP.
+        :func:`~empulse.metrics.max_profit` : For a deterministic version of the EMP.
 
     Parameters
     ----------

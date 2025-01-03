@@ -19,7 +19,7 @@ def mpc_score(
         check_input: bool = True,
 ) -> float:
     """
-    :func:`~empulse.metrics.mpc()` but only returning the MPC score
+    :func:`~empulse.metrics.mpc()` but only returning the MPC score.
 
     MPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer.
@@ -144,7 +144,7 @@ def mpc(
         check_input: bool = True,
 ) -> tuple[float, float]:
     """
-    Maximum Profit Measure for Customer Churn (MPC)
+    Maximum Profit Measure for Customer Churn (MPC).
 
     MPC presumes a situation where identified churners are contacted and offered an incentive to remain customers.
     Only a fraction of churners accepts the incentive offer.

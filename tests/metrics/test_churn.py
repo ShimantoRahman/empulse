@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 import numpy as np
-from empulse.metrics import empc, mpc, mpc_cost_score, empb
+from empulse.metrics import empc, mpc, expected_cost_loss_churn, empb
 from empulse.metrics.churn.stochastic import auepc_score
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
@@ -175,7 +175,7 @@ class TestMPCScore(BaseTestMetric.TestMetric):
 
     @property
     def metric(self):
-        return mpc_cost_score
+        return expected_cost_loss_churn
 
     def test_half_correct_prediction(self):
         self.assertAlmostEqualMetric(

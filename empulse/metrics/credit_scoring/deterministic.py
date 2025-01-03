@@ -14,7 +14,7 @@ def mpcs_score(
         check_input: bool = True,
 ) -> float:
     """
-    :func:`~empulse.metrics.mpcs()` but only returning the MPCS score
+    :func:`~empulse.metrics.mpcs()` but only returning the MPCS score.
 
     MPCS presumes a situation where a company is considering whether to grant a loan to a customer.
     Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly
@@ -109,7 +109,7 @@ def mpcs(
         check_input: bool = True,
 ) -> tuple[float, float]:
     """
-    Maximum Profit measure for Credit Scoring
+    Maximum Profit measure for Credit Scoring.
 
     MPCS presumes a situation where a company is considering whether to grant a loan to a customer.
     Correctly identifying defaulters results in receiving a return on investment (ROI), while incorrectly

@@ -4,7 +4,7 @@ from numpy.typing import ArrayLike
 from ._convex_hull import _compute_convex_hull
 
 
-def mp_score(
+def max_profit_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -14,10 +14,10 @@ def mp_score(
         fp_cost: float = 0.0,
 ) -> float:
     """
-    :func:`~empulse.metrics.mp()` but only returning the MP score.
+    :func:`~empulse.metrics.max_profit()` but only returning the MP score.
 
     .. seealso::
-        :func:`~empulse.metrics.mp` : To also return the threshold at which the maximum profit is achieved.
+        :func:`~empulse.metrics.max_profit` : To also return the threshold at which the maximum profit is achieved.
 
         :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
 
@@ -68,7 +68,7 @@ def mp_score(
 
     Reimplement MPC:
 
-    >>> from empulse.metrics import mp_score
+    >>> from empulse.metrics import max_profit_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
@@ -80,13 +80,13 @@ def mp_score(
     >>> tp_benefit = clv * (gamma * (1 - (d / clv) - (f / clv)))
     >>> fp_cost = d + f
     >>>
-    >>> mp_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    >>> max_profit_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
     24.22...
     """
-    return mp(y_true, y_pred, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
+    return max_profit(y_true, y_pred, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
 
 
-def mp(
+def max_profit(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -99,7 +99,7 @@ def mp(
     Maximum Profit Measure (MP).
 
     .. seealso::
-        :func:`~empulse.metrics.mp_score` : To only return the maximum profit score.
+        :func:`~empulse.metrics.max_profit_score` : To only return the maximum profit score.
 
         :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
 
@@ -153,7 +153,7 @@ def mp(
 
     Reimplement MPC:
 
-    >>> from empulse.metrics import mp
+    >>> from empulse.metrics import max_profit
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
@@ -165,7 +165,7 @@ def mp(
     >>> tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
     >>> fp_cost = d + f
     >>>
-    >>> mp(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    >>> max_profit(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
     (23.87..., 0.875)
     """
     y_true = np.asarray(y_true)

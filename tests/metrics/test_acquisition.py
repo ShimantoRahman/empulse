@@ -3,7 +3,7 @@ from typing import Generator
 
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
-from empulse.metrics import empa, mpa, mpa_cost_score
+from empulse.metrics import empa, mpa, expected_cost_loss_acquisition
 
 
 class TestEMPA(BaseTestMetric.TestMetric):
@@ -192,7 +192,7 @@ class TestMPAScore(BaseTestMetric.TestMetric):
 
     @property
     def metric(self):
-        return mpa_cost_score
+        return expected_cost_loss_acquisition
 
     def test_half_correct_prediction(self):
         self.assertAlmostEqualMetric(

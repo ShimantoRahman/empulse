@@ -22,7 +22,7 @@ def empa_score(
         check_input: bool = True
 ) -> float:
     """
-    :func:`~empulse.metrics.empa()` but only returning the EMPA score
+    :func:`~empulse.metrics.empa()` but only returning the EMPA score.
 
     EMPA presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.
@@ -149,7 +149,7 @@ def empa(
         check_input: bool = True
 ) -> tuple[float, float]:
     """
-    Expected Maximum Profit measure for customer Acquisition (EMPA)
+    Expected Maximum Profit measure for customer Acquisition (EMPA).
 
     EMPA presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.

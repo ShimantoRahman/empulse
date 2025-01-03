@@ -19,7 +19,7 @@ def mpa_score(
         check_input: bool = True
 ) -> float:
     """
-    :func:`~empulse.metrics.mpa()` but only returning the MPA score
+    :func:`~empulse.metrics.mpa()` but only returning the MPA score.
 
     MPA presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.
@@ -129,7 +129,7 @@ def mpa(
         check_input: bool = True
 ) -> tuple[float, float]:
     """
-    Maximum Profit measure for customer Acquisition (MPA)
+    Maximum Profit measure for customer Acquisition (MPA).
 
     MPA presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.

@@ -5,7 +5,7 @@ User-Defined Value Metric
 Empulse allows users to define their own value metric, following the Expected Maximum Profit (EMP) specification.
 This is useful for when the default metrics are not appropriate for the user's application.
 The user-defined value metric can be either deterministic or stochastic,
-using the :func:`empulse.metrics.mp` and :func:`empulse.metrics.emp` functions, respectively.
+using the :func:`empulse.metrics.max_profit` and :func:`empulse.metrics.emp` functions, respectively.
 
 As an example, we will redefine the Maximum Profit measure for customer churn (MPC) and
 Expected Maximum Profit measure for customer churn (EMPC).
@@ -13,7 +13,7 @@ Expected Maximum Profit measure for customer churn (EMPC).
 Implementing the MPC measure
 ----------------------------
 
-The Maximum Profit function :func:`empulse.metrics.mp`
+The Maximum Profit function :func:`empulse.metrics.max_profit`
 requires the user to define the costs and benefits of each possible model prediction
 (true positive, false positive, true negative and false negative).
 In the case of customer churn, the costs and benefits are defined as follows:
@@ -37,7 +37,7 @@ In the case of customer churn, the costs and benefits are defined as follows:
 
 .. code-block:: python
 
-    from empulse.metrics import mp_score
+    from empulse.metrics import max_profit_score
 
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
@@ -49,15 +49,15 @@ In the case of customer churn, the costs and benefits are defined as follows:
     tp_benefit = gamma * (clv - d - f) - (1 - gamma) * (d + f)
     fp_cost = d + f
 
-    mp_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    max_profit_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
 
 Note that when computing the Maximum Profit for customer churn,
-the :func:`empulse.metrics.mpc` should be preferred over the :func:`empulse.metrics.mp` function.
+the :func:`empulse.metrics.mpc` should be preferred over the :func:`empulse.metrics.max_profit` function.
 
 Implementing the EMPC measure
 -----------------------------
 
-The biggest difference between the Maximum Profit function :func:`empulse.metrics.mp`
+The biggest difference between the Maximum Profit function :func:`empulse.metrics.max_profit`
 and the Expected Maximum Profit function :func:`empulse.metrics.emp`
 is that the latter requires the user to define a weighted probability density function (PDF)
 of the joint distribution of the stochastic benefits and costs.

@@ -15,7 +15,7 @@ def make_objective_churn(
         contact_cost: float = 15,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
-    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn
+    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn.
 
     The objective function presumes a situation where identified churners are
     contacted and offered an incentive to remain customers.
@@ -118,7 +118,7 @@ def _objective(
     return gradient, hessian
 
 
-def mpc_cost_score(
+def expected_cost_loss_churn(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
@@ -129,7 +129,7 @@ def mpc_cost_score(
         check_input: bool = True
 ) -> float:
     """
-    Profit-driven cost function for customer churn
+    Expected cost of a classifier for customer churn.
 
     The cost function presumes a situation where identified churners are
     contacted and offered an incentive to remain customers.

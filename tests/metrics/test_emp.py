@@ -1,5 +1,5 @@
 import pytest
-from empulse.metrics import emp, empc, mp, mpc
+from empulse.metrics import emp, empc, max_profit, mpc
 
 
 def test_empc_replication():
@@ -44,7 +44,7 @@ def test_mpc_replication():
     tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
     fp_cost = d + f
 
-    mp_score, mp_threshold = mp(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    mp_score, mp_threshold = max_profit(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
     mpc_score, mpc_threshold = mpc(y_true, y_pred, clv=clv, incentive_cost=d, contact_cost=f, accept_rate=gamma)
     assert mp_score == pytest.approx(mpc_score)
     assert mp_threshold == pytest.approx(mpc_threshold)
