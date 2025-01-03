@@ -164,8 +164,9 @@ class B2BoostClassifier(BaseBoostClassifier):
 
     def fit(
             self,
-            X,
-            y,
+            X: ArrayLike,
+            y: ArrayLike,
+            *,
             accept_rate: float | Parameter = Parameter.UNCHANGED,
             clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
             incentive_fraction: float | Parameter = Parameter.UNCHANGED,
@@ -176,8 +177,9 @@ class B2BoostClassifier(BaseBoostClassifier):
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_features)
-        y : 1D numpy.ndarray, shape=(n_samples,)
+        X : array-like of shape (n_samples, n_features)
+
+        y : array-like of shape (n_samples,)
 
         accept_rate : float, default=0.3
             Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).

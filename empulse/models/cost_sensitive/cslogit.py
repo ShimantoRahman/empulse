@@ -201,8 +201,9 @@ class CSLogitClassifier(BaseLogitClassifier):
 
     def __init__(
             self,
-            C=1.0,
-            fit_intercept=True,
+            *,
+            C: float = 1.0,
+            fit_intercept: bool  = True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
             loss: Loss | Callable = 'average expected cost',

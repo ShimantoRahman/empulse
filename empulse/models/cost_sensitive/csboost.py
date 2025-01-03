@@ -165,6 +165,7 @@ class CSBoostClassifier(BaseBoostClassifier):
     def __init__(
             self,
             estimator: Optional[XGBClassifier] = None,
+            *,
             tp_cost: ArrayLike | float = 0.0,
             tn_cost: ArrayLike | float = 0.0,
             fn_cost: ArrayLike | float = 0.0,
