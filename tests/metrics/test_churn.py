@@ -1,4 +1,5 @@
 import random
+from functools import partial
 from typing import Generator
 import unittest
 
@@ -175,7 +176,7 @@ class TestMPCScore(BaseTestMetric.TestMetric):
 
     @property
     def metric(self):
-        return expected_cost_loss_churn
+        return partial(expected_cost_loss_churn, normalize=True)
 
     def test_half_correct_prediction(self):
         self.assertAlmostEqualMetric(

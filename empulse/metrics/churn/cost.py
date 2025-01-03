@@ -126,6 +126,7 @@ def expected_cost_loss_churn(
         clv: Union[float, ArrayLike] = 200,
         incentive_fraction: Union[float, ArrayLike] = 0.05,
         contact_cost: float = 1,
+        normalize: bool = False,
         check_input: bool = True
 ) -> float:
     """
@@ -162,6 +163,10 @@ def expected_cost_loss_churn(
 
     contact_cost : float, default=1
         Constant cost of contact (``contact_cost > 0``).
+
+    normalize : bool, default=False
+        Normalize the cost by the number of samples.
+        If ``True``, return the average expected cost for customer churn.
 
     check_input : bool, default=True
         Perform input validation.
@@ -218,4 +223,6 @@ def expected_cost_loss_churn(
     profits = y_pred * (contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     ))
-    return float(np.mean(profits))
+    if normalize:
+        return profits.mean()
+    return profits.sum()

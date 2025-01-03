@@ -136,6 +136,7 @@ def expected_cost_loss_acquisition (
         sales_cost: float = 500,
         direct_selling: float = 1,
         commission: float = 0.1,
+        normalize: bool = False,
         check_input: bool = True,
 ) -> float:
     """
@@ -176,6 +177,10 @@ def expected_cost_loss_acquisition (
         .. note::
             The commission is only relevant when there is an indirect channel (``direct_selling < 1``).
 
+    normalize : bool, default=True
+        Normalize the cost function by the number of samples.
+        If ``True``, return the average expected cost for customer acquisition.
+
     check_input : bool, default=True
         Perform input validation.
         Turning off improves performance, useful when using this metric as a loss function.
@@ -204,4 +209,6 @@ def expected_cost_loss_acquisition (
     costs = y_true * y_pred * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
             contact_cost - (1 - commission) * contribution
     )) + (1 - y_true) * y_pred * contact_cost
-    return float(np.mean(costs))
+    if normalize:
+        return costs.mean()
+    return costs.sum()

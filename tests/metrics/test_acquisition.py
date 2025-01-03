@@ -1,4 +1,5 @@
 import random
+from functools import partial
 from typing import Generator
 
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
@@ -192,7 +193,7 @@ class TestMPAScore(BaseTestMetric.TestMetric):
 
     @property
     def metric(self):
-        return expected_cost_loss_acquisition
+        return partial(expected_cost_loss_acquisition, normalize=True)
 
     def test_half_correct_prediction(self):
         self.assertAlmostEqualMetric(
