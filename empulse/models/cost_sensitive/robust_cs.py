@@ -1,13 +1,14 @@
-from typing import Union
+from typing import Union, Literal
 
 import numpy as np
 import scipy.stats as st
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, clone, check_is_fitted
 from sklearn.linear_model import HuberRegressor
-from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils.validation import _estimator_has
+
+CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 
 
 class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
@@ -31,18 +32,22 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         The threshold for the standardized residuals to detect outliers.
         If the absolute value of the standardized residual is greater than the threshold,
         the cost is an outlier and will be imputed with the predicted cost.
+    detect_outliers_for : {'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', list}, default='all'
+        The costs for which to detect outliers.
+        By default, all instance-dependent costs are used for outlier detection.
+        If a single cost is passed, only that cost is used for outlier detection.
+        If a list of costs is passed, only those costs are used for outlier detection.
 
     Attributes
     ----------
     estimator_ : Estimator
         The fitted cost-sensitive classifier.
-    outlier_estimator_ : Estimator
-        The fitted outlier estimator. If multiple costs are passed, this is a
-        :class:`sklearn:sklearn.linear_model.MultiOutputRegressor` wrapping `outlier_estimator`.
+    outlier_estimators_ : dict{str, Estimator or None}
+        The fitted outlier estimators.
+        If no outliers are detected for this cost, the value is None.
+        The keys of the directory are 'tp_cost', 'tn_cost', 'fn_cost', and 'fp_cost'.
     costs_ : dict
         The imputed costs for the cost-sensitive classifier.
-    n_treatments_ : int
-        The number of costs which have been imputed.
 
     Notes
     -----
@@ -137,11 +142,19 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
            Robust instance-dependent cost-sensitive classification.
            Advances in Data Analysis and Classification, 17(4), 1057-1079.
     """
-    def __init__(self, estimator, outlier_estimator=None, outlier_threshold: float = 2.5):
+
+    def __init__(
+            self,
+            estimator,
+            outlier_estimator=None,
+            outlier_threshold: float = 2.5,
+            detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
+    ):
         super().__init__()
         self.estimator = estimator
         self.outlier_estimator = outlier_estimator
         self.outlier_threshold = outlier_threshold
+        self.detect_outliers_for = detect_outliers_for
 
     def fit(
             self,
@@ -196,36 +209,61 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         # only fit on the costs that are arrays and have a standard deviation greater than 0
         should_fit = [cost_name for cost_name, cost in self.costs_.items() if
                       isinstance(cost, np.ndarray) and np.std(cost) > 0]
-        self.n_treatments_ = len(should_fit)
-        if self.n_treatments_ == 0:
-            pass  # no outlier detection needed
-        elif self.n_treatments_ == 1:
-            target = self.costs_[should_fit[0]]
-            self.outlier_estimator_ = clone(
-                self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
-            ).fit(X, target)
-            cost_predictions = self.outlier_estimator_.predict(X)
-            # outliers if the absolute value of the standardized residuals is greater than the threshold
-            residuals = np.abs(target - cost_predictions)
-            std_residuals = residuals / st.sem(target)
-            # TODO: check if this is correct
-            # std_residuals = residuals / residuals.std()
-            outliers = std_residuals > self.outlier_threshold
-            # for the outliers impute the cost with the predicted cost
-            self.costs_[should_fit[0]] = np.where(outliers, cost_predictions, target)
-        else:
-            targets = np.column_stack([self.costs_[cost_name] for cost_name in should_fit])
-            self.outlier_estimator_ = MultiOutputRegressor(
-                self.outlier_estimator if self.outlier_threshold is not None else HuberRegressor()
-            ).fit(X, targets)
-            cost_predictions = self.outlier_estimator_.predict(X)
-            residuals = np.abs(targets - cost_predictions)
-            std_residuals = residuals / st.sem(targets, axis=0)
-            # TODO: check if this is correct
-            # std_residuals = residuals / residuals.std(axis=0)
-            outliers = std_residuals > self.outlier_threshold
-            for i, cost_name in enumerate(should_fit):
-                self.costs_[cost_name] = np.where(outliers[:, i], cost_predictions[:, i], self.costs_[cost_name])
+
+        if self.detect_outliers_for != 'all':
+            if isinstance(self.detect_outliers_for, str):
+                if self.detect_outliers_for in self.costs_:  # single cost
+                    if self.detect_outliers_for not in should_fit:
+                        raise ValueError(
+                            f"Cost '{self.detect_outliers_for}' is not an array or has a standard deviation of 0."
+                            " Cannot detect outliers for this cost."
+                        )
+                    should_fit = [self.detect_outliers_for]
+                else:
+                    raise ValueError(
+                        f"Invalid cost name '{self.detect_outliers_for}' in detect_outliers_for."
+                        " Must be one of 'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', or a list of these."
+                    )
+            elif isinstance(self.detect_outliers_for, list):
+                for cost_name in self.detect_outliers_for:
+                    if cost_name not in self.costs_:
+                        raise ValueError(f"Invalid cost name '{cost_name}' in detect_outliers_for.")
+                    if cost_name not in should_fit:
+                        raise ValueError(
+                            f"Cost '{cost_name}' is not an array or has a standard deviation of 0."
+                            " Cannot detect outliers for this cost."
+                        )
+                should_fit = [cost_name for cost_name in self.detect_outliers_for if cost_name in should_fit]
+            else:
+                raise TypeError(
+                    f"Invalid type '{type(self.detect_outliers_for)}' for detect_outliers_for."
+                    " Must be one of 'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', or a list of these."
+                )
+
+        self.outlier_estimators_ = {}
+
+        for cost_name in self.costs_:
+            if cost_name in should_fit:
+                target = self.costs_[cost_name]
+                if cost_name in ['tp_cost', 'fn_cost']:
+                    X_relevant, target_relevant = X[y > 0], target[y > 0]
+                else:
+                    X_relevant, target_relevant = X[y == 0], target[y == 0]
+
+                if X_relevant.size > 0:
+                    outlier_estimator = clone(
+                        self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
+                    ).fit(X_relevant, target_relevant)
+                    cost_predictions = outlier_estimator.predict(X)
+                    residuals = np.abs(target - cost_predictions)
+                    std_residuals = residuals / st.sem(target)
+                    outliers = std_residuals > self.outlier_threshold
+                    self.costs_[cost_name] = np.where(outliers, cost_predictions, target)
+                    self.outlier_estimators_[cost_name] = outlier_estimator
+                else:
+                    self.outlier_estimators_[cost_name] = None
+            else:
+                self.outlier_estimators_[cost_name] = None
 
         # with the imputed costs fit the estimator
         self.estimator_ = clone(self.estimator).fit(X, y, **self.costs_, **fit_params)
