@@ -1,0 +1,6 @@
+﻿make\_objective\_churn
+======================================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: make_objective_churn

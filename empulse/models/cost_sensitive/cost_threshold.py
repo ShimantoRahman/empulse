@@ -58,6 +58,12 @@ class CSThresholdClassifier(BaseThresholdClassifier):
               Therefore, it is recommended to use a calibrator when the probabilities are not well-calibrated.
               See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
               for more information.
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
     """
 
     _parameter_constraints: dict = {

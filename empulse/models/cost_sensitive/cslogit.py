@@ -39,16 +39,20 @@ class CSLogitClassifier(BaseLogitClassifier):
 
     l1_ratio : float, default=1.0
         The ElasticNet mixing parameter, with ``0 <= l1_ratio <= 1``.
+
             - For ``l1_ratio = 0`` the penalty is a L2 penalty.
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-        loss : {'average expected cost'} or Callable, default='average expected cost'
+    loss : {'average expected cost'} or Callable, default='average expected cost'
         Loss function which should be minimized.
+
         - If ``str``, then it should be one of the following:
-            - 'average expected cost' : Average Expected Cost loss function,
-            see :func:`~empulse.metrics.expected_cost_loss`.
+
+            - 'average expected cost' : Average Expected Cost loss function, see :func:`~empulse.metrics.expected_cost_loss`.
+
         - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
+
         By default, loss function is minimized, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional
@@ -437,9 +441,6 @@ def _check_optimize_result(result):
     ----------
     result : OptimizeResult
        Result of the scipy.optimize.minimize function.
-
-    max_iter : int, default=None
-       Expected maximum number of iterations.
     """
     # handle both scipy and scikit-learn solver names
     if result.status != 0:

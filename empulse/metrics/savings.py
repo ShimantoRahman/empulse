@@ -617,7 +617,7 @@ def expected_savings_score(
 
         Notes
     -----
-    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [2]_:
+    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [1]_:
 
     .. math:: \\mathbb{E}[C_i(s_i)] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
 

@@ -1,3 +1,4 @@
+=======
 Empulse
 =======
 
@@ -6,31 +7,22 @@ Empulse
    :start-after: <!-- start-of-readme-intro -->
    :end-before: <!-- end-of-readme-install -->
 
-.. toctree::
-    :maxdepth: 2
-    :caption: Overview:
-    :glob:
 
-    overview/*
+What does Empulse have to offer?
+================================
 
-.. toctree::
-    :maxdepth: 1
-    :caption: API Reference:
-    :glob:
-
-    reference/*
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_
+   :start-after: <!-- end-of-readme-intro -->
+   :end-before: <!-- end-of-readme-usage -->
 
 .. toctree::
-    :maxdepth: 1
-    :caption: User Guide:
-    :glob:
+   :maxdepth: 1
+   :hidden:
 
-    guide/*
+   guide.rst
+   api.rst
+   project_info.rst
 
-.. toctree::
-    :maxdepth: 1
-    :caption: Project Information:
-    :glob:
 
-    project/*
 

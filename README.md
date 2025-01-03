@@ -8,7 +8,7 @@
 
 # Empulse
 
-<a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/image/empulse_logo.png" width="25%" height="25%" align="right" /></a>
+<a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/_static/assets/empulse_logo_light.png" width="25%" height="25%" align="right" /></a>
 
 <!-- start-of-readme-intro -->
 
