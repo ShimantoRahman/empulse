@@ -120,7 +120,7 @@ def _objective(
 
 def expected_cost_loss_churn(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_proba: ArrayLike,
         *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
@@ -146,8 +146,8 @@ def expected_cost_loss_churn(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
-        Target scores, must be probability estimates.
+    y_proba : 1D array-like, shape=(n_samples,)
+        Target probabilities, should lie between 0 and 1.
 
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
@@ -206,9 +206,9 @@ def expected_cost_loss_churn(
 
     """
     if check_input:
-        y_true, y_pred, clv = _validate_input_mpc(
+        y_true, y_proba, clv = _validate_input_mpc(
             y_true,
-            y_pred,
+            y_proba,
             clv=clv,
             accept_rate=accept_rate,
             incentive_fraction=incentive_fraction,
@@ -216,11 +216,11 @@ def expected_cost_loss_churn(
         )
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_proba = np.asarray(y_proba)
         clv = np.asarray(clv)
 
     incentive_cost = incentive_fraction * clv
-    profits = y_pred * (contact_cost + incentive_cost + y_true * (
+    profits = y_proba * (contact_cost + incentive_cost + y_true * (
             accept_rate * incentive_cost - incentive_cost - clv * accept_rate
     ))
     if normalize:

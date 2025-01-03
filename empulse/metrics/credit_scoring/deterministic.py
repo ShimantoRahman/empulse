@@ -7,7 +7,7 @@ from ..common import _compute_profits
 
 def mpcs_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         loan_lost_rate: float = 0.275,
         roi: float = 0.2644,
@@ -33,7 +33,7 @@ def mpcs_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
@@ -72,8 +72,8 @@ def mpcs_score(
     >>> from empulse.metrics import mpcs_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpcs_score(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpcs_score(y_true, y_score)
     0.038349999999999995
 
     Using scorer:
@@ -97,12 +97,12 @@ def mpcs_score(
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.123
     """
-    return mpcs(y_true, y_pred, loan_lost_rate=loan_lost_rate, roi=roi, check_input=check_input)[0]
+    return mpcs(y_true, y_score, loan_lost_rate=loan_lost_rate, roi=roi, check_input=check_input)[0]
 
 
 def mpcs(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         loan_lost_rate: float = 0.275,
         roi: float = 0.2644,
@@ -127,7 +127,7 @@ def mpcs(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     loan_lost_rate : float, default=0.275
@@ -169,11 +169,11 @@ def mpcs(
     >>> from empulse.metrics import mpcs
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpcs(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpcs(y_true, y_score)
     (0.038349999999999995, 0.875)
     """
-    profits, customer_thresholds = compute_profit_credit_scoring(y_true, y_pred, loan_lost_rate, roi, check_input)
+    profits, customer_thresholds = compute_profit_credit_scoring(y_true, y_score, loan_lost_rate, roi, check_input)
     max_profit_index = np.argmax(profits)
 
     return profits[max_profit_index], customer_thresholds[max_profit_index]
@@ -181,15 +181,15 @@ def mpcs(
 
 def compute_profit_credit_scoring(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         frac_loan_lost: float = 0.275,
         roi: float = 0.2644,
         check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
-        y_true, y_pred = _validate_input_mp(y_true, y_pred, frac_loan_lost, roi)
+        y_true, y_score = _validate_input_mp(y_true, y_score, frac_loan_lost, roi)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
     cost_benefits = np.array([frac_loan_lost, -roi])
-    return _compute_profits(y_true, y_pred, cost_benefits)
+    return _compute_profits(y_true, y_score, cost_benefits)

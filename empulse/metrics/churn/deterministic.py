@@ -10,7 +10,7 @@ from ..common import _compute_profits
 
 def mpc_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         accept_rate: float = 0.3,
         clv: float = 200,
@@ -37,7 +37,7 @@ def mpc_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
@@ -97,8 +97,8 @@ def mpc_score(
     >>> from empulse.metrics import mpc_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpc_score(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpc_score(y_true, y_score)
     23.874999999999996
 
     Using scorer:
@@ -124,7 +124,7 @@ def mpc_score(
     """
     return mpc(
         y_true,
-        y_pred,
+        y_score,
         clv=clv,
         incentive_cost=incentive_cost,
         contact_cost=contact_cost,
@@ -135,7 +135,7 @@ def mpc_score(
 
 def mpc(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         accept_rate: float = 0.3,
         clv: Union[ArrayLike, float] = 200,
@@ -161,7 +161,7 @@ def mpc(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     accept_rate : float, default=0.3
@@ -224,13 +224,13 @@ def mpc(
     >>> from empulse.metrics import mpc
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpc(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpc(y_true, y_score)
     (23.874999999999996, 0.875)
     """
     profits, customer_thresholds = compute_profit_churn(
         y_true,
-        y_pred,
+        y_score,
         clv,
         incentive_cost,
         contact_cost,
@@ -244,7 +244,7 @@ def mpc(
 
 def compute_profit_churn(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         clv: Union[ArrayLike, float] = 200,
         d: float = 10,
         f: float = 1,
@@ -252,15 +252,15 @@ def compute_profit_churn(
         check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
-        y_true, y_pred, clv = _validate_input_mp(y_true, y_pred, gamma, clv, d, f)
+        y_true, y_score, clv = _validate_input_mp(y_true, y_score, gamma, clv, d, f)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
         clv = np.asarray(clv)
     if isinstance(clv, np.ndarray):
         clv = np.mean(clv)
     cost_benefits = _compute_cost_benefits(gamma, clv, d, f)
-    return _compute_profits(y_true, y_pred, cost_benefits)
+    return _compute_profits(y_true, y_score, cost_benefits)
 
 
 @lru_cache(maxsize=1)

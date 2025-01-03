@@ -208,7 +208,7 @@ def cost_loss(
 
 def expected_cost_loss(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_proba: ArrayLike,
         *,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
@@ -239,8 +239,8 @@ def expected_cost_loss(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
-        Predicted probabilities.
+    y_proba : 1D array-like, shape=(n_samples,)
+        Target probabilities, should lie between 0 and 1.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -306,18 +306,18 @@ def expected_cost_loss(
     --------
     >>> import numpy as np
     >>> from empulse.metrics import expected_cost_loss
-    >>> y_pred = [0.2, 0.9, 0.1, 0.2]
+    >>> y_proba = [0.2, 0.9, 0.1, 0.2]
     >>> y_true = [0, 1, 1, 0]
     >>> fp_cost = np.array([4, 1, 2, 2])
     >>> fn_cost = np.array([1, 3, 3, 1])
-    >>> expected_cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+    >>> expected_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
     4.2
     """
-    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
+    cost = _compute_expected_cost(y_true, y_proba, tp_cost, tn_cost, fn_cost, fp_cost)
 
     if normalize:
         return cost.mean()
@@ -326,7 +326,7 @@ def expected_cost_loss(
 
 def expected_log_cost_loss(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_proba: ArrayLike,
         *,
         tp_cost: Union[ArrayLike, float] = 0.0,
         tn_cost: Union[ArrayLike, float] = 0.0,
@@ -354,8 +354,8 @@ def expected_log_cost_loss(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
-        Predicted probabilities.
+    y_proba : 1D array-like, shape=(n_samples,)
+        Target probabilities, should lie between 0 and 1.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -410,16 +410,17 @@ def expected_log_cost_loss(
 
         import numpy as np
         from empulse.metrics import expected_log_cost_loss
-        y_pred = [0.1, 0.9, 0.8, 0.2]
+        y_proba = [0.1, 0.9, 0.8, 0.2]
         y_true = [0, 1, 1, 0]
         fp_cost = np.array([4, 1, 2, 2])
         fn_cost = np.array([1, 3, 3, 1])
-        expected_log_cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+        expected_log_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
+
     """
-    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
-    cost = _compute_log_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
+    cost = _compute_log_expected_cost(y_true, y_proba, tp_cost, tn_cost, fn_cost, fp_cost)
     if normalize:
         return cost.mean()
     return cost.sum()
@@ -562,7 +563,7 @@ def savings_score(
 
 def expected_savings_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_proba: ArrayLike,
         *,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
@@ -588,8 +589,8 @@ def expected_savings_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
-        Predicted probabilities.
+    y_proba : 1D array-like, shape=(n_samples,)
+        Target probabilities, should lie between 0 and 1.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -654,8 +655,8 @@ def expected_savings_score(
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
     """
-    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
-        y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
+    y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
+        y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
     # Calculate the cost of naive prediction
@@ -666,7 +667,7 @@ def expected_savings_score(
                   tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     )
 
-    cost = expected_cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
+    cost = expected_cost_loss(y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost,
                               tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     return 1.0 - cost / cost_base
 

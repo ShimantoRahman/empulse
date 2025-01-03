@@ -16,7 +16,7 @@ if Version(np.version.version) >= Version("2.0.0"):
 
 def empc_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         alpha: float = 6,
         beta: float = 14,
@@ -48,7 +48,7 @@ def empc_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
@@ -113,8 +113,8 @@ def empc_score(
     >>> from empulse.metrics import empc_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empc_score(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empc_score(y_true, y_score)
     23.875593418348124
 
     Using scorer:
@@ -140,7 +140,7 @@ def empc_score(
     """
     return empc(
         y_true,
-        y_pred,
+        y_score,
         alpha=alpha,
         beta=beta,
         clv=clv,
@@ -152,7 +152,7 @@ def empc_score(
 
 def empc(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         alpha: float = 6,
         beta: float = 14,
@@ -183,7 +183,7 @@ def empc(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
@@ -253,15 +253,15 @@ def empc(
     >>> from empulse.metrics import empc
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empc(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empc(y_true, y_score)
     (23.875593418348124, 0.8743700763487141)
     """
     if check_input:
-        y_true, y_pred, clv = _validate_input_emp(y_true, y_pred, alpha, beta, clv, incentive_cost, contact_cost)
+        y_true, y_score, clv = _validate_input_emp(y_true, y_score, alpha, beta, clv, incentive_cost, contact_cost)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
         clv = np.asarray(clv)
 
     if isinstance(clv, np.ndarray):
@@ -271,7 +271,7 @@ def empc(
     phi = contact_cost / clv
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 
-    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_pred)
+    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
     tpr_coef = phi * positive_class_prob
@@ -318,7 +318,7 @@ def _compute_gamma_bounds(
 
 def empb_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         clv: ArrayLike,
         alpha: float = 6,
@@ -348,7 +348,7 @@ def empb_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
@@ -387,7 +387,7 @@ def empb_score(
     """
     return empb(
         y_true,
-        y_pred,
+        y_score,
         alpha=alpha,
         beta=beta,
         clv=clv,
@@ -399,7 +399,7 @@ def empb_score(
 
 def empb(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         clv: ArrayLike,
         alpha: float = 6,
@@ -428,7 +428,7 @@ def empb(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
@@ -469,15 +469,15 @@ def empb(
         Annals of Operations Research, 1-27.
     """
     if check_input:
-        y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+        y_true, y_score, clv = _validate_input_empb(y_true, y_score, clv, alpha, beta, incentive_fraction, contact_cost)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
         clv = np.asarray(clv)
     gamma = alpha / (alpha + beta)
 
     # Sort by predicted probabilities
-    sorted_indices = np.argsort(y_pred)[::-1]
+    sorted_indices = np.argsort(y_score)[::-1]
     sorted_y_true = y_true[sorted_indices]
     sorted_clv = clv[sorted_indices]
 
@@ -492,14 +492,14 @@ def empb(
     # Find the maximum profit and corresponding threshold
     max_profit_index = np.argmax(cumulative_profits)
     max_profit = cumulative_profits[max_profit_index]
-    threshold = max_profit_index / len(y_pred)
+    threshold = max_profit_index / len(y_score)
 
     return float(max_profit), float(threshold)
 
 
 def auepc_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         clv: ArrayLike,
         alpha: float = 6,
@@ -529,7 +529,7 @@ def auepc_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=6
@@ -574,10 +574,10 @@ def auepc_score(
         Journal of Business Research.
     """
     if check_input:
-        y_true, y_pred, clv = _validate_input_empb(y_true, y_pred, clv, alpha, beta, incentive_fraction, contact_cost)
+        y_true, y_score, clv = _validate_input_empb(y_true, y_score, clv, alpha, beta, incentive_fraction, contact_cost)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
         clv = np.asarray(clv)
     if clv.ndim > 1:
         clv = clv[:, 0]
@@ -596,7 +596,7 @@ def auepc_score(
     perfect_profits = perfect_benefits + perfect_costs
 
     # Calculate the expected profit vector for the perfect model
-    sorted_indices = y_pred.argsort()[::-1]
+    sorted_indices = y_score.argsort()[::-1]
     targets = y_true[sorted_indices]
     clv_targets = clv[sorted_indices]
 

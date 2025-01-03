@@ -9,7 +9,7 @@ from ..common import _compute_profits
 
 def mpa_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         contribution: float = 8_000,
         contact_cost: float = 50,
@@ -39,7 +39,7 @@ def mpa_score(
     y_true : array-like of shape (n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : array-like of shape (n_samples,)
+    y_score : array-like of shape (n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     contribution : float, default=7000
@@ -78,8 +78,8 @@ def mpa_score(
     >>> from empulse.metrics import mpa_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpa_score(y_true, y_pred, direct_selling=1)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpa_score(y_true, y_score, direct_selling=1)
     3706.25
 
     Indirect channel using scorer:
@@ -107,7 +107,7 @@ def mpa_score(
     """
     return mpa(
         y_true,
-        y_pred,
+        y_score,
         contribution=contribution,
         contact_cost=contact_cost,
         sales_cost=sales_cost,
@@ -119,7 +119,7 @@ def mpa_score(
 
 def mpa(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         contribution: float = 8_000,
         contact_cost: float = 50,
@@ -148,7 +148,7 @@ def mpa(
     y_true : array-like of shape (n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : array-like of shape (n_samples,)
+    y_score : array-like of shape (n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     contribution : float, default=7000
@@ -189,13 +189,13 @@ def mpa(
     >>> from empulse.metrics import mpa
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> mpa(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> mpa(y_true, y_score)
     (3706.25, 0.875)
     """
     profits, customer_thresholds = compute_profit_acquisition(
         y_true,
-        y_pred,
+        y_score,
         contribution,
         contact_cost,
         sales_cost,

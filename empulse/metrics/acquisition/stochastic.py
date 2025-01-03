@@ -11,7 +11,7 @@ from .._convex_hull import _compute_convex_hull
 
 def empa_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         alpha: float = 12,
         beta: float = 0.0015,
@@ -42,7 +42,7 @@ def empa_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=10
@@ -95,8 +95,8 @@ def empa_score(
     >>> from empulse.metrics import empa_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empa_score(y_true, y_pred, direct_selling=1)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empa_score(y_true, y_score, direct_selling=1)
     3706.2500000052773
 
     Indirect channel using scorer (rho = 0):
@@ -125,7 +125,7 @@ def empa_score(
     """
     return empa(
         y_true,
-        y_pred,
+        y_score,
         alpha=alpha,
         beta=beta,
         contact_cost=contact_cost,
@@ -138,7 +138,7 @@ def empa_score(
 
 def empa(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         alpha: float = 12,
         beta: float = 0.0015,
@@ -168,7 +168,7 @@ def empa(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     alpha : float, default=10
@@ -224,8 +224,8 @@ def empa(
     >>> from empulse.metrics import empa
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empa(y_true, y_pred, direct_selling=1)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empa(y_true, y_score, direct_selling=1)
     (3706.2500000052773, 0.8749999997947746)
 
     Indirect channel (rho = 0):
@@ -233,15 +233,15 @@ def empa(
     >>> from empulse.metrics import empa
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empa(y_true, y_pred, direct_selling=0)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empa(y_true, y_score, direct_selling=0)
     (3556.25, 0.875)
     """
 
     if check_input:
-        y_true, y_pred = _validate_input_stochastic(
+        y_true, y_score = _validate_input_stochastic(
             y_true,
-            y_pred,
+            y_score,
             alpha,
             beta,
             contact_cost,
@@ -251,11 +251,11 @@ def empa(
         )
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
 
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 
-    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_pred, expand_dims=True)
+    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score, expand_dims=True)
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
     fpr_coef = contact_cost * negative_class_prob

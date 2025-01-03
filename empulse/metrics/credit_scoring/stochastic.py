@@ -10,7 +10,7 @@ from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
 def empcs_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         success_rate: float = 0.55,
         default_rate: float = 0.1,
@@ -40,7 +40,7 @@ def empcs_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
@@ -85,8 +85,8 @@ def empcs_score(
     >>> from empulse.metrics import empcs_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empcs_score(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empcs_score(y_true, y_score)
     0.09747017050000001
 
     Using scorer:
@@ -113,7 +113,7 @@ def empcs_score(
     """
     return empcs(
         y_true,
-        y_pred,
+        y_score,
         success_rate=success_rate,
         default_rate=default_rate,
         roi=roi,
@@ -123,7 +123,7 @@ def empcs_score(
 
 def empcs(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         success_rate: float = 0.55,
         default_rate: float = 0.1,
@@ -152,7 +152,7 @@ def empcs(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('acquisition': 1, 'no acquisition': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     success_rate : float, default=0.55
@@ -197,20 +197,20 @@ def empcs(
     >>> from empulse.metrics import empcs
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> empcs(y_true, y_pred)
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> empcs(y_true, y_score)
     (0.09747017050000001, 0.32434500000000005)
     """
     if check_input:
-        y_true, y_pred = _validate_input_emp(y_true, y_pred, success_rate, default_rate, roi)
+        y_true, y_score = _validate_input_emp(y_true, y_score, success_rate, default_rate, roi)
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_score = np.asarray(y_score)
 
     alpha = 1 - success_rate - default_rate
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 
-    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_pred)
+    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
     lambda_cdf_diff, lambda_cdf_sum = _compute_lambda_cdf(roi, tpr_diff, fpr_diff, positive_class_prob,

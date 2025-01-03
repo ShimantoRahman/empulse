@@ -129,7 +129,7 @@ def _objective(
 
 def expected_cost_loss_acquisition (
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_proba: ArrayLike,
         *,
         contribution: float = 7_000,
         contact_cost: float = 50,
@@ -154,8 +154,8 @@ def expected_cost_loss_acquisition (
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
-        Target scores, must be probability estimates.
+    y_proba : 1D array-like, shape=(n_samples,)
+        Target probabilities, should lie between 0 and 1.
 
     contribution : float, default=7000
         Average contribution of a new customer (``contribution ≥ 0``).
@@ -193,9 +193,9 @@ def expected_cost_loss_acquisition (
 
     """
     if check_input:
-        y_true, y_pred = _validate_input_deterministic(
+        y_true, y_proba = _validate_input_deterministic(
             y_true,
-            y_pred,
+            y_proba,
             contribution,
             contact_cost,
             sales_cost,
@@ -204,11 +204,11 @@ def expected_cost_loss_acquisition (
         )
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_proba = np.asarray(y_proba)
 
-    costs = y_true * y_pred * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
+    costs = y_true * y_proba * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
             contact_cost - (1 - commission) * contribution
-    )) + (1 - y_true) * y_pred * contact_cost
+    )) + (1 - y_true) * y_proba * contact_cost
     if normalize:
         return costs.mean()
     return costs.sum()

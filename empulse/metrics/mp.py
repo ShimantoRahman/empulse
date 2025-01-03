@@ -6,7 +6,7 @@ from ._convex_hull import _compute_convex_hull
 
 def max_profit_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         tp_benefit: float = 0.0,
         tn_benefit: float = 0.0,
@@ -26,7 +26,7 @@ def max_profit_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     tp_benefit : float, default=0.0
@@ -71,7 +71,7 @@ def max_profit_score(
     >>> from empulse.metrics import max_profit_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>>
     >>> clv = 200
     >>> d = 10
@@ -80,15 +80,15 @@ def max_profit_score(
     >>> tp_benefit = clv * (gamma * (1 - (d / clv) - (f / clv)))
     >>> fp_cost = d + f
     >>>
-    >>> max_profit_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    >>> max_profit_score(y_true, y_score, tp_benefit=tp_benefit, fp_cost=fp_cost)
     24.22...
     """
-    return max_profit(y_true, y_pred, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
+    return max_profit(y_true, y_score, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
 
 
 def max_profit(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         tp_benefit: float = 0.0,
         tn_benefit: float = 0.0,
@@ -108,7 +108,7 @@ def max_profit(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     tp_benefit : float, default=0.0
@@ -156,7 +156,7 @@ def max_profit(
     >>> from empulse.metrics import max_profit
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>>
     >>> clv = 200
     >>> d = 10
@@ -165,16 +165,16 @@ def max_profit(
     >>> tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
     >>> fp_cost = d + f
     >>>
-    >>> max_profit(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+    >>> max_profit(y_true, y_score, tp_benefit=tp_benefit, fp_cost=fp_cost)
     (23.87..., 0.875)
     """
     y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    y_score = np.asarray(y_score)
 
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
 
-    f0, f1 = _compute_convex_hull(y_true, y_pred)
+    f0, f1 = _compute_convex_hull(y_true, y_score)
 
     profits = (tp_benefit + fn_cost) * pi0 * f0 - \
               (tn_benefit + fp_cost) * pi1 * f1 + \

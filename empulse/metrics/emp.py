@@ -10,7 +10,7 @@ from .common import _range
 
 def emp_score(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
         tp_benefit: Union[float, tuple[float, float]] = 0.0,
@@ -32,7 +32,7 @@ def emp_score(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     weighted_pdf : Callable[[float, float, float, float, float, float, float, float], float]
@@ -121,7 +121,7 @@ def emp_score(
     >>> from scipy.stats import beta
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>>
     >>> clv = 200
     >>> d = 10
@@ -135,7 +135,7 @@ def emp_score(
     >>>
     >>> emp_score(
     ...     y_true,
-    ...     y_pred,
+    ...     y_score,
     ...     weighted_pdf=weighted_pdf,
     ...     tp_benefit=tp_benefit,
     ...     fp_cost=fp_cost,
@@ -145,7 +145,7 @@ def emp_score(
     """
     return emp(
         y_true,
-        y_pred,
+        y_score,
         weighted_pdf=weighted_pdf,
         tp_benefit=tp_benefit,
         tn_benefit=tn_benefit,
@@ -157,7 +157,7 @@ def emp_score(
 
 def emp(
         y_true: ArrayLike,
-        y_pred: ArrayLike,
+        y_score: ArrayLike,
         *,
         weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
         tp_benefit: Union[float, tuple[float, float]] = 0.0,
@@ -179,7 +179,7 @@ def emp(
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('positive': 1, 'negative': 0).
 
-    y_pred : 1D array-like, shape=(n_samples,)
+    y_score : 1D array-like, shape=(n_samples,)
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     weighted_pdf : Callable[[float, float, float, float, float, float, float, float], float]
@@ -271,7 +271,7 @@ def emp(
     >>> from scipy.stats import beta
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    >>> y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>>
     >>> clv = 200
     >>> d = 10
@@ -285,7 +285,7 @@ def emp(
     >>>
     >>> emp(
     ...     y_true,
-    ...     y_pred,
+    ...     y_score,
     ...     weighted_pdf=weighted_pdf,
     ...     tp_benefit=tp_benefit,
     ...     fp_cost=fp_cost,
@@ -294,12 +294,12 @@ def emp(
     (23.875..., 0.874...)
     """
     y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    y_score = np.asarray(y_score)
 
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
 
-    f0, f1 = _compute_convex_hull(y_true, y_pred)
+    f0, f1 = _compute_convex_hull(y_true, y_score)
 
     bounds = [var if isinstance(var, tuple) else (var, var) for var in (tp_benefit, tn_benefit, fn_cost, fp_cost)]
     return _compute_emp(pi0, pi1, f0, f1, bounds, weighted_pdf, n_buckets)
