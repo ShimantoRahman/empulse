@@ -9,14 +9,15 @@ from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
 
-from ._parameter import Parameter
+from ._cs_mixin import CostSensitiveMixin
 from .._base import BaseLogitClassifier
+from ..._common import Parameter
 from ...metrics import make_objective_aec
 
 Loss = Literal["average expected cost"]
 
 
-class CSLogitClassifier(BaseLogitClassifier):
+class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
     Logistic classifier to optimize instance-specific cost loss.
 
@@ -64,6 +65,15 @@ class CSLogitClassifier(BaseLogitClassifier):
         Additional keyword arguments passed to `optimize_fn`.
 
         tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` method.
@@ -203,7 +213,7 @@ class CSLogitClassifier(BaseLogitClassifier):
             self,
             *,
             C: float = 1.0,
-            fit_intercept: bool  = True,
+            fit_intercept: bool = True,
             soft_threshold: bool = True,
             l1_ratio: float = 1.0,
             loss: Loss | Callable = 'average expected cost',
@@ -282,23 +292,13 @@ class CSLogitClassifier(BaseLogitClassifier):
             fp_cost: ArrayLike | float = 0.0,
             **loss_params
     ) -> 'CSLogitClassifier':
-        if tp_cost is Parameter.UNCHANGED:
-            tp_cost = self.tp_cost
-        if tn_cost is Parameter.UNCHANGED:
-            tn_cost = self.tn_cost
-        if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost
-        if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost
 
-        if (all(isinstance(cost, numbers.Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
-                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
-            warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit() method.",
-                UserWarning)
-            fp_cost = 1
-            fn_cost = 1
+        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost
+        )
 
         optimizer_params = self.optimizer_params or {}
 
@@ -522,61 +522,3 @@ def _check_optimize_result(result):
             "preprocessing.html"
         ).format(result.status, result_message)
         warnings.warn(warning_msg, ConvergenceWarning, stacklevel=2)
-
-# def transform_cost_matrix(x: NDArray, y: NDArray, cost_matrix: NDArray) -> NDArray[np.float64]:
-#     # Transform cost matrix
-#     # create df: a merge of x, y and amount
-#     amounts = cost_matrix[:, 0, 1]
-#     df = pd.DataFrame(data=x)
-#     df['y'] = y
-#     df['Amount'] = amounts
-#
-#     # step 1: fit model on df, return df_enhanced
-#     df_enhanced = enhance_df(df)
-#     # step 2: replace conditionally outlying amounts with estimated amounts
-#     df = impute_amounts(df_enhanced)
-#     # step 3: return cost_matrix_transformed
-#     cost_matrix_transformed = get_cost_matrix(df['Amount'])
-#     return cost_matrix_transformed
-# def get_cost_matrix(cost):
-#     cost_matrix = np.zeros((len(cost), 2, 2))  # cost_matrix [[TN, FN], [FP, TP]]
-#     cost_matrix[:, 0, 0] = 0
-#     cost_matrix[:, 0, 1] = cost
-#     cost_matrix[:, 1, 0] = cost
-#     cost_matrix[:, 1, 1] = 0
-#
-#     return cost_matrix
-#
-#
-# def enhance_df(df):
-#     model_0 = HuberRegressor(max_iter=1000)
-#     model_1 = HuberRegressor(max_iter=1000)
-#
-#     df_0 = df[df.y == 0]
-#     model_0.fit(df_0.loc[:, df_0.columns != 'Amount'], df_0['Amount'])
-#     Ahat_0_array = model_0.predict(df_0.loc[:, df_0.columns != 'Amount'])
-#     Ahat_0_array[Ahat_0_array < 0] = 0
-#
-#     df_1 = df[df.y == 1]
-#     model_1.fit(df_1.loc[:, df_1.columns != 'Amount'], df_1['Amount'])
-#     Ahat_1_array = model_1.predict(df_1.loc[:, df_1.columns != 'Amount'])
-#     Ahat_1_array[Ahat_1_array < 0] = 0
-#
-#     df_0['Amount_pred'] = Ahat_0_array
-#     df_1['Amount_pred'] = Ahat_1_array
-#     prediction = pd.concat([df_0, df_1])
-#     df['Amount_pred'] = prediction['Amount_pred']
-#
-#     return df
-#
-#
-# # Function to detect and impute conditionally outlying amount
-# def impute_amounts(df):
-#     std = st.sem(df['Amount'])
-#     df['resid'] = df['Amount'] - df['Amount_pred']
-#     df['resid_std'] = df['resid'] / std
-#     df['resid_std_abs'] = abs(df['resid_std'])
-#     df.loc[df.resid_std_abs > 3, 'Amount'] = df['Amount_pred']
-#     print("")
-#     df = df.drop(columns=['Amount_pred', 'resid', 'resid_std', 'resid_std_abs'])
-#     return df

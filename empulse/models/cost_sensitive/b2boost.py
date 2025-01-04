@@ -5,8 +5,8 @@ from numpy.typing import ArrayLike
 from sklearn.base import clone
 from xgboost import XGBClassifier
 
-from ._parameter import Parameter
 from .._base import BaseBoostClassifier
+from ..._common import Parameter
 from ...metrics import make_objective_churn
 
 

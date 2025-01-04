@@ -1,18 +1,17 @@
-import warnings
-from numbers import Real
-from typing import Union, Optional
+from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
 from xgboost import XGBClassifier
 
-from ._parameter import Parameter
+from ._cs_mixin import CostSensitiveMixin
 from .._base import BaseBoostClassifier
+from ..._common import Parameter
 from ...metrics import make_objective_aec
 
 
-class CSBoostClassifier(BaseBoostClassifier):
+class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
     :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss.
 
@@ -235,23 +234,12 @@ class CSBoostClassifier(BaseBoostClassifier):
             **fit_params
     ) -> 'CSBoostClassifier':
 
-        if tp_cost is Parameter.UNCHANGED:
-            tp_cost = self.tp_cost
-        if tn_cost is Parameter.UNCHANGED:
-            tn_cost = self.tn_cost
-        if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost
-        if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost
-
-        if (all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
-                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
-            warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit() method.",
-                UserWarning)
-            fp_cost = 1
-            fn_cost = 1
+        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost
+        )
 
         objective = make_objective_aec(
             'csboost',

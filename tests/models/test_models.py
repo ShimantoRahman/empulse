@@ -21,10 +21,10 @@ ESTIMATORS = (
     BiasReweighingClassifier(estimator=LogisticRegression()),
     BiasResamplingClassifier(estimator=LogisticRegression()),
     BiasRelabelingClassifier(estimator=LogisticRegression()),
-    CSBoostClassifier(),
-    CSLogitClassifier(),
-    RobustCSClassifier(estimator=CSLogitClassifier()),
-    CSThresholdClassifier(estimator=LogisticRegression(), random_state=42),
+    CSBoostClassifier(fp_cost=1, fn_cost=1),
+    CSLogitClassifier(fp_cost=1, fn_cost=1),
+    RobustCSClassifier(estimator=CSLogitClassifier(), fp_cost=1, fn_cost=1),
+    CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
 )
 
 

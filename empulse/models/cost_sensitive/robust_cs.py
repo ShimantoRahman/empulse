@@ -1,7 +1,4 @@
-import numbers
-import warnings
-from numbers import Real
-from typing import Union, Literal
+from typing import Literal
 
 import numpy as np
 import scipy.stats as st
@@ -11,12 +8,13 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils.validation import _estimator_has
 
-from empulse.models.cost_sensitive._parameter import Parameter
+from ._cs_mixin import CostSensitiveMixin
+from ..._common import Parameter
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 
 
-class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
+class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):
     """
     Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
 
@@ -46,6 +44,15 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         If a single cost is passed, only that cost is used for outlier detection.
         If a list of costs is passed, only those costs are used for outlier detection.
         tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` method.
@@ -253,23 +260,13 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
         self : RobustCSLogitClassifier
             Fitted RobustCSLogitClassifier model.
         """
-        if tp_cost is Parameter.UNCHANGED:
-            tp_cost = self.tp_cost
-        if tn_cost is Parameter.UNCHANGED:
-            tn_cost = self.tn_cost
-        if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost
-        if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost
 
-        if (all(isinstance(cost, numbers.Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
-                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
-            warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit() method.",
-                UserWarning)
-            fp_cost = 1
-            fn_cost = 1
+        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost
+        )
 
         self.costs_ = {
             'tp_cost': tp_cost if isinstance(tp_cost, (int, float)) else np.array(tp_cost),  # take copy of the array

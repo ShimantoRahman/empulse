@@ -1,3 +1,4 @@
+import warnings
 from typing import Literal, TYPE_CHECKING
 
 import numpy as np
@@ -5,6 +6,8 @@ from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import check_random_state, ClassifierTags
 from sklearn.utils._param_validation import Interval, Real, StrOptions
+
+from .._common import Parameter
 
 
 class CostSensitiveSampler(BaseSampler):
@@ -16,19 +19,37 @@ class CostSensitiveSampler(BaseSampler):
 
     Parameters
     ----------
-        method : {'rejection sampling', 'oversampling'}, default='rejection sampling'
-            Method to perform the cost-proportionate sampling,
-            either 'RejectionSampling' or 'OverSampling'.
+    method : {'rejection sampling', 'oversampling'}, default='rejection sampling'
+        Method to perform the cost-proportionate sampling,
+        either 'RejectionSampling' or 'OverSampling'.
 
-        oversampling_norm: float, default=0.1
-            Oversampling norm for the cost.
+    oversampling_norm: float, default=0.1
+        Oversampling norm for the cost.
 
-        percentile_threshold: float, default=97.5
-            Outlier adjustment for the cost.
-            Costs are normalized and cost values above the percentile_threshold'th percentile are set to 1.
+    percentile_threshold: float, default=97.5
+        Outlier adjustment for the cost.
+        Costs are normalized and cost values above the percentile_threshold'th percentile are set to 1.
 
-        random_state : int or :class:`numpy:numpy.random.RandomState`, optional
-            Random number generator seed for reproducibility.
+    random_state : int or :class:`numpy:numpy.random.RandomState`, optional
+        Random number generator seed for reproducibility.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit_resample`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit_resample`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit_resample`` method.
 
     Attributes
     ----------
@@ -83,15 +104,20 @@ class CostSensitiveSampler(BaseSampler):
     def __init__(
             self,
             method: Literal['rejection sampling', 'oversampling'] = 'rejection sampling',
+            *,
             oversampling_norm: float = 0.1,
             percentile_threshold: float = 97.5,
-            random_state: int | np.random.RandomState | None = None
+            random_state: int | np.random.RandomState | None = None,
+            fp_cost: float | ArrayLike = 0.0,
+            fn_cost: float | ArrayLike = 0.0
     ):
         super().__init__()
         self.method = method
         self.oversampling_norm = oversampling_norm
         self.percentile_threshold = percentile_threshold
         self.random_state = random_state
+        self.fp_cost = fp_cost
+        self.fn_cost = fn_cost
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -104,8 +130,8 @@ class CostSensitiveSampler(BaseSampler):
             X: ArrayLike,
             y: ArrayLike,
             *,
-            fp_cost: float | ArrayLike = 0.0,
-            fn_cost: float | ArrayLike = 0.0
+            fp_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
+            fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
     ) -> tuple[NDArray, NDArray]:
         """
         Parameters
@@ -114,11 +140,11 @@ class CostSensitiveSampler(BaseSampler):
 
         y : array-like of shape (n_samples,)
 
-        fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
 
-        fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
@@ -139,11 +165,26 @@ class CostSensitiveSampler(BaseSampler):
             fp_cost: float | ArrayLike = 0.0,
             fn_cost: float | ArrayLike = 0.0,
     ) -> tuple[NDArray, NDArray]:
-        if isinstance(fp_cost, (int, float)):
+
+        if fp_cost is Parameter.UNCHANGED:
+            fp_cost = self.fp_cost
+        if fn_cost is Parameter.UNCHANGED:
+            fn_cost = self.fn_cost
+
+        if (all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
+                and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0):
+            warnings.warn(
+                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
+                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.",
+                UserWarning)
+            fp_cost = 1
+            fn_cost = 1
+
+        if isinstance(fp_cost, Real):
             fp_cost = np.full_like(y, fp_cost)
         else:
             fp_cost = np.asarray(fp_cost)
-        if isinstance(fn_cost, (int, float)):
+        if isinstance(fn_cost, Real):
             fn_cost = np.full_like(y, fn_cost)
         else:
             fn_cost = np.asarray(fn_cost)

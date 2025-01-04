@@ -1,4 +1,3 @@
-import warnings
 from numbers import Real
 from typing import Literal
 
@@ -7,14 +6,17 @@ from numpy.typing import ArrayLike
 from sklearn import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
+from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._metadata_requests import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted, validate_data
-from sklearn.model_selection import StratifiedKFold
+
+from ._cs_mixin import CostSensitiveMixin
+from ..._common import Parameter
 
 
-class CSThresholdClassifier(BaseThresholdClassifier):
+class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     """
     Cost-sensitive threshold classifier.
 
@@ -39,6 +41,51 @@ class CSThresholdClassifier(BaseThresholdClassifier):
 
     random_state : int or None, default=None
         Random state for the calibrator. Ignored when `calibrator` is an Estimator.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``predict`` method.
+
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``predict`` method.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``predict`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``predict`` method.
 
     Attributes
     ----------
@@ -84,11 +131,19 @@ class CSThresholdClassifier(BaseThresholdClassifier):
             calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
             pos_label=None,
             random_state=None,
+            tp_cost: ArrayLike | float = 0.0,
+            tn_cost: ArrayLike | float = 0.0,
+            fn_cost: ArrayLike | float = 0.0,
+            fp_cost: ArrayLike | float = 0.0,
     ):
         super().__init__(estimator, response_method='predict_proba')
         self.calibrator = calibrator
         self.pos_label = pos_label
         self.random_state = random_state
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
 
     @property
     def classes_(self):
@@ -152,10 +207,10 @@ class CSThresholdClassifier(BaseThresholdClassifier):
     def predict(
             self,
             X,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
+            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
     ):
         """
         Predict the target of new samples.
@@ -165,19 +220,19 @@ class CSThresholdClassifier(BaseThresholdClassifier):
         X : {array-like, sparse matrix} of shape (n_samples, n_features)
             The samples, as accepted by `estimator.predict`.
 
-        tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
 
-        fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
 
-        tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
             If array-like, then it is the cost of each true negative classification.
 
-        fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
@@ -192,16 +247,15 @@ class CSThresholdClassifier(BaseThresholdClassifier):
         """
         check_is_fitted(self)
 
-        estimator = getattr(self, "estimator_", self.estimator)
+        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
+            caller='predict'
+        )
 
-        if (all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
-                sum((tp_cost, tn_cost, fn_cost, fp_cost)) == 0):
-            warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.predict() method.",
-                UserWarning)
-            fp_cost = 1
-            fn_cost = 1
+        estimator = getattr(self, "estimator_", self.estimator)
 
         y_score = estimator.predict_proba(X)[:, 1]
 
