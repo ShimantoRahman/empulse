@@ -1,6 +1,6 @@
-﻿mpc\_cost\_score
+﻿expected_cost_loss_churn
 ================================
 
 .. currentmodule:: empulse.metrics
 
-.. autofunction:: mpc_cost_score
+.. autofunction:: expected_cost_loss_churn

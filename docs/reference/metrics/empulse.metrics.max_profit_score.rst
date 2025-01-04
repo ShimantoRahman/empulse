@@ -1,6 +1,6 @@
-﻿mp\_score
+﻿max_profit_score
 =========================
 
 .. currentmodule:: empulse.metrics
 
-.. autofunction:: mp_score
+.. autofunction:: max_profit_score

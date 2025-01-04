@@ -1,6 +1,6 @@
-﻿mp
+﻿max_profit
 ==================
 
 .. currentmodule:: empulse.metrics
 
-.. autofunction:: mp
+.. autofunction:: max_profit

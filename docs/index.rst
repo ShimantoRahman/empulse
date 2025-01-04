@@ -8,8 +8,8 @@ Empulse
    :end-before: <!-- end-of-readme-install -->
 
 
-What does Empulse have to offer?
-================================
+What can you do with Empulse?
+=============================
 
 .. include:: ../README.md
    :parser: myst_parser.sphinx_

@@ -21,8 +21,8 @@ General Metrics
 
    emp
    emp_score
-   mp
-   mp_score
+   max_profit
+   max_profit_score
    lift_score
    cost_loss
    expected_cost_loss
@@ -41,7 +41,7 @@ Customer Acquisition Metrics
    empa_score
    mpa
    mpa_score
-   mpa_cost_score
+   expected_cost_loss_acquisition
    make_objective_acquisition
 
 
@@ -58,7 +58,7 @@ Customer Churn Metrics
    empb
    empb_score
    auepc_score
-   mpc_cost_score
+   expected_cost_loss_churn
    make_objective_churn
 
 Credit Scoring Metrics
