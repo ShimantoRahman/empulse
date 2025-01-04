@@ -22,6 +22,10 @@
 - Added cost-sensitive sampler
     - CostSensitiveSampler
 - Added datasets module
+-  rename metric arguments which expect target score from y_pred to y_score and
+target probabilities from y_pred to y_proba.
+- Allow all cost-sensitive models and samplers to accept cost parameters during initialization
+
 
 .. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.0...main
 .. _0.5.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.0
