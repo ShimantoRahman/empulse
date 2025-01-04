@@ -40,6 +40,7 @@ You can find the documentation [here](https://empulse.readthedocs.io/en/latest/)
 - [Easy passing of instance-dependent costs](#easy-passing-of-instance-dependent-costs)
 - [Cost-aware resampling and relabeling](#cost-aware-resampling-and-relabeling)
 - [Find the optimal decision threshold](#find-the-optimal-decision-threshold)
+- [Easy access to real-world datasets for benchmarking](#easy-access-to-real-world-datasets-for-benchmarking)
 
 ## Take the tour
 
@@ -289,6 +290,34 @@ from sklearn.model_selection import FixedThresholdClassifier
 
 model = FixedThresholdClassifier(estimator=model, threshold=decision_threshold)
 model.predict(X)
+```
+
+### Easy access to real-world datasets for benchmarking
+
+Empulse provides easy access to real-world datasets for benchmarking cost-sensitive models.
+
+Each dataset returns the features, the target, and the instance-dependent costs, ready to use in a cost-sensitive model.
+
+```python
+from empulse.datasets import load_give_me_some_credit
+from empulse.models import CSLogitClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, y, tp_cost, fp_cost, tn_cost, fn_cost = load_give_me_some_credit(return_X_y_costs=True)
+
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', CSLogitClassifier())
+])
+pipeline.fit(
+    X, 
+    y, 
+    model__tp_cost=tp_cost, 
+    model__fp_cost=fp_cost, 
+    model__tn_cost=tn_cost, 
+    model__fn_cost=fn_cost
+)
 ```
 
 <!-- end-of-readme-usage -->
