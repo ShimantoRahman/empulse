@@ -144,6 +144,9 @@ html_theme_options = {
     #         "sg_launcher_links",
     #     ],
     # },
+    "secondary_sidebar_items": {
+        "**": ["page-toc"],
+    },
     "show_version_warning_banner": True,
     "announcement": None,
 }
