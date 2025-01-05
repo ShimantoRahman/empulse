@@ -112,11 +112,13 @@ These assumptions can be changed by passing your own values to the
 
 .. code-block:: python
 
+    from empulse.datasets import load_upsell_bank_telemarketing
+
     X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_upsell_bank_telemarketing(
         return_X_y_costs=True,
-        interest_rate = 0.05,
-        term_deposit_fraction = 0.30,
-        contact_cost = 10,
+        interest_rate=0.05,
+        term_deposit_fraction=0.30,
+        contact_cost=10,
     )
 
 Data Description

@@ -133,14 +133,16 @@ These assumptions can be changed by passing your own values to the
 
 .. code-block:: python
 
+    from empulse.datasets import load_credit_scoring_pakdd
+
     X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_credit_scoring_pakdd(
         return_X_y_costs=True,
-        interest_rate: float = 0.63,
-        fund_cost: float = 0.165,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+        interest_rate=0.63,
+        fund_cost=0.165,
+        max_credit_line=25000,
+        loss_given_default=0.75,
+        term_length_months=24,
+        loan_to_income_ratio=3,
     )
 
 Data Description
