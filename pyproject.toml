@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empulse"
-version = "0.5.0"
+version = "0.5.1"
 description = "Value-driven and cost-sensitive tools for scikit-learn"
 readme = "README.md"
 authors = [
