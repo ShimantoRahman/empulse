@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Unreleased",
+    "version": "0.5.2",
+    "url": "https://empulse.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "0.5.1 (stable)",
+    "version": "0.5.1",
+    "url": "https://empulse.readthedocs.io/en/stable/",
+    "preferred": true
+  }
+]

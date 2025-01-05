@@ -98,7 +98,13 @@ html_theme_options = {
     "navbar_align": "left",
     "header_links_before_dropdown": 5,
     "header_dropdown_text": "More",
-
+    "switcher": {
+        "json_url": "https://empulse.readthedocs.io/en/latest/_static/versions.json",
+        "version_match": release,
+    },
+    # check_switcher may be set to False if docbuild pipeline fails. See
+    # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html#configure-switcher-json-url
+    "check_switcher": True,
     "pygments_light_style": "tango",
     "pygments_dark_style": "monokai",
     "logo": {
