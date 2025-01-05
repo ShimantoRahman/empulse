@@ -17,6 +17,7 @@ The Maximum Profit function :func:`empulse.metrics.max_profit`
 requires the user to define the costs and benefits of each possible model prediction
 (true positive, false positive, true negative and false negative).
 In the case of customer churn, the costs and benefits are defined as follows:
+
     - **True positive**: The company contacts the churner with cost :math:`f` and
       sends an incentive offer with cost :math:`d`.
       A proportion :math:`\gamma` of the churners accept the offer and stay with the company,

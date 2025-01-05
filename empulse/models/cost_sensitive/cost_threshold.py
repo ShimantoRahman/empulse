@@ -29,12 +29,13 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     calibrator : {'sigmoid', 'isotonic'}, Estimator or None, default='sigmoid'
         The calibrator to use.
-            - If 'sigmoid', then a :class:`sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='sigmoid'`
-            and `ensemble=False` is used.
-            - If 'isotonic', then a :class:`sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='isotonic'`
-            and `ensemble=False` is used.
-            - If an Estimator, then it should have a `fit` and `predict_proba` method.
-            - If None, probabilities are assumed to be well-calibrated.
+
+        - If 'sigmoid', then a :class:`~sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='sigmoid'`
+          and `ensemble=False` is used.
+        - If 'isotonic', then a :class:`~sklearn:sklearn.calibration.CalibratedClassifierCV` with `method='isotonic'`
+          and `ensemble=False` is used.
+        - If an Estimator, then it should have a `fit` and `predict_proba` method.
+        - If None, probabilities are assumed to be well-calibrated.
 
     pos_label : int, str, 'boolean' or None, default=None
         The positive label. If None, the positive label is assumed to be 1.

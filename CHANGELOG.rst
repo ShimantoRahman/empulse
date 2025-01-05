@@ -23,7 +23,7 @@
     - CostSensitiveSampler
 - Added datasets module
 -  rename metric arguments which expect target score from y_pred to y_score and
-target probabilities from y_pred to y_proba.
+   target probabilities from y_pred to y_proba.
 - Allow all cost-sensitive models and samplers to accept cost parameters during initialization
 
 
