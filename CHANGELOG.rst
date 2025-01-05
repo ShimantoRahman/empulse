@@ -31,5 +31,6 @@
 - Allow all cost-sensitive models and samplers to accept cost parameters during initialization
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.1...main
+.. _0.5.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.1
 .. _0.5.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.0
