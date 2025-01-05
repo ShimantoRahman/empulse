@@ -9,6 +9,7 @@
 import json
 import os
 import sys
+import requests
 from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../empulse"))
@@ -25,22 +26,45 @@ release = empulse.__version__
 
 # -- Generate versions.json ---------------------------------------------------
 
+def get_latest_github_release(repo):
+    url = f"https://api.github.com/repos/{repo}/releases/latest"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()["tag_name"]
+
 def generate_versions_json():
     with open('../empulse/VERSION.txt', 'r') as version_file:
         version = version_file.read().strip()
-
-    versions = [
-        {
-            "name": "dev (latest)",
-            "url": "https://empulse.readthedocs.io/en/latest/"
-        },
-        {
-            "name": f"{version} (stable)",
-            "version": version,
-            "url": f"https://empulse.readthedocs.io/en/stable/",
-            "preferred": True
-        }
-    ]
+    if 'dev' in version:
+        # If the version is a dev version, then we need to get the latest release from GitHub
+        latest_version = get_latest_github_release("ShimantoRahman/empulse")
+        versions = [
+            {
+                "name": "dev (latest)",
+                "version": version,
+                "url": "https://empulse.readthedocs.io/en/latest/",
+            },
+            {
+                "name": f"{latest_version} (stable)",
+                "version": latest_version,
+                "url": f"https://empulse.readthedocs.io/en/stable/",
+                "preferred": True
+            }
+        ]
+    else:
+        versions = [
+            {
+                "name": "dev (latest)",
+                "version": version,
+                "url": "https://empulse.readthedocs.io/en/latest/"
+            },
+            {
+                "name": f"{version} (stable)",
+                "version": version,
+                "url": f"https://empulse.readthedocs.io/en/stable/",
+                "preferred": True
+            }
+        ]
 
     with open('./_static/versions.json', 'w') as f:
         json.dump(versions, f, indent=2)
