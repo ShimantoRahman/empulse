@@ -149,6 +149,7 @@ html_theme_options = {
 }
 html_short_title = "empulse"
 html_logo = "./_static/assets/empulse_logo_light.png"
+html_favicon = "./_static/assets//favicon.ico"
 html_static_path = ['_static']
 html_css_files = ["css/custom.css"]
 html_js_files = [
