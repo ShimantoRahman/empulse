@@ -1,6 +1,6 @@
-===
-API
-===
+=============
+API Reference
+=============
 
 This is the class and function reference of Empulse.
 Please refer to the full :doc:`guide` for further details,
