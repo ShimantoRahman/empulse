@@ -43,7 +43,7 @@ dependencies = [
 ]
 
 [project.urls]
-documentation = "https://empulse.readthedocs.io/en/latest/"
+documentation = "https://empulse.readthedocs.io/en/stable/"
 repository = "https://github.com/ShimantoRahman/empulse"
 issue-tracker = "https://github.com/ShimantoRahman/empulse/issues"
 
