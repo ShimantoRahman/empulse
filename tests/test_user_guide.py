@@ -4,6 +4,7 @@ import textwrap
 import traceback
 
 import pytest
+from sklearn import set_config
 
 # Directory containing the user guide files
 GUIDE_DIR = 'docs/guide'
@@ -23,6 +24,7 @@ def extract_code_blocks(file_content):
 
 def execute_code_blocks(code_blocks):
     """Execute each code block and report any errors."""
+    set_config(enable_metadata_routing=False)   # reset the global configuration
     for code in code_blocks:
         code = textwrap.dedent(code)
         exec_globals = {}
