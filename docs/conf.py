@@ -37,7 +37,7 @@ def generate_versions_json():
         {
             "name": f"{version} (stable)",
             "version": version,
-            "url": f"https://empulse.readthedocs.io/en/{version}/",
+            "url": f"https://empulse.readthedocs.io/en/stable/",
             "preferred": True
         }
     ]
