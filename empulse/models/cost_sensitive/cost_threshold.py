@@ -8,8 +8,8 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
-from sklearn.utils._metadata_requests import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils._param_validation import HasMethods, StrOptions
+from sklearn.utils.metadata_routing import process_routing, MetadataRouter, MethodMapping
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ._cs_mixin import CostSensitiveMixin
@@ -276,7 +276,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     def get_metadata_routing(self):
         """Get metadata routing of this object.
 
-        Please check :ref:`sklearn:User Guide <metadata_routing>` on how the routing
+        Please check :ref:`User Guide <sklearn:metadata_routing>` on how the routing
         mechanism works.
 
         Returns
