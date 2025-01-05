@@ -257,15 +257,15 @@ def load_upsell_bank_telemarketing(
     The goal is to predict whether a client will subscribe to a term deposit after being called by the bank.
     The target variable is whether the client subscribed to the term deposit, 'yes' = 1 and 'no' = 0.
 
-    The data is related with direct marketing campaigns (phone calls) of a Portuguese banking institution.
+    The dataset is related to a direct marketing campaigns (phone calls) of a Portuguese banking institution.
     The marketing campaigns were based on phone calls.
     Often, more than one contact to the same client was required,
     in order to access if the product (bank term deposit) would be or not subscribed.
 
-    Features recorded before the contact event are removed to avoid data leakage from the original dataset [1]_.
+    Features recorded before the contact event are removed from the original dataset [1]_ to avoid data leakage.
     Only clients with a positive balance are considered, since clients in debt are not eligible for term deposits.
 
-    For a full feature description and additional information about the dataset,
+    For a full data description and additional information about the dataset,
     consult the :ref:`User Guide <upsell_bank_telemarketing>`.
 
     =================   ==============
@@ -393,6 +393,30 @@ def load_upsell_bank_telemarketing(
     tp_cost = contact_cost
     tn_cost = 0.0
 
+    data.loc[:, 'default'] = data['default'].map({'yes': 1, 'no': 0})
+    data.loc[:, 'housing'] = data['housing'].map({'yes': 1, 'no': 0})
+    data.loc[:, 'loan'] = data['loan'].map({'yes': 1, 'no': 0})
+
+    data = data.astype({
+        'age': np.uint8,
+        'balance': np.int32,
+        'previous': np.uint8,
+        'job': 'category',
+        'marital': 'category',
+        'education': 'category',
+        'default': np.uint8,
+        'housing': np.uint8,
+        'loan': np.uint8,
+        'poutcome': 'category'
+    })
+
+    data = data.rename(columns={
+        'poutcome': 'previous_outcome',
+        'loan': 'has_personal_loan',
+        'housing': 'has_housing_loan',
+        'default': 'has_credit_in_default',
+    })
+
     if return_X_y_costs:
         if as_frame:
             return (
@@ -502,7 +526,7 @@ def load_give_me_some_credit(
 
     Only customers with a positive monthly income and a debt ratio less than 1 are considered.
 
-    For a full feature description and additional information about the dataset,
+    For a full data description and additional information about the dataset,
     consult the :ref:`User Guide <give_me_some_credit>`.
 
     =================   ==============
@@ -526,7 +550,7 @@ def load_give_me_some_credit(
     max_credit_line : float, default=25000
         The maximum amount a client can borrow.
     loss_given_default : float, default=0.75
-        The amount of the loan amount which is lost if the client defaults.
+        The fraction of the loan amount which is lost if the client defaults.
     term_length_months : int, default=24
         The length of the loan term in months.
     loan_to_income_ratio : float, default=3
@@ -561,6 +585,7 @@ def load_give_me_some_credit(
         - :math:`\\pi_1` : percentage of non-defaulters
         - :math:`Cl_i` : credit line of the client
         - :math:`\\bar{Cl}` : average credit line
+        - :math:`L_{gd}` : the fraction of the loan amount which is lost if the client defaults
 
     References
     ----------
@@ -615,7 +640,7 @@ def load_give_me_some_credit(
 
     # normalize feature names
     column_mapping = {
-        'RevolvingUtilizationOfUnsecuredLines': 'total_balance',
+        'RevolvingUtilizationOfUnsecuredLines': 'revolving_utilization',
         'age': 'age',
         'NumberOfTime30-59DaysPastDueNotWorse': 'n_times_late_30_59_days',
         'DebtRatio': 'debt_ratio',
@@ -628,6 +653,35 @@ def load_give_me_some_credit(
     }
 
     data = data.rename(columns=column_mapping)
+
+    new_order = [
+        'monthly_income',
+        'debt_ratio',
+        'revolving_utilization',
+        'age',
+        'n_dependents',
+        'n_open_credit_lines',
+        'n_real_estate_loans',
+        'n_times_late_30_59_days',
+        'n_times_late_60_89_days',
+        'n_times_late_over_90_days',
+    ]
+
+    # Reorder columns
+    data = data.reindex(columns=new_order)
+
+    data = data.astype({
+        'monthly_income': np.float64,
+        'debt_ratio': np.float64,
+        'revolving_utilization': np.float64,
+        'age': np.uint8,
+        'n_dependents': np.uint8,
+        'n_open_credit_lines': np.uint8,
+        'n_real_estate_loans': np.uint8,
+        'n_times_late_30_59_days': np.uint8,
+        'n_times_late_60_89_days': np.uint8,
+        'n_times_late_over_90_days': np.uint8,
+    })
 
     if return_X_y_costs:
         if as_frame:
@@ -738,7 +792,7 @@ def load_credit_scoring_pakdd(
 
     Only clients with a personal income between 100 and 10000 are considered.
 
-    For a full feature description and additional information about the dataset,
+    For a full data description and additional information about the dataset,
     consult the :ref:`User Guide <credit_scoring_pakdd>`.
 
     =================   ==============
@@ -746,7 +800,7 @@ def load_credit_scoring_pakdd(
     Defaulters                    7743
     Non-defaulters               31195
     Samples                      38938
-    Features                        26
+    Features                        25
     =================   ==============
 
     Parameters
@@ -797,6 +851,7 @@ def load_credit_scoring_pakdd(
         - :math:`\\pi_1` : percentage of non-defaulters
         - :math:`Cl_i` : credit line of the client
         - :math:`\\bar{Cl}` : average credit line
+        - :math:`L_{gd}` : the fraction of the loan amount which is lost if the client defaults
 
     References
     ----------
@@ -874,18 +929,109 @@ def load_credit_scoring_pakdd(
 
     # normalize feature names
     data.columns = data.columns.str.lower().str.replace('#', '').str.replace('quant', 'n')
-    data.columns = data.columns.str.replace('in_the_application', '').str.replace('residencial', 'residential')
+    data.columns = data.columns.str.replace('_in_the_application', '').str.replace('residencial', 'residential')
+    data.loc[:, 'sex'] = data['sex'].map({'M': 1, 'F': 0})
+    # fill in single  missing value as male
+    data.loc[:, 'sex'] = data.sex.fillna('1')
+
     column_mapping = {
-        'FLAG_RESIDENTIAL_ADDRESS=POSTAL_ADDRESS'.lower(): 'flag_address_eq_postal_address',
-        'FLAG_RESIDENCE_TOWN=WORKING_TOWN'.lower(): 'flag_lives_in_work_town',
-        'FLAG_RESIDENCE_STATE=WORKING_STATE'.lower(): 'flag_lives_in_work_state',
+        'flag_residence_town_eq_working_town': 'lives_in_work_town',
+        'flag_residence_state_eq_working_state': 'lives_in_work_state',
+        'flag_residential_address_eq_postal_address': 'has_same_postal_address',
+        'flag_residential_phone': 'has_residential_phone',
+        'sex': 'is_male',
+        'flag_mothers_name': 'filled_in_mothers_name',
+        'flag_fathers_name': 'filled_in_fathers_name',
+        'mate_income': 'partner_income',
+        'flag_other_card': 'has_other_card',
+        'flag_mobile_phone': 'has_mobile_phone',
+        'flag_contact_phone': 'has_contact_phone',
+        'cod_application_booth': 'application_booth_code',
+        'flag_card_insurance_option': 'has_card_insurance',
+        'id_shop': 'shop_code',
     }
     data = data.rename(columns=column_mapping)
 
-    # set all string types to category
-    for col in data.columns:
-        if data[col].dtype == 'object':
-            data[col] = data[col].astype('category')
+    # remap values of matiral_status to more readable values
+    data.loc[:, 'marital_status'] = data['marital_status'].map({
+        'S': 'single',
+        'M': 'married',
+        'D': 'divorced',
+        'W': 'widowed',
+        'O': 'other'
+    })
+    # remap values of residence_type to more readable values
+    data.loc[:, 'residence_type'] = data['residence_type'].map({
+        'P': 'owned',
+        'A': 'rented',
+        'C': 'parents',
+        'O': 'other'
+    })
+
+    # Desired column order
+    new_order = [
+        'age',
+        'personal_net_income',
+        'partner_income',
+        'months_in_residence',
+        'months_in_the_job',
+        'payment_day',
+        'n_banking_accounts',
+        'n_additional_cards',
+        'is_male',
+        'has_residential_phone',
+        'has_mobile_phone',
+        'has_contact_phone',
+        'has_same_postal_address',
+        'has_other_card',
+        'has_card_insurance',
+        'lives_in_work_town',
+        'lives_in_work_state',
+        'filled_in_mothers_name',
+        'filled_in_fathers_name',
+        'shop_rank',
+        'marital_status',
+        'residence_type',
+        'area_code_residential_phone',
+        'shop_code',
+        'application_booth_code',
+        'profession_code',
+    ]
+
+    # Reorder columns
+    data = data.reindex(columns=new_order)
+
+    data = data.astype({
+        'age': np.uint8,
+        'personal_net_income': np.float32,
+        'partner_income': np.float32,
+        'months_in_residence': np.uint8,
+        'months_in_the_job': np.uint8,
+        'payment_day': np.uint8,
+        'n_banking_accounts': np.uint8,
+        'n_additional_cards': np.uint8,
+        'is_male': np.uint8,
+        'has_residential_phone': np.uint8,
+        'has_mobile_phone': np.uint8,
+        'has_contact_phone': np.uint8,
+        'has_same_postal_address': np.uint8,
+        'has_other_card': np.uint8,
+        'has_card_insurance': np.uint8,
+        'lives_in_work_town': np.uint8,
+        'lives_in_work_state': np.uint8,
+        'filled_in_mothers_name': np.uint8,
+        'filled_in_fathers_name': np.uint8,
+        'shop_rank': 'category',
+        'marital_status': 'category',
+        'residence_type': 'category',
+        'area_code_residential_phone': 'category',
+        'shop_code': 'category',
+        'application_booth_code': 'category',
+        'profession_code': 'category',
+    })
+
+    # remove flag_card_insurance_option
+    data = data.drop(['has_card_insurance'], axis=1)
 
     if return_X_y_costs:
         if as_frame:
