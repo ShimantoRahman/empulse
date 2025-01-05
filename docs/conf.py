@@ -6,6 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import json
 import os
 import sys
 from datetime import datetime
@@ -20,6 +21,31 @@ project = 'Empulse'
 copyright = f"2024 - {datetime.now().year}, Shimanto Rahman (MIT License)"
 author = 'Shimanto Rahman'
 release = empulse.__version__
+
+
+# -- Generate versions.json ---------------------------------------------------
+
+def generate_versions_json():
+    with open('../empulse/VERSION.txt', 'r') as version_file:
+        version = version_file.read().strip()
+
+    versions = [
+        {
+            "name": "dev (latest)",
+            "url": "https://empulse.readthedocs.io/en/latest/"
+        },
+        {
+            "name": f"{version} (stable)",
+            "version": version,
+            "url": f"https://empulse.readthedocs.io/en/{version}/",
+            "preferred": True
+        }
+    ]
+
+    with open('./_static/versions.json', 'w') as f:
+        json.dump(versions, f, indent=2)
+
+generate_versions_json()
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -57,7 +83,6 @@ intersphinx_disabled_reftypes = ["*"]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

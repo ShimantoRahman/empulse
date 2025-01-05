@@ -1,10 +1,9 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "setuptools-scm[toml]"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "empulse"
-version = "0.5.1"
 description = "Value-driven and cost-sensitive tools for scikit-learn"
 readme = "README.md"
 authors = [
@@ -41,6 +40,9 @@ dependencies = [
     "joblib>=1.3.2",
     "pandas>=2.2.0",
 ]
+
+[tool.setuptools.dynamic]
+version = { file = "empulse/VERSION.txt" }
 
 [project.urls]
 documentation = "https://empulse.readthedocs.io/en/stable/"
