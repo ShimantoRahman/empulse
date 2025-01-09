@@ -25,9 +25,9 @@ def extract_code_blocks(file_content):
 def execute_code_blocks(code_blocks):
     """Execute each code block and report any errors."""
     set_config(enable_metadata_routing=False)   # reset the global configuration
+    exec_globals = {} # shared environment for all code blocks
     for code in code_blocks:
         code = textwrap.dedent(code)
-        exec_globals = {}
         try:
             exec(code, exec_globals)
         except Exception as e:
