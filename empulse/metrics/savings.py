@@ -66,7 +66,7 @@ def _compute_log_expected_cost(
         fp_cost: Union[NDArray, float] = 0.0,
 ) -> NDArray:
     epsilon = np.finfo(y_pred.dtype).eps
-    y_pred = np.clip(y_pred, epsilon, 1-epsilon)
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     inverse_y_pred = 1 - y_pred
     log_y_pred = np.log(y_pred)
     log_inv_y_pred = np.log(inverse_y_pred)
@@ -667,6 +667,10 @@ def expected_savings_score(
                   tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     )
 
+    # avoid division by zero
+    if cost_base == 0.0:
+        cost_base = np.finfo(float).eps
+
     cost = expected_cost_loss(y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost,
                               tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
     return 1.0 - cost / cost_base
@@ -799,11 +803,11 @@ def _objective_cslogit(
         normalize=True,
         check_input=False
     )
-    gradient = np.sum(
+    gradient = np.mean(
         features * y_pred * (1 - y_pred) * (
                 y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
         )
-        , axis=0) / len(y_true)
+        , axis=0)
     return average_expected_cost, gradient
 
 
