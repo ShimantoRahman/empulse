@@ -11,6 +11,8 @@ class Generation:
     """
     A single generation of a Real-coded Genetic Algorithm (RGA).
 
+    Read more in the :ref:`User Guide <proflogit>`.
+
     Parameters
     ----------
     population_size : int or None, default=None

@@ -21,6 +21,8 @@ class BiasResampler(BaseSampler):
     """
     Sampler which resamples instances to remove bias against a subgroup.
 
+    Read more in the :ref:`User Guide <bias_mitigation>`.
+
     Parameters
     ----------
     strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'

@@ -31,6 +31,8 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
     """
     Classifier which reweighs instances during training to remove bias against a subgroup.
 
+    Read more in the :ref:`User Guide <bias_mitigation>`.
+
     Parameters
     ----------
     estimator : Estimator instance

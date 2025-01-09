@@ -14,6 +14,8 @@ class B2BoostClassifier(BaseBoostClassifier):
     """
     :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss for customer churn.
 
+    Read more in the :ref:`User Guide <csboost>`.
+
     Parameters
     ----------
     estimator : `xgboost:xgboost.XGBClassifier`, optional

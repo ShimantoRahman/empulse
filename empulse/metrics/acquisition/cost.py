@@ -24,6 +24,8 @@ def make_objective_acquisition(
     which receive a commission.
     The company gains a contribution from a successful acquisition.
 
+    Read more in the :ref:`User Guide <cost_functions>`.
+
     Parameters
     ----------
     contribution : float, default=7000

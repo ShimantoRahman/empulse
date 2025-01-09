@@ -64,6 +64,8 @@ class BiasRelabler(BaseSampler):
     """
     Sampler which relabels instances to remove bias against a subgroup.
 
+    Read more in the :ref:`User Guide <bias_mitigation>`.
+
     Parameters
     ----------
     estimator : Estimator instance

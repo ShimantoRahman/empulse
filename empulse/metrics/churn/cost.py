@@ -22,6 +22,8 @@ def make_objective_churn(
     Only a fraction of churners accepts the incentive offer.
     For detailed information, consult the paper [1]_.
 
+    Read more in the :ref:`User Guide <cost_functions>`.
+
     .. seealso::
         :class:`~empulse.models.B2BoostClassifier` : Uses the instance-specific cost function as objective function.
 

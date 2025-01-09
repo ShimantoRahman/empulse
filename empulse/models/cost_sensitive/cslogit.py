@@ -21,6 +21,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
     Logistic classifier to optimize instance-specific cost loss.
 
+    Read more in the :ref:`User Guide <cslogit>`.
+
     .. seealso::
 
         :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.

@@ -17,6 +17,8 @@ class CostSensitiveSampler(BaseSampler):
     This method adjusts the sampling probability of each sample based on the cost of misclassification.
     This is done either by rejection sampling [1]_ or oversampling [2]_.
 
+    Read more in the :ref:`User Guide <cost_sampling>`.
+
     Parameters
     ----------
     method : {'rejection sampling', 'oversampling'}, default='rejection sampling'

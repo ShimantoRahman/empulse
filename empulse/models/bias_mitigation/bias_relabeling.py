@@ -14,6 +14,8 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
     """
     Classifier which relabels instances during training to remove bias against a subgroup.
 
+    Read more in the :ref:`User Guide <bias_mitigation>`.
+
     Parameters
     ----------
     estimator : Estimator instance

@@ -23,6 +23,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     The costs passed to the cost-sensitive classifier are a combination of the original costs (not non-outliers) and
     the imputed predicted costs (for outliers).
 
+    Read more in the :ref:`User Guide <robustcs>`.
+
     Parameters
     ----------
     estimator : Estimator

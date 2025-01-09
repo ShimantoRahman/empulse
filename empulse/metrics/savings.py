@@ -693,6 +693,8 @@ def make_objective_aec(
     which receive a commission.
     The company gains a contribution from a successful acquisition.
 
+    Read more in the :ref:`User Guide <cost_functions>`.
+
     Parameters
     ----------
     model : {'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'}

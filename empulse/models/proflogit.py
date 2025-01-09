@@ -20,6 +20,8 @@ class ProfLogitClassifier(BaseLogitClassifier):
     the regression coefficients of the logistic model through
     a Real-coded Genetic Algorithm (RGA).
 
+    Read more in the :ref:`User Guide <proflogit>`.
+
     Parameters
     ----------
     C : float, default=1.0

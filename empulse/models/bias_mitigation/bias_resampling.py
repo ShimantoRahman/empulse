@@ -14,6 +14,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
 
+    Read more in the :ref:`User Guide <bias_mitigation>`.
+
     Parameters
     ----------
     estimator : Estimator instance
