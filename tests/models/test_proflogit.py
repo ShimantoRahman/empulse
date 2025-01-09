@@ -27,7 +27,7 @@ def test_proflogit_init():
     clf = ProfLogitClassifier()
     assert clf.C == 1.0
     assert clf.fit_intercept is True
-    assert clf.soft_threshold is True
+    assert clf.soft_threshold is False
     assert clf.l1_ratio == 1.0
     assert clf.n_jobs is None
 
@@ -174,7 +174,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
         )
         return result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize)
+    proflogit = ProfLogitClassifier(optimize_fn=optimize, soft_threshold=True)
 
     proflogit.fit(X, y)
 
