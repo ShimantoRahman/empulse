@@ -8,7 +8,7 @@
 
 # Empulse
 
-<a href="https://empulse.readthedocs.io/en/latest/"><img src="docs/_static/assets/empulse_logo_light.png" width="25%" height="25%" align="right" /></a>
+<a href="https://empulse.readthedocs.io/en/latest/"><img src="https://empulse.readthedocs.io/en/latest/_static/assets/empulse_logo_light.png" alt="Empulse Logo" width="25%" height="25%" align="right" /></a>
 
 <!-- start-of-readme-intro -->
 
@@ -109,31 +109,31 @@ cross_val_score(pipeline, X, y, scoring=scorer)
 ### Use case specific profit and cost metrics
 
 Empulse offers a wide range of profit and cost metrics that are tailored to specific use cases such as:
-- [customer churn](https://empulse.readthedocs.io/en/latest/reference/metrics.html#customer-churn-metrics), 
-- [customer acquisition](https://empulse.readthedocs.io/en/latest/reference/metrics.html#customer-acquisition-metrics),
-- [credit scoring](https://empulse.readthedocs.io/en/latest/reference/metrics.html#credit-scoring-metrics),
+- [customer churn](https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-churn-metrics), 
+- [customer acquisition](https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-acquisition-metrics),
+- [credit scoring](https://empulse.readthedocs.io/en/stable/reference/metrics.html#credit-scoring-metrics),
 - and fraud detection (coming soon).
 
 For other use cases, the package provides a generic implementations for:
-- the [cost loss](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.cost_loss.html),
-- the [expected cost loss](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.expected_cost_loss.html),
-- the [expected log cost loss](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.expected_log_cost_loss.html),
-- the [savings score](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.savings_score.html),
-- the [expected savings score](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.expected_savings_score.html),
-- the [maximum profit score](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.max_profit_score.html),
-- and the [expected maximum profit score](https://empulse.readthedocs.io/en/stable/reference/metrics/empulse.metrics.emp_score.html).
+- the [cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.cost_loss.html),
+- the [expected cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_cost_loss.html),
+- the [expected log cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_log_cost_loss.html),
+- the [savings score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.savings_score.html),
+- the [expected savings score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_savings_score.html),
+- the [maximum profit score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.max_profit_score.html),
+- and the [expected maximum profit score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.emp_score.html).
 
 ### Flexible profit-driven and cost-sensitive models
 
 Empulse provides a range of profit-driven and cost-sensitive models such as:
-- [CSLogitClassifier](https://empulse.readthedocs.io/en/stable/reference/models/CSLogitClassifier.html),
-- [CSBoostClassifier](https://empulse.readthedocs.io/en/stable/reference/models/CSBoostClassifier.html),
-- [B2BoostClassifier](https://empulse.readthedocs.io/en/stable/reference/models/B2BoostClassifier.html),
-- [RobustCSClassifier](https://empulse.readthedocs.io/en/stable/reference/models/RobustCSClassifier.html),
-- [ProfLogitClassifier](https://empulse.readthedocs.io/en/stable/reference/models/ProfLogitClassifier.html),
-- [BiasRelabelingClassifier](https://empulse.readthedocs.io/en/stable/reference/models/BiasRelabelingClassifier.html),
-- [BiasResamplingClassifier](https://empulse.readthedocs.io/en/stable/reference/models/BiasResamplingClassifier.html),
-- and [BiasReweighingClassifier](https://empulse.readthedocs.io/en/stable/reference/models/BiasReweighingClassifier.html).
+- [CSLogitClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSLogitClassifier.html),
+- [CSBoostClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSBoostClassifier.html),
+- [B2BoostClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.B2BoostClassifier.html),
+- [RobustCSClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.RobustCSClassifier.html),
+- [ProfLogitClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.ProfLogitClassifier.html),
+- [BiasRelabelingClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasRelabelingClassifier.html),
+- [BiasResamplingClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasResamplingClassifier.html),
+- and [BiasReweighingClassifier](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasReweighingClassifier.html).
 
 Each classifier tries to balance ease of use through good defaults and flexibility through a wide range of parameters.
 
@@ -200,9 +200,9 @@ cross_val_score(pipeline, X, y, scoring=scorer, params={"fp_cost": fp_cost, "fn_
 
 Empulse uses the [imbalanced-learn](https://imbalanced-learn.org/) 
 package to provide cost-aware resampling and relabeling techniques:
-- [CostSensitiveSampler](https://empulse.readthedocs.io/en/stable/reference/samplers/CostSensitiveSampler.html)
-- [BiasResampler](https://empulse.readthedocs.io/en/stable/reference/samplers/BiasResampler.html)
-- [BiasRelabler](https://empulse.readthedocs.io/en/stable/reference/samplers/BiasRelabler.html)
+- [CostSensitiveSampler](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.CostSensitiveSampler.html)
+- [BiasResampler](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.BiasResampler.html)
+- [BiasRelabler](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.BiasRelabler.html)
 
 ```python
 from empulse.samplers import CostSensitiveSampler
@@ -241,7 +241,7 @@ pipeline.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 ### Find the optimal decision threshold
 
 Empulse provides the 
-[`CSThresholdClassifier`](https://empulse.readthedocs.io/en/stable/reference/models/CSThresholdClassifier.html)
+[`CSThresholdClassifier`](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSThresholdClassifier.html)
 which allows you to find the optimal decision threshold for a given cost matrix to minimize the expected cost loss.
 
 The meta-estimator changes the `predict` method of the base estimator to predict the class with the lowest expected cost.
