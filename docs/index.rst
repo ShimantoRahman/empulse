@@ -2,7 +2,7 @@
     :description lang=en:
         Empulse is a scikit-learn based Python package for cost-sensitive and
         value-driven (also known as profit-driven) machine learning.
-        Solve your imbalanced data and other cost-sensitive learning data-science problems
+        Solve your imbalanced data and other cost-sensitive learning data science problems
         with a sklearn compatible library.
 
 =======
