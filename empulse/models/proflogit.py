@@ -29,7 +29,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
     fit_intercept : bool, default=True
         Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
 
-    soft_threshold : bool, default=True
+    soft_threshold : bool, default=False
         If ``True``, apply soft-thresholding to the regression coefficients.
 
     l1_ratio : float, default=1.0
@@ -102,7 +102,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
             self,
             C: float = 1.0,
             fit_intercept: bool = True,
-            soft_threshold: bool = True,
+            soft_threshold: bool = False,
             l1_ratio: float = 1.0,
             loss: Callable = empc_score,
             optimize_fn: Optional[Callable] = None,

@@ -36,7 +36,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     fit_intercept : bool, default=True
         Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
 
-    soft_threshold : bool, default=True
+    soft_threshold : bool, default=False
         If ``True``, apply soft-thresholding to the regression coefficients.
 
     l1_ratio : float, default=1.0
@@ -214,7 +214,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             *,
             C: float = 1.0,
             fit_intercept: bool = True,
-            soft_threshold: bool = True,
+            soft_threshold: bool = False,
             l1_ratio: float = 1.0,
             loss: Loss | Callable = 'average expected cost',
             optimize_fn: Optional[Callable] = None,
@@ -439,10 +439,8 @@ def _optimize_jacobian(
 def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
     """compute the objective function and its gradient using elastic net regularization."""
 
-    # b is the vector holding the regression coefficients (no intercept)
-    b = weights.copy()[1:] if fit_intercept else weights
-
     if soft_threshold:
+        b = weights.copy()[1:] if fit_intercept else weights.copy()
         bool_nonzero = (np.abs(b) - C) > 0
         if np.sum(bool_nonzero) > 0:
             b[bool_nonzero] = np.sign(b[bool_nonzero]) * (
@@ -450,8 +448,11 @@ def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
             )
         if np.sum(~bool_nonzero) > 0:
             b[~bool_nonzero] = 0
+    else:
+        b = weights[1:] if fit_intercept else weights
 
     loss, gradient = loss_fn(X, weights, y)
+    # loss, gradient = loss_fn(expit(np.dot(weights, X.T)))
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     gradient_penalty = (1 - l1_ratio) * b + l1_ratio * np.sign(b)
