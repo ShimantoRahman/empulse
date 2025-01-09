@@ -1,6 +1,0 @@
-﻿expected\_cost\_loss
-====================================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: expected_cost_loss

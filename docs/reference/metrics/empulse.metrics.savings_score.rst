@@ -1,6 +1,0 @@
-﻿savings\_score
-==============================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: savings_score

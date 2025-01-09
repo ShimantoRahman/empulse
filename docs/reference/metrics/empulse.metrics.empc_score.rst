@@ -1,6 +1,0 @@
-﻿empc\_score
-===========================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: empc_score

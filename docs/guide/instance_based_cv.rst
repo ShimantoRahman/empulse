@@ -1,27 +1,28 @@
 .. _instance_based_cv:
 
-Cross-Validation with Instance Based Metrics
-============================================
+==========================================
+Cross-Validation with Instance-Based Costs
+==========================================
 
-Instance-based metrics in the empulse library,
-such as :func:`empulse.metrics.empb_score`,
-provide the flexibility to incorporate instance-based weights into the metrics.
-This feature is particularly useful when dealing with imbalanced datasets or
-when different instances have different importance.
-
+Cost-sensitive, models, samplers and metrics depend on instance-based costs.
 In a simple train-validation-test split scenario,
-using instance-based weights is straightforward.
-However, when performing cross-validation, the weights for each fold change, which requires special handling.
+using instance-based weights is straightforward,
+since they can just be passed to the ``fit``, ``fit_resample`` or ``score`` methods.
+However, when performing cross-validation, the costs for each fold change, which requires special handling.
 
 As of scikit-learn 1.4.0,
 some cross-validation methods support
 `metadata routing <https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_metadata_routing.html>`_.
-This feature allows instance-based weights to be passed to scorers,
-and these weights are split accordingly for each fold.
+This feature allows instance-based costs to be passed to estimators, samplers, and scorers,
+and these costs are split accordingly for each fold.
 For a list of cross-validation methods that support metadata routing,
 refer to `this link <https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models>`_.
 Please note that metadata routing is an experimental feature and needs to be enabled manually.
 
+Enabling Metadata Routing
+=========================
+
+To enable metadata routing in scikit-learn, use the following code snippet:
 
 .. code-block:: python
 
@@ -29,56 +30,118 @@ Please note that metadata routing is an experimental feature and needs to be ena
 
     set_config(enable_metadata_routing=True)
 
-The above code snippet enables metadata routing in scikit-learn.
-Once this is done, instance-based weights can be used with cross-validation.
-The following example demonstrates this.
+Alternatively, you can also use the context manager to not enable metadata routing globally:
+
+.. code-block:: python
+
+    from sklearn import config_context
+
+    with config_context(enable_metadata_routing=True):
+        # code that uses metadata routing
+        ...
+
+What is Metadata Routing
+========================
+
+A full explanation of how metadata routing works can be found in sklearn's
+`User Guide <https://scikit-learn.org/stable/metadata_routing.html>`_.
+
+But for a brief summary to be able to use the tools in Empulse,
+all methods on an estimator like ``fit``, ``fit_resample``, ``score`` can request metadata.
+Metadata routers like :func:`~sklearn:sklearn.model_selection.cross_val_score` or
+:class:`~sklearn:sklearn.model_selection.GridSearchCV` can pass metadata to the metadata requesters.
+A metadata requester can request metadata through calling ``set_***_request`` methods.
+
+So for a cost-sensitive model can request the ``fp_cost`` metadata to its ``fit`` method like this:
+
+.. code-block:: python
+
+    from empulse.models import CSLogitClassifier
+
+    cslogit = CSLogitClassifier().set_fit_request(fp_cost=True)
+
+A sampler can request the ``fp_cost`` metadata to its ``fit_resample`` method like this:
+
+.. code-block:: python
+
+    from empulse.samplers import CostSensitiveSampler
+
+    sampler = CostSensitiveSampler().set_fit_resample_request(fp_cost=True)
+
+.. note::
+
+    When using a sampler inside a pipeline, it should be an imbalanced-learn
+    :class:`~imblearn:imblearn.pipeline.Pipeline`.
+    Otherwise the parameters will not be passed to the sampler.
+
+A scorer can request the ``fp_cost`` metadata to its ``score`` method like this:
+
+.. code-block:: python
+
+    from empulse.metrics import expected_savings_score
+    from sklearn.metrics import make_scorer
+
+    scorer = make_scorer(
+        expected_savings_score,
+        greater_is_better=True,
+        response_method='predict_proba',
+    ).set_score_request(fp_cost=True)
+
+Then, when using :func:`~sklearn:sklearn.model_selection.cross_val_score` or
+:class:`~sklearn:sklearn.model_selection.GridSearchCV`, you can pass the metadata to the method like this:
 
 .. code-block:: python
 
     import numpy as np
+    from sklearn.model_selection import cross_val_score
     from sklearn.datasets import make_classification
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import make_scorer
-    from sklearn.model_selection import cross_val_score, StratifiedKFold, train_test_split
-
-    from empulse.metrics import empb_score
 
     X, y = make_classification()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, stratify=y)
+    fp_cost = np.random.rand(X.shape[0])  # instance-dependent costs
 
-    estimator = LogisticRegression()
+    cross_val_score(cslogit, X, y, scoring=scorer, params={"fp_cost": fp_cost})
 
-    # define EMPB parameters
-    clv = np.random.rand(100) * 200
-    alpha = 6
-    beta = 14
-    incentive_fraction = 0.05
-    contact_cost = 15
+Now the `fp_cost` metadata will be passed to the `fit` method of the :class:`~empulse.models.CSLogitClassifier`
+and the `score` method of the :func:`~empulse.metrics.expected_savings_score` scorer.
 
-    scoring = make_scorer(
-        empb_score,
-        greater_is_better=True,
+
+Gridsearch Example
+==================
+
+In this example we want to train a cost-sensitive logistic regression model.
+We will find the best hyperparameters using a grid search optimizing the expected cost loss.
+The model and scorer are set up to request the instance-dependent costs.
+
+.. code-block:: python
+
+    import numpy as np
+    from sklearn import set_config
+    from sklearn.datasets import make_classification
+    from sklearn.model_selection import GridSearchCV, StratifiedKFold
+    from sklearn.metrics import make_scorer
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.pipeline import Pipeline
+    from empulse.models import CSLogitClassifier
+    from empulse.metrics import expected_cost_loss
+
+    set_config(enable_metadata_routing=True)
+
+    X, y = make_classification()
+    fp_cost = np.random.rand(X.shape[0])
+    fn_cost = np.random.rand(X.shape[0])
+
+    scorer = make_scorer(
+        expected_cost_loss,
+        greater_is_better=False,
         response_method='predict_proba',
-        alpha=alpha,  # pass fixed EMPB parameters to scorer
-        beta=beta,
-        incentive_fraction=incentive_fraction,
-        contact_cost=contact_cost,
-    ).set_score_request(clv=True)  # enable passing of clv to scorer
+    ).set_score_request(fp_cost=True, fn_cost=True)
+
+    pipe = Pipeline([
+        ('scaler', StandardScaler()),
+        ('model', CSLogitClassifier().set_fit_request(fp_cost=True, fn_cost=True))
+    ])
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    cross_val_score(estimator, X, y, cv=cv, scoring=scoring, params={"clv": clv})  # pass clv to cross_val_score
-
-In the above example, we first create a classification dataset using
-:py:func:`~sklearn:sklearn.datasets.make_classification`.
-We then split the dataset into training and testing sets.
-We define an estimator using :py:class:`~sklearn:sklearn.linear_model.LogisticRegression`.
-
-Next, we define the parameters for the :func:`~empulse.metrics.empb_score` metric,
-including ``clv``, ``alpha``, ``beta``, ``incentive_fraction``, and ``contact_cost``.
-We create a scorer using :py:func:`~sklearn:sklearn.metrics.make_scorer` and
-set ``clv=True`` to enable the passing of ``clv`` to the scorer.
-
-Finally, we perform cross-validation using :py:class:`~sklearn:sklearn.model_selection.StratifiedKFold` and
-compute the cross-validation score using :py:func:`~sklearn:sklearn.model_selection.cross_val_score`,
-passing ``clv`` as a parameter.
+    param_grid = {'model__C': [0.1, 1]}
+    grid_search = GridSearchCV(pipe, param_grid, cv=cv, scoring=scorer)
+    grid_search.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)

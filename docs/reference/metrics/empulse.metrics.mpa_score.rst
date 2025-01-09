@@ -1,6 +1,0 @@
-﻿mpa\_score
-==========================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: mpa_score

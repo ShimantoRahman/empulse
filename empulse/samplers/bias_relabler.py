@@ -62,7 +62,7 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
 
 class BiasRelabler(BaseSampler):
     """
-    Sampler which relabels instances to remove bias against a subgroup
+    Sampler which relabels instances to remove bias against a subgroup.
 
     Parameters
     ----------

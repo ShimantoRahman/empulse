@@ -9,7 +9,7 @@ from sklearn.utils import check_random_state
 
 class Generation:
     """
-    A single generation of a Real-coded Genetic Algorithm (RGA)
+    A single generation of a Real-coded Genetic Algorithm (RGA).
 
     Parameters
     ----------

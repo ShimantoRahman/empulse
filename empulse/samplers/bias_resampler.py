@@ -19,7 +19,7 @@ _YT = TypeVar('_YT', bound=ArrayLike)
 
 class BiasResampler(BaseSampler):
     """
-    Sampler which resamples instances to remove bias against a subgroup
+    Sampler which resamples instances to remove bias against a subgroup.
 
     Parameters
     ----------

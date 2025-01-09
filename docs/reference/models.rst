@@ -6,40 +6,30 @@ empulse.models
 
 The :mod:`~empulse.models` module contains a collection of cost-sensitive and profit-driven models.
 
-.. toctree::
-   :hidden:
-   :glob:
-
-   models/*
-
-
 Cost-Sensitive and Value-driven Models
 ======================================
-.. list-table::
-   :widths: 25 75
 
-   * - :class:`B2BoostClassifier`
-     - :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss for customer churn.
-   * - :class:`CSBoostClassifier`
-     - :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss.
-   * - :class:`CSLogitClassifier`
-     - Logistic classifier to optimize instance-specific cost loss.
-   * - :class:`CSThresholdClassifier`
-     - Classifier which sets the decision threshold to optimize the instance-specific cost loss.
-   * - :class:`RobustCSClassifier`
-     - Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
-   * - :class:`ProfLogitClassifier`
-     - Logistic classifier to optimize profit-driven score.
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+   :template: base.rst
+
+   B2BoostClassifier
+   CSBoostClassifier
+   CSLogitClassifier
+   CSThresholdClassifier
+   RobustCSClassifier
+   ProfLogitClassifier
 
 Bias Mitigation Models
 ======================
 
-.. list-table::
-   :widths: 25 75
+.. autosummary::
+    :toctree: generated/
+    :nosignatures:
+    :template: base.rst
 
-   * - :class:`BiasRelabelingClassifier`
-     - Classifier which relabels instances during training to remove bias against a subgroup.
-   * - :class:`BiasResamplingClassifier`
-     - Classifier which resamples instances during training to remove bias against a subgroup.
-   * - :class:`BiasReweighingClassifier`
-     - Classifier which reweighs instances during training to remove bias against a subgroup.
+    BiasRelabelingClassifier
+    BiasResamplingClassifier
+    BiasReweighingClassifier
+

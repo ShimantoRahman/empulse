@@ -18,8 +18,6 @@ from ..._common import Parameter
 
 class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     """
-    Cost-sensitive threshold classifier.
-
     Classifier which sets the decision threshold to optimize the instance-specific cost loss.
 
     Parameters

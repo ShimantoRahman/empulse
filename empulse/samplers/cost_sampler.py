@@ -12,7 +12,7 @@ from .._common import Parameter
 
 class CostSensitiveSampler(BaseSampler):
     """
-    Cost-proportionate sampling.
+    Sampler which performs cost-proportionate resampling.
 
     This method adjusts the sampling probability of each sample based on the cost of misclassification.
     This is done either by rejection sampling [1]_ or oversampling [2]_.

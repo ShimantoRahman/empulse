@@ -14,6 +14,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../empulse"))
 sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("sphinxext"))
 
 print(sys.path)
 import empulse  # noqa: E402 F401
@@ -84,6 +85,7 @@ extensions = [
     "sphinx.ext.doctest",
     "numpydoc",
     "sphinx_copybutton",
+    "override_pst_pagetoc",
 ]
 
 numpydoc_show_class_members = False
@@ -102,6 +104,7 @@ intersphinx_mapping = {
     "sklearn": ("https://scikit-learn.org/stable", None),
     "xgboost": ("https://xgboost.readthedocs.io/en/latest/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "imblearn": ("https://imbalanced-learn.org/stable", None),
 }
 intersphinx_disabled_reftypes = ["*"]
 
@@ -207,3 +210,20 @@ html_css_files = ["css/custom.css"]
 html_js_files = [
     "js/custom-icon.js",
 ]
+
+def add_js_css_files(app, pagename, templatename, context, doctree):
+    """Load additional JS and CSS files only for certain pages.
+
+    Note that `html_js_files` and `html_css_files` are included in all pages and
+    should be used for the ones that are used by multiple pages. All page-specific
+    JS and CSS files should be added here instead.
+    """
+    if pagename == "api":
+        # Internal: API search intialization and styling
+        app.add_js_file("_static/js/api-search.js")
+        app.add_css_file("_static/css/api-search.css")
+
+
+def setup(app):
+    # triggered just before the HTML for an individual page is created
+    app.connect("html-page-context", add_js_css_files)

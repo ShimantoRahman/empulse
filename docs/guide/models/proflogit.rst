@@ -1,8 +1,26 @@
 .. _proflogit:
 
-=====================
-Customizing ProfLogit
-=====================
+=============================================
+Profit-Driven Logistic Regression (ProfLogit)
+=============================================
+
+ProfLogit is a profit-driven logistic regression model that optimizes the expected maximum profit (EMP)
+with elastic net regularization.
+
+Regularization
+==============
+
+The strength of regularization can be controlled by the `C` parameter.
+The `l1_ratio` parameter controls the ratio of L1 regularization to L2 regularization.
+By default l1_ratio is set to 1, which means L1 regularization is used
+and a sparse solution if found for the coefficients.
+
+.. code-block:: python
+
+    from empulse.models import ProfLogitClassifier
+
+    proflogit = ProfLogitClassifier(C=100, l1_ratio=0.2)
+
 
 ProfLogit, by default,
 utilizes the EMPC metric as its loss function and is optimized by a real-coded genetic algorithm (RGA).
@@ -10,6 +28,8 @@ The RGA runs for 1000 iterations, but it can stop early if the loss converges.
 However, ProfLogit offers flexibility in terms of customization.
 You can modify the stopping conditions, use different loss functions, and even change the optimization algorithms.
 
+Optimization
+============
 
 Custom Stopping Conditions
 --------------------------
@@ -29,7 +49,6 @@ For example, if you want to use the RGA for a set amount of time, you can do the
 
 .. code-block:: python
 
-    from empulse.models import ProfLogitClassifier
     from empulse.optimizers import Generation
     from scipy.optimize import OptimizeResult
     from time import perf_counter
@@ -51,10 +70,6 @@ For example, if you want to use the RGA for a set amount of time, you can do the
 Or you can stop the RGA after a set number of fitness evaluations:
 
 .. code-block:: python
-
-    from empulse.models import ProfLogitClassifier
-    from empulse.optimizers import Generation
-    from scipy.optimize import OptimizeResult
 
     def optimize(objective, X, max_evals=10_000, **kwargs) -> OptimizeResult:
         generation = Generation(**kwargs)
@@ -78,7 +93,6 @@ simply pass the metric function to the :class:`~empulse.models.ProfLogitClassifi
 
 .. code-block:: python
 
-    from empulse.models import ProfLogitClassifier
     from empulse.metrics import empa_score
 
     proflogit = ProfLogitClassifier(loss=empa_score)
@@ -92,8 +106,6 @@ For instance, if you want to use the L-BFGS-B algorithm from scipy.optimize, you
 
 .. code-block:: python
 
-    from empulse.models import ProfLogitClassifier
-    from scipy.optimize import minimize, OptimizeResult
     import numpy as np
 
     def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
@@ -119,10 +131,6 @@ Note that EMPC is a maximization problem, so we need to pass the inverse objecti
 You can also use unbounded optimization algorithms like BFGS:
 
 .. code-block:: python
-
-    from empulse.models import ProfLogitClassifier
-    from scipy.optimize import minimize, OptimizeResult
-    import numpy as np
 
     def optimize(objective, X, **kwargs) -> OptimizeResult:
         initial_guess = np.zeros(X.shape[1])

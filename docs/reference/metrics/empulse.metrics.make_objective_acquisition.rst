@@ -1,6 +1,0 @@
-﻿make\_objective\_acquisition
-============================================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: make_objective_acquisition

@@ -6,18 +6,13 @@ empulse.metrics
 The :mod:`~empulse.metrics` module contains a collection of metrics for evaluating the performance of
 models in the context of customer churn, credit scoring, and acquisition.
 
-.. toctree::
-   :hidden:
-   :glob:
-
-   metrics/*
-
-
 General Metrics
 ---------------
 
 .. autosummary::
+   :toctree: generated/
    :nosignatures:
+   :template: base.rst
 
    emp
    emp_score
@@ -35,7 +30,9 @@ Customer Acquisition Metrics
 ----------------------------
 
 .. autosummary::
+   :toctree: generated/
    :nosignatures:
+   :template: base.rst
 
    empa
    empa_score
@@ -49,7 +46,9 @@ Customer Churn Metrics
 ----------------------
 
 .. autosummary::
+   :toctree: generated/
    :nosignatures:
+   :template: base.rst
 
    empc
    empc_score
@@ -65,7 +64,9 @@ Credit Scoring Metrics
 ----------------------
 
 .. autosummary::
+   :toctree: generated/
    :nosignatures:
+   :template: base.rst
 
    empcs
    empcs_score
@@ -76,6 +77,8 @@ Helper Functions
 ----------------
 
 .. autosummary::
+   :toctree: generated/
    :nosignatures:
+   :template: base.rst
 
    classification_threshold

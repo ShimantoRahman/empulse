@@ -1,6 +1,0 @@
-﻿mpc\_score
-==========================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: mpc_score

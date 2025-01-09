@@ -1,6 +1,0 @@
-﻿mpcs
-====================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: mpcs

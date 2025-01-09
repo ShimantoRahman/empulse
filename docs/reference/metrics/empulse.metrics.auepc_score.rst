@@ -1,6 +1,0 @@
-﻿auepc\_score
-============================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: auepc_score

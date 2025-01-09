@@ -1,6 +1,0 @@
-﻿mpa
-===================
-
-.. currentmodule:: empulse.metrics
-
-.. autofunction:: mpa
