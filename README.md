@@ -19,6 +19,8 @@ This allows the measures to seamlessly integrate into existing ML workflows.
 
 ## Installation
 
+Empulse requires python 3.10 or higher.
+
 Install `empulse` via pip with
 
 ```bash
