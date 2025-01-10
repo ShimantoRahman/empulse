@@ -27,8 +27,9 @@ class CostSensitiveSampler(BaseSampler):
 
     oversampling_norm: float, default=0.1
         Oversampling norm for the cost.
+        The smaller the oversampling_norm, the more samples are generated.
 
-    percentile_threshold: float, default=97.5
+    percentile_threshold: float, default=0.975
         Outlier adjustment for the cost.
         Costs are normalized and cost values above the percentile_threshold'th percentile are set to 1.
 
@@ -108,7 +109,7 @@ class CostSensitiveSampler(BaseSampler):
             method: Literal['rejection sampling', 'oversampling'] = 'rejection sampling',
             *,
             oversampling_norm: float = 0.1,
-            percentile_threshold: float = 97.5,
+            percentile_threshold: float = 0.975,
             random_state: int | np.random.RandomState | None = None,
             fp_cost: float | ArrayLike = 0.0,
             fn_cost: float | ArrayLike = 0.0
@@ -196,7 +197,7 @@ class CostSensitiveSampler(BaseSampler):
         misclassification_costs[y == 1] = fn_cost[y == 1]
 
         normalized_costs = np.minimum(
-            misclassification_costs / np.percentile(misclassification_costs, self.percentile_threshold),
+            misclassification_costs / np.percentile(misclassification_costs, self.percentile_threshold * 100),
             1
         )
 
