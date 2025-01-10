@@ -7,7 +7,7 @@ Bias Mitigation
 In many business problems,
 there is often an inverse relationship between the likelihood of an event and the value of a subgroup.
 For example, in customer churn scenarios,
-high-value customers might be less likely to churn compared to low-value customers.
+high-value customers might be less likely to churn compared to low-value customers [1]_.
 As a result, models designed to predict this event may focus more on the majority subgroup,
 which is often less valuable from a business perspective.
 This leads to suboptimal targeting, as the models neglect the minority subgroup that holds higher value.
@@ -62,7 +62,7 @@ You should pass the model which is used to rank the high-value non-events and lo
     relabler = BiasRelabler(estimator=LogisticRegression())
     X_relabeled, y_relabeled = relabler.fit_resample(X, y, sensitive_feature=high_clv)
 
-This can easily used inside a imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
+This can easily used inside an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
 (note that the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers):
 
 .. code-block:: python
@@ -152,7 +152,7 @@ To use the relabeling technique, you can use the :class:`~empulse.samplers.BiasR
     resampler = BiasResampler()
     X_resampled, y_resampled = resampler.fit_resample(X, y, sensitive_feature=high_clv)
 
-This can easily used inside a imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
+This can easily used inside an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
 (note that the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers):
 
 .. code-block:: python
@@ -274,3 +274,10 @@ For example, here we assign a weight of 0.5 to low clv customers and a weight of
         strategy=strategy
     )
     model.fit(X, y, sensitive_feature=high_clv)
+
+References
+==========
+
+.. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
+       Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+       Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
