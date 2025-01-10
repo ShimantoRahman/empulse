@@ -442,7 +442,8 @@ def savings_score(
 
     The cost savings of a classifiers is the cost the classifier saved over a baseline classification model.
     By default, a naive algorithm is used (predicting all ones or zeros whichever is better).
-    With 1 being the perfect model, 0 being not better than the naive model.
+    With 1 being the perfect model, 0 being as good as the baseline model,
+    and values smaller than 0 being worse than the baseline model.
 
     Modified from `costcla.metrics.savings_score`.
 
@@ -593,7 +594,8 @@ def expected_savings_score(
     The expected cost savings of a classifiers is the expected cost the classifier saved
     over a baseline classification model.
     By default, a naive model is used (predicting all ones or zeros whichever is better).
-    With 1 being the perfect model, 0 being not better than the naive model.
+    With 1 being the perfect model, 0 being as good as the baseline model,
+    and values smaller than 0 being worse than the baseline model.
 
     .. seealso::
 
