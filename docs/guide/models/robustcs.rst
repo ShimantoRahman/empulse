@@ -42,7 +42,7 @@ You can customize the outlier detection step by passing a custom outlier detecto
 
     robust_cslogit = RobustCSClassifier(
         CSLogitClassifier(),
-        outlier_estimator=HuberRegressor(C=0.1)
+        outlier_estimator=HuberRegressor(max_iter=50)
     )
 
 :class:`~empulse.models.RobustCSClassifier` considers a cost an outlier if it the predicted value of the Huber regressor
