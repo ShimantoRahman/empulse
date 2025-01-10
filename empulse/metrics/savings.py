@@ -99,7 +99,7 @@ def cost_loss(
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
 
-        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a naive algorithm.
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a baseline.
 
     Parameters
     ----------
@@ -232,7 +232,7 @@ def expected_cost_loss(
         :func:`~empulse.metrics.cost_loss` : Cost of a classifier.
 
         :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
-        compared to using a naive algorithm.
+        compared to using a baseline.
 
     Parameters
     ----------
@@ -430,6 +430,7 @@ def savings_score(
         y_true: ArrayLike,
         y_pred: ArrayLike,
         *,
+        y_pred_baseline: ArrayLike | None = None,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
@@ -437,10 +438,10 @@ def savings_score(
         check_input: bool = True,
 ) -> float:
     """
-    Cost savings of a classifier compared to using a naive algorithm.
+    Cost savings of a classifier compared to using a baseline.
 
-    The cost savings of a classifiers is the cost the classifier saved over a naive classification model
-    (predicting all ones or zeros whichever is better).
+    The cost savings of a classifiers is the cost the classifier saved over a baseline classification model.
+    By default, a naive algorithm is used (predicting all ones or zeros whichever is better).
     With 1 being the perfect model, 0 being not better than the naive model.
 
     Modified from `costcla.metrics.savings_score`.
@@ -467,6 +468,11 @@ def savings_score(
         .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
                   See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
                   for more information.
+
+    y_pred_baseline : 1D array-like, shape=(n_samples,), default=None
+        Predicted labels or calibrated probabilities of the baseline model.
+        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
+        depending on which is better.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -495,7 +501,7 @@ def savings_score(
     Returns
     -------
     score : float
-        Cost savings of a classifier compared to using a naive algorithm.
+        Cost savings of a classifier compared to using a baseline.
 
     Notes
     -----
@@ -506,6 +512,10 @@ def savings_score(
     The savings over a naive model is calculated as:
 
     .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
+
+    The savings over a baseline model is calculated as:
+
+    .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\sum_{i=1}^N C_i(s_i^*)}
 
     where
 
@@ -548,13 +558,18 @@ def savings_score(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    # Calculate the cost of naive prediction
-    cost_base = min(
-        cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                  tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
-        cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+    if y_pred_baseline is None:
+        # Calculate the cost of naive prediction
+        cost_base = min(
+            cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
+            cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+        )
+    else:
+        y_pred_baseline = np.asarray(y_pred_baseline)
+        cost_loss(y_true, y_pred_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
                   tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
-    )
 
     cost = cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
@@ -565,6 +580,7 @@ def expected_savings_score(
         y_true: ArrayLike,
         y_proba: ArrayLike,
         *,
+        y_proba_baseline: ArrayLike | None  = None,
         tp_cost: Union[float, ArrayLike] = 0.0,
         fp_cost: Union[float, ArrayLike] = 0.0,
         tn_cost: Union[float, ArrayLike] = 0.0,
@@ -572,15 +588,16 @@ def expected_savings_score(
         check_input: bool = True,
 ) -> float:
     """
-    Expected savings of a classifier compared to using a naive algorithm.
+    Expected savings of a classifier compared to a baseline.
 
     The expected cost savings of a classifiers is the expected cost the classifier saved
-    over a naive classification model (predicting all ones or zeros whichever is better).
+    over a baseline classification model.
+    By default, a naive model is used (predicting all ones or zeros whichever is better).
     With 1 being the perfect model, 0 being not better than the naive model.
 
     .. seealso::
 
-        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a naive algorithm.
+        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to a baseline.
 
         :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
 
@@ -591,6 +608,11 @@ def expected_savings_score(
 
     y_proba : 1D array-like, shape=(n_samples,)
         Target probabilities, should lie between 0 and 1.
+
+    y_proba_baseline : 1D array-like, shape=(n_samples,), default=None
+        Target probabilities of the baseline model.
+        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
+        depending on which is better.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -614,7 +636,7 @@ def expected_savings_score(
     Returns
     -------
     score : float
-        Expected savings of a classifier compared to using a naive algorithm.
+        Expected savings of a classifier compared to a baseline.
 
         Notes
     -----
@@ -625,6 +647,10 @@ def expected_savings_score(
     The expected savings over a naive model is calculated as:
 
     .. math::  \\text{Expected Savings} = 1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
+
+    The expected savings over a baseline model is calculated as:
+
+    .. math::  \\text{Expected Savings} = 1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i^*)]}
 
     where
 
@@ -659,13 +685,18 @@ def expected_savings_score(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    # Calculate the cost of naive prediction
-    cost_base = min(
-        cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                  tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
-        cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                  tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
-    )
+    if y_proba_baseline is None:
+        # Calculate the cost of naive prediction
+        cost_base = min(
+            cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
+            cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+        )
+    else:
+        y_proba_baseline = np.asarray(y_proba_baseline)
+        cost_base = expected_cost_loss(y_true, y_proba_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
+                                       tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
 
     # avoid division by zero
     if cost_base == 0.0:
