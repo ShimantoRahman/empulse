@@ -10,8 +10,8 @@ User Guide
     :maxdepth: 2
     :numbered:
 
-    guide/datasets_guide.rst
+    guide/metrics_guide.rst
     guide/models_guide.rst
     guide/preprocessing_guide.rst
     guide/instance_based_cv.rst
-    guide/user_defined_value_metric.rst
+    guide/datasets_guide.rst

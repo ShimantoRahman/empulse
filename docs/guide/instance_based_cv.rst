@@ -1,19 +1,20 @@
 .. _instance_based_cv:
 
-==========================================
-Cross-Validation with Instance-Based Costs
-==========================================
+==============================================
+Cross-Validation with Instance-dependent Costs
+==============================================
 
-Cost-sensitive, models, samplers and metrics depend on instance-based costs.
+Cost-sensitive, models, samplers and metrics depend on instance-dependent costs.
 In a simple train-validation-test split scenario,
-using instance-based weights is straightforward,
+using instance-dependent costs is straightforward,
 since they can just be passed to the ``fit``, ``fit_resample`` or ``score`` methods.
-However, when performing cross-validation, the costs for each fold change, which requires special handling.
+However, when performing cross-validation, the costs for each fold change,
+which requires special handling and can be done through metadata routing.
 
 As of scikit-learn 1.4.0,
 some cross-validation methods support
 `metadata routing <https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_metadata_routing.html>`_.
-This feature allows instance-based costs to be passed to estimators, samplers, and scorers,
+This feature allows instance-dependent costs to be passed to estimators, samplers, and scorers,
 and these costs are split accordingly for each fold.
 For a list of cross-validation methods that support metadata routing,
 refer to `this link <https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models>`_.

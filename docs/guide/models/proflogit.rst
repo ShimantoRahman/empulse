@@ -5,14 +5,14 @@ Profit-Driven Logistic Regression (ProfLogit)
 =============================================
 
 ProfLogit is a profit-driven logistic regression model that optimizes the expected maximum profit (EMP)
-with elastic net regularization.
+with elastic net regularization [1]_.
 
 Regularization
 ==============
 
-The strength of regularization can be controlled by the `C` parameter.
-The `l1_ratio` parameter controls the ratio of L1 regularization to L2 regularization.
-By default l1_ratio is set to 1, which means L1 regularization is used
+The strength of regularization can be controlled by the ``C`` parameter.
+The ``l1_ratio`` parameter controls the ratio of L1 regularization to L2 regularization.
+By default ``l1_ratio`` is set to 1, which means L1 regularization is used
 and a sparse solution if found for the coefficients.
 
 .. code-block:: python
@@ -23,7 +23,8 @@ and a sparse solution if found for the coefficients.
 
 
 ProfLogit, by default,
-utilizes the EMPC metric as its loss function and is optimized by a real-coded genetic algorithm (RGA).
+utilizes the EMPC metric (:func:`~empulse.metrics.empc_score`)
+as its loss function and is optimized by a real-coded genetic algorithm (RGA).
 The RGA runs for 1000 iterations, but it can stop early if the loss converges.
 However, ProfLogit offers flexibility in terms of customization.
 You can modify the stopping conditions, use different loss functions, and even change the optimization algorithms.
@@ -144,3 +145,10 @@ You can also use unbounded optimization algorithms like BFGS:
 
     proflogit = ProfLogitClassifier(optimize_fn=optimize)
 
+References
+==========
+
+.. [1] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
+    Snoeck, M. (2017). Profit Maximizing Logistic Model for
+    Customer Churn Prediction Using Genetic Algorithms.
+    Swarm and Evolutionary Computation.

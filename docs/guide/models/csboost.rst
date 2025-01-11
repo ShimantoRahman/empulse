@@ -8,7 +8,7 @@ CSBoost
 =======
 
 CSBoost is a cost-sensitive gradient boosting model that optimizes the
-:func:`~empulse.metrics.expected_cost_loss` with the Extreme gradient boosting algorithm.
+:func:`~empulse.metrics.expected_cost_loss` with the Extreme gradient boosting algorithm [1]_.
 
 The CSBoost model is a wrapper around the :class:`xgboost:xgboost.XGBClassifier` model.
 By default a XGBoost model with default parameters is used, if the user does not pass an instance of the XGBoost model.
@@ -90,3 +90,10 @@ All aspects mentioned about the CSBoost model apply to the B2Boost model as well
     )  # class-dependent costs
 
     b2boost.fit(X, y, clv=clv)  # instance-dependent costs
+
+References
+==========
+
+.. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+       Instance-dependent cost-sensitive learning for detecting transfer fraud.
+       European Journal of Operational Research, 297(1), 291-300.

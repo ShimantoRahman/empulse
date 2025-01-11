@@ -18,23 +18,23 @@ requires the user to define the costs and benefits of each possible model predic
 (true positive, false positive, true negative and false negative).
 In the case of customer churn, the costs and benefits are defined as follows:
 
-    - **True positive**: The company contacts the churner with cost :math:`f` and
-      sends an incentive offer with cost :math:`d`.
-      A proportion :math:`\gamma` of the churners accept the offer and stay with the company,
-      retaining their Customer Lifetime Value :math:`CLV`.
-      The remaining proportion :math:`1 - \gamma` of the churners leave the company and do not accept the offer.
-      This results in a true positive benefit of :math:`\gamma (CLV-d-f) - (1-\gamma)(d+f)`.
+- **True positive**: The company contacts the churner with cost :math:`f` and
+  sends an incentive offer with cost :math:`d`.
+  A proportion :math:`\gamma` of the churners accept the offer and stay with the company,
+  retaining their Customer Lifetime Value :math:`CLV`.
+  The remaining proportion :math:`1 - \gamma` of the churners leave the company and do not accept the offer.
+  This results in a true positive benefit of :math:`\gamma (CLV-d-f) - (1-\gamma)(d+f)`.
 
-    - **False positive**: The company contacts the non-churner with cost :math:`f` and
-      sends an incentive offer with cost :math:`d`.
-      The non-churner accepts the offer and stays with the company.
-      This results in a false positive cost of :math:`d+f`.
+- **False positive**: The company contacts the non-churner with cost :math:`f` and
+  sends an incentive offer with cost :math:`d`.
+  The non-churner accepts the offer and stays with the company.
+  This results in a false positive cost of :math:`d+f`.
 
-    - **True negative**: The company does not send an incentive offer to the non-churner.
-      Since the company does not take action, this has no cost or benefit.
+- **True negative**: The company does not send an incentive offer to the non-churner.
+  Since the company does not take action, this has no cost or benefit.
 
-    - **False negative**: The company does not contact the churner and the customer leaves the company.
-      Since the company does not take action, this has no cost or benefit.
+- **False negative**: The company does not contact the churner and the customer leaves the company.
+  Since the company does not take action, this has no cost or benefit.
 
 .. code-block:: python
 
