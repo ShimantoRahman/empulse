@@ -19,13 +19,13 @@ Loss = Literal["average expected cost"]
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
-    Logistic classifier to optimize instance-specific cost loss.
+    Logistic classifier to optimize instance-dependent cost loss.
 
     Read more in the :ref:`User Guide <cslogit>`.
 
     .. seealso::
 
-        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.
+        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-dependent cost function.
 
         :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive XGBoost classifier.
 

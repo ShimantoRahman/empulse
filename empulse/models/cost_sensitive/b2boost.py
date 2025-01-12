@@ -12,7 +12,7 @@ from ...metrics import make_objective_churn
 
 class B2BoostClassifier(BaseBoostClassifier):
     """
-    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss for customer churn.
+    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-dependent cost loss for customer churn.
 
     Read more in the :ref:`User Guide <csboost>`.
 
@@ -63,7 +63,7 @@ class B2BoostClassifier(BaseBoostClassifier):
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
     .. seealso::
-        :func:`~empulse.metrics.create_objective_churn` : Creates the instance-specific cost function
+        :func:`~empulse.metrics.create_objective_churn` : Creates the instance-dependent cost function
         for customer churn.
 
     Examples

@@ -13,13 +13,13 @@ from ...metrics import make_objective_aec
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
-    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-specific cost loss.
+    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-dependent cost loss.
 
     Read more in the :ref:`User Guide <csboost>`.
 
     .. seealso::
 
-        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-specific cost function.
+        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-dependent cost function.
 
         :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression.
 
