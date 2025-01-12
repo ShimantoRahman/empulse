@@ -3,36 +3,42 @@
 
 - ...
 
-`0.5.2`_ (XX-01-2025)
+`0.5.2`_ (12-01-2025)
 =====================
-- |Enhancement| Rework user guide documentation to better explain the usage of value-driven
-  and cost-sensitive models and metrics
+- |Feature| Allow :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`
+  to calculate the savings score over the baseline model instead of a naive model,
+  by setting the ``y_pred_baseline`` and ``y_proba_baseline`` parameters, respectively.
+- |Enhancement| Reworked the user guide documentation to better explain the usage of value-driven
+  and cost-sensitive models, samplers and metrics
+- |API| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  by default do not perform soft-thresholding on the regression coefficients.
+  This can be enabled by setting the ``soft_threshold`` parameter to True.
+- |Fix| Prevent division by zero errors in :func:`~empulse.metrics.expected_cost_loss`
 
 `0.5.1`_ (05-01-2025)
 =====================
-- |Fix| Fix documentation build issue
+- |Fix| Fixed documentation build issue
 
 `0.5.0`_ (05-01-2025)
 =====================
 
 - |MajorFeature| Added supported for python 3.13
 - |MajorFeature| Added cost-sensitive models
-    - CSLogitClassifier
-    - CSBoostClassifier
-    - RobustCSClassifier
-    - CSThresholdClassifier
+    - :class:`~empulse.models.CSLogitClassifier`
+    - :class:`~empulse.models.CSBoostClassifier`
+    - :class:`~empulse.models.RobustCSClassifier`
+    - :class:`~empulse.models.CSThresholdClassifier`
 - |MajorFeature| Added cost-sensitive metrics
-    - cost_loss
-    - expected_cost_loss
-    - expected_log_cost_loss
-    - savings_score
-    - expected_savings_score
-- |MajorFeature| Added datasets module
-- |Feature| Added cost-sensitive sampler
-    - CostSensitiveSampler
-- |API| rename metric arguments which expect target score from y_pred to y_score and
-   target probabilities from y_pred to y_proba.
+    - :func:`~empulse.metrics.cost_loss`
+    - :func:`~empulse.metrics.expected_cost_loss`
+    - :func:`~empulse.metrics.expected_log_cost_loss`
+    - :func:`~empulse.metrics.savings_score`
+    - :func:`~empulse.metrics.expected_savings_score`
+- |MajorFeature| Added :mod:`empulse.datasets` module
+- |Feature| Added :class:`~empulse.samplers.CostSensitiveSampler`
 - |Enhancement| Allow all cost-sensitive models and samplers to accept cost parameters during initialization
+- |API| Renamed metric arguments which expect target score from y_pred to y_score and
+  target probabilities from y_pred to y_proba
 
 
 .. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.2...main
