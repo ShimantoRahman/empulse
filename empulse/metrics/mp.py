@@ -52,7 +52,11 @@ def max_profit_score(
     -----
     The MP is defined as [1]_:
 
-    .. math::  P(T;b_0, c_0, b_1, c_1)
+    .. math::
+
+        \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 F_1(T)
+
+    where :math:`T` is the threshold at which the maximum profit is achieved.
 
     The MP requires that the positive class is encoded as 0, and negative class as 1.
     However, this implementation assumes the standard notation ('positive': 1, 'negative': 0).
@@ -139,7 +143,11 @@ def max_profit(
     -----
     The MP is defined as [1]_:
 
-    .. math::  P(T;b_0, c_0, b_1, c_1)
+    .. math::
+
+        \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 F_1(T)
+
+    where :math:`T` is the threshold at which the maximum profit is achieved.
 
     The MP requires that the positive class is encoded as 0, and negative class as 1.
     However, this implementation assumes the standard notation ('positive': 1, 'negative': 0).
