@@ -178,25 +178,36 @@ For a brief summary of what each metric does and why it is useful, see the table
 
     - * Metric
       * Description
-    - * Cost Loss
+    - * :func:`~empulse.metrics.cost_loss`
       * Measures how much a classifier would cost if it were to be used in the real world.
-    - * Expected Cost Loss
+        It takes the instance-dependent costs into account.
+    - * :func:`~empulse.metrics.expected_cost_loss`
       * Similar to the cost loss, but takes the predicted class probabilities into account.
         So it will punish classifiers if they are not confident in their predictions.
-    - * Expected Log Cost Loss
+        It takes the instance-dependent costs into account.
+    - * :func:`~empulse.metrics.expected_log_cost_loss`
       * Similar to the expected cost loss, but uses the logarithm of the predicted class probabilities.
-        This will punish classifiers more if they are not confident in their predictions.
+        This will punish classifiers if they are not confident in their predictions and
+        will punish them more if they are very confident in the wrong class.
         This can be seen as a generalization of the weighted cross-entropy loss.
-    - * Savings Score
+        It takes the instance-dependent costs into account.
+    - * :func:`~empulse.metrics.savings_score`
       * Measures how much a classifier saved over a baseline model (in terms of the cost loss).
         1 is the perfect model, 0 is as good as the baseline model, and negative values are worse than the baseline model.
-    - * Expected Savings Score
+        It takes the instance-dependent costs into account.
+    - * :func:`~empulse.metrics.expected_savings_score`
       * Similar to the savings score, but takes the predicted class probabilities into account.
         So it will punish classifiers if they are not confident in their predictions.
-
-- **Cost Loss**: The cost loss measures the cost of a classifier if it were to be used in the real world.
-  This is u
-- **Savings Score**: The savings score measures the cost savings of a classifier over a baseline model.
+        It takes the instance-dependent costs into account.
+    - * :func:`~empulse.metrics.max_profit_score`
+      * Measures how much profit a classifier would make if it were to be used at the optimal decision threshold.
+        The optimal decision threshold maximizes the profit and is calculated by the metric.
+        It does **NOT** take the instance-dependent costs into account, rather it evaluates global classifier performance.
+    - * :func:`~empulse.metrics.emp_score`
+      * Similar to the maximum profit score, but takes the expected value of the cost-benefit distribution.
+        This allows you to express uncertainty over certain costs or benefits.
+        Note that the "expected" does not refer to the class probabilities,
+        but to the expected value of the cost-benefit distribution.
 
 (Expected) Cost Loss
 --------------------
@@ -257,4 +268,33 @@ Since the naive model only predicts 1s or 0s, the expected cost of the naive mod
 (Expected) Maximum Profit Score
 -------------------------------
 
-The maximum profit score of a classifier is the profit the classifier made over a naive classification model
+The maximum profit score of a classifier measures how much profit a classifier would make
+if it were to be used at the optimal decision threshold.
+To maximize the profit, let's define the profit as follows:
+
+.. math::
+
+    \text{Profit}(t) = b_0 \pi_0 F_0(t) + b_1 \pi_1 (1 - F_1(t)) - c_0 \pi_0 (1 - F_0(t)) - c_1 F_1(t)
+
+where :math:`F_0(t)` and :math:`F_1(t)` are the false positive and false negative rates at threshold :math:`t`,
+and :math:`\pi_0` and :math:`\pi_1` are the prior probabilities of the classes.
+Note that in value-driven literature, the positive class is denoted as 0 and the negative class as 1
+(hence :math:`\pi_0` is the prior probability of the positive class).
+
+The optimal decision threshold :math:`T` is the threshold that maximizes the profit.
+The maximum profit score is the profit at the optimal decision threshold.
+
+.. math::
+
+    \text{MP} = \max_{\forall t} \text{Profit}(t) = \text{Profit}(T)
+
+In the the maximum profit score, it is assumed that the costs and benefits are deterministic.
+If you assume that the costs and benefits are stochastic, you can use the expected maximum profit score.
+
+
+.. math::
+
+    \mathbb{E}(\text{MP}) = \int_{b_0} \int_{c_0} \int_{b_1} \int_{c_1} \text{Profit}(T;b_0, c_0, b_1, c_1) \cdot w(b_0, c_0, b_1, c_1) \, db_0 dc_0 db_1 dc_1
+
+where :math:`w(b_0, c_0, b_1, c_1)` is the join probability density function of the cost-benefit distribution.
+In practice usually only one variable is presumed to be stochastic.
