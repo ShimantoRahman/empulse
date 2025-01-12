@@ -144,6 +144,11 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.sparse = False
+        return tags
+
     @property
     def classes_(self):
         if estimator := getattr(self, "estimator_", None):
