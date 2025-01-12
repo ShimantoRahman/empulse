@@ -8,7 +8,7 @@ from ..._common import Parameter
 
 class CostSensitiveMixin:
 
-    def _check_costs(self, *, tp_cost, tn_cost, fn_cost, fp_cost, caller='fit'):
+    def _check_costs(self, *, tp_cost, tn_cost, fn_cost, fp_cost, caller='fit', force_array=False, n_samples=None):
         """
         Check if costs are set and return them.
         Also convert them to numpy arrays if they are array-like.
@@ -33,13 +33,31 @@ class CostSensitiveMixin:
             fp_cost = 1
             fn_cost = 1
 
-        if not isinstance(tp_cost, Real):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(tn_cost, Real):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, Real):
-            fn_cost = np.asarray(fn_cost)
-        if not isinstance(fp_cost, Real):
-            fp_cost = np.asarray(fp_cost)
+        if force_array:
+            if not isinstance(tp_cost, Real):
+                tp_cost = np.asarray(tp_cost)
+            else:
+                tp_cost = np.full(n_samples, tp_cost)
+            if not isinstance(tn_cost, Real):
+                tn_cost = np.asarray(tn_cost)
+            else:
+                tn_cost = np.full(n_samples, tn_cost)
+            if not isinstance(fn_cost, Real):
+                fn_cost = np.asarray(fn_cost)
+            else:
+                fn_cost = np.full(n_samples, fn_cost)
+            if not isinstance(fp_cost, Real):
+                fp_cost = np.asarray(fp_cost)
+            else:
+                fp_cost = np.full(n_samples, fp_cost)
+        else:
+            if not isinstance(tp_cost, Real):
+                tp_cost = np.asarray(tp_cost)
+            if not isinstance(tn_cost, Real):
+                tn_cost = np.asarray(tn_cost)
+            if not isinstance(fn_cost, Real):
+                fn_cost = np.asarray(fn_cost)
+            if not isinstance(fp_cost, Real):
+                fp_cost = np.asarray(fp_cost)
 
         return tp_cost, tn_cost, fn_cost, fp_cost

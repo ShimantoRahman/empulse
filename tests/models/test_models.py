@@ -15,20 +15,24 @@ from empulse.models import (
     BiasRelabelingClassifier,
     CSBoostClassifier,
     CSLogitClassifier,
+    CSTreeClassifier,
+    CSForestClassifier,
     RobustCSClassifier,
     CSThresholdClassifier
 )
 
 ESTIMATORS = (
-    B2BoostClassifier(),
-    ProfLogitClassifier(optimizer_params={'max_iter': 2}),
-    BiasReweighingClassifier(estimator=LogisticRegression()),
-    BiasResamplingClassifier(estimator=LogisticRegression()),
-    BiasRelabelingClassifier(estimator=LogisticRegression()),
-    CSBoostClassifier(fp_cost=1, fn_cost=1),
-    CSLogitClassifier(fp_cost=1, fn_cost=1),
-    RobustCSClassifier(estimator=CSLogitClassifier(), fp_cost=1, fn_cost=1),
-    CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
+    # B2BoostClassifier(),
+    # ProfLogitClassifier(optimizer_params={'max_iter': 2}),
+    # BiasReweighingClassifier(estimator=LogisticRegression()),
+    # BiasResamplingClassifier(estimator=LogisticRegression()),
+    # BiasRelabelingClassifier(estimator=LogisticRegression()),
+    # CSBoostClassifier(fp_cost=1, fn_cost=1),
+    # CSLogitClassifier(fp_cost=1, fn_cost=1),
+    # CSTreeClassifier(fp_cost=1, fn_cost=1),
+    CSForestClassifier(n_estimators=10, fp_cost=1, fn_cost=1),
+    # RobustCSClassifier(estimator=CSLogitClassifier(), fp_cost=1, fn_cost=1),
+    # CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
 )
 
 
