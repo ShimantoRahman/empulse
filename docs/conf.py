@@ -85,6 +85,7 @@ extensions = [
     "sphinx.ext.doctest",
     "numpydoc",
     "sphinx_copybutton",
+    "sphinxcontrib.sass",
     "override_pst_pagetoc",
 ]
 
@@ -206,7 +207,13 @@ html_short_title = "empulse"
 html_logo = "./_static/assets/empulse_logo_light.png"
 html_favicon = "./_static/assets//favicon.ico"
 html_static_path = ['_static']
+# dynamically construct custom.css through sphinxcontrib.sass
 html_css_files = ["css/custom.css"]
+sass_src_dir = "_static/scss"
+sass_out_dir = "_static/css"
+sass_targets = {
+    "custom.scss": "custom.css"
+}
 html_js_files = [
     "js/custom-icon.js",
 ]
