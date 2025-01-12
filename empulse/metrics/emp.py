@@ -22,6 +22,8 @@ def emp_score(
     """
     :func:`~empulse.metrics.emp()` but only returning the EMP score.
 
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+
     .. seealso::
         :func:`~empulse.metrics.emp` : To also return the threshold at which the EMP score is achieved.
 
@@ -168,6 +170,8 @@ def emp(
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure (EMP).
+
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
 
     .. seealso::
         :func:`~empulse.metrics.emp_score` : To only return the EMP score.

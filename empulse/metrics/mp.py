@@ -16,6 +16,8 @@ def max_profit_score(
     """
     :func:`~empulse.metrics.max_profit()` but only returning the MP score.
 
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+
     .. seealso::
         :func:`~empulse.metrics.max_profit` : To also return the threshold at which the maximum profit is achieved.
 
@@ -97,6 +99,8 @@ def max_profit(
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure (MP).
+
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
 
     .. seealso::
         :func:`~empulse.metrics.max_profit_score` : To only return the maximum profit score.

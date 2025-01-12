@@ -1,3 +1,5 @@
+.. _user_defined_value_metric:
+
 =========================
 User-Defined Value Metric
 =========================
