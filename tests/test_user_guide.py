@@ -34,6 +34,7 @@ def execute_code_blocks(code_blocks):
             pytest.fail(f"Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("file_path", [
     os.path.join(root, file)
     for root, _, files in os.walk(GUIDE_DIR)

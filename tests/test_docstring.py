@@ -37,6 +37,7 @@ def iter_modules(module_name):
         yield module
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("module", iter_modules(TOP_MODULE))
 def test_code_blocks_in_docstrings(module):
     """Test that code blocks in docstrings execute without errors"""
