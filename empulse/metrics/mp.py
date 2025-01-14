@@ -54,7 +54,7 @@ def max_profit_score(
 
     .. math::
 
-        \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 F_1(T)
+        \\text{MP} = b_0 \\pi_0 F_0(T) + b_1 \\pi_1 (1 - F_1(T)) - c_0 \\pi_0 (1 - F_0(T)) - c_1 F_1(T)
 
     where :math:`T` is the threshold at which the maximum profit is achieved.
 
@@ -145,7 +145,7 @@ def max_profit(
 
     .. math::
 
-        \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 F_1(T)
+        \\text{MP} = b_0 \\pi_0 F_0(T) + b_1 \\pi_1 (1 - F_1(T)) - c_0 \\pi_0 (1 - F_0(T)) - c_1 F_1(T)
 
     where :math:`T` is the threshold at which the maximum profit is achieved.
 
