@@ -10,11 +10,26 @@ from scipy.special import expit
 from ._validation import _check_y_true, _check_y_pred, _check_consistent_length
 
 
-def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input):
+def _validate_input(
+        y_true: ArrayLike,
+        y_proba: ArrayLike,
+        tp_cost: float | ArrayLike,
+        fp_cost: float | ArrayLike,
+        tn_cost: float | ArrayLike,
+        fn_cost: float | ArrayLike,
+        check_input: bool,
+) -> tuple[
+    NDArray,
+    NDArray,
+    float | NDArray,
+    float | NDArray,
+    float | NDArray,
+    float | NDArray,
+]:
     if check_input:
         y_true = _check_y_true(y_true)
-        y_pred = _check_y_pred(y_pred)
-        arrays = [y_true, y_pred]
+        y_proba = _check_y_pred(y_proba)
+        arrays = [y_true, y_proba]
         if not isinstance(tp_cost, numbers.Number):
             tp_cost = np.asarray(tp_cost)
             arrays.append(tp_cost)
@@ -30,10 +45,10 @@ def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_in
         _check_consistent_length(*arrays)
         if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
             raise ValueError("All costs are zero. At least one cost must be non-zero.")
-        return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
+        return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
     else:
         y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        y_proba = np.asarray(y_proba)
         if not isinstance(tp_cost, numbers.Number):
             tp_cost = np.asarray(tp_cost)
         if not isinstance(fp_cost, numbers.Number):
@@ -42,7 +57,7 @@ def _validate_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_in
             tn_cost = np.asarray(tn_cost)
         if not isinstance(fn_cost, numbers.Number):
             fn_cost = np.asarray(fn_cost)
-        return y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost
+        return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
 
 
 def _compute_expected_cost(
