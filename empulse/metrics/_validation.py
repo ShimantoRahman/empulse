@@ -24,17 +24,17 @@ def _check_y_pred(y_pred: ArrayLike) -> np.ndarray:
     return y_pred
 
 
-def _check_nan(array: np.ndarray) -> None:
+def _check_nan(array: NDArray) -> None:
     if np.isnan(array).any():
         raise ValueError(f"The array should not contain NaN values, got {np.sum(np.isnan(array))} instead.")
 
 
-def _check_inf(array: np.ndarray) -> None:
+def _check_inf(array: NDArray) -> None:
     if np.isinf(array).any():
         raise ValueError(f"The array should not contain Inf values, got {np.sum(np.isinf(array))} instead.")
 
 
-def _check_shape(y_true: np.ndarray, y_pred: np.ndarray) -> None:
+def _check_shape(y_true: NDArray, y_pred: NDArray) -> None:
     if y_true.shape != y_pred.shape:
         raise ValueError(f"The shapes of the true label and predictions should match, "
                          f"got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead.")
@@ -61,17 +61,17 @@ def _check_consistent_length(*arrays: NDArray) -> None:
         )
 
 
-def _check_numeric(y_true: np.ndarray) -> None:
+def _check_numeric(y_true: NDArray) -> None:
     if not np.issubdtype(y_true.dtype, np.number):
         raise TypeError(f"The true labels should be numeric, got dtype {y_true.dtype} instead.")
 
 
-def _check_binary(y_true: np.ndarray) -> None:
+def _check_binary(y_true: NDArray) -> None:
     if not np.all(np.isin(y_true, [0, 1])):
         raise ValueError(f"The true labels should be binary, got unique values {np.unique(y_true)} instead.")
 
 
-def _check_variance(array: np.ndarray) -> None:
+def _check_variance(array: NDArray) -> None:
     unique_values = np.unique(array)
     if len(unique_values) < 2:
         raise ValueError(f"The array should have at least two different values, "
