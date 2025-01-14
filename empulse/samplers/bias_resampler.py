@@ -5,7 +5,7 @@ from typing import Union, Callable, Optional, TypeVar, TYPE_CHECKING
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.random import RandomState
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import check_random_state, _safe_indexing
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.estimator_checks import ClassifierTags
@@ -13,8 +13,13 @@ from sklearn.utils.multiclass import type_of_target
 
 from ._strategies import _independent_weights, Strategy, StrategyFn
 
-_XT = TypeVar('_XT', bound=ArrayLike)
-_YT = TypeVar('_YT', bound=ArrayLike)
+if TYPE_CHECKING:
+    import pandas as pd
+    _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
+    _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
+else:
+    _XT = TypeVar('_XT', bound=ArrayLike)
+    _YT = TypeVar('_YT', bound=ArrayLike)
 
 
 class BiasResampler(BaseSampler):

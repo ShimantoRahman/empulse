@@ -1,9 +1,9 @@
 import warnings
-from typing import Union, Callable, Optional, TypeVar, TYPE_CHECKING
+from typing import Union, Callable, Optional, TypeVar, TYPE_CHECKING, Any
 
 import numpy as np
 from imblearn.base import BaseSampler
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
 from sklearn.utils import _safe_indexing, ClassifierTags
 from sklearn.utils._param_validation import StrOptions
@@ -12,24 +12,9 @@ from sklearn.utils.multiclass import type_of_target
 from empulse.samplers._strategies import Strategy, StrategyFn
 
 if TYPE_CHECKING:
-    X_arrays = [np.ndarray]
-    y_arrays = [np.ndarray]
-    try:
-        import pandas as pd
-
-        X_arrays.append(pd.DataFrame)
-        y_arrays.append(pd.Series)
-    except ImportError:
-        pass
-    try:
-        import polars as pl
-
-        X_arrays.append(pl.DataFrame)
-        y_arrays.append(pl.Series)
-    except ImportError:
-        pass
-    _XT = TypeVar('_XT', *X_arrays, ArrayLike)
-    _YT = TypeVar('_YT', *y_arrays, ArrayLike)
+    import pandas as pd
+    _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
+    _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
 else:
     _XT = TypeVar('_XT', bound=ArrayLike)
     _YT = TypeVar('_YT', bound=ArrayLike)
