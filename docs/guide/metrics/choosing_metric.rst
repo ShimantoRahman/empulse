@@ -81,7 +81,7 @@ The best way to understand the cost matrix is through an example.
 Consider a binary classification problem
 where the goal is to predict whether a customer is going to churn in the next year.
 
-we presumes a situation where predicted churners are contacted and offered an incentive to remain customers.
+We presumes a situation where predicted churners are contacted and offered an incentive to remain customers.
 Only a fraction of churners accepts the incentive offer (the accept rate).
 If a churner accepts the incentive, the company wins back the customer and receives the customer's lifetime value.
 If a loyal customer is offered an incentive, they will happily accept it, since they were going to stay anyway.
