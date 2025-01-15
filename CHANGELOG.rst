@@ -1,7 +1,10 @@
 `Unreleased`_
 =============
 
-- ...
+- |Feature| Add parameter validation for all models and samplers
+- |API| Make all arguments of dataset loaders keyword-only
+- |Fix| Update the descriptions attached to each dataset to match information found in the user guide
+- |Fix| Improve type hints for functions and classes
 
 `0.5.2`_ (12-01-2025)
 =====================
