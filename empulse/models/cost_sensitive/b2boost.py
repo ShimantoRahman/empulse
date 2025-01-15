@@ -3,7 +3,15 @@ from typing import Optional, Union
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
-from xgboost import XGBClassifier
+
+try:
+    from xgboost import XGBClassifier
+except ImportError:
+    XGBClassifier = None
+try:
+    from lightgbm import LGBMClassifier
+except ImportError:
+    LGBMClassifier = None
 
 from .._base import BaseBoostClassifier
 from ..._common import Parameter
@@ -12,14 +20,17 @@ from ...metrics import make_objective_churn
 
 class B2BoostClassifier(BaseBoostClassifier):
     """
-    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-dependent cost loss for customer churn.
+    Gradient boosting model to optimize instance-dependent cost loss for customer churn.
+
+    B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier` and :class:`lightgbm:lightgbm.LGBMClassifier`.
+    By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier`, optional
-        XGBoost classifier to be fit with desired hyperparameters.
+    estimator : `xgboost:xgboost.XGBClassifier` or :class:`lightgbm:lightgbm.LGBMClassifier`, optional
+        XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
     accept_rate : float, default=0.3
@@ -151,7 +162,7 @@ class B2BoostClassifier(BaseBoostClassifier):
 
     def __init__(
         self,
-        estimator: Optional[XGBClassifier] = None,
+        estimator: Optional[XGBClassifier | LGBMClassifier] = None,
         *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
@@ -231,17 +242,41 @@ class B2BoostClassifier(BaseBoostClassifier):
         if contact_cost is Parameter.UNCHANGED:
             contact_cost = self.contact_cost
 
-        objective = make_objective_churn(
-            clv=clv,
-            incentive_fraction=incentive_fraction,
-            contact_cost=contact_cost,
-            accept_rate=accept_rate,
-        )
         if self.estimator is None:
+            if XGBClassifier is None:
+                raise ImportError(
+                    "XGBoost package is required to use CSBoostClassifier. "
+                    "Install optional dependencies through pip install empulse[optional] or "
+                    "pip install xgboost"
+                )
+            objective = make_objective_churn(
+                model='xgboost',
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+                accept_rate=accept_rate,
+            )
             self.estimator_ = XGBClassifier(objective=objective)
-        else:
-            if not isinstance(self.estimator, XGBClassifier):
-                raise ValueError("estimator must be an instance of XGBClassifier")
+        elif isinstance(self.estimator, XGBClassifier):
+            objective = make_objective_churn(
+                model='xgboost',
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+                accept_rate=accept_rate,
+            )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, LGBMClassifier):
+            objective = make_objective_churn(
+                model='lightgbm',
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+                accept_rate=accept_rate,
+            )
+            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        else:
+            raise ValueError("estimator must be an instance of XGBClassifier or LGBMClassifier")
+
         self.estimator_.fit(X, y)
         return self

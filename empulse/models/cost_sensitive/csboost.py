@@ -4,7 +4,15 @@ from typing import Optional
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
-from xgboost import XGBClassifier
+
+try:
+    from xgboost import XGBClassifier
+except ImportError:
+    XGBClassifier = None
+try:
+    from lightgbm import LGBMClassifier
+except ImportError:
+    LGBMClassifier = None
 
 from ._cs_mixin import CostSensitiveMixin
 from .._base import BaseBoostClassifier
@@ -14,7 +22,10 @@ from ...metrics import make_objective_aec
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
-    :class:`xgboost:xgboost.XGBClassifier` to optimize instance-dependent cost loss.
+    Gradient boosting model to optimize instance-dependent cost loss.
+
+    CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier` and :class:`lightgbm:lightgbm.LGBMClassifier`.
+    By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
 
@@ -26,8 +37,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier`, optional
-        XGBoost classifier to be fit with desired hyperparameters.
+    estimator : `xgboost:xgboost.XGBClassifier` or `lightgbm:lightgbm.LGBMClassifier`, optional
+        XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -174,7 +185,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def __init__(
         self,
-        estimator: Optional[XGBClassifier] = None,
+        estimator: Optional[XGBClassifier | LGBMClassifier] = None,
         *,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
@@ -252,18 +263,40 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             fp_cost=fp_cost
         )
 
-        objective = make_objective_aec(
-            'csboost',
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-        )
         if self.estimator is None:
+            if XGBClassifier is None:
+                raise ImportError(
+                    "XGBoost package is required to use CSBoostClassifier. "
+                    "Install optional dependencies through pip install empulse[optional] or "
+                    "pip install xgboost"
+                    )
+            objective = make_objective_aec(
+                'xgboost',
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+            )
             self.estimator_ = XGBClassifier(objective=objective)
-        else:
-            if not isinstance(self.estimator, XGBClassifier):
-                raise ValueError("estimator must be an instance of XGBClassifier")
+        elif isinstance(self.estimator, XGBClassifier):
+            objective = make_objective_aec(
+                'xgboost',
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+            )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, LGBMClassifier):
+            objective = make_objective_aec(
+                'lightgbm',
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+            )
+            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        else:
+            raise ValueError("estimator must be an instance of XGBClassifier or LGBMClassifier")
         self.estimator_.fit(X, y, **fit_params)
         return self

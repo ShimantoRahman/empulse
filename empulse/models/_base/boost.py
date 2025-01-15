@@ -1,10 +1,16 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+from scipy.special import expit
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
+
+try:
+    from lightgbm import LGBMClassifier
+except ImportError:
+    LGBMClassifier = None
 
 
 class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, ABC):
@@ -79,6 +85,11 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
+
+        if LGBMClassifier is not None and isinstance(self.estimator_, LGBMClassifier):
+            y_proba = self.estimator_.predict_proba(X, raw_score=True)
+            y_proba = expit(y_proba)
+            return np.column_stack([1 - y_proba, y_proba])
 
         return self.estimator_.predict_proba(X)
 

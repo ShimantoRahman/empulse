@@ -1,5 +1,5 @@
 from functools import partial, update_wrapper
-from typing import Callable, Union
+from typing import Callable, Literal, Union
 
 import numpy as np
 import xgboost as xgb
@@ -9,6 +9,7 @@ from empulse.metrics.churn._validation import _validate_input_mpc
 
 
 def make_objective_churn(
+    model: Literal['xgboost', 'lightgbm'],
     *,
     accept_rate: float = 0.3,
     clv: Union[float, ArrayLike] = 200,
@@ -66,14 +67,45 @@ def make_objective_churn(
         Annals of Operations Research, 1-27.
 
     """
-    objective = partial(
-        _objective,
-        accept_rate=accept_rate,
-        clv=clv,
-        incentive_fraction=incentive_fraction,
-        contact_cost=contact_cost,
-    )
-    update_wrapper(objective, _objective)
+    if model == 'xgboost':
+        objective = partial(
+            _objective,
+            accept_rate=accept_rate,
+            clv=clv,
+            incentive_fraction=incentive_fraction,
+            contact_cost=contact_cost,
+        )
+        update_wrapper(objective, _objective)
+    elif model == 'lightgbm':
+        def objective(y_pred, train_data):
+            """
+            Create an objective function for the churn AEC measure.
+
+            Parameters
+            ----------
+            y_pred : np.ndarray
+                Predicted values.
+            train_data : xgb.DMatrix or np.ndarray
+                Training data.
+
+            Returns
+            -------
+            gradient  : np.ndarray
+                Gradient of the objective function.
+
+            hessian : np.ndarray
+                Hessian of the objective function.
+            """
+            return _objective(
+                y_pred,
+                train_data,
+                accept_rate=accept_rate,
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+            )
+    else:
+        raise ValueError(f"Expected model to be 'xgboost' or 'lightgbm', got {model} instead.")
     return objective
 
 

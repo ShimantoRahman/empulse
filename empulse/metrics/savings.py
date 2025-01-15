@@ -741,7 +741,7 @@ def expected_savings_score(
 
 
 def make_objective_aec(
-    model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'],
+    model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
     tp_cost: Union[ArrayLike, float] = 0.0,
     tn_cost: Union[ArrayLike, float] = 0.0,
@@ -761,14 +761,12 @@ def make_objective_aec(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'}
+    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
-        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`  (not implemented yet)
-        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`  (not implemented yet)
+        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
         - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
-        - 'csboost' : :class:`~empulse.models.CSBoostClassifier`
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -815,11 +813,29 @@ def make_objective_aec(
     """
 
     if model == 'xgboost':
-        objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        update_wrapper(objective, _objective_xgboost)
+        objective = partial(_objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
         def objective(y_pred, train_data):
-            return _objective_lightgbm(
+            """
+            Create an objective function for the AEC measure.
+
+            Parameters
+            ----------
+            y_pred : np.ndarray
+                Predicted values.
+            train_data : xgb.DMatrix or np.ndarray
+                Training data.
+
+            Returns
+            -------
+            gradient  : np.ndarray
+                Gradient of the objective function.
+
+            hessian : np.ndarray
+                Hessian of the objective function.
+            """
+            return _objective_boost(
                 y_pred,
                 train_data,
                 tp_cost=tp_cost,
@@ -827,20 +843,11 @@ def make_objective_aec(
                 fn_cost=fn_cost,
                 fp_cost=fp_cost
             )
-    elif model == 'catboost':
-        objective = partial(_objective_catboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        update_wrapper(objective, _objective_catboost)
     elif model == 'cslogit':
         objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_cslogit)
-    elif model == 'csboost':
-        objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        update_wrapper(objective, _objective_xgboost)
     else:
-        raise ValueError(
-            f"Expected model to be one of 'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost', "
-            f"got {model} instead."
-        )
+        raise ValueError(f"Expected model to be one of 'xgboost', 'lightgbm' or 'cslogit', got {model} instead.")
 
     return objective
 
@@ -880,7 +887,7 @@ def _objective_cslogit(
     return average_expected_cost, gradient
 
 
-def _objective_xgboost(
+def _objective_boost(
     y_pred: np.ndarray,
     dtrain: Union[xgb.DMatrix, np.ndarray],
     tp_cost: float = 0.0,
@@ -919,36 +926,3 @@ def _objective_xgboost(
     gradient = y_pred * (1 - y_pred) * cost
     hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
-
-
-def _objective_lightgbm(
-    y_pred,
-    train_data,
-    tp_cost=0.0,
-    tn_cost=0.0,
-    fn_cost=0.0,
-    fp_cost=0.0,
-) -> tuple[np.ndarray, np.ndarray]:
-    if hasattr(train_data, 'get_label'):
-        y_true = train_data.get_label()
-    elif isinstance(train_data, np.ndarray):
-        y_true = train_data
-    else:
-        raise TypeError(f"Invalid train data type, got {type(train_data)}.")
-
-    y_pred = expit(y_pred)
-    cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
-    gradient = y_pred * (1 - y_pred) * cost
-    hessian = np.abs((1 - 2 * y_pred) * gradient)
-    return gradient, hessian
-
-
-def _objective_catboost(
-    y_pred,
-    train_data,
-    tp_cost=0.0,
-    tn_cost=0.0,
-    fn_cost=0.0,
-    fp_cost=0.0,
-) -> tuple[np.ndarray, np.ndarray]:
-    raise NotImplementedError("Objective function for CatBoost is not implemented yet.")
