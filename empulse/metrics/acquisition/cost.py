@@ -9,6 +9,7 @@ from empulse.metrics.acquisition._validation import _validate_input_deterministi
 
 
 def make_objective_acquisition(
+    *,
         contribution: float = 7_000,
         contact_cost: float = 50,
         sales_cost: float = 500,

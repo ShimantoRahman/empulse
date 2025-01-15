@@ -9,6 +9,7 @@ from empulse.metrics.churn._validation import _validate_input_mpc
 
 
 def make_objective_churn(
+    *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
         incentive_fraction: Union[float, ArrayLike] = 0.05,
