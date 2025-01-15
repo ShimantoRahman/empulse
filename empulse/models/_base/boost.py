@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
+from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -30,6 +31,10 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
     The subclasses should implement the `fit` method to fit the base estimator with instance-specific costs.
     """
 
+    _parameter_constraints: dict = {
+        "estimator": [HasMethods(["fit", "predict_proba"]), None],
+    }
+
     def __init__(self, estimator=None):
         self.estimator = estimator
 
@@ -39,6 +44,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         tags.classifier_tags.poor_score = True
         return tags
 
+    @_fit_context(prefer_skip_nested_validation=False)
     def fit(self, X, y, **fit_params):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
@@ -54,11 +60,9 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
 
         return self._fit(X, y, **fit_params)
 
-
     @abstractmethod
     def _fit(self, X, y, **fit_params):
         ...
-
 
     def predict_proba(self, X):
         """

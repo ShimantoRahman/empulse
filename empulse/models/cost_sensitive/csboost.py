@@ -1,3 +1,4 @@
+from numbers import Real
 from typing import Optional
 
 import numpy as np
@@ -162,6 +163,14 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
     """
+
+    _parameter_constraints: dict = {
+        **BaseBoostClassifier._parameter_constraints,
+        'tp_cost': ["array-like", Real],
+        'tn_cost': ["array-like", Real],
+        'fn_cost': ["array-like", Real],
+        'fp_cost': ["array-like", Real],
+    }
 
     def __init__(
             self,

@@ -1,24 +1,35 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Any, Union
+from numbers import Real
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.special import expit
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 
 class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
+    _parameter_constraints: dict = {
+        "C": [Interval(Real, 0, None, closed="right")],
+        "fit_intercept": ["boolean"],
+        "soft_threshold": ["boolean"],
+        "loss": [StrOptions({"average expected cost"}), None],
+        "optimize_fn": [callable, None],
+        "l1_ratio": [Interval(Real, 0, 1, closed="both")],
+    }
+
     def __init__(
-            self,
-            C: float = 1.0,
-            fit_intercept: bool = True,
-            soft_threshold: bool = True,
-            l1_ratio: float = 1.0,
-            loss: Union[str | Callable] = None,
-            optimize_fn: Optional[Callable] = None,
-            optimizer_params: Optional[dict[str, Any]] = None,
+        self,
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        soft_threshold: bool = True,
+        l1_ratio: float = 1.0,
+        loss: Union[str | Callable] = None,
+        optimize_fn: Optional[Callable] = None,
+        optimizer_params: Optional[dict[str, Any]] = None,
     ):
         self.C = C
         self.fit_intercept = fit_intercept
