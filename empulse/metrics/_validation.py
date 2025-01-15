@@ -1,8 +1,8 @@
 from typing import Union
 
 import numpy as np
-from sklearn.utils import column_or_1d
 from numpy.typing import ArrayLike, NDArray
+from sklearn.utils import column_or_1d
 
 
 def _check_y_true(y_true: ArrayLike) -> np.ndarray:
@@ -36,8 +36,10 @@ def _check_inf(array: NDArray) -> None:
 
 def _check_shape(y_true: NDArray, y_pred: NDArray) -> None:
     if y_true.shape != y_pred.shape:
-        raise ValueError(f"The shapes of the true label and predictions should match, "
-                         f"got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead.")
+        raise ValueError(
+            f"The shapes of the true label and predictions should match, "
+            f"got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead."
+        )
 
 
 def _check_consistent_length(*arrays: NDArray) -> None:
@@ -74,8 +76,10 @@ def _check_binary(y_true: NDArray) -> None:
 def _check_variance(array: NDArray) -> None:
     unique_values = np.unique(array)
     if len(unique_values) < 2:
-        raise ValueError(f"The array should have at least two different values, "
-                         f"got unique values {unique_values} instead.")
+        raise ValueError(
+            f"The array should have at least two different values, "
+            f"got unique values {unique_values} instead."
+        )
 
 
 def _check_positive(var: Union[float, int], var_name: str) -> None:

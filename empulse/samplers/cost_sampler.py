@@ -4,7 +4,7 @@ from typing import Literal, TYPE_CHECKING
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import check_random_state, ClassifierTags
+from sklearn.utils import ClassifierTags, check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
@@ -105,14 +105,14 @@ class CostSensitiveSampler(BaseSampler):
             pass
 
     def __init__(
-            self,
-            method: Literal['rejection sampling', 'oversampling'] = 'rejection sampling',
-            *,
-            oversampling_norm: float = 0.1,
-            percentile_threshold: float = 0.975,
-            random_state: int | np.random.RandomState | None = None,
-            fp_cost: float | ArrayLike = 0.0,
-            fn_cost: float | ArrayLike = 0.0
+        self,
+        method: Literal['rejection sampling', 'oversampling'] = 'rejection sampling',
+        *,
+        oversampling_norm: float = 0.1,
+        percentile_threshold: float = 0.975,
+        random_state: int | np.random.RandomState | None = None,
+        fp_cost: float | ArrayLike = 0.0,
+        fn_cost: float | ArrayLike = 0.0
     ):
         super().__init__()
         self.method = method
@@ -129,12 +129,12 @@ class CostSensitiveSampler(BaseSampler):
         return tags
 
     def fit_resample(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            fp_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
-            fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        fp_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
+        fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
     ) -> tuple[NDArray, NDArray]:
         """
         Parameters
@@ -162,11 +162,11 @@ class CostSensitiveSampler(BaseSampler):
         return super().fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
     def _fit_resample(
-            self,
-            X: NDArray,
-            y: NDArray,
-            fp_cost: float | ArrayLike = 0.0,
-            fn_cost: float | ArrayLike = 0.0,
+        self,
+        X: NDArray,
+        y: NDArray,
+        fp_cost: float | ArrayLike = 0.0,
+        fn_cost: float | ArrayLike = 0.0,
     ) -> tuple[NDArray, NDArray]:
 
         if fp_cost is Parameter.UNCHANGED:
@@ -179,7 +179,8 @@ class CostSensitiveSampler(BaseSampler):
             warnings.warn(
                 "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
                 f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.",
-                UserWarning)
+                UserWarning
+            )
             fp_cost = 1
             fn_cost = 1
 

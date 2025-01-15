@@ -9,13 +9,13 @@ from ..._common import Parameter
 
 class CostSensitiveMixin:
     def _check_costs(
-            self,
-            *,
-            tp_cost: ArrayLike | float | Parameter,
-            tn_cost: ArrayLike | float | Parameter,
-            fn_cost: ArrayLike | float | Parameter,
-            fp_cost: ArrayLike | float | Parameter,
-            caller: str = 'fit'
+        self,
+        *,
+        tp_cost: ArrayLike | float | Parameter,
+        tn_cost: ArrayLike | float | Parameter,
+        fn_cost: ArrayLike | float | Parameter,
+        fp_cost: ArrayLike | float | Parameter,
+        caller: str = 'fit'
     ) -> tuple[
         NDArray | float,
         NDArray | float,
@@ -42,7 +42,8 @@ class CostSensitiveMixin:
             warnings.warn(
                 "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
                 f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.",
-                UserWarning)
+                UserWarning
+            )
             fp_cost = 1
             fn_cost = 1
 

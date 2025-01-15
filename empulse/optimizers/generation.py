@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Callable, Generator
+from typing import Callable, Generator, Optional
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -106,15 +106,15 @@ class Generation:
     """
 
     def __init__(
-            self,
-            population_size: Optional[int] = None,
-            crossover_rate: float = 0.8,
-            mutation_rate: float = 0.1,
-            elitism: float = 0.05,
-            verbose: bool = False,
-            logging_fn: Callable = print,
-            random_state: Optional[int] = None,
-            n_jobs: Optional[int] = 1,
+        self,
+        population_size: Optional[int] = None,
+        crossover_rate: float = 0.8,
+        mutation_rate: float = 0.1,
+        elitism: float = 0.05,
+        verbose: bool = False,
+        logging_fn: Callable = print,
+        random_state: Optional[int] = None,
+        n_jobs: Optional[int] = 1,
     ):
         super().__init__()
         self.name = "RGA"

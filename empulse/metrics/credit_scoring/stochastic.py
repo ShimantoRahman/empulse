@@ -9,13 +9,13 @@ from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
 
 def empcs_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        success_rate: float = 0.55,
-        default_rate: float = 0.1,
-        roi: float = 0.2644,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    success_rate: float = 0.55,
+    default_rate: float = 0.1,
+    roi: float = 0.2644,
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empcs()` but only returning the EMPCS score.
@@ -122,13 +122,13 @@ def empcs_score(
 
 
 def empcs(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        success_rate: float = 0.55,
-        default_rate: float = 0.1,
-        roi: float = 0.2644,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    success_rate: float = 0.55,
+    default_rate: float = 0.1,
+    roi: float = 0.2644,
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for Credit Scoring.
@@ -213,8 +213,10 @@ def empcs(
     true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
-    lambda_cdf_diff, lambda_cdf_sum = _compute_lambda_cdf(roi, tpr_diff, fpr_diff, positive_class_prob,
-                                                          negative_class_prob)
+    lambda_cdf_diff, lambda_cdf_sum = _compute_lambda_cdf(
+        roi, tpr_diff, fpr_diff, positive_class_prob,
+        negative_class_prob
+    )
 
     cutoff = len(true_positive_rates) - len(lambda_cdf_diff)
     if cutoff > 0:
@@ -230,9 +232,11 @@ def empcs(
     )
     empcs = partial_default_term + full_default_term
 
-    customer_threshold = np.sum(alpha * lambda_cdf_diff *
-                                (positive_class_prob * true_positive_rates +
-                                 negative_class_prob * false_positive_rates)) + \
+    customer_threshold = np.sum(
+        alpha * lambda_cdf_diff *
+        (positive_class_prob * true_positive_rates +
+         negative_class_prob * false_positive_rates)
+    ) + \
                          default_rate * (positive_class_prob * true_positive_rates[-1] +
                                          negative_class_prob * false_positive_rates[-1])
 
@@ -240,11 +244,11 @@ def empcs(
 
 
 def _compute_lambda_cdf(
-        roi: float,
-        tpr_diff: np.ndarray,
-        fpr_diff: np.ndarray,
-        positive_class_prob: float,
-        negative_class_prob: float
+    roi: float,
+    tpr_diff: np.ndarray,
+    fpr_diff: np.ndarray,
+    positive_class_prob: float,
+    negative_class_prob: float
 ) -> tuple[np.ndarray, np.ndarray]:
     # ignore division by zero warning
     with warnings.catch_warnings():

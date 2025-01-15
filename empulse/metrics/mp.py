@@ -5,13 +5,13 @@ from ._convex_hull import _compute_convex_hull
 
 
 def max_profit_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        tp_benefit: float = 0.0,
-        tn_benefit: float = 0.0,
-        fn_cost: float = 0.0,
-        fp_cost: float = 0.0,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    tp_benefit: float = 0.0,
+    tn_benefit: float = 0.0,
+    fn_cost: float = 0.0,
+    fp_cost: float = 0.0,
 ) -> float:
     """
     :func:`~empulse.metrics.max_profit()` but only returning the MP score.
@@ -89,17 +89,18 @@ def max_profit_score(
     >>> max_profit_score(y_true, y_score, tp_benefit=tp_benefit, fp_cost=fp_cost)
     24.22...
     """
-    return max_profit(y_true, y_score, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[0]
+    return max_profit(y_true, y_score, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[
+        0]
 
 
 def max_profit(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        tp_benefit: float = 0.0,
-        tn_benefit: float = 0.0,
-        fn_cost: float = 0.0,
-        fp_cost: float = 0.0,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    tp_benefit: float = 0.0,
+    tn_benefit: float = 0.0,
+    fn_cost: float = 0.0,
+    fp_cost: float = 0.0,
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure (MP).

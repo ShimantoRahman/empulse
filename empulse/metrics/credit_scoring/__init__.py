@@ -1,5 +1,5 @@
+from .deterministic import compute_profit_credit_scoring, mpcs, mpcs_score
 from .stochastic import empcs, empcs_score
-from .deterministic import mpcs, mpcs_score, compute_profit_credit_scoring
 
 __all__ = [
     empcs,

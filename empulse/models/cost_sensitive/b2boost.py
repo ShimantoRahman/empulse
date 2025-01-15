@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -150,13 +150,13 @@ class B2BoostClassifier(BaseBoostClassifier):
     """
 
     def __init__(
-            self,
-            estimator: Optional[XGBClassifier] = None,
-            *,
-            accept_rate: float = 0.3,
-            clv: Union[float, ArrayLike] = 200,
-            incentive_fraction: float = 0.05,
-            contact_cost: float = 15,
+        self,
+        estimator: Optional[XGBClassifier] = None,
+        *,
+        accept_rate: float = 0.3,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_fraction: float = 0.05,
+        contact_cost: float = 15,
     ) -> None:
         super().__init__(estimator=estimator)
         self.clv = clv
@@ -165,14 +165,14 @@ class B2BoostClassifier(BaseBoostClassifier):
         self.accept_rate = accept_rate
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            accept_rate: float | Parameter = Parameter.UNCHANGED,
-            clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            incentive_fraction: float | Parameter = Parameter.UNCHANGED,
-            contact_cost: float | Parameter = Parameter.UNCHANGED
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        accept_rate: float | Parameter = Parameter.UNCHANGED,
+        clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        incentive_fraction: float | Parameter = Parameter.UNCHANGED,
+        contact_cost: float | Parameter = Parameter.UNCHANGED
     ):
         """
         Fit the model.
@@ -213,13 +213,13 @@ class B2BoostClassifier(BaseBoostClassifier):
         )
 
     def _fit(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            accept_rate: float = None,
-            clv: Union[float, ArrayLike] = None,
-            incentive_fraction: float = None,
-            contact_cost: float = None,
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        accept_rate: float = None,
+        clv: Union[float, ArrayLike] = None,
+        incentive_fraction: float = None,
+        contact_cost: float = None,
     ) -> 'B2BoostClassifier':
 
         if accept_rate is Parameter.UNCHANGED:

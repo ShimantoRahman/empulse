@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from os.path import dirname
-from os.path import join
-from typing import Generic, TypeVar, overload, Literal
+from os.path import dirname, join
+from typing import Generic, Literal, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -54,44 +53,44 @@ class Dataset(Generic[Frame, Series]):
 
 @overload
 def load_churn_tv_subscriptions(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[False],
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[False],
 ) -> Dataset[pd.DataFrame, pd.Series]:
     ...
 
 
 @overload
 def load_churn_tv_subscriptions(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[False],
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[False],
 ) -> Dataset[NDArray, NDArray]:
     ...
 
 
 @overload
 def load_churn_tv_subscriptions(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[True],
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[True],
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
     ...
 
 
 @overload
 def load_churn_tv_subscriptions(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[True],
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[True],
 ) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
     ...
 
 
 def load_churn_tv_subscriptions(
-        *,
-        as_frame: bool = False,
-        return_X_y_costs: bool = False
+    *,
+    as_frame: bool = False,
+    return_X_y_costs: bool = False
 ) -> Dataset | tuple:
     """
     Load the TV Subscription Churn dataset (binary classification).
@@ -207,59 +206,59 @@ def load_churn_tv_subscriptions(
 
 @overload
 def load_upsell_bank_telemarketing(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[False],
-        interest_rate: float = 0.02463333,
-        term_deposit_fraction: float = 0.25,
-        contact_cost: float = 1,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[False],
+    interest_rate: float = 0.02463333,
+    term_deposit_fraction: float = 0.25,
+    contact_cost: float = 1,
 ) -> Dataset[pd.DataFrame, pd.Series]:
     ...
 
 
 @overload
 def load_upsell_bank_telemarketing(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[False],
-        interest_rate: float = 0.02463333,
-        term_deposit_fraction: float = 0.25,
-        contact_cost: float = 1,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[False],
+    interest_rate: float = 0.02463333,
+    term_deposit_fraction: float = 0.25,
+    contact_cost: float = 1,
 ) -> Dataset[NDArray, NDArray]:
     ...
 
 
 @overload
 def load_upsell_bank_telemarketing(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.02463333,
-        term_deposit_fraction: float = 0.25,
-        contact_cost: float = 1,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.02463333,
+    term_deposit_fraction: float = 0.25,
+    contact_cost: float = 1,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
     ...
 
 
 @overload
 def load_upsell_bank_telemarketing(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.02463333,
-        term_deposit_fraction: float = 0.25,
-        contact_cost: float = 1,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.02463333,
+    term_deposit_fraction: float = 0.25,
+    contact_cost: float = 1,
 ) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
     ...
 
 
 def load_upsell_bank_telemarketing(
-        *,
-        as_frame: bool = False,
-        return_X_y_costs: bool = False,
-        interest_rate: float = 0.02463333,
-        term_deposit_fraction: float = 0.25,
-        contact_cost: float = 1,
+    *,
+    as_frame: bool = False,
+    return_X_y_costs: bool = False,
+    interest_rate: float = 0.02463333,
+    term_deposit_fraction: float = 0.25,
+    contact_cost: float = 1,
 ) -> Dataset | tuple:
     """
     Load the bank telemarketing dataset (binary classification).
@@ -407,25 +406,29 @@ def load_upsell_bank_telemarketing(
     data.loc[:, 'housing'] = data['housing'].map({'yes': 1, 'no': 0})
     data.loc[:, 'loan'] = data['loan'].map({'yes': 1, 'no': 0})
 
-    data = data.astype({
-        'age': np.uint8,
-        'balance': np.int32,
-        'previous': np.uint8,
-        'job': 'category',
-        'marital': 'category',
-        'education': 'category',
-        'default': np.uint8,
-        'housing': np.uint8,
-        'loan': np.uint8,
-        'poutcome': 'category'
-    })
+    data = data.astype(
+        {
+            'age': np.uint8,
+            'balance': np.int32,
+            'previous': np.uint8,
+            'job': 'category',
+            'marital': 'category',
+            'education': 'category',
+            'default': np.uint8,
+            'housing': np.uint8,
+            'loan': np.uint8,
+            'poutcome': 'category'
+        }
+    )
 
-    data = data.rename(columns={
-        'poutcome': 'previous_outcome',
-        'loan': 'has_personal_loan',
-        'housing': 'has_housing_loan',
-        'default': 'has_credit_in_default',
-    })
+    data = data.rename(
+        columns={
+            'poutcome': 'previous_outcome',
+            'loan': 'has_personal_loan',
+            'housing': 'has_housing_loan',
+            'default': 'has_credit_in_default',
+        }
+    )
 
     if return_X_y_costs:
         if as_frame:
@@ -464,74 +467,74 @@ def load_upsell_bank_telemarketing(
 
 @overload
 def load_give_me_some_credit(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[False],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[False],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> Dataset[pd.DataFrame, pd.Series]:
     ...
 
 
 @overload
 def load_give_me_some_credit(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[False],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[False],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> Dataset[NDArray, NDArray]:
     ...
 
 
 @overload
 def load_give_me_some_credit(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
     ...
 
 
 @overload
 def load_give_me_some_credit(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
     ...
 
 
 def load_give_me_some_credit(
-        *,
-        as_frame: bool = False,
-        return_X_y_costs: bool = False,
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: bool = False,
+    return_X_y_costs: bool = False,
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> Dataset | tuple:
     """
     Load the "Give Me Some Credit" Kaggle credit scoring competition dataset (binary classification).
@@ -638,12 +641,14 @@ def load_give_me_some_credit(
     data = raw_data.drop(['SeriousDlqin2yrs', 'id'], axis=1)
 
     # Calculate cost_mat (see[1])
-    cost_mat_parameters = {'int_r': interest_rate / 12,
-                           'int_cf': fund_cost / 12,
-                           'cl_max': max_credit_line,
-                           'n_term': term_length_months,
-                           'k': loan_to_income_ratio,
-                           'lgd': loss_given_default}
+    cost_mat_parameters = {
+        'int_r': interest_rate / 12,
+        'int_cf': fund_cost / 12,
+        'cl_max': max_credit_line,
+        'n_term': term_length_months,
+        'k': loan_to_income_ratio,
+        'lgd': loss_given_default
+    }
 
     pi_1 = target.mean()
     # cost_mat[FP,FN,TP,TN]
@@ -685,18 +690,20 @@ def load_give_me_some_credit(
     # Reorder columns
     data = data.reindex(columns=new_order)
 
-    data = data.astype({
-        'monthly_income': np.float64,
-        'debt_ratio': np.float64,
-        'revolving_utilization': np.float64,
-        'age': np.uint8,
-        'n_dependents': np.uint8,
-        'n_open_credit_lines': np.uint8,
-        'n_real_estate_loans': np.uint8,
-        'n_times_late_30_59_days': np.uint8,
-        'n_times_late_60_89_days': np.uint8,
-        'n_times_late_over_90_days': np.uint8,
-    })
+    data = data.astype(
+        {
+            'monthly_income': np.float64,
+            'debt_ratio': np.float64,
+            'revolving_utilization': np.float64,
+            'age': np.uint8,
+            'n_dependents': np.uint8,
+            'n_open_credit_lines': np.uint8,
+            'n_real_estate_loans': np.uint8,
+            'n_times_late_30_59_days': np.uint8,
+            'n_times_late_60_89_days': np.uint8,
+            'n_times_late_over_90_days': np.uint8,
+        }
+    )
 
     if return_X_y_costs:
         if as_frame:
@@ -735,74 +742,74 @@ def load_give_me_some_credit(
 
 @overload
 def load_credit_scoring_pakdd(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[False] = False,
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[False] = False,
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> Dataset[pd.DataFrame, pd.Series]:
     ...
 
 
 @overload
 def load_credit_scoring_pakdd(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[False],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[False],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> Dataset[NDArray, NDArray]:
     ...
 
 
 @overload
 def load_credit_scoring_pakdd(
-        *,
-        as_frame: Literal[True],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[True],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
     ...
 
 
 @overload
 def load_credit_scoring_pakdd(
-        *,
-        as_frame: Literal[False],
-        return_X_y_costs: Literal[True],
-        interest_rate: float = 0.0479,
-        fund_cost: float = 0.0294,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: Literal[False],
+    return_X_y_costs: Literal[True],
+    interest_rate: float = 0.0479,
+    fund_cost: float = 0.0294,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
     ...
 
 
 def load_credit_scoring_pakdd(
-        *,
-        as_frame: bool = False,
-        return_X_y_costs: bool = False,
-        interest_rate: float = 0.63,
-        fund_cost: float = 0.165,
-        max_credit_line: float = 25000,
-        loss_given_default: float = 0.75,
-        term_length_months: int = 24,
-        loan_to_income_ratio: float = 3,
+    *,
+    as_frame: bool = False,
+    return_X_y_costs: bool = False,
+    interest_rate: float = 0.63,
+    fund_cost: float = 0.165,
+    max_credit_line: float = 25000,
+    loss_given_default: float = 0.75,
+    term_length_months: int = 24,
+    loan_to_income_ratio: float = 3,
 ):
     """
     Load the credit scoring PAKDD 2009 competition dataset (binary classification).
@@ -973,20 +980,24 @@ def load_credit_scoring_pakdd(
     data = data.rename(columns=column_mapping)
 
     # remap values of matiral_status to more readable values
-    data.loc[:, 'marital_status'] = data['marital_status'].map({
-        'S': 'single',
-        'M': 'married',
-        'D': 'divorced',
-        'W': 'widowed',
-        'O': 'other'
-    })
+    data.loc[:, 'marital_status'] = data['marital_status'].map(
+        {
+            'S': 'single',
+            'M': 'married',
+            'D': 'divorced',
+            'W': 'widowed',
+            'O': 'other'
+        }
+    )
     # remap values of residence_type to more readable values
-    data.loc[:, 'residence_type'] = data['residence_type'].map({
-        'P': 'owned',
-        'A': 'rented',
-        'C': 'parents',
-        'O': 'other'
-    })
+    data.loc[:, 'residence_type'] = data['residence_type'].map(
+        {
+            'P': 'owned',
+            'A': 'rented',
+            'C': 'parents',
+            'O': 'other'
+        }
+    )
 
     # Desired column order
     new_order = [
@@ -1021,34 +1032,36 @@ def load_credit_scoring_pakdd(
     # Reorder columns
     data = data.reindex(columns=new_order)
 
-    data = data.astype({
-        'age': np.uint8,
-        'personal_net_income': np.float32,
-        'partner_income': np.float32,
-        'months_in_residence': np.uint8,
-        'months_in_the_job': np.uint8,
-        'payment_day': np.uint8,
-        'n_banking_accounts': np.uint8,
-        'n_additional_cards': np.uint8,
-        'is_male': np.uint8,
-        'has_residential_phone': np.uint8,
-        'has_mobile_phone': np.uint8,
-        'has_contact_phone': np.uint8,
-        'has_same_postal_address': np.uint8,
-        'has_other_card': np.uint8,
-        'has_card_insurance': np.uint8,
-        'lives_in_work_town': np.uint8,
-        'lives_in_work_state': np.uint8,
-        'filled_in_mothers_name': np.uint8,
-        'filled_in_fathers_name': np.uint8,
-        'shop_rank': 'category',
-        'marital_status': 'category',
-        'residence_type': 'category',
-        'area_code_residential_phone': 'category',
-        'shop_code': 'category',
-        'application_booth_code': 'category',
-        'profession_code': 'category',
-    })
+    data = data.astype(
+        {
+            'age': np.uint8,
+            'personal_net_income': np.float32,
+            'partner_income': np.float32,
+            'months_in_residence': np.uint8,
+            'months_in_the_job': np.uint8,
+            'payment_day': np.uint8,
+            'n_banking_accounts': np.uint8,
+            'n_additional_cards': np.uint8,
+            'is_male': np.uint8,
+            'has_residential_phone': np.uint8,
+            'has_mobile_phone': np.uint8,
+            'has_contact_phone': np.uint8,
+            'has_same_postal_address': np.uint8,
+            'has_other_card': np.uint8,
+            'has_card_insurance': np.uint8,
+            'lives_in_work_town': np.uint8,
+            'lives_in_work_state': np.uint8,
+            'filled_in_mothers_name': np.uint8,
+            'filled_in_fathers_name': np.uint8,
+            'shop_rank': 'category',
+            'marital_status': 'category',
+            'residence_type': 'category',
+            'area_code_residential_phone': 'category',
+            'shop_code': 'category',
+            'application_booth_code': 'category',
+            'profession_code': 'category',
+        }
+    )
 
     # remove flag_card_insurance_option
     data = data.drop(['has_card_insurance'], axis=1)

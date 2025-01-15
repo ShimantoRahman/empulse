@@ -5,9 +5,9 @@ from sklearn.metrics import roc_curve
 
 
 def _compute_convex_hull(
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        expand_dims: bool = False
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    expand_dims: bool = False
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Computes the convex hull points of the ROC curve.

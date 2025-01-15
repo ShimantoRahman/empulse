@@ -5,21 +5,21 @@ import scipy.stats as st
 from numpy.typing import ArrayLike
 
 from ._validation import _validate_input_stochastic
-from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from .._convex_hull import _compute_convex_hull
+from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
 
 def empa_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        alpha: float = 12,
-        beta: float = 0.0015,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    alpha: float = 12,
+    beta: float = 0.0015,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    check_input: bool = True
 ) -> float:
     """
     :func:`~empulse.metrics.empa()` but only returning the EMPA score.
@@ -137,16 +137,16 @@ def empa_score(
 
 
 def empa(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        alpha: float = 12,
-        beta: float = 0.0015,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    alpha: float = 12,
+    beta: float = 0.0015,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    check_input: bool = True
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for customer Acquisition (EMPA).
@@ -279,11 +279,11 @@ def empa(
 
 
 def _compute_integration_bounds(
-        tpr_coef: float,
-        fpr_coef: float,
-        denominator: float,
-        tpr_diff: np.ndarray,
-        fpr_diff: np.ndarray,
+    tpr_coef: float,
+    fpr_coef: float,
+    denominator: float,
+    tpr_diff: np.ndarray,
+    fpr_diff: np.ndarray,
 ) -> np.ndarray:
     """Compute the integration bounds for the contribution of a new customer."""
     # ignore division by zero warning
@@ -292,11 +292,13 @@ def _compute_integration_bounds(
         clv_bounds = (fpr_coef * fpr_diff - tpr_coef * tpr_diff) / (denominator * tpr_diff)
     # add zero and infinity to bounds
     if clv_bounds.ndim == 2:
-        return np.concatenate([
-            np.zeros((1, clv_bounds.shape[1])),
-            clv_bounds,
-            np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf)
-        ])
+        return np.concatenate(
+            [
+                np.zeros((1, clv_bounds.shape[1])),
+                clv_bounds,
+                np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf)
+            ]
+        )
     elif clv_bounds.ndim == 1:
         return np.concatenate([[0], clv_bounds, [np.inf]]).reshape(-1, 1)
     else:

@@ -1,16 +1,16 @@
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .._validation import _check_shape, _check_positive, _check_fraction, _check_y_true, _check_y_pred
+from .._validation import _check_fraction, _check_positive, _check_shape, _check_y_pred, _check_y_true
 
 
 def _validate_input(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        contact_cost: float,
-        sales_cost: float,
-        direct_selling: float,
-        commission: float,
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    contact_cost: float,
+    sales_cost: float,
+    direct_selling: float,
+    commission: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Validate input for all acquisition parameters."""
     y_true = _check_y_true(y_true)
@@ -25,14 +25,14 @@ def _validate_input(
 
 
 def _validate_input_stochastic(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        alpha: float,
-        beta: float,
-        contact_cost: float,
-        sales_cost: float,
-        direct_selling: float,
-        commission: float,
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    alpha: float,
+    beta: float,
+    contact_cost: float,
+    sales_cost: float,
+    direct_selling: float,
+    commission: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Validate input for all stochastic acquisition parameters."""
     _check_positive(alpha, 'alpha')
@@ -48,13 +48,13 @@ def _validate_input_stochastic(
 
 
 def _validate_input_deterministic(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        contribution: float,
-        contact_cost: float,
-        sales_cost: float,
-        direct_selling: float,
-        commission: float,
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    contribution: float,
+    contact_cost: float,
+    sales_cost: float,
+    direct_selling: float,
+    commission: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Validate input for all deterministic acquisition parameters."""
     _check_positive(contribution, 'contribution')

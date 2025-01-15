@@ -1,4 +1,4 @@
-from typing import Optional, Generator
+from typing import Generator, Optional
 
 import numpy as np
 from numba import njit
@@ -70,8 +70,10 @@ def _compute_prior_class_probabilities(y_true: np.ndarray) -> tuple[float, float
     return positive_class_prob, negative_class_prob
 
 
-def _compute_tpr_fpr_diffs(true_positive_rates: np.ndarray,
-                           false_positive_rates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _compute_tpr_fpr_diffs(
+    true_positive_rates: np.ndarray,
+    false_positive_rates: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate differences between subsequent true positive rates and false positive rates."""
     tpr_diff = np.diff(true_positive_rates, axis=0)  # F_0(T_i) - F_0(T_{i-1})
     fpr_diff = np.diff(false_positive_rates, axis=0)  # F_1(T_i) - F_1(T_{i-1})

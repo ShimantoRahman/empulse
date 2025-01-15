@@ -1,2 +1,2 @@
-from .logit import BaseLogitClassifier
 from .boost import BaseBoostClassifier
+from .logit import BaseLogitClassifier

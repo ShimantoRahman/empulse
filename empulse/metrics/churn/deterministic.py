@@ -9,14 +9,14 @@ from ..common import _compute_profits
 
 
 def mpc_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        accept_rate: float = 0.3,
-        clv: float = 200,
-        incentive_cost: float = 10,
-        contact_cost: float = 1,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    accept_rate: float = 0.3,
+    clv: float = 200,
+    incentive_cost: float = 10,
+    contact_cost: float = 1,
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.mpc()` but only returning the MPC score.
@@ -134,14 +134,14 @@ def mpc_score(
 
 
 def mpc(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        accept_rate: float = 0.3,
-        clv: Union[ArrayLike, float] = 200,
-        incentive_cost: float = 10,
-        contact_cost: float = 1,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    accept_rate: float = 0.3,
+    clv: Union[ArrayLike, float] = 200,
+    incentive_cost: float = 10,
+    contact_cost: float = 1,
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Maximum Profit Measure for Customer Churn (MPC).
@@ -243,13 +243,13 @@ def mpc(
 
 
 def compute_profit_churn(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        clv: Union[ArrayLike, float] = 200,
-        d: float = 10,
-        f: float = 1,
-        gamma: float = 0.3,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    clv: Union[ArrayLike, float] = 200,
+    d: float = 10,
+    f: float = 1,
+    gamma: float = 0.3,
+    check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
         y_true, y_score, clv = _validate_input_mp(y_true, y_score, gamma, clv, d, f)

@@ -10,11 +10,11 @@ from empulse.metrics.acquisition._validation import _validate_input_deterministi
 
 def make_objective_acquisition(
     *,
-        contribution: float = 7_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
+    contribution: float = 7_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
 ) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
     """
     Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition.
@@ -87,13 +87,13 @@ def make_objective_acquisition(
 
 
 def _objective(
-        y_pred: np.ndarray,
-        dtrain: Union[xgb.DMatrix, np.ndarray],
-        contribution: float = 7_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
+    y_pred: np.ndarray,
+    dtrain: Union[xgb.DMatrix, np.ndarray],
+    contribution: float = 7_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create an objective function for `XGBoostClassifier` for customer acquisition.
@@ -130,17 +130,17 @@ def _objective(
     return gradient, hessian
 
 
-def expected_cost_loss_acquisition (
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        *,
-        contribution: float = 7_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        normalize: bool = False,
-        check_input: bool = True,
+def expected_cost_loss_acquisition(
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    *,
+    contribution: float = 7_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    normalize: bool = False,
+    check_input: bool = True,
 ) -> float:
     """
     Expected cost of a classifier for customer acquisition.

@@ -10,10 +10,10 @@ from empulse.metrics.churn._validation import _validate_input_mpc
 
 def make_objective_churn(
     *,
-        accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_fraction: Union[float, ArrayLike] = 0.05,
-        contact_cost: float = 15,
+    accept_rate: float = 0.3,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    contact_cost: float = 15,
 ) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
     """
     Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn.
@@ -78,12 +78,12 @@ def make_objective_churn(
 
 
 def _objective(
-        y_pred: np.ndarray,
-        dtrain: Union[xgb.DMatrix, np.ndarray],
-        accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_fraction: Union[float, ArrayLike] = 0.05,
-        contact_cost: float = 1,
+    y_pred: np.ndarray,
+    dtrain: Union[xgb.DMatrix, np.ndarray],
+    accept_rate: float = 0.3,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    contact_cost: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Objective function for XGBoost to maximize the profit of a churn model.
@@ -122,15 +122,15 @@ def _objective(
 
 
 def expected_cost_loss_churn(
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        *,
-        accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_fraction: Union[float, ArrayLike] = 0.05,
-        contact_cost: float = 1,
-        normalize: bool = False,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    *,
+    accept_rate: float = 0.3,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    contact_cost: float = 1,
+    normalize: bool = False,
+    check_input: bool = True
 ) -> float:
     """
     Expected cost of a classifier for customer churn.

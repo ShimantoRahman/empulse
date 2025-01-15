@@ -1,7 +1,7 @@
 import numbers
 import warnings
 from functools import partial
-from typing import Callable, Optional, Any, Union, Literal
+from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -212,19 +212,19 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
 
     def __init__(
-            self,
-            *,
-            C: float = 1.0,
-            fit_intercept: bool = True,
-            soft_threshold: bool = False,
-            l1_ratio: float = 1.0,
-            loss: Loss | Callable = 'average expected cost',
-            optimize_fn: Optional[Callable] = None,
-            optimizer_params: Optional[dict[str, Any]] = None,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
+        self,
+        *,
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        soft_threshold: bool = False,
+        l1_ratio: float = 1.0,
+        loss: Loss | Callable = 'average expected cost',
+        optimize_fn: Optional[Callable] = None,
+        optimizer_params: Optional[dict[str, Any]] = None,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
     ):
         super().__init__(
             C=C,
@@ -241,15 +241,15 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         self.fp_cost = fp_cost
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            tp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-            tn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-            fn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-            fp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-            **loss_params
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        tp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
+        tn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
+        fn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
+        fp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
+        **loss_params
     ) -> 'CSLogitClassifier':
         """
 
@@ -284,15 +284,15 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
 
     def _fit(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            *,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
-            **loss_params
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        *,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
+        **loss_params
     ) -> 'CSLogitClassifier':
 
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
@@ -412,11 +412,11 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
 
 def _optimize_jacobian(
-        objective,
-        X,
-        max_iter=10000,
-        tolerance=1e-4,
-        **kwargs
+    objective,
+    X,
+    max_iter=10000,
+    tolerance=1e-4,
+    **kwargs
 ) -> OptimizeResult:
     initial_weights = np.zeros(X.shape[1], order="F", dtype=X.dtype)
 
@@ -489,8 +489,10 @@ def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
             loss, gradient, hessian = loss_output
             return loss + _compute_penalty(b, C, l1_ratio), gradient, hessian
         else:
-            raise ValueError(f"Invalid loss function output length: {len(loss_output)}, expected 1, 2 or 3. "
-                             f"(loss, gradient, hessian)")
+            raise ValueError(
+                f"Invalid loss function output length: {len(loss_output)}, expected 1, 2 or 3. "
+                f"(loss, gradient, hessian)"
+            )
     else:
         loss = loss_output
         return loss + _compute_penalty(b, C, l1_ratio)

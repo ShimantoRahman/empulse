@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._validation import _check_shape, _check_binary, _check_fraction, _check_variance, _check_y_true, _check_y_pred
+from ._validation import _check_binary, _check_fraction, _check_shape, _check_variance, _check_y_pred, _check_y_true
 
 
 def _validate_input(y_true: ArrayLike, y_score: ArrayLike, fraction: float) -> tuple[np.ndarray, np.ndarray]:

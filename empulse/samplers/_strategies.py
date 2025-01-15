@@ -1,4 +1,4 @@
-from typing import Literal, Callable
+from typing import Callable, Literal
 
 import numpy as np
 

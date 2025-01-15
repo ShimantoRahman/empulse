@@ -9,7 +9,7 @@ from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.metadata_routing import process_routing, MetadataRouter, MethodMapping
+from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ._cs_mixin import CostSensitiveMixin
@@ -124,16 +124,16 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     }
 
     def __init__(
-            self,
-            estimator,
-            *,
-            calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
-            pos_label=None,
-            random_state=None,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
+        self,
+        estimator,
+        *,
+        calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
+        pos_label=None,
+        random_state=None,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
     ):
         super().__init__(estimator, response_method='predict_proba')
         self.calibrator = calibrator
@@ -209,12 +209,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         return self
 
     def predict(
-            self,
-            X,
-            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        self,
+        X,
+        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
     ):
         """
         Predict the target of new samples.

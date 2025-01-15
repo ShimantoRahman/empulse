@@ -6,12 +6,12 @@ from ..common import _compute_profits
 
 
 def mpcs_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        loan_lost_rate: float = 0.275,
-        roi: float = 0.2644,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    loan_lost_rate: float = 0.275,
+    roi: float = 0.2644,
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.mpcs()` but only returning the MPCS score.
@@ -101,12 +101,12 @@ def mpcs_score(
 
 
 def mpcs(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        loan_lost_rate: float = 0.275,
-        roi: float = 0.2644,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    loan_lost_rate: float = 0.275,
+    roi: float = 0.2644,
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for Credit Scoring.
@@ -180,11 +180,11 @@ def mpcs(
 
 
 def compute_profit_credit_scoring(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        frac_loan_lost: float = 0.275,
-        roi: float = 0.2644,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    frac_loan_lost: float = 0.275,
+    roi: float = 0.2644,
+    check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
         y_true, y_score = _validate_input_mp(y_true, y_score, frac_loan_lost, roi)

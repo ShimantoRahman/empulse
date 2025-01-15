@@ -1,11 +1,11 @@
 import warnings
-from typing import Union, Callable, Optional, TypeVar, TYPE_CHECKING, Any
+from typing import Callable, Optional, TYPE_CHECKING, TypeVar, Union
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
-from sklearn.utils import _safe_indexing, ClassifierTags
+from sklearn.utils import ClassifierTags, _safe_indexing
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.multiclass import type_of_target
 
@@ -13,6 +13,7 @@ from empulse.samplers._strategies import Strategy, StrategyFn
 
 if TYPE_CHECKING:
     import pandas as pd
+
     _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
     _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
 else:
@@ -174,11 +175,11 @@ class BiasRelabler(BaseSampler):
         def set_fit_resample_request(self, sensitive_feature=False): pass
 
     def __init__(
-            self,
-            estimator,
-            *,
-            strategy: Union[Callable, Strategy] = 'statistical parity',
-            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        self,
+        estimator,
+        *,
+        strategy: Union[Callable, Strategy] = 'statistical parity',
+        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):
         super().__init__()
         self.estimator = estimator
@@ -213,11 +214,11 @@ class BiasRelabler(BaseSampler):
         return self.fit_resample(X, y, sensitive_feature=sensitive_feature)
 
     def fit_resample(
-            self,
-            X: _XT,
-            y: _YT,
-            *,
-            sensitive_feature: Optional[ArrayLike] = None,
+        self,
+        X: _XT,
+        y: _YT,
+        *,
+        sensitive_feature: Optional[ArrayLike] = None,
     ) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
@@ -239,11 +240,11 @@ class BiasRelabler(BaseSampler):
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
     def _fit_resample(
-            self,
-            X: _XT,
-            y: _YT,
-            *,
-            sensitive_feature: Optional[ArrayLike] = None
+        self,
+        X: _XT,
+        y: _YT,
+        *,
+        sensitive_feature: Optional[ArrayLike] = None
     ) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.

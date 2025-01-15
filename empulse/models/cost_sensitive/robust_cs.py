@@ -3,7 +3,7 @@ from typing import Literal
 import numpy as np
 import scipy.stats as st
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, clone, check_is_fitted
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils.validation import _estimator_has
@@ -197,16 +197,16 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     """
 
     def __init__(
-            self,
-            estimator,
-            outlier_estimator=None,
-            *,
-            outlier_threshold: float = 2.5,
-            detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
+        self,
+        estimator,
+        outlier_estimator=None,
+        *,
+        outlier_threshold: float = 2.5,
+        detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
     ):
         super().__init__()
         self.estimator = estimator
@@ -219,15 +219,15 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self.fp_cost = fp_cost
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            **fit_params
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **fit_params
     ) -> 'RobustCSLogitClassifier':
         """
         Fit the estimator with the adjusted costs.

@@ -1,10 +1,10 @@
-from typing import Callable, Union, Optional
+from typing import Callable, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import ClassifierMixin, BaseEstimator, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data, check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ...samplers import BiasRelabler
 from ...samplers._strategies import Strategy, StrategyFn
@@ -157,11 +157,11 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
     """
 
     def __init__(
-            self,
-            estimator,
-            *,
-            strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None
+        self,
+        estimator,
+        *,
+        strategy: Union[StrategyFn, Strategy] = 'statistical parity',
+        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -174,12 +174,12 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
         return tags
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            sensitive_feature: Optional[ArrayLike] = None,
-            **fit_params
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        sensitive_feature: Optional[ArrayLike] = None,
+        **fit_params
     ) -> 'BiasRelabelingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.

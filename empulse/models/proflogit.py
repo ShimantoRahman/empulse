@@ -1,6 +1,6 @@
 from functools import partial
 from itertools import islice
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -101,15 +101,15 @@ class ProfLogitClassifier(BaseLogitClassifier):
     """
 
     def __init__(
-            self,
-            C: float = 1.0,
-            fit_intercept: bool = True,
-            soft_threshold: bool = False,
-            l1_ratio: float = 1.0,
-            loss: Callable = empc_score,
-            optimize_fn: Optional[Callable] = None,
-            optimizer_params: Optional[dict[str, Any]] = None,
-            n_jobs: Optional[int] = None,
+        self,
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        soft_threshold: bool = False,
+        l1_ratio: float = 1.0,
+        loss: Callable = empc_score,
+        optimize_fn: Optional[Callable] = None,
+        optimizer_params: Optional[dict[str, Any]] = None,
+        n_jobs: Optional[int] = None,
     ):
         super().__init__(
             C=C,

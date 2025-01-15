@@ -1,9 +1,9 @@
 import warnings
 from typing import Union
-from packaging.version import Version
 
 import numpy as np
 from numpy.typing import ArrayLike
+from packaging.version import Version
 from scipy import stats as st
 
 from ._validation import _validate_input_emp, _validate_input_empb
@@ -15,15 +15,15 @@ if Version(np.version.version) >= Version("2.0.0"):
 
 
 def empc_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        alpha: float = 6,
-        beta: float = 14,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_cost: float = 10,
-        contact_cost: float = 1,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    alpha: float = 6,
+    beta: float = 14,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_cost: float = 10,
+    contact_cost: float = 1,
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empc()` but only returning the EMPC score.
@@ -151,15 +151,15 @@ def empc_score(
 
 
 def empc(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        alpha: float = 6,
-        beta: float = 14,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_cost: float = 10,
-        contact_cost: float = 1,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    alpha: float = 6,
+    beta: float = 14,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_cost: float = 10,
+    contact_cost: float = 1,
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for Customer Churn (EMPC).
@@ -298,12 +298,12 @@ def empc(
 
 
 def _compute_gamma_bounds(
-        tpr_coef: float,
-        fpr_coef: float,
-        delta: float,
-        tpr_diff: np.ndarray,
-        fpr_diff: np.ndarray,
-        positive_class_prob: float
+    tpr_coef: float,
+    fpr_coef: float,
+    delta: float,
+    tpr_diff: np.ndarray,
+    fpr_diff: np.ndarray,
+    positive_class_prob: float
 ) -> np.ndarray:
     """Compute the gamma bounds of the integral"""
     numerator = fpr_coef * fpr_diff + tpr_coef * tpr_diff
@@ -317,15 +317,15 @@ def _compute_gamma_bounds(
 
 
 def empb_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        clv: ArrayLike,
-        alpha: float = 6,
-        beta: float = 14,
-        incentive_fraction: float = 0.05,
-        contact_cost: float = 15,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    clv: ArrayLike,
+    alpha: float = 6,
+    beta: float = 14,
+    incentive_fraction: float = 0.05,
+    contact_cost: float = 15,
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empb()` but only returning the EMPB score.
@@ -398,15 +398,15 @@ def empb_score(
 
 
 def empb(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        clv: ArrayLike,
-        alpha: float = 6,
-        beta: float = 14,
-        incentive_fraction: float = 0.05,
-        contact_cost: float = 15,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    clv: ArrayLike,
+    alpha: float = 6,
+    beta: float = 14,
+    incentive_fraction: float = 0.05,
+    contact_cost: float = 15,
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure for B2B Customer Churn (EMPB).
@@ -498,16 +498,16 @@ def empb(
 
 
 def auepc_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        clv: ArrayLike,
-        alpha: float = 6,
-        beta: float = 14,
-        incentive_fraction: float = 0.05,
-        contact_cost: float = 15,
-        normalize: bool = True,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    clv: ArrayLike,
+    alpha: float = 6,
+    beta: float = 14,
+    incentive_fraction: float = 0.05,
+    contact_cost: float = 15,
+    normalize: bool = True,
+    check_input: bool = True,
 ) -> float:
     """
     Area Under the Expected Profit Curve (AUEPC).

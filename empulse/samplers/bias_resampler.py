@@ -1,20 +1,21 @@
 import warnings
 from itertools import product
-from typing import Union, Callable, Optional, TypeVar, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING, TypeVar, Union
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import check_random_state, _safe_indexing
+from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.estimator_checks import ClassifierTags
 from sklearn.utils.multiclass import type_of_target
 
-from ._strategies import _independent_weights, Strategy, StrategyFn
+from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:
     import pandas as pd
+
     _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
     _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
 else:
@@ -151,11 +152,11 @@ class BiasResampler(BaseSampler):
         def set_fit_resample_request(self, sensitive_feature=False): pass
 
     def __init__(
-            self,
-            *,
-            strategy: Union[Callable, Strategy] = 'statistical parity',
-            transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-            random_state: Optional[Union[RandomState, int]] = None
+        self,
+        *,
+        strategy: Union[Callable, Strategy] = 'statistical parity',
+        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        random_state: Optional[Union[RandomState, int]] = None
     ):
         super().__init__()
         self.strategy = strategy
@@ -169,11 +170,11 @@ class BiasResampler(BaseSampler):
         return tags
 
     def fit_resample(
-            self,
-            X: _XT,
-            y: _YT,
-            *,
-            sensitive_feature: Optional[ArrayLike] = None,
+        self,
+        X: _XT,
+        y: _YT,
+        *,
+        sensitive_feature: Optional[ArrayLike] = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -195,11 +196,11 @@ class BiasResampler(BaseSampler):
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
     def _fit_resample(
-            self,
-            X: _XT,
-            y: _YT,
-            *,
-            sensitive_feature: Optional[ArrayLike] = None,
+        self,
+        X: _XT,
+        y: _YT,
+        *,
+        sensitive_feature: Optional[ArrayLike] = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -266,15 +267,19 @@ class BiasResampler(BaseSampler):
             n_samples = int(class_weights[target_class, sensitive_val] * len(idx_class_sensitive))
             if n_samples > len(idx_class_sensitive):  # oversampling
                 indices = np.concatenate((indices, idx_class_sensitive))
-                indices = np.concatenate((
-                    indices,
-                    random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True)
-                ))
+                indices = np.concatenate(
+                    (
+                        indices,
+                        random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True)
+                    )
+                )
             else:  # undersampling
-                indices = np.concatenate((
-                    indices,
-                    random_state.choice(idx_class_sensitive, n_samples, replace=False)
-                ))
+                indices = np.concatenate(
+                    (
+                        indices,
+                        random_state.choice(idx_class_sensitive, n_samples, replace=False)
+                    )
+                )
 
         self.sample_indices_ = indices
 

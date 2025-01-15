@@ -9,15 +9,15 @@ from .common import _range
 
 
 def emp_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-        tp_benefit: Union[float, tuple[float, float]] = 0.0,
-        tn_benefit: Union[float, tuple[float, float]] = 0.0,
-        fn_cost: Union[float, tuple[float, float]] = 0.0,
-        fp_cost: Union[float, tuple[float, float]] = 0.0,
-        n_buckets: int = 100,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
+    tp_benefit: Union[float, tuple[float, float]] = 0.0,
+    tn_benefit: Union[float, tuple[float, float]] = 0.0,
+    fn_cost: Union[float, tuple[float, float]] = 0.0,
+    fp_cost: Union[float, tuple[float, float]] = 0.0,
+    n_buckets: int = 100,
 ) -> float:
     """
     :func:`~empulse.metrics.emp()` but only returning the EMP score.
@@ -158,15 +158,15 @@ def emp_score(
 
 
 def emp(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-        tp_benefit: Union[float, tuple[float, float]] = 0.0,
-        tn_benefit: Union[float, tuple[float, float]] = 0.0,
-        fn_cost: Union[float, tuple[float, float]] = 0.0,
-        fp_cost: Union[float, tuple[float, float]] = 0.0,
-        n_buckets: int = 100,
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
+    tp_benefit: Union[float, tuple[float, float]] = 0.0,
+    tn_benefit: Union[float, tuple[float, float]] = 0.0,
+    fn_cost: Union[float, tuple[float, float]] = 0.0,
+    fp_cost: Union[float, tuple[float, float]] = 0.0,
+    n_buckets: int = 100,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit Measure (EMP).
@@ -310,13 +310,13 @@ def emp(
 
 
 def _compute_emp(
-        pi0: float,
-        pi1: float,
-        f0: np.ndarray,
-        f1: np.ndarray,
-        bounds: list[tuple[float, float]],
-        weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-        n_buckets: int
+    pi0: float,
+    pi1: float,
+    f0: np.ndarray,
+    f1: np.ndarray,
+    bounds: list[tuple[float, float]],
+    weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
+    n_buckets: int
 ) -> tuple[float, float]:
     """Computes the expected maximum profit and the threshold at which the maximum profit is achieved."""
     emp = 0.0
@@ -332,12 +332,14 @@ def _compute_emp(
 
 
 def _construct_iter(
-        bounds: Iterable[tuple[float, float]],
-        steps_sizes: Iterable[float],
+    bounds: Iterable[tuple[float, float]],
+    steps_sizes: Iterable[float],
 ) -> Generator[tuple[float, ...], None, None]:
     """Construct an iterator over the parameter space."""
-    return product(*(
-        _range(min_val, max_val, step_size) if min_val != max_val
-        else (min_val,)
-        for (min_val, max_val), step_size in zip(bounds, steps_sizes)
-    ))
+    return product(
+        *(
+            _range(min_val, max_val, step_size) if min_val != max_val
+            else (min_val,)
+            for (min_val, max_val), step_size in zip(bounds, steps_sizes)
+        )
+    )

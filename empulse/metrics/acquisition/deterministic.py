@@ -8,15 +8,15 @@ from ..common import _compute_profits
 
 
 def mpa_score(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        contribution: float = 8_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    contribution: float = 8_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    check_input: bool = True
 ) -> float:
     """
     :func:`~empulse.metrics.mpa()` but only returning the MPA score.
@@ -118,15 +118,15 @@ def mpa_score(
 
 
 def mpa(
-        y_true: ArrayLike,
-        y_score: ArrayLike,
-        *,
-        contribution: float = 8_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_score: ArrayLike,
+    *,
+    contribution: float = 8_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    check_input: bool = True
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for customer Acquisition (MPA).
@@ -208,14 +208,14 @@ def mpa(
 
 
 def compute_profit_acquisition(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        contribution: float = 8_000,
-        contact_cost: float = 50,
-        sales_cost: float = 500,
-        direct_selling: float = 1,
-        commission: float = 0.1,
-        check_input: bool = True
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    contribution: float = 8_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+    check_input: bool = True
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
         y_true, y_pred = _validate_input_deterministic(
@@ -236,11 +236,11 @@ def compute_profit_acquisition(
 
 @lru_cache(maxsize=1)
 def _compute_cost_benefits(
-        contribution: float,
-        contact_cost: float,
-        sales_cost: float,
-        direct_selling: float,
-        commission: float,
+    contribution: float,
+    contact_cost: float,
+    sales_cost: float,
+    direct_selling: float,
+    commission: float,
 ) -> np.ndarray:
     true_positive_benefit = direct_selling * (contribution - contact_cost - sales_cost) + (1 - direct_selling) * (
             (1 - commission) * contribution - contact_cost

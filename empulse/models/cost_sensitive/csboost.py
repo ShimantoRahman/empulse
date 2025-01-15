@@ -173,13 +173,13 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     }
 
     def __init__(
-            self,
-            estimator: Optional[XGBClassifier] = None,
-            *,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
+        self,
+        estimator: Optional[XGBClassifier] = None,
+        *,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
     ) -> None:
         super().__init__(estimator=estimator)
         self.tp_cost = tp_cost
@@ -188,15 +188,15 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self.fp_cost = fp_cost
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            **fit_params
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **fit_params
     ) -> 'CSBoostClassifier':
         """
         Fit the model.
@@ -234,15 +234,15 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         return super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **fit_params)
 
     def _fit(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            *,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
-            **fit_params
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        *,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
+        **fit_params
     ) -> 'CSBoostClassifier':
 
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(

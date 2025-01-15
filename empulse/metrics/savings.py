@@ -1,23 +1,23 @@
 import numbers
 from functools import partial, update_wrapper
-from typing import Union, Callable, Literal
+from typing import Callable, Literal, Union
 
 import numpy as np
 import xgboost as xgb
 from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 
-from ._validation import _check_y_true, _check_y_pred, _check_consistent_length
+from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
 
 def _validate_input(
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        tp_cost: float | ArrayLike,
-        fp_cost: float | ArrayLike,
-        tn_cost: float | ArrayLike,
-        fn_cost: float | ArrayLike,
-        check_input: bool,
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    tp_cost: float | ArrayLike,
+    fp_cost: float | ArrayLike,
+    tn_cost: float | ArrayLike,
+    fn_cost: float | ArrayLike,
+    check_input: bool,
 ) -> tuple[
     NDArray,
     NDArray,
@@ -61,24 +61,24 @@ def _validate_input(
 
 
 def _compute_expected_cost(
-        y_true: NDArray,
-        y_pred: NDArray,
-        tp_cost: Union[NDArray, float] = 0.0,
-        tn_cost: Union[NDArray, float] = 0.0,
-        fn_cost: Union[NDArray, float] = 0.0,
-        fp_cost: Union[NDArray, float] = 0.0,
+    y_true: NDArray,
+    y_pred: NDArray,
+    tp_cost: Union[NDArray, float] = 0.0,
+    tn_cost: Union[NDArray, float] = 0.0,
+    fn_cost: Union[NDArray, float] = 0.0,
+    fp_cost: Union[NDArray, float] = 0.0,
 ) -> NDArray:
     return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) \
         + (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
 
 
 def _compute_log_expected_cost(
-        y_true: NDArray,
-        y_pred: NDArray,
-        tp_cost: Union[NDArray, float] = 0.0,
-        tn_cost: Union[NDArray, float] = 0.0,
-        fn_cost: Union[NDArray, float] = 0.0,
-        fp_cost: Union[NDArray, float] = 0.0,
+    y_true: NDArray,
+    y_pred: NDArray,
+    tp_cost: Union[NDArray, float] = 0.0,
+    tn_cost: Union[NDArray, float] = 0.0,
+    fn_cost: Union[NDArray, float] = 0.0,
+    fp_cost: Union[NDArray, float] = 0.0,
 ) -> NDArray:
     epsilon = np.finfo(y_pred.dtype).eps
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
@@ -90,15 +90,15 @@ def _compute_log_expected_cost(
 
 
 def cost_loss(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        *,
-        tp_cost: Union[float, ArrayLike] = 0.0,
-        fp_cost: Union[float, ArrayLike] = 0.0,
-        tn_cost: Union[float, ArrayLike] = 0.0,
-        fn_cost: Union[float, ArrayLike] = 0.0,
-        normalize: bool = False,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    *,
+    tp_cost: Union[float, ArrayLike] = 0.0,
+    fp_cost: Union[float, ArrayLike] = 0.0,
+    tn_cost: Union[float, ArrayLike] = 0.0,
+    fn_cost: Union[float, ArrayLike] = 0.0,
+    normalize: bool = False,
+    check_input: bool = True,
 ) -> float:
     """
     Cost of a classifier.
@@ -222,15 +222,15 @@ def cost_loss(
 
 
 def expected_cost_loss(
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        *,
-        tp_cost: Union[float, ArrayLike] = 0.0,
-        fp_cost: Union[float, ArrayLike] = 0.0,
-        tn_cost: Union[float, ArrayLike] = 0.0,
-        fn_cost: Union[float, ArrayLike] = 0.0,
-        normalize: bool = False,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    *,
+    tp_cost: Union[float, ArrayLike] = 0.0,
+    fp_cost: Union[float, ArrayLike] = 0.0,
+    tn_cost: Union[float, ArrayLike] = 0.0,
+    fn_cost: Union[float, ArrayLike] = 0.0,
+    normalize: bool = False,
+    check_input: bool = True,
 ) -> float:
     """
     Expected cost of a classifier.
@@ -340,15 +340,15 @@ def expected_cost_loss(
 
 
 def expected_log_cost_loss(
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        *,
-        tp_cost: Union[ArrayLike, float] = 0.0,
-        tn_cost: Union[ArrayLike, float] = 0.0,
-        fn_cost: Union[ArrayLike, float] = 0.0,
-        fp_cost: Union[ArrayLike, float] = 0.0,
-        normalize: bool = False,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    *,
+    tp_cost: Union[ArrayLike, float] = 0.0,
+    tn_cost: Union[ArrayLike, float] = 0.0,
+    fn_cost: Union[ArrayLike, float] = 0.0,
+    fp_cost: Union[ArrayLike, float] = 0.0,
+    normalize: bool = False,
+    check_input: bool = True,
 ) -> float:
     """
     Expected log cost of a classifier.
@@ -442,15 +442,15 @@ def expected_log_cost_loss(
 
 
 def savings_score(
-        y_true: ArrayLike,
-        y_pred: ArrayLike,
-        *,
-        y_pred_baseline: ArrayLike | None = None,
-        tp_cost: Union[float, ArrayLike] = 0.0,
-        fp_cost: Union[float, ArrayLike] = 0.0,
-        tn_cost: Union[float, ArrayLike] = 0.0,
-        fn_cost: Union[float, ArrayLike] = 0.0,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    *,
+    y_pred_baseline: ArrayLike | None = None,
+    tp_cost: Union[float, ArrayLike] = 0.0,
+    fp_cost: Union[float, ArrayLike] = 0.0,
+    tn_cost: Union[float, ArrayLike] = 0.0,
+    fn_cost: Union[float, ArrayLike] = 0.0,
+    check_input: bool = True,
 ) -> float:
     """
     Cost savings of a classifier compared to using a baseline.
@@ -577,31 +577,39 @@ def savings_score(
     if y_pred_baseline is None:
         # Calculate the cost of naive prediction
         cost_base = min(
-            cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
-            cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+            cost_loss(
+                y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            ),
+            cost_loss(
+                y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            )
         )
     else:
         y_pred_baseline = np.asarray(y_pred_baseline)
-        cost_loss(y_true, y_pred_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
-                  tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+        cost_loss(
+            y_true, y_pred_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
+            tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+        )
 
-    cost = cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
-                     tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+    cost = cost_loss(
+        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
+        tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+    )
     return 1.0 - cost / cost_base
 
 
 def expected_savings_score(
-        y_true: ArrayLike,
-        y_proba: ArrayLike,
-        *,
-        y_proba_baseline: ArrayLike | None  = None,
-        tp_cost: Union[float, ArrayLike] = 0.0,
-        fp_cost: Union[float, ArrayLike] = 0.0,
-        tn_cost: Union[float, ArrayLike] = 0.0,
-        fn_cost: Union[float, ArrayLike] = 0.0,
-        check_input: bool = True,
+    y_true: ArrayLike,
+    y_proba: ArrayLike,
+    *,
+    y_proba_baseline: ArrayLike | None = None,
+    tp_cost: Union[float, ArrayLike] = 0.0,
+    fp_cost: Union[float, ArrayLike] = 0.0,
+    tn_cost: Union[float, ArrayLike] = 0.0,
+    fn_cost: Union[float, ArrayLike] = 0.0,
+    check_input: bool = True,
 ) -> float:
     """
     Expected savings of a classifier compared to a baseline.
@@ -705,32 +713,40 @@ def expected_savings_score(
     if y_proba_baseline is None:
         # Calculate the cost of naive prediction
         cost_base = min(
-            cost_loss(y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False),
-            cost_loss(y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                      tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+            cost_loss(
+                y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            ),
+            cost_loss(
+                y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
+                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            )
         )
     else:
         y_proba_baseline = np.asarray(y_proba_baseline)
-        cost_base = expected_cost_loss(y_true, y_proba_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
-                                       tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+        cost_base = expected_cost_loss(
+            y_true, y_proba_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
+            tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+        )
 
     # avoid division by zero
     if cost_base == 0.0:
         cost_base = np.finfo(float).eps
 
-    cost = expected_cost_loss(y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost,
-                              tn_cost=tn_cost, fn_cost=fn_cost, check_input=False)
+    cost = expected_cost_loss(
+        y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost,
+        tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+    )
     return 1.0 - cost / cost_base
 
 
 def make_objective_aec(
-        model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'],
-        *,
-        tp_cost: Union[ArrayLike, float] = 0.0,
-        tn_cost: Union[ArrayLike, float] = 0.0,
-        fn_cost: Union[ArrayLike, float] = 0.0,
-        fp_cost: Union[ArrayLike, float] = 0.0,
+    model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost'],
+    *,
+    tp_cost: Union[ArrayLike, float] = 0.0,
+    tn_cost: Union[ArrayLike, float] = 0.0,
+    fn_cost: Union[ArrayLike, float] = 0.0,
+    fp_cost: Union[ArrayLike, float] = 0.0,
 ) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
@@ -821,20 +837,22 @@ def make_objective_aec(
         objective = partial(_objective_xgboost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_xgboost)
     else:
-        raise ValueError(f"Expected model to be one of 'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost', "
-                         f"got {model} instead.")
+        raise ValueError(
+            f"Expected model to be one of 'xgboost', 'lightgbm', 'catboost', 'cslogit', 'csboost', "
+            f"got {model} instead."
+        )
 
     return objective
 
 
 def _objective_cslogit(
-        features: np.ndarray,
-        weights: np.ndarray,
-        y_true: np.ndarray,
-        tp_cost: float = 0.0,
-        tn_cost: float = 0.0,
-        fn_cost: float = 0.0,
-        fp_cost: float = 0.0,
+    features: np.ndarray,
+    weights: np.ndarray,
+    y_true: np.ndarray,
+    tp_cost: float = 0.0,
+    tn_cost: float = 0.0,
+    fn_cost: float = 0.0,
+    fp_cost: float = 0.0,
 ) -> tuple[float, np.ndarray]:
     y_pred = expit(np.dot(weights, features.T))
 
@@ -857,17 +875,18 @@ def _objective_cslogit(
         features * y_pred * (1 - y_pred) * (
                 y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
         )
-        , axis=0)
+        , axis=0
+    )
     return average_expected_cost, gradient
 
 
 def _objective_xgboost(
-        y_pred: np.ndarray,
-        dtrain: Union[xgb.DMatrix, np.ndarray],
-        tp_cost: float = 0.0,
-        tn_cost: float = 0.0,
-        fn_cost: float = 0.0,
-        fp_cost: float = 0.0,
+    y_pred: np.ndarray,
+    dtrain: Union[xgb.DMatrix, np.ndarray],
+    tp_cost: float = 0.0,
+    tn_cost: float = 0.0,
+    fn_cost: float = 0.0,
+    fp_cost: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create an objective function for the AEC measure.
@@ -903,12 +922,12 @@ def _objective_xgboost(
 
 
 def _objective_lightgbm(
-        y_pred,
-        train_data,
-        tp_cost=0.0,
-        tn_cost=0.0,
-        fn_cost=0.0,
-        fp_cost=0.0,
+    y_pred,
+    train_data,
+    tp_cost=0.0,
+    tn_cost=0.0,
+    fn_cost=0.0,
+    fp_cost=0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     if hasattr(train_data, 'get_label'):
         y_true = train_data.get_label()
@@ -925,11 +944,11 @@ def _objective_lightgbm(
 
 
 def _objective_catboost(
-        y_pred,
-        train_data,
-        tp_cost=0.0,
-        tn_cost=0.0,
-        fn_cost=0.0,
-        fp_cost=0.0,
+    y_pred,
+    train_data,
+    tp_cost=0.0,
+    tn_cost=0.0,
+    fn_cost=0.0,
+    fp_cost=0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     raise NotImplementedError("Objective function for CatBoost is not implemented yet.")
