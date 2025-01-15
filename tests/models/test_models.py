@@ -9,14 +9,14 @@ from empulse.datasets import load_give_me_some_credit
 from empulse.metrics import cost_loss
 from empulse.models import (
     B2BoostClassifier,
-    ProfLogitClassifier,
-    BiasReweighingClassifier,
-    BiasResamplingClassifier,
     BiasRelabelingClassifier,
+    BiasResamplingClassifier,
+    BiasReweighingClassifier,
     CSBoostClassifier,
     CSLogitClassifier,
+    CSThresholdClassifier,
+    ProfLogitClassifier,
     RobustCSClassifier,
-    CSThresholdClassifier
 )
 
 ESTIMATORS = (
@@ -118,29 +118,37 @@ def test_proflogit_supervised_y_2d():
     sklearn.utils.set_random_state = sklearn_set_random_state
 
 
-@pytest.mark.parametrize("classifier", [
-    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
-    CSBoostClassifier(),
-    CSLogitClassifier(),
-    RobustCSClassifier(estimator=CSLogitClassifier()),
-])
+@pytest.mark.parametrize(
+    "classifier", [
+        CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
+        CSBoostClassifier(),
+        CSLogitClassifier(),
+        RobustCSClassifier(estimator=CSLogitClassifier()),
+    ]
+)
 def test_cost_loss_performance(classifier):
     X, y, tp_cost, fp_cost, tn_cost, fn_cost = load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
 
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('model', classifier)
-    ])
+    pipeline = Pipeline(
+        [
+            ('scaler', StandardScaler()),
+            ('model', classifier)
+        ]
+    )
 
     if isinstance(classifier, CSThresholdClassifier):
         pipeline.fit(X, y)
         y_pred = pipeline.predict(X, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)
     else:
-        pipeline.fit(X, y, model__tp_cost=tp_cost, model__fp_cost=fp_cost,
-                     model__tn_cost=tn_cost, model__fn_cost=fn_cost)
+        pipeline.fit(
+            X, y, model__tp_cost=tp_cost, model__fp_cost=fp_cost,
+            model__tn_cost=tn_cost, model__fn_cost=fn_cost
+        )
         y_pred = pipeline.predict(X)
 
-    performance = cost_loss(y, y_pred, tp_cost=tp_cost, tn_cost=tn_cost,
-                            fn_cost=fn_cost, fp_cost=fp_cost, normalize=True)
+    performance = cost_loss(
+        y, y_pred, tp_cost=tp_cost, tn_cost=tn_cost,
+        fn_cost=fn_cost, fp_cost=fp_cost, normalize=True
+    )
 
     assert performance < 750, f"Performance {performance} is not better than 750"

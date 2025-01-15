@@ -1,8 +1,9 @@
-import pytest
 import numpy as np
-from empulse.models import B2BoostClassifier
+import pytest
+from sklearn.utils.validation import NotFittedError, check_is_fitted
 from xgboost import XGBClassifier
-from sklearn.utils.validation import check_is_fitted, NotFittedError
+
+from empulse.models import B2BoostClassifier
 
 
 @pytest.fixture(scope='module')

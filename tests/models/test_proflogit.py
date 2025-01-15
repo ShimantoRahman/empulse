@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 

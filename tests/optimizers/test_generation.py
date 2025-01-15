@@ -1,7 +1,8 @@
 from itertools import islice
 
-import pytest
 import numpy as np
+import pytest
+
 from empulse.optimizers import Generation
 
 
@@ -55,7 +56,6 @@ def test_rga_optimize_trigonometric(generation):
 
 
 def test_rga_optimize_differentiable_unimodal_func(generation):
-
     def objective(x, a=10, b=3):
         x1, x2 = x[0], x[1]
         z = x1 ** 2 + b * x2 ** 2
@@ -71,7 +71,6 @@ def test_rga_optimize_differentiable_unimodal_func(generation):
 
 
 def test_rga_optimize_non_differentiable_unimodal_func(generation):
-
     def objective(x, a=10, b=3):
         x1, x2 = x[0], x[1]
         z = x1 ** 2 + b * x2 ** 2
@@ -87,7 +86,6 @@ def test_rga_optimize_non_differentiable_unimodal_func(generation):
 
 
 def test_rga_optimize_rotated_ellipse(generation):
-
     def objective(x):
         x1, x2 = x[0], x[1]
         return -(2 * (x1 ** 2 - x1 * x2 + x2 ** 2))
@@ -102,7 +100,6 @@ def test_rga_optimize_rotated_ellipse(generation):
 
 
 def test_rga_optimize_rastrigin(generation):
-
     def objective(x):
         x1, x2 = x[0], x[1]
         return -(20 + x1 ** 2 - 10 * np.cos(2 * np.pi * x1) + x2 ** 2 - 10 * np.cos(2 * np.pi * x2))
@@ -140,5 +137,3 @@ def test_rga_fitness_calculation(generation):
     # Check if fitness is calculated correctly
     for fitness_val, x in zip(generation.fitness, generation.population):
         assert fitness_val == pytest.approx(objective(x))
-
-

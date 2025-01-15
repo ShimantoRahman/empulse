@@ -24,8 +24,8 @@ def extract_code_blocks(file_content):
 
 def execute_code_blocks(code_blocks):
     """Execute each code block and report any errors."""
-    set_config(enable_metadata_routing=False)   # reset the global configuration
-    exec_globals = {} # shared environment for all code blocks
+    set_config(enable_metadata_routing=False)  # reset the global configuration
+    exec_globals = {}  # shared environment for all code blocks
     for code in code_blocks:
         code = textwrap.dedent(code)
         try:
@@ -35,11 +35,13 @@ def execute_code_blocks(code_blocks):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("file_path", [
-    os.path.join(root, file)
-    for root, _, files in os.walk(GUIDE_DIR)
-    for file in files if file.endswith('.rst')
-])
+@pytest.mark.parametrize(
+    "file_path", [
+        os.path.join(root, file)
+        for root, _, files in os.walk(GUIDE_DIR)
+        for file in files if file.endswith('.rst')
+    ]
+)
 def test_code_blocks_in_user_guides(file_path):
     """Test that code blocks in user guide files execute without errors."""
     with open(file_path, 'r', encoding='utf-8') as f:

@@ -1,6 +1,5 @@
-from .test_metrics import BaseTestMetric
-
 from empulse.metrics import empcs, mpcs
+from .test_metrics import BaseTestMetric
 
 
 class TestEMPCS(BaseTestMetric.TestMetric):
@@ -46,7 +45,6 @@ class TestEMPCS(BaseTestMetric.TestMetric):
 
 
 class TestMPCS(BaseTestMetric.TestMetric):
-
     parameters = [
         {},  # default
         {"loan_lost_rate": 0.7},

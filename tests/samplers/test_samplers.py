@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from empulse.samplers import BiasResampler, BiasRelabler, CostSensitiveSampler
+from empulse.samplers import BiasRelabler, BiasResampler, CostSensitiveSampler
 from .sampler_checks import parametrize_with_checks_samplers
 
 ESTIMATORS = (

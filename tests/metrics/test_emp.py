@@ -1,4 +1,5 @@
 import pytest
+
 from empulse.metrics import emp, empc, max_profit, mpc
 
 

@@ -28,11 +28,11 @@ from imblearn.utils._test_common.instance_generator import _get_check_estimator_
 # )
 from numpy.testing import assert_array_equal
 from sklearn.base import clone
-from sklearn.datasets import make_classification, make_blobs
+from sklearn.datasets import make_blobs, make_classification
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import get_tags
-from sklearn.utils._testing import assert_allclose, set_random_state, raises, SkipTest
+from sklearn.utils._testing import SkipTest, assert_allclose, raises, set_random_state
 from sklearn.utils.estimator_checks import _enforce_estimator_tags_X
 
 from empulse.samplers import BiasRelabler, CostSensitiveSampler
@@ -131,7 +131,7 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
 
 
 def estimator_checks_generator(
-        estimator, *, fit_params, expected_failed_checks=None, mark=None
+    estimator, *, fit_params, expected_failed_checks=None, mark=None
 ):
     """Iteratively yield all check callables for an estimator.
 

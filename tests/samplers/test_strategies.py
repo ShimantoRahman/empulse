@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from empulse.samplers._strategies import _independent_weights
 

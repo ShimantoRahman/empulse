@@ -1,4 +1,3 @@
-import pytest
 from empulse.metrics import lift_score
 
 from .test_metrics import BaseTestMetric

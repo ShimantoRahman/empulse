@@ -53,8 +53,10 @@ def test_bias_resampler_balanced():  # no resampling needed
 def test_no_protected_attr():
     X = np.array([[[1, 0]] * 5 + [[0, 0]] * 5]).reshape(10, 2)  # first feature is sensitive feature
     y = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0])
-    sensitive_feature = np.array([0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0])
+    sensitive_feature = np.array(
+        [0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0]
+    )
     with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no resampling is performed."):
         X_re, y_re = BiasResampler().fit_resample(X, y, sensitive_feature=sensitive_feature)
         assert np.array_equal(X_re, X)
@@ -64,8 +66,10 @@ def test_no_protected_attr():
 def test_all_protected_attr():
     X = np.array([[[1, 0]] * 5 + [[0, 0]] * 5]).reshape(10, 2)  # first feature is sensitive feature
     y = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0])
-    sensitive_feature = np.array([1, 1, 1, 1, 1,
-                               1, 1, 1, 1, 1])
+    sensitive_feature = np.array(
+        [1, 1, 1, 1, 1,
+         1, 1, 1, 1, 1]
+    )
     with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no resampling is performed."):
         X_re, y_re = BiasResampler().fit_resample(X, y, sensitive_feature=sensitive_feature)
         assert np.array_equal(X_re, X)

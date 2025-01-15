@@ -2,9 +2,8 @@ import random
 from functools import partial
 from typing import Generator
 
+from empulse.metrics import empa, expected_cost_loss_acquisition, mpa
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
-
-from empulse.metrics import empa, mpa, expected_cost_loss_acquisition
 
 
 class TestEMPA(BaseTestMetric.TestMetric):
@@ -68,7 +67,6 @@ class TestEMPA(BaseTestMetric.TestMetric):
 
 
 class TestMPA(BaseTestMetric.TestMetric):
-
     parameters = [
         {},  # default
         {"contribution": 2_000},
@@ -155,7 +153,6 @@ class TestRelationAcquisitionMetrics(BaseTestRelationMetrics.TestRelationshipMet
 
 
 class TestMPAScore(BaseTestMetric.TestMetric):
-
     parameters = [
         {},  # default
         {"contribution": 2_000},

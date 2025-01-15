@@ -1,11 +1,12 @@
 import random
+import unittest
 from functools import partial
 from typing import Generator
-import unittest
 
-import pytest
 import numpy as np
-from empulse.metrics import empc, mpc, expected_cost_loss_churn, empb
+import pytest
+
+from empulse.metrics import empb, empc, expected_cost_loss_churn, mpc
 from empulse.metrics.churn.stochastic import auepc_score
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 

@@ -1,19 +1,20 @@
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
+
 from empulse.datasets import (
-    load_churn_tv_subscriptions,
-    load_upsell_bank_telemarketing,
-    load_give_me_some_credit,
-    load_credit_scoring_pakdd
+    load_churn_tv_subscriptions, load_credit_scoring_pakdd, load_give_me_some_credit, load_upsell_bank_telemarketing,
 )
 
-@pytest.mark.parametrize("loader", [
-    load_churn_tv_subscriptions,
-    load_upsell_bank_telemarketing,
-    load_give_me_some_credit,
-    load_credit_scoring_pakdd
-])
+
+@pytest.mark.parametrize(
+    "loader", [
+        load_churn_tv_subscriptions,
+        load_upsell_bank_telemarketing,
+        load_give_me_some_credit,
+        load_credit_scoring_pakdd
+    ]
+)
 @pytest.mark.parametrize("as_frame", [True, False])
 @pytest.mark.parametrize("return_X_y_costs", [True, False])
 def test_dataset_loading(loader, as_frame, return_X_y_costs):
