@@ -174,7 +174,9 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
         return tags
 
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
+        self,
+        X: ArrayLike,
+        y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
     ) -> 'BiasRelabelingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.
