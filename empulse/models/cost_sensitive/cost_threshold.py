@@ -12,8 +12,8 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from ._cs_mixin import CostSensitiveMixin
 from ..._common import Parameter
+from ._cs_mixin import CostSensitiveMixin
 
 
 class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):

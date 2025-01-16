@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
 import numpy as np
 from imblearn.base import BaseSampler

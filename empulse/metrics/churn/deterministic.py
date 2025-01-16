@@ -4,8 +4,8 @@ from typing import Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._validation import _validate_input_mp
 from ..common import _compute_profits
+from ._validation import _validate_input_mp
 
 
 def mpc_score(

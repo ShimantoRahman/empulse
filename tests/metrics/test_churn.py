@@ -8,6 +8,7 @@ import pytest
 
 from empulse.metrics import empb, empc, expected_cost_loss_churn, mpc
 from empulse.metrics.churn.stochastic import auepc_score
+
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 

@@ -9,8 +9,9 @@
 import json
 import os
 import sys
-import requests
 from datetime import datetime
+
+import requests
 
 sys.path.insert(0, os.path.abspath("../empulse"))
 sys.path.insert(0, os.path.abspath(".."))
@@ -48,7 +49,7 @@ def generate_versions_json():
             {
                 "name": f"{latest_version} (stable)",
                 "version": latest_version,
-                "url": f"https://empulse.readthedocs.io/en/stable/",
+                "url": "https://empulse.readthedocs.io/en/stable/",
                 "preferred": True
             }
         ]
@@ -62,7 +63,7 @@ def generate_versions_json():
             {
                 "name": f"{version} (stable)",
                 "version": version,
-                "url": f"https://empulse.readthedocs.io/en/stable/",
+                "url": "https://empulse.readthedocs.io/en/stable/",
                 "preferred": True
             }
         ]

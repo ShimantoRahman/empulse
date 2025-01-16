@@ -5,6 +5,7 @@ from functools import partial
 
 import numpy as np
 from imblearn.utils._test_common.instance_generator import _get_check_estimator_ids
+
 # from imblearn.utils.estimator_checks import (
 #     _maybe_mark,
 # check_sampler_get_feature_names_out,

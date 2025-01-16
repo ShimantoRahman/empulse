@@ -8,8 +8,9 @@ from scipy.optimize import OptimizeResult
 from scipy.special import expit
 
 from empulse.optimizers import Generation
-from ._base import BaseLogitClassifier
+
 from ..metrics import empc_score
+from ._base import BaseLogitClassifier
 
 
 class ProfLogitClassifier(BaseLogitClassifier):

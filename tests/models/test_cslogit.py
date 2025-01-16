@@ -15,9 +15,11 @@ def y():
 
 
 def test_works_with_time_stopping_condition(X, y):
-    from empulse.optimizers import Generation
-    from scipy.optimize import OptimizeResult
     from time import perf_counter
+
+    from scipy.optimize import OptimizeResult
+
+    from empulse.optimizers import Generation
 
     def optimize(objective, X, max_time=1, **kwargs) -> OptimizeResult:
         rga = Generation(**kwargs)
@@ -47,8 +49,8 @@ def test_works_with_time_stopping_condition(X, y):
 
 
 def test_works_with_different_optimizers_bfgs(X, y):
-    from scipy.optimize import minimize, OptimizeResult
     import numpy as np
+    from scipy.optimize import OptimizeResult, minimize
 
     def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
         assert max_iter == 2
@@ -75,8 +77,9 @@ def test_works_with_different_optimizers_bfgs(X, y):
 
 
 def test_works_with_different_loss(X, y):
-    from empulse.metrics import expected_savings_score
     from scipy.optimize import OptimizeResult
+
+    from empulse.metrics import expected_savings_score
 
     clf = CSLogitClassifier(loss=expected_savings_score)
     clf.fit(X, y, fp_cost=1, fn_cost=1)

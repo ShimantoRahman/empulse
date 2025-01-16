@@ -14,10 +14,10 @@ try:
 except ImportError:
     LGBMClassifier = None
 
-from ._cs_mixin import CostSensitiveMixin
-from .._base import BaseBoostClassifier
 from ..._common import Parameter
 from ...metrics import make_objective_aec
+from .._base import BaseBoostClassifier
+from ._cs_mixin import CostSensitiveMixin
 
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):

@@ -3,9 +3,9 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._validation import _validate_input_emp
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
+from ._validation import _validate_input_emp
 
 
 def empcs_score(

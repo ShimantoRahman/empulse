@@ -6,9 +6,9 @@ from numpy.typing import ArrayLike
 from packaging.version import Version
 from scipy import stats as st
 
-from ._validation import _validate_input_emp, _validate_input_empb
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
+from ._validation import _validate_input_emp, _validate_input_empb
 
 if Version(np.version.version) >= Version('2.0.0'):
     np.trapz = np.trapezoid

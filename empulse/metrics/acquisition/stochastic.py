@@ -4,9 +4,9 @@ import numpy as np
 import scipy.stats as st
 from numpy.typing import ArrayLike
 
-from ._validation import _validate_input_stochastic
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
+from ._validation import _validate_input_stochastic
 
 
 def empa_score(

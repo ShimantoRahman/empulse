@@ -9,10 +9,10 @@ from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
 
-from ._cs_mixin import CostSensitiveMixin
-from .._base import BaseLogitClassifier
 from ..._common import Parameter
 from ...metrics import make_objective_aec
+from .._base import BaseLogitClassifier
+from ._cs_mixin import CostSensitiveMixin
 
 Loss = Literal['average expected cost']
 
@@ -384,7 +384,6 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     def _optimize(objective, X, max_iter=10000, tolerance=1e-4, **kwargs) -> OptimizeResult:
         initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
 
-        print(max_iter, tolerance, kwargs)
         result = minimize(
             objective,
             initial_weights,

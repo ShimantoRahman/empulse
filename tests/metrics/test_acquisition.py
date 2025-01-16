@@ -3,6 +3,7 @@ from functools import partial
 from typing import Generator
 
 from empulse.metrics import empa, expected_cost_loss_acquisition, mpa
+
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 

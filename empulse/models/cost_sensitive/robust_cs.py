@@ -8,8 +8,8 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils.validation import _estimator_has
 
-from ._cs_mixin import CostSensitiveMixin
 from ..._common import Parameter
+from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 

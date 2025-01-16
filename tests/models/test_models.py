@@ -60,8 +60,8 @@ def test_proflogit_classifier_data_not_an_array():
                 random_state = np.random.RandomState()
             estimator.optimizer_params['random_state'] = random_state
 
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
     import sklearn.utils
+    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
 
     sklearn.utils.set_random_state = set_random_state
     from sklearn.utils.estimator_checks import check_classifier_data_not_an_array
@@ -82,8 +82,8 @@ def test_proflogit_fit_idempotent():
                 random_state = np.random.RandomState()
             estimator.optimizer_params['random_state'] = random_state
 
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
     import sklearn.utils
+    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
 
     sklearn.utils.set_random_state = set_random_state
     from sklearn.utils.estimator_checks import check_fit_idempotent
@@ -104,8 +104,8 @@ def test_proflogit_supervised_y_2d():
                 random_state = np.random.RandomState()
             estimator.optimizer_params['random_state'] = random_state
 
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
     import sklearn.utils
+    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
 
     sklearn.utils.set_random_state = set_random_state
     from sklearn.utils.estimator_checks import check_supervised_y_2d

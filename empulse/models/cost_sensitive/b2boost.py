@@ -13,9 +13,9 @@ try:
 except ImportError:
     LGBMClassifier = None
 
-from .._base import BaseBoostClassifier
 from ..._common import Parameter
 from ...metrics import make_objective_churn
+from .._base import BaseBoostClassifier
 
 
 class B2BoostClassifier(BaseBoostClassifier):

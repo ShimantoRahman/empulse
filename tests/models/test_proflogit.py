@@ -138,9 +138,11 @@ def test_works_in_ensemble(X, y):
 
 
 def test_works_with_time_stopping_condition(X, y):
-    from empulse.optimizers import Generation
-    from scipy.optimize import OptimizeResult
     from time import perf_counter
+
+    from scipy.optimize import OptimizeResult
+
+    from empulse.optimizers import Generation
 
     def optimize(objective, X, max_time=0.1, **kwargs) -> OptimizeResult:
         rga = Generation(**kwargs)
@@ -165,8 +167,8 @@ def test_works_with_time_stopping_condition(X, y):
 
 
 def test_works_with_different_optimizers_bfgs(X, y):
-    from scipy.optimize import minimize, OptimizeResult
     import numpy as np
+    from scipy.optimize import OptimizeResult, minimize
 
     def optimize(objective, X, **kwargs) -> OptimizeResult:
         initial_guess = np.zeros(X.shape[1])
@@ -187,8 +189,8 @@ def test_works_with_different_optimizers_bfgs(X, y):
 
 
 def test_works_with_different_optimizers_lbfgsb(X, y):
-    from scipy.optimize import minimize, OptimizeResult
     import numpy as np
+    from scipy.optimize import OptimizeResult, minimize
 
     def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
         initial_guess = np.zeros(X.shape[1])

@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from imblearn.base import BaseSampler
