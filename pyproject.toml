@@ -93,7 +93,7 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["docs"]
+exclude = ["docs", "notebooks"]
 
 [tool.ruff.lint]
 extend-select = ["I", "T201"]
