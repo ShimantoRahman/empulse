@@ -37,9 +37,7 @@ def test_relabeling_init():
 
 def test_relabeling_with_different_parameters():
     clf = BiasRelabelingClassifier(
-        estimator=LogisticRegression(),
-        strategy='demographic parity',
-        transform_feature=lambda x: x
+        estimator=LogisticRegression(), strategy='demographic parity', transform_feature=lambda x: x
     )
     assert isinstance(clf.estimator, LogisticRegression)
     assert clf.transform_feature is not None
@@ -54,7 +52,7 @@ def test_relabeling_fit(X, y, sensitive_feature):
     try:
         check_is_fitted(clf.estimator_)
     except NotFittedError:
-        pytest.fail("BiasReweighingClassifier is not fitted")
+        pytest.fail('BiasReweighingClassifier is not fitted')
 
 
 def test_relabeling_predict_proba(clf, X):
@@ -76,6 +74,7 @@ def test_relabeling_score(clf, X, y):
 
 def test_cloneable_by_sklearn():
     from sklearn.base import clone
+
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
     clf_clone = clone(clf)
     assert isinstance(clf_clone, BiasRelabelingClassifier)
@@ -89,6 +88,7 @@ def test_cloneable_by_sklearn():
 
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
+
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
@@ -99,6 +99,7 @@ def test_works_in_cross_validation(X, y):
 def test_works_in_pipeline(X, y, sensitive_feature):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
+
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y, clf__sensitive_feature=sensitive_feature)
@@ -111,6 +112,7 @@ def test_works_in_pipeline(X, y, sensitive_feature):
 
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
+
     clf = BiasRelabelingClassifier(estimator=LogisticRegression())
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
@@ -119,7 +121,7 @@ def test_works_in_ensemble(X, y):
     assert isinstance(bagging.predict(X), np.ndarray)
 
 
-@pytest.mark.filterwarnings("ignore:sensitive_feature only contains one class, no relabeling is performed.")
+@pytest.mark.filterwarnings('ignore:sensitive_feature only contains one class, no relabeling is performed.')
 def test_metadatarouting(X, y, sensitive_feature):
     from sklearn import config_context
     from sklearn.model_selection import GridSearchCV
@@ -134,6 +136,6 @@ def test_metadatarouting(X, y, sensitive_feature):
         try:
             check_is_fitted(search)
         except NotFittedError:
-            pytest.fail("GridSearchCV is not fitted")
+            pytest.fail('GridSearchCV is not fitted')
         assert isinstance(search.score(X, y), float)
         assert isinstance(search.predict(X), np.ndarray)

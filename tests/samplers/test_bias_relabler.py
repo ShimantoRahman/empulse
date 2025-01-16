@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 
 from empulse.samplers.bias_relabler import (
-    BiasRelabler, _get_demotion_candidates, _get_promotion_candidates, _independent_pairs,
+    BiasRelabler,
+    _get_demotion_candidates,
+    _get_promotion_candidates,
+    _independent_pairs,
 )
 
 
@@ -13,34 +16,22 @@ def test_n_pairs_uneven():
 
 
 def test_n_pairs_even():
-    y_true = [1, 1, 1, 1, 0,
-              1, 1, 1, 1, 0]
-    protected_attr = np.array(
-        [1, 1, 1, 1, 1,
-         0, 0, 0, 0, 0]
-    )
+    y_true = [1, 1, 1, 1, 0, 1, 1, 1, 1, 0]
+    protected_attr = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
     assert _independent_pairs(y_true, protected_attr) == 0
 
 
 def test_no_protected_attr():
-    y_true = [1, 1, 1, 1, 0,
-              1, 1, 1, 1, 0]
-    protected_attr = np.array(
-        [0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0]
-    )
-    with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no relabeling is performed."):
+    y_true = [1, 1, 1, 1, 0, 1, 1, 1, 1, 0]
+    protected_attr = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    with pytest.warns(UserWarning, match='sensitive_feature only contains one class, no relabeling is performed.'):
         assert _independent_pairs(y_true, protected_attr) == 0
 
 
 def test_all_protected_attr():
-    y_true = [1, 1, 1, 1, 0,
-              1, 1, 1, 1, 0]
-    protected_attr = np.array(
-        [1, 1, 1, 1, 1,
-         1, 1, 1, 1, 1]
-    )
-    with pytest.warns(UserWarning, match="sensitive_feature only contains one class, no relabeling is performed."):
+    y_true = [1, 1, 1, 1, 0, 1, 1, 1, 1, 0]
+    protected_attr = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    with pytest.warns(UserWarning, match='sensitive_feature only contains one class, no relabeling is performed.'):
         assert _independent_pairs(y_true, protected_attr) == 0
 
 

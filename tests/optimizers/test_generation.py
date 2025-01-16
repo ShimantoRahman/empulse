@@ -31,7 +31,7 @@ def test_rga_init(generation):
 
 def test_rga_optimize_parabola(generation):
     def objective(x):
-        return np.sum(x ** 2)
+        return np.sum(x**2)
 
     bounds = [(-10, 10)]
     for _ in islice(generation.optimize(objective, bounds), 100):
@@ -45,7 +45,7 @@ def test_rga_optimize_parabola(generation):
 
 def test_rga_optimize_trigonometric(generation):
     def objective(x):
-        return float(((x ** 2 + x) * np.cos(x))[0])
+        return float(((x**2 + x) * np.cos(x))[0])
 
     bounds = [(-10, 10)]
     for _ in islice(generation.optimize(objective, bounds), 100):
@@ -58,7 +58,7 @@ def test_rga_optimize_trigonometric(generation):
 def test_rga_optimize_differentiable_unimodal_func(generation):
     def objective(x, a=10, b=3):
         x1, x2 = x[0], x[1]
-        z = x1 ** 2 + b * x2 ** 2
+        z = x1**2 + b * x2**2
         return -(a - np.exp(-z))
 
     bounds = [(-1, 1)] * 2
@@ -73,7 +73,7 @@ def test_rga_optimize_differentiable_unimodal_func(generation):
 def test_rga_optimize_non_differentiable_unimodal_func(generation):
     def objective(x, a=10, b=3):
         x1, x2 = x[0], x[1]
-        z = x1 ** 2 + b * x2 ** 2
+        z = x1**2 + b * x2**2
         return -(a - np.exp(-z))
 
     bounds = [(-1, 1)] * 2
@@ -88,7 +88,7 @@ def test_rga_optimize_non_differentiable_unimodal_func(generation):
 def test_rga_optimize_rotated_ellipse(generation):
     def objective(x):
         x1, x2 = x[0], x[1]
-        return -(2 * (x1 ** 2 - x1 * x2 + x2 ** 2))
+        return -(2 * (x1**2 - x1 * x2 + x2**2))
 
     bounds = [(-1, 1)] * 2
     for _ in islice(generation.optimize(objective, bounds), 100):
@@ -102,7 +102,7 @@ def test_rga_optimize_rotated_ellipse(generation):
 def test_rga_optimize_rastrigin(generation):
     def objective(x):
         x1, x2 = x[0], x[1]
-        return -(20 + x1 ** 2 - 10 * np.cos(2 * np.pi * x1) + x2 ** 2 - 10 * np.cos(2 * np.pi * x2))
+        return -(20 + x1**2 - 10 * np.cos(2 * np.pi * x1) + x2**2 - 10 * np.cos(2 * np.pi * x2))
 
     bounds = [(-5.12, 5.12)] * 2
     for _ in islice(generation.optimize(objective, bounds), 500):
@@ -125,7 +125,7 @@ def test_rga_generate_population(generation):
 
 def test_rga_fitness_calculation(generation):
     def objective(x):
-        return np.sum(x ** 2)
+        return np.sum(x**2)
 
     bounds = [(-10, 10)]
     for _ in islice(generation.optimize(objective, bounds), 10):

@@ -31,7 +31,7 @@ def test_works_with_time_stopping_condition(X, y):
         start = perf_counter()
         for _ in rga.optimize(_objective, bounds):
             if perf_counter() - start > max_time:
-                rga.result.message = "Maximum time reached."
+                rga.result.message = 'Maximum time reached.'
                 rga.result.success = True
                 break
         return rga.result
@@ -41,7 +41,7 @@ def test_works_with_time_stopping_condition(X, y):
     cslogit.fit(X, y, fp_cost=1, fn_cost=1)
 
     assert isinstance(cslogit.result_, OptimizeResult)
-    assert cslogit.result_.message == "Maximum time reached."
+    assert cslogit.result_.message == 'Maximum time reached.'
     assert cslogit.result_.success is True
     assert cslogit.result_.x.shape == (3,)
 
@@ -52,7 +52,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
 
     def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
         assert max_iter == 2
-        initial_guess = np.zeros(X.shape[1], order="F", dtype=X.dtype)
+        initial_guess = np.zeros(X.shape[1], order='F', dtype=X.dtype)
         result = minimize(
             objective,  # inverse objective function
             initial_guess,
@@ -62,7 +62,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
                 'maxiter': max_iter,
                 'gtol': 1e-4,
             },
-            **kwargs
+            **kwargs,
         )
         return result
 
@@ -77,6 +77,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
 def test_works_with_different_loss(X, y):
     from empulse.metrics import expected_savings_score
     from scipy.optimize import OptimizeResult
+
     clf = CSLogitClassifier(loss=expected_savings_score)
     clf.fit(X, y, fp_cost=1, fn_cost=1)
     assert clf.result_.x.shape == (3,)

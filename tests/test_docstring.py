@@ -38,7 +38,7 @@ def iter_modules(module_name):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("module", iter_modules(TOP_MODULE))
+@pytest.mark.parametrize('module', iter_modules(TOP_MODULE))
 def test_code_blocks_in_docstrings(module):
     """Test that code blocks in docstrings execute without errors"""
     functions_and_classes = get_all_functions_and_classes(module)
@@ -55,4 +55,4 @@ def test_code_blocks_in_docstrings(module):
                 try:
                     exec(code, exec_globals)
                 except Exception as e:
-                    pytest.fail(f"Code block in {obj.__name__} docstring failed to execute: {e}")
+                    pytest.fail(f'Code block in {obj.__name__} docstring failed to execute: {e}')

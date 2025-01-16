@@ -31,16 +31,13 @@ def execute_code_blocks(code_blocks):
         try:
             exec(code, exec_globals)
         except Exception as e:
-            pytest.fail(f"Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}")
+            pytest.fail(f'Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}')
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "file_path", [
-        os.path.join(root, file)
-        for root, _, files in os.walk(GUIDE_DIR)
-        for file in files if file.endswith('.rst')
-    ]
+    'file_path',
+    [os.path.join(root, file) for root, _, files in os.walk(GUIDE_DIR) for file in files if file.endswith('.rst')],
 )
 def test_code_blocks_in_user_guides(file_path):
     """Test that code blocks in user guide files execute without errors."""

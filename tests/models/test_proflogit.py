@@ -57,7 +57,7 @@ def test_proflogit_fit_no_intercept(X, y):
     try:
         check_is_fitted(clf)
     except NotFittedError:
-        pytest.fail("ProfLogitClassifier is not fitted")
+        pytest.fail('ProfLogitClassifier is not fitted')
     assert isinstance(clf.result_, OptimizeResult)
 
 
@@ -91,11 +91,12 @@ def test_proflogit_with_different_bounds(clf, X, y):
     clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'bounds': (-1, 1)})
     clf.fit(X, y)
     assert isinstance(clf.result_, OptimizeResult)
-    assert clf.result_.message == "Maximum number of iterations reached."
+    assert clf.result_.message == 'Maximum number of iterations reached.'
 
 
 def test_cloneable_by_sklearn():
     from sklearn.base import clone
+
     clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
     clf_clone = clone(clf)
     assert isinstance(clf_clone, ProfLogitClassifier)
@@ -104,6 +105,7 @@ def test_cloneable_by_sklearn():
 
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
+
     clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
@@ -114,6 +116,7 @@ def test_works_in_cross_validation(X, y):
 def test_works_in_pipeline(X, y):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
+
     clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y)
@@ -125,6 +128,7 @@ def test_works_in_pipeline(X, y):
 
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
+
     clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
@@ -145,7 +149,7 @@ def test_works_with_time_stopping_condition(X, y):
         start = perf_counter()
         for _ in rga.optimize(objective, bounds):
             if perf_counter() - start > max_time:
-                rga.result.message = "Maximum time reached."
+                rga.result.message = 'Maximum time reached.'
                 rga.result.success = True
                 break
         return rga.result
@@ -155,7 +159,7 @@ def test_works_with_time_stopping_condition(X, y):
     proflogit.fit(X, y)
 
     assert isinstance(proflogit.result_, OptimizeResult)
-    assert proflogit.result_.message == "Maximum time reached."
+    assert proflogit.result_.message == 'Maximum time reached.'
     assert proflogit.result_.success is True
     assert proflogit.result_.x.shape == (3,)
 
@@ -170,7 +174,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
             method='BFGS',
-            **kwargs
+            **kwargs,
         )
         return result
 
@@ -198,7 +202,7 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
                 'maxiter': max_iter,
                 'ftol': 1e-4,
             },
-            **kwargs
+            **kwargs,
         )
         return result
 
@@ -212,20 +216,22 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
 
 def test_works_with_different_loss_empa(X, y):
     from empulse.metrics import empa_score
+
     clf = ProfLogitClassifier(loss=empa_score, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
-    assert clf.result_.message == "Maximum number of iterations reached."
+    assert clf.result_.message == 'Maximum number of iterations reached.'
 
 
 def test_works_with_different_loss_auc(X, y):
     from sklearn.metrics import roc_auc_score
+
     clf = ProfLogitClassifier(loss=roc_auc_score, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
-    assert clf.result_.message == "Maximum number of iterations reached."
+    assert clf.result_.message == 'Maximum number of iterations reached.'
 
 
 def test_one_variable(y):
@@ -234,4 +240,4 @@ def test_one_variable(y):
     clf.fit(X, y)
     assert clf.result_.x.shape == (1,)
     assert isinstance(clf.result_, OptimizeResult)
-    assert clf.result_.message == "Maximum number of iterations reached."
+    assert clf.result_.message == 'Maximum number of iterations reached.'

@@ -13,10 +13,10 @@ ESTIMATORS = (
 )
 
 FIT_PARAMS = (
-    {"sensitive_feature": np.append(np.zeros(500), np.ones(500))},
-    {"sensitive_feature": np.append(np.zeros(500), np.ones(500))},
-    {"fp_cost": np.ones(1000) * 10, 'fn_cost': np.ones(1000)},
-    {"fp_cost": np.ones(1000) * 10, 'fn_cost': np.ones(1000)},
+    {'sensitive_feature': np.append(np.zeros(500), np.ones(500))},
+    {'sensitive_feature': np.append(np.zeros(500), np.ones(500))},
+    {'fp_cost': np.ones(1000) * 10, 'fn_cost': np.ones(1000)},
+    {'fp_cost': np.ones(1000) * 10, 'fn_cost': np.ones(1000)},
 )
 
 

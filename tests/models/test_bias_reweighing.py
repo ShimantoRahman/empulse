@@ -14,9 +14,8 @@ def test_independent_sample_weights():
     assert np.allclose(
         weights,
         np.array(
-            [0.375, 0.375, 0.375, 0.375, 1,
-             0.33333333, 0.33333333, 0.75, 0.33333333, 0.75]
-        )  # divided by 2 because of the normalization
+            [0.375, 0.375, 0.375, 0.375, 1, 0.33333333, 0.33333333, 0.75, 0.33333333, 0.75]
+        ),  # divided by 2 because of the normalization
     )
 
 
@@ -51,9 +50,7 @@ def test_reweighing_init():
 
 def test_reweighing_with_different_parameters():
     clf = BiasReweighingClassifier(
-        estimator=LogisticRegression(),
-        strategy='demographic parity',
-        transform_feature=lambda x: x
+        estimator=LogisticRegression(), strategy='demographic parity', transform_feature=lambda x: x
     )
     assert isinstance(clf.estimator, LogisticRegression)
     assert clf.transform_feature is not None
@@ -68,7 +65,7 @@ def test_reweighing_fit(X, y, sensitive_feature):
     try:
         check_is_fitted(clf.estimator_)
     except NotFittedError:
-        pytest.fail("BiasReweighingClassifier is not fitted")
+        pytest.fail('BiasReweighingClassifier is not fitted')
 
 
 def test_reweighing_predict_proba(clf, X):
@@ -90,6 +87,7 @@ def test_reweighing_score(clf, X, y):
 
 def test_cloneable_by_sklearn():
     from sklearn.base import clone
+
     clf = BiasReweighingClassifier(estimator=LogisticRegression())
     clf_clone = clone(clf)
     assert isinstance(clf_clone, BiasReweighingClassifier)
@@ -103,6 +101,7 @@ def test_cloneable_by_sklearn():
 
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
+
     clf = BiasReweighingClassifier(estimator=LogisticRegression())
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
@@ -113,6 +112,7 @@ def test_works_in_cross_validation(X, y):
 def test_works_in_pipeline(X, y, sensitive_feature):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
+
     clf = BiasReweighingClassifier(estimator=LogisticRegression())
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y, clf__sensitive_feature=sensitive_feature)
@@ -125,6 +125,7 @@ def test_works_in_pipeline(X, y, sensitive_feature):
 
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
+
     clf = BiasReweighingClassifier(estimator=LogisticRegression())
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)  # no option to pass protected_attr
@@ -147,6 +148,6 @@ def test_metadatarouting(X, y, sensitive_feature):
         try:
             check_is_fitted(search)
         except NotFittedError:
-            pytest.fail("GridSearchCV is not fitted")
+            pytest.fail('GridSearchCV is not fitted')
         assert isinstance(search.score(X, y), float)
         assert isinstance(search.predict(X), np.ndarray)

@@ -57,7 +57,7 @@ def test_b2boost_fit(X, y):
     except AttributeError:  # TODO: remove when XGBClassifier is fixed
         pass
     except NotFittedError:
-        pytest.fail("XGBClassifier is not fitted")
+        pytest.fail('XGBClassifier is not fitted')
 
 
 def test_b2boost_predict_proba(clf, X):
@@ -79,6 +79,7 @@ def test_b2boost_score(clf, X, y):
 
 def test_cloneable_by_sklearn():
     from sklearn.base import clone
+
     clf = B2BoostClassifier(XGBClassifier(n_estimators=2))
     clf_clone = clone(clf)
     assert isinstance(clf_clone, B2BoostClassifier)
@@ -86,6 +87,7 @@ def test_cloneable_by_sklearn():
 
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
+
     clf = B2BoostClassifier(XGBClassifier(n_estimators=2))
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
@@ -96,6 +98,7 @@ def test_works_in_cross_validation(X, y):
 def test_works_in_pipeline(X, y):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
+
     clf = B2BoostClassifier(XGBClassifier(n_estimators=2))
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y)
@@ -108,6 +111,7 @@ def test_works_in_pipeline(X, y):
 
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
+
     clf = B2BoostClassifier(XGBClassifier(n_estimators=2))
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
