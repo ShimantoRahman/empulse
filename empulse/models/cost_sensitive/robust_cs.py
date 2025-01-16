@@ -228,7 +228,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         **fit_params,
-    ) -> 'RobustCSLogitClassifier':
+    ) -> 'RobustCSLogitClassifier':  # noqa: F821
         """
         Fit the estimator with the adjusted costs.
 

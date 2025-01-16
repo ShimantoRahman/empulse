@@ -7,3 +7,15 @@ from .cost_sensitive import (
     RobustCSClassifier,
 )
 from .proflogit import ProfLogitClassifier
+
+__all__ = [
+    'BiasRelabelingClassifier',
+    'BiasResamplingClassifier',
+    'BiasReweighingClassifier',
+    'B2BoostClassifier',
+    'CSBoostClassifier',
+    'CSLogitClassifier',
+    'CSThresholdClassifier',
+    'RobustCSClassifier',
+    'ProfLogitClassifier',
+]
