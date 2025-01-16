@@ -256,18 +256,6 @@ def expected_cost_loss_churn(
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
-    Examples
-    --------
-    .. code-block::  python
-
-        import xgboost as xgb
-        from empulse.metrics import make_objective_churn
-
-        objective = make_objective_churn()
-        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict(X_test)
-
     References
     ----------
     .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).

@@ -834,18 +834,14 @@ def make_objective_aec(
 
     Examples
     --------
+
     .. code-block::  python
 
-        import xgboost as xgb
+        from xgboost import XGBClassifier
         from empulse.metrics import make_objective_aec
-        from sklearn.datasets import make_classification
 
-        X, y = make_classification()
         objective = make_objective_aec('xgboost', fp_cost=1, fn_cost=1)
-
-        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
-        clf.fit(X, y)
-        y_pred = clf.predict(X)
+        clf = XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
 
     References
     ----------
