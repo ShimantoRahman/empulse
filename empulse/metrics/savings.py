@@ -44,7 +44,7 @@ def _validate_input(
             arrays.append(fn_cost)
         _check_consistent_length(*arrays)
         if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
-            raise ValueError("All costs are zero. At least one cost must be non-zero.")
+            raise ValueError('All costs are zero. At least one cost must be non-zero.')
         return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
     else:
         y_true = np.asarray(y_true)
@@ -68,8 +68,9 @@ def _compute_expected_cost(
     fn_cost: Union[NDArray, float] = 0.0,
     fp_cost: Union[NDArray, float] = 0.0,
 ) -> NDArray:
-    return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) \
-        + (1 - y_true) * (y_pred * fp_cost + (1 - y_pred) * tn_cost)
+    return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) + (1 - y_true) * (
+            y_pred * fp_cost + (1 - y_pred) * tn_cost
+    )
 
 
 def _compute_log_expected_cost(
@@ -85,8 +86,9 @@ def _compute_log_expected_cost(
     inverse_y_pred = 1 - y_pred
     log_y_pred = np.log(y_pred)
     log_inv_y_pred = np.log(inverse_y_pred)
-    return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) \
-        + (1 - y_true) * (log_y_pred * fp_cost + log_inv_y_pred * tn_cost)
+    return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) + (1 - y_true) * (
+            log_y_pred * fp_cost + log_inv_y_pred * tn_cost
+    )
 
 
 def cost_loss(
@@ -578,24 +580,38 @@ def savings_score(
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
-                y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+                y_true,
+                np.zeros_like(y_true),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
             ),
             cost_loss(
-                y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
-            )
+                y_true,
+                np.ones_like(y_true),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
         )
     else:
         y_pred_baseline = np.asarray(y_pred_baseline)
         cost_loss(
-            y_true, y_pred_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
-            tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            y_true,
+            y_pred_baseline,
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
         )
 
     cost = cost_loss(
-        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost,
-        tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
     )
     return 1.0 - cost / cost_base
 
@@ -714,19 +730,34 @@ def expected_savings_score(
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
-                y_true, np.zeros_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+                y_true,
+                np.zeros_like(y_true),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
             ),
             cost_loss(
-                y_true, np.ones_like(y_true), tp_cost=tp_cost, fp_cost=fp_cost,
-                tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
-            )
+                y_true,
+                np.ones_like(y_true),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
         )
     else:
         y_proba_baseline = np.asarray(y_proba_baseline)
         cost_base = expected_cost_loss(
-            y_true, y_proba_baseline, tp_cost=tp_cost, fp_cost=fp_cost,
-            tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+            y_true,
+            y_proba_baseline,
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
         )
 
     # avoid division by zero
@@ -734,8 +765,7 @@ def expected_savings_score(
         cost_base = np.finfo(float).eps
 
     cost = expected_cost_loss(
-        y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost,
-        tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+        y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
     )
     return 1.0 - cost / cost_base
 
@@ -816,6 +846,7 @@ def make_objective_aec(
         objective = partial(_objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
+
         def objective(y_pred, train_data):
             """
             Create an objective function for the AEC measure.
@@ -836,12 +867,7 @@ def make_objective_aec(
                 Hessian of the objective function.
             """
             return _objective_boost(
-                y_pred,
-                train_data,
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost
+                y_pred, train_data, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
     elif model == 'cslogit':
         objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
@@ -876,13 +902,10 @@ def _objective_cslogit(
         fn_cost=fn_cost,
         fp_cost=fp_cost,
         normalize=True,
-        check_input=False
+        check_input=False,
     )
     gradient = np.mean(
-        features * y_pred * (1 - y_pred) * (
-                y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
-        )
-        , axis=0
+        features * y_pred * (1 - y_pred) * (y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)), axis=0
     )
     return average_expected_cost, gradient
 
@@ -919,7 +942,7 @@ def _objective_boost(
     elif isinstance(dtrain, xgb.DMatrix):
         y_true = dtrain.get_label()
     else:
-        raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
+        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
 
     y_pred = expit(y_pred)
     cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)

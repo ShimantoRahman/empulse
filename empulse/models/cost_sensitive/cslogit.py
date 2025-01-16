@@ -14,7 +14,7 @@ from .._base import BaseLogitClassifier
 from ..._common import Parameter
 from ...metrics import make_objective_aec
 
-Loss = Literal["average expected cost"]
+Loss = Literal['average expected cost']
 
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
@@ -249,7 +249,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         tn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
         fn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
         fp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-        **loss_params
+        **loss_params,
     ) -> 'CSLogitClassifier':
         """
 
@@ -292,14 +292,10 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        **loss_params
+        **loss_params,
     ) -> 'CSLogitClassifier':
-
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost
+            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
 
         optimizer_params = self.optimizer_params or {}
@@ -336,11 +332,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             else:
                 optimize_fn = self.optimize_fn
 
-            self.result_ = optimize_fn(
-                objective=objective,
-                X=X,
-                **optimizer_params
-            )
+            self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
         # elif self.loss == 'cross_entropy':
         #     loss = LinearModelLoss(
         #         base_loss=HalfBinomialLoss(), fit_intercept=self.fit_intercept
@@ -363,7 +355,6 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         #         },
         #     )
         elif isinstance(self.loss, Callable):
-
             objective = partial(
                 _objective_callable,
                 X=X,
@@ -381,7 +372,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
             self.result_ = optimize_fn(objective, X=X, **optimizer_params)
         else:
-            raise ValueError(f"Invalid loss function: {self.loss}")
+            raise ValueError(f'Invalid loss function: {self.loss}')
 
         self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
         if self.fit_intercept:
@@ -391,18 +382,18 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     @staticmethod
     def _optimize(objective, X, max_iter=10000, tolerance=1e-4, **kwargs) -> OptimizeResult:
-        initial_weights = np.zeros(X.shape[1], order="F", dtype=np.float64)
+        initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
 
         print(max_iter, tolerance, kwargs)
         result = minimize(
             objective,
             initial_weights,
-            method="L-BFGS-B",
+            method='L-BFGS-B',
             options={
-                "maxiter": max_iter,
-                "maxls": 50,
-                "gtol": tolerance,
-                "ftol": 64 * np.finfo(float).eps,
+                'maxiter': max_iter,
+                'maxls': 50,
+                'gtol': tolerance,
+                'ftol': 64 * np.finfo(float).eps,
             },
             **kwargs,
         )
@@ -411,25 +402,19 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return result
 
 
-def _optimize_jacobian(
-    objective,
-    X,
-    max_iter=10000,
-    tolerance=1e-4,
-    **kwargs
-) -> OptimizeResult:
-    initial_weights = np.zeros(X.shape[1], order="F", dtype=X.dtype)
+def _optimize_jacobian(objective, X, max_iter=10000, tolerance=1e-4, **kwargs) -> OptimizeResult:
+    initial_weights = np.zeros(X.shape[1], order='F', dtype=X.dtype)
 
     result = minimize(
         objective,
         initial_weights,
-        method="L-BFGS-B",
+        method='L-BFGS-B',
         jac=True,
         options={
-            "maxiter": max_iter,
-            "maxls": 50,
-            "gtol": tolerance,
-            "ftol": 64 * np.finfo(float).eps,
+            'maxiter': max_iter,
+            'maxls': 50,
+            'gtol': tolerance,
+            'ftol': 64 * np.finfo(float).eps,
         },
         **kwargs,
     )
@@ -445,9 +430,7 @@ def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
         b = weights.copy()[1:] if fit_intercept else weights.copy()
         bool_nonzero = (np.abs(b) - C) > 0
         if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (
-                    np.abs(b[bool_nonzero]) - C
-            )
+            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
         if np.sum(~bool_nonzero) > 0:
             b[~bool_nonzero] = 0
     else:
@@ -472,9 +455,7 @@ def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
     if soft_threshold:
         bool_nonzero = (np.abs(b) - C) > 0
         if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (
-                    np.abs(b[bool_nonzero]) - C
-            )
+            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
         if np.sum(~bool_nonzero) > 0:
             b[~bool_nonzero] = 0
 
@@ -490,8 +471,8 @@ def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
             return loss + _compute_penalty(b, C, l1_ratio), gradient, hessian
         else:
             raise ValueError(
-                f"Invalid loss function output length: {len(loss_output)}, expected 1, 2 or 3. "
-                f"(loss, gradient, hessian)"
+                f'Invalid loss function output length: {len(loss_output)}, expected 1, 2 or 3. '
+                f'(loss, gradient, hessian)'
             )
     else:
         loss = loss_output
@@ -516,14 +497,14 @@ def _check_optimize_result(result):
     if result.status != 0:
         try:
             # The message is already decoded in scipy>=1.6.0
-            result_message = result.message.decode("latin1")
+            result_message = result.message.decode('latin1')
         except AttributeError:
             result_message = result.message
         warning_msg = (
-            "L-BFGS failed to converge (status={}):\n{}.\n\n"
-            "Increase the number of iterations (max_iter) "
-            "or scale the data as shown in:\n"
-            "    https://scikit-learn.org/stable/modules/"
-            "preprocessing.html"
+            'L-BFGS failed to converge (status={}):\n{}.\n\n'
+            'Increase the number of iterations (max_iter) '
+            'or scale the data as shown in:\n'
+            '    https://scikit-learn.org/stable/modules/'
+            'preprocessing.html'
         ).format(result.status, result_message)
         warnings.warn(warning_msg, ConvergenceWarning, stacklevel=2)

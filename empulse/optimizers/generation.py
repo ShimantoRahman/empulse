@@ -117,26 +117,26 @@ class Generation:
         n_jobs: Optional[int] = 1,
     ):
         super().__init__()
-        self.name = "RGA"
+        self.name = 'RGA'
         self.population = []
 
         if population_size is not None:
             if not isinstance(population_size, int):
-                raise TypeError("`pop_size` must be an int.")
+                raise TypeError('`pop_size` must be an int.')
             if population_size < 10:
-                raise ValueError("`pop_size` must be >= 10.")
+                raise ValueError('`pop_size` must be >= 10.')
         self.population_size = population_size
 
         if not 0.0 <= crossover_rate <= 1.0:
-            raise ValueError("`crossover_rate` must be in [0, 1].")
+            raise ValueError('`crossover_rate` must be in [0, 1].')
         self.crossover_rate = crossover_rate
 
         if not 0.0 <= mutation_rate <= 1.0:
-            raise ValueError("`mutation_rate` must be in [0, 1].")
+            raise ValueError('`mutation_rate` must be in [0, 1].')
         self.mutation_rate = mutation_rate
 
         if not 0.0 <= elitism <= 1.0:
-            raise ValueError("`elitism` must be in [0, 1].")
+            raise ValueError('`elitism` must be in [0, 1].')
         self.elitism = elitism
 
         self.verbose = verbose
@@ -180,13 +180,13 @@ class Generation:
         # Check bounds
         bounds = list(bounds)
         if not all(
-                isinstance(t, tuple)
-                and len(t) == 2
-                and isinstance(t[0], (int, float))
-                and isinstance(t[1], (int, float))
+                isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], (int, float)) and isinstance(
+                    t[1],
+                    (int, float)
+                    )
                 for t in bounds
         ):
-            raise ValueError("`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).")
+            raise ValueError('`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).')
         array_bounds = np.asarray(bounds, dtype=np.float64).T
         self.lower_bounds = array_bounds[0]
         self.upper_bounds = array_bounds[1]
@@ -265,7 +265,8 @@ class Generation:
                 mutant = self.population[ix]  # inplace
                 rnd_gene = self.rng.choice(self.n_dim)
                 rnd_val = self.rng.uniform(
-                    low=self.lower_bounds[rnd_gene], high=self.upper_bounds[rnd_gene],
+                    low=self.lower_bounds[rnd_gene],
+                    high=self.upper_bounds[rnd_gene],
                 )
                 mutant[rnd_gene] = rnd_val
                 self.fitness[ix] = np.nan
@@ -299,16 +300,17 @@ class Generation:
 
         # Select individuals
         select_ix = self.rng.choice(
-            self.population_size, size=self.population_size, replace=True, p=relative_fitness,
+            self.population_size,
+            size=self.population_size,
+            replace=True,
+            p=relative_fitness,
         )
         self.population = self.population[select_ix]
         self.fitness = self.fitness[select_ix]
 
     def _get_sorted_non_nan_ix(self):
         """Get indices sorted according to non-nan fitness values"""
-        non_nan_fx = (
-            (ix, fx) for ix, fx in enumerate(self.fitness) if ~np.isnan(fx)
-        )
+        non_nan_fx = ((ix, fx) for ix, fx in enumerate(self.fitness) if ~np.isnan(fx))
         sorted_list = sorted(non_nan_fx, key=lambda t: t[1])
         return sorted_list
 
@@ -335,9 +337,7 @@ class Generation:
         else:
             elite_ix = np.argsort(self.fitness)[-self.elitism:]  # TODO: replace with argpartition
             # elite_ix = np.argpartition(self.fitness, -self.elitism)[-self.elitism:]
-        self.elite_pool = [
-            (self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix
-        ]
+        self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])
         self.result.x = self.population[elite_ix[-1]]
@@ -346,18 +346,20 @@ class Generation:
 
     def _log_start(self):
         self.logging_fn(
-            "# ---  {} ({})  --- #".format(
+            '# ---  {} ({})  --- #'.format(
                 self.name,
-                datetime.now().strftime("%a %b %d %H:%M:%S"),
+                datetime.now().strftime('%a %b %d %H:%M:%S'),
             )
         )
 
     def _log_progress(self):
-        status_msg = "Iter = {:5d}; nfev = {:6d}; fx = {:.4f}".format(
-            self.result.nit, self.result.nfev, self.fx_best[-1],
+        status_msg = 'Iter = {:5d}; nfev = {:6d}; fx = {:.4f}'.format(
+            self.result.nit,
+            self.result.nfev,
+            self.fx_best[-1],
         )
         self.logging_fn(status_msg)
 
     def _log_end(self, stop_time):
         self.logging_fn(self.result)
-        self.logging_fn("# ---  {} ({})  --- #".format(self.name, stop_time))
+        self.logging_fn('# ---  {} ({})  --- #'.format(self.name, stop_time))

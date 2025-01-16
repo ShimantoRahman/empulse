@@ -214,8 +214,7 @@ def empcs(
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
     lambda_cdf_diff, lambda_cdf_sum = _compute_lambda_cdf(
-        roi, tpr_diff, fpr_diff, positive_class_prob,
-        negative_class_prob
+        roi, tpr_diff, fpr_diff, positive_class_prob, negative_class_prob
     )
 
     cutoff = len(true_positive_rates) - len(lambda_cdf_diff)
@@ -227,32 +226,25 @@ def empcs(
     N = roi * false_positive_rates * negative_class_prob
     partial_default_term = np.sum(alpha * lambda_cdf_diff * (M - N))
     full_default_term = default_rate * (
-            positive_class_prob * true_positive_rates[-1] -
-            roi * negative_class_prob * false_positive_rates[-1]
+            positive_class_prob * true_positive_rates[-1] - roi * negative_class_prob * false_positive_rates[-1]
     )
     empcs = partial_default_term + full_default_term
 
     customer_threshold = np.sum(
-        alpha * lambda_cdf_diff *
-        (positive_class_prob * true_positive_rates +
-         negative_class_prob * false_positive_rates)
-    ) + \
-                         default_rate * (positive_class_prob * true_positive_rates[-1] +
-                                         negative_class_prob * false_positive_rates[-1])
+        alpha
+        * lambda_cdf_diff
+        * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
+    ) + default_rate * (positive_class_prob * true_positive_rates[-1] + negative_class_prob * false_positive_rates[-1])
 
     return empcs, customer_threshold
 
 
 def _compute_lambda_cdf(
-    roi: float,
-    tpr_diff: np.ndarray,
-    fpr_diff: np.ndarray,
-    positive_class_prob: float,
-    negative_class_prob: float
+    roi: float, tpr_diff: np.ndarray, fpr_diff: np.ndarray, positive_class_prob: float, negative_class_prob: float
 ) -> tuple[np.ndarray, np.ndarray]:
     # ignore division by zero warning
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
         lambda_bounds = negative_class_prob * roi / positive_class_prob * (fpr_diff / tpr_diff)
     lambda_bounds = np.append(0, lambda_bounds)
     lambda_bounds = np.append(lambda_bounds[lambda_bounds < 1], 1)

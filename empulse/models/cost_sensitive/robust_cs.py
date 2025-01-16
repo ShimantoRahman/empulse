@@ -227,7 +227,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params
+        **fit_params,
     ) -> 'RobustCSLogitClassifier':
         """
         Fit the estimator with the adjusted costs.
@@ -264,21 +264,19 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         """
 
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost
+            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
 
         self.costs_ = {
             'tp_cost': tp_cost if isinstance(tp_cost, (int, float)) else np.array(tp_cost),  # take copy of the array
             'tn_cost': tn_cost if isinstance(tn_cost, (int, float)) else np.array(tn_cost),
             'fn_cost': fn_cost if isinstance(fn_cost, (int, float)) else np.array(fn_cost),
-            'fp_cost': fp_cost if isinstance(fp_cost, (int, float)) else np.array(fp_cost)
+            'fp_cost': fp_cost if isinstance(fp_cost, (int, float)) else np.array(fp_cost),
         }
         # only fit on the costs that are arrays and have a standard deviation greater than 0
-        should_fit = [cost_name for cost_name, cost in self.costs_.items() if
-                      isinstance(cost, np.ndarray) and np.std(cost) > 0]
+        should_fit = [
+            cost_name for cost_name, cost in self.costs_.items() if isinstance(cost, np.ndarray) and np.std(cost) > 0
+        ]
 
         if self.detect_outliers_for != 'all':
             if isinstance(self.detect_outliers_for, str):
@@ -286,7 +284,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     if self.detect_outliers_for not in should_fit:
                         raise ValueError(
                             f"Cost '{self.detect_outliers_for}' is not an array or has a standard deviation of 0."
-                            " Cannot detect outliers for this cost."
+                            ' Cannot detect outliers for this cost.'
                         )
                     should_fit = [self.detect_outliers_for]
                 else:
@@ -301,7 +299,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     if cost_name not in should_fit:
                         raise ValueError(
                             f"Cost '{cost_name}' is not an array or has a standard deviation of 0."
-                            " Cannot detect outliers for this cost."
+                            ' Cannot detect outliers for this cost.'
                         )
                 should_fit = [cost_name for cost_name in self.detect_outliers_for if cost_name in should_fit]
             else:
@@ -338,26 +336,26 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         # with the imputed costs fit the estimator
         self.estimator_ = clone(self.estimator).fit(X, y, **self.costs_, **fit_params)
 
-        if hasattr(self.estimator_, "n_features_in_"):
+        if hasattr(self.estimator_, 'n_features_in_'):
             self.n_features_in_ = self.estimator_.n_features_in_
-        if hasattr(self.estimator_, "feature_names_in_"):
+        if hasattr(self.estimator_, 'feature_names_in_'):
             self.feature_names_in_ = self.estimator_.feature_names_in_
 
         return self
 
-    @available_if(_estimator_has("predict"))
+    @available_if(_estimator_has('predict'))
     def predict(self, X: ArrayLike) -> np.ndarray:
-        check_is_fitted(self, "estimator_")
+        check_is_fitted(self, 'estimator_')
         return self.estimator_.predict(X)
 
-    @available_if(_estimator_has("predict_proba"))
+    @available_if(_estimator_has('predict_proba'))
     def predict_proba(self, X: ArrayLike) -> np.ndarray:
-        check_is_fitted(self, "estimator_")
+        check_is_fitted(self, 'estimator_')
         return self.estimator_.predict_proba(X)
 
-    @available_if(_estimator_has("decision_function"))
+    @available_if(_estimator_has('decision_function'))
     def decision_function(self, X: ArrayLike) -> np.ndarray:
-        check_is_fitted(self, "estimator_")
+        check_is_fitted(self, 'estimator_')
         return self.estimator_.decision_function(X)
 
     @property

@@ -112,7 +112,7 @@ class CostSensitiveSampler(BaseSampler):
         percentile_threshold: float = 0.975,
         random_state: int | np.random.RandomState | None = None,
         fp_cost: float | ArrayLike = 0.0,
-        fn_cost: float | ArrayLike = 0.0
+        fn_cost: float | ArrayLike = 0.0,
     ):
         super().__init__()
         self.method = method
@@ -168,18 +168,19 @@ class CostSensitiveSampler(BaseSampler):
         fp_cost: float | ArrayLike = 0.0,
         fn_cost: float | ArrayLike = 0.0,
     ) -> tuple[NDArray, NDArray]:
-
         if fp_cost is Parameter.UNCHANGED:
             fp_cost = self.fp_cost
         if fn_cost is Parameter.UNCHANGED:
             fn_cost = self.fn_cost
 
-        if (all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
-                and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0):
+        if (
+                all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
+                and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0
+        ):
             warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.",
-                UserWarning
+                'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
+                f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.',
+                UserWarning,
             )
             fp_cost = 1
             fn_cost = 1
@@ -198,8 +199,7 @@ class CostSensitiveSampler(BaseSampler):
         misclassification_costs[y == 1] = fn_cost[y == 1]
 
         normalized_costs = np.minimum(
-            misclassification_costs / np.percentile(misclassification_costs, self.percentile_threshold * 100),
-            1
+            misclassification_costs / np.percentile(misclassification_costs, self.percentile_threshold * 100), 1
         )
 
         n_samples = X.shape[0]

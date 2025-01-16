@@ -11,5 +11,5 @@ __all__ = [
     empb_score,
     compute_profit_churn,
     make_objective_churn,
-    expected_cost_loss_churn
+    expected_cost_loss_churn,
 ]

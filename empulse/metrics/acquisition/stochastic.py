@@ -19,7 +19,7 @@ def empa_score(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.empa()` but only returning the EMPA score.
@@ -146,7 +146,7 @@ def empa(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Expected Maximum Profit measure for customer Acquisition (EMPA).
@@ -240,14 +240,7 @@ def empa(
 
     if check_input:
         y_true, y_score = _validate_input_stochastic(
-            y_true,
-            y_score,
-            alpha,
-            beta,
-            contact_cost,
-            sales_cost,
-            direct_selling,
-            commission
+            y_true, y_score, alpha, beta, contact_cost, sales_cost, direct_selling, commission
         )
     else:
         y_true = np.asarray(y_true)
@@ -266,10 +259,10 @@ def empa(
     cdf_diff = np.diff(st.gamma.cdf(bounds, a=alpha, loc=0, scale=1 / beta), axis=0)
     cdf_1_diff = np.diff(st.gamma.cdf(bounds, a=alpha + 1, loc=0, scale=1 / beta), axis=0)
 
-    cdf_coef = (tpr_coef * true_positive_rates - fpr_coef * false_positive_rates)
+    cdf_coef = tpr_coef * true_positive_rates - fpr_coef * false_positive_rates
     cdf_1_coef = denominator * true_positive_rates
 
-    expected_profit = ((alpha / beta) * (cdf_1_coef * cdf_1_diff).sum(axis=0) + (cdf_coef * cdf_diff).sum(axis=0))
+    expected_profit = (alpha / beta) * (cdf_1_coef * cdf_1_diff).sum(axis=0) + (cdf_coef * cdf_diff).sum(axis=0)
 
     threshold = (
             cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
@@ -288,18 +281,14 @@ def _compute_integration_bounds(
     """Compute the integration bounds for the contribution of a new customer."""
     # ignore division by zero warning
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
         clv_bounds = (fpr_coef * fpr_diff - tpr_coef * tpr_diff) / (denominator * tpr_diff)
     # add zero and infinity to bounds
     if clv_bounds.ndim == 2:
         return np.concatenate(
-            [
-                np.zeros((1, clv_bounds.shape[1])),
-                clv_bounds,
-                np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf)
-            ]
+            [np.zeros((1, clv_bounds.shape[1])), clv_bounds, np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf)]
         )
     elif clv_bounds.ndim == 1:
         return np.concatenate([[0], clv_bounds, [np.inf]]).reshape(-1, 1)
     else:
-        raise ValueError(f"Invalid number of dimensions: {clv_bounds.ndim}")
+        raise ValueError(f'Invalid number of dimensions: {clv_bounds.ndim}')

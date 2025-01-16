@@ -113,14 +113,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     """
 
     _parameter_constraints: dict = {
-        "estimator": [HasMethods(["fit", "predict_proba"]), ],
-        "calibrator": [
-            HasMethods(["fit", "predict_proba"]),
-            StrOptions({"sigmoid", "isotonic"}),
-            None
+        'estimator': [
+            HasMethods(['fit', 'predict_proba']),
         ],
-        "pos_label": [Real, str, "boolean", None],
-        "random_state": ["random_state"],
+        'calibrator': [HasMethods(['fit', 'predict_proba']), StrOptions({'sigmoid', 'isotonic'}), None],
+        'pos_label': [Real, str, 'boolean', None],
+        'random_state': ['random_state'],
     }
 
     def __init__(
@@ -151,33 +149,21 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     @property
     def classes_(self):
-        if estimator := getattr(self, "estimator_", None):
+        if estimator := getattr(self, 'estimator_', None):
             return estimator.classes_
         try:
             check_is_fitted(self.estimator)
             return self.estimator.classes_
         except NotFittedError:
-            raise AttributeError(
-                "The underlying estimator is not fitted yet."
-            ) from NotFittedError
+            raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
     def _get_calibrator(self, estimator):
         if self.calibrator == 'sigmoid':
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
-            return CalibratedClassifierCV(
-                estimator,
-                method='sigmoid',
-                cv=cv,
-                ensemble=False
-            )
+            return CalibratedClassifierCV(estimator, method='sigmoid', cv=cv, ensemble=False)
         elif self.calibrator == 'isotonic':
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
-            return CalibratedClassifierCV(
-                estimator,
-                method='isotonic',
-                cv=cv,
-                ensemble=False
-            )
+            return CalibratedClassifierCV(estimator, method='isotonic', cv=cv, ensemble=False)
         else:
             return self.calibrator.set_params(estimator=estimator)
 
@@ -201,7 +187,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             Returns an instance of self.
         """
         X, y = validate_data(self, X, y)
-        routed_params = process_routing(self, "fit", **params)
+        routed_params = process_routing(self, 'fit', **params)
         if self.calibrator is not None:
             self.estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.estimator.fit)
         else:
@@ -252,14 +238,10 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         check_is_fitted(self)
 
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            caller='predict'
+            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict'
         )
 
-        estimator = getattr(self, "estimator_", self.estimator)
+        estimator = getattr(self, 'estimator_', self.estimator)
 
         y_score = estimator.predict_proba(X)[:, 1]
 
@@ -290,6 +272,6 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         """
         router = MetadataRouter(owner=self.__class__.__name__).add(
             estimator=self.estimator,
-            method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+            method_mapping=MethodMapping().add(callee='fit', caller='fit'),
         )
         return router

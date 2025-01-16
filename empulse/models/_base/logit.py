@@ -13,12 +13,12 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
     _parameter_constraints: dict = {
-        "C": [Interval(Real, 0, None, closed="right")],
-        "fit_intercept": ["boolean"],
-        "soft_threshold": ["boolean"],
-        "loss": [StrOptions({"average expected cost"}), None],
-        "optimize_fn": [callable, None],
-        "l1_ratio": [Interval(Real, 0, 1, closed="both")],
+        'C': [Interval(Real, 0, None, closed='right')],
+        'fit_intercept': ['boolean'],
+        'soft_threshold': ['boolean'],
+        'loss': [StrOptions({'average expected cost'}), None],
+        'optimize_fn': [callable, None],
+        'l1_ratio': [Interval(Real, 0, 1, closed='both')],
     }
 
     def __init__(
@@ -49,10 +49,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
+            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

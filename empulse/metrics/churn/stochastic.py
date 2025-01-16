@@ -10,7 +10,7 @@ from ._validation import _validate_input_emp, _validate_input_empb
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 
-if Version(np.version.version) >= Version("2.0.0"):
+if Version(np.version.version) >= Version('2.0.0'):
     np.trapz = np.trapezoid
 
 
@@ -303,14 +303,14 @@ def _compute_gamma_bounds(
     delta: float,
     tpr_diff: np.ndarray,
     fpr_diff: np.ndarray,
-    positive_class_prob: float
+    positive_class_prob: float,
 ) -> np.ndarray:
     """Compute the gamma bounds of the integral"""
     numerator = fpr_coef * fpr_diff + tpr_coef * tpr_diff
     denominator = positive_class_prob * (1 - delta) * tpr_diff
     # ignore division by zero warning
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
         gamma_bounds = numerator / denominator
     gamma_bounds = np.append([0], gamma_bounds)
     return np.append(gamma_bounds[gamma_bounds < 1], [1])
@@ -600,9 +600,7 @@ def auepc_score(
     targets = y_true[sorted_indices]
     clv_targets = clv[sorted_indices]
 
-    benefits = np.cumsum(
-        accept_rate * ((1 - incentive_fraction) * clv_targets - contact_cost) * targets
-    )
+    benefits = np.cumsum(accept_rate * ((1 - incentive_fraction) * clv_targets - contact_cost) * targets)
     costs = np.cumsum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
     profits = benefits + costs
 

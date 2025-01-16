@@ -153,7 +153,7 @@ def emp_score(
         tn_benefit=tn_benefit,
         fn_cost=fn_cost,
         fp_cost=fp_cost,
-        n_buckets=n_buckets
+        n_buckets=n_buckets,
     )[0]
 
 
@@ -316,7 +316,7 @@ def _compute_emp(
     f1: np.ndarray,
     bounds: list[tuple[float, float]],
     weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-    n_buckets: int
+    n_buckets: int,
 ) -> tuple[float, float]:
     """Computes the expected maximum profit and the threshold at which the maximum profit is achieved."""
     emp = 0.0
@@ -338,8 +338,7 @@ def _construct_iter(
     """Construct an iterator over the parameter space."""
     return product(
         *(
-            _range(min_val, max_val, step_size) if min_val != max_val
-            else (min_val,)
+            _range(min_val, max_val, step_size) if min_val != max_val else (min_val,)
             for (min_val, max_val), step_size in zip(bounds, steps_sizes)
         )
     )

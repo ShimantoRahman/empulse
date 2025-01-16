@@ -5,9 +5,7 @@ from sklearn.metrics import roc_curve
 
 
 def _compute_convex_hull(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    expand_dims: bool = False
+    y_true: np.ndarray, y_pred: np.ndarray, expand_dims: bool = False
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Computes the convex hull points of the ROC curve.
@@ -40,7 +38,7 @@ def _compute_convex_hull(
     fpr = fpr[is_finite]
     tpr = tpr[is_finite]
     if fpr.shape[0] < 2:
-        raise ValueError("Too few distinct predictions for ROCCH")
+        raise ValueError('Too few distinct predictions for ROCCH')
 
     points = np.c_[fpr, tpr]  # concatenate into matrix with two columns
     try:

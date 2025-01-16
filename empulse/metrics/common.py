@@ -71,8 +71,7 @@ def _compute_prior_class_probabilities(y_true: np.ndarray) -> tuple[float, float
 
 
 def _compute_tpr_fpr_diffs(
-    true_positive_rates: np.ndarray,
-    false_positive_rates: np.ndarray
+    true_positive_rates: np.ndarray, false_positive_rates: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate differences between subsequent true positive rates and false positive rates."""
     tpr_diff = np.diff(true_positive_rates, axis=0)  # F_0(T_i) - F_0(T_{i-1})
@@ -81,8 +80,9 @@ def _compute_tpr_fpr_diffs(
     return tpr_diff, fpr_diff
 
 
-def _compute_profits(y_true: np.ndarray, y_pred: np.ndarray, cost_benefits: np.ndarray) -> tuple[
-    np.ndarray, np.ndarray]:
+def _compute_profits(
+    y_true: np.ndarray, y_pred: np.ndarray, cost_benefits: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     n_samples = y_pred.shape[0]
     confusion_matrix, _, _ = _compute_confusion_matrix(y_true, y_pred)
     profit_matrix = np.dot(confusion_matrix.T, cost_benefits) / n_samples

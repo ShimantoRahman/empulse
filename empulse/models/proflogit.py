@@ -153,7 +153,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
-            fit_intercept=self.fit_intercept
+            fit_intercept=self.fit_intercept,
         )
         self.result_ = optimize_fn(objective, X)
 
@@ -175,9 +175,7 @@ def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercep
     if soft_threshold:
         bool_nonzero = (np.abs(b) - C) > 0
         if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (
-                    np.abs(b[bool_nonzero]) - C
-            )
+            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
         if np.sum(~bool_nonzero) > 0:
             b[~bool_nonzero] = 0
 
@@ -197,17 +195,16 @@ def _optimize(objective, X, max_iter=1000, tolerance=1e-4, patience=250, bounds=
 
     for _ in islice(rga.optimize(objective, bounds), max_iter):
         score = rga.result.fun
-        relative_improvement = (score - previous_score) / previous_score \
-            if previous_score != np.inf else np.inf
+        relative_improvement = (score - previous_score) / previous_score if previous_score != np.inf else np.inf
         previous_score = score
         if relative_improvement < tolerance:
             if (iter_stagnant := iter_stagnant + 1) >= patience:
-                rga.result.message = "Converged."
+                rga.result.message = 'Converged.'
                 rga.result.success = True
                 break
         else:
             iter_stagnant = 0
     else:
-        rga.result.message = "Maximum number of iterations reached."
+        rga.result.message = 'Maximum number of iterations reached.'
         rga.result.success = False
     return rga.result

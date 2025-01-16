@@ -119,12 +119,17 @@ def _objective(
     elif isinstance(dtrain, xgb.DMatrix):
         y_true = dtrain.get_label()
     else:
-        raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
+        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
 
     y_pred = 1 / (1 + np.exp(-y_pred))
-    cost = y_true * (direct_selling * (contact_cost + sales_cost - contribution) + (1 - direct_selling) * (
-            contact_cost - (1 - commission) * contribution
-    )) + (1 - y_true) * contact_cost
+    cost = (
+            y_true
+            * (
+                    direct_selling * (contact_cost + sales_cost - contribution)
+                    + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
+            )
+            + (1 - y_true) * contact_cost
+    )
     gradient = y_pred * (1 - y_pred) * cost
     hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
@@ -197,21 +202,21 @@ def expected_cost_loss_acquisition(
     """
     if check_input:
         y_true, y_proba = _validate_input_deterministic(
-            y_true,
-            y_proba,
-            contribution,
-            contact_cost,
-            sales_cost,
-            direct_selling,
-            commission
+            y_true, y_proba, contribution, contact_cost, sales_cost, direct_selling, commission
         )
     else:
         y_true = np.asarray(y_true)
         y_proba = np.asarray(y_proba)
 
-    costs = y_true * y_proba * (direct_selling * (sales_cost + contact_cost - contribution) + (1 - direct_selling) * (
-            contact_cost - (1 - commission) * contribution
-    )) + (1 - y_true) * y_proba * contact_cost
+    costs = (
+            y_true
+            * y_proba
+            * (
+                    direct_selling * (sales_cost + contact_cost - contribution)
+                    + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
+            )
+            + (1 - y_true) * y_proba * contact_cost
+    )
     if normalize:
         return costs.mean()
     return costs.sum()

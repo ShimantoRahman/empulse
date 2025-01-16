@@ -179,7 +179,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         estimator,
         *,
         strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None
+        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -192,12 +192,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         return tags
 
     def fit(
-        self,
-        X: ArrayLike,
-        y: ArrayLike,
-        *,
-        sensitive_feature: Optional[ArrayLike] = None,
-        **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
     ) -> 'BiasReweighingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.
@@ -218,10 +213,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
+            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

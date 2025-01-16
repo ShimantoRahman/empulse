@@ -34,7 +34,7 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
 
     # no swapping needed if one of the groups is empty
     if n_sensitive == 0 or n_not_sensitive == 0:
-        warnings.warn("sensitive_feature only contains one class, no relabeling is performed.", UserWarning)
+        warnings.warn('sensitive_feature only contains one class, no relabeling is performed.', UserWarning)
         return 0
 
     pos_ratio_sensitive = np.sum(_safe_indexing(y_true, sensitive_indices)) / n_sensitive
@@ -158,7 +158,8 @@ class BiasRelabler(BaseSampler):
            Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
-    _estimator_type = "sampler"
+
+    _estimator_type = 'sampler'
     _sampling_type = 'bypass'
     _parameter_constraints = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
@@ -172,7 +173,8 @@ class BiasRelabler(BaseSampler):
 
     if TYPE_CHECKING:
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False): pass
+        def set_fit_resample_request(self, sensitive_feature=False):
+            pass
 
     def __init__(
         self,
@@ -239,13 +241,7 @@ class BiasRelabler(BaseSampler):
         """
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
-    def _fit_resample(
-        self,
-        X: _XT,
-        y: _YT,
-        *,
-        sensitive_feature: Optional[ArrayLike] = None
-    ) -> tuple[_XT, _YT]:
+    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 
@@ -266,10 +262,7 @@ class BiasRelabler(BaseSampler):
         sensitive_feature = np.asarray(sensitive_feature)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
+            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             return X, y
@@ -296,15 +289,9 @@ class BiasRelabler(BaseSampler):
         probas_non_sensitive = y_pred[non_sensitive]
         probas_sensitive = y_pred[sensitive_indices]
 
-        demotion_candidates = _get_demotion_candidates(
-            probas_non_sensitive,
-            _safe_indexing(y, non_sensitive),
-            n_pairs
-        )
+        demotion_candidates = _get_demotion_candidates(probas_non_sensitive, _safe_indexing(y, non_sensitive), n_pairs)
         promotion_candidates = _get_promotion_candidates(
-            probas_sensitive,
-            _safe_indexing(y, sensitive_indices),
-            n_pairs
+            probas_sensitive, _safe_indexing(y, sensitive_indices), n_pairs
         )
 
         # map promotion and demotion candidates to original indices

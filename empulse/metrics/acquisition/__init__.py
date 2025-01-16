@@ -9,5 +9,5 @@ __all__ = [
     mpa_score,
     compute_profit_acquisition,
     make_objective_acquisition,
-    expected_cost_loss_acquisition
+    expected_cost_loss_acquisition,
 ]

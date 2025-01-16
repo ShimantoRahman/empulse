@@ -77,6 +77,7 @@ def make_objective_churn(
         )
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
+
         def objective(y_pred, train_data):
             """
             Create an objective function for the churn AEC measure.
@@ -141,12 +142,12 @@ def _objective(
     elif isinstance(dtrain, xgb.DMatrix):
         y_true = dtrain.get_label()
     else:
-        raise TypeError(f"Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.")
+        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
     y_pred = 1 / (1 + np.exp(-y_pred))
 
     incentive_cost = incentive_fraction * clv
-    profits = contact_cost + incentive_cost + y_true * (
-            accept_rate * incentive_cost - incentive_cost - clv * accept_rate
+    profits = (
+            contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
     gradient = y_pred * (1 - y_pred) * profits
     hessian = np.abs((1 - 2 * y_pred) * gradient)
@@ -162,7 +163,7 @@ def expected_cost_loss_churn(
     incentive_fraction: Union[float, ArrayLike] = 0.05,
     contact_cost: float = 1,
     normalize: bool = False,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> float:
     """
     Expected cost of a classifier for customer churn.
@@ -247,7 +248,7 @@ def expected_cost_loss_churn(
             clv=clv,
             accept_rate=accept_rate,
             incentive_fraction=incentive_fraction,
-            contact_cost=contact_cost
+            contact_cost=contact_cost,
         )
     else:
         y_true = np.asarray(y_true)
@@ -255,9 +256,9 @@ def expected_cost_loss_churn(
         clv = np.asarray(clv)
 
     incentive_cost = incentive_fraction * clv
-    profits = y_proba * (contact_cost + incentive_cost + y_true * (
-            accept_rate * incentive_cost - incentive_cost - clv * accept_rate
-    ))
+    profits = y_proba * (
+            contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
+    )
     if normalize:
         return profits.mean()
     return profits.sum()

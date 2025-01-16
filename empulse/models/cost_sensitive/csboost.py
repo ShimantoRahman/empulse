@@ -177,10 +177,10 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     _parameter_constraints: dict = {
         **BaseBoostClassifier._parameter_constraints,
-        'tp_cost': ["array-like", Real],
-        'tn_cost': ["array-like", Real],
-        'fn_cost': ["array-like", Real],
-        'fp_cost': ["array-like", Real],
+        'tp_cost': ['array-like', Real],
+        'tn_cost': ['array-like', Real],
+        'fn_cost': ['array-like', Real],
+        'fp_cost': ['array-like', Real],
     }
 
     def __init__(
@@ -207,7 +207,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params
+        **fit_params,
     ) -> 'CSBoostClassifier':
         """
         Fit the model.
@@ -253,23 +253,19 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        **fit_params
+        **fit_params,
     ) -> 'CSBoostClassifier':
-
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost
+            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
 
         if self.estimator is None:
             if XGBClassifier is None:
                 raise ImportError(
-                    "XGBoost package is required to use CSBoostClassifier. "
-                    "Install optional dependencies through pip install empulse[optional] or "
-                    "pip install xgboost"
-                    )
+                    'XGBoost package is required to use CSBoostClassifier. '
+                    'Install optional dependencies through pip install empulse[optional] or '
+                    'pip install xgboost'
+                )
             objective = make_objective_aec(
                 'xgboost',
                 tp_cost=tp_cost,
@@ -297,6 +293,6 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         else:
-            raise ValueError("estimator must be an instance of XGBClassifier or LGBMClassifier")
+            raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
         self.estimator_.fit(X, y, **fit_params)
         return self

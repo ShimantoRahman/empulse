@@ -183,7 +183,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         accept_rate: float | Parameter = Parameter.UNCHANGED,
         clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         incentive_fraction: float | Parameter = Parameter.UNCHANGED,
-        contact_cost: float | Parameter = Parameter.UNCHANGED
+        contact_cost: float | Parameter = Parameter.UNCHANGED,
     ):
         """
         Fit the model.
@@ -232,7 +232,6 @@ class B2BoostClassifier(BaseBoostClassifier):
         incentive_fraction: float = None,
         contact_cost: float = None,
     ) -> 'B2BoostClassifier':
-
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
         if clv is Parameter.UNCHANGED:
@@ -245,9 +244,9 @@ class B2BoostClassifier(BaseBoostClassifier):
         if self.estimator is None:
             if XGBClassifier is None:
                 raise ImportError(
-                    "XGBoost package is required to use CSBoostClassifier. "
-                    "Install optional dependencies through pip install empulse[optional] or "
-                    "pip install xgboost"
+                    'XGBoost package is required to use CSBoostClassifier. '
+                    'Install optional dependencies through pip install empulse[optional] or '
+                    'pip install xgboost'
                 )
             objective = make_objective_churn(
                 model='xgboost',
@@ -276,7 +275,7 @@ class B2BoostClassifier(BaseBoostClassifier):
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         else:
-            raise ValueError("estimator must be an instance of XGBClassifier or LGBMClassifier")
+            raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
 
         self.estimator_.fit(X, y)
         return self

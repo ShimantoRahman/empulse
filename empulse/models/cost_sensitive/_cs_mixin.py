@@ -15,7 +15,7 @@ class CostSensitiveMixin:
         tn_cost: ArrayLike | float | Parameter,
         fn_cost: ArrayLike | float | Parameter,
         fp_cost: ArrayLike | float | Parameter,
-        caller: str = 'fit'
+        caller: str = 'fit',
     ) -> tuple[
         NDArray | float,
         NDArray | float,
@@ -37,12 +37,14 @@ class CostSensitiveMixin:
         if fp_cost is Parameter.UNCHANGED:
             fp_cost = self.fp_cost
 
-        if (all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) and
-                sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0):
+        if (
+                all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost))
+                and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0
+        ):
             warnings.warn(
-                "All costs are zero. Setting fp_cost=1 and fn_cost=1. "
-                f"To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.",
-                UserWarning
+                'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
+                f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
+                UserWarning,
             )
             fp_cost = 1
             fn_cost = 1

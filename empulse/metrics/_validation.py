@@ -26,19 +26,19 @@ def _check_y_pred(y_pred: ArrayLike) -> np.ndarray:
 
 def _check_nan(array: NDArray) -> None:
     if np.isnan(array).any():
-        raise ValueError(f"The array should not contain NaN values, got {np.sum(np.isnan(array))} instead.")
+        raise ValueError(f'The array should not contain NaN values, got {np.sum(np.isnan(array))} instead.')
 
 
 def _check_inf(array: NDArray) -> None:
     if np.isinf(array).any():
-        raise ValueError(f"The array should not contain Inf values, got {np.sum(np.isinf(array))} instead.")
+        raise ValueError(f'The array should not contain Inf values, got {np.sum(np.isinf(array))} instead.')
 
 
 def _check_shape(y_true: NDArray, y_pred: NDArray) -> None:
     if y_true.shape != y_pred.shape:
         raise ValueError(
-            f"The shapes of the true label and predictions should match, "
-            f"got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead."
+            f'The shapes of the true label and predictions should match, '
+            f'got shape y_true={y_true.shape} and shape y_pred={y_pred.shape} instead.'
         )
 
 
@@ -57,41 +57,37 @@ def _check_consistent_length(*arrays: NDArray) -> None:
     lengths = [len(X) for X in arrays if X is not None]
     uniques = np.unique(lengths)
     if len(uniques) > 1:
-        raise ValueError(
-            "Found input variables with inconsistent numbers of samples: %r"
-            % [int(l) for l in lengths]
-        )
+        raise ValueError('Found input variables with inconsistent numbers of samples: %r' % [int(l) for l in lengths])
 
 
 def _check_numeric(y_true: NDArray) -> None:
     if not np.issubdtype(y_true.dtype, np.number):
-        raise TypeError(f"The true labels should be numeric, got dtype {y_true.dtype} instead.")
+        raise TypeError(f'The true labels should be numeric, got dtype {y_true.dtype} instead.')
 
 
 def _check_binary(y_true: NDArray) -> None:
     if not np.all(np.isin(y_true, [0, 1])):
-        raise ValueError(f"The true labels should be binary, got unique values {np.unique(y_true)} instead.")
+        raise ValueError(f'The true labels should be binary, got unique values {np.unique(y_true)} instead.')
 
 
 def _check_variance(array: NDArray) -> None:
     unique_values = np.unique(array)
     if len(unique_values) < 2:
         raise ValueError(
-            f"The array should have at least two different values, "
-            f"got unique values {unique_values} instead."
+            f'The array should have at least two different values, got unique values {unique_values} instead.'
         )
 
 
 def _check_positive(var: Union[float, int], var_name: str) -> None:
     if var < 0:
-        raise ValueError(f"{var_name} should be positive, got a value of {var} instead.")
+        raise ValueError(f'{var_name} should be positive, got a value of {var} instead.')
 
 
 def _check_gt_one(var: Union[float, int], var_name: str) -> None:
     if var < 0:
-        raise ValueError(f"{var_name} should be greater than 1, got a value of {var} instead.")
+        raise ValueError(f'{var_name} should be greater than 1, got a value of {var} instead.')
 
 
 def _check_fraction(var: float, var_name: str) -> None:
     if not (0 <= var <= 1):
-        raise ValueError(f"{var_name} should lay between 0 and 1, got a value of {var} instead.")
+        raise ValueError(f'{var_name} should lay between 0 and 1, got a value of {var} instead.')

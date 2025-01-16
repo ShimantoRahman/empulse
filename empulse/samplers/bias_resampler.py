@@ -135,7 +135,8 @@ class BiasResampler(BaseSampler):
            Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
-    _estimator_type = "sampler"
+
+    _estimator_type = 'sampler'
     _sampling_type = 'bypass'
     _parameter_constraints = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
@@ -149,14 +150,15 @@ class BiasResampler(BaseSampler):
 
     if TYPE_CHECKING:
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False): pass
+        def set_fit_resample_request(self, sensitive_feature=False):
+            pass
 
     def __init__(
         self,
         *,
         strategy: Union[Callable, Strategy] = 'statistical parity',
         transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        random_state: Optional[Union[RandomState, int]] = None
+        random_state: Optional[Union[RandomState, int]] = None,
     ):
         super().__init__()
         self.strategy = strategy
@@ -221,10 +223,7 @@ class BiasResampler(BaseSampler):
         """
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
-            )
+            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             self.sample_indices_ = np.arange(len(y))
@@ -252,9 +251,7 @@ class BiasResampler(BaseSampler):
 
         unique_attr = np.unique(sensitive_feature)
         if len(unique_attr) == 1:
-            warnings.warn(
-                "sensitive_feature only contains one class, no resampling is performed.", UserWarning
-            )
+            warnings.warn('sensitive_feature only contains one class, no resampling is performed.', UserWarning)
             self.sample_indices_ = np.arange(len(y))
             return X, y
 
@@ -270,16 +267,11 @@ class BiasResampler(BaseSampler):
                 indices = np.concatenate(
                     (
                         indices,
-                        random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True)
+                        random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True),
                     )
                 )
             else:  # undersampling
-                indices = np.concatenate(
-                    (
-                        indices,
-                        random_state.choice(idx_class_sensitive, n_samples, replace=False)
-                    )
-                )
+                indices = np.concatenate((indices, random_state.choice(idx_class_sensitive, n_samples, replace=False)))
 
         self.sample_indices_ = indices
 

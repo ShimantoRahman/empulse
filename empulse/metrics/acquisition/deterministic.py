@@ -16,7 +16,7 @@ def mpa_score(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> float:
     """
     :func:`~empulse.metrics.mpa()` but only returning the MPA score.
@@ -126,7 +126,7 @@ def mpa(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> tuple[float, float]:
     """
     Maximum Profit measure for customer Acquisition (MPA).
@@ -215,17 +215,11 @@ def compute_profit_acquisition(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-    check_input: bool = True
+    check_input: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     if check_input:
         y_true, y_pred = _validate_input_deterministic(
-            y_true,
-            y_pred,
-            contribution,
-            contact_cost,
-            sales_cost,
-            direct_selling,
-            commission
+            y_true, y_pred, contribution, contact_cost, sales_cost, direct_selling, commission
         )
     else:
         y_true = np.asarray(y_true)

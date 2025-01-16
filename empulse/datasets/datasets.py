@@ -56,8 +56,7 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[True],
     return_X_y_costs: Literal[False],
-) -> Dataset[pd.DataFrame, pd.Series]:
-    ...
+) -> Dataset[pd.DataFrame, pd.Series]: ...
 
 
 @overload
@@ -65,8 +64,7 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[False],
     return_X_y_costs: Literal[False],
-) -> Dataset[NDArray, NDArray]:
-    ...
+) -> Dataset[NDArray, NDArray]: ...
 
 
 @overload
@@ -74,8 +72,7 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[True],
     return_X_y_costs: Literal[True],
-) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
-    ...
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]: ...
 
 
 @overload
@@ -83,15 +80,10 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[False],
     return_X_y_costs: Literal[True],
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
-    ...
+) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
 
 
-def load_churn_tv_subscriptions(
-    *,
-    as_frame: bool = False,
-    return_X_y_costs: bool = False
-) -> Dataset | tuple:
+def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: bool = False) -> Dataset | tuple:
     """
     Load the TV Subscription Churn dataset (binary classification).
 
@@ -170,9 +162,7 @@ def load_churn_tv_subscriptions(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(
-        join(module_path, 'data', 'churn_tv_subscriptions.csv.gz'),
-        delimiter=',',
-        compression='gzip'
+        join(module_path, 'data', 'churn_tv_subscriptions.csv.gz'), delimiter=',', compression='gzip'
     )
     description = open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst')).read()
     data = raw_data.iloc[:, 1:-5]
@@ -187,7 +177,7 @@ def load_churn_tv_subscriptions(
                 raw_data['C_TP'].values,
                 raw_data['C_FP'].values,
                 raw_data['C_TN'].values,
-                raw_data['C_FN'].values
+                raw_data['C_FN'].values,
             )
     else:
         return Dataset(
@@ -212,8 +202,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> Dataset[pd.DataFrame, pd.Series]:
-    ...
+) -> Dataset[pd.DataFrame, pd.Series]: ...
 
 
 @overload
@@ -224,8 +213,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> Dataset[NDArray, NDArray]:
-    ...
+) -> Dataset[NDArray, NDArray]: ...
 
 
 @overload
@@ -236,8 +224,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
-    ...
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]: ...
 
 
 @overload
@@ -248,8 +235,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
-    ...
+) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
 
 
 def load_upsell_bank_telemarketing(
@@ -394,8 +380,9 @@ def load_upsell_bank_telemarketing(
     # Filter if balance>0
     raw_data = raw_data.loc[raw_data['balance'] > 0]
     target = (raw_data.y.values == 'yes').astype(np.int8)  # type: ignore
-    data = raw_data[['age', 'balance', 'previous', 'job', 'marital',
-                     'education', 'default', 'housing', 'loan', 'poutcome']]
+    data = raw_data[
+        ['age', 'balance', 'previous', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'poutcome']
+    ]
 
     fp_cost = contact_cost
     fn_cost = np.maximum(data['balance'].values * interest_rate * term_deposit_fraction, contact_cost)  # type: ignore
@@ -417,7 +404,7 @@ def load_upsell_bank_telemarketing(
             'default': np.uint8,
             'housing': np.uint8,
             'loan': np.uint8,
-            'poutcome': 'category'
+            'poutcome': 'category',
         }
     )
 
@@ -438,17 +425,10 @@ def load_upsell_bank_telemarketing(
                 tp_cost,
                 fp_cost,
                 tn_cost,
-                pd.Series(fn_cost, name='fn_cost')
+                pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (
-                data.values,
-                target,
-                tp_cost,
-                fp_cost,
-                tn_cost,
-                fn_cost
-            )
+            return (data.values, target, tp_cost, fp_cost, tn_cost, fn_cost)
     else:
         target_names = ['no subscription', 'subscription']
         return Dataset(
@@ -476,8 +456,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[pd.DataFrame, pd.Series]:
-    ...
+) -> Dataset[pd.DataFrame, pd.Series]: ...
 
 
 @overload
@@ -491,8 +470,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[NDArray, NDArray]:
-    ...
+) -> Dataset[NDArray, NDArray]: ...
 
 
 @overload
@@ -506,8 +484,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
-    ...
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]: ...
 
 
 @overload
@@ -521,8 +498,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
-    ...
+) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
 
 
 def load_give_me_some_credit(
@@ -647,7 +623,7 @@ def load_give_me_some_credit(
         'cl_max': max_credit_line,
         'n_term': term_length_months,
         'k': loan_to_income_ratio,
-        'lgd': loss_given_default
+        'lgd': loss_given_default,
     }
 
     pi_1 = target.mean()
@@ -669,7 +645,7 @@ def load_give_me_some_credit(
         'NumberOfTimes90DaysLate': 'n_times_late_over_90_days',
         'NumberRealEstateLoansOrLines': 'n_real_estate_loans',
         'NumberOfTime60-89DaysPastDueNotWorse': 'n_times_late_60_89_days',
-        'NumberOfDependents': 'n_dependents'
+        'NumberOfDependents': 'n_dependents',
     }
 
     data = data.rename(columns=column_mapping)
@@ -713,17 +689,10 @@ def load_give_me_some_credit(
                 0.0,
                 pd.Series(fp_cost, name='fp_cost'),
                 0.0,
-                pd.Series(fn_cost, name='fn_cost')
+                pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (
-                data.values,
-                target,
-                0.0,
-                fp_cost,
-                0.0,
-                fn_cost
-            )
+            return (data.values, target, 0.0, fp_cost, 0.0, fn_cost)
     else:
         target_names = ['no default', 'default']
         return Dataset(
@@ -751,8 +720,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[pd.DataFrame, pd.Series]:
-    ...
+) -> Dataset[pd.DataFrame, pd.Series]: ...
 
 
 @overload
@@ -766,8 +734,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[NDArray, NDArray]:
-    ...
+) -> Dataset[NDArray, NDArray]: ...
 
 
 @overload
@@ -781,8 +748,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
-    ...
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]: ...
 
 
 @overload
@@ -796,8 +762,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]:
-    ...
+) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
 
 
 def load_credit_scoring_pakdd(
@@ -920,13 +885,17 @@ def load_credit_scoring_pakdd(
     # drop the last column
     data = data.iloc[:, :-1]
 
-    continuous_columns = [
-        'MATE_INCOME', 'PERSONAL_NET_INCOME'
-    ]
+    continuous_columns = ['MATE_INCOME', 'PERSONAL_NET_INCOME']
     integer_columns = [
-        'ID_SHOP', 'AGE', 'AREA_CODE_RESIDENCIAL_PHONE', 'PAYMENT_DAY', 'SHOP_RANK',
-        'MONTHS_IN_RESIDENCE', 'MONTHS_IN_THE_JOB', 'PROFESSION_CODE',
-        'QUANT_ADDITIONAL_CARDS_IN_THE_APPLICATION'
+        'ID_SHOP',
+        'AGE',
+        'AREA_CODE_RESIDENCIAL_PHONE',
+        'PAYMENT_DAY',
+        'SHOP_RANK',
+        'MONTHS_IN_RESIDENCE',
+        'MONTHS_IN_THE_JOB',
+        'PROFESSION_CODE',
+        'QUANT_ADDITIONAL_CARDS_IN_THE_APPLICATION',
     ]
     data[continuous_columns] = data[continuous_columns].astype('float64')
     data[integer_columns] = data[integer_columns].astype('int32')
@@ -938,7 +907,7 @@ def load_credit_scoring_pakdd(
         'cl_max': max_credit_line * 0.33,
         'n_term': term_length_months,
         'k': loan_to_income_ratio,
-        'lgd': loss_given_default
+        'lgd': loss_given_default,
     }
 
     n_samples = data.shape[0]
@@ -981,22 +950,11 @@ def load_credit_scoring_pakdd(
 
     # remap values of matiral_status to more readable values
     data.loc[:, 'marital_status'] = data['marital_status'].map(
-        {
-            'S': 'single',
-            'M': 'married',
-            'D': 'divorced',
-            'W': 'widowed',
-            'O': 'other'
-        }
+        {'S': 'single', 'M': 'married', 'D': 'divorced', 'W': 'widowed', 'O': 'other'}
     )
     # remap values of residence_type to more readable values
     data.loc[:, 'residence_type'] = data['residence_type'].map(
-        {
-            'P': 'owned',
-            'A': 'rented',
-            'C': 'parents',
-            'O': 'other'
-        }
+        {'P': 'owned', 'A': 'rented', 'C': 'parents', 'O': 'other'}
     )
 
     # Desired column order
@@ -1074,17 +1032,10 @@ def load_credit_scoring_pakdd(
                 0.0,
                 pd.Series(fp_cost, name='fp_cost'),
                 0.0,
-                pd.Series(fn_cost, name='fn_cost')
+                pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (
-                data.values,
-                target,
-                0.0,
-                fp_cost,
-                0.0,
-                fn_cost
-            )
+            return (data.values, target, 0.0, fp_cost, 0.0, fn_cost)
     else:
         target_names = ['no default', 'default']
         return Dataset(
@@ -1102,7 +1053,7 @@ def load_credit_scoring_pakdd(
 
 
 def _creditscoring_costmat(income, debt, pi_1, cost_mat_parameters):
-    """ Private function to calculate the cost matrix of credit scoring models.
+    """Private function to calculate the cost matrix of credit scoring models.
 
     Parameters
     ----------

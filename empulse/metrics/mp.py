@@ -90,7 +90,8 @@ def max_profit_score(
     24.22...
     """
     return max_profit(y_true, y_score, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost)[
-        0]
+        0
+    ]
 
 
 def max_profit(
@@ -189,9 +190,7 @@ def max_profit(
 
     f0, f1 = _compute_convex_hull(y_true, y_score)
 
-    profits = (tp_benefit + fn_cost) * pi0 * f0 - \
-              (tn_benefit + fp_cost) * pi1 * f1 + \
-              tn_benefit * pi1 - fn_cost * pi0
+    profits = (tp_benefit + fn_cost) * pi0 * f0 - (tn_benefit + fp_cost) * pi1 * f1 + tn_benefit * pi1 - fn_cost * pi0
     best_index = np.argmax(profits)
     maximum_profit = float(profits[best_index])
     customer_threshold = float(f0[best_index] * pi0 + f1[best_index] * pi1)
