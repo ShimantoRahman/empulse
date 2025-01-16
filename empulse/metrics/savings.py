@@ -1,11 +1,28 @@
 import numbers
 from functools import partial, update_wrapper
-from typing import Callable, Literal, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union
 
 import numpy as np
-import xgboost as xgb
 from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
+
+if TYPE_CHECKING:
+    try:
+        from xgboost import DMatrix
+    except ImportError:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=np.ndarray)
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
+    else:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
 
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
@@ -511,11 +528,6 @@ def savings_score(
         Perform input validation.
         Turning off improves performance, useful when using this metric as a loss function.
 
-    cost_mat : array-like of shape = [n_samples, 4]
-        Cost matrix of the classification problem
-        Where the columns represents the costs of: false positives, false negatives,
-        true positives and true negatives, for each example.
-
     Returns
     -------
     score : float
@@ -600,7 +612,7 @@ def savings_score(
         )
     else:
         y_pred_baseline = np.asarray(y_pred_baseline)
-        cost_loss(
+        cost_base = cost_loss(
             y_true,
             y_pred_baseline,
             tp_cost=tp_cost,
@@ -777,7 +789,7 @@ def make_objective_aec(
     tn_cost: Union[ArrayLike, float] = 0.0,
     fn_cost: Union[ArrayLike, float] = 0.0,
     fp_cost: Union[ArrayLike, float] = 0.0,
-) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
 
@@ -791,7 +803,7 @@ def make_objective_aec(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit'}
+    model : {'xgboost', 'lightgbm', 'cslogit'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
@@ -847,7 +859,7 @@ def make_objective_aec(
         update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
 
-        def objective(y_pred, train_data):
+        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
             """
             Create an objective function for the AEC measure.
 
@@ -855,7 +867,7 @@ def make_objective_aec(
             ----------
             y_pred : np.ndarray
                 Predicted values.
-            train_data : xgb.DMatrix or np.ndarray
+            train_data : xgboost.DMatrix, lightgbm.Dataset or numpy.ndarray
                 Training data.
 
             Returns
@@ -912,7 +924,7 @@ def _objective_cslogit(
 
 def _objective_boost(
     y_pred: np.ndarray,
-    dtrain: Union[xgb.DMatrix, np.ndarray],
+    dtrain: Matrix,
     tp_cost: float = 0.0,
     tn_cost: float = 0.0,
     fn_cost: float = 0.0,
@@ -925,7 +937,7 @@ def _objective_boost(
     ----------
     y_pred : np.ndarray
         Predicted values.
-    dtrain : xgb.DMatrix or np.ndarray
+    dtrain : xgboost.DMatrix, lightgbm.Dataset or numpy.ndarray
         Training data.
 
     Returns
@@ -939,10 +951,10 @@ def _objective_boost(
 
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
-    elif isinstance(dtrain, xgb.DMatrix):
+    elif hasattr(dtrain, 'get_label'):
         y_true = dtrain.get_label()
     else:
-        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
+        raise TypeError(f'Expected dtrain to be of type numpy.ndarray or xgboost.DMatrix, got {type(dtrain)} instead.')
 
     y_pred = expit(y_pred)
     cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)

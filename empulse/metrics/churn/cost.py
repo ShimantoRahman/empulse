@@ -1,9 +1,26 @@
 from functools import partial, update_wrapper
-from typing import Callable, Literal, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union
 
 import numpy as np
-import xgboost as xgb
 from numpy.typing import ArrayLike
+
+if TYPE_CHECKING:
+    try:
+        from xgboost import DMatrix
+    except ImportError:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=np.ndarray)
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
+    else:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
 
 from empulse.metrics.churn._validation import _validate_input_mpc
 
@@ -15,9 +32,9 @@ def make_objective_churn(
     clv: Union[float, ArrayLike] = 200,
     incentive_fraction: Union[float, ArrayLike] = 0.05,
     contact_cost: float = 15,
-) -> Callable[[np.ndarray, xgb.DMatrix], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
     """
-    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` for customer churn.
+    Create an objective function for the Expected Cost measure for customer churn.
 
     The objective function presumes a situation where identified churners are
     contacted and offered an incentive to remain customers.
@@ -31,6 +48,12 @@ def make_objective_churn(
 
     Parameters
     ----------
+    model : {'xgboost', 'lightgbm'}
+        The model for which the objective function is created.
+
+        - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
+        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
@@ -50,6 +73,17 @@ def make_objective_churn(
     -------
     objective : Callable
         A custom objective function for :class:`xgboost:xgboost.XGBClassifier`.
+
+    Examples
+    --------
+
+    .. code-block::  python
+
+        from xgboost import XGBClassifier
+        from empulse.metrics import make_objective_churn
+
+        objective = make_objective_churn(model='xgboost')
+        clf = XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
 
     Notes
     -----
@@ -78,7 +112,7 @@ def make_objective_churn(
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
 
-        def objective(y_pred, train_data):
+        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
             """
             Create an objective function for the churn AEC measure.
 
@@ -112,7 +146,7 @@ def make_objective_churn(
 
 def _objective(
     y_pred: np.ndarray,
-    dtrain: Union[xgb.DMatrix, np.ndarray],
+    dtrain: Matrix,
     accept_rate: float = 0.3,
     clv: Union[float, ArrayLike] = 200,
     incentive_fraction: Union[float, ArrayLike] = 0.05,
@@ -139,7 +173,7 @@ def _objective(
 
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
-    elif isinstance(dtrain, xgb.DMatrix):
+    elif hasattr(dtrain, 'get_label'):
         y_true = dtrain.get_label()
     else:
         raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')

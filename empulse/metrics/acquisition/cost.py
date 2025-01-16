@@ -1,23 +1,42 @@
 from functools import partial, update_wrapper
-from typing import Callable, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar
 
 import numpy as np
-import xgboost as xgb
 from numpy.typing import ArrayLike
+
+if TYPE_CHECKING:
+    try:
+        from xgboost import DMatrix
+    except ImportError:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=np.ndarray)
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
+    else:
+        try:
+            from lightgbm import Dataset
+        except ImportError:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
+        else:
+            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
+
 
 from empulse.metrics.acquisition._validation import _validate_input_deterministic
 
 
 def make_objective_acquisition(
+    model: Literal['xgboost', 'lightgbm'] = 'xgboost',
     *,
     contribution: float = 7_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> Callable[[np.ndarray, Union[xgb.DMatrix, np.ndarray]], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
     """
-    Create an objective function for the :class:`xgboost:xgboost.XGBClassifier` customer acquisition.
+    Create an objective function for the Expected Cost measure for customer acquisition.
 
     The objective function presumes a situation where leads are targeted either directly or indirectly.
     Directly targeted leads are contacted and handled by the internal sales team.
@@ -29,6 +48,12 @@ def make_objective_acquisition(
 
     Parameters
     ----------
+    model : {'xgboost', 'lightgbm'}
+        The model for which the objective function is created.
+
+        - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
+        - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+
     contribution : float, default=7000
         Average contribution of a new customer (``contribution ≥ 0``).
 
@@ -57,15 +82,14 @@ def make_objective_acquisition(
 
     Examples
     --------
+
     .. code-block::  python
 
-        import xgboost as xgb
+        from xgboost import XGBClassifier
         from empulse.metrics import make_objective_acquisition
 
-        objective = make_objective_acquisition()
-        clf = xgb.XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict(X_test)
+        objective = make_objective_acquisition(model='xgboost')
+        clf = XGBClassifier(objective=objective, n_estimators=100, max_depth=3)
 
     References
     ----------
@@ -73,22 +97,54 @@ def make_objective_acquisition(
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
     """
+    if model == 'xgboost':
+        objective = partial(
+            _objective,
+            contribution=contribution,
+            contact_cost=contact_cost,
+            sales_cost=sales_cost,
+            direct_selling=direct_selling,
+            commission=commission,
+        )
+        update_wrapper(objective, _objective)
+    elif model == 'lightgbm':
 
-    objective = partial(
-        _objective,
-        contribution=contribution,
-        contact_cost=contact_cost,
-        sales_cost=sales_cost,
-        direct_selling=direct_selling,
-        commission=commission,
-    )
-    update_wrapper(objective, _objective)
+        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
+            """
+            Create an objective function for the churn AEC measure.
+
+            Parameters
+            ----------
+            y_pred : np.ndarray
+                Predicted values.
+            train_data : xgb.DMatrix or np.ndarray
+                Training data.
+
+            Returns
+            -------
+            gradient  : np.ndarray
+                Gradient of the objective function.
+
+            hessian : np.ndarray
+                Hessian of the objective function.
+            """
+            return _objective(
+                y_pred,
+                train_data,
+                contribution=contribution,
+                contact_cost=contact_cost,
+                sales_cost=sales_cost,
+                direct_selling=direct_selling,
+                commission=commission,
+            )
+    else:
+        raise ValueError(f"Expected model to be 'xgboost' or 'lightgbm', got {model} instead.")
     return objective
 
 
 def _objective(
     y_pred: np.ndarray,
-    dtrain: Union[xgb.DMatrix, np.ndarray],
+    dtrain: Matrix,
     contribution: float = 7_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
@@ -116,7 +172,7 @@ def _objective(
 
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
-    elif isinstance(dtrain, xgb.DMatrix):
+    elif hasattr(dtrain, 'get_label'):
         y_true = dtrain.get_label()
     else:
         raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
