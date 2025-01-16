@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "empulse.__init__.__version__"}
+version = {attr = "empulse.__version__"}
 
 [project.urls]
 documentation = "https://empulse.readthedocs.io/en/stable/"
