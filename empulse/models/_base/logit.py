@@ -61,8 +61,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         return self._fit(X, y, **fit_params)
 
     @abstractmethod
-    def _fit(self, X, y, **fit_params):
-        ...
+    def _fit(self, X, y, **fit_params): ...
 
     def predict_proba(self, X: ArrayLike) -> np.ndarray:
         """

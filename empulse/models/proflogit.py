@@ -183,7 +183,7 @@ def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercep
     logits = np.dot(X, weights)
     y_pred = expit(logits)  # Invert logit transformation
     loss = loss_fn(y, y_pred)
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
+    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return loss - penalty
 

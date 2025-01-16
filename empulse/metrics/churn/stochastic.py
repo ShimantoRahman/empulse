@@ -291,7 +291,7 @@ def empc(
     empc = (N * gamma_cdf_1_diff - M * gamma_cdf_diff).sum()
 
     customer_threshold = (
-            gamma_cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
+        gamma_cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
     ).sum()
 
     return empc, customer_threshold

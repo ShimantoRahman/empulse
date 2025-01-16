@@ -38,8 +38,8 @@ class CostSensitiveMixin:
             fp_cost = self.fp_cost
 
         if (
-                all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost))
-                and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0
+            all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost))
+            and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0
         ):
             warnings.warn(
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '

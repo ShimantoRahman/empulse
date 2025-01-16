@@ -437,7 +437,7 @@ def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
 
     loss, gradient = loss_fn(X, weights, y)
     # loss, gradient = loss_fn(expit(np.dot(weights, X.T)))
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
+    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     gradient_penalty = (1 - l1_ratio) * b + l1_ratio * np.sign(b)
     if fit_intercept:
@@ -479,7 +479,7 @@ def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
 
 
 def _compute_penalty(b, C, l1_ratio):
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b ** 2) + l1_ratio * np.sum(np.abs(b))
+    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return penalty
 

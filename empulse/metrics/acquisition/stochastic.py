@@ -265,7 +265,7 @@ def empa(
     expected_profit = (alpha / beta) * (cdf_1_coef * cdf_1_diff).sum(axis=0) + (cdf_coef * cdf_diff).sum(axis=0)
 
     threshold = (
-            cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
+        cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)
     ).sum()
 
     return expected_profit.sum(), threshold

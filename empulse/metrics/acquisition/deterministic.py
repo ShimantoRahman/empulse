@@ -237,7 +237,7 @@ def _compute_cost_benefits(
     commission: float,
 ) -> np.ndarray:
     true_positive_benefit = direct_selling * (contribution - contact_cost - sales_cost) + (1 - direct_selling) * (
-            (1 - commission) * contribution - contact_cost
+        (1 - commission) * contribution - contact_cost
     )
     false_positive_cost = -contact_cost
     return np.array([true_positive_benefit, false_positive_cost])

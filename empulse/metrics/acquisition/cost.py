@@ -123,12 +123,12 @@ def _objective(
 
     y_pred = 1 / (1 + np.exp(-y_pred))
     cost = (
-            y_true
-            * (
-                    direct_selling * (contact_cost + sales_cost - contribution)
-                    + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
-            )
-            + (1 - y_true) * contact_cost
+        y_true
+        * (
+            direct_selling * (contact_cost + sales_cost - contribution)
+            + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
+        )
+        + (1 - y_true) * contact_cost
     )
     gradient = y_pred * (1 - y_pred) * cost
     hessian = np.abs((1 - 2 * y_pred) * gradient)
@@ -209,13 +209,13 @@ def expected_cost_loss_acquisition(
         y_proba = np.asarray(y_proba)
 
     costs = (
-            y_true
-            * y_proba
-            * (
-                    direct_selling * (sales_cost + contact_cost - contribution)
-                    + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
-            )
-            + (1 - y_true) * y_proba * contact_cost
+        y_true
+        * y_proba
+        * (
+            direct_selling * (sales_cost + contact_cost - contribution)
+            + (1 - direct_selling) * (contact_cost - (1 - commission) * contribution)
+        )
+        + (1 - y_true) * y_proba * contact_cost
     )
     if normalize:
         return costs.mean()

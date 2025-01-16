@@ -69,7 +69,7 @@ def _compute_expected_cost(
     fp_cost: Union[NDArray, float] = 0.0,
 ) -> NDArray:
     return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) + (1 - y_true) * (
-            y_pred * fp_cost + (1 - y_pred) * tn_cost
+        y_pred * fp_cost + (1 - y_pred) * tn_cost
     )
 
 
@@ -87,7 +87,7 @@ def _compute_log_expected_cost(
     log_y_pred = np.log(y_pred)
     log_inv_y_pred = np.log(inverse_y_pred)
     return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) + (1 - y_true) * (
-            log_y_pred * fp_cost + log_inv_y_pred * tn_cost
+        log_y_pred * fp_cost + log_inv_y_pred * tn_cost
     )
 
 

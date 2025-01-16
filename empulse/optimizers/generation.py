@@ -180,11 +180,8 @@ class Generation:
         # Check bounds
         bounds = list(bounds)
         if not all(
-                isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], (int, float)) and isinstance(
-                    t[1],
-                    (int, float)
-                    )
-                for t in bounds
+            isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], (int, float)) and isinstance(t[1], (int, float))
+            for t in bounds
         ):
             raise ValueError('`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).')
         array_bounds = np.asarray(bounds, dtype=np.float64).T
@@ -333,9 +330,9 @@ class Generation:
     def _update_elite_pool(self):
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
-            elite_ix = [t[0] for t in sorted_fx][-self.elitism:]
+            elite_ix = [t[0] for t in sorted_fx][-self.elitism :]
         else:
-            elite_ix = np.argsort(self.fitness)[-self.elitism:]  # TODO: replace with argpartition
+            elite_ix = np.argsort(self.fitness)[-self.elitism :]  # TODO: replace with argpartition
             # elite_ix = np.argpartition(self.fitness, -self.elitism)[-self.elitism:]
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution

@@ -430,13 +430,13 @@ def check_samplers_one_label(name, fit_params, sampler_orig):
         sampler.fit_resample(X, y, **fit_params)
     except ValueError as e:
         if 'class' not in repr(e):
-            print(error_string_fit, sampler.__class__.__name__, e)
+            print(error_string_fit, sampler.__class__.__name__, e)  # noqa: T201
             traceback.print_exc(file=sys.stdout)
             raise e
         else:
             return
     except Exception as exc:
-        print(error_string_fit, traceback, exc)
+        print(error_string_fit, traceback, exc)  # noqa: T201
         traceback.print_exc(file=sys.stdout)
         raise exc
     raise AssertionError(error_string_fit)

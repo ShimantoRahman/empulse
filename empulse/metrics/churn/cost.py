@@ -147,7 +147,7 @@ def _objective(
 
     incentive_cost = incentive_fraction * clv
     profits = (
-            contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
+        contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
     gradient = y_pred * (1 - y_pred) * profits
     hessian = np.abs((1 - 2 * y_pred) * gradient)
@@ -257,7 +257,7 @@ def expected_cost_loss_churn(
 
     incentive_cost = incentive_fraction * clv
     profits = y_proba * (
-            contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
+        contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
     if normalize:
         return profits.mean()
