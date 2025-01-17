@@ -3,8 +3,8 @@
 
 - |Feature| Add support for LightGBM models in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier`
-- |API| :func:`~empulse.metrics.make_objective_churn` now takes a ``model`` argument to calculate the churn objective
-  for either XGBoost or LightGBM models.
+- |API| :func:`~empulse.metrics.make_objective_churn` and :func:`~empulse.metrics.make_objective_acquisition`
+  now take a ``model`` argument to calculate the objective for either XGBoost or LightGBM models.
 - |API| XGBoost is now an optional dependency together with LightGBM. To install the package with
   XGBoost and LightGBM support, use the following command: ``pip install empulse[optional]``
 - |Feature| Add parameter validation for all models and samplers
