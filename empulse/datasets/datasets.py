@@ -55,15 +55,15 @@ class Dataset(Generic[Frame, Series]):
 def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[True],
-    return_X_y_costs: Literal[False],
+    return_X_y_costs: Literal[False] = False,
 ) -> Dataset[pd.DataFrame, pd.Series]: ...
 
 
 @overload
 def load_churn_tv_subscriptions(
     *,
-    as_frame: Literal[False],
-    return_X_y_costs: Literal[False],
+    as_frame: Literal[False] = False,
+    return_X_y_costs: Literal[False] = False,
 ) -> Dataset[NDArray, NDArray]: ...
 
 
@@ -78,7 +78,7 @@ def load_churn_tv_subscriptions(
 @overload
 def load_churn_tv_subscriptions(
     *,
-    as_frame: Literal[False],
+    as_frame: Literal[False] = False,
     return_X_y_costs: Literal[True],
 ) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
 
@@ -199,7 +199,7 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
 def load_upsell_bank_telemarketing(
     *,
     as_frame: Literal[True],
-    return_X_y_costs: Literal[False],
+    return_X_y_costs: Literal[False] = False,
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
@@ -209,8 +209,8 @@ def load_upsell_bank_telemarketing(
 @overload
 def load_upsell_bank_telemarketing(
     *,
-    as_frame: Literal[False],
-    return_X_y_costs: Literal[False],
+    as_frame: Literal[False] = False,
+    return_X_y_costs: Literal[False] = False,
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
@@ -231,7 +231,7 @@ def load_upsell_bank_telemarketing(
 @overload
 def load_upsell_bank_telemarketing(
     *,
-    as_frame: Literal[False],
+    as_frame: Literal[False] = False,
     return_X_y_costs: Literal[True],
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
@@ -451,7 +451,7 @@ def load_upsell_bank_telemarketing(
 def load_give_me_some_credit(
     *,
     as_frame: Literal[True],
-    return_X_y_costs: Literal[False],
+    return_X_y_costs: Literal[False] = False,
     interest_rate: float = 0.0479,
     fund_cost: float = 0.0294,
     max_credit_line: float = 25000,
@@ -464,8 +464,8 @@ def load_give_me_some_credit(
 @overload
 def load_give_me_some_credit(
     *,
-    as_frame: Literal[False],
-    return_X_y_costs: Literal[False],
+    as_frame: Literal[False] = False,
+    return_X_y_costs: Literal[False] = False,
     interest_rate: float = 0.0479,
     fund_cost: float = 0.0294,
     max_credit_line: float = 25000,
@@ -492,7 +492,7 @@ def load_give_me_some_credit(
 @overload
 def load_give_me_some_credit(
     *,
-    as_frame: Literal[False],
+    as_frame: Literal[False] = False,
     return_X_y_costs: Literal[True],
     interest_rate: float = 0.0479,
     fund_cost: float = 0.0294,
@@ -729,8 +729,8 @@ def load_credit_scoring_pakdd(
 @overload
 def load_credit_scoring_pakdd(
     *,
-    as_frame: Literal[False],
-    return_X_y_costs: Literal[False],
+    as_frame: Literal[False] = False,
+    return_X_y_costs: Literal[False] = False,
     interest_rate: float = 0.0479,
     fund_cost: float = 0.0294,
     max_credit_line: float = 25000,
@@ -757,7 +757,7 @@ def load_credit_scoring_pakdd(
 @overload
 def load_credit_scoring_pakdd(
     *,
-    as_frame: Literal[False],
+    as_frame: Literal[False] = False,
     return_X_y_costs: Literal[True],
     interest_rate: float = 0.0479,
     fund_cost: float = 0.0294,
