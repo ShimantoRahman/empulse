@@ -21,6 +21,8 @@ if TYPE_CHECKING:
             Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
         else:
             Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
+else:
+    Matrix = TypeVar('Matrix', bound=np.ndarray)
 
 from empulse.metrics.churn._validation import _validate_input_mpc
 

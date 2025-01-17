@@ -23,6 +23,8 @@ if TYPE_CHECKING:
             Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
         else:
             Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
+else:
+    Matrix = TypeVar('Matrix', bound=np.ndarray)
 
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
