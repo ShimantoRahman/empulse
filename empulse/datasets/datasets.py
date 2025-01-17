@@ -631,7 +631,9 @@ def load_give_me_some_credit(
 
     pi_1 = target.mean()
     # cost_mat[FP,FN,TP,TN]
-    cost_mat = _creditscoring_costmat(data['MonthlyIncome'].to_numpy(), data['DebtRatio'].to_numpy(), pi_1, cost_mat_parameters)
+    cost_mat = _creditscoring_costmat(
+        data['MonthlyIncome'].to_numpy(), data['DebtRatio'].to_numpy(), pi_1, cost_mat_parameters
+    )
 
     # unroll into separate costs
     fp_cost = cost_mat[:, 0]
