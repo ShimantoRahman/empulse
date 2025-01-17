@@ -17,6 +17,9 @@ test:
 doctest:
 	pytest --doctest-modules empulse/
 
+tox:
+	tox -p
+
 # Content from the docs directory Makefile
 # You can set these variables from the command line, and also
 # from the environment for the first two.
