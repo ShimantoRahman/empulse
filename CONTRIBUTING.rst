@@ -56,24 +56,28 @@ Then, the workflow would look as follows:
 
     $ pip install -e ".[dev]"
 
+5. Install pre-commit hooks that will check your commits::
 
-5. Create a new branch from ``main``::
+    $ pre-commit install --install-hooks
+
+6. Create a new branch from ``main``::
 
     $ git checkout main
     $ git branch fix_bug
     $ git checkout fix_bug
 
-6. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
-7. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
+7. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
+8. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
 
-    $ tox -e tests
+    $ tox
 
-8. Remember to update documentation if required.
-9. If your development modifies `Empulse` behavior, update the ``CHANGELOG.rst`` file with what you improved.
-10. ``add`` and ``commit`` your changes, then ``push`` your local project::
+9. Remember to update documentation if required.
+10. If your development modifies `Empulse` behavior, update the ``CHANGELOG.rst`` file with what you improved.
+11. ``add`` and ``commit`` your changes, then ``push`` your local project::
 
     $ git add .
     $ git commit -m 'Add succinct explanation of what changed'
     $ git push origin fix_bug
 
-11. Finally, `open a pull request`_ before getting it merged!
+12. If previous step failed due to the pre-commit hooks, fix reported errors and try again.
+13. Finally, `open a pull request`_ before getting it merged!
