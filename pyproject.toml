@@ -76,6 +76,7 @@ dev = [
     "empulse[test,docs]",
     "twine>=4.0.2",
     "ruff>=0.9.2",
+    "pre-commit>=4.0.1",
 ]
 
 [tool.setuptools.packages.find]
