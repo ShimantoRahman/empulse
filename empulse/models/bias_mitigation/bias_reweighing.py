@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Callable, Optional, Union
+from typing import Callable, ClassVar, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -169,7 +169,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    strategy_mapping: dict[str, StrategyFn] = {
+    strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_sample_weights,
         'demographic parity': _independent_sample_weights,
     }
@@ -224,10 +224,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
             return self
         sensitive_feature = np.asarray(sensitive_feature)
 
-        if isinstance(self.strategy, str):
-            strategy_fn = self.strategy_mapping[self.strategy]
-        else:
-            strategy_fn = self.strategy
+        strategy_fn = self.strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
 
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)

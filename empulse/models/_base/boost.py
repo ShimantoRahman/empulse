@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 import numpy as np
 from scipy.special import expit
@@ -37,7 +38,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
     The subclasses should implement the `fit` method to fit the base estimator with instance-specific costs.
     """
 
-    _parameter_constraints: dict = {
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
     }
 

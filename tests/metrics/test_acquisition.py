@@ -1,6 +1,6 @@
 import random
 from functools import partial
-from typing import Generator
+from typing import ClassVar, Generator
 
 from empulse.metrics import empa, expected_cost_loss_acquisition, mpa
 
@@ -8,7 +8,7 @@ from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 
 class TestEMPA(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'alpha': 10},
         {'beta': 0.02},
@@ -25,7 +25,7 @@ class TestEMPA(BaseTestMetric.TestMetric):
             'commission': 0.2,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (3725.0000000021705, 0.5),
         'incorrect_prediction': (3700.0, 1.0),
         'half_correct_prediction': (3700.0, 1.0),
@@ -65,7 +65,7 @@ class TestEMPA(BaseTestMetric.TestMetric):
 
 
 class TestMPA(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'contribution': 2_000},
         {'contact_cost': 100},
@@ -80,7 +80,7 @@ class TestMPA(BaseTestMetric.TestMetric):
             'commission': 0.2,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (3725.0, 0.5),
         'incorrect_prediction': (3700.0, 1.0),
         'half_correct_prediction': (3700.0, 1.0),
@@ -147,7 +147,7 @@ class TestRelationAcquisitionMetrics(BaseTestRelationMetrics.TestRelationshipMet
 
 
 class TestMPAScore(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'contribution': 2_000},
         {'contact_cost': 100},
@@ -162,7 +162,7 @@ class TestMPAScore(BaseTestMetric.TestMetric):
             'commission': 0.2,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': -3225.0,
         'incorrect_prediction': 25.0,
         'different_parameters': [

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from numbers import Real
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,7 +12,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 
 class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
-    _parameter_constraints: dict = {
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
         'soft_threshold': ['boolean'],
@@ -27,9 +27,9 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         fit_intercept: bool = True,
         soft_threshold: bool = True,
         l1_ratio: float = 1.0,
-        loss: Union[str | Callable] = None,
-        optimize_fn: Optional[Callable] = None,
-        optimizer_params: Optional[dict[str, Any]] = None,
+        loss: str | Callable | None = None,
+        optimize_fn: Callable | None = None,
+        optimizer_params: dict[str, Any] | None = None,
     ):
         self.C = C
         self.fit_intercept = fit_intercept

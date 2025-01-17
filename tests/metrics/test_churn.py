@@ -1,7 +1,7 @@
 import random
 import unittest
 from functools import partial
-from typing import Generator
+from typing import ClassVar, Generator
 
 import numpy as np
 import pytest
@@ -13,7 +13,7 @@ from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 
 class TestEMPC(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'alpha': 2},
         {'beta': 5},
@@ -28,7 +28,7 @@ class TestEMPC(BaseTestMetric.TestMetric):
             'contact_cost': 25,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (28.0000000000391, 0.499999999728095),
         'incorrect_prediction': (22.5007912244511, 0.9991601018889205),
         'half_correct_prediction': (22.5007912244511, 0.9991601018889205),
@@ -63,7 +63,7 @@ class TestEMPC(BaseTestMetric.TestMetric):
 
 
 class TestMPC(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'accept_rate': 0.2},
         {'clv': 50},
@@ -76,7 +76,7 @@ class TestMPC(BaseTestMetric.TestMetric):
             'contact_cost': 25,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (28.0, 0.5),
         'incorrect_prediction': (22.5, 1.0),
         'half_correct_prediction': (22.5, 1.0),
@@ -144,7 +144,7 @@ class TestRelationChurnMetrics(BaseTestRelationMetrics.TestRelationshipMetrics):
 
 
 class TestMPCScore(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'accept_rate': 0.2},
         {'clv': 50},
@@ -158,7 +158,7 @@ class TestMPCScore(BaseTestMetric.TestMetric):
         },
         {'clv': np.arange(221)},  # array-like clv
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': -28.0,
         'incorrect_prediction': 5.5,
         'different_parameters': [
@@ -201,7 +201,7 @@ class TestMPCScore(BaseTestMetric.TestMetric):
 
 
 class TestEMPB(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'alpha': 2},
         {'beta': 5},
@@ -214,7 +214,7 @@ class TestEMPB(BaseTestMetric.TestMetric):
             'contact_cost': 25,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (525.0, 0.5),
         'incorrect_prediction': (325.0, 1.0),
         'different_parameters': [
@@ -773,7 +773,7 @@ class TestEMPB(BaseTestMetric.TestMetric):
 
 
 class TestAUEPC(unittest.TestCase):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'alpha': 2},
         {'beta': 5},
@@ -786,7 +786,7 @@ class TestAUEPC(unittest.TestCase):
             'contact_cost': 25,
         },
     ]
-    expected_values_normalized = {
+    expected_values_normalized: ClassVar[dict] = {
         'perfect_prediction': 1,
         'incorrect_prediction': -0.07459262529519728,
         'different_parameters': [
@@ -798,7 +798,7 @@ class TestAUEPC(unittest.TestCase):
             0.6811263188760222,
         ],
     }
-    expected_values_unnormalized = {
+    expected_values_unnormalized: ClassVar[dict] = {
         'perfect_prediction': 1,
         'incorrect_prediction': -0.07459262529519728,
         'different_parameters': [

@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Optional
+from typing import ClassVar, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -175,7 +175,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: dict = {
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         **BaseBoostClassifier._parameter_constraints,
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],

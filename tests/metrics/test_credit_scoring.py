@@ -1,10 +1,12 @@
+from typing import ClassVar
+
 from empulse.metrics import empcs, mpcs
 
 from .test_metrics import BaseTestMetric
 
 
 class TestEMPCS(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'success_rate': 0.7},
         {'default_rate': 0.01},
@@ -15,7 +17,7 @@ class TestEMPCS(BaseTestMetric.TestMetric):
             'roi': 0.7,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (0.1375, 0.225),
         'incorrect_prediction': (0.08412689400000001, 0.35746),
         'half_correct_prediction': (0.08412689400000001, 0.35746),
@@ -46,7 +48,7 @@ class TestEMPCS(BaseTestMetric.TestMetric):
 
 
 class TestMPCS(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'loan_lost_rate': 0.7},
         {'roi': 0.1},
@@ -55,7 +57,7 @@ class TestMPCS(BaseTestMetric.TestMetric):
             'roi': 0.7,
         },
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': (0.1375, 0.5),
         'incorrect_prediction': (0.005299999999999999, 1.0),
         'half_correct_prediction': (0.005299999999999999, 1.0),

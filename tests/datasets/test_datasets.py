@@ -24,34 +24,34 @@ def test_dataset_loading(loader, as_frame, return_X_y_costs):
             data, target, tp_cost, fp_cost, tn_cost, fn_cost = result
             assert isinstance(data, pd.DataFrame)
             assert isinstance(target, pd.Series)
-            assert isinstance(tp_cost, pd.Series) or isinstance(tp_cost, (int, float))
-            assert isinstance(fp_cost, pd.Series) or isinstance(fp_cost, (int, float))
-            assert isinstance(tn_cost, pd.Series) or isinstance(tn_cost, (int, float))
-            assert isinstance(fn_cost, pd.Series) or isinstance(fn_cost, (int, float))
+            assert isinstance(tp_cost, pd.Series | int | float)
+            assert isinstance(fp_cost, pd.Series | int | float)
+            assert isinstance(tn_cost, pd.Series | int | float)
+            assert isinstance(fn_cost, pd.Series | int | float)
         else:
             data, target, tp_cost, fp_cost, tn_cost, fn_cost = result
             assert isinstance(data, np.ndarray)
             assert isinstance(target, np.ndarray)
-            assert isinstance(tp_cost, np.ndarray) or isinstance(tp_cost, (int, float))
-            assert isinstance(fp_cost, np.ndarray) or isinstance(fp_cost, (int, float))
-            assert isinstance(tn_cost, np.ndarray) or isinstance(tn_cost, (int, float))
-            assert isinstance(fn_cost, np.ndarray) or isinstance(fn_cost, (int, float))
+            assert isinstance(tp_cost, np.ndarray | int | float)
+            assert isinstance(fp_cost, np.ndarray | int | float)
+            assert isinstance(tn_cost, np.ndarray | int | float)
+            assert isinstance(fn_cost, np.ndarray | int | float)
     else:
         dataset = result
         if as_frame:
             assert isinstance(dataset.data, pd.DataFrame)
             assert isinstance(dataset.target, pd.Series)
-            assert isinstance(dataset.tp_cost, pd.Series) or isinstance(dataset.tp_cost, (int, float))
-            assert isinstance(dataset.fp_cost, pd.Series) or isinstance(dataset.fp_cost, (int, float))
-            assert isinstance(dataset.tn_cost, pd.Series) or isinstance(dataset.tn_cost, (int, float))
-            assert isinstance(dataset.fn_cost, pd.Series) or isinstance(dataset.fn_cost, (int, float))
+            assert isinstance(dataset.tp_cost, pd.Series | int | float)
+            assert isinstance(dataset.fp_cost, pd.Series | int | float)
+            assert isinstance(dataset.tn_cost, pd.Series | int | float)
+            assert isinstance(dataset.fn_cost, pd.Series | int | float)
         else:
             assert isinstance(dataset.data, np.ndarray)
             assert isinstance(dataset.target, np.ndarray)
-            assert isinstance(dataset.tp_cost, np.ndarray) or isinstance(dataset.tp_cost, (int, float))
-            assert isinstance(dataset.fp_cost, np.ndarray) or isinstance(dataset.fp_cost, (int, float))
-            assert isinstance(dataset.tn_cost, np.ndarray) or isinstance(dataset.tn_cost, (int, float))
-            assert isinstance(dataset.fn_cost, np.ndarray) or isinstance(dataset.fn_cost, (int, float))
+            assert isinstance(dataset.tp_cost, np.ndarray | int | float)
+            assert isinstance(dataset.fp_cost, np.ndarray | int | float)
+            assert isinstance(dataset.tn_cost, np.ndarray | int | float)
+            assert isinstance(dataset.fn_cost, np.ndarray | int | float)
 
     # Check dimensions
     if return_X_y_costs:

@@ -320,8 +320,7 @@ class Generation:
             sorted_fx = self._get_sorted_non_nan_ix()
             worst_ix = [t[0] for t in sorted_fx][: self.elitism]
         else:
-            worst_ix = np.argsort(self.fitness)[: self.elitism]  # TODO: replace with argpartition
-            # worst_ix = np.argpartition(self.fitness, self.elitism)[: self.elitism]
+            worst_ix = np.argsort(self.fitness)[: self.elitism]
         for i, ix in enumerate(worst_ix):
             elite, fitness_elite = self.elite_pool[i]
             self.population[ix] = elite
@@ -332,8 +331,7 @@ class Generation:
             sorted_fx = self._get_sorted_non_nan_ix()
             elite_ix = [t[0] for t in sorted_fx][-self.elitism :]
         else:
-            elite_ix = np.argsort(self.fitness)[-self.elitism :]  # TODO: replace with argpartition
-            # elite_ix = np.argpartition(self.fitness, -self.elitism)[-self.elitism:]
+            elite_ix = np.argsort(self.fitness)[-self.elitism :]
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])

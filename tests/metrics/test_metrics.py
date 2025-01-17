@@ -1,7 +1,7 @@
 import random
 import unittest
 from itertools import islice
-from typing import Generator
+from typing import ClassVar, Generator
 
 import numpy as np
 
@@ -10,8 +10,8 @@ import numpy as np
 class BaseTestMetric:
     class TestMetric(unittest.TestCase):
         path_predictions = 'tests/data/predictions.dat'
-        parameters = {}
-        expected_values = {}
+        parameters: ClassVar[dict] = {}
+        expected_values: ClassVar[dict] = {}
 
         @property
         def metric(self):
@@ -580,7 +580,7 @@ class BaseTestRelationMetrics:
                 if n_positive_class == 0:
                     n_positive_class = 1
                 n_negative_class = N_SAMPLES - n_positive_class
-                random_param = lambda x: random.random() * x  # noqa E731
+                random_param = lambda x: random.random() * x
                 positive_class_predictions = np.random.beta(random_param(20), random_param(20), n_positive_class)
                 negative_class_predictions = np.random.beta(random_param(20), random_param(20), n_negative_class)
                 predictions = np.concatenate([positive_class_predictions, negative_class_predictions])
@@ -591,11 +591,9 @@ class BaseTestRelationMetrics:
 
         def generate_parameters(self) -> Generator[dict, None, None]:
             """Generates parameters for the metric."""
-            ...
 
         def to_deterministic_params(self, params: dict) -> dict:
             """Converts the parameters to deterministic values."""
-            ...
 
         def test_deterministic_metric_lower_bound(self):
             """Test whether the deterministic metric is lower or equal than the stochastic metric."""

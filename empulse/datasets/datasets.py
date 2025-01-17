@@ -164,7 +164,8 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
     raw_data = pd.read_csv(
         join(module_path, 'data', 'churn_tv_subscriptions.csv.gz'), delimiter=',', compression='gzip'
     )
-    description = open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst')).read()
+    with open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst')) as f:
+        description = f.read()
     data = raw_data.iloc[:, 1:-5]
 
     if return_X_y_costs:
@@ -172,22 +173,22 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
             return data, raw_data.target, raw_data['C_TP'], raw_data['C_FP'], raw_data['C_TN'], raw_data['C_FN']
         else:
             return (
-                data.values,
-                raw_data.target.values.astype(np.int8),
-                raw_data['C_TP'].values,
-                raw_data['C_FP'].values,
-                raw_data['C_TN'].values,
-                raw_data['C_FN'].values,
+                data.to_numpy(),
+                raw_data.target.to_numpy().astype(np.int8),
+                raw_data['C_TP'].to_numpy(),
+                raw_data['C_FP'].to_numpy(),
+                raw_data['C_TN'].to_numpy(),
+                raw_data['C_FN'].to_numpy(),
             )
     else:
         return Dataset(
-            data=data.values if not as_frame else data,
-            target=raw_data.target.values.astype(np.int8) if not as_frame else raw_data['target'],
-            tp_cost=raw_data.C_TP.values if not as_frame else raw_data['C_TP'],
-            fp_cost=raw_data.C_FP.values if not as_frame else raw_data['C_FP'],
-            tn_cost=raw_data.C_TN.values if not as_frame else raw_data['C_TN'],
-            fn_cost=raw_data.C_FN.values if not as_frame else raw_data['C_FN'],
-            feature_names=data.columns.values if not as_frame else data.columns,
+            data=data.to_numpy() if not as_frame else data,
+            target=raw_data.target.to_numpy().astype(np.int8) if not as_frame else raw_data['target'],
+            tp_cost=raw_data.C_TP.to_numpy() if not as_frame else raw_data['C_TP'],
+            fp_cost=raw_data.C_FP.to_numpy() if not as_frame else raw_data['C_FP'],
+            tn_cost=raw_data.C_TN.to_numpy() if not as_frame else raw_data['C_TN'],
+            fn_cost=raw_data.C_FN.to_numpy() if not as_frame else raw_data['C_FN'],
+            feature_names=data.columns.to_numpy() if not as_frame else data.columns,
             target_names=np.array(['no churn', 'churn']) if not as_frame else pd.Series(['no churn', 'churn']),
             name='Churn TV subscriptions',
             DESCR=description,
@@ -350,7 +351,8 @@ def load_upsell_bank_telemarketing(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'bankmarketing.csv.gz'), delimiter=';', compression='gzip')
-    description = open(join(module_path, 'descriptions', 'bankmarketing.rst')).read()
+    with open(join(module_path, 'descriptions', 'bankmarketing.rst')) as f:
+        description = f.read()
 
     # only use features pre-contact:
     # 1 - age (numeric)
@@ -379,13 +381,13 @@ def load_upsell_bank_telemarketing(
 
     # Filter if balance>0
     raw_data = raw_data.loc[raw_data['balance'] > 0]
-    target = (raw_data.y.values == 'yes').astype(np.int8)  # type: ignore
+    target = (raw_data.y.to_numpy() == 'yes').astype(np.int8)  # type: ignore
     data = raw_data[
         ['age', 'balance', 'previous', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'poutcome']
     ]
 
     fp_cost = contact_cost
-    fn_cost = np.maximum(data['balance'].values * interest_rate * term_deposit_fraction, contact_cost)  # type: ignore
+    fn_cost = np.maximum(data['balance'].to_numpy() * interest_rate * term_deposit_fraction, contact_cost)  # type: ignore
     tp_cost = contact_cost
     tn_cost = 0.0
 
@@ -428,17 +430,17 @@ def load_upsell_bank_telemarketing(
                 pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (data.values, target, tp_cost, fp_cost, tn_cost, fn_cost)
+            return (data.to_numpy(), target, tp_cost, fp_cost, tn_cost, fn_cost)
     else:
         target_names = ['no subscription', 'subscription']
         return Dataset(
-            data=data.values if not as_frame else data,
+            data=data.to_numpy() if not as_frame else data,
             target=target if not as_frame else pd.Series(target, name='subscription'),
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
             fn_cost=fn_cost if not as_frame else pd.Series(fn_cost, name='fn_cost'),
-            feature_names=data.columns.values if not as_frame else data.columns,
+            feature_names=data.columns.to_numpy() if not as_frame else data.columns,
             target_names=np.array(target_names) if not as_frame else pd.Series(target_names, name='target'),
             name='Bank Telemarketing',
             DESCR=description,
@@ -605,14 +607,15 @@ def load_give_me_some_credit(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring1.csv.gz'), delimiter=',', compression='gzip')
-    description = open(join(module_path, 'descriptions', 'creditscoring1.rst')).read()
+    with open(join(module_path, 'descriptions', 'creditscoring1.rst')) as f:
+        description = f.read()
 
     # Exclude MonthlyIncome = nan or =0 or DebtRatio >1
     raw_data = raw_data.dropna()
     raw_data = raw_data.loc[(raw_data['MonthlyIncome'] > 0)]
     raw_data = raw_data.loc[(raw_data['DebtRatio'] < 1)]
 
-    target = raw_data['SeriousDlqin2yrs'].values.astype(np.int64)
+    target = raw_data['SeriousDlqin2yrs'].to_numpy().astype(np.int64)
 
     data = raw_data.drop(['SeriousDlqin2yrs', 'id'], axis=1)
 
@@ -628,7 +631,7 @@ def load_give_me_some_credit(
 
     pi_1 = target.mean()
     # cost_mat[FP,FN,TP,TN]
-    cost_mat = _creditscoring_costmat(data['MonthlyIncome'].values, data['DebtRatio'].values, pi_1, cost_mat_parameters)
+    cost_mat = _creditscoring_costmat(data['MonthlyIncome'].to_numpy(), data['DebtRatio'].to_numpy(), pi_1, cost_mat_parameters)
 
     # unroll into separate costs
     fp_cost = cost_mat[:, 0]
@@ -692,17 +695,17 @@ def load_give_me_some_credit(
                 pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (data.values, target, 0.0, fp_cost, 0.0, fn_cost)
+            return (data.to_numpy(), target, 0.0, fp_cost, 0.0, fn_cost)
     else:
         target_names = ['no default', 'default']
         return Dataset(
-            data=data.values if not as_frame else data,
+            data=data.to_numpy() if not as_frame else data,
             target=target if not as_frame else pd.Series(target, name='default'),
             tp_cost=0.0,
             fp_cost=fp_cost if not as_frame else pd.Series(fp_cost, name='fp_cost'),
             tn_cost=0.0,
             fn_cost=fn_cost if not as_frame else pd.Series(fn_cost, name='fn_cost'),
-            feature_names=data.columns.values if not as_frame else data.columns,
+            feature_names=data.columns.to_numpy() if not as_frame else data.columns,
             target_names=np.array(target_names) if not as_frame else pd.Series(target_names, name='target'),
             name='Give Me Some Credit',
             DESCR=description,
@@ -870,16 +873,17 @@ def load_credit_scoring_pakdd(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring2.csv.gz'), delimiter='\t', compression='gzip')
-    description = open(join(module_path, 'descriptions', 'creditscoring2.rst')).read()
+    with open(join(module_path, 'descriptions', 'creditscoring2.rst')) as f:
+        description = f.read()
 
     # Exclude TARGET_LABEL_BAD=1 == 'N'
     raw_data = raw_data.loc[raw_data['TARGET_LABEL_BAD=1'] != 'N']
 
     # Exclude 100<PERSONAL_NET_INCOME<10000
-    raw_data = raw_data.loc[(raw_data['PERSONAL_NET_INCOME'].values.astype(np.float64) > 100)]
-    raw_data = raw_data.loc[(raw_data['PERSONAL_NET_INCOME'].values.astype(np.float64) < 10000)]
+    raw_data = raw_data.loc[(raw_data['PERSONAL_NET_INCOME'].to_numpy().astype(np.float64) > 100)]
+    raw_data = raw_data.loc[(raw_data['PERSONAL_NET_INCOME'].to_numpy().astype(np.float64) < 10000)]
 
-    target = raw_data['TARGET_LABEL_BAD=1'].values.astype(np.int64)
+    target = raw_data['TARGET_LABEL_BAD=1'].to_numpy().astype(np.int64)
     data = raw_data.drop(['TARGET_LABEL_BAD=1'], axis=1)
 
     # drop the last column
@@ -912,7 +916,7 @@ def load_credit_scoring_pakdd(
 
     n_samples = data.shape[0]
     pi_1 = target.mean()
-    monthly_income = data['PERSONAL_NET_INCOME'].values * 0.33  # type: ignore
+    monthly_income = data['PERSONAL_NET_INCOME'].to_numpy() * 0.33  # type: ignore
     cost_mat = _creditscoring_costmat(monthly_income, np.zeros(n_samples), pi_1, cost_mat_parameters)
 
     # unroll into separate costs
@@ -1035,17 +1039,17 @@ def load_credit_scoring_pakdd(
                 pd.Series(fn_cost, name='fn_cost'),
             )
         else:
-            return (data.values, target, 0.0, fp_cost, 0.0, fn_cost)
+            return (data.to_numpy(), target, 0.0, fp_cost, 0.0, fn_cost)
     else:
         target_names = ['no default', 'default']
         return Dataset(
-            data=data.values if not as_frame else data,
+            data=data.to_numpy() if not as_frame else data,
             target=target if not as_frame else pd.Series(target, name='default'),
             tp_cost=0.0,
             fp_cost=fp_cost if not as_frame else pd.Series(fp_cost, name='fp_cost'),
             tn_cost=0.0,
             fn_cost=fn_cost if not as_frame else pd.Series(fn_cost, name='fn_cost'),
-            feature_names=data.columns.values if not as_frame else data.columns,
+            feature_names=data.columns.to_numpy() if not as_frame else data.columns,
             target_names=np.array(target_names) if not as_frame else pd.Series(target_names, name='target'),
             name='Credit Scoring PAKDD 2009',
             DESCR=description,

@@ -1,16 +1,18 @@
+from typing import ClassVar
+
 from empulse.metrics import lift_score
 
 from .test_metrics import BaseTestMetric
 
 
 class TestLift(BaseTestMetric.TestMetric):
-    parameters = [
+    parameters: ClassVar[dict] = [
         {},  # default
         {'fraction': 0.2},
         {'fraction': 1},
         {'fraction': 0.5},
     ]
-    expected_values = {
+    expected_values: ClassVar[dict] = {
         'perfect_prediction': 2.0,
         'incorrect_prediction': 0.0,
         'half_correct_prediction': 1.0,

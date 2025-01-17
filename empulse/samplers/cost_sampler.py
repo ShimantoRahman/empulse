@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -91,8 +91,8 @@ class CostSensitiveSampler(BaseSampler):
 
     """
 
-    _sampling_type = 'bypass'
-    _parameter_constraints = {
+    _sampling_type: ClassVar[str] = 'bypass'
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
         'percentile_threshold': [Interval(Real, 0, 100, closed='both')],
@@ -185,14 +185,8 @@ class CostSensitiveSampler(BaseSampler):
             fp_cost = 1
             fn_cost = 1
 
-        if isinstance(fp_cost, Real):
-            fp_cost = np.full_like(y, fp_cost)
-        else:
-            fp_cost = np.asarray(fp_cost)
-        if isinstance(fn_cost, Real):
-            fn_cost = np.full_like(y, fn_cost)
-        else:
-            fn_cost = np.asarray(fn_cost)
+        fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.asarray(fp_cost)
+        fn_cost = np.full_like(y, fn_cost) if isinstance(fn_cost, Real) else np.asarray(fn_cost)
         rng = check_random_state(self.random_state)
 
         misclassification_costs = fp_cost

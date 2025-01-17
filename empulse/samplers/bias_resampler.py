@@ -1,6 +1,6 @@
 import warnings
 from itertools import product
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -136,14 +136,14 @@ class BiasResampler(BaseSampler):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _estimator_type = 'sampler'
-    _sampling_type = 'bypass'
-    _parameter_constraints = {
+    _estimator_type: ClassVar[str] = 'sampler'
+    _sampling_type: ClassVar[str] = 'bypass'
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_attr': [callable, None],
         'random_state': ['random_state'],
     }
-    _strategy_mapping: dict[str, StrategyFn] = {
+    _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_weights,
         'demographic parity': _independent_weights,
     }
@@ -238,10 +238,7 @@ class BiasResampler(BaseSampler):
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)
 
-        if isinstance(self.strategy, str):
-            strategy = self._strategy_mapping[self.strategy]
-        else:
-            strategy = self.strategy
+        strategy = self._strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
         class_weights = strategy(y_binarized, sensitive_feature)
         # if class_weights are all 1, no resampling is needed
         if np.allclose(class_weights, np.ones(class_weights.shape)):

@@ -5,28 +5,6 @@ from functools import partial
 
 import numpy as np
 from imblearn.utils._test_common.instance_generator import _get_check_estimator_ids
-
-# from imblearn.utils.estimator_checks import (
-#     _maybe_mark,
-# check_sampler_get_feature_names_out,
-# check_sampler_get_feature_names_out_pandas,
-# check_samplers_2d_target,
-# check_samplers_fit,
-# check_samplers_fit_resample,
-# check_samplers_list,
-# check_samplers_multiclass_ova,
-# check_samplers_nan,
-# check_samplers_one_label,
-# check_samplers_pandas,
-# check_samplers_pandas_sparse,
-# check_samplers_preserve_dtype,
-# check_samplers_sample_indices,
-# check_samplers_sampling_strategy_fit_resample,
-# check_samplers_sparse,
-# check_samplers_string,
-# check_target_type,
-# parametrize_with_checks
-# )
 from numpy.testing import assert_array_equal
 from sklearn.base import clone
 from sklearn.datasets import make_blobs, make_classification
@@ -159,18 +137,11 @@ def estimator_checks_generator(estimator, *, fit_params, expected_failed_checks=
     if mark == 'xfail':
         import pytest
     else:
-        pytest = None  # noqa F841
+        pytest = None  # noqa: F841
 
     name = type(estimator).__name__
     for check in _yield_sampler_checks(estimator):
         check_with_name = partial(check, name, fit_params)
-        # yield _maybe_mark(
-        #     estimator,
-        #     check_with_name,
-        #     expected_failed_checks=expected_failed_checks,
-        #     mark=mark,
-        #     pytest=pytest,
-        # )
         yield estimator, check_with_name
 
 
@@ -387,8 +358,7 @@ def check_sampler_get_feature_names_out_pandas(name, fit_params, sampler_orig):
 
     y_ = y
     feature_names_in = [f'col{i}' for i in range(n_features)]
-    df = pd.DataFrame(X, columns=feature_names_in)
-    X_res, y_res = sampler.fit_resample(df, y=y_, **fit_params)
+    X_res, y_res = sampler.fit_resample(pd.DataFrame(X, columns=feature_names_in), y=y_, **fit_params)
 
     # error is raised when `input_features` do not match feature_names_in
     invalid_feature_names = [f'bad{i}' for i in range(n_features)]

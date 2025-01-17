@@ -97,9 +97,10 @@ line-length = 120
 exclude = ["docs", "notebooks"]
 
 [tool.ruff.lint]
-extend-select = ["I", "T201"]
+extend-select = ["A", "BLE", "F", "I", "ICN", "INP", "PD", "PGH004", "PIE", "RSE", "RUF", "SIM", "T20", "TC"]
 ignore = [
     "E731",  # do not assign a `lambda` expression, use a `def`
+    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
 ]
 
 [tool.ruff.format]

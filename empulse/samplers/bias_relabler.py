@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -159,14 +159,14 @@ class BiasRelabler(BaseSampler):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _estimator_type = 'sampler'
-    _sampling_type = 'bypass'
-    _parameter_constraints = {
+    _estimator_type: ClassVar[str] = 'sampler'
+    _sampling_type: ClassVar[str] = 'bypass'
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_attr': [callable, None],
         'random_state': ['random_state'],
     }
-    _strategy_mapping: dict[str, StrategyFn] = {
+    _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_pairs,
         'demographic parity': _independent_pairs,
     }
@@ -275,11 +275,7 @@ class BiasRelabler(BaseSampler):
         self.estimator_.fit(X, y)
         y_pred = self.estimator_.predict_proba(X)[:, 1]
 
-        if isinstance(self.strategy, str):
-            strategy = self._strategy_mapping[self.strategy]
-        else:
-            strategy = self.strategy
-
+        strategy = self._strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
         n_pairs = strategy(y_binarized, sensitive_feature)
         if n_pairs <= 0:
             return X, np.asarray(y)

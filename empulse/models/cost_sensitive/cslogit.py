@@ -327,33 +327,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 fit_intercept=self.fit_intercept,
             )
 
-            if self.optimize_fn is None:
-                optimize_fn = _optimize_jacobian
-            else:
-                optimize_fn = self.optimize_fn
-
+            optimize_fn = _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
             self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
-        # elif self.loss == 'cross_entropy':
-        #     loss = LinearModelLoss(
-        #         base_loss=HalfBinomialLoss(), fit_intercept=self.fit_intercept
-        #     )
-        #     func = loss.loss_gradient
-        #     l2_reg_strength = 1.0 / self.C
-        #     w0 = np.zeros(X.shape[1], order="F", dtype=X.dtype)
-        #     sample_weight = np.ones(X.shape[0], dtype=X.dtype)
-        #     self.result_ = minimize(
-        #         func,
-        #         w0,
-        #         method="L-BFGS-B",
-        #         jac=True,
-        #         args=(X, y, sample_weight, l2_reg_strength, 1),
-        #         options={
-        #             "maxiter": 10_000,
-        #             "maxls": 50,  # default is 20
-        #             "gtol": 1e-4,
-        #             "ftol": 64 * np.finfo(float).eps,
-        #         },
-        #     )
         elif isinstance(self.loss, Callable):
             objective = partial(
                 _objective_callable,
@@ -365,10 +340,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 soft_threshold=self.soft_threshold,
                 fit_intercept=self.fit_intercept,
             )
-            if self.optimize_fn is None:
-                optimize_fn = self._optimize
-            else:
-                optimize_fn = self.optimize_fn
+            optimize_fn = self._optimize if self.optimize_fn is None else self.optimize_fn
 
             self.result_ = optimize_fn(objective, X=X, **optimizer_params)
         else:

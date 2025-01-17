@@ -9,13 +9,13 @@ from .cost_sensitive import (
 from .proflogit import ProfLogitClassifier
 
 __all__ = [
+    'B2BoostClassifier',
     'BiasRelabelingClassifier',
     'BiasResamplingClassifier',
     'BiasReweighingClassifier',
-    'B2BoostClassifier',
     'CSBoostClassifier',
     'CSLogitClassifier',
     'CSThresholdClassifier',
-    'RobustCSClassifier',
     'ProfLogitClassifier',
+    'RobustCSClassifier',
 ]

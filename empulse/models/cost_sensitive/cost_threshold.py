@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -112,7 +112,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: dict = {
+    _parameter_constraints: ClassVar[dict[str, list]] = {
         'estimator': [
             HasMethods(['fit', 'predict_proba']),
         ],

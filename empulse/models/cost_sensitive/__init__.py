@@ -4,4 +4,4 @@ from .csboost import CSBoostClassifier
 from .cslogit import CSLogitClassifier
 from .robust_cs import RobustCSClassifier
 
-__all__ = ['B2BoostClassifier', 'CSThresholdClassifier', 'CSBoostClassifier', 'CSLogitClassifier', 'RobustCSClassifier']
+__all__ = ['B2BoostClassifier', 'CSBoostClassifier', 'CSLogitClassifier', 'CSThresholdClassifier', 'RobustCSClassifier']

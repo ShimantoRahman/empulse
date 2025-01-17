@@ -30,7 +30,7 @@ def execute_code_blocks(code_blocks):
         code = textwrap.dedent(code)
         try:
             exec(code, exec_globals)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             pytest.fail(f'Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}')
 
 

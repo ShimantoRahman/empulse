@@ -227,10 +227,10 @@ class B2BoostClassifier(BaseBoostClassifier):
         self,
         X: np.ndarray,
         y: np.ndarray,
-        accept_rate: float = None,
-        clv: Union[float, ArrayLike] = None,
-        incentive_fraction: float = None,
-        contact_cost: float = None,
+        accept_rate: float | None = None,
+        clv: float | ArrayLike | None = None,
+        incentive_fraction: float | None = None,
+        contact_cost: float | None = None,
     ) -> 'B2BoostClassifier':
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
