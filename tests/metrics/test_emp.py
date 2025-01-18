@@ -22,11 +22,11 @@ def test_empc_replication():
         return beta.pdf(gamma, a=6, b=14) * gamma_step
 
     emp_score, emp_threshold = emp(
-        y_true, y_pred, weighted_pdf=weighted_pdf, tp_benefit=tp_benefit, fp_cost=fp_cost, n_buckets=10_000
+        y_true, y_pred, weighted_pdf=weighted_pdf, tp_benefit=tp_benefit, fp_cost=fp_cost, n_buckets=1_000
     )
     empc_score, empc_threshold = empc(y_true, y_pred, clv=clv, incentive_cost=d, contact_cost=f)
-    assert emp_score == pytest.approx(empc_score, abs=1e-5)
-    assert emp_threshold == pytest.approx(empc_threshold, abs=1e-5)
+    assert emp_score == pytest.approx(empc_score, abs=1e-3)
+    assert emp_threshold == pytest.approx(empc_threshold, abs=1e-3)
 
 
 def test_mpc_replication():

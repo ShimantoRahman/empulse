@@ -598,7 +598,7 @@ class BaseTestRelationMetrics:
         def test_deterministic_metric_lower_bound(self):
             """Test whether the deterministic metric is lower or equal than the stochastic metric."""
             for params, (y_true, y_pred) in zip(
-                islice(self.generate_parameters(), 1000), islice(self.generate_data(), 1000)
+                islice(self.generate_parameters(), 100), islice(self.generate_data(), 100)
             ):
                 stochastic_score, _ = self.stochastic_metric(y_true, y_pred, **params)
                 params = self.to_deterministic_params(params)

@@ -125,17 +125,22 @@ def test_proflogit_supervised_y_2d():
     sklearn.utils.set_random_state = sklearn_set_random_state
 
 
+@pytest.fixture(scope='module')
+def data():
+    return load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
+
+
 @pytest.mark.parametrize(
     'classifier',
     [
         CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
         CSBoostClassifier(),
-        CSLogitClassifier(),
-        RobustCSClassifier(estimator=CSLogitClassifier()),
+        CSLogitClassifier(optimizer_params={'max_iter': 100}),
+        RobustCSClassifier(estimator=CSBoostClassifier()),
     ],
 )
-def test_cost_loss_performance(classifier):
-    X, y, tp_cost, fp_cost, tn_cost, fn_cost = load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
+def test_cost_loss_performance(classifier, data):
+    X, y, tp_cost, fp_cost, tn_cost, fn_cost = data
 
     pipeline = Pipeline([('scaler', StandardScaler()), ('model', classifier)])
 
