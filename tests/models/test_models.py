@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.estimator_checks import parametrize_with_checks
+from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
 from empulse.metrics import cost_loss
@@ -24,15 +25,17 @@ from empulse.models import (
 )
 
 ESTIMATORS = (
-    B2BoostClassifier(),
-    ProfLogitClassifier(optimizer_params={'max_iter': 2}),
-    BiasReweighingClassifier(estimator=LogisticRegression()),
-    BiasResamplingClassifier(estimator=LogisticRegression()),
-    BiasRelabelingClassifier(estimator=LogisticRegression()),
-    CSBoostClassifier(fp_cost=1, fn_cost=1),
+    B2BoostClassifier(
+        XGBClassifier(n_estimators=2, max_depth=1),
+    ),
+    ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10}),
+    BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
+    BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
+    BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
+    CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
     CSLogitClassifier(fp_cost=1, fn_cost=1),
-    RobustCSClassifier(estimator=CSLogitClassifier(), fp_cost=1, fn_cost=1),
-    CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
+    RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
+    CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
 )
 
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}

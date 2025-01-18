@@ -18,7 +18,7 @@ def y():
 
 @pytest.fixture(scope='module')
 def clf(X, y):
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     return clf
 
@@ -82,13 +82,13 @@ def test_proflogit_with_missing_values(X, y):
     X = np.array(X, dtype=float)
     # Introduce missing values
     X[0, 0] = np.nan
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
     with pytest.raises(ValueError):
         clf.fit(X, y)
 
 
 def test_proflogit_with_different_bounds(clf, X, y):
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'bounds': (-1, 1)})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10, 'bounds': (-1, 1)})
     clf.fit(X, y)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.message == 'Maximum number of iterations reached.'
@@ -106,7 +106,7 @@ def test_cloneable_by_sklearn():
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
     assert scores.shape == (2,)
@@ -117,7 +117,7 @@ def test_works_in_pipeline(X, y):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y)
     assert isinstance(pipe.named_steps['scaler'], StandardScaler)
@@ -129,7 +129,7 @@ def test_works_in_pipeline(X, y):
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
     assert isinstance(bagging.estimators_[0], ProfLogitClassifier)
@@ -144,7 +144,7 @@ def test_works_with_time_stopping_condition(X, y):
 
     from empulse.optimizers import Generation
 
-    def optimize(objective, X, max_time=0.1, **kwargs) -> OptimizeResult:
+    def optimize(objective, X, max_time=0.01, **kwargs) -> OptimizeResult:
         rga = Generation(**kwargs)
         bounds = [(-5, 5)] * X.shape[1]
 
@@ -176,6 +176,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
             lambda x: -objective(x),  # inverse objective function
             initial_guess,
             method='BFGS',
+            options={'maxiter': 2},
             **kwargs,
         )
         return result
@@ -219,7 +220,7 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
 def test_works_with_different_loss_empa(X, y):
     from empulse.metrics import empa_score
 
-    clf = ProfLogitClassifier(loss=empa_score, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(loss=empa_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
@@ -229,7 +230,7 @@ def test_works_with_different_loss_empa(X, y):
 def test_works_with_different_loss_auc(X, y):
     from sklearn.metrics import roc_auc_score
 
-    clf = ProfLogitClassifier(loss=roc_auc_score, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(loss=roc_auc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
@@ -238,7 +239,7 @@ def test_works_with_different_loss_auc(X, y):
 
 def test_one_variable(y):
     X = np.arange(10).reshape(10, 1)
-    clf = ProfLogitClassifier(fit_intercept=False, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(fit_intercept=False, optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     assert clf.result_.x.shape == (1,)
     assert isinstance(clf.result_, OptimizeResult)

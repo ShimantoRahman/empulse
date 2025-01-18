@@ -19,7 +19,7 @@ def data():
 @pytest.mark.parametrize('calibrator', ['sigmoid', 'isotonic', None])
 def test_fit(data, calibrator):
     X, y = data
-    clf = CSThresholdClassifier(LogisticRegression(), calibrator=calibrator)
+    clf = CSThresholdClassifier(LogisticRegression(max_iter=2), calibrator=calibrator)
     clf.fit(X, y)
     assert hasattr(clf, 'estimator_')
 
@@ -30,7 +30,7 @@ def test_fit(data, calibrator):
 )
 def test_predict(data, tp_cost, tn_cost, fn_cost, fp_cost):
     X, y = data
-    clf = CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid')
+    clf = CSThresholdClassifier(LogisticRegression(max_iter=2), calibrator='sigmoid')
     clf.fit(X, y)
     y_pred = clf.predict(X, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
     assert y_pred.shape == y.shape
