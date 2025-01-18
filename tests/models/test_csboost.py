@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
-from sklearn.utils._param_validation import InvalidParameterError
 
 from empulse.models import CSBoostClassifier
 
@@ -31,19 +30,3 @@ def test_csboost_different_classifiers(library, classifier_name, dataset):
 
     assert y_pred.shape == y.shape
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
-
-
-INVALID_PARAMS = [
-    {'tp_cost': '5'},
-    {'tn_cost': '5'},
-    {'fp_cost': '5'},
-    {'fn_cost': '5'},
-]
-
-
-@pytest.mark.parametrize('invalid_params', INVALID_PARAMS)
-def test_csboost_invalid_params(invalid_params, dataset):
-    X, y, _, _ = dataset
-    model = CSBoostClassifier(**invalid_params)
-    with pytest.raises(InvalidParameterError):
-        model.fit(X, y)

@@ -1,8 +1,12 @@
+import inspect
+
 import numpy as np
 import pytest
+from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from empulse.datasets import load_give_me_some_credit
@@ -30,6 +34,8 @@ ESTIMATORS = (
     RobustCSClassifier(estimator=CSLogitClassifier(), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
 )
+
+ESTIMATOR_CLASSES = [est.__class__ for est in ESTIMATORS]
 
 
 def expected_failed_checks(estimator):
@@ -144,3 +150,40 @@ def test_cost_loss_performance(classifier):
     )
 
     assert performance < 750, f'Performance {performance} is not better than 750'
+
+
+@pytest.fixture(scope='module')
+def dataset():
+    X, y = make_classification(n_samples=50, random_state=42)
+    fn_cost = np.random.rand(y.size)
+    fp_cost = 5
+    return X, y, fn_cost, fp_cost
+
+
+class InvalidParameter:
+    pass
+
+
+def generate_invalid_params(estimator_class):
+    parameters = inspect.signature(estimator_class.__init__).parameters
+    takes_estimator = 'estimator' in parameters
+    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator
+
+
+@pytest.mark.parametrize('estimator_class', ESTIMATOR_CLASSES)
+def test_invalid_params(estimator_class, dataset):
+    X, y, _, _ = dataset
+    invalid_params_list, takes_estimator = generate_invalid_params(estimator_class)
+    for invalid_params in invalid_params_list:
+        if (
+            takes_estimator
+            and 'estimator' in invalid_params
+            and isinstance(invalid_params['estimator'], InvalidParameter)
+        ):
+            model = estimator_class(**invalid_params)
+        elif takes_estimator:
+            model = estimator_class(estimator=LogisticRegression(), **invalid_params)
+        else:
+            model = estimator_class(**invalid_params)
+        with pytest.raises(InvalidParameterError):
+            model.fit(X, y)
