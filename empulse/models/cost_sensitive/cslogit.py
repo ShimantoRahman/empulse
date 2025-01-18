@@ -363,7 +363,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return self
 
     @staticmethod
-    def _optimize(objective, X, max_iter=10000, tolerance=1e-4, **kwargs) -> OptimizeResult:
+    def _optimize(objective, X, max_iter=1000, tolerance=1e-4, **kwargs) -> OptimizeResult:
         initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
 
         result = minimize(
@@ -383,7 +383,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return result
 
 
-def _optimize_jacobian(objective, X, max_iter=10000, tolerance=1e-4, **kwargs) -> OptimizeResult:
+def _optimize_jacobian(objective, X, max_iter=1000, tolerance=1e-4, **kwargs) -> OptimizeResult:
     initial_weights = np.zeros(X.shape[1], order='F', dtype=X.dtype)
 
     result = minimize(
