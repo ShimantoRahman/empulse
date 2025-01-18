@@ -35,7 +35,7 @@ ESTIMATORS = (
     CSThresholdClassifier(estimator=LogisticRegression(), random_state=42, fp_cost=1, fn_cost=1),
 )
 
-ESTIMATOR_CLASSES = [est.__class__ for est in ESTIMATORS]
+ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 
 
 def expected_failed_checks(estimator):

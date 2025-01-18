@@ -140,7 +140,7 @@ class BiasResampler(BaseSampler):
     _sampling_type: ClassVar[str] = 'bypass'
     _parameter_constraints: ClassVar[dict[str, list]] = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
-        'transform_attr': [callable, None],
+        'transform_feature': [callable, None],
         'random_state': ['random_state'],
     }
     _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {

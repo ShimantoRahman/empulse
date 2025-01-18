@@ -162,9 +162,9 @@ class BiasRelabler(BaseSampler):
     _estimator_type: ClassVar[str] = 'sampler'
     _sampling_type: ClassVar[str] = 'bypass'
     _parameter_constraints: ClassVar[dict[str, list]] = {
-        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        'estimator': [HasMethods(['fit', 'predict_proba'])],
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
-        'transform_attr': [callable, None],
+        'transform_feature': [callable, None],
     }
     _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_pairs,

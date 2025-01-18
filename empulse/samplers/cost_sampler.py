@@ -97,6 +97,8 @@ class CostSensitiveSampler(BaseSampler):
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
         'percentile_threshold': [Interval(Real, 0, 1, closed='both')],
         'random_state': ['random_state'],
+        'fp_cost': [Real, 'array-like'],
+        'fn_cost': [Real, 'array-like'],
     }
 
     if TYPE_CHECKING:
