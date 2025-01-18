@@ -1,8 +1,9 @@
-from typing import Callable, Optional, Union
+from typing import Callable, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
+from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -156,12 +157,18 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
+        'transform_feature': [callable, None],
+    }
+
     def __init__(
         self,
         estimator,
         *,
-        strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: StrategyFn | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -173,8 +180,9 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params
     ) -> 'BiasRelabelingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.

@@ -1,13 +1,14 @@
-import numbers
 import warnings
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union
+from numbers import Real
+from typing import Any, Callable, ClassVar, Literal, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.utils._param_validation import StrOptions
 
 from ..._common import Parameter
 from ...metrics import make_objective_aec
@@ -211,6 +212,15 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        **BaseLogitClassifier._parameter_constraints,
+        'loss': [StrOptions({'average expected cost'}), callable, None],
+        'tp_cost': ['array-like', Real],
+        'tn_cost': ['array-like', Real],
+        'fn_cost': ['array-like', Real],
+        'fp_cost': ['array-like', Real],
+    }
+
     def __init__(
         self,
         *,
@@ -301,13 +311,13 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         optimizer_params = self.optimizer_params or {}
 
         # Assume that the loss function takes the following parameters:
-        if not isinstance(tp_cost, numbers.Number) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
+        if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
             tp_cost = np.expand_dims(tp_cost, axis=1)
-        if not isinstance(tn_cost, numbers.Number) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
+        if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
             tn_cost = np.expand_dims(tn_cost, axis=1)
-        if not isinstance(fn_cost, numbers.Number) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
+        if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
             fn_cost = np.expand_dims(fn_cost, axis=1)
-        if not isinstance(fp_cost, numbers.Number) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
+        if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
             fp_cost = np.expand_dims(fp_cost, axis=1)
         loss_params['tp_cost'] = tp_cost
         loss_params['tn_cost'] = tn_cost

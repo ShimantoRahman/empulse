@@ -95,7 +95,7 @@ class CostSensitiveSampler(BaseSampler):
     _parameter_constraints: ClassVar[dict[str, list]] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
-        'percentile_threshold': [Interval(Real, 0, 100, closed='both')],
+        'percentile_threshold': [Interval(Real, 0, 1, closed='both')],
         'random_state': ['random_state'],
     }
 

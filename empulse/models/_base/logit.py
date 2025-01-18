@@ -5,8 +5,8 @@ from typing import Any, Callable, ClassVar
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.special import expit
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
+from sklearn.utils._param_validation import Interval
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -16,9 +16,9 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
         'soft_threshold': ['boolean'],
-        'loss': [StrOptions({'average expected cost'}), None],
         'optimize_fn': [callable, None],
         'l1_ratio': [Interval(Real, 0, 1, closed='both')],
+        'optimizer_params': [dict, None],
     }
 
     def __init__(
@@ -45,6 +45,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(self, X, y, **fit_params):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)

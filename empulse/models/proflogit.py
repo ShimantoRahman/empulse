@@ -1,6 +1,7 @@
 from functools import partial
 from itertools import islice
-from typing import Any, Callable, Optional
+from numbers import Integral
+from typing import Any, Callable, ClassVar, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -100,6 +101,12 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.
     .. [3] https://github.com/estripling/proflogit/tree/master
     """
+
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        **BaseLogitClassifier._parameter_constraints,
+        'loss': [callable, None],
+        'n_jobs': [None, Integral],
+    }
 
     def __init__(
         self,

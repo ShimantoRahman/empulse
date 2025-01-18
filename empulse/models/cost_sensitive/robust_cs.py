@@ -1,11 +1,13 @@
-from typing import Literal
+from numbers import Real
+from typing import ClassVar, Literal
 
 import numpy as np
 import scipy.stats as st
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, check_is_fitted, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
+from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.validation import _estimator_has
 
 from ..._common import Parameter
@@ -196,6 +198,17 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
            Advances in Data Analysis and Classification, 17(4), 1057-1079.
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        'outlier_estimator': [HasMethods(['fit', 'predict']), None],
+        'outlier_threshold': [Interval(Real, 0, None, closed='right')],
+        'detect_outliers_for': [StrOptions({'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}), list],
+        'tp_cost': ['array-like', Real],
+        'tn_cost': ['array-like', Real],
+        'fn_cost': ['array-like', Real],
+        'fp_cost': ['array-like', Real],
+    }
+
     def __init__(
         self,
         estimator,
@@ -218,6 +231,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
+    @_fit_context(prefer_skip_nested_validation=False)
     def fit(
         self,
         X: ArrayLike,

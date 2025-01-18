@@ -3,7 +3,8 @@ from typing import Callable, ClassVar, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
+from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -169,6 +170,12 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
+        'transform_feature': [callable, None],
+    }
+
     strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_sample_weights,
         'demographic parity': _independent_sample_weights,
@@ -191,6 +198,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(
         self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
     ) -> 'BiasReweighingClassifier':

@@ -6,7 +6,7 @@ from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
 from sklearn.utils import ClassifierTags, _safe_indexing
-from sklearn.utils._param_validation import StrOptions
+from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.multiclass import type_of_target
 
 from empulse.samplers._strategies import Strategy, StrategyFn
@@ -162,9 +162,9 @@ class BiasRelabler(BaseSampler):
     _estimator_type: ClassVar[str] = 'sampler'
     _sampling_type: ClassVar[str] = 'bypass'
     _parameter_constraints: ClassVar[dict[str, list]] = {
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_attr': [callable, None],
-        'random_state': ['random_state'],
     }
     _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_pairs,

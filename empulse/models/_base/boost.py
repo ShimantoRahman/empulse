@@ -51,7 +51,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         tags.classifier_tags.poor_score = True
         return tags
 
-    @_fit_context(prefer_skip_nested_validation=False)
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(self, X, y, **fit_params):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
