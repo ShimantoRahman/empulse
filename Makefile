@@ -20,6 +20,10 @@ doctest:
 tox:
 	tox -p
 
+lint:
+	ruff check --fix
+	ruff format
+
 # Content from the docs directory Makefile
 # You can set these variables from the command line, and also
 # from the environment for the first two.
