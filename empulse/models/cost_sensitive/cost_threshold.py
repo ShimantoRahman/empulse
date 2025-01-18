@@ -113,12 +113,14 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     """
 
     _parameter_constraints: ClassVar[dict[str, list]] = {
-        'estimator': [
-            HasMethods(['fit', 'predict_proba']),
-        ],
+        'estimator': [HasMethods(['fit', 'predict_proba'])],
         'calibrator': [HasMethods(['fit', 'predict_proba']), StrOptions({'sigmoid', 'isotonic'}), None],
         'pos_label': [Real, str, 'boolean', None],
         'random_state': ['random_state'],
+        'tp_cost': ['array-like', Real],
+        'tn_cost': ['array-like', Real],
+        'fn_cost': ['array-like', Real],
+        'fp_cost': ['array-like', Real],
     }
 
     def __init__(
