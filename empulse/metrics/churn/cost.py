@@ -1,8 +1,9 @@
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
 from numpy.typing import ArrayLike
+from scipy.special import expit
 
 if TYPE_CHECKING:
     try:
@@ -27,6 +28,18 @@ else:
 from empulse.metrics.churn._validation import _validate_input_mpc
 
 
+@overload
+def make_objective_churn(
+    model: Literal['catboost'],
+    *,
+    accept_rate: float = 0.3,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    contact_cost: float = 15,
+) -> tuple['AECObjectiveChurn', 'AECMetricChurn']: ...
+
+
+@overload
 def make_objective_churn(
     model: Literal['xgboost', 'lightgbm'],
     *,
@@ -34,7 +47,17 @@ def make_objective_churn(
     clv: Union[float, ArrayLike] = 200,
     incentive_fraction: Union[float, ArrayLike] = 0.05,
     contact_cost: float = 15,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+
+
+def make_objective_churn(
+    model: Literal['xgboost', 'lightgbm', 'catboost'],
+    *,
+    accept_rate: float = 0.3,
+    clv: Union[float, ArrayLike] = 200,
+    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    contact_cost: float = 15,
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
     """
     Create an objective function for the Expected Cost measure for customer churn.
 
@@ -50,11 +73,12 @@ def make_objective_churn(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm'}
+    model : {'xgboost', 'lightgbm', 'catboost'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
 
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
@@ -141,8 +165,23 @@ def make_objective_churn(
                 incentive_fraction=incentive_fraction,
                 contact_cost=contact_cost,
             )
+    elif model == 'catboost':
+        return (
+            AECObjectiveChurn(
+                accept_rate=accept_rate,
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+            ),
+            AECMetricChurn(
+                accept_rate=accept_rate,
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+            ),
+        )
     else:
-        raise ValueError(f"Expected model to be 'xgboost' or 'lightgbm', got {model} instead.")
+        raise ValueError(f"Expected model to be 'xgboost', 'lightgbm' or 'catboost', got {model} instead.")
     return objective
 
 
@@ -188,6 +227,133 @@ def _objective(
     gradient = y_pred * (1 - y_pred) * profits
     hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
+
+
+class AECObjectiveChurn:
+    def __init__(
+        self,
+        accept_rate: float = 0.3,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_fraction: Union[float, ArrayLike] = 0.05,
+        contact_cost: float = 1,
+    ):
+        self.accept_rate = accept_rate
+        self.clv = clv
+        self.incentive_fraction = incentive_fraction
+        self.contact_cost = contact_cost
+
+    def calc_ders_range(self, predictions, targets, weights):
+        """
+        Computes first and second derivative of the loss function
+        with respect to the predicted value for each object.
+
+        Parameters
+        ----------
+        predictions : indexed container of floats
+            Current predictions for each object.
+
+        targets : indexed container of floats
+            Target values you provided with the dataset.
+
+        weights : float, optional (default=None)
+            Instance weight.
+
+        Returns
+        -------
+            der1 : list-like object of float
+            der2 : list-like object of float
+
+        """
+        # Use weights as a proxy to index the costs
+        weights = weights.astype(int)
+        clv = self.clv[weights] if isinstance(self.clv, np.ndarray) else self.clv
+
+        y_proba = expit(predictions)
+        incentive_cost = self.incentive_fraction * clv
+        profits = (
+            self.contact_cost
+            + incentive_cost
+            + targets * (self.accept_rate * incentive_cost - incentive_cost - clv * self.accept_rate)
+        )
+        gradient = y_proba * (1 - y_proba) * profits
+        hessian = np.abs((1 - 2 * y_proba) * gradient)
+        return list(zip(-gradient, -hessian))
+
+
+class AECMetricChurn:
+    def __init__(
+        self,
+        accept_rate: float = 0.3,
+        clv: Union[float, ArrayLike] = 200,
+        incentive_fraction: Union[float, ArrayLike] = 0.05,
+        contact_cost: float = 1,
+    ):
+        self.accept_rate = accept_rate
+        self.clv = clv
+        self.incentive_fraction = incentive_fraction
+        self.contact_cost = contact_cost
+
+    def is_max_optimal(self):
+        """
+        Returns whether great values of metric are better
+        """
+        return False
+
+    def evaluate(self, predictions, targets, weights):
+        """
+        Evaluates metric value.
+
+        Parameters
+        ----------
+        predictions : list of indexed containers (containers with only __len__ and __getitem__ defined) of float
+            Vectors of approx labels.
+
+        targets : one dimensional indexed container of float
+            Vectors of true labels.
+
+        weights : one dimensional indexed container of float, optional (default=None)
+            Weight for each instance.
+
+        Returns
+        -------
+            weighted error : float
+            total weight : float
+
+        """
+        # Use weights as a proxy to index the costs
+        weights = weights.astype(int)
+        clv = self.clv[weights] if isinstance(self.clv, np.ndarray) else self.clv
+
+        y_proba = expit(predictions)
+        return expected_cost_loss_churn(
+            targets,
+            y_proba,
+            accept_rate=self.accept_rate,
+            clv=clv,
+            incentive_fraction=self.incentive_fraction,
+            contact_cost=self.contact_cost,
+            normalize=True,
+            check_input=False,
+        ), 1
+
+    def get_final_error(self, error, weight):
+        """
+        Returns final value of metric based on error and weight.
+
+        Parameters
+        ----------
+        error : float
+            Sum of errors in all instances.
+
+        weight : float
+            Sum of weights of all instances.
+
+        Returns
+        -------
+        metric value : float
+
+        """
+        return error
 
 
 def expected_cost_loss_churn(

@@ -54,6 +54,7 @@ optional = [
     "empulse",
     "xgboost>=1.7.4",
     "lightgbm>=4.5.0",
+    "catboost>=1.2.7",
 ]
 
 test = [

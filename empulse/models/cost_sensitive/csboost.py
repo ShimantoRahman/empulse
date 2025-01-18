@@ -1,5 +1,6 @@
+import warnings
 from numbers import Real
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -13,6 +14,10 @@ try:
     from lightgbm import LGBMClassifier
 except ImportError:
     LGBMClassifier = None
+try:
+    from catboost import CatBoostClassifier
+except ImportError:
+    CatBoostClassifier = None
 
 from ..._common import Parameter
 from ...metrics import make_objective_aec
@@ -24,7 +29,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
     Gradient boosting model to optimize instance-dependent cost loss.
 
-    CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier` and :class:`lightgbm:lightgbm.LGBMClassifier`.
+    CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
+    and :class:`catboost:catboost.CatBoostClassifier` as base estimators.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
@@ -37,7 +43,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier` or `lightgbm:lightgbm.LGBMClassifier`, optional
+    estimator : `xgboost:xgboost.XGBClassifier`, `lightgbm:lightgbm.LGBMClassifier` or :class:`catboost:catboost.CatBoostClassifier`, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
@@ -185,7 +191,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def __init__(
         self,
-        estimator: Optional[XGBClassifier | LGBMClassifier] = None,
+        estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
         *,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
@@ -292,6 +298,29 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 fp_cost=fp_cost,
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, CatBoostClassifier):
+            objective, metric = make_objective_aec(
+                'catboost',
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+            )
+            self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
+            indices = np.arange(X.shape[0])
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    'ignore',
+                    message='Can\'t optimze method "calc_ders_range" because self argument is used',
+                    category=UserWarning,
+                )
+                warnings.filterwarnings(
+                    'ignore',
+                    message='Can\'t optimze method "evaluate" because self argument is used',
+                    category=UserWarning,
+                )
+                self.estimator_.fit(X, y, sample_weight=indices, **fit_params)
+            return self
         else:
             raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
         self.estimator_.fit(X, y, **fit_params)

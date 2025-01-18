@@ -1,6 +1,6 @@
 import numbers
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -784,6 +784,18 @@ def expected_savings_score(
     return 1.0 - cost / cost_base
 
 
+@overload
+def make_objective_aec(
+    model: Literal['catboost'],
+    *,
+    tp_cost: Union[ArrayLike, float] = 0.0,
+    tn_cost: Union[ArrayLike, float] = 0.0,
+    fn_cost: Union[ArrayLike, float] = 0.0,
+    fp_cost: Union[ArrayLike, float] = 0.0,
+) -> tuple['AECObjective', 'AECMetric']: ...
+
+
+@overload
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
@@ -791,7 +803,17 @@ def make_objective_aec(
     tn_cost: Union[ArrayLike, float] = 0.0,
     fn_cost: Union[ArrayLike, float] = 0.0,
     fp_cost: Union[ArrayLike, float] = 0.0,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+
+
+def make_objective_aec(
+    model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit'],
+    *,
+    tp_cost: Union[ArrayLike, float] = 0.0,
+    tn_cost: Union[ArrayLike, float] = 0.0,
+    fn_cost: Union[ArrayLike, float] = 0.0,
+    fp_cost: Union[ArrayLike, float] = 0.0,
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjective', 'AECMetric']:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
 
@@ -805,11 +827,12 @@ def make_objective_aec(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm', 'cslogit'}
+    model : {'xgboost', 'lightgbm', 'catboost', 'cslogit'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
         - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -879,11 +902,18 @@ def make_objective_aec(
             return _objective_boost(
                 y_pred, train_data, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
+    elif model == 'catboost':
+        return (
+            AECObjective(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost),
+            AECMetric(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost),
+        )
     elif model == 'cslogit':
         objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_cslogit)
     else:
-        raise ValueError(f"Expected model to be one of 'xgboost', 'lightgbm' or 'cslogit', got {model} instead.")
+        raise ValueError(
+            f"Expected model to be one of 'xgboost', 'lightgbm', 'catboost' or 'cslogit', got {model} instead."
+        )
 
     return objective
 
@@ -959,3 +989,120 @@ def _objective_boost(
     gradient = y_pred * (1 - y_pred) * cost
     hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
+
+
+class AECObjective:
+    def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
+
+    def calc_ders_range(self, predictions, targets, weights):
+        """
+        Computes first and second derivative of the loss function
+        with respect to the predicted value for each object.
+
+        Parameters
+        ----------
+        predictions : indexed container of floats
+            Current predictions for each object.
+
+        targets : indexed container of floats
+            Target values you provided with the dataset.
+
+        weights : float, optional (default=None)
+            Instance weight.
+
+        Returns
+        -------
+            der1 : list-like object of float
+            der2 : list-like object of float
+
+        """
+        weights = weights.astype(int)
+        # Use weights as a proxy to index the costs
+        tp_cost = self.tp_cost[weights] if isinstance(self.tp_cost, np.ndarray) else self.tp_cost
+        tn_cost = self.tn_cost[weights] if isinstance(self.tn_cost, np.ndarray) else self.tn_cost
+        fn_cost = self.fn_cost[weights] if isinstance(self.fn_cost, np.ndarray) else self.fn_cost
+        fp_cost = self.fp_cost[weights] if isinstance(self.fp_cost, np.ndarray) else self.fp_cost
+
+        y_proba = expit(predictions)
+        cost = targets * (tp_cost - fn_cost) + (1 - targets) * (fp_cost - tn_cost)
+        gradient = y_proba * (1 - y_proba) * cost
+        hessian = np.abs((1 - 2 * y_proba) * gradient)
+        # convert from two arrays to one list of tuples
+        return list(zip(-gradient, -hessian))
+
+
+class AECMetric:
+    def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
+
+    def is_max_optimal(self):
+        """
+        Returns whether great values of metric are better
+        """
+        return False
+
+    def evaluate(self, predictions, targets, weights):
+        """
+        Evaluates metric value.
+
+        Parameters
+        ----------
+        approxes : list of indexed containers (containers with only __len__ and __getitem__ defined) of float
+            Vectors of approx labels.
+
+        targets : one dimensional indexed container of float
+            Vectors of true labels.
+
+        weights : one dimensional indexed container of float, optional (default=None)
+            Weight for each instance.
+
+        Returns
+        -------
+            weighted error : float
+            total weight : float
+
+        """
+        weights = weights.astype(int)
+        # Use weights as a proxy to index the costs
+        tp_cost = self.tp_cost[weights] if isinstance(self.tp_cost, np.ndarray) else self.tp_cost
+        tn_cost = self.tn_cost[weights] if isinstance(self.tn_cost, np.ndarray) else self.tn_cost
+        fn_cost = self.fn_cost[weights] if isinstance(self.fn_cost, np.ndarray) else self.fn_cost
+        fp_cost = self.fp_cost[weights] if isinstance(self.fp_cost, np.ndarray) else self.fp_cost
+
+        y_proba = expit(predictions)
+        return expected_cost_loss(
+            targets,
+            y_proba,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
+            normalize=True,
+            check_input=False,
+        ), 1
+
+    def get_final_error(self, error, weight):
+        """
+        Returns final value of metric based on error and weight.
+
+        Parameters
+        ----------
+        error : float
+            Sum of errors in all instances.
+
+        weight : float
+            Sum of weights of all instances.
+
+        Returns
+        -------
+        metric value : float
+
+        """
+        return error

@@ -1,4 +1,6 @@
-from typing import Optional, Union
+import warnings
+from numbers import Real
+from typing import ClassVar, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,6 +14,10 @@ try:
     from lightgbm import LGBMClassifier
 except ImportError:
     LGBMClassifier = None
+try:
+    from catboost import CatBoostClassifier
+except ImportError:
+    CatBoostClassifier = None
 
 from ..._common import Parameter
 from ...metrics import make_objective_churn
@@ -22,14 +28,15 @@ class B2BoostClassifier(BaseBoostClassifier):
     """
     Gradient boosting model to optimize instance-dependent cost loss for customer churn.
 
-    B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier` and :class:`lightgbm:lightgbm.LGBMClassifier`.
+    B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
+    and :class:`catboost:catboost.CatBoostClassifier`.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier` or :class:`lightgbm:lightgbm.LGBMClassifier`, optional
+    estimator : `xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` or :class:`catboost:catboost.CatBoostClassifier`, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
@@ -160,9 +167,17 @@ class B2BoostClassifier(BaseBoostClassifier):
         Annals of Operations Research, 1-27.
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        **BaseBoostClassifier._parameter_constraints,
+        'accept_rate': [Real],
+        'clv': ['array-like', Real],
+        'incentive_fraction': [Real],
+        'contact_cost': [Real],
+    }
+
     def __init__(
         self,
-        estimator: Optional[XGBClassifier | LGBMClassifier] = None,
+        estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
         *,
         accept_rate: float = 0.3,
         clv: Union[float, ArrayLike] = 200,
@@ -274,6 +289,29 @@ class B2BoostClassifier(BaseBoostClassifier):
                 accept_rate=accept_rate,
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, CatBoostClassifier):
+            objective, metric = make_objective_churn(
+                'catboost',
+                clv=clv,
+                incentive_fraction=incentive_fraction,
+                contact_cost=contact_cost,
+                accept_rate=accept_rate,
+            )
+            self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
+            indices = np.arange(X.shape[0])
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    'ignore',
+                    message='Can\'t optimze method "calc_ders_range" because self argument is used',
+                    category=UserWarning,
+                )
+                warnings.filterwarnings(
+                    'ignore',
+                    message='Can\'t optimze method "evaluate" because self argument is used',
+                    category=UserWarning,
+                )
+                self.estimator_.fit(X, y, sample_weight=indices)
+            return self
         else:
             raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
 

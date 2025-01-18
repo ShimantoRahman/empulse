@@ -1,12 +1,12 @@
 `Unreleased`_
 =============
 
-- |Feature| Add support for LightGBM models in :class:`~empulse.models.CSBoostClassifier` and
+- |Feature| Add support for LightGBM and Catboost models in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier`
 - |API| :func:`~empulse.metrics.make_objective_churn` and :func:`~empulse.metrics.make_objective_acquisition`
-  now take a ``model`` argument to calculate the objective for either XGBoost or LightGBM models.
-- |API| XGBoost is now an optional dependency together with LightGBM. To install the package with
-  XGBoost and LightGBM support, use the following command: ``pip install empulse[optional]``
+  now take a ``model`` argument to calculate the objective for either XGBoost, LightGBM or Catboost models.
+- |API| XGBoost is now an optional dependency together with LightGBM and Catboost. To install the package with
+  XGBoost, LightGBM and Catboost support, use the following command: ``pip install empulse[optional]``
 - |Feature| Add parameter validation for all models and samplers
 - |API| Make all arguments of dataset loaders keyword-only
 - |Fix| Update the descriptions attached to each dataset to match information found in the user guide

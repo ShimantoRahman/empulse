@@ -1,8 +1,10 @@
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Literal, TypeVar, overload
 
 import numpy as np
+from numpy import ndarray
 from numpy.typing import ArrayLike
+from scipy.special import expit
 
 if TYPE_CHECKING:
     try:
@@ -28,15 +30,39 @@ else:
 from empulse.metrics.acquisition._validation import _validate_input_deterministic
 
 
+@overload
 def make_objective_acquisition(
-    model: Literal['xgboost', 'lightgbm'] = 'xgboost',
+    model: Literal['catboost'],
     *,
     contribution: float = 7_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]:
+) -> tuple['AECObjectiveAcquisition', 'AECMetricAcquisition']: ...
+
+
+@overload
+def make_objective_acquisition(
+    model: Literal['xgboost', 'lightgbm'],
+    *,
+    contribution: float = 7_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+
+
+def make_objective_acquisition(
+    model: Literal['xgboost', 'lightgbm', 'catboost'],
+    *,
+    contribution: float = 7_000,
+    contact_cost: float = 50,
+    sales_cost: float = 500,
+    direct_selling: float = 1,
+    commission: float = 0.1,
+) -> tuple['AECObjectiveAcquisition', 'AECMetricAcquisition'] | Callable[[ndarray, Matrix], tuple[ndarray, ndarray]]:
     """
     Create an objective function for the Expected Cost measure for customer acquisition.
 
@@ -50,11 +76,12 @@ def make_objective_acquisition(
 
     Parameters
     ----------
-    model : {'xgboost', 'lightgbm'}
+    model : {'xgboost', 'lightgbm', 'catboost'}
         The model for which the objective function is created.
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
+        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
 
     contribution : float, default=7000
         Average contribution of a new customer (``contribution ≥ 0``).
@@ -139,6 +166,23 @@ def make_objective_acquisition(
                 direct_selling=direct_selling,
                 commission=commission,
             )
+    elif model == 'catboost':
+        return (
+            AECObjectiveAcquisition(
+                contribution=contribution,
+                contact_cost=contact_cost,
+                sales_cost=sales_cost,
+                direct_selling=direct_selling,
+                commission=commission,
+            ),
+            AECMetricAcquisition(
+                contribution=contribution,
+                contact_cost=contact_cost,
+                sales_cost=sales_cost,
+                direct_selling=direct_selling,
+                commission=commission,
+            ),
+        )
     else:
         raise ValueError(f"Expected model to be 'xgboost' or 'lightgbm', got {model} instead.")
     return objective
@@ -191,6 +235,132 @@ def _objective(
     gradient = y_pred * (1 - y_pred) * cost
     hessian = np.abs((1 - 2 * y_pred) * gradient)
     return gradient, hessian
+
+
+class AECObjectiveAcquisition:
+    def __init__(
+        self,
+        contribution: float = 7_000,
+        contact_cost: float = 50,
+        sales_cost: float = 500,
+        direct_selling: float = 1,
+        commission: float = 0.1,
+    ):
+        self.contribution = contribution
+        self.sales_cost = sales_cost
+        self.contact_cost = contact_cost
+        self.direct_selling = direct_selling
+        self.commission = commission
+
+    def calc_ders_range(self, predictions, targets, weights):
+        """
+        Computes first and second derivative of the loss function
+        with respect to the predicted value for each object.
+
+        Parameters
+        ----------
+        predictions : indexed container of floats
+            Current predictions for each object.
+
+        targets : indexed container of floats
+            Target values you provided with the dataset.
+
+        weights : float, optional (default=None)
+            Instance weight.
+
+        Returns
+        -------
+            der1 : list-like object of float
+            der2 : list-like object of float
+
+        """
+        y_proba = expit(predictions)
+        cost = (
+            targets
+            * (
+                self.direct_selling * (self.contact_cost + self.sales_cost - self.contribution)
+                + (1 - self.direct_selling) * (self.contact_cost - (1 - self.commission) * self.contribution)
+            )
+            + (1 - targets) * self.contact_cost
+        )
+        gradient = y_proba * (1 - y_proba) * cost
+        hessian = np.abs((1 - 2 * y_proba) * gradient)
+        return list(zip(-gradient, -hessian))
+
+
+class AECMetricAcquisition:
+    def __init__(
+        self,
+        contribution: float = 7_000,
+        contact_cost: float = 50,
+        sales_cost: float = 500,
+        direct_selling: float = 1,
+        commission: float = 0.1,
+    ):
+        self.contribution = contribution
+        self.sales_cost = sales_cost
+        self.contact_cost = contact_cost
+        self.direct_selling = direct_selling
+        self.commission = commission
+
+    def is_max_optimal(self):
+        """
+        Returns whether great values of metric are better
+        """
+        return False
+
+    def evaluate(self, predictions, targets, weights):
+        """
+        Evaluates metric value.
+
+        Parameters
+        ----------
+        predictions : list of indexed containers (containers with only __len__ and __getitem__ defined) of float
+            Vectors of approx labels.
+
+        targets : one dimensional indexed container of float
+            Vectors of true labels.
+
+        weights : one dimensional indexed container of float, optional (default=None)
+            Weight for each instance.
+
+        Returns
+        -------
+            weighted error : float
+            total weight : float
+
+        """
+        y_proba = expit(predictions)
+        return expected_cost_loss_acquisition(
+            targets,
+            y_proba,
+            contribution=self.contribution,
+            contact_cost=self.contact_cost,
+            sales_cost=self.sales_cost,
+            direct_selling=self.direct_selling,
+            commission=self.commission,
+            normalize=True,
+            check_input=False,
+        ), 1
+
+    def get_final_error(self, error, weight):
+        """
+        Returns final value of metric based on error and weight.
+
+        Parameters
+        ----------
+        error : float
+            Sum of errors in all instances.
+
+        weight : float
+            Sum of weights of all instances.
+
+        Returns
+        -------
+        metric value : float
+
+        """
+        return error
 
 
 def expected_cost_loss_acquisition(
