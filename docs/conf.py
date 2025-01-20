@@ -35,15 +35,13 @@ def get_latest_github_release(repo):
     return response.json()["tag_name"]
 
 def generate_versions_json():
-    with open('../empulse/VERSION.txt', 'r') as version_file:
-        version = version_file.read().strip()
-    if 'dev' in version:
+    if 'dev' in release:
         # If the version is a dev version, then we need to get the latest release from GitHub
         latest_version = get_latest_github_release("ShimantoRahman/empulse")
         versions = [
             {
                 "name": "dev (latest)",
-                "version": version,
+                "version": release,
                 "url": "https://empulse.readthedocs.io/en/latest/",
             },
             {
@@ -57,12 +55,12 @@ def generate_versions_json():
         versions = [
             {
                 "name": "dev (latest)",
-                "version": version,
+                "version": release,
                 "url": "https://empulse.readthedocs.io/en/latest/"
             },
             {
-                "name": f"{version} (stable)",
-                "version": version,
+                "name": f"{release} (stable)",
+                "version": release,
                 "url": "https://empulse.readthedocs.io/en/stable/",
                 "preferred": True
             }
