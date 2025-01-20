@@ -14,6 +14,7 @@ from .common import classification_threshold
 from .credit_scoring import empcs, empcs_score, mpcs, mpcs_score
 from .emp import emp, emp_score
 from .lift import lift_score
+from .metric import Metric
 from .mp import max_profit, max_profit_score
 from .savings import (
     cost_loss,
@@ -25,6 +26,7 @@ from .savings import (
 )
 
 __all__ = [
+    'Metric',
     'auepc_score',
     'classification_threshold',
     'cost_loss',

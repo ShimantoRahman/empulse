@@ -1,6 +1,7 @@
 `Unreleased`_
 =============
 
+- |MajorFeature| Add :class:`~empulse.metrics.Metric` to easily build your own value-driven and cost-sensitive metrics
 - |Feature| Add support for LightGBM and Catboost models in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier`
 - |API| :func:`~empulse.metrics.make_objective_churn` and :func:`~empulse.metrics.make_objective_acquisition`

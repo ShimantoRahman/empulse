@@ -4,10 +4,7 @@ from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sympy.stats import Beta
 
-from empulse.metrics import empc_score
-
-# Define the Metric class (assuming it is imported from the correct module)
-from empulse.metrics.metric import Metric
+from empulse.metrics import Metric, empc_score
 
 
 @pytest.fixture(scope='module')
