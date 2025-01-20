@@ -19,7 +19,7 @@ def dataset():
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
 def test_csboost_different_classifiers(library, classifier_name, dataset):
     # Import the classifier dynamically
-    classifier_module = __import__(library, fromlist=[classifier_name])
+    classifier_module = pytest.importorskip(library)
     classifier_class = getattr(classifier_module, classifier_name)
 
     X, y, fn_cost, fp_cost = dataset

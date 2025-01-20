@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
-from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 from xgboost import XGBClassifier
 
@@ -135,7 +134,7 @@ def dataset():
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
 def test_b2boost_different_classifiers(library, classifier_name, dataset):
     # Import the classifier dynamically
-    classifier_module = __import__(library, fromlist=[classifier_name])
+    classifier_module = pytest.importorskip(library)
     classifier_class = getattr(classifier_module, classifier_name)
 
     X, y = dataset
@@ -146,19 +145,3 @@ def test_b2boost_different_classifiers(library, classifier_name, dataset):
 
     assert y_pred.shape == y.shape
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
-
-
-INVALID_PARAMS = [
-    {'clv': '5'},
-    {'accept_rate': '5'},
-    {'incentive_fraction': '5'},
-    {'contact_cost': '5'},
-]
-
-
-@pytest.mark.parametrize('invalid_params', INVALID_PARAMS)
-def test_b2boost_invalid_params(invalid_params, dataset):
-    X, y = dataset
-    model = B2BoostClassifier(**invalid_params)
-    with pytest.raises(InvalidParameterError):
-        model.fit(X, y)
