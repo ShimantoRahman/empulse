@@ -31,6 +31,22 @@ class Metric:
         return self._tn_benefit
 
     @property
+    def fp_benefit(self):
+        return -self._fp_cost
+
+    @property
+    def fn_benefit(self):
+        return -self._fn_cost
+
+    @property
+    def tp_cost(self):
+        return -self._tp_benefit
+
+    @property
+    def tn_cost(self):
+        return -self._tn_benefit
+
+    @property
     def fp_cost(self):
         return self._fp_cost
 
@@ -48,6 +64,30 @@ class Metric:
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._tn_benefit += term
+        return self
+
+    def add_fp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        if isinstance(term, str):
+            term = sympy.sympify(term)
+        self._fp_cost -= term
+        return self
+
+    def add_fn_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        if isinstance(term, str):
+            term = sympy.sympify(term)
+        self._fn_cost -= term
+        return self
+
+    def add_tp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        if isinstance(term, str):
+            term = sympy.sympify(term)
+        self._tp_benefit -= term
+        return self
+
+    def add_tn_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        if isinstance(term, str):
+            term = sympy.sympify(term)
+        self._tn_benefit -= term
         return self
 
     def add_fp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
@@ -70,16 +110,51 @@ class Metric:
         return self
 
     def build(self, kind: Literal['metric', 'objective'] = 'metric') -> 'Metric':
-        self.profit_function = self._build_max_profit()
-        random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
-        n_random = len(random_symbols)
+        if self.kind == 'max profit':
+            self.profit_function = self._build_max_profit()
+            random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
+            n_random = len(random_symbols)
 
-        if n_random == 0:
-            self._score_function = self._compute_deterministic(self.profit_function)
-        elif n_random == 1:
-            self._score_function = self._compute_one_stochastic(self.profit_function, random_symbols[0])
+            if n_random == 0:
+                self._score_function = self._compute_deterministic(self.profit_function)
+            elif n_random == 1:
+                self._score_function = self._compute_one_stochastic(self.profit_function, random_symbols[0])
+            else:
+                raise NotImplementedError('Only zero or one random variable is supported')
+        elif self.kind == 'cost':
+            y, s = sympy.symbols('y s')
+            cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
+                (1 - s) * self.tn_cost + s * self.fp_cost
+            )
+            cost_funct = lambdify(list(cost_function.free_symbols), cost_function)
+
+            def cost_loss(y_true, y_score, **kwargs):
+                return np.mean(cost_funct(y=y_true, s=y_score, **kwargs))
+
+            self._score_function = cost_loss
+
+        elif self.kind == 'savings':
+            y, s = sympy.symbols('y s')
+            cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
+                (1 - s) * self.tn_cost + s * self.fp_cost
+            )
+            all_zero_function = cost_function.subs(s, 0)
+            all_one_function = cost_function.subs(s, 1)
+
+            cost_func = lambdify(list(cost_function.free_symbols), cost_function)
+            all_zero_func = lambdify(list(all_zero_function.free_symbols), all_zero_function)
+            all_one_func = lambdify(list(all_one_function.free_symbols), all_one_function)
+
+            def savings(y_true, y_score, **kwargs):
+                # it is possible that with the substitution of the symbols, the function becomes a constant
+                all_zero_score = np.mean(all_zero_func(y=y_true, **kwargs)) if all_zero_function != 0 else 0
+                all_one_score = np.mean(all_one_func(y=y_true, **kwargs)) if all_one_function != 0 else 0
+                cost_base = min(all_zero_score, all_one_score)
+                return 1 - np.mean(cost_func(y=y_true, s=y_score, **kwargs)) / cost_base
+
+            self._score_function = savings
         else:
-            raise NotImplementedError('Only zero or one random variable is supported')
+            raise NotImplementedError(f'Kind {self.kind} is not supported')
         return self
 
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
@@ -184,4 +259,30 @@ class Metric:
                 s = latex(profit_function, mode='plain', order=None)
 
             s = s.replace('F_{0}', 'F_{0}(T)').replace('F_{1}', 'F_{1}(T)')
+            return '$\\displaystyle %s$' % s
+        elif self.kind == 'cost':
+            y, s, i, N = sympy.symbols('y s i N')
+            cost_function = (1 / N) * sympy.Sum(
+                y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
+                (i, 0, N),
+            )
+
+            for symbol in cost_function.free_symbols:
+                if symbol != N:
+                    cost_function = cost_function.subs(symbol, str(symbol) + '_i')
+
+            s = latex(cost_function, mode='plain', order=None)
+            return '$\\displaystyle %s$' % s
+        elif self.kind == 'savings':
+            y, s, i, N, c0, c1 = sympy.symbols('y s i N Cost_{0} Cost_{1}')
+            cost_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
+                y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
+                (i, 0, N),
+            )
+
+            for symbol in cost_function.free_symbols:
+                if symbol not in (N, c0, c1):
+                    cost_function = cost_function.subs(symbol, str(symbol) + '_i')
+
+            s = latex(cost_function, mode='plain', order=None)
             return '$\\displaystyle %s$' % s
