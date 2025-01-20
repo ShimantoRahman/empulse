@@ -20,6 +20,7 @@ class Metric:
         self._tn_benefit = 0
         self._fp_cost = 0
         self._fn_cost = 0
+        self._aliases = {}
 
     @property
     def tp_benefit(self):
@@ -61,6 +62,13 @@ class Metric:
         self._fn_cost += term
         return self
 
+    def alias(self, alias: str | dict, symbol: sympy.Symbol = None) -> 'Metric':
+        if isinstance(alias, dict):
+            self._aliases.update(alias)
+        else:
+            self._aliases[alias] = symbol
+        return self
+
     def build(self, kind: Literal['metric', 'objective'] = 'metric') -> 'Metric':
         self.profit_function = self._build_max_profit()
         random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
@@ -75,6 +83,10 @@ class Metric:
         return self
 
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
+        # Map aliases to the appropriate symbols
+        for alias, symbol in self._aliases.items():
+            if alias in kwargs:
+                kwargs[symbol] = kwargs.pop(alias)
         return self._score_function(y_true, y_score, **kwargs)
 
     def _compute_deterministic(self, profit_function):
