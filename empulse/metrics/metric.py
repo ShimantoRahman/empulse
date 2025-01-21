@@ -16,13 +16,24 @@ from ._convex_hull import _compute_convex_hull
 
 class Metric:
     """
-    Metric class to compute the profit, cost, savings, etc. of a binary classifier.
+    Class to create a custom value/cost-sensitive metric.
+
+    The Metric class uses the Builder pattern to create a custom metric.
+    You start by specifying the kind of metric you want to compute and then add the terms that make up the metric.
+    These terms come from the cost-benefits matrix of the classification problem.
+    After you have added all the terms, you can call the build method to create the metric function.
+    Then you can call the metric function with the true labels and predicted probabilities to compute the metric value.
+
+    The costs and benefits are specified using sympy symbols or expressions.
+    Stochastic variables are supported, and can be specified using sympy.stats random variables.
+    Make sure that you add the parameters of the random variables as keyword arguments when calling the metric function.
+
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
 
     Parameters
     ----------
-    kind : str, optional
+    kind : {'max profit', 'cost', 'savings'}
         The kind of metric to compute.
-        The supported values are 'max profit', 'profit', 'min cost', 'cost', and 'savings'.
 
     Attributes
     ----------
@@ -101,9 +112,9 @@ class Metric:
         cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
     """
 
-    METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'profit', 'min cost', 'cost', 'savings']
+    METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'cost', 'savings']
 
-    def __init__(self, kind: Literal['max profit', 'profit', 'min cost', 'cost', 'savings'] = 'max profit') -> None:
+    def __init__(self, kind: Literal['max profit', 'cost', 'savings']) -> None:
         if kind not in self.METRIC_TYPES:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         self.kind = kind
@@ -147,48 +158,144 @@ class Metric:
         return self._fn_cost
 
     def add_tp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the benefit of classifying a true positive.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the benefit of classifying a true positive.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._tp_benefit += term
         return self
 
     def add_tn_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the benefit of classifying a true negative.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the benefit of classifying a true negative.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._tn_benefit += term
         return self
 
     def add_fp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the benefit of classifying a false positive.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the benefit of classifying a false positive.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._fp_cost -= term
         return self
 
     def add_fn_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the benefit of classifying a false negative.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the benefit of classifying a false negative.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._fn_cost -= term
         return self
 
     def add_tp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the cost of classifying a true positive.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the cost of classifying a true positive.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._tp_benefit -= term
         return self
 
     def add_tn_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the cost of classifying a true negative.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the cost of classifying a true negative.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._tn_benefit -= term
         return self
 
     def add_fp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the cost of classifying a false positive.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the cost of classifying a false positive.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._fp_cost += term
         return self
 
     def add_fn_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+        """
+        Add a term to the cost of classifying a false negative.
+
+        Parameters
+        ----------
+        term: sympy.Symbol | sympy.Expr | str
+            The term to add to the cost of classifying a false negative.
+
+        Returns
+        -------
+        Metric
+        """
         if isinstance(term, str):
             term = sympy.sympify(term)
         self._fn_cost += term
@@ -229,7 +336,9 @@ class Metric:
 
             y_true = [1, 0, 1, 0, 1]
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
-            cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+            cost_loss(
+                y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
+            )
         """
         if isinstance(alias, dict):
             self._aliases.update(alias)
@@ -279,6 +388,16 @@ class Metric:
         return self
 
     def build(self) -> 'Metric':
+        """
+        Build the metric function.
+
+        This function should be called last after adding all the terms.
+        After calling this function, the metric function can be called with the true labels and predicted probabilities.
+
+        Returns
+        -------
+        Metric
+        """
         if self.kind == 'max profit':
             self.profit_function = self._build_max_profit()
             random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
