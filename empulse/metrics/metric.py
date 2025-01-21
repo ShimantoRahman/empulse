@@ -15,6 +15,92 @@ from ._convex_hull import _compute_convex_hull
 
 
 class Metric:
+    """
+    Metric class to compute the profit, cost, savings, etc. of a binary classifier.
+
+    Parameters
+    ----------
+    kind : str, optional
+        The kind of metric to compute.
+        The supported values are 'max profit', 'profit', 'min cost', 'cost', and 'savings'.
+
+    Attributes
+    ----------
+    tp_benefit : sympy.Symbol | sympy.Expr
+        The benefit of a true positive.
+
+    tn_benefit : sympy.Symbol | sympy.Expr
+        The benefit of a true negative.
+
+    fp_benefit : sympy.Symbol | sympy.Expr
+        The benefit of a false positive.
+
+    fn_benefit : sympy.Symbol | sympy.Expr
+        The benefit of a false negative.
+
+    tp_cost : sympy.Symbol | sympy.Expr
+        The cost of a true positive.
+
+    tn_cost : sympy.Symbol | sympy.Expr
+        The cost of a true negative.
+
+    fp_cost : sympy.Symbol | sympy.Expr
+        The cost of a false positive.
+
+    fn_cost : sympy.Symbol | sympy.Expr
+        The cost of a false negative.
+
+    Examples
+    --------
+
+    Reimplementing :func:`~empulse.metrics.empc_score` using the :class:`Metric` class.
+
+    .. code-block:: python
+
+        import sympy as sp
+        from empulse.metrics import Metric
+
+        clv, d, f, alpha, beta = sp.symbols('clv d f alpha beta')  # define deterministic variables
+        gamma = sp.stats.Beta('gamma', alpha, beta)  # define gamma to follow a Beta distribution
+
+        empc_score = (
+            Metric(kind='max profit')
+            .add_tp_benefit(gamma * (clv - d - f))  # when churner accepts offer
+            .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
+            .add_fp_cost(d + f)  # when you send an offer to a non-churner
+            .alias({'incentive_cost': 'd', 'contact_cost': 'f'})
+            .build()
+        )
+
+        y_true = [1, 0, 1, 0, 1]
+        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+
+        empc_score(y_true, y_proba, clv=100, incentive_cost=10, contact_cost=1, alpha=6, beta=14)
+
+    Reimplementing :func:`~empulse.metrics.expected_cost_loss_churn` using the :class:`Metric` class.
+
+    .. code-block:: python
+
+        import sympy as sp
+        from empulse.metrics import Metric
+
+        clv, delta, f, gamma = sp.symbols('clv delta f gamma')
+
+        cost_loss = (
+            Metric(kind='cost')
+            .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer
+            .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
+            .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner
+            .alias({'incentive_fraction': 'delta', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+            .build()
+        )
+
+        y_true = [1, 0, 1, 0, 1]
+        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+
+        cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+    """
+
     METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'profit', 'min cost', 'cost', 'savings']
 
     def __init__(self, kind: Literal['max profit', 'profit', 'min cost', 'cost', 'savings'] = 'max profit') -> None:
@@ -26,6 +112,7 @@ class Metric:
         self._fp_cost = 0
         self._fn_cost = 0
         self._aliases = {}
+        self._defaults = {}
 
     @property
     def tp_benefit(self) -> sympy.Symbol | sympy.Expr:
@@ -108,10 +195,87 @@ class Metric:
         return self
 
     def alias(self, alias: str | dict[str, sympy.Symbol | str], symbol: sympy.Symbol = None) -> 'Metric':
+        """
+        Add an alias for a symbol.
+
+        Parameters
+        ----------
+        alias: str | dict[str, sympy.Symbol | str]
+            The alias to add. If a dictionary is passed, the keys are the aliases and the values are the symbols.
+        symbol: sympy.Symbol, optional
+            The symbol to alias to.
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import Metric
+
+            clv, delta, f, gamma = sp.symbols('clv delta f gamma')
+            cost_loss = (
+                Metric(kind='cost')
+                .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer
+                .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
+                .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner
+                .alias({'incentive_fraction': 'delta', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+                .build()
+            )
+
+            y_true = [1, 0, 1, 0, 1]
+            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+            cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+        """
         if isinstance(alias, dict):
             self._aliases.update(alias)
         else:
             self._aliases[alias] = symbol
+        return self
+
+    def set_default(self, **defaults: float) -> 'Metric':
+        """
+        Set default values for symbols or their aliases.
+
+        Parameters
+        ----------
+        defaults: float
+            Default values for symbols or their aliases.
+            These default values will be used if not provided in __call__.
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import Metric
+
+            clv, delta, f, gamma = sp.symbols('clv delta f gamma')
+            cost_loss = (
+                Metric(kind='cost')
+                .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer
+                .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
+                .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner
+                .alias({'incentive_fraction': 'delta', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+                .set_default(incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+                .build()
+            )
+
+            y_true = [1, 0, 1, 0, 1]
+            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+            cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
+
+        """
+        self._defaults.update(defaults)
         return self
 
     def build(self) -> 'Metric':
@@ -165,6 +329,11 @@ class Metric:
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
+
+        # Use default values if not provided in kwargs
+        for key, value in self._defaults.items():
+            kwargs.setdefault(key, value)
+
         for key, value in kwargs.items():
             if not isinstance(value, Real):
                 kwargs[key] = np.asarray(value)
