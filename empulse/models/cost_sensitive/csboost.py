@@ -30,7 +30,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     Gradient boosting model to optimize instance-dependent cost loss.
 
     CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
-    and :class:`catboost:catboost.CatBoostClassifier` as base estimators.
+    and :class:`catboost.CatBoostClassifier` as base estimators.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
@@ -43,7 +43,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier`, `lightgbm:lightgbm.LGBMClassifier` or :class:`catboost:catboost.CatBoostClassifier`, optional
+    estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` or :class:`catboost.CatBoostClassifier`, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
@@ -88,7 +88,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     classes_ : numpy.ndarray, shape=(n_classes,)
         Unique classes in the target.
 
-    estimator_ : `xgboost:xgboost.XGBClassifier`
+    estimator_ : :class:`xgboost:xgboost.XGBClassifier`
         Fitted XGBoost classifier.
 
     Examples

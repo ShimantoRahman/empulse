@@ -832,7 +832,7 @@ def make_objective_aec(
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
-        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
+        - 'catboost' : :class:`catboost.CatBoostClassifier`
         - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0

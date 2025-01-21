@@ -103,6 +103,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "xgboost": ("https://xgboost.readthedocs.io/en/latest/", None),
+    "lightgbm": ("https://lightgbm.readthedocs.io/en/latest/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "imblearn": ("https://imbalanced-learn.org/stable", None),
 }
@@ -113,8 +114,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-# html_theme = 'sphinx_rtd_theme'
-# html_theme_options = {"logo_only": True}
 html_theme = 'pydata_sphinx_theme'
 html_theme_options = {
     # -- General configuration ------------------------------------------------

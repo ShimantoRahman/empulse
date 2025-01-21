@@ -81,7 +81,7 @@ def make_objective_acquisition(
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
-        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
+        - 'catboost' : :class:`catboost.CatBoostClassifier`
 
     contribution : float, default=7000
         Average contribution of a new customer (``contribution ≥ 0``).

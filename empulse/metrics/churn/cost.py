@@ -78,7 +78,7 @@ def make_objective_churn(
 
         - 'xgboost' : :class:`xgboost:xgboost.XGBClassifier`
         - 'lightgbm' : :class:`lightgbm:lightgbm.LGBMClassifier`
-        - 'catboost' : :class:`catboost:catboost.CatBoostClassifier`
+        - 'catboost' : :class:`catboost.CatBoostClassifier`
 
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).

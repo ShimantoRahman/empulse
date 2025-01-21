@@ -29,14 +29,14 @@ class B2BoostClassifier(BaseBoostClassifier):
     Gradient boosting model to optimize instance-dependent cost loss for customer churn.
 
     B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
-    and :class:`catboost:catboost.CatBoostClassifier`.
+    and :class:`catboost.CatBoostClassifier`.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
 
     Parameters
     ----------
-    estimator : `xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` or :class:`catboost:catboost.CatBoostClassifier`, optional
+    estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` or :class:`catboost.CatBoostClassifier`, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 
@@ -68,7 +68,7 @@ class B2BoostClassifier(BaseBoostClassifier):
     classes_ : numpy.ndarray, shape=(n_classes,)
         Unique classes in the target.
 
-    estimator_ : `xgboost:xgboost.XGBClassifier`
+    estimator_ : :class:`xgboost:xgboost.XGBClassifier`
         Fitted XGBoost classifier.
 
     Notes
