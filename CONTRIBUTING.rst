@@ -69,7 +69,7 @@ Then, the workflow would look as follows:
 7. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
 8. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
 
-    $ tox
+    $ tox -f tests
 
 9. Remember to update documentation if required.
 10. If your development modifies `Empulse` behavior, update the ``CHANGELOG.rst`` file with what you improved.

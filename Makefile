@@ -18,7 +18,9 @@ doctest:
 	pytest --doctest-modules empulse/
 
 tox:
-	tox -p
+	tox -e py312-lint
+	tox -e py312-docs
+	tox -f tests -p
 
 lint:
 	ruff check --fix
