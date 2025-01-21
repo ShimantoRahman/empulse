@@ -1,5 +1,6 @@
 from itertools import islice, pairwise
-from typing import Literal
+from numbers import Real
+from typing import ClassVar, Literal
 
 import numpy as np
 import sympy
@@ -14,7 +15,11 @@ from ._convex_hull import _compute_convex_hull
 
 
 class Metric:
-    def __init__(self, kind: Literal['max profit', 'profit', 'min cost', 'cost', 'savings'] = 'max profit'):
+    METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'profit', 'min cost', 'cost', 'savings']
+
+    def __init__(self, kind: Literal['max profit', 'profit', 'min cost', 'cost', 'savings'] = 'max profit') -> None:
+        if kind not in self.METRIC_TYPES:
+            raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         self.kind = kind
         self._tp_benefit = 0
         self._tn_benefit = 0
@@ -23,31 +28,31 @@ class Metric:
         self._aliases = {}
 
     @property
-    def tp_benefit(self):
+    def tp_benefit(self) -> sympy.Symbol | sympy.Expr:
         return self._tp_benefit
 
     @property
-    def tn_benefit(self):
+    def tn_benefit(self) -> sympy.Symbol | sympy.Expr:
         return self._tn_benefit
 
     @property
-    def fp_benefit(self):
+    def fp_benefit(self) -> sympy.Symbol | sympy.Expr:
         return -self._fp_cost
 
     @property
-    def fn_benefit(self):
+    def fn_benefit(self) -> sympy.Symbol | sympy.Expr:
         return -self._fn_cost
 
     @property
-    def tp_cost(self):
+    def tp_cost(self) -> sympy.Symbol | sympy.Expr:
         return -self._tp_benefit
 
     @property
-    def tn_cost(self):
+    def tn_cost(self) -> sympy.Symbol | sympy.Expr:
         return -self._tn_benefit
 
     @property
-    def fp_cost(self):
+    def fp_cost(self) -> sympy.Symbol | sympy.Expr:
         return self._fp_cost
 
     @property
@@ -102,14 +107,14 @@ class Metric:
         self._fn_cost += term
         return self
 
-    def alias(self, alias: str | dict, symbol: sympy.Symbol = None) -> 'Metric':
+    def alias(self, alias: str | dict[str, sympy.Symbol | str], symbol: sympy.Symbol = None) -> 'Metric':
         if isinstance(alias, dict):
             self._aliases.update(alias)
         else:
             self._aliases[alias] = symbol
         return self
 
-    def build(self, kind: Literal['metric', 'objective'] = 'metric') -> 'Metric':
+    def build(self) -> 'Metric':
         if self.kind == 'max profit':
             self.profit_function = self._build_max_profit()
             random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
@@ -158,10 +163,17 @@ class Metric:
         return self
 
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
+        y_true = np.asarray(y_true)
+        y_score = np.asarray(y_score)
+        for key, value in kwargs.items():
+            if not isinstance(value, Real):
+                kwargs[key] = np.asarray(value)
+
         # Map aliases to the appropriate symbols
         for alias, symbol in self._aliases.items():
             if alias in kwargs:
                 kwargs[symbol] = kwargs.pop(alias)
+
         return self._score_function(y_true, y_score, **kwargs)
 
     def _compute_deterministic(self, profit_function):
@@ -224,7 +236,7 @@ class Metric:
 
         return score_function
 
-    def _build_max_profit(self):
+    def _build_max_profit(self) -> sympy.Expr:
         pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
         profit_function = (
             self._tp_benefit * pos_prior * tpr
@@ -234,14 +246,14 @@ class Metric:
         )
         return profit_function
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}(tp_benefit={self.tp_benefit}, '
             f'tn_benefit={self.tn_benefit}, fp_cost={self.fp_cost}, '
             f'fn_cost={self.fn_cost})'
         )
 
-    def _repr_latex_(self):
+    def _repr_latex_(self) -> str:
         from sympy.printing.latex import latex
 
         if self.kind == 'max profit':
