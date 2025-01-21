@@ -24,6 +24,9 @@ lint:
 	ruff check --fix
 	ruff format
 
+pre-commit:
+	pre-commit run --all-files
+
 # Content from the docs directory Makefile
 # You can set these variables from the command line, and also
 # from the environment for the first two.
@@ -40,7 +43,11 @@ BUILDDIR      = docs/_build
 
 
 help:
-	@echo clean 	remove all build artifacts
-	@echo build 	build the project
-	@echo upload 	upload the project to pypi
-	@echo html 	build the html docs
+	@echo - clean:	remove all build artifacts
+	@echo - build:	build the project
+	@echo - upload:	upload the project to pypi
+	@echo - html:		build the html docs
+	@echo - test:		run the tests
+	@echo - doctest:	run the doctests
+	@echo - lint:		run the linter
+	@echo - pre-commit:	run the pre-commit checks
