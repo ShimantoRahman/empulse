@@ -14,6 +14,7 @@ General Metrics
    :nosignatures:
    :template: base.rst
 
+   Metric
    emp
    emp_score
    max_profit
