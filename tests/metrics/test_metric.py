@@ -141,7 +141,42 @@ def test_metric_vs_savings(customer_lifetime_value, incentive_cost, contact_cost
     assert pytest.approx(metric_result) == cost_result
 
 
-def test_alias(y_true_and_prediction):
+def test_metric_arraylikes(y_true_and_prediction):
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    y, y_proba = y_true_and_prediction
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit(gamma * (clv - delta * clv - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(delta * clv + f)
+        .build()
+    )
+    clvs = [customer_lifetime_value] * len(y)
+    deltas = [incentive_fraction] * len(y)
+    fs = [contact_cost] * len(y)
+    gammas = [accept_rate] * len(y)
+    metric_result = profit_func(
+        y,
+        y_proba,
+        clv=clvs,
+        delta=deltas,
+        f=fs,
+        gamma=gammas,
+    )
+    cost_result = expected_cost_loss_churn(
+        y,
+        y_proba,
+        clv=clvs,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_alias(y_true_and_prediction):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
     clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
@@ -173,7 +208,7 @@ def test_alias(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
-def test_set_default(y_true_and_prediction):
+def test_metric_set_default(y_true_and_prediction):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
     clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
