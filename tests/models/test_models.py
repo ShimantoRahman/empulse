@@ -44,7 +44,8 @@ ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 def expected_failed_checks(estimator):
     if isinstance(estimator, ProfLogitClassifier):
         return {
-            'check_classifier_data_not_an_array': 'Sklearn does not set random_state properly in the test. Tested internally.',
+            'check_classifier_data_not_an_array': 'Sklearn does not set random_state properly in the test. '
+            'Tested internally.',
             'check_fit_idempotent': 'Sklearn does not set random_state properly in the test. Tested internally.',
             'check_supervised_y_2d': 'Sklearn does not set random_state properly in the test. Tested internally.',
         }

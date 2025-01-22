@@ -101,7 +101,10 @@ def emp_score(
     -----
     The EMP is defined as [1]_:
 
-    .. math::  \\int_{b_0} \\int_{c_0} \\int_{b_1} \\int_{c_1} P(T;b_0, c_0, b_1, c_1) \\cdot w(b_0, c_0, b_1, c_1) \\, db_0 dc_0 db_1 dc_1
+    .. math::
+
+        \\int_{b_0} \\int_{c_0} \\int_{b_1} \\int_{c_1} \
+        P(T;b_0, c_0, b_1, c_1) \\cdot w(b_0, c_0, b_1, c_1) \\, db_0 dc_0 db_1 dc_1
 
     The EMP requires that the positive class is encoded as 0, and negative class as 1.
     However, this implementation assumes the standard notation ('positive': 1, 'negative': 0).
@@ -253,7 +256,10 @@ def emp(
     -----
     The EMP is defined as [1]_:
 
-    .. math::  \\int_{b_0} \\int_{c_0} \\int_{b_1} \\int_{c_1} P(T;b_0, c_0, b_1, c_1) \\cdot w(b_0, c_0, b_1, c_1) \\, db_0 dc_0 db_1 dc_1
+    .. math::
+
+        \\int_{b_0} \\int_{c_0} \\int_{b_1} \\int_{c_1} \
+        P(T;b_0, c_0, b_1, c_1) \\cdot w(b_0, c_0, b_1, c_1) \\, db_0 dc_0 db_1 dc_1
 
     The EMP requires that the positive class is encoded as 0, and negative class as 1.
     However, this implementation assumes the standard notation ('positive': 1, 'negative': 0).

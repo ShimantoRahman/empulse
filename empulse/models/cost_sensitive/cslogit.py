@@ -54,7 +54,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
         - If ``str``, then it should be one of the following:
 
-            - 'average expected cost' : Average Expected Cost loss function, see :func:`~empulse.metrics.expected_cost_loss`.
+            - 'average expected cost' : Average Expected Cost loss function,
+              see :func:`~empulse.metrics.expected_cost_loss`.
 
         - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
 

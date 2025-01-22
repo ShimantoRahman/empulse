@@ -25,7 +25,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         Determines how the group weights are computed.
         Group weights determine how much to over or undersample each combination of target and sensitive feature.
         For example, a weight of 2 for the pair (y_true == 1, sensitive_feature == 0) means that the resampled dataset
-        should have twice as many instances with y_true == 1 and sensitive_feature == 0 compared to the original dataset.
+        should have twice as many instances with y_true == 1 and sensitive_feature == 0
+        compared to the original dataset.
 
         - ``'statistical_parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.

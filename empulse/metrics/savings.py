@@ -185,7 +185,10 @@ def cost_loss(
     -----
     The cost of each instance :math:`C_i` is calculated as [3]_:
 
-    .. math:: C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+    .. math::
+
+        C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \
+        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
 
     where
 
@@ -310,7 +313,10 @@ def expected_cost_loss(
     -----
     The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [3]_:
 
-    .. math:: \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
+    .. math::
+
+        \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + \
+        (1 - y_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
 
     where
 
@@ -425,7 +431,10 @@ def expected_log_cost_loss(
     -----
     The expected log cost of each instance :math:`\\mathbb{E}[C^l_i]` is calculated as:
 
-    .. math:: \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))
+    .. math::
+
+        \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + \
+        (1 - y_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))
 
     where
 
@@ -539,7 +548,11 @@ def savings_score(
     -----
     The cost of each instance :math:`C_i` is calculated as [1]_:
 
-    .. math:: C_i(s_i) = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+    .. math::
+
+        C_i(s_i) = \
+        y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \
+        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
 
     The savings over a naive model is calculated as:
 
@@ -697,15 +710,25 @@ def expected_savings_score(
     -----
     The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [1]_:
 
-    .. math:: \\mathbb{E}[C_i(s_i)] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
+    .. math::
+
+        \\mathbb{E}[C_i(s_i)] = \
+        y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot \
+        (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
 
     The expected savings over a naive model is calculated as:
 
-    .. math::  \\text{Expected Savings} = 1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
+    .. math::
+
+        \\text{Expected Savings} = \
+        1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}
 
     The expected savings over a baseline model is calculated as:
 
-    .. math::  \\text{Expected Savings} = 1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i^*)]}
+    .. math::
+
+        \\text{Expected Savings} = \
+        1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i^*)]}
 
     where
 

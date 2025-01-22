@@ -43,7 +43,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     Parameters
     ----------
-    estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` or :class:`catboost.CatBoostClassifier`, optional
+    estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` \
+    or :class:`catboost.CatBoostClassifier`, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 

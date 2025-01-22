@@ -86,7 +86,10 @@ def empc_score(
     -----
     The EMPC is defined as [1]_:
 
-    .. math:: \\int_\\gamma CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - CLV (\\delta + \\phi) \\pi_1 F_1(T) d\\gamma
+    .. math::
+
+        \\int_\\gamma CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - \
+        CLV (\\delta + \\phi) \\pi_1 F_1(T) d\\gamma
 
     The EMPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [3]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
@@ -224,7 +227,10 @@ def empc(
     -----
     The EMPC is defined as [1]_:
 
-    .. math:: \\int_\\gamma CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - CLV (\\delta + \\phi) \\pi_1 F_1(T) d\\gamma
+    .. math::
+
+        \\int_\\gamma CLV (\\gamma (1 - \\delta) - \\phi) \\pi_0 F_0(T) - \
+        CLV (\\delta + \\phi) \\pi_1 F_1(T) d\\gamma
 
     The EMPC requires that the churn class is encoded as 0, and it is NOT interchangeable (see [3]_ p37).
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
