@@ -111,6 +111,7 @@ extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "I",  # isort
     "ICN",  # flake8-import-conventions
     "INP",  # flake8-no-pep420
+    "NPY",  # numpy-specific rules
     "PD",  # pandas-vet
     "PGH004",  # blanket-noqa
     "PIE",  # flake8-pie
@@ -140,4 +141,5 @@ convention = "numpy"
     "E731",  # do not assign a `lambda` expression, use a `def`
     "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D",  # pydocstyle
+    "NPY002",  # Replace legacy `np.random.random` call with `np.random.Generator`
 ]

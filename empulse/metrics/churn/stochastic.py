@@ -10,8 +10,8 @@ from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp, _validate_input_empb
 
-if Version(np.version.version) >= Version('2.0.0'):
-    np.trapz = np.trapezoid
+if Version(np.version.version) < Version('2.0.0'):
+    np.trapezoid = np.trapz  # noqa: NPY201
 
 
 def empc_score(
@@ -614,7 +614,7 @@ def auepc_score(
     stop_index = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)
 
     # Calculate the AUEPC
-    score = np.trapz(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))
+    score = np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))
     if normalize:
         score /= (stop_index - 1) / len(profits)
     return score
