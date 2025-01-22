@@ -17,7 +17,7 @@ from ._cs_mixin import CostSensitiveMixin
 
 
 class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
-    """
+    r"""
     Classifier that sets the decision threshold to optimize the instance-dependent cost loss.
 
     Parameters
@@ -98,7 +98,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
     -----
     The optimal threshold is computed as [1]_:
 
-    .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
+    .. math:: t^*_i = \frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
 
     .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
               Therefore, it is recommended to use a calibrator when the probabilities are not well-calibrated.
@@ -150,7 +150,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         return tags
 
     @property
-    def classes_(self):
+    def classes_(self):  # noqa: D102
         if estimator := getattr(self, 'estimator_', None):
             return estimator.classes_
         try:

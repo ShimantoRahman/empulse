@@ -103,7 +103,7 @@ class CostSensitiveSampler(BaseSampler):
 
     if TYPE_CHECKING:
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, *, fp_cost=False, fn_cost=False):
+        def set_fit_resample_request(self, *, fp_cost=False, fn_cost=False):  # noqa: D102
             pass
 
     def __init__(
@@ -139,6 +139,8 @@ class CostSensitiveSampler(BaseSampler):
         fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
     ) -> tuple[NDArray, NDArray]:
         """
+        Resample the dataset.
+
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)

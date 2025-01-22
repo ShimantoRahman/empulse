@@ -228,7 +228,7 @@ def mpc(
     >>> mpc(y_true, y_score)
     (23.874999999999996, 0.875)
     """
-    profits, customer_thresholds = compute_profit_churn(
+    profits, customer_thresholds = _compute_profit_churn(
         y_true,
         y_score,
         clv,
@@ -242,7 +242,7 @@ def mpc(
     return profits[max_profit_index], customer_thresholds[max_profit_index]
 
 
-def compute_profit_churn(
+def _compute_profit_churn(
     y_true: ArrayLike,
     y_score: ArrayLike,
     clv: Union[ArrayLike, float] = 200,

@@ -81,7 +81,6 @@ def empcs_score(
 
     Examples
     --------
-
     >>> from empulse.metrics import empcs_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
@@ -193,14 +192,13 @@ def empcs(
 
     Examples
     --------
-
     >>> from empulse.metrics import empcs
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>> empcs(y_true, y_score)
     (0.09747017050000001, 0.32434500000000005)
-    """
+    """  # noqa: D401
     if check_input:
         y_true, y_score = _validate_input_emp(y_true, y_score, success_rate, default_rate, roi)
     else:

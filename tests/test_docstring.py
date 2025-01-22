@@ -40,7 +40,7 @@ def iter_modules(module_name):
 @pytest.mark.slow
 @pytest.mark.parametrize('module', iter_modules(TOP_MODULE))
 def test_code_blocks_in_docstrings(module):
-    """Test that code blocks in docstrings execute without errors"""
+    """Test that code blocks in docstrings execute without errors."""
     functions_and_classes = get_all_functions_and_classes(module)
 
     for obj in functions_and_classes:

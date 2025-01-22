@@ -8,7 +8,7 @@ StrategyFn = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 def _independent_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.ndarray:
     """
-    compute weights so that y would be statistically independent of the protected attribute.
+    Compute weights so that y would be statistically independent of the protected attribute.
 
     Parameters
     ----------

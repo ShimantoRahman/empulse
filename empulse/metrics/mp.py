@@ -71,7 +71,6 @@ def max_profit_score(
 
     Examples
     --------
-
     Reimplement MPC:
 
     >>> from empulse.metrics import max_profit_score
@@ -164,7 +163,6 @@ def max_profit(
 
     Examples
     --------
-
     Reimplement MPC:
 
     >>> from empulse.metrics import max_profit

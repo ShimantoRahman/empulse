@@ -185,7 +185,6 @@ def mpa(
 
     Examples
     --------
-
     >>> from empulse.metrics import mpa
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
@@ -193,7 +192,7 @@ def mpa(
     >>> mpa(y_true, y_score)
     (3706.25, 0.875)
     """
-    profits, customer_thresholds = compute_profit_acquisition(
+    profits, customer_thresholds = _compute_profit_acquisition(
         y_true,
         y_score,
         contribution,
@@ -207,7 +206,7 @@ def mpa(
     return profits[max_profit_index], customer_thresholds[max_profit_index]
 
 
-def compute_profit_acquisition(
+def _compute_profit_acquisition(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     contribution: float = 8_000,

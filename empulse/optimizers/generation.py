@@ -176,7 +176,6 @@ class Generation:
         self : Generation
             Current instance of the optimizer.
         """
-
         # Check bounds
         bounds = list(bounds)
         if not all(
@@ -236,7 +235,7 @@ class Generation:
             return fitness_value
 
     def _crossover(self):
-        """Perform local arithmetic crossover"""
+        """Perform local arithmetic crossover."""
         # Make iterator for pairs
         match_parents = (
             rnd_pair for rnd_pair in self.rng.choice(self.population_size, (self._n_mating_pairs, 2), replace=False)
@@ -256,7 +255,7 @@ class Generation:
                 self.fitness[ix2] = np.nan
 
     def _mutate(self):
-        """Perform uniform random mutation"""
+        """Perform uniform random mutation."""
         for ix in range(self.population_size):
             if self.rng.uniform() < self.mutation_rate:
                 mutant = self.population[ix]  # inplace
@@ -269,7 +268,7 @@ class Generation:
                 self.fitness[ix] = np.nan
 
     def _select(self):
-        """Perform linear scaling selection"""
+        """Perform linear scaling selection."""
         fitness_values = np.copy(self.fitness)
         min_fitness = np.min(fitness_values)
         avg_fitness = np.mean(fitness_values)
@@ -306,16 +305,13 @@ class Generation:
         self.fitness = self.fitness[select_ix]
 
     def _get_sorted_non_nan_ix(self):
-        """Get indices sorted according to non-nan fitness values"""
+        """Get indices sorted according to non-nan fitness values."""
         non_nan_fx = ((ix, fx) for ix, fx in enumerate(self.fitness) if ~np.isnan(fx))
         sorted_list = sorted(non_nan_fx, key=lambda t: t[1])
         return sorted_list
 
     def _insert_elites(self):
-        """
-        Update population by replacing the worst solutions of the current
-        with the ones from the elite pool.
-        """
+        """Update population by replacing the worst solutions of the current with the ones from the elite pool."""
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
             worst_ix = [t[0] for t in sorted_fx][: self.elitism]

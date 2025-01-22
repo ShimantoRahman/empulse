@@ -263,6 +263,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         **loss_params,
     ) -> 'CSLogitClassifier':
         """
+        Fit the model.
 
         Parameters
         ----------
@@ -406,8 +407,7 @@ def _optimize_jacobian(objective, X, max_iter=1000, tolerance=1e-4, **kwargs) ->
 
 
 def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
-    """compute the objective function and its gradient using elastic net regularization."""
-
+    """Compute the objective function and its gradient using elastic net regularization."""
     if soft_threshold:
         b = weights.copy()[1:] if fit_intercept else weights.copy()
         bool_nonzero = (np.abs(b) - C) > 0
@@ -429,8 +429,7 @@ def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
 
 
 def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
-    """objective function (minimization problem)."""
-
+    """Objective function (minimization problem)."""
     # b is the vector holding the regression coefficients (no intercept)
     b = weights.copy()[1:] if fit_intercept else weights
 
@@ -468,7 +467,8 @@ def _compute_penalty(b, C, l1_ratio):
 
 
 def _check_optimize_result(result):
-    """Check the OptimizeResult for successful convergence
+    """
+    Check the OptimizeResult for successful convergence.
 
     Parameters
     ----------

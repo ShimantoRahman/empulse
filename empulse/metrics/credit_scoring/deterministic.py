@@ -68,7 +68,6 @@ def mpcs_score(
 
     Examples
     --------
-
     >>> from empulse.metrics import mpcs_score
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
@@ -165,7 +164,6 @@ def mpcs(
 
     Examples
     --------
-
     >>> from empulse.metrics import mpcs
     >>>
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
@@ -173,13 +171,13 @@ def mpcs(
     >>> mpcs(y_true, y_score)
     (0.038349999999999995, 0.875)
     """
-    profits, customer_thresholds = compute_profit_credit_scoring(y_true, y_score, loan_lost_rate, roi, check_input)
+    profits, customer_thresholds = _compute_profit_credit_scoring(y_true, y_score, loan_lost_rate, roi, check_input)
     max_profit_index = np.argmax(profits)
 
     return profits[max_profit_index], customer_thresholds[max_profit_index]
 
 
-def compute_profit_credit_scoring(
+def _compute_profit_credit_scoring(
     y_true: ArrayLike,
     y_score: ArrayLike,
     frac_loan_lost: float = 0.275,

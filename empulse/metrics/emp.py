@@ -119,7 +119,6 @@ def emp_score(
 
     Examples
     --------
-
     Reimplement EMPC:
 
     >>> from empulse.metrics import emp_score
@@ -274,7 +273,6 @@ def emp(
 
     Examples
     --------
-
     Reimplement EMPC:
 
     >>> from empulse.metrics import emp
@@ -302,7 +300,7 @@ def emp(
     ...     n_buckets=1000
     ... )
     (23.875..., 0.874...)
-    """
+    """  # noqa: D401
     y_true = np.asarray(y_true)
     y_score = np.asarray(y_score)
 
@@ -324,7 +322,7 @@ def _compute_emp(
     weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
     n_buckets: int,
 ) -> tuple[float, float]:
-    """Computes the expected maximum profit and the threshold at which the maximum profit is achieved."""
+    """Compute the expected maximum profit and the threshold at which the maximum profit is achieved."""
     emp = 0.0
     eta = 0.0
     step_sizes = [(max_val - min_val) / n_buckets if min_val != max_val else 0 for min_val, max_val in bounds]

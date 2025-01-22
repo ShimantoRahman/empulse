@@ -262,7 +262,7 @@ def empc(
     >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>> empc(y_true, y_score)
     (23.875593418348124, 0.8743700763487141)
-    """
+    """  # noqa: D401
     if check_input:
         y_true, y_score, clv = _validate_input_emp(y_true, y_score, alpha, beta, clv, incentive_cost, contact_cost)
     else:
@@ -311,7 +311,7 @@ def _compute_gamma_bounds(
     fpr_diff: np.ndarray,
     positive_class_prob: float,
 ) -> np.ndarray:
-    """Compute the gamma bounds of the integral"""
+    """Compute the gamma bounds of the integral."""
     numerator = fpr_coef * fpr_diff + tpr_coef * tpr_diff
     denominator = positive_class_prob * (1 - delta) * tpr_diff
     # ignore division by zero warning
@@ -473,7 +473,7 @@ def empb(
     .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
-    """
+    """  # noqa: D401
     if check_input:
         y_true, y_score, clv = _validate_input_empb(y_true, y_score, clv, alpha, beta, incentive_fraction, contact_cost)
     else:

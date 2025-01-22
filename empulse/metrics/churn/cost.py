@@ -211,7 +211,6 @@ def _objective(
     hessian : np.ndarray
         Hessian of the objective function.
     """
-
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
     elif hasattr(dtrain, 'get_label'):
@@ -230,6 +229,8 @@ def _objective(
 
 
 class AECObjectiveChurn:
+    """AEC churn objective for catboost."""
+
     def __init__(
         self,
         accept_rate: float = 0.3,
@@ -244,8 +245,7 @@ class AECObjectiveChurn:
 
     def calc_ders_range(self, predictions, targets, weights):
         """
-        Computes first and second derivative of the loss function
-        with respect to the predicted value for each object.
+        Compute first and second derivative of the loss function with respect to the predicted value for each object.
 
         Parameters
         ----------
@@ -281,6 +281,8 @@ class AECObjectiveChurn:
 
 
 class AECMetricChurn:
+    """AEC churn metric for catboost."""
+
     def __init__(
         self,
         accept_rate: float = 0.3,
@@ -294,14 +296,12 @@ class AECMetricChurn:
         self.contact_cost = contact_cost
 
     def is_max_optimal(self):
-        """
-        Returns whether great values of metric are better
-        """
+        """Return whether great values of metric are better."""
         return False
 
     def evaluate(self, predictions, targets, weights):
         """
-        Evaluates metric value.
+        Evaluate metric value.
 
         Parameters
         ----------
@@ -338,7 +338,7 @@ class AECMetricChurn:
 
     def get_final_error(self, error, weight):
         """
-        Returns final value of metric based on error and weight.
+        Return final value of metric based on error and weight.
 
         Parameters
         ----------
@@ -380,7 +380,6 @@ def expected_cost_loss_churn(
 
     Parameters
     ----------
-
     y_true : 1D array-like, shape=(n_samples,)
         Binary target values ('churn': 1, 'no churn': 0).
 
@@ -430,7 +429,7 @@ def expected_cost_loss_churn(
         B2Boost: Instance-dependent profit-driven modelling of B2B churn.
         Annals of Operations Research, 1-27.
 
-    """
+    """  # noqa: D401
     if check_input:
         y_true, y_proba, clv = _validate_input_mpc(
             y_true,

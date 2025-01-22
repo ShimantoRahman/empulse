@@ -28,13 +28,13 @@ FIT_PARAMS = (
 
 @parametrize_with_checks(ESTIMATORS)
 def test_estimators(estimator, check):
-    """Check the compatibility with scikit-learn API"""
+    """Check the compatibility with scikit-learn API."""
     check(estimator)
 
 
 @parametrize_with_checks_samplers(ESTIMATORS, FIT_PARAMS)
 def test_samplers(estimator, check):
-    """Check the compatibility with imbalanced-learn API"""
+    """Check the compatibility with imbalanced-learn API."""
     check(estimator)
 
 

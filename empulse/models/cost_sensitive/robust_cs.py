@@ -276,7 +276,6 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self : RobustCSLogitClassifier
             Fitted RobustCSLogitClassifier model.
         """
-
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
@@ -358,22 +357,22 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         return self
 
     @available_if(_estimator_has('predict'))
-    def predict(self, X: ArrayLike) -> np.ndarray:
+    def predict(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
         return self.estimator_.predict(X)
 
     @available_if(_estimator_has('predict_proba'))
-    def predict_proba(self, X: ArrayLike) -> np.ndarray:
+    def predict_proba(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
         return self.estimator_.predict_proba(X)
 
     @available_if(_estimator_has('decision_function'))
-    def decision_function(self, X: ArrayLike) -> np.ndarray:
+    def decision_function(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
         return self.estimator_.decision_function(X)
 
     @property
-    def classes_(self):
+    def classes_(self):  # noqa: D102
         return self.estimator_.classes_
 
     def __sklearn_tags__(self):

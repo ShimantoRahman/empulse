@@ -64,7 +64,6 @@ class Metric:
 
     Examples
     --------
-
     Reimplementing :func:`~empulse.metrics.empc_score` using the :class:`Metric` class.
 
     .. code-block:: python
@@ -127,35 +126,35 @@ class Metric:
         self._defaults = {}
 
     @property
-    def tp_benefit(self) -> sympy.Symbol | sympy.Expr:
+    def tp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return self._tp_benefit
 
     @property
-    def tn_benefit(self) -> sympy.Symbol | sympy.Expr:
+    def tn_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return self._tn_benefit
 
     @property
-    def fp_benefit(self) -> sympy.Symbol | sympy.Expr:
+    def fp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return -self._fp_cost
 
     @property
-    def fn_benefit(self) -> sympy.Symbol | sympy.Expr:
+    def fn_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return -self._fn_cost
 
     @property
-    def tp_cost(self) -> sympy.Symbol | sympy.Expr:
+    def tp_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return -self._tp_benefit
 
     @property
-    def tn_cost(self) -> sympy.Symbol | sympy.Expr:
+    def tn_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return -self._tn_benefit
 
     @property
-    def fp_cost(self) -> sympy.Symbol | sympy.Expr:
+    def fp_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
         return self._fp_cost
 
     @property
-    def fn_cost(self):
+    def fn_cost(self):  # noqa: D102
         return self._fn_cost
 
     def add_tp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
@@ -469,7 +468,6 @@ class Metric:
         score: float
             The computed metric score or loss.
         """
-
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
 

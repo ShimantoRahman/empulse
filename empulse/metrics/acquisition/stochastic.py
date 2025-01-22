@@ -236,8 +236,7 @@ def empa(
     >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     >>> empa(y_true, y_score, direct_selling=0)
     (3556.25, 0.875)
-    """
-
+    """  # noqa: D401
     if check_input:
         y_true, y_score = _validate_input_stochastic(
             y_true, y_score, alpha, beta, contact_cost, sales_cost, direct_selling, commission

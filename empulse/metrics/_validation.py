@@ -53,7 +53,6 @@ def _check_consistent_length(*arrays: NDArray) -> None:
     *arrays : list or tuple of input objects.
         Objects that will be checked for consistent length.
     """
-
     lengths = [len(X) for X in arrays if X is not None]
     uniques = np.unique(lengths)
     if len(uniques) > 1:

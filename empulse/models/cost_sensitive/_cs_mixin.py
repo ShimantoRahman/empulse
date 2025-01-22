@@ -24,10 +24,10 @@ class CostSensitiveMixin:
     ]:
         """
         Check if costs are set and return them.
+
         Also convert them to numpy arrays if they are array-like.
         Overwrite costs set in constructor if they are set in the fit/predict method.
         """
-
         if tp_cost is Parameter.UNCHANGED:
             tp_cost = self.tp_cost
         if tn_cost is Parameter.UNCHANGED:

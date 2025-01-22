@@ -22,10 +22,7 @@ else:
 
 
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
-    """
-    Determine the number of promotion and demotion pairs
-    so that y would be statistically independent of the sensitive feature.
-    """
+    """Determine promotion and demotion pairs so that y is statistically independent of sensitive feature."""
     sensitive_indices = np.where(sensitive_feature == 0)[0]
     not_sensititive_indices = np.where(sensitive_feature == 1)[0]
     n_sensitive = len(sensitive_indices)
@@ -173,7 +170,7 @@ class BiasRelabler(BaseSampler):
 
     if TYPE_CHECKING:
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False):
+        def set_fit_resample_request(self, sensitive_feature=False):  # noqa: D102
             pass
 
     def __init__(
@@ -314,14 +311,14 @@ class BiasRelabler(BaseSampler):
 
 
 def _get_demotion_candidates(y_pred, y_true, n_pairs):
-    """Returns the n_pairs instances with the lowest probability of being positive class label"""
+    """Return the n_pairs instances with the lowest probability of being positive class label."""
     positive_indices = np.where(y_true == 1)[0]
     positive_predictions = y_pred[positive_indices]
     return positive_indices[np.argsort(positive_predictions)[:n_pairs]]
 
 
 def _get_promotion_candidates(y_pred, y_true, n_pairs):
-    """Returns the n_pairs instances with the lowest probability of being negative class label"""
+    """Return the n_pairs instances with the lowest probability of being negative class label."""
     negative_indices = np.where(y_true == 0)[0]
     negative_predictions = y_pred[negative_indices]
     return negative_indices[np.argsort(negative_predictions)[-n_pairs:]]

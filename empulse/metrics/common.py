@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 
 def classification_threshold(y_true: ArrayLike, y_score: ArrayLike, customer_threshold: float) -> float:
     """
-    Returns classification threshold for given customer threshold.
+    Return classification threshold for given customer threshold.
 
     Parameters
     ----------

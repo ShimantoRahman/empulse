@@ -102,10 +102,31 @@ line-length = 120
 exclude = ["docs", "notebooks"]
 
 [tool.ruff.lint]
-extend-select = ["A", "BLE", "F", "I", "ICN", "INP", "PD", "PGH004", "PIE", "RSE", "RUF", "SIM", "T20", "TC", "E"]
+extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
+    "A",  # flake8-builtins
+    "BLE",  # flake8-blind-except
+    "D",  # pydocstyle
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "ICN",  # flake8-import-conventions
+    "INP",  # flake8-no-pep420
+    "PD",  # pandas-vet
+    "PGH004",  # blanket-noqa
+    "PIE",  # flake8-pie
+    "RSE",  # flake8-raise
+    "RUF",  # ruff-specific rules
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "TC",  # flake8-type-checking
+]
 ignore = [
     "E731",  # do not assign a `lambda` expression, use a `def`
     "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+    "D100",  # Missing docstring in public module
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D301",  # Use r""" if any backslashes in a docstring
 ]
 
 [tool.ruff.format]
@@ -113,3 +134,10 @@ quote-style = "single"
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "E731",  # do not assign a `lambda` expression, use a `def`
+    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+    "D",  # pydocstyle
+]

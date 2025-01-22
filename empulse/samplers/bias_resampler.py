@@ -151,7 +151,7 @@ class BiasResampler(BaseSampler):
 
     if TYPE_CHECKING:
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False):
+        def set_fit_resample_request(self, sensitive_feature=False):  # noqa: D102
             pass
 
     def __init__(

@@ -354,7 +354,7 @@ def expected_cost_loss(
     >>> fn_cost = np.array([1, 3, 3, 1])
     >>> expected_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
     4.2
-    """
+    """  # noqa: D401
     y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
@@ -461,7 +461,7 @@ def expected_log_cost_loss(
         fn_cost = np.array([1, 3, 3, 1])
         expected_log_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
 
-    """
+    """  # noqa: D401
     y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
@@ -598,7 +598,6 @@ def savings_score(
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
     """
-
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
@@ -706,7 +705,7 @@ def expected_savings_score(
     score : float
         Expected savings of a classifier compared to a baseline.
 
-        Notes
+    Notes
     -----
     The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [1]_:
 
@@ -758,7 +757,7 @@ def expected_savings_score(
     .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
-    """
+    """  # noqa: D401
     y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
@@ -897,7 +896,6 @@ def make_objective_aec(
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
     """
-
     if model == 'xgboost':
         objective = partial(_objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         update_wrapper(objective, _objective_boost)
@@ -999,7 +997,6 @@ def _objective_boost(
     hessian : np.ndarray
         Hessian of the objective function.
     """
-
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
     elif hasattr(dtrain, 'get_label'):
@@ -1015,6 +1012,8 @@ def _objective_boost(
 
 
 class AECObjective:
+    """AEC objective for catboost."""
+
     def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -1023,8 +1022,7 @@ class AECObjective:
 
     def calc_ders_range(self, predictions, targets, weights):
         """
-        Computes first and second derivative of the loss function
-        with respect to the predicted value for each object.
+        Compute first and second derivative of the loss function with respect to the predicted value for each object.
 
         Parameters
         ----------
@@ -1059,6 +1057,8 @@ class AECObjective:
 
 
 class AECMetric:
+    """AEC metric for catboost."""
+
     def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -1066,14 +1066,12 @@ class AECMetric:
         self.fp_cost = fp_cost
 
     def is_max_optimal(self):
-        """
-        Returns whether great values of metric are better
-        """
+        """Return whether great values of metric are better."""
         return False
 
     def evaluate(self, predictions, targets, weights):
         """
-        Evaluates metric value.
+        Evaluate metric value.
 
         Parameters
         ----------
@@ -1113,7 +1111,7 @@ class AECMetric:
 
     def get_final_error(self, error, weight):
         """
-        Returns final value of metric based on error and weight.
+        Return final value of metric based on error and weight.
 
         Parameters
         ----------

@@ -117,7 +117,6 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
 
     Notes
     -----
-
     Cost matrix
 
     .. list-table::
@@ -292,7 +291,6 @@ def load_upsell_bank_telemarketing(
 
     Notes
     -----
-
     Cost matrix
 
     .. list-table::
@@ -559,7 +557,6 @@ def load_give_me_some_credit(
 
     Notes
     -----
-
     Cost matrix
 
     .. list-table::
@@ -826,7 +823,6 @@ def load_credit_scoring_pakdd(
 
     Notes
     -----
-
     Cost matrix
 
     .. list-table::
