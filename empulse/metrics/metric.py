@@ -21,7 +21,8 @@ class Metric:
     The Metric class uses the Builder pattern to create a custom metric.
     You start by specifying the kind of metric you want to compute and then add the terms that make up the metric.
     These terms come from the cost-benefits matrix of the classification problem.
-    After you have added all the terms, you can call the build method to create the metric function.
+    After you have added all the terms, you can call the :meth:`~empulse.metrics.Metric.build`
+    method to create the metric function.
     Then you can call the metric function with the true labels and predicted probabilities to compute the metric value.
 
     The costs and benefits are specified using sympy symbols or expressions.
@@ -445,7 +446,30 @@ class Metric:
             raise NotImplementedError(f'Kind {self.kind} is not supported')
         return self
 
-    def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
+    def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs: ArrayLike | float) -> float:
+        """
+        Compute the metric score or loss.
+
+        The :meth:`empulse.metrics.Metric.build` method should be called before calling this method.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities or decision scores (based on the chosen metric).
+
+        kwargs: float or array-like of shape (n_samples,)
+            The values of the costs and benefits defined in the metric.
+            Can either be their symbols or their aliases.
+
+        Returns
+        -------
+        score: float
+            The computed metric score or loss.
+        """
+
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
 
