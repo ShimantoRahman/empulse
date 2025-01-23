@@ -518,6 +518,8 @@ class Metric:
 
         def compute_integral(integrand, lower_bound, upper_bound, tpr, fpr, random_var):
             integrand = integrand.subs('F_0', tpr).subs('F_1', fpr).evalf()
+            if not integrand.free_symbols:  # if the integrand is constant
+                return float(integrand * (upper_bound - lower_bound))
             integrand_func = lambdify(random_var, integrand)
             result, _ = quad(integrand_func, lower_bound, upper_bound)
             return result
@@ -535,8 +537,12 @@ class Metric:
             bounds = []
             for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1)), len(f0) - 2):
                 bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))
-            bounds.append(random_var_bounds[1])
-            bounds.insert(0, random_var_bounds[0])
+            if isinstance(upper_bound := random_var_bounds[1], sympy.Symbol | sympy.Expr):
+                upper_bound = upper_bound.subs(dist_vals)
+            bounds.append(upper_bound)
+            if isinstance(lower_bound := random_var_bounds[0], sympy.Symbol | sympy.Expr):
+                lower_bound = lower_bound.subs(dist_vals)
+            bounds.insert(0, lower_bound)
 
             integrand_ = integrand.subs(kwargs).subs(dist_vals).subs('pi_0', pi0).subs('pi_1', pi1)
             score = 0
