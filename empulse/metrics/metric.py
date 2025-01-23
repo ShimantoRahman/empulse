@@ -533,7 +533,7 @@ class Metric:
 
             f0, f1 = _compute_convex_hull(y_true, y_score)
 
-            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args}
+            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args if key in kwargs}
             bounds = []
             for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1)), len(f0) - 2):
                 bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))
