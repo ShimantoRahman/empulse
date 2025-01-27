@@ -17,8 +17,6 @@
     the majority or minority class depending on which is better (not available for savings score).
   - If array-like, target probabilities of the baseline model.
 
-- |API| :func:`~empulse.metrics.expected_savings_score` now calculates the expected savings score over the baseline model
-  probability of the majority or minority class target class, whichever is better.
 - |Feature| Add parameter validation for all models and samplers
 - |API| Make all arguments of dataset loaders keyword-only
 - |Fix| Update the descriptions attached to each dataset to match information found in the user guide
