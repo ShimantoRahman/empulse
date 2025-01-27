@@ -646,7 +646,7 @@ def expected_savings_score(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    y_proba_baseline: ArrayLike | None = None,
+    baseline: Literal['zero_one', 'prior'] | ArrayLike = 'zero_one',
     tp_cost: Union[float, ArrayLike] = 0.0,
     fp_cost: Union[float, ArrayLike] = 0.0,
     tn_cost: Union[float, ArrayLike] = 0.0,
@@ -676,10 +676,13 @@ def expected_savings_score(
     y_proba : 1D array-like, shape=(n_samples,)
         Target probabilities, should lie between 0 and 1.
 
-    y_proba_baseline : 1D array-like, shape=(n_samples,), default=None
-        Target probabilities of the baseline model.
-        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
-        depending on which is better.
+    baseline : {'zero_one', 'prior'} or 1D array-like, shape=(n_samples,), default='zero_one'
+        
+        - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
+          depending on which is better.
+        - If ``'prior'``, the baseline model is a model that predicts the prior probability of the majority class.
+        - If array-like, target probabilities of the baseline model.
+        
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -762,7 +765,7 @@ def expected_savings_score(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if y_proba_baseline is None:
+    if baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -784,11 +787,23 @@ def expected_savings_score(
                 check_input=False,
             ),
         )
-    else:
-        y_proba_baseline = np.asarray(y_proba_baseline)
+    elif baseline == 'prior':
+        prior = np.mean(y_true)
+        prior = prior if prior >= 0.5 else 1 - prior
         cost_base = expected_cost_loss(
             y_true,
-            y_proba_baseline,
+            np.full_like(y_true, prior),
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
+        )
+    else:
+        baseline = np.asarray(baseline)
+        cost_base = expected_cost_loss(
+            y_true,
+            baseline,
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
