@@ -8,6 +8,17 @@
   now take a ``model`` argument to calculate the objective for either XGBoost, LightGBM or Catboost models.
 - |API| XGBoost is now an optional dependency together with LightGBM and Catboost. To install the package with
   XGBoost, LightGBM and Catboost support, use the following command: ``pip install empulse[optional]``
+- |API| Renamed ``y_pred_baseline`` and ``y_proba_baseline`` to ``baseline`` in :func:`~empulse.metrics.savings_score`
+  and :func:`~empulse.metrics.expected_savings_score`. It now accepts the following arguments:
+
+  - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
+    depending on which is better.
+  - If ``'prior'``, the baseline model is a model that predicts the prior probability of
+    the majority or minority class depending on which is better (not available for savings score).
+  - If array-like, target probabilities of the baseline model.
+
+- |API| :func:`~empulse.metrics.expected_savings_score` now calculates the expected savings score over the baseline model
+  probability of the majority or minority class target class, whichever is beter.
 - |Feature| Add parameter validation for all models and samplers
 - |API| Make all arguments of dataset loaders keyword-only
 - |Fix| Update the descriptions attached to each dataset to match information found in the user guide

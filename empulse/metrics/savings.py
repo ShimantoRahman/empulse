@@ -475,7 +475,7 @@ def savings_score(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     *,
-    y_pred_baseline: ArrayLike | None = None,
+    baseline: ArrayLike | Literal['zero_one'] = 'zero_one',
     tp_cost: Union[float, ArrayLike] = 0.0,
     fp_cost: Union[float, ArrayLike] = 0.0,
     tn_cost: Union[float, ArrayLike] = 0.0,
@@ -515,9 +515,9 @@ def savings_score(
                   See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
                   for more information.
 
-    y_pred_baseline : 1D array-like, shape=(n_samples,), default=None
+    baseline : 'zero_one' or 1D array-like, shape=(n_samples,), default='zero_one'
         Predicted labels or calibrated probabilities of the baseline model.
-        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
+        If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
         depending on which is better.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -602,7 +602,7 @@ def savings_score(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if y_pred_baseline is None:
+    if baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -625,10 +625,10 @@ def savings_score(
             ),
         )
     else:
-        y_pred_baseline = np.asarray(y_pred_baseline)
+        baseline = np.asarray(baseline)
         cost_base = cost_loss(
             y_true,
-            y_pred_baseline,
+            baseline,
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
@@ -680,7 +680,8 @@ def expected_savings_score(
         
         - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
           depending on which is better.
-        - If ``'prior'``, the baseline model is a model that predicts the prior probability of the majority class.
+        - If ``'prior'``, the baseline model is a model that predicts the prior probability of 
+        the majority or minority class depending on which is better.
         - If array-like, target probabilities of the baseline model.
         
 
@@ -788,16 +789,27 @@ def expected_savings_score(
             ),
         )
     elif baseline == 'prior':
-        prior = np.mean(y_true)
-        prior = prior if prior >= 0.5 else 1 - prior
-        cost_base = expected_cost_loss(
-            y_true,
-            np.full_like(y_true, prior),
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            check_input=False,
+        prior_pos = np.mean(y_true)
+        prior_neg = 1 - prior_pos
+        cost_base = min(
+            cost_loss(
+                y_true,
+                np.full_like(y_true, prior_pos),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
+            cost_loss(
+                y_true,
+                np.full_like(y_true, prior_neg),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
         )
     else:
         baseline = np.asarray(baseline)
