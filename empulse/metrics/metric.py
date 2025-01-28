@@ -396,7 +396,8 @@ class Metric:
         -------
         Metric
         """
-        random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
+        terms = self.tp_cost + self.tn_cost + self.fp_cost + self.fn_cost
+        random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
         n_random = len(random_symbols)
 
         if self.kind in ['cost', 'savings'] and n_random > 0:
