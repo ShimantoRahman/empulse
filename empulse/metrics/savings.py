@@ -681,7 +681,7 @@ def expected_savings_score(
         - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
           depending on which is better.
         - If ``'prior'``, the baseline model is a model that predicts the prior probability of 
-        the majority or minority class depending on which is better.
+          the majority or minority class depending on which is better.
         - If array-like, target probabilities of the baseline model.
         
 

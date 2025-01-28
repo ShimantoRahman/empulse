@@ -29,8 +29,6 @@ class Metric:
     Stochastic variables are supported, and can be specified using sympy.stats random variables.
     Make sure that you add the parameters of the random variables as keyword arguments when calling the metric function.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
-
     Parameters
     ----------
     kind : {'max profit', 'cost', 'savings'}
@@ -398,11 +396,14 @@ class Metric:
         -------
         Metric
         """
+        random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
+        n_random = len(random_symbols)
+
+        if self.kind in ['cost', 'savings'] and n_random > 0:
+            raise NotImplementedError('Random variables are not supported for cost and savings metrics')
+
         if self.kind == 'max profit':
             self.profit_function = self._build_max_profit()
-            random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
-            n_random = len(random_symbols)
-
             if n_random == 0:
                 self._score_function = self._compute_deterministic(self.profit_function)
             elif n_random == 1:
