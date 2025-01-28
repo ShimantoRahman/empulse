@@ -1,6 +1,11 @@
 `Unreleased`_
 =============
 
+- ...
+
+`0.6.0`_ (28-01-2025)
+=====================
+
 - |MajorFeature| Add :class:`~empulse.metrics.Metric` to easily build your own value-driven and cost-sensitive metrics
 - |Feature| Add support for LightGBM and Catboost models in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier`
@@ -60,7 +65,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.2...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.6.0...main
+.. _0.6.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0
 .. _0.5.2: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.2
 .. _0.5.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.1
 .. _0.5.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.0
