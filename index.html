@@ -1,0 +1,802 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta content="Empulse is a scikit-learn based Python package for cost-sensitive and value-driven (also known as profit-driven) machine learning. Solve your imbalanced data and other cost-sensitive learning data science problems with a sklearn compatible library." lang="en" name="description" xml:lang="en" />
+
+    <title>Empulse &#8212; Empulse 0.6.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=8fa8b3e9"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.6.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="User Guide" href="guide.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="empulse">
+<h1>Empulse<a class="headerlink" href="#empulse" title="Link to this heading">#</a></h1>
+<p>Empulse is a package aimed to enable value-driven and cost-sensitive analysis in Python.
+The package implements popular value-driven and cost-sensitive metrics and algorithms
+in accordance to sci-kit learn conventions.
+This allows the measures to seamlessly integrate into existing ML workflows.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Empulse requires python 3.10 or higher.</p>
+<p>Install <code class="docutils literal notranslate"><span class="pre">empulse</span></code> via pip with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>empulse
+</pre></div>
+</div>
+</section>
+<section id="what-can-you-do-with-empulse">
+<h2>What can you do with Empulse?<a class="headerlink" href="#what-can-you-do-with-empulse" title="Link to this heading">#</a></h2>
+<section id="features">
+<h3>Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><a class="reference internal" href="#ready-to-use-out-of-the-box-with-scikit-learn"><span class="xref myst">Ready to use out of the box with scikit-learn</span></a></p></li>
+<li><p><a class="reference internal" href="#use-case-specific-profit-and-cost-metrics"><span class="xref myst">Use case specific profit and cost metrics</span></a></p></li>
+<li><p><a class="reference internal" href="#flexible-profit-driven-and-cost-sensitive-models"><span class="xref myst">Flexible profit-driven and cost-sensitive models</span></a></p></li>
+<li><p><a class="reference internal" href="#easy-passing-of-instance-dependent-costs"><span class="xref myst">Easy passing of instance-dependent costs</span></a></p></li>
+<li><p><a class="reference internal" href="#cost-aware-resampling-and-relabeling"><span class="xref myst">Cost-aware resampling and relabeling</span></a></p></li>
+<li><p><a class="reference internal" href="#find-the-optimal-decision-threshold"><span class="xref myst">Find the optimal decision threshold</span></a></p></li>
+<li><p><a class="reference internal" href="#easy-access-to-real-world-datasets-for-benchmarking"><span class="xref myst">Easy access to real-world datasets for benchmarking</span></a></p></li>
+</ul>
+</section>
+<section id="take-the-tour">
+<h3>Take the tour<a class="headerlink" href="#take-the-tour" title="Link to this heading">#</a></h3>
+<section id="ready-to-use-out-of-the-box-with-scikit-learn">
+<h4>Ready to use out of the box with scikit-learn<a class="headerlink" href="#ready-to-use-out-of-the-box-with-scikit-learn" title="Link to this heading">#</a></h4>
+<p>All components of the package are designed to work seamlessly with scikit-learn.</p>
+<p>Models are implemented as scikit-learn estimators and can be used anywhere a scikit-learn estimator can be used.</p>
+<section id="pipelines">
+<h5>Pipelines<a class="headerlink" href="#pipelines" title="Link to this heading">#</a></h5>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;scaler&quot;</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">CSLogitClassifier</span><span class="p">())</span>
+<span class="p">])</span>
+<span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">model__fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">model__fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="cross-validation">
+<h5>Cross-validation<a class="headerlink" href="#cross-validation" title="Link to this heading">#</a></h5>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">cross_val_score</span>
+
+<span class="n">cross_val_score</span><span class="p">(</span>
+    <span class="n">pipeline</span><span class="p">,</span>
+    <span class="n">X</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">,</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">,</span>
+    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;model__fp_cost&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;model__fn_cost&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="grid-search">
+<h5>Grid search<a class="headerlink" href="#grid-search" title="Link to this heading">#</a></h5>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridSearchCV</span>
+
+<span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;model__C&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">]}</span>
+<span class="n">grid_search</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">)</span>
+<span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">model__fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">model__fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>All metrics can easily be converted as scikit-learn scorers
+and can be used in the same way as any other scikit-learn scorer.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">expected_cost_loss</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_scorer</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+    <span class="n">expected_cost_loss</span><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s2">&quot;predict_proba&quot;</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span>
+<span class="p">)</span>
+<span class="n">cross_val_score</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="use-case-specific-profit-and-cost-metrics">
+<h4>Use case specific profit and cost metrics<a class="headerlink" href="#use-case-specific-profit-and-cost-metrics" title="Link to this heading">#</a></h4>
+<p>Empulse offers a wide range of profit and cost metrics that are tailored to specific use cases such as:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-churn-metrics">customer churn</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-acquisition-metrics">customer acquisition</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/metrics.html#credit-scoring-metrics">credit scoring</a>,</p></li>
+<li><p>and fraud detection (coming soon).</p></li>
+</ul>
+<p>For other use cases, the package provides a generic implementations for:</p>
+<ul class="simple">
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.cost_loss.html">cost loss</a>,</p></li>
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_cost_loss.html">expected cost loss</a>,</p></li>
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_log_cost_loss.html">expected log cost loss</a>,</p></li>
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.savings_score.html">savings score</a>,</p></li>
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_savings_score.html">expected savings score</a>,</p></li>
+<li><p>the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.max_profit_score.html">maximum profit score</a>,</p></li>
+<li><p>and the <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.emp_score.html">expected maximum profit score</a>.</p></li>
+</ul>
+</section>
+<section id="flexible-profit-driven-and-cost-sensitive-models">
+<h4>Flexible profit-driven and cost-sensitive models<a class="headerlink" href="#flexible-profit-driven-and-cost-sensitive-models" title="Link to this heading">#</a></h4>
+<p>Empulse provides a range of profit-driven and cost-sensitive models such as:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSLogitClassifier.html">CSLogitClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSBoostClassifier.html">CSBoostClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.B2BoostClassifier.html">B2BoostClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.RobustCSClassifier.html">RobustCSClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.ProfLogitClassifier.html">ProfLogitClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasRelabelingClassifier.html">BiasRelabelingClassifier</a>,</p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasResamplingClassifier.html">BiasResamplingClassifier</a>,</p></li>
+<li><p>and <a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.BiasReweighingClassifier.html">BiasReweighingClassifier</a>.</p></li>
+</ul>
+<p>Each classifier tries to balance ease of use through good defaults and flexibility through a wide range of parameters.</p>
+<p>For instance, the <code class="docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code> allows you to change the loss function and the optimization method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">expected_savings_score</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span><span class="p">,</span> <span class="n">OptimizeResult</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">optimize</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OptimizeResult</span><span class="p">:</span>
+    <span class="n">initial_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">objective</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>  <span class="c1"># inverse objective function to maximize</span>
+        <span class="n">initial_guess</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s1">&#39;BFGS&#39;</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_savings_score</span><span class="p">,</span> <span class="n">optimize_fn</span><span class="o">=</span><span class="n">optimize</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="easy-passing-of-instance-dependent-costs">
+<h4>Easy passing of instance-dependent costs<a class="headerlink" href="#easy-passing-of-instance-dependent-costs" title="Link to this heading">#</a></h4>
+<p>Instance-dependent costs can easily be passed to the models through <a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html">metadata routing</a>.</p>
+<p>For instance, the instance-dependent costs are passed dynamically to each fold of the cross-validation
+through requesting the costs in the <code class="docutils literal notranslate"><span class="pre">set_fit_request</span></code> method of the model
+and the <code class="docutils literal notranslate"><span class="pre">set_score_request</span></code> method of the scorer.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">expected_cost_loss</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">cross_val_score</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_scorer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+
+<span class="n">set_config</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;scale&quot;</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">CSLogitClassifier</span><span class="p">()</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="p">])</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+    <span class="n">expected_cost_loss</span><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s2">&quot;predict_proba&quot;</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">cross_val_score</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;fp_cost&quot;</span><span class="p">:</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="s2">&quot;fn_cost&quot;</span><span class="p">:</span> <span class="n">fn_cost</span><span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="cost-aware-resampling-and-relabeling">
+<h4>Cost-aware resampling and relabeling<a class="headerlink" href="#cost-aware-resampling-and-relabeling" title="Link to this heading">#</a></h4>
+<p>Empulse uses the <a class="reference external" href="https://imbalanced-learn.org/">imbalanced-learn</a>
+package to provide cost-aware resampling and relabeling techniques:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.CostSensitiveSampler.html">CostSensitiveSampler</a></p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.BiasResampler.html">BiasResampler</a></p></li>
+<li><p><a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.samplers.BiasRelabler.html">BiasRelabler</a></p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.samplers</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostSensitiveSampler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">CostSensitiveSampler</span><span class="p">()</span>
+<span class="n">X_resampled</span><span class="p">,</span> <span class="n">y_resampled</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">fit_resample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>They can be used in an imbalanced-learn pipeline:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.samplers</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostSensitiveSampler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">imblearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="n">set_config</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;scaler&quot;</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s2">&quot;sampler&quot;</span><span class="p">,</span> <span class="n">CostSensitiveSampler</span><span class="p">()</span><span class="o">.</span><span class="n">set_fit_resample_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+    <span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">LogisticRegression</span><span class="p">())</span>
+<span class="p">])</span>
+
+<span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="find-the-optimal-decision-threshold">
+<h4>Find the optimal decision threshold<a class="headerlink" href="#find-the-optimal-decision-threshold" title="Link to this heading">#</a></h4>
+<p>Empulse provides the
+<a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.models.CSThresholdClassifier.html"><code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a>
+which allows you to find the optimal decision threshold for a given cost matrix to minimize the expected cost loss.</p>
+<p>The meta-estimator changes the <code class="docutils literal notranslate"><span class="pre">predict</span></code> method of the base estimator to predict the class with the lowest expected cost.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSThresholdClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">CSThresholdClassifier</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">())</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Metrics like the maximum profit score conveniently return the optimal target threshold.
+For example the Expected Maximum Profit measure for customer churn (EMPC)
+tells you what fraction of the customer base should be targeted to maximize profit.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">empc</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">()</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">()</span>
+<span class="n">predictions</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+<span class="n">score</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="n">empc</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This score can then be converted to a decision threshold by using the
+<a class="reference external" href="https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.classification_threshold.html"><code class="docutils literal notranslate"><span class="pre">classification_threshold</span></code></a>
+function.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">classification_threshold</span>
+
+<span class="n">decision_threshold</span> <span class="o">=</span> <span class="n">classification_threshold</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">customer_threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This can then be combined with sci-kit learn’s
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.FixedThresholdClassifier.html"><code class="docutils literal notranslate"><span class="pre">FixedThresholdClassifier</span></code></a>
+to create a model that predicts the class with the highest expected profit.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">FixedThresholdClassifier</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FixedThresholdClassifier</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">decision_threshold</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="easy-access-to-real-world-datasets-for-benchmarking">
+<h4>Easy access to real-world datasets for benchmarking<a class="headerlink" href="#easy-access-to-real-world-datasets-for-benchmarking" title="Link to this heading">#</a></h4>
+<p>Empulse provides easy access to real-world datasets for benchmarking cost-sensitive models.</p>
+<p>Each dataset returns the features, the target, and the instance-dependent costs, ready to use in a cost-sensitive model.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_give_me_some_credit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">load_give_me_some_credit</span><span class="p">(</span><span class="n">return_X_y_costs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s1">&#39;scaler&#39;</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">CSLogitClassifier</span><span class="p">())</span>
+<span class="p">])</span>
+<span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">,</span>
+    <span class="n">model__tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+    <span class="n">model__fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+    <span class="n">model__tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+    <span class="n">model__fn_cost</span><span class="o">=</span><span class="n">fn_cost</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+    <a class="right-next"
+       href="guide.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">User Guide</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-can-you-do-with-empulse">What can you do with Empulse?</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#take-the-tour">Take the tour</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ready-to-use-out-of-the-box-with-scikit-learn">Ready to use out of the box with scikit-learn</a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines">Pipelines</a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#cross-validation">Cross-validation</a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#grid-search">Grid search</a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#use-case-specific-profit-and-cost-metrics">Use case specific profit and cost metrics</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#flexible-profit-driven-and-cost-sensitive-models">Flexible profit-driven and cost-sensitive models</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#easy-passing-of-instance-dependent-costs">Easy passing of instance-dependent costs</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-aware-resampling-and-relabeling">Cost-aware resampling and relabeling</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#find-the-optimal-decision-threshold">Find the optimal decision threshold</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#easy-access-to-real-world-datasets-for-benchmarking">Easy access to real-world datasets for benchmarking</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

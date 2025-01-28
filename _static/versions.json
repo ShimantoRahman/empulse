@@ -1,0 +1,13 @@
+[
+  {
+    "name": "dev (latest)",
+    "version": "0.6.0",
+    "url": "https://empulse.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "0.6.0 (stable)",
+    "version": "0.6.0",
+    "url": "https://empulse.readthedocs.io/en/stable/",
+    "preferred": true
+  }
+]
