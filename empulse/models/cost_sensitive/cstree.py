@@ -1,5 +1,7 @@
 import copy
 import numbers
+from math import ceil
+from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -54,18 +56,18 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    criterion : string, optional (default="direct_cost")
+    criterion : {"direct_cost", "pi_cost", "gini_cost" or "entropy_cost"}, default="direct_cost"
         The function to measure the quality of a split. Supported criteria are
         "direct_cost" for the Direct Cost impurity measure, "pi_cost", "gini_cost",
         and "entropy_cost".
 
-    criterion_weight : bool, optional (default=False)
+    criterion_weight : bool, default=False
         Whenever or not to weight the gain according to the population distribution.
 
-    num_pct : int, optional (default=100)
+    num_pct : int, default=100
         Number of percentiles to evaluate the splits for each feature.
 
-    max_features : int, float, string or None, optional (default=None)
+    max_features : {"auto", "sqrt", "log2" or None }, int or float, default=None
         The number of features to consider when looking for the best split:
           - If int, then consider ``max_features`` features at each split.
           - If float, then ``max_features`` is a percentage and
@@ -80,25 +82,25 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         valid partition of the node samples is found, even if it requires to
         effectively inspect more than ``max_features`` features.
 
-    max_depth : int or None, optional (default=None)
+    max_depth : int or None, default=None
         The maximum depth of the tree. If None, then nodes are expanded until
         all leaves are pure or until all leaves contain less than
         min_samples_split samples.
         Ignored if ``max_samples_leaf`` is not None.
 
-    min_samples_split : int, optional (default=2)
+    min_samples_split : int, default=2
         The minimum number of samples required to split an internal node.
 
-    min_samples_leaf : int, optional (default=1)
+    min_samples_leaf : int, default=1
         The minimum number of samples required to be at a leaf node.
 
-    min_gain : float, optional (default=0.001)
+    min_gain : float, default=0.001
         The minimum gain that a split must produce in order to be taken into account.
 
-    pruned : bool, optional (default=True)
+    pruned : bool, default=True
         Whenever to prune the decision tree using cost-based pruning.
 
-    random_state : int, RandomState instance or None, optional (default=None)
+    random_state : int, RandomState instance or None, default=None
         Controls the randomness of the estimator. The features are always randomly permuted at each split. When
         `random_state` is None, the random number generator is the :class:`numpy:numpy.random.RandomState` instance
         used by :func:`numpy:numpy.random`.
@@ -112,7 +114,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     ----------
 
     .. [1] Correa Bahnsen, A., Aouada, D., & Ottersten, B.
-           `"Example-Dependent Cost-Sensitive Decision Trees. Expert Systems with Applications" <http://albahnsen.com/files/Example-Dependent%20Cost-Sensitive%20Decision%20Trees.pdf>`__,
+           "Example-Dependent Cost-Sensitive Decision Trees. Expert Systems with Applications",
            Expert Systems with Applications, 42(19), 6609–6619, 2015,
            http://doi.org/10.1016/j.eswa.2015.04.042
     """
@@ -124,16 +126,16 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             tn_cost: ArrayLike | float = 0.0,
             fn_cost: ArrayLike | float = 0.0,
             fp_cost: ArrayLike | float = 0.0,
-            criterion='direct_cost',
-            criterion_weight=False,
-            num_pct=100,
-            max_features=None,
-            max_depth=None,
-            min_samples_split=2,
-            min_samples_leaf=1,
-            min_gain=0.001,
-            pruned=True,
-            random_state=None
+            criterion: Literal["direct_cost", "pi_cost", "gini_cost", "entropy_cost"] = 'direct_cost',
+            criterion_weight: bool = False,
+            num_pct: int = 100,
+            max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
+            max_depth: int | None = None,
+            min_samples_split: int | float = 2,
+            min_samples_leaf: int | float = 1,
+            min_gain: float = 0.001,
+            pruned: bool = True,
+            random_state: int | np.random.RandomState | None = None
     ):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -157,7 +159,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return tags
 
     def _node_cost(self, y_true, cost_mat):
-        """ Private function to calculate the cost of a node.
+        """
+        Private function to calculate the cost of a node.
 
         Parameters
         ----------
@@ -166,7 +169,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         cost_mat : array-like of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         Returns
@@ -240,7 +243,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         cost_mat : array-like of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         split : tuple of len = 2
@@ -253,9 +256,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         """
 
-        # Check if cost_base == 0, then no gain is possible
         # TODO: This must be check in _best_split
-        if cost_base == 0.0:
+        if cost_base == 0.0:  # no gain is possible
             # In case cost_b==0 and pi_1!=(0,1)
             return 0.0, int(np.sign(y_true.mean() - 0.5) == 1)
 
@@ -395,7 +397,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         if self.max_depth is not None:
             if level >= self.max_depth:
                 return tree
-        if n_samples <= self.min_samples_split:
+        if 0 < self.min_samples_split < 1:
+            min_samples_split = ceil(self.min_samples_split * n_samples)
+        else:
+            min_samples_split = self.min_samples_split
+        if n_samples <= min_samples_split:
             return tree
 
         j, l = split
@@ -404,7 +410,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_samples_Xl = np.nonzero(filter_Xl)[0].shape[0]
         n_samples_Xr = np.nonzero(filter_Xr)[0].shape[0]
 
-        if min(n_samples_Xl, n_samples_Xr) <= self.min_samples_leaf:
+        if 0 < self.min_samples_leaf < 1:
+            min_samples_leaf = ceil(self.min_samples_leaf * n_samples)
+        else:
+            min_samples_leaf = self.min_samples_leaf
+        if min(n_samples_Xl, n_samples_Xr) <= min_samples_leaf:
             return tree
 
         # No stooping criteria is met
@@ -779,7 +789,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         cost_mat : array-like of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         """
