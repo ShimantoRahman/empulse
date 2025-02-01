@@ -18,11 +18,11 @@ from empulse.models import (
     BiasResamplingClassifier,
     BiasReweighingClassifier,
     CSBoostClassifier,
+    CSForestClassifier,
     CSLogitClassifier,
     CSThresholdClassifier,
-    ProfLogitClassifier,
     CSTreeClassifier,
-    CSForestClassifier,
+    ProfLogitClassifier,
     RobustCSClassifier,
 )
 

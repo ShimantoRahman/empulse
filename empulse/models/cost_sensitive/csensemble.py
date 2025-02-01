@@ -13,7 +13,6 @@ class CSForestClassifier(BaggingClassifier):
 
     Parameters
     ----------
-
     n_estimators : int, default=100
         The number of trees in the forest.
 
@@ -133,7 +132,7 @@ class CSForestClassifier(BaggingClassifier):
     `estimators_features_`: list of arrays
         The subset of drawn features for each base estimator.
 
-    See also
+    See Also
     --------
     costcla.models.CostSensitiveDecisionTreeClassifier
 
@@ -153,8 +152,8 @@ class CSForestClassifier(BaggingClassifier):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        combination: Literal["majority_voting", "weighted_voting"] = "majority_voting",
-        max_features: Literal["auto", "sqrt", "log2"] | int | float = "auto",
+        combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
+        max_features: Literal['auto', 'sqrt', 'log2'] | int | float = 'auto',
         max_samples: int | float = 1.0,
         max_depth: int | None = None,
         min_samples_split: int | float = 2,
@@ -170,10 +169,10 @@ class CSForestClassifier(BaggingClassifier):
             estimator=CSTreeClassifier(max_features=1.0),
             n_estimators=n_estimators,
             estimator_params=(
-                "max_depth",
-                "min_samples_split",
-                "min_samples_leaf",
-                "pruned",
+                'max_depth',
+                'min_samples_split',
+                'min_samples_leaf',
+                'pruned',
             ),
             fp_cost=fp_cost,
             fn_cost=fn_cost,
@@ -200,7 +199,6 @@ class CSBaggingClassifier(BaggingClassifier):
 
     Parameters
     ----------
-
     estimator : estimator, default=None
         The base estimator to fit on random subsets of the dataset.
 
@@ -312,10 +310,8 @@ class CSBaggingClassifier(BaggingClassifier):
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
         max_samples: float | int = 0.5,
-        max_features: Literal["auto", "sqrt", "log2"] | int | float = "auto",
-        combination: Literal[
-            "majority_voting", "weighted_voting", "stacking", "stacking_proba"
-        ] = "majority_voting",
+        max_features: Literal['auto', 'sqrt', 'log2'] | int | float = 'auto',
+        combination: Literal['majority_voting', 'weighted_voting', 'stacking', 'stacking_proba'] = 'majority_voting',
         bootstrap: bool = True,
         bootstrap_features: bool = False,
         n_jobs: int = 1,
