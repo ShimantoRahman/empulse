@@ -1,7 +1,9 @@
-from typing import Literal
+from numbers import Integral
+from typing import ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
+from sklearn.utils._param_validation import HasMethods, Interval, RealNotInt, StrOptions
 
 from .csbagging import BaggingClassifier
 from .cstree import CSTreeClassifier
@@ -117,6 +119,12 @@ class CSForestClassifier(BaggingClassifier):
     verbose : int, optional (default=0)
         Controls the verbosity of the building process.
 
+    random_state : int, RandomState instance or None, default=None
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+
     Attributes
     ----------
     `base_estimator_`: list of estimators
@@ -143,6 +151,21 @@ class CSForestClassifier(BaggingClassifier):
            `"Ensemble of Example-Dependent Cost-Sensitive Decision Trees" <http://arxiv.org/abs/1505.04637>`__,
            2015, http://arxiv.org/abs/1505.04637.
     """
+
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'combination': [StrOptions({'majority_voting', 'weighted_voting'})],
+        'max_depth': [Interval(Integral, 1, None, closed='left'), None],
+        'min_samples_split': [
+            Interval(Integral, 2, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='right'),
+        ],
+        'min_samples_leaf': [
+            Interval(Integral, 1, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='neither'),
+        ],
+        'pruned': ['boolean'],
+        **BaggingClassifier._parameter_constraints,
+    }
 
     def __init__(
         self,
@@ -276,6 +299,13 @@ class CSBaggingClassifier(BaggingClassifier):
     verbose : int, default=0
         Controls the verbosity of the building process.
 
+    random_state : int, RandomState instance or None, default=None
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+
+
     Attributes
     ----------
     `base_estimator_`: list of estimators
@@ -299,6 +329,13 @@ class CSBaggingClassifier(BaggingClassifier):
            2015, http://arxiv.org/abs/1505.04637.
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'estimator': [HasMethods(['fit', 'predict']), HasMethods(['fit', 'predict_proba']), None],
+        'final_estimator': [HasMethods(['fit', 'predict']), HasMethods(['fit', 'predict_proba']), None],
+        'combination': [StrOptions({'majority_voting', 'weighted_voting', 'stacking', 'stacking_proba'})],
+        **BaggingClassifier._parameter_constraints,
+    }
+
     def __init__(
         self,
         estimator=None,
@@ -316,6 +353,7 @@ class CSBaggingClassifier(BaggingClassifier):
         bootstrap_features: bool = False,
         n_jobs: int = 1,
         verbose: bool | int = False,
+        random_state: int | np.random.RandomState | None = None,
     ):
         super().__init__(
             estimator=estimator,
@@ -331,6 +369,6 @@ class CSBaggingClassifier(BaggingClassifier):
             bootstrap_features=bootstrap_features,
             combination=combination,
             n_jobs=n_jobs,
-            random_state=None,
+            random_state=random_state,
             verbose=verbose,
         )

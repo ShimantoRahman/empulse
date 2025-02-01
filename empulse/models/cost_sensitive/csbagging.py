@@ -2,13 +2,14 @@ import contextlib
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 from joblib import Parallel, cpu_count, delayed
 from numpy.typing import ArrayLike
-from sklearn.base import ClassifierMixin, clone
+from sklearn.base import ClassifierMixin, _fit_context, clone
 from sklearn.ensemble import BaseEnsemble
+from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.random import sample_without_replacement
 from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
@@ -195,6 +196,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         self.random_state = random_state
         self.verbose = verbose
 
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(
         self,
         X: ArrayLike,
@@ -507,6 +509,30 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
            1996.
     """
 
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'n_estimators': [Interval(numbers.Integral, 1, None, closed='left')],
+        'tp_cost': ['array-like', numbers.Real],
+        'tn_cost': ['array-like', numbers.Real],
+        'fn_cost': ['array-like', numbers.Real],
+        'fp_cost': ['array-like', numbers.Real],
+        'max_features': [
+            StrOptions({'auto', 'sqrt', 'log2'}),
+            Interval(numbers.Integral, 1, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='right'),
+            None,
+        ],
+        'max_samples': [
+            Interval(numbers.Integral, 1, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='right'),
+            None,
+        ],
+        'bootstrap': ['boolean'],
+        'bootstrap_features': ['boolean'],
+        'n_jobs': [Interval(numbers.Integral, -1, None, closed='left')],
+        'verbose': [Interval(numbers.Integral, 0, None, closed='left'), 'boolean'],
+        'random_state': ['random_state'],
+    }
+
     def __init__(
         self,
         estimator=None,
@@ -695,5 +721,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
                 self.combination,
             )
             proba = self.final_estimator_.predict_proba(X_stacking)
+        else:
+            raise ValueError('Invalid combination method.')
 
         return proba

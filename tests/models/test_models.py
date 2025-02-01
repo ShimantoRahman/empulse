@@ -17,6 +17,7 @@ from empulse.models import (
     BiasRelabelingClassifier,
     BiasResamplingClassifier,
     BiasReweighingClassifier,
+    CSBaggingClassifier,
     CSBoostClassifier,
     CSForestClassifier,
     CSLogitClassifier,
@@ -27,9 +28,7 @@ from empulse.models import (
 )
 
 ESTIMATORS = (
-    B2BoostClassifier(
-        XGBClassifier(n_estimators=2, max_depth=1),
-    ),
+    B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
     ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10}),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -38,6 +37,9 @@ ESTIMATORS = (
     CSLogitClassifier(fp_cost=1, fn_cost=1),
     CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1),
     CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1),
+    CSBaggingClassifier(
+        estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), n_estimators=2, fp_cost=1, fn_cost=1
+    ),
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
 )
@@ -140,7 +142,9 @@ def data():
     [
         CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
         CSBoostClassifier(),
-        CSLogitClassifier(optimizer_params={'max_iter': 100}),
+        CSLogitClassifier(optimizer_params={'max_iter': 10}),
+        CSTreeClassifier(max_depth=2),
+        CSForestClassifier(n_estimators=3, max_depth=1),
         RobustCSClassifier(estimator=CSBoostClassifier()),
     ],
 )

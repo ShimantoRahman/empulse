@@ -1,11 +1,12 @@
 import copy
-import numbers
 from math import ceil
-from typing import Literal
+from numbers import Integral, Real
+from typing import ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
+from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
 
@@ -126,6 +127,34 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
            Expert Systems with Applications, 42(19), 6609–6619, 2015,
            http://doi.org/10.1016/j.eswa.2015.04.042
     """
+
+    _parameter_constraints: ClassVar[dict[str, list]] = {
+        'tp_cost': ['array-like', Real],
+        'tn_cost': ['array-like', Real],
+        'fn_cost': ['array-like', Real],
+        'fp_cost': ['array-like', Real],
+        'criterion': [StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'})],
+        'criterion_weight': ['boolean'],
+        'num_pct': [Interval(Real, left=0, right=100, closed='both')],
+        'max_features': [
+            StrOptions({'auto', 'sqrt', 'log2'}),
+            Interval(Integral, 1, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='right'),
+            None,
+        ],
+        'max_depth': [Interval(Integral, 1, None, closed='left'), None],
+        'min_samples_split': [
+            Interval(Integral, 2, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='right'),
+        ],
+        'min_samples_leaf': [
+            Interval(Integral, 1, None, closed='left'),
+            Interval(RealNotInt, 0.0, 1.0, closed='neither'),
+        ],
+        'min_gain': [Interval(Real, left=0, right=None, closed='neither')],
+        'pruned': ['boolean'],
+        'random_state': ['random_state'],
+    }
 
     def __init__(
         self,
@@ -444,6 +473,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             self.nodes = []
             self.n_nodes_pruned = 0
 
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(
         self,
         X: ArrayLike,
@@ -518,7 +548,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 raise ValueError('Invalid value for max_features. Allowed string values are "auto", "sqrt" or "log2".')
         elif self.max_features is None:
             max_features = self.n_features_
-        elif isinstance(self.max_features, (numbers.Integral, np.integer)):
+        elif isinstance(self.max_features, (Integral, np.integer)):
             max_features = self.max_features
         else:  # float
             max_features = max(1, int(self.max_features * self.n_features_)) if self.max_features > 0.0 else 1
