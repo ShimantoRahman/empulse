@@ -21,6 +21,8 @@ from empulse.models import (
     CSLogitClassifier,
     CSThresholdClassifier,
     ProfLogitClassifier,
+    CSTreeClassifier,
+    CSForestClassifier,
     RobustCSClassifier,
 )
 
@@ -34,6 +36,8 @@ ESTIMATORS = (
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
     CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
     CSLogitClassifier(fp_cost=1, fn_cost=1),
+    CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1),
+    CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1),
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
 )

@@ -4,6 +4,9 @@ from .cost_sensitive import (
     CSBoostClassifier,
     CSLogitClassifier,
     CSThresholdClassifier,
+    CSTreeClassifier,
+    CSBaggingClassifier,
+    CSForestClassifier,
     RobustCSClassifier,
 )
 from .proflogit import ProfLogitClassifier
