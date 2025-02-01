@@ -1,14 +1,10 @@
 from typing import Literal
 
+import numpy as np
 from numpy.typing import ArrayLike
 
 from .csbagging import BaggingClassifier
 from .cstree import CSTreeClassifier
-
-Combination = Literal[
-    "majority_voting", "weighted_voting", "stacking", "stacking_proba"
-]
-MaxFeatures = Literal["auto", "sqrt", "log2"]
 
 
 class CSForestClassifier(BaggingClassifier):
@@ -21,15 +17,47 @@ class CSForestClassifier(BaggingClassifier):
     n_estimators : int, default=100
         The number of trees in the forest.
 
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
     combination : string, optional default="majority_voting"
         Which combination method to use:
-          - If "majority_voting" then combine by majority voting
-          - If "weighted_voting" then combine by weighted voting using the
+          - If ``"majority_voting"`` then combine by majority voting
+          - If ``"weighted_voting"`` then combine by weighted voting using the
             out of bag savings as the weight for each estimator.
-          - If "stacking" then a Cost Sensitive Logistic Regression is used
-            to learn the combination.
-          - If "stacking_proba" then a Cost Sensitive Logistic Regression trained
-            with the estimated probabilities is used to learn the combination.
 
     max_depth : int, default=None
         The maximum depth of the tree.
@@ -42,10 +70,10 @@ class CSForestClassifier(BaggingClassifier):
           - If float, then `max_features` is a percentage and
             `int(max_features * n_features)` features are considered at each
             split.
-          - If "auto", then `max_features=sqrt(n_features)`.
-          - If "sqrt", then `max_features=sqrt(n_features)`.
-          - If "log2", then `max_features=log2(n_features)`.
-          - If None, then `max_features=n_features`.
+          - If ``"auto"``, then ``max_features=sqrt(n_features)``.
+          - If ``"sqrt"``, then ``max_features=sqrt(n_features)``.
+          - If ``"log2"``, then ``max_features=log2(n_features)``.
+          - If None, then ``max_features=n_features``.
 
         Note: the search for a split does not stop until at least one
         valid partition of the node samples is found, even if it requires to
@@ -75,6 +103,13 @@ class CSForestClassifier(BaggingClassifier):
 
     pruned : bool, optional (default=True)
         Whenever or not to prune the decision tree using cost-based pruning
+
+    bootstrap: bool, default=True
+        Whether samples are drawn with replacement.
+        If False, sampling without replacement is performed.
+
+    bootstrap_features: bool, default=False
+        Whether features are drawn with replacement.
 
     n_jobs : int, optional (default=1)
         The number of jobs to run in parallel for both `fit` and `predict`.
@@ -118,16 +153,18 @@ class CSForestClassifier(BaggingClassifier):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        combination: Combination = "majority_voting",
-        max_features: MaxFeatures | int | float = "auto",
-        max_samples=1.0,
-        max_depth=None,
-        min_samples_split=2,
-        min_samples_leaf=1,
-        n_jobs=1,
-        verbose=False,
-        pruned=False,
-        random_state=None,
+        combination: Literal["majority_voting", "weighted_voting"] = "majority_voting",
+        max_features: Literal["auto", "sqrt", "log2"] | int | float = "auto",
+        max_samples: int | float = 1.0,
+        max_depth: int | None = None,
+        min_samples_split: int | float = 2,
+        min_samples_leaf: int | float = 1,
+        bootstrap: bool = True,
+        bootstrap_features: bool = False,
+        n_jobs: int = 1,
+        verbose: bool | int = False,
+        pruned: bool = False,
+        random_state: int | np.random.RandomState | None = None,
     ):
         super().__init__(
             estimator=CSTreeClassifier(max_features=1.0),
@@ -144,8 +181,8 @@ class CSForestClassifier(BaggingClassifier):
             tn_cost=tn_cost,
             max_samples=max_samples,
             max_features=max_features,
-            bootstrap=True,
-            bootstrap_features=False,
+            bootstrap=bootstrap,
+            bootstrap_features=bootstrap_features,
             combination=combination,
             n_jobs=n_jobs,
             random_state=random_state,
@@ -164,33 +201,81 @@ class CSBaggingClassifier(BaggingClassifier):
     Parameters
     ----------
 
-    estimator : ...
+    estimator : estimator, default=None
+        The base estimator to fit on random subsets of the dataset.
 
-    final_estimator : ...
+    final_estimator : estimator, default=None
+        The estimator to train on the weighted combination of the base estimators.
+        By default, a Cost Sensitive Logistic Regression is used.
+        Only used if ``combination`` is ``"stacking"`` or ``"stacking_proba"``.
 
-    n_estimators : int, optional (default=10)
+    n_estimators : int, default=10
         The number of base estimators in the ensemble.
 
-    max_samples : int or float, optional (default=0.5)
-        The number of samples to draw from X to train each base estimator.
-            - If int, then draw `max_samples` samples.
-            - If float, then draw `max_samples * X.shape[0]` samples.
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
 
-    combination : string, optional (default="majority_voting")
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false negatives. If ``float``, then all false negatives have the same cost.
+        If array-like, then it is the cost of each false negative classification.
+        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    max_samples : int or float, default=1.0
+        The number of samples to draw from X to train each base estimator.
+          - If None (default), then draw ``X.shape[0]`` samples.
+          - If int, then draw max_samples samples.
+          - If float, then draw ``max(round(n_samples * max_samples), 1)`` samples.
+            Thus, ``max_samples`` should be in the interval ``(0.0, 1.0]``.
+
+    combination : string, default="majority_voting"
         Which combination method to use:
-          - If "majority_voting" then combine by majority voting
-          - If "weighted_voting" then combine by weighted voting using the
+          - If ``"majority_voting"`` then combine by majority voting
+          - If ``"weighted_voting"`` then combine by weighted voting using the
             out of bag savings as the weight for each estimator.
-          - If "stacking" then a Cost Sensitive Logistic Regression is used
-            to learn the combination.
-          - If "stacking_proba" then a Cost Sensitive Logistic Regression trained
+          - If ``"stacking"`` then the ``final_estimator`` is used to learn the combination.
+          - If ``"stacking_proba"`` then the ``final_estimator`` is trained
             with the estimated probabilities is used to learn the combination.
 
-    n_jobs : int, optional (default=1)
-        The number of jobs to run in parallel for both `fit` and `predict`.
+    bootstrap: bool, default=True
+        Whether samples are drawn with replacement.
+        If False, sampling without replacement is performed.
+
+    bootstrap_features: bool, default=False
+        Whether features are drawn with replacement.
+
+    n_jobs : int, default=1
+        The number of jobs to run in parallel for both ``fit`` and ``predict``.
         If -1, then the number of jobs is set to the number of cores.
 
-    verbose : int, optional (default=0)
+    verbose : int, default=0
         Controls the verbosity of the building process.
 
     Attributes
@@ -219,21 +304,35 @@ class CSBaggingClassifier(BaggingClassifier):
     def __init__(
         self,
         estimator=None,
+        *,
         final_estimator=None,
-        n_estimators=10,
-        max_samples=0.5,
-        combination="majority_voting",
-        n_jobs=1,
-        verbose=False,
+        n_estimators: int = 10,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
+        max_samples: float | int = 0.5,
+        max_features: Literal["auto", "sqrt", "log2"] | int | float = "auto",
+        combination: Literal[
+            "majority_voting", "weighted_voting", "stacking", "stacking_proba"
+        ] = "majority_voting",
+        bootstrap: bool = True,
+        bootstrap_features: bool = False,
+        n_jobs: int = 1,
+        verbose: bool | int = False,
     ):
         super().__init__(
             estimator=estimator,
             final_estimator=final_estimator,
             n_estimators=n_estimators,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
             max_samples=max_samples,
-            max_features=1.0,
-            bootstrap=True,
-            bootstrap_features=False,
+            max_features=max_features,
+            bootstrap=bootstrap,
+            bootstrap_features=bootstrap_features,
             combination=combination,
             n_jobs=n_jobs,
             random_state=None,

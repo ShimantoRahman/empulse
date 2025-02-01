@@ -1,6 +1,7 @@
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
+from typing import Literal
 
 import numpy as np
 from joblib import Parallel, delayed, cpu_count
@@ -236,18 +237,23 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
             they are supported by the base estimator.
 
         y : array-like, shape = [n_samples]
-            The target values (class labels in classification, real numbers in
-            regression).
+            The target values.
 
-        cost_mat : array-like of shape = [n_samples, 4]
-            Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
-            true positives and true negatives, for each example.
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of true positives. If ``float``, then all true positives have the same cost.
+            If array-like, then it is the cost of each true positive classification.
 
-        sample_weight : array-like, shape = [n_samples] or None
-            Sample weights. If None, then samples are equally weighted.
-            Note that this is supported only if the base estimator supports
-            sample weighting.
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
+
+        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of true negatives. If ``float``, then all true negatives have the same cost.
+            If array-like, then it is the cost of each true negative classification.
+
+        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false negatives. If ``float``, then all false negatives have the same cost.
+            If array-like, then it is the cost of each false negative classification.
 
         Returns
         -------
@@ -313,7 +319,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
             if self.max_features > 0.0:
                 max_features = max(1, int(self.max_features * self.n_features_))
             else:
-                max_features = 1  # On sklearn is 0.
+                max_features = 1
         self.max_features_ = max_features
 
         # Free allocated memory, if any
@@ -366,13 +372,25 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         else:
             final_estimator = self.final_estimator
         self.final_estimator_ = clone(final_estimator)
-        X_stacking = _create_stacking_set(self.estimators_, self.estimators_features_,
-                                          self.estimators_weight_, X, self.combination)
+        X_stacking = _create_stacking_set(
+            self.estimators_,
+            self.estimators_features_,
+            self.estimators_weight_,
+            X,
+            self.combination,
+        )
         fp_cost = cost_mat[:, 0]
         fn_cost = cost_mat[:, 1]
         tp_cost = cost_mat[:, 2]
         tn_cost = cost_mat[:, 3]
-        self.final_estimator_.fit(X_stacking, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        self.final_estimator_.fit(
+            X_stacking,
+            y,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
+        )
         return self
 
     # TODO: _evaluate_oob_savings in parallel
@@ -544,20 +562,22 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         self,
         estimator=None,
         final_estimator=None,
-        n_estimators=10,
+        n_estimators: int = 10,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        estimator_params=tuple(),
-        max_samples=None,
-        max_features=None,
-        bootstrap=True,
-        bootstrap_features=False,
-        combination="majority_voting",
-        n_jobs=1,
-        random_state=None,
-        verbose=0,
+        estimator_params: tuple = tuple(),
+        max_samples: int | float = None,
+        max_features: Literal["auto", "sqrt", "log2"] | int | float = None,
+        bootstrap: bool = True,
+        bootstrap_features: bool = False,
+        combination: Literal[
+            "majority_voting", "weighted_voting", "stacking", "stacking_proba"
+        ] = "majority_voting",
+        n_jobs: int = 1,
+        random_state: int | np.random.RandomState | None = None,
+        verbose: bool = 0,
     ):
         super().__init__(
             estimator=estimator,
@@ -629,7 +649,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
                 self.n_estimators, self.n_jobs
             )
 
-            if hasattr(self.estimator_, 'predict_proba'):
+            if hasattr(self.estimator_, "predict_proba"):
                 all_proba = Parallel(n_jobs=n_jobs, verbose=self.verbose)(
                     delayed(_parallel_predict_proba)(
                         self.estimators_[starts[i] : starts[i + 1]],

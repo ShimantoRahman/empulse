@@ -86,13 +86,21 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         The maximum depth of the tree. If None, then nodes are expanded until
         all leaves are pure or until all leaves contain less than
         min_samples_split samples.
-        Ignored if ``max_samples_leaf`` is not None.
 
-    min_samples_split : int, default=2
-        The minimum number of samples required to split an internal node.
+    min_samples_split : int or float, default=2
+        The minimum number of samples required to split an internal node:
+          - If int, then consider ``min_samples_split`` as the minimum number.
+          - If float, then ``min_samples_split`` is a fraction and ``ceil(min_samples_split * n_samples)``
+          are the minimum number of samples for each split.
 
-    min_samples_leaf : int, default=1
+    min_samples_leaf : int or float, default=1
         The minimum number of samples required to be at a leaf node.
+        A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples
+        in each of the left and right branches.
+        This may have the effect of smoothing the model, especially in regression.
+          - If int, then consider ``min_samples_leaf`` as the minimum number.
+          - If float, then ``min_samples_leaf`` is a fraction and ``ceil(min_samples_leaf * n_samples)``
+            are the minimum number of samples for each node.
 
     min_gain : float, default=0.001
         The minimum gain that a split must produce in order to be taken into account.
@@ -120,22 +128,24 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     """
 
     def __init__(
-            self,
-            *,
-            tp_cost: ArrayLike | float = 0.0,
-            tn_cost: ArrayLike | float = 0.0,
-            fn_cost: ArrayLike | float = 0.0,
-            fp_cost: ArrayLike | float = 0.0,
-            criterion: Literal["direct_cost", "pi_cost", "gini_cost", "entropy_cost"] = 'direct_cost',
-            criterion_weight: bool = False,
-            num_pct: int = 100,
-            max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
-            max_depth: int | None = None,
-            min_samples_split: int | float = 2,
-            min_samples_leaf: int | float = 1,
-            min_gain: float = 0.001,
-            pruned: bool = True,
-            random_state: int | np.random.RandomState | None = None
+        self,
+        *,
+        tp_cost: ArrayLike | float = 0.0,
+        tn_cost: ArrayLike | float = 0.0,
+        fn_cost: ArrayLike | float = 0.0,
+        fp_cost: ArrayLike | float = 0.0,
+        criterion: Literal[
+            "direct_cost", "pi_cost", "gini_cost", "entropy_cost"
+        ] = "direct_cost",
+        criterion_weight: bool = False,
+        num_pct: int = 100,
+        max_features: Literal["auto", "sqrt", "log2"] | int | float | None = None,
+        max_depth: int | None = None,
+        min_samples_split: int | float = 2,
+        min_samples_leaf: int | float = 1,
+        min_gain: float = 0.001,
+        pruned: bool = True,
+        random_state: int | np.random.RandomState | None = None,
     ):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -192,7 +202,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             fn_cost=fn_cost,
             tp_cost=tp_cost,
             tn_cost=tn_cost,
-            check_input=False
+            check_input=False,
         )
         costs[1] = cost_loss(
             y_true,
@@ -201,18 +211,18 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             fn_cost=fn_cost,
             tp_cost=tp_cost,
             tn_cost=tn_cost,
-            check_input=False
+            check_input=False,
         )
 
         pi = np.array([1 - y_true.mean(), y_true.mean()])
 
-        if self.criterion == 'direct_cost':
+        if self.criterion == "direct_cost":
             costs = costs
-        elif self.criterion == 'pi_cost':
+        elif self.criterion == "pi_cost":
             costs *= pi
-        elif self.criterion == 'gini_cost':
-            costs *= pi ** 2
-        elif self.criterion in 'entropy_cost':
+        elif self.criterion == "gini_cost":
+            costs *= pi**2
+        elif self.criterion in "entropy_cost":
             if pi[0] == 0 or pi[1] == 0:
                 costs *= 0
             else:
@@ -227,7 +237,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return costs[y_pred], y_pred, y_prob
 
     def _calculate_gain(self, cost_base, y_true, X, cost_mat, split):
-        """ Private function to calculate the gain in cost of using split in the
+        """Private function to calculate the gain in cost of using split in the
          current node.
 
         Parameters
@@ -246,9 +256,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
-        split : tuple of len = 2
-            split[0] = feature to split = j
-            split[1] = where to split = l
+        split : tuple(feature, split_value)
+            The feature and value to split the node.
 
         Returns
         -------
@@ -261,8 +270,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             # In case cost_b==0 and pi_1!=(0,1)
             return 0.0, int(np.sign(y_true.mean() - 0.5) == 1)
 
-        j, l = split
-        filter_Xl = (X[:, j] <= l)
+        feature, split_value = split
+        filter_Xl = X[:, feature] <= split_value
         filter_Xr = ~filter_Xl
         n_samples, n_features = X.shape
 
@@ -272,24 +281,21 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             return 0.0, 0.0
 
         # Split X in Xl and Xr according to rule split
-        Xl_cost, Xl_pred, _ = self._node_cost(
-            y_true[filter_Xl], cost_mat[filter_Xl, :])
-        Xr_cost, _, _ = self._node_cost(
-            y_true[filter_Xr], cost_mat[filter_Xr, :])
+        Xl_cost, Xl_pred, _ = self._node_cost(y_true[filter_Xl], cost_mat[filter_Xl, :])
+        Xr_cost, _, _ = self._node_cost(y_true[filter_Xr], cost_mat[filter_Xr, :])
 
         if self.criterion_weight:
             n_samples_Xl = np.nonzero(filter_Xl)[0].shape[0]
             Xl_w = n_samples_Xl * 1.0 / n_samples
             Xr_w = 1 - Xl_w
-            gain = round(
-                (cost_base - (Xl_w * Xl_cost + Xr_w * Xr_cost)) / cost_base, 6)
+            gain = round((cost_base - (Xl_w * Xl_cost + Xr_w * Xr_cost)) / cost_base, 6)
         else:
             gain = round((cost_base - (Xl_cost + Xr_cost)) / cost_base, 6)
 
         return gain, Xl_pred
 
     def _best_split(self, y_true, X, cost_mat):
-        """ Private function to calculate the split that gives the best gain.
+        """Private function to calculate the split that gives the best gain.
 
         Parameters
         ----------
@@ -324,7 +330,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         # Selected features
         selected_features = np.arange(0, self.n_features_)
         self._rng.shuffle(selected_features)
-        selected_features = selected_features[:self.max_features_]
+        selected_features = selected_features[: self.max_features_]
         selected_features.sort()
 
         # TODO:  # Skip the CPU intensive evaluation of the impurity criterion for
@@ -334,23 +340,31 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         # nodes.
 
         # For each feature test all possible splits
-        for j in selected_features:
-            splits[j, :] = np.percentile(
-                X[:, j], np.arange(0, 100, 100.0 / num_pct).tolist())
+        for feature in selected_features:
+            splits[feature, :] = np.percentile(
+                X[:, feature], np.arange(0, 100, 100.0 / num_pct).tolist()
+            )
 
-            for l in range(num_pct):
+            for split_val in range(num_pct):
                 # Avoid repeated values, since np.percentile may return repeated values
-                if l == 0 or (l > 0 and splits[j, l] != splits[j, l - 1]):
-                    split = (j, splits[j, l])
-                    gains[j, l], pred[j, l] = self._calculate_gain(
-                        cost_base, y_true, X, cost_mat, split)
+                if split_val == 0 or (split_val > 0 and splits[feature, split_val] != splits[feature, split_val - 1]):
+                    split = (feature, splits[feature, split_val])
+                    gains[feature, split_val], pred[feature, split_val] = self._calculate_gain(
+                        cost_base, y_true, X, cost_mat, split
+                    )
 
         best_split = np.unravel_index(gains.argmax(), gains.shape)
 
-        return (best_split[0], splits[best_split]), gains.max(), pred[best_split], y_pred, y_prob
+        return (
+            (best_split[0], splits[best_split]),
+            gains.max(),
+            pred[best_split],
+            y_pred,
+            y_prob,
+        )
 
     def _tree_grow(self, y_true, X, cost_mat, level=0):
-        """ Private recursive function to grow the decision tree.
+        """Private recursive function to grow the decision tree.
 
         Parameters
         ----------
@@ -373,23 +387,28 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         """
 
-        # TODO: Find error, add min_samples_split
         if len(X.shape) == 1:
-            tree = dict(y_pred=y_true, y_prob=0.5, level=level,
-                        split=-1, n_samples=1, gain=0)
+            tree = dict(
+                y_pred=y_true, y_prob=0.5, level=level, split=-1, n_samples=1, gain=0
+            )
             return tree
 
         # Calculate the best split of the current node
-        split, gain, Xl_pred, y_pred, y_prob = self._best_split(
-            y_true, X, cost_mat)
+        split, gain, Xl_pred, y_pred, y_prob = self._best_split(y_true, X, cost_mat)
 
         n_samples, n_features = X.shape
 
         # Construct the tree object as a dictionary
 
         # TODO: Convert tree to be equal to sklearn.tree.tree object
-        tree = dict(y_pred=y_pred, y_prob=y_prob, level=level,
-                    split=-1, n_samples=n_samples, gain=gain)
+        tree = dict(
+            y_pred=y_pred,
+            y_prob=y_prob,
+            level=level,
+            split=-1,
+            n_samples=n_samples,
+            gain=gain,
+        )
 
         # Check the stopping criteria
         if gain < self.min_gain:
@@ -404,8 +423,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         if n_samples <= min_samples_split:
             return tree
 
-        j, l = split
-        filter_Xl = (X[:, j] <= l)
+        feature, split_value = split
+        filter_Xl = X[:, feature] <= split_value
         filter_Xr = ~filter_Xl
         n_samples_Xl = np.nonzero(filter_Xl)[0].shape[0]
         n_samples_Xr = np.nonzero(filter_Xr)[0].shape[0]
@@ -418,18 +437,20 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             return tree
 
         # No stooping criteria is met
-        tree['split'] = split
-        tree['node'] = self.tree_.n_nodes
+        tree["split"] = split
+        tree["node"] = self.tree_.n_nodes
         self.tree_.n_nodes += 1
 
-        tree['sl'] = self._tree_grow(
-            y_true[filter_Xl], X[filter_Xl], cost_mat[filter_Xl], level + 1)
-        tree['sr'] = self._tree_grow(
-            y_true[filter_Xr], X[filter_Xr], cost_mat[filter_Xr], level + 1)
+        tree["sl"] = self._tree_grow(
+            y_true[filter_Xl], X[filter_Xl], cost_mat[filter_Xl], level + 1
+        )
+        tree["sr"] = self._tree_grow(
+            y_true[filter_Xr], X[filter_Xr], cost_mat[filter_Xr], level + 1
+        )
 
         return tree
 
-    class _tree_class():
+    class _tree_class:
         def __init__(self):
             self.n_nodes = 0
             self.tree = dict()
@@ -438,16 +459,16 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             self.n_nodes_pruned = 0
 
     def fit(
-            self,
-            X: ArrayLike,
-            y: ArrayLike,
-            *,
-            tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-            fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        self,
+        X: ArrayLike,
+        y: ArrayLike,
+        *,
+        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
     ):
-        """ Build a example-dependent cost-sensitive decision tree from the training set (X, y, cost_mat)
+        """Build a example-dependent cost-sensitive decision tree from the training set (X, y, cost_mat)
 
         Parameters
         ----------
@@ -479,11 +500,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             Returns self.
         """
         X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
+        y_type = type_of_target(y, input_name="y", raise_unknown=True)
+        if y_type != "binary":
             raise ValueError(
-                'Only binary classification is supported. The type of the target '
-                f'is {y_type}.'
+                "Only binary classification is supported. The type of the target "
+                f"is {y_type}."
             )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
@@ -495,7 +516,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             fn_cost=fn_cost,
             fp_cost=fp_cost,
             force_array=True,
-            n_samples=len(y)
+            n_samples=len(y),
         )
         cost_mat = np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
         self._rng = check_random_state(self.random_state)
@@ -513,18 +534,18 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 max_features = max(1, int(np.log2(self.n_features_)))
             else:
                 raise ValueError(
-                    'Invalid value for max_features. Allowed string '
-                    'values are "auto", "sqrt" or "log2".')
+                    "Invalid value for max_features. Allowed string "
+                    'values are "auto", "sqrt" or "log2".'
+                )
         elif self.max_features is None:
             max_features = self.n_features_
         elif isinstance(self.max_features, (numbers.Integral, np.integer)):
             max_features = self.max_features
         else:  # float
             if self.max_features > 0.0:
-                max_features = max(
-                    1, int(self.max_features * self.n_features_))
+                max_features = max(1, int(self.max_features * self.n_features_))
             else:
-                max_features = 1  # On sklearn is 0.
+                max_features = 1
         self.max_features_ = max_features
 
         self.tree_.tree = self._tree_grow(y, X, cost_mat)
@@ -535,7 +556,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return self
 
     def _nodes(self, tree):
-        """ Private function that find the number of nodes in a tree.
+        """Private function that find the number of nodes in a tree.
 
         Parameters
         ----------
@@ -548,10 +569,10 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         def recourse(temp_tree_, nodes):
             if isinstance(temp_tree_, dict):
-                if temp_tree_['split'] != -1:
-                    nodes.append(temp_tree_['node'])
-                    if temp_tree_['split'] != -1:
-                        for k in ['sl', 'sr']:
+                if temp_tree_["split"] != -1:
+                    nodes.append(temp_tree_["node"])
+                    if temp_tree_["split"] != -1:
+                        for k in ["sl", "sr"]:
                             recourse(temp_tree_[k], nodes)
             return None
 
@@ -560,7 +581,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return nodes_
 
     def _classify(self, X, tree, proba=False):
-        """ Private function that classify a dataset using tree.
+        """Private function that classify a dataset using tree.
 
         Parameters
         ----------
@@ -584,34 +605,38 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         predicted = np.ones(n_samples)
 
         # Check if final node
-        if tree['split'] == -1:
+        if tree["split"] == -1:
             if not proba:
-                predicted = predicted * tree['y_pred']
+                predicted = predicted * tree["y_pred"]
             else:
-                predicted = predicted * tree['y_prob']
+                predicted = predicted * tree["y_prob"]
         else:
-            j, l = tree['split']
-            filter_Xl = (X[:, j] <= l)
+            feature, split_value = tree["split"]
+            filter_Xl = X[:, feature] <= split_value
             filter_Xr = ~filter_Xl
             n_samples_Xl = np.nonzero(filter_Xl)[0].shape[0]
             n_samples_Xr = np.nonzero(filter_Xr)[0].shape[0]
 
             if n_samples_Xl == 0:  # If left node is empty only continue with right
                 predicted[filter_Xr] = self._classify(
-                    X[filter_Xr, :], tree['sr'], proba)
+                    X[filter_Xr, :], tree["sr"], proba
+                )
             elif n_samples_Xr == 0:  # If right node is empty only continue with left
                 predicted[filter_Xl] = self._classify(
-                    X[filter_Xl, :], tree['sl'], proba)
+                    X[filter_Xl, :], tree["sl"], proba
+                )
             else:
                 predicted[filter_Xl] = self._classify(
-                    X[filter_Xl, :], tree['sl'], proba)
+                    X[filter_Xl, :], tree["sl"], proba
+                )
                 predicted[filter_Xr] = self._classify(
-                    X[filter_Xr, :], tree['sr'], proba)
+                    X[filter_Xr, :], tree["sr"], proba
+                )
 
         return predicted
 
     def predict(self, X):
-        """ Predict class of X.
+        """Predict class of X.
 
         The predicted class for each sample in X is returned.
 
@@ -667,7 +692,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return prob
 
     def _delete_node(self, tree, node):
-        """ Private function that eliminate node from tree.
+        """Private function that eliminate node from tree.
 
         Parameters
         ----------
@@ -687,14 +712,14 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         def recourse(temp_tree_, del_node):
             if isinstance(temp_tree_, dict):
-                if temp_tree_['split'] != -1:
-                    if temp_tree_['node'] == del_node:
-                        del temp_tree_['sr']
-                        del temp_tree_['sl']
-                        del temp_tree_['node']
-                        temp_tree_['split'] = -1
+                if temp_tree_["split"] != -1:
+                    if temp_tree_["node"] == del_node:
+                        del temp_tree_["sr"]
+                        del temp_tree_["sl"]
+                        del temp_tree_["node"]
+                        temp_tree_["split"] = -1
                     else:
-                        for k in ['sl', 'sr']:
+                        for k in ["sl", "sr"]:
                             recourse(temp_tree_[k], del_node)
             return None
 
@@ -702,7 +727,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return temp_tree
 
     def _pruning(self, X, y_true, cost_mat):
-        """ Private function that prune the decision tree.
+        """Private function that prune the decision tree.
 
         Parameters
         ----------
@@ -735,7 +760,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             fp_cost=fp_cost,
             fn_cost=fn_cost,
             tp_cost=tp_cost,
-            tn_cost=tn_cost
+            tn_cost=tn_cost,
         )
         if cost_base == 0:
             cost_base = np.finfo(float).eps
@@ -748,15 +773,18 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             nodes_pruned = self._nodes(temp_tree)
 
             # Calculate %gain
-            gain = (cost_base - cost_loss(
-                y_true,
-                y_pred,
-                fp_cost=fp_cost,
-                fn_cost=fn_cost,
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                check_input=False
-            )) / cost_base
+            gain = (
+                cost_base
+                - cost_loss(
+                    y_true,
+                    y_pred,
+                    fp_cost=fp_cost,
+                    fn_cost=fn_cost,
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    check_input=False,
+                )
+            ) / cost_base
 
             # Calculate %gain_size
             gain_size = (len(nodes) - len(nodes_pruned)) * 1.0 / len(nodes)
@@ -769,14 +797,15 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         if best_gain > self.min_gain:
             self.tree_.tree_pruned = self._delete_node(
-                self.tree_.tree_pruned, best_node)
+                self.tree_.tree_pruned, best_node
+            )
 
             # If best tree is not root node, then recursively pruning the tree
             if best_node != 0:
                 self._pruning(X, y_true, cost_mat)
 
     def pruning(self, X, y, cost_mat):
-        """ Function that prune the decision tree.
+        """Function that prune the decision tree.
 
         Parameters
         ----------
