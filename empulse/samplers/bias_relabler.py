@@ -1,5 +1,6 @@
 import warnings
-from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -31,7 +32,11 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
 
     # no swapping needed if one of the groups is empty
     if n_sensitive == 0 or n_not_sensitive == 0:
-        warnings.warn('sensitive_feature only contains one class, no relabeling is performed.', UserWarning)
+        warnings.warn(
+            'sensitive_feature only contains one class, no relabeling is performed.',
+            UserWarning,
+            stacklevel=2,
+        )
         return 0
 
     pos_ratio_sensitive = np.sum(_safe_indexing(y_true, sensitive_indices)) / n_sensitive
@@ -177,8 +182,8 @@ class BiasRelabler(BaseSampler):
         self,
         estimator,
         *,
-        strategy: Union[Callable, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: Callable | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         super().__init__()
         self.estimator = estimator
@@ -190,7 +195,7 @@ class BiasRelabler(BaseSampler):
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
 
-    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
+    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 
@@ -217,7 +222,7 @@ class BiasRelabler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
@@ -238,7 +243,7 @@ class BiasRelabler(BaseSampler):
         """
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
-    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
+    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 

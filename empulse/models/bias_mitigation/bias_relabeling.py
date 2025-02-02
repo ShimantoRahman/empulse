@@ -1,4 +1,5 @@
-from typing import Callable, ClassVar
+from collections.abc import Callable
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike

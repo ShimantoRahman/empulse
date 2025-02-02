@@ -1,5 +1,4 @@
 import warnings
-from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -20,7 +19,7 @@ def empc_score(
     *,
     alpha: float = 6,
     beta: float = 14,
-    clv: Union[float, ArrayLike] = 200,
+    clv: float | ArrayLike = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,
@@ -159,7 +158,7 @@ def empc(
     *,
     alpha: float = 6,
     beta: float = 14,
-    clv: Union[float, ArrayLike] = 200,
+    clv: float | ArrayLike = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,

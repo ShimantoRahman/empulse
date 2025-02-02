@@ -45,7 +45,7 @@ def _parallel_build_estimators(n_estimators, ensemble, X, y, cost_mat, seeds, ve
 
     if max_samples is None:
         max_samples = n_samples
-    elif not isinstance(max_samples, (numbers.Integral, np.integer)) and (0.0 < max_samples <= 1.0):
+    elif not isinstance(max_samples, numbers.Integral | np.integer) and (0.0 < max_samples <= 1.0):
         max_samples = int(max_samples * n_samples)
 
     bootstrap = ensemble.bootstrap
@@ -58,7 +58,7 @@ def _parallel_build_estimators(n_estimators, ensemble, X, y, cost_mat, seeds, ve
 
     for i in range(n_estimators):
         if verbose > 1:
-            print(('building estimator %d of %d' % (i + 1, n_estimators)))  # noqa: T201
+            print(f'building estimator {i + 1} of {n_estimators}')  # noqa: T201
 
         random_state = check_random_state(seeds[i])
         seed = check_random_state(random_state.randint(MAX_INT))
@@ -107,7 +107,7 @@ def _parallel_predict_proba(estimators, estimators_features, X, n_classes, combi
     n_samples = X.shape[0]
     proba = np.zeros((n_samples, n_classes))
 
-    for estimator, features, weight in zip(estimators, estimators_features, estimators_weight):
+    for estimator, features, weight in zip(estimators, estimators_features, estimators_weight, strict=False):
         proba_estimator = estimator.predict_proba(X[:, features])
         if combination == 'weighted_voting':
             proba += proba_estimator * weight
@@ -122,7 +122,7 @@ def _parallel_predict(estimators, estimators_features, X, n_classes, combination
     n_samples = X.shape[0]
     pred = np.zeros((n_samples, n_classes))
 
-    for estimator, features, weight in zip(estimators, estimators_features, estimators_weight):
+    for estimator, features, weight in zip(estimators, estimators_features, estimators_weight, strict=False):
         # Resort to voting
         predictions = estimator.predict(X[:, features])
 
@@ -167,7 +167,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         estimator=None,
         final_estimator=None,
         n_estimators=10,
-        estimator_params=tuple(),
+        estimator_params=tuple(),  # noqa: C408
         max_samples=None,
         max_features=None,
         bootstrap=True,
@@ -267,7 +267,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
 
         if self.max_samples is None:
             max_samples = n_samples
-        elif isinstance(self.max_samples, (numbers.Integral, np.integer)):
+        elif isinstance(self.max_samples, numbers.Integral | np.integer):
             max_samples = self.max_samples
         else:  # float
             max_samples = int(self.max_samples * X.shape[0])
@@ -284,7 +284,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
                 raise ValueError('Invalid value for max_features. Allowed string values are "auto", "sqrt" or "log2".')
         elif self.max_features is None:
             max_features = self.n_features_
-        elif isinstance(self.max_features, (numbers.Integral, np.integer)):
+        elif isinstance(self.max_features, numbers.Integral | np.integer):
             max_features = self.max_features
         else:  # float
             max_features = max(1, int(self.max_features * self.n_features_)) if self.max_features > 0.0 else 1
@@ -354,7 +354,9 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
     def _evaluate_oob_savings(self, X, y, cost_mat):
         """Private function used to calculate the OOB Savings of each estimator."""
         estimators_weight = []
-        for estimator, samples, features in zip(self.estimators_, self.estimators_samples_, self.estimators_features_):
+        for estimator, samples, features in zip(
+            self.estimators_, self.estimators_samples_, self.estimators_features_, strict=False
+        ):
             # Test if all examples where used for training
             if not np.any(~samples):
                 # Then use training
@@ -542,7 +544,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        estimator_params: tuple = tuple(),
+        estimator_params: tuple = tuple(),  # noqa: C408
         max_samples: int | float | None = None,
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
         bootstrap: bool = True,
@@ -601,9 +603,8 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         if self.n_features_ != X.shape[1]:
             raise ValueError(
                 'Number of features of the model must '
-                'match the input. Model n_features is {0} and '
-                'input n_features is {1}.'
-                ''.format(self.n_features_, X.shape[1])
+                f'match the input. Model n_features is {self.n_features_} and '
+                f'input n_features is {X.shape[1]}.'
             )
 
         if self.combination in ['stacking', 'stacking_proba']:
@@ -618,7 +619,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
 
         elif self.combination in ['majority_voting', 'weighted_voting']:
             # Parallel loop
-            n_jobs, n_estimators, starts = _partition_estimators(self.n_estimators, self.n_jobs)
+            n_jobs, _, starts = _partition_estimators(self.n_estimators, self.n_jobs)
 
             if hasattr(self.estimator_, 'predict_proba'):
                 all_proba = Parallel(n_jobs=n_jobs, verbose=self.verbose)(
@@ -684,13 +685,12 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         if self.n_features_ != X.shape[1]:
             raise ValueError(
                 'Number of features of the model must '
-                'match the input. Model n_features is {0} and '
-                'input n_features is {1}.'
-                ''.format(self.n_features_, X.shape[1])
+                f'match the input. Model n_features is {self.n_features_} and '
+                f'input n_features is {X.shape[1]}.'
             )
 
         # Parallel loop
-        n_jobs, n_estimators, starts = _partition_estimators(self.n_estimators, self.n_jobs)
+        n_jobs, _, starts = _partition_estimators(self.n_estimators, self.n_jobs)
 
         all_proba = Parallel(n_jobs=n_jobs, verbose=self.verbose)(
             delayed(_parallel_predict_proba)(

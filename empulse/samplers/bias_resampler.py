@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Callable
 from itertools import product
-from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -157,9 +158,9 @@ class BiasResampler(BaseSampler):
     def __init__(
         self,
         *,
-        strategy: Union[Callable, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        random_state: Optional[Union[RandomState, int]] = None,
+        strategy: Callable | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
+        random_state: RandomState | int | None = None,
     ):
         super().__init__()
         self.strategy = strategy
@@ -177,7 +178,7 @@ class BiasResampler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -203,7 +204,7 @@ class BiasResampler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -249,7 +250,11 @@ class BiasResampler(BaseSampler):
 
         unique_attr = np.unique(sensitive_feature)
         if len(unique_attr) == 1:
-            warnings.warn('sensitive_feature only contains one class, no resampling is performed.', UserWarning)
+            warnings.warn(
+                'sensitive_feature only contains one class, no resampling is performed.',
+                UserWarning,
+                stacklevel=2,
+            )
             self.sample_indices_ = np.arange(len(y))
             return X, y
 

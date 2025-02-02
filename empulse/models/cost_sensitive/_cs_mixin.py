@@ -47,6 +47,7 @@ class CostSensitiveMixin:
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
                 f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
                 UserWarning,
+                stacklevel=2,
             )
             fp_cost = 1
             fn_cost = 1

@@ -1,4 +1,4 @@
-from typing import Generator, Optional
+from collections.abc import Generator
 
 import numpy as np
 from numba import njit
@@ -52,7 +52,7 @@ def _compute_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[n
 
     # calculate the TP & FP at each new lead targeted
     true_positives = np.pad(np.cumsum(sorted_labels), pad_width=(1, 0))
-    false_positives = np.pad(np.cumsum((sorted_labels == 0)), pad_width=(1, 0))
+    false_positives = np.pad(np.cumsum(sorted_labels == 0), pad_width=(1, 0))
 
     # merge consecutive equal prediction values
     duplicated_prediction_indices = np.where(np.diff(sorted_predictions) == 0)[0] + 1
@@ -91,7 +91,7 @@ def _compute_profits(
 
 
 @njit
-def _range(start: float, stop: Optional[float] = None, step: Optional[float] = None) -> Generator[float, None, None]:
+def _range(start: float, stop: float | None = None, step: float | None = None) -> Generator[float, None, None]:
     if stop is None:
         stop = start
         start = 0.0

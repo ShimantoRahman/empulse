@@ -501,7 +501,7 @@ class Metric:
             tprs, fprs = _compute_convex_hull(y_true, y_score)
 
             profits = np.zeros_like(tprs)
-            for i, (tpr, fpr) in enumerate(zip(tprs, fprs)):
+            for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
                 profits[i] = calculate_profit(pi_0=pi0, pi_1=pi1, F_0=tpr, F_1=fpr, **kwargs)
 
             return profits.max()
@@ -537,7 +537,7 @@ class Metric:
 
             dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args}
             bounds = []
-            for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1)), len(f0) - 2):
+            for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1, strict=False)), len(f0) - 2):
                 bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))
             if isinstance(upper_bound := random_var_bounds[1], sympy.Symbol | sympy.Expr):
                 upper_bound = upper_bound.subs(dist_vals)
@@ -548,7 +548,7 @@ class Metric:
 
             integrand_ = integrand.subs(kwargs).subs(dist_vals).subs('pi_0', pi0).subs('pi_1', pi1)
             score = 0
-            for (lower_bound, upper_bound), tpr, fpr in zip(pairwise(bounds), f0, f1):
+            for (lower_bound, upper_bound), tpr, fpr in zip(pairwise(bounds), f0, f1, strict=False):
                 score += compute_integral(integrand_, lower_bound, upper_bound, tpr, fpr, random_symbol)
             return score
 
@@ -589,7 +589,7 @@ class Metric:
                 s = latex(profit_function, mode='plain', order=None)
 
             s = s.replace('F_{0}', 'F_{0}(T)').replace('F_{1}', 'F_{1}(T)')
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'
         elif self.kind == 'cost':
             y, s, i, N = sympy.symbols('y s i N')
             cost_function = (1 / N) * sympy.Sum(
@@ -602,7 +602,7 @@ class Metric:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
             s = latex(cost_function, mode='plain', order=None)
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'
         elif self.kind == 'savings':
             y, s, i, N, c0, c1 = sympy.symbols('y s i N Cost_{0} Cost_{1}')
             cost_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
@@ -615,4 +615,4 @@ class Metric:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
             s = latex(cost_function, mode='plain', order=None)
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'

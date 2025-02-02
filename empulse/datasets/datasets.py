@@ -163,7 +163,7 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
     raw_data = pd.read_csv(
         join(module_path, 'data', 'churn_tv_subscriptions.csv.gz'), delimiter=',', compression='gzip'
     )
-    with open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst')) as f:
+    with open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst'), encoding='utf-8') as f:
         description = f.read()
     data = raw_data.iloc[:, 1:-5]
 
@@ -349,7 +349,7 @@ def load_upsell_bank_telemarketing(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'bankmarketing.csv.gz'), delimiter=';', compression='gzip')
-    with open(join(module_path, 'descriptions', 'bankmarketing.rst')) as f:
+    with open(join(module_path, 'descriptions', 'bankmarketing.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # only use features pre-contact:
@@ -604,7 +604,7 @@ def load_give_me_some_credit(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring1.csv.gz'), delimiter=',', compression='gzip')
-    with open(join(module_path, 'descriptions', 'creditscoring1.rst')) as f:
+    with open(join(module_path, 'descriptions', 'creditscoring1.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # Exclude MonthlyIncome = nan or =0 or DebtRatio >1
@@ -871,7 +871,7 @@ def load_credit_scoring_pakdd(
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring2.csv.gz'), delimiter='\t', compression='gzip')
-    with open(join(module_path, 'descriptions', 'creditscoring2.rst')) as f:
+    with open(join(module_path, 'descriptions', 'creditscoring2.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # Exclude TARGET_LABEL_BAD=1 == 'N'

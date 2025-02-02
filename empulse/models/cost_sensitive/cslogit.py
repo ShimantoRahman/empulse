@@ -1,7 +1,8 @@
 import warnings
+from collections.abc import Callable
 from functools import partial
 from numbers import Real
-from typing import Any, Callable, ClassVar, Literal, Optional, Union
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -230,8 +231,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
         loss: Loss | Callable = 'average expected cost',
-        optimize_fn: Optional[Callable] = None,
-        optimizer_params: Optional[dict[str, Any]] = None,
+        optimize_fn: Callable | None = None,
+        optimizer_params: dict[str, Any] | None = None,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
@@ -256,10 +257,10 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         X: ArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-        tn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-        fn_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
-        fp_cost: Union[ArrayLike, float] = Parameter.UNCHANGED,
+        tp_cost: ArrayLike | float = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float = Parameter.UNCHANGED,
         **loss_params,
     ) -> 'CSLogitClassifier':
         """
@@ -483,10 +484,10 @@ def _check_optimize_result(result):
         except AttributeError:
             result_message = result.message
         warning_msg = (
-            'L-BFGS failed to converge (status={}):\n{}.\n\n'
+            f'L-BFGS failed to converge (status={result.status}):\n{result_message}.\n\n'
             'Increase the number of iterations (max_iter) '
             'or scale the data as shown in:\n'
             '    https://scikit-learn.org/stable/modules/'
             'preprocessing.html'
-        ).format(result.status, result_message)
+        )
         warnings.warn(warning_msg, ConvergenceWarning, stacklevel=2)

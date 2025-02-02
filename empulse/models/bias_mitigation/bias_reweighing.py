@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from itertools import product
-from typing import Callable, ClassVar, Optional, Union
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -185,8 +186,8 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         self,
         estimator,
         *,
-        strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: StrategyFn | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -200,7 +201,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params
     ) -> 'BiasReweighingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.

@@ -281,10 +281,10 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         )
 
         self.costs_ = {
-            'tp_cost': tp_cost if isinstance(tp_cost, (int, float)) else np.array(tp_cost),  # take copy of the array
-            'tn_cost': tn_cost if isinstance(tn_cost, (int, float)) else np.array(tn_cost),
-            'fn_cost': fn_cost if isinstance(fn_cost, (int, float)) else np.array(fn_cost),
-            'fp_cost': fp_cost if isinstance(fp_cost, (int, float)) else np.array(fp_cost),
+            'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
+            'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
+            'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
+            'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),
         }
         # only fit on the costs that are arrays and have a standard deviation greater than 0
         should_fit = [

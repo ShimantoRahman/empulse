@@ -1,6 +1,6 @@
 import warnings
 from numbers import Real
-from typing import ClassVar, Union
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -181,7 +181,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
         *,
         accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
+        clv: float | ArrayLike = 200,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
     ) -> None:

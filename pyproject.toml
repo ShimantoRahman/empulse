@@ -75,7 +75,7 @@ docs = [
 ]
 
 lint = [
-    "ruff>=0.9.2",
+    "ruff>=0.9.4",
     "pre-commit>=4.0.1",
 ]
 
@@ -104,20 +104,28 @@ exclude = ["docs", "notebooks"]
 [tool.ruff.lint]
 extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "A",  # flake8-builtins
+    "B",  # flake8-bugbear
     "BLE",  # flake8-blind-except
+    "C4",  # flake8-comprehensions
     "D",  # pydocstyle
     "E",  # pycodestyle
     "F",  # pyflakes
     "I",  # isort
+    "ISC",  # flake8-implicit-str-concat
     "ICN",  # flake8-import-conventions
     "INP",  # flake8-no-pep420
+    "N",  # pep8-naming
     "NPY",  # numpy-specific rules
     "PD",  # pandas-vet
     "PGH004",  # blanket-noqa
     "PIE",  # flake8-pie
+    "PLC",
+    "PLE",
+    "PLW",
     "RSE",  # flake8-raise
     "RUF",  # ruff-specific rules
     "SIM",  # flake8-simplify
+    "UP",  # pyupgrade
     "T20",  # flake8-print
     "TC",  # flake8-type-checking
 ]
@@ -128,6 +136,12 @@ ignore = [
     "D104",  # Missing docstring in public package
     "D105",  # Missing docstring in magic method
     "D301",  # Use r""" if any backslashes in a docstring
+    "N803",  # Argument name should be lowercase (sklearn convention to express features as X)
+    "N806",  # Variable in function should be lowercase (sklearn convention to express features as X)
+    "PLW2901",  # `for` loop variable overwritten by assignment target
+    "PLC2701",  # Private name import {name} from external module {module}
+    "PLC0415",  # `import` should be at the top-level of a file
+    "PLW3201",  # Dunder method has no special meaning in Python 3
 ]
 
 [tool.ruff.format]
@@ -142,4 +156,11 @@ convention = "numpy"
     "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D",  # pydocstyle
     "NPY002",  # Replace legacy `np.random.random` call with `np.random.Generator`
+    "N802",  # Function name should be lowercase (sklearn convention to express features as X)
+    "N803",  # Argument name should be lowercase (sklearn convention to express features as X)
+    "N806",  # Variable in function should be lowercase (sklearn convention to express features as X)
+    "PLW2901",  # `for` loop variable overwritten by assignment target
+    "PLC2701",  # Private name import {name} from external module {module}
+    "PLC0415",  # `import` should be at the top-level of a file
+    "PLW3201"  # Dunder method has no special meaning in Python 3
 ]

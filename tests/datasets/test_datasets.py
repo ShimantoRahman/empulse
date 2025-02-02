@@ -36,6 +36,15 @@ def test_dataset_loading(loader, as_frame, return_X_y_costs):
             assert isinstance(fp_cost, np.ndarray | int | float)
             assert isinstance(tn_cost, np.ndarray | int | float)
             assert isinstance(fn_cost, np.ndarray | int | float)
+        assert data.shape[0] == target.shape[0]
+        if isinstance(tp_cost, pd.Series | np.ndarray):
+            assert tp_cost.shape[0] == target.shape[0]
+        if isinstance(fp_cost, pd.Series | np.ndarray):
+            assert fp_cost.shape[0] == target.shape[0]
+        if isinstance(tn_cost, pd.Series | np.ndarray):
+            assert tn_cost.shape[0] == target.shape[0]
+        if isinstance(fn_cost, pd.Series | np.ndarray):
+            assert fn_cost.shape[0] == target.shape[0]
     else:
         dataset = result
         if as_frame:
@@ -52,25 +61,12 @@ def test_dataset_loading(loader, as_frame, return_X_y_costs):
             assert isinstance(dataset.fp_cost, np.ndarray | int | float)
             assert isinstance(dataset.tn_cost, np.ndarray | int | float)
             assert isinstance(dataset.fn_cost, np.ndarray | int | float)
-
-    # Check dimensions
-    if return_X_y_costs:
-        assert data.shape[0] == target.shape[0]
-        if isinstance(tp_cost, (pd.Series, np.ndarray)):
-            assert tp_cost.shape[0] == target.shape[0]
-        if isinstance(fp_cost, (pd.Series, np.ndarray)):
-            assert fp_cost.shape[0] == target.shape[0]
-        if isinstance(tn_cost, (pd.Series, np.ndarray)):
-            assert tn_cost.shape[0] == target.shape[0]
-        if isinstance(fn_cost, (pd.Series, np.ndarray)):
-            assert fn_cost.shape[0] == target.shape[0]
-    else:
         assert dataset.data.shape[0] == dataset.target.shape[0]
-        if isinstance(dataset.tp_cost, (pd.Series, np.ndarray)):
+        if isinstance(dataset.tp_cost, pd.Series | np.ndarray):
             assert dataset.tp_cost.shape[0] == dataset.target.shape[0]
-        if isinstance(dataset.fp_cost, (pd.Series, np.ndarray)):
+        if isinstance(dataset.fp_cost, pd.Series | np.ndarray):
             assert dataset.fp_cost.shape[0] == dataset.target.shape[0]
-        if isinstance(dataset.tn_cost, (pd.Series, np.ndarray)):
+        if isinstance(dataset.tn_cost, pd.Series | np.ndarray):
             assert dataset.tn_cost.shape[0] == dataset.target.shape[0]
-        if isinstance(dataset.fn_cost, (pd.Series, np.ndarray)):
+        if isinstance(dataset.fn_cost, pd.Series | np.ndarray):
             assert dataset.fn_cost.shape[0] == dataset.target.shape[0]

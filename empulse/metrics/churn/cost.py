@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -33,8 +34,8 @@ def make_objective_churn(
     model: Literal['catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: Union[float, ArrayLike] = 200,
-    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    clv: float | ArrayLike = 200,
+    incentive_fraction: float | ArrayLike = 0.05,
     contact_cost: float = 15,
 ) -> tuple['AECObjectiveChurn', 'AECMetricChurn']: ...
 
@@ -44,8 +45,8 @@ def make_objective_churn(
     model: Literal['xgboost', 'lightgbm'],
     *,
     accept_rate: float = 0.3,
-    clv: Union[float, ArrayLike] = 200,
-    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    clv: float | ArrayLike = 200,
+    incentive_fraction: float | ArrayLike = 0.05,
     contact_cost: float = 15,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
 
@@ -54,8 +55,8 @@ def make_objective_churn(
     model: Literal['xgboost', 'lightgbm', 'catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: Union[float, ArrayLike] = 200,
-    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    clv: float | ArrayLike = 200,
+    incentive_fraction: float | ArrayLike = 0.05,
     contact_cost: float = 15,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
     """
@@ -189,8 +190,8 @@ def _objective(
     y_pred: np.ndarray,
     dtrain: Matrix,
     accept_rate: float = 0.3,
-    clv: Union[float, ArrayLike] = 200,
-    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    clv: float | ArrayLike = 200,
+    incentive_fraction: float | ArrayLike = 0.05,
     contact_cost: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -234,8 +235,8 @@ class AECObjectiveChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_fraction: Union[float, ArrayLike] = 0.05,
+        clv: float | ArrayLike = 200,
+        incentive_fraction: float | ArrayLike = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -277,7 +278,7 @@ class AECObjectiveChurn:
         )
         gradient = y_proba * (1 - y_proba) * profits
         hessian = np.abs((1 - 2 * y_proba) * gradient)
-        return list(zip(-gradient, -hessian))
+        return list(zip(-gradient, -hessian, strict=False))
 
 
 class AECMetricChurn:
@@ -286,8 +287,8 @@ class AECMetricChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: Union[float, ArrayLike] = 200,
-        incentive_fraction: Union[float, ArrayLike] = 0.05,
+        clv: float | ArrayLike = 200,
+        incentive_fraction: float | ArrayLike = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -361,8 +362,8 @@ def expected_cost_loss_churn(
     y_proba: ArrayLike,
     *,
     accept_rate: float = 0.3,
-    clv: Union[float, ArrayLike] = 200,
-    incentive_fraction: Union[float, ArrayLike] = 0.05,
+    clv: float | ArrayLike = 200,
+    incentive_fraction: float | ArrayLike = 0.05,
     contact_cost: float = 1,
     normalize: bool = False,
     check_input: bool = True,

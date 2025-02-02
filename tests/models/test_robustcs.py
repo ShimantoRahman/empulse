@@ -29,7 +29,7 @@ def test_fit(data, tp_cost, tn_cost, fn_cost, fp_cost):
     assert hasattr(clf, 'estimator_')
     assert hasattr(clf, 'outlier_estimators_')
     for cost_name, original_cost in zip(
-        ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'], [tp_cost, tn_cost, fn_cost, fp_cost]
+        ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'], [tp_cost, tn_cost, fn_cost, fp_cost], strict=False
     ):
         if isinstance(original_cost, np.ndarray):
             assert not np.array_equal(clf.costs_[cost_name], original_cost)
@@ -49,7 +49,7 @@ def test_detect_outliers_for(data, detect_outliers_for):
     assert hasattr(clf, 'estimator_')
     assert hasattr(clf, 'outlier_estimators_')
     for cost_name, original_cost in zip(
-        ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'], [tp_cost, tn_cost, fn_cost, fp_cost]
+        ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'], [tp_cost, tn_cost, fn_cost, fp_cost], strict=False
     ):
         if isinstance(original_cost, np.ndarray) and cost_name in detect_outliers_for:
             assert not np.array_equal(clf.costs_[cost_name], original_cost)

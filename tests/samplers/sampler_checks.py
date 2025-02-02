@@ -95,7 +95,7 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
         raise TypeError(msg)
 
     def _checks_generator(estimators, fit_params, expected_failed_checks):
-        for estimator, fit_param in zip(estimators, fit_params):
+        for estimator, fit_param in zip(estimators, fit_params, strict=False):
             args = {'estimator': estimator, 'fit_params': fit_param, 'mark': 'xfail'}
             if callable(expected_failed_checks):
                 args['expected_failed_checks'] = expected_failed_checks(estimator)
@@ -195,7 +195,7 @@ def check_samplers_fit_resample(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     X, y = sample_dataset_generator()
     target_stats = Counter(y)
-    X_res, y_res = sampler.fit_resample(X, y, **fit_params)
+    _, y_res = sampler.fit_resample(X, y, **fit_params)
     if isinstance(sampler, CostSensitiveSampler) and sampler.method == 'oversampling':
         n_samples = max(target_stats.values())
         assert all(value >= n_samples for value in Counter(y_res).values())
@@ -210,7 +210,7 @@ def check_samplers_pandas(name, fit_params, sampler_orig):
     try:
         import pandas as pd
     except ImportError:
-        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')
+        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # noqa: B904
     sampler = clone(sampler_orig)
     # Check that the samplers handle pandas dataframe and pandas series
     X, y = sample_dataset_generator()
@@ -308,7 +308,7 @@ def check_sampler_get_feature_names_out(name, fit_params, sampler_orig):
     set_random_state(sampler)
 
     y_ = y
-    X_res, y_res = sampler.fit_resample(X, y=y_, **fit_params)
+    X_res, _ = sampler.fit_resample(X, y=y_, **fit_params)
     input_features = [f'feature{i}' for i in range(n_features)]
 
     # input_features names is not the same length as n_features_in_
@@ -332,7 +332,7 @@ def check_sampler_get_feature_names_out_pandas(name, fit_params, sampler_orig):
     try:
         import pandas as pd
     except ImportError:
-        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')
+        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # noqa: B904
 
     tags = get_tags(sampler_orig)
     two_d_array = tags.input_tags.two_d_array
@@ -358,7 +358,7 @@ def check_sampler_get_feature_names_out_pandas(name, fit_params, sampler_orig):
 
     y_ = y
     feature_names_in = [f'col{i}' for i in range(n_features)]
-    X_res, y_res = sampler.fit_resample(pd.DataFrame(X, columns=feature_names_in), y=y_, **fit_params)
+    X_res, _ = sampler.fit_resample(pd.DataFrame(X, columns=feature_names_in), y=y_, **fit_params)
 
     # error is raised when `input_features` do not match feature_names_in
     invalid_feature_names = [f'bad{i}' for i in range(n_features)]

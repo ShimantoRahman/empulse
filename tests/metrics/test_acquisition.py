@@ -1,6 +1,7 @@
 import random
+from collections.abc import Generator
 from functools import partial
-from typing import ClassVar, Generator
+from typing import ClassVar
 
 from empulse.metrics import empa, expected_cost_loss_acquisition, mpa
 

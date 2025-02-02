@@ -1,7 +1,8 @@
+from collections.abc import Callable
 from functools import partial
 from itertools import islice
 from numbers import Integral
-from typing import Any, Callable, ClassVar, Optional
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -115,9 +116,9 @@ class ProfLogitClassifier(BaseLogitClassifier):
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
         loss: Callable = empc_score,
-        optimize_fn: Optional[Callable] = None,
-        optimizer_params: Optional[dict[str, Any]] = None,
-        n_jobs: Optional[int] = None,
+        optimize_fn: Callable | None = None,
+        optimizer_params: dict[str, Any] | None = None,
+        n_jobs: int | None = None,
     ):
         super().__init__(
             C=C,

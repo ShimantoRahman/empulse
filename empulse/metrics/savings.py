@@ -1,6 +1,7 @@
 import numbers
+from collections.abc import Callable
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -82,10 +83,10 @@ def _validate_input(
 def _compute_expected_cost(
     y_true: NDArray,
     y_pred: NDArray,
-    tp_cost: Union[NDArray, float] = 0.0,
-    tn_cost: Union[NDArray, float] = 0.0,
-    fn_cost: Union[NDArray, float] = 0.0,
-    fp_cost: Union[NDArray, float] = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> NDArray:
     return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) + (1 - y_true) * (
         y_pred * fp_cost + (1 - y_pred) * tn_cost
@@ -95,10 +96,10 @@ def _compute_expected_cost(
 def _compute_log_expected_cost(
     y_true: NDArray,
     y_pred: NDArray,
-    tp_cost: Union[NDArray, float] = 0.0,
-    tn_cost: Union[NDArray, float] = 0.0,
-    fn_cost: Union[NDArray, float] = 0.0,
-    fp_cost: Union[NDArray, float] = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> NDArray:
     epsilon = np.finfo(y_pred.dtype).eps
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
@@ -114,10 +115,10 @@ def cost_loss(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     *,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -249,10 +250,10 @@ def expected_cost_loss(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -370,10 +371,10 @@ def expected_log_cost_loss(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -476,10 +477,10 @@ def savings_score(
     y_pred: ArrayLike,
     *,
     baseline: ArrayLike | Literal['zero_one'] = 'zero_one',
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """
@@ -647,10 +648,10 @@ def expected_savings_score(
     y_proba: ArrayLike,
     *,
     baseline: Literal['zero_one', 'prior'] | ArrayLike = 'zero_one',
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """
@@ -837,10 +838,10 @@ def expected_savings_score(
 def make_objective_aec(
     model: Literal['catboost'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> tuple['AECObjective', 'AECMetric']: ...
 
 
@@ -848,20 +849,20 @@ def make_objective_aec(
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
 
 
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjective', 'AECMetric']:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
@@ -1080,7 +1081,7 @@ class AECObjective:
         gradient = y_proba * (1 - y_proba) * cost
         hessian = np.abs((1 - 2 * y_proba) * gradient)
         # convert from two arrays to one list of tuples
-        return list(zip(-gradient, -hessian))
+        return list(zip(-gradient, -hessian, strict=False))
 
 
 class AECMetric:

@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -138,7 +137,7 @@ def mpc(
     y_score: ArrayLike,
     *,
     accept_rate: float = 0.3,
-    clv: Union[ArrayLike, float] = 200,
+    clv: ArrayLike | float = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,
@@ -245,7 +244,7 @@ def mpc(
 def _compute_profit_churn(
     y_true: ArrayLike,
     y_score: ArrayLike,
-    clv: Union[ArrayLike, float] = 200,
+    clv: ArrayLike | float = 200,
     d: float = 10,
     f: float = 1,
     gamma: float = 0.3,

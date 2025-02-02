@@ -60,7 +60,7 @@ def expected_failed_checks(estimator):
     return {}
 
 
-@parametrize_with_checks([est for est in ESTIMATORS], expected_failed_checks=expected_failed_checks)
+@parametrize_with_checks(list(ESTIMATORS), expected_failed_checks=expected_failed_checks)
 def test_estimators(estimator, check):
     """Check the compatibility with scikit-learn API"""
     check(estimator)

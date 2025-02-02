@@ -1,5 +1,5 @@
+from collections.abc import Callable, Generator, Iterable
 from itertools import product
-from typing import Callable, Generator, Iterable, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -13,10 +13,10 @@ def emp_score(
     y_score: ArrayLike,
     *,
     weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-    tp_benefit: Union[float, tuple[float, float]] = 0.0,
-    tn_benefit: Union[float, tuple[float, float]] = 0.0,
-    fn_cost: Union[float, tuple[float, float]] = 0.0,
-    fp_cost: Union[float, tuple[float, float]] = 0.0,
+    tp_benefit: float | tuple[float, float] = 0.0,
+    tn_benefit: float | tuple[float, float] = 0.0,
+    fn_cost: float | tuple[float, float] = 0.0,
+    fp_cost: float | tuple[float, float] = 0.0,
     n_buckets: int = 100,
 ) -> float:
     """
@@ -164,10 +164,10 @@ def emp(
     y_score: ArrayLike,
     *,
     weighted_pdf: Callable[[float, float, float, float, float, float, float, float], float],
-    tp_benefit: Union[float, tuple[float, float]] = 0.0,
-    tn_benefit: Union[float, tuple[float, float]] = 0.0,
-    fn_cost: Union[float, tuple[float, float]] = 0.0,
-    fp_cost: Union[float, tuple[float, float]] = 0.0,
+    tp_benefit: float | tuple[float, float] = 0.0,
+    tn_benefit: float | tuple[float, float] = 0.0,
+    fn_cost: float | tuple[float, float] = 0.0,
+    fp_cost: float | tuple[float, float] = 0.0,
     n_buckets: int = 100,
 ) -> tuple[float, float]:
     """
@@ -343,6 +343,6 @@ def _construct_iter(
     return product(
         *(
             _range(min_val, max_val, step_size) if min_val != max_val else (min_val,)
-            for (min_val, max_val), step_size in zip(bounds, steps_sizes)
+            for (min_val, max_val), step_size in zip(bounds, steps_sizes, strict=False)
         )
     )

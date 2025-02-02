@@ -1,7 +1,8 @@
 import random
 import unittest
+from collections.abc import Generator
 from functools import partial
-from typing import ClassVar, Generator
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -753,7 +754,7 @@ class TestEMPB(BaseTestMetric.TestMetric):
         y_true = np.array(y_true)
         y_score = np.array(y_score)
 
-        for params, expected in zip(self.parameters, self.expected_values['different_parameters']):
+        for params, expected in zip(self.parameters, self.expected_values['different_parameters'], strict=False):
             with self.subTest(params):
                 self.assertAlmostEqualMetric(
                     self.metric(y_true, y_score, clv=np.arange(y_true.shape[0]), **params), expected
@@ -1363,7 +1364,9 @@ class TestAUEPC(unittest.TestCase):
         y_true = np.array(y_true)
         y_score = np.array(y_score)
 
-        for params, expected in zip(self.parameters, self.expected_values_normalized['different_parameters']):
+        for params, expected in zip(
+            self.parameters, self.expected_values_normalized['different_parameters'], strict=False
+        ):
             with self.subTest(params):
                 self.assertAlmostEqual(self.metric(y_true, y_score, clv=np.arange(y_true.shape[0]), **params), expected)
 
