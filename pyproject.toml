@@ -119,9 +119,9 @@ extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "PD",  # pandas-vet
     "PGH004",  # blanket-noqa
     "PIE",  # flake8-pie
-    "PLC",
-    "PLE",
-    "PLW",
+    "PLC",  # pylint conventions
+    "PLE",  # pylint errors
+    "PLW",  # pylint warnings
     "RSE",  # flake8-raise
     "RUF",  # ruff-specific rules
     "SIM",  # flake8-simplify
