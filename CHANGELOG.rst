@@ -1,7 +1,9 @@
 `Unreleased`_
 =============
 
-- ...
+- |MajorFeature| Add :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`,
+  and :class:`~empulse.models.CSBaggingClassifier` to support cost-sensitive decision tree and ensemble models
+- |Fix| Fix documentation linking issues to sklearn
 
 `0.6.0`_ (28-01-2025)
 =====================
