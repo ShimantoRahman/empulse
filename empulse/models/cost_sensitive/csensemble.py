@@ -56,9 +56,10 @@ class CSForestClassifier(BaggingClassifier):
 
     combination : string, optional default="majority_voting"
         Which combination method to use:
-          - If ``"majority_voting"`` then combine by majority voting
-          - If ``"weighted_voting"`` then combine by weighted voting using the
-            out of bag savings as the weight for each estimator.
+
+        - If ``"majority_voting"`` then combine by majority voting
+        - If ``"weighted_voting"`` then combine by weighted voting using the
+          out of bag savings as the weight for each estimator.
 
     max_depth : int, default=None
         The maximum depth of the tree.
@@ -67,14 +68,14 @@ class CSForestClassifier(BaggingClassifier):
 
     max_features : {'auto', 'sqrt', 'log2', None}, int or float, default='auto'
         The number of features to consider when looking for the best split in each tree:
-          - If int, then consider `max_features` features at each split.
-          - If float, then `max_features` is a percentage and
-            `int(max_features * n_features)` features are considered at each
-            split.
-          - If ``"auto"``, then ``max_features=sqrt(n_features)``.
-          - If ``"sqrt"``, then ``max_features=sqrt(n_features)``.
-          - If ``"log2"``, then ``max_features=log2(n_features)``.
-          - If None, then ``max_features=n_features``.
+
+        - If int, then consider ``max_features`` features at each split.
+        - If float, then ``max_features`` is a percentage and
+          ``int(max_features * n_features)`` features are considered at each split.
+        - If ``"auto"``, then ``max_features=sqrt(n_features)``.
+        - If ``"sqrt"``, then ``max_features=sqrt(n_features)``.
+        - If ``"log2"``, then ``max_features=log2(n_features)``.
+        - If None, then ``max_features=n_features``.
 
         Note: the search for a split does not stop until at least one
         valid partition of the node samples is found, even if it requires to
@@ -82,15 +83,17 @@ class CSForestClassifier(BaggingClassifier):
 
     max_samples : int or float, default=1.0
         The number of samples to draw from X to train each base estimator.
-          - If None (default), then draw ``X.shape[0]`` samples.
-          - If int, then draw max_samples samples.
-          - If float, then draw ``max(round(n_samples * max_samples), 1)`` samples.
-            Thus, ``max_samples`` should be in the interval ``(0.0, 1.0]``.
+
+        - If None (default), then draw ``X.shape[0]`` samples.
+        - If int, then draw max_samples samples.
+        - If float, then draw ``max(round(n_samples * max_samples), 1)`` samples.
+          Thus, ``max_samples`` should be in the interval ``(0.0, 1.0]``.
 
     min_samples_split : int or float, default=2
         The minimum number of samples required to split an internal node:
-          - If int, then consider ``min_samples_split`` as the minimum number.
-          - If float, then ``min_samples_split`` is a fraction and ``ceil(min_samples_split * n_samples)``
+
+        - If int, then consider ``min_samples_split`` as the minimum number.
+        - If float, then ``min_samples_split`` is a fraction and ``ceil(min_samples_split * n_samples)``
           are the minimum number of samples for each split.
 
     min_samples_leaf : int or float, default=1
@@ -98,9 +101,10 @@ class CSForestClassifier(BaggingClassifier):
         A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples
         in each of the left and right branches.
         This may have the effect of smoothing the model, especially in regression.
-          - If int, then consider ``min_samples_leaf`` as the minimum number.
-          - If float, then ``min_samples_leaf`` is a fraction and ``ceil(min_samples_leaf * n_samples)``
-            are the minimum number of samples for each node.
+
+        - If int, then consider ``min_samples_leaf`` as the minimum number.
+        - If float, then ``min_samples_leaf`` is a fraction and ``ceil(min_samples_leaf * n_samples)``
+          are the minimum number of samples for each node.
 
     pruned : bool, optional (default=True)
         Whenever or not to prune the decision tree using cost-based pruning
@@ -120,29 +124,26 @@ class CSForestClassifier(BaggingClassifier):
         Controls the verbosity of the building process.
 
     random_state : int, RandomState instance or None, default=None
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+
+        - If int, random_state is the seed used by the random number generator;
+        - If RandomState instance, random_state is the random number generator;
+        - If None, the random number generator is the RandomState instance used
+          by `np.random`.
 
     Attributes
     ----------
-    `base_estimator_`: list of estimators
+    estimator_: :class:`~empulse.models.CSTreeClassifier`
         The base estimator from which the ensemble is grown.
 
-    `estimators_`: list of estimators
+    estimators_: list of estimators
         The collection of fitted base estimators.
 
-    `estimators_samples_`: list of arrays
+    estimators_samples_: list of arrays
         The subset of drawn samples (i.e., the in-bag samples) for each base
         estimator.
 
-    `estimators_features_`: list of arrays
+    estimators_features_: list of arrays
         The subset of drawn features for each base estimator.
-
-    See Also
-    --------
-    costcla.models.CostSensitiveDecisionTreeClassifier
 
     References
     ----------
@@ -271,19 +272,21 @@ class CSBaggingClassifier(BaggingClassifier):
 
     max_samples : int or float, default=1.0
         The number of samples to draw from X to train each base estimator.
-          - If None (default), then draw ``X.shape[0]`` samples.
-          - If int, then draw max_samples samples.
-          - If float, then draw ``max(round(n_samples * max_samples), 1)`` samples.
-            Thus, ``max_samples`` should be in the interval ``(0.0, 1.0]``.
+
+        - If None (default), then draw ``X.shape[0]`` samples.
+        - If int, then draw max_samples samples.
+        - If float, then draw ``max(round(n_samples * max_samples), 1)`` samples.
+          Thus, ``max_samples`` should be in the interval ``(0.0, 1.0]``.
 
     combination : string, default="majority_voting"
         Which combination method to use:
-          - If ``"majority_voting"`` then combine by majority voting
-          - If ``"weighted_voting"`` then combine by weighted voting using the
-            out of bag savings as the weight for each estimator.
-          - If ``"stacking"`` then the ``final_estimator`` is used to learn the combination.
-          - If ``"stacking_proba"`` then the ``final_estimator`` is trained
-            with the estimated probabilities is used to learn the combination.
+
+        - If ``"majority_voting"`` then combine by majority voting
+        - If ``"weighted_voting"`` then combine by weighted voting using the
+          out of bag savings as the weight for each estimator.
+        - If ``"stacking"`` then the ``final_estimator`` is used to learn the combination.
+        - If ``"stacking_proba"`` then the ``final_estimator`` is trained
+          with the estimated probabilities is used to learn the combination.
 
     bootstrap: bool, default=True
         Whether samples are drawn with replacement.
@@ -300,25 +303,26 @@ class CSBaggingClassifier(BaggingClassifier):
         Controls the verbosity of the building process.
 
     random_state : int, RandomState instance or None, default=None
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+
+        - If int, random_state is the seed used by the random number generator;
+        - If RandomState instance, random_state is the random number generator;
+        - If None, the random number generator is the RandomState instance used
+          by `np.random`.
 
 
     Attributes
     ----------
-    `base_estimator_`: list of estimators
+    estimator_: estimator
         The base estimator from which the ensemble is grown.
 
-    `estimators_`: list of estimators
+    estimators_: list of estimators
         The collection of fitted base estimators.
 
-    `estimators_samples_`: list of arrays
+    estimators_samples_: list of arrays
         The subset of drawn samples (i.e., the in-bag samples) for each base
         estimator.
 
-    `estimators_features_`: list of arrays
+    estimators_features_: list of arrays
         The subset of drawn features for each base estimator.
 
     References

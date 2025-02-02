@@ -70,14 +70,14 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     max_features : {"auto", "sqrt", "log2" or None }, int or float, default=None
         The number of features to consider when looking for the best split:
-          - If int, then consider ``max_features`` features at each split.
-          - If float, then ``max_features`` is a percentage and
-            ``int(max_features * n_features)`` features are considered at each
-            split.
-          - If "auto", then ``max_features=sqrt(n_features)``.
-          - If "sqrt", then ``max_features=sqrt(n_features)``.
-          - If "log2", then ``max_features=log2(n_features)``.
-          - If None, then ``max_features=n_features``.
+
+        - If int, then consider ``max_features`` features at each split.
+        - If float, then ``max_features`` is a percentage and
+          ``int(max_features * n_features)`` features are considered at each split.
+        - If "auto", then ``max_features=sqrt(n_features)``.
+        - If "sqrt", then ``max_features=sqrt(n_features)``.
+        - If "log2", then ``max_features=log2(n_features)``.
+        - If None, then ``max_features=n_features``.
 
         Note: the search for a split does not stop until at least one
         valid partition of the node samples is found, even if it requires to
@@ -90,8 +90,9 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     min_samples_split : int or float, default=2
         The minimum number of samples required to split an internal node:
-          - If int, then consider ``min_samples_split`` as the minimum number.
-          - If float, then ``min_samples_split`` is a fraction and ``ceil(min_samples_split * n_samples)``
+
+        - If int, then consider ``min_samples_split`` as the minimum number.
+        - If float, then ``min_samples_split`` is a fraction and ``ceil(min_samples_split * n_samples)``
           are the minimum number of samples for each split.
 
     min_samples_leaf : int or float, default=1
@@ -99,9 +100,10 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples
         in each of the left and right branches.
         This may have the effect of smoothing the model, especially in regression.
-          - If int, then consider ``min_samples_leaf`` as the minimum number.
-          - If float, then ``min_samples_leaf`` is a fraction and ``ceil(min_samples_leaf * n_samples)``
-            are the minimum number of samples for each node.
+
+        - If int, then consider ``min_samples_leaf`` as the minimum number.
+        - If float, then ``min_samples_leaf`` is a fraction and ``ceil(min_samples_leaf * n_samples)``
+          are the minimum number of samples for each node.
 
     min_gain : float, default=0.001
         The minimum gain that a split must produce in order to be taken into account.
@@ -116,7 +118,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     Attributes
     ----------
-    `tree_` : Tree object
+    tree_ : Tree object
         The underlying Tree object.
 
     References
