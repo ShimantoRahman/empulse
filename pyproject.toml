@@ -122,6 +122,15 @@ extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "PIE",  # flake8-pie
     "PLC",  # pylint conventions
     "PLE",  # pylint errors
+    # pylint refactor
+    "PLR1714",
+    "PLR1716",
+    "PLR1730",
+    "PLR1733",
+    "PLR1736",
+    "PLR2044",
+    "PLR5501",
+    "PLR6201",
     "PLW",  # pylint warnings
     "RSE",  # flake8-raise
     "RUF",  # ruff-specific rules
