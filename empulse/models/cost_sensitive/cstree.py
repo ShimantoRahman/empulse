@@ -540,7 +540,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         # Maximum number of features to be taken into account per split
         if isinstance(self.max_features, str):
-            if self.max_features == 'auto' or self.max_features == 'sqrt':
+            if self.max_features in {'auto', 'sqrt'}:
                 max_features = max(1, int(np.sqrt(self.n_features_)))
             elif self.max_features == 'log2':
                 max_features = max(1, int(np.log2(self.n_features_)))
