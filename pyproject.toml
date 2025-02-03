@@ -166,9 +166,6 @@ convention = "numpy"
 ignore-fully-untyped = true  # gradually type-check the codebase
 mypy-init-return = true
 
-[tool.ruff.lint.isort]
-combine-as-imports = true
-
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "return_X_y_costs"]
 
