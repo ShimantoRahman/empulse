@@ -137,6 +137,7 @@ def data():
     return load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     'classifier',
     [
