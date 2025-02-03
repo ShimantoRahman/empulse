@@ -1,4 +1,4 @@
-numba==0.61.0rc2
+numba==0.61.0
 numpy==1.26.4
 scikit-learn==1.6.0
 imbalanced-learn==0.13.0
