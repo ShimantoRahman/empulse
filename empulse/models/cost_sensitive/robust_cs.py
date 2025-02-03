@@ -336,7 +336,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         for cost_name in self.costs_:
             if cost_name in should_fit:
                 target = self.costs_[cost_name]
-                if cost_name in ['tp_cost', 'fn_cost']:
+                if cost_name in {'tp_cost', 'fn_cost'}:
                     X_relevant, target_relevant = X[y > 0], target[y > 0]
                 else:
                     X_relevant, target_relevant = X[y == 0], target[y == 0]

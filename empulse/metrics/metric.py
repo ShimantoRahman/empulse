@@ -404,7 +404,7 @@ class Metric:
         random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
         n_random = len(random_symbols)
 
-        if self.kind in ['cost', 'savings'] and n_random > 0:
+        if self.kind in {'cost', 'savings'} and n_random > 0:
             raise NotImplementedError('Random variables are not supported for cost and savings metrics')
 
         if self.kind == 'max profit':
@@ -615,7 +615,7 @@ class Metric:
             )
 
             for symbol in cost_function.free_symbols:
-                if symbol not in (N, c0, c1):
+                if symbol not in {N, c0, c1}:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
             s = latex(cost_function, mode='plain', order=None)

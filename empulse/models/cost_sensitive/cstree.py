@@ -303,7 +303,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         # Check if one of the leafs is empty
         # TODO: This must be check in _best_split
-        if np.nonzero(filter_Xl)[0].shape[0] in [0, n_samples]:  # One leaft is empty
+        if np.nonzero(filter_Xl)[0].shape[0] in {0, n_samples}:  # One leaft is empty
             return 0.0, 0.0
 
         # Split X in Xl and Xr according to rule split

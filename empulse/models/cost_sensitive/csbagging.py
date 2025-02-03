@@ -276,7 +276,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
             raise ValueError('max_samples must be in (0, n_samples]')
 
         if isinstance(self.max_features, str):
-            if self.max_features in ['auto', 'sqrt']:
+            if self.max_features in {'auto', 'sqrt'}:
                 max_features = max(1, int(np.sqrt(self.n_features_)))
             elif self.max_features == 'log2':
                 max_features = max(1, int(np.log2(self.n_features_)))
@@ -317,10 +317,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
 
         self._evaluate_oob_savings(X, y, cost_mat)
 
-        if self.combination in [
-            'stacking',
-            'stacking_proba',
-        ]:
+        if self.combination in {'stacking', 'stacking_proba'}:
             self._fit_stacking_model(X, y, cost_mat)
 
         return self
@@ -607,7 +604,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
                 f'input n_features is {X.shape[1]}.'
             )
 
-        if self.combination in ['stacking', 'stacking_proba']:
+        if self.combination in {'stacking', 'stacking_proba'}:
             X_stacking = _create_stacking_set(
                 self.estimators_,
                 self.estimators_features_,
@@ -617,7 +614,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
             )
             return self.final_estimator_.predict(X_stacking)
 
-        elif self.combination in ['majority_voting', 'weighted_voting']:
+        elif self.combination in {'majority_voting', 'weighted_voting'}:
             # Parallel loop
             n_jobs, _, starts = _partition_estimators(self.n_estimators, self.n_jobs)
 
@@ -709,10 +706,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
             proba = sum(all_proba) / self.n_estimators
         elif self.combination == 'weighted_voting':
             proba = sum(all_proba)
-        elif self.combination in [
-            'stacking',
-            'stacking_proba',
-        ]:
+        elif self.combination in {'stacking', 'stacking_proba'}:
             X_stacking = _create_stacking_set(
                 self.estimators_,
                 self.estimators_features_,
