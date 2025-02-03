@@ -104,7 +104,7 @@ exclude = ["docs", "notebooks"]
 [tool.ruff.lint]
 extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "A",  # flake8-builtins
-    "ANN",
+    "ANN",  # flake8-annotations
     "B",  # flake8-bugbear
     "BLE",  # flake8-blind-except
     "C4",  # flake8-comprehensions
