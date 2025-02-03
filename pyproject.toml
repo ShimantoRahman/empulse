@@ -104,6 +104,7 @@ exclude = ["docs", "notebooks"]
 [tool.ruff.lint]
 extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "A",  # flake8-builtins
+    "ANN",
     "B",  # flake8-bugbear
     "BLE",  # flake8-blind-except
     "C4",  # flake8-comprehensions
@@ -130,37 +131,46 @@ extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "TC",  # flake8-type-checking
 ]
 ignore = [
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed in {name}
     "E731",  # do not assign a `lambda` expression, use a `def`
-    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D100",  # Missing docstring in public module
     "D104",  # Missing docstring in public package
     "D105",  # Missing docstring in magic method
     "D301",  # Use r""" if any backslashes in a docstring
-    "N803",  # Argument name should be lowercase (sklearn convention to express features as X)
-    "N806",  # Variable in function should be lowercase (sklearn convention to express features as X)
     "PLW2901",  # `for` loop variable overwritten by assignment target
     "PLC2701",  # Private name import {name} from external module {module}
     "PLC0415",  # `import` should be at the top-level of a file
-    "PLW3201",  # Dunder method has no special meaning in Python 3
 ]
+allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
 
 [tool.ruff.format]
 quote-style = "single"
+docstring-code-format = true
+docstring-code-line-length = 90
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed in {name}
     "E731",  # do not assign a `lambda` expression, use a `def`
-    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D",  # pydocstyle
     "NPY002",  # Replace legacy `np.random.random` call with `np.random.Generator`
-    "N802",  # Function name should be lowercase (sklearn convention to express features as X)
-    "N803",  # Argument name should be lowercase (sklearn convention to express features as X)
-    "N806",  # Variable in function should be lowercase (sklearn convention to express features as X)
     "PLW2901",  # `for` loop variable overwritten by assignment target
     "PLC2701",  # Private name import {name} from external module {module}
     "PLC0415",  # `import` should be at the top-level of a file
-    "PLW3201"  # Dunder method has no special meaning in Python 3
 ]
+
+[tool.ruff.lint.flake8-annotations]
+ignore-fully-untyped = true  # gradually type-check the codebase
+mypy-init-return = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "return_X_y_costs"]
+
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]

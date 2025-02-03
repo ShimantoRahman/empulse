@@ -1,5 +1,9 @@
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
@@ -144,7 +148,7 @@ def test_works_with_time_stopping_condition(X, y):
 
     from empulse.optimizers import Generation
 
-    def optimize(objective, X, max_time=0.01, **kwargs) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, max_time: float = 0.01, **kwargs: Any) -> OptimizeResult:
         rga = Generation(**kwargs)
         bounds = [(-5, 5)] * X.shape[1]
 
@@ -170,7 +174,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
     import numpy as np
     from scipy.optimize import OptimizeResult, minimize
 
-    def optimize(objective, X, **kwargs) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, **kwargs: Any) -> OptimizeResult:
         initial_guess = np.zeros(X.shape[1])
         result = minimize(
             lambda x: -objective(x),  # inverse objective function
@@ -193,7 +197,7 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
     import numpy as np
     from scipy.optimize import OptimizeResult, minimize
 
-    def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, max_iter: int = 10000, **kwargs: Any) -> OptimizeResult:
         initial_guess = np.zeros(X.shape[1])
         bounds = [(-5, 5)] * X.shape[1]
         result = minimize(

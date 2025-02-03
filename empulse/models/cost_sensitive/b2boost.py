@@ -200,7 +200,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         incentive_fraction: float | Parameter = Parameter.UNCHANGED,
         contact_cost: float | Parameter = Parameter.UNCHANGED,
-    ):
+    ) -> 'B2BoostClassifier':
         """
         Fit the model.
 

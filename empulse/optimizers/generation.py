@@ -219,14 +219,14 @@ class Generation:
         population = self.rng.rand(self.population_size, self.n_dim)
         return self.lower_bounds + population * self.delta_bounds
 
-    def _evaluate(self, objective) -> bool:
+    def _evaluate(self, objective: Callable) -> bool:
         fitness_values = Parallel(n_jobs=self.n_jobs)(
             delayed(self._update_fitness)(objective, ix) for ix in range(self.population_size)
         )
         self.fitness = np.asarray(fitness_values)
         return False
 
-    def _update_fitness(self, objective, index: int) -> float:
+    def _update_fitness(self, objective: Callable, index: int) -> float:
         fitness_value = float(self.fitness[index])
         if np.isnan(fitness_value):
             self.result.nfev += 1

@@ -18,7 +18,7 @@ class BaseTestMetric:
         def metric(self):
             return ...
 
-        def assertAlmostEqualMetric(self, generated: tuple[float, float], expected: tuple[float, float]):
+        def assertAlmostEqualMetric(self, generated: tuple[float, float], expected: tuple[float, float]) -> None:
             """Assert that the generated value and threshold is equal to the expected value and threshold."""
             self.assertAlmostEqual(generated[0], expected[0])
             self.assertAlmostEqual(generated[1], expected[1])
@@ -575,12 +575,12 @@ class BaseTestRelationMetrics:
         def generate_data(self) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
             """Generates data for the metric."""
             while True:
-                N_SAMPLES = 1000
+                n_samples = 1000
                 positive_class_prior = random.random()
-                n_positive_class = int(positive_class_prior * N_SAMPLES)
+                n_positive_class = int(positive_class_prior * n_samples)
                 if n_positive_class == 0:
                     n_positive_class = 1
-                n_negative_class = N_SAMPLES - n_positive_class
+                n_negative_class = n_samples - n_positive_class
                 random_param = lambda x: random.random() * x
                 positive_class_predictions = np.random.beta(random_param(20), random_param(20), n_positive_class)
                 negative_class_predictions = np.random.beta(random_param(20), random_param(20), n_negative_class)

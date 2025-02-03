@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from itertools import product
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,7 +12,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
 
 
-def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray):
+def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
     """Convert group weights to sample weights."""
     sample_weight = np.empty(len(y_true))
     for target_class, sensitive_val in product(np.unique(y_true), np.unique(sensitive_feature)):
@@ -184,7 +184,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
         strategy: StrategyFn | Strategy = 'statistical parity',
         transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -201,7 +201,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
     ) -> 'BiasReweighingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.

@@ -1,8 +1,8 @@
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
@@ -125,11 +125,11 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
         calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
-        pos_label=None,
-        random_state=None,
+        pos_label: int | bool | str | None = None,
+        random_state: int | np.random.RandomState | None = None,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
@@ -198,12 +198,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     def predict(
         self,
-        X,
+        X: NDArray,
         tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ):
+    ) -> NDArray:
         """
         Predict the target of new samples.
 

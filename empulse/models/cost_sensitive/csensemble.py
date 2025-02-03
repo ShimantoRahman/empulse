@@ -1,5 +1,5 @@
 from numbers import Integral
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -170,7 +170,7 @@ class CSForestClassifier(BaggingClassifier):
 
     def __init__(
         self,
-        n_estimators=100,
+        n_estimators: int = 100,
         *,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
@@ -342,9 +342,9 @@ class CSBaggingClassifier(BaggingClassifier):
 
     def __init__(
         self,
-        estimator=None,
+        estimator: Any = None,
         *,
-        final_estimator=None,
+        final_estimator: Any = None,
         n_estimators: int = 10,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,

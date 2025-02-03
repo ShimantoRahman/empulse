@@ -2,7 +2,7 @@ import contextlib
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from joblib import Parallel, cpu_count, delayed
@@ -164,18 +164,18 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        estimator=None,
-        final_estimator=None,
-        n_estimators=10,
-        estimator_params=tuple(),  # noqa: C408
-        max_samples=None,
-        max_features=None,
-        bootstrap=True,
-        bootstrap_features=False,
-        combination='majority_voting',
-        n_jobs=1,
-        random_state=None,
-        verbose=0,
+        estimator: Any = None,
+        final_estimator: Any = None,
+        n_estimators: int = 10,
+        estimator_params: tuple = tuple(),  # noqa: C408
+        max_samples: int | float | None = None,
+        max_features: int | float | None = None,
+        bootstrap: bool = True,
+        bootstrap_features: bool = False,
+        combination: str = 'majority_voting',
+        n_jobs: int = 1,
+        random_state: int | np.random.RandomState | None = None,
+        verbose: int | bool = 0,
     ):
         super().__init__(
             estimator=estimator,
@@ -206,7 +206,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ):
+    ) -> 'BaseBagging':
         """Build a Bagging ensemble of estimators from the training set (X, y).
 
         Parameters
@@ -537,8 +537,8 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
 
     def __init__(
         self,
-        estimator=None,
-        final_estimator=None,
+        estimator: Any = None,
+        final_estimator: Any = None,
         n_estimators: int = 10,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,

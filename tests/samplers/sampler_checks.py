@@ -55,7 +55,7 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
         form::
 
             {
-                "check_name": "my reason",
+                'check_name': 'my reason',
             }
 
         Where `"check_name"` is the name of the check, and `"my reason"` is why
@@ -78,8 +78,7 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
     >>> from sklearn.linear_model import LogisticRegression
     >>> from sklearn.tree import DecisionTreeRegressor
 
-    >>> @parametrize_with_checks([LogisticRegression(),
-    ...                           DecisionTreeRegressor()])
+    >>> @parametrize_with_checks([LogisticRegression(), DecisionTreeRegressor()])
     ... def test_sklearn_compatible_estimator(estimator, check):
     ...     check(estimator)
 

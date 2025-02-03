@@ -5,7 +5,7 @@ from numbers import Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
@@ -164,10 +164,12 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                ('model', CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True)),
+            ]
+        )
 
         cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
 
@@ -191,16 +193,18 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                ('model', CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True)),
+            ]
+        )
         param_grid = {'model__C': np.logspace(-5, 2, 5)}
         scorer = make_scorer(
             expected_cost_loss,
             response_method='predict_proba',
             greater_is_better=False,
-            normalize=True
+            normalize=True,
         )
         scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)
 
@@ -261,7 +265,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float = Parameter.UNCHANGED,
-        **loss_params,
+        **loss_params: Any,
     ) -> 'CSLogitClassifier':
         """
         Fit the model.
@@ -305,7 +309,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        **loss_params,
+        **loss_params: Any,
     ) -> 'CSLogitClassifier':
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
@@ -366,7 +370,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return self
 
     @staticmethod
-    def _optimize(objective, X, max_iter=1000, tolerance=1e-4, **kwargs) -> OptimizeResult:
+    def _optimize(
+        objective: Callable, X: NDArray, max_iter: int = 1000, tolerance: float = 1e-4, **kwargs: Any
+    ) -> OptimizeResult:
         initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
 
         result = minimize(
@@ -386,7 +392,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         return result
 
 
-def _optimize_jacobian(objective, X, max_iter=1000, tolerance=1e-4, **kwargs) -> OptimizeResult:
+def _optimize_jacobian(
+    objective: Callable, X: NDArray, max_iter: int = 1000, tolerance: float = 1e-4, **kwargs: Any
+) -> OptimizeResult:
     initial_weights = np.zeros(X.shape[1], order='F', dtype=X.dtype)
 
     result = minimize(

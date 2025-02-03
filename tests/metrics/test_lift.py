@@ -24,7 +24,7 @@ class TestLift(BaseTestMetric.TestMetric):
         ],
     }
 
-    def assertAlmostEqualMetric(self, generated: float, expected: float):
+    def assertAlmostEqualMetric(self, generated: float, expected: float) -> None:
         self.assertAlmostEqual(generated, expected)
 
     @property

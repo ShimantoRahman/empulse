@@ -291,9 +291,9 @@ def empc(
         true_positive_rates = true_positive_rates[:-cutoff]
         false_positive_rates = false_positive_rates[:-cutoff]
     mean_gamma = st.beta.mean(a=alpha, b=beta)
-    N = mean_gamma * (clv * (1 - delta) * positive_class_prob * true_positive_rates)
-    M = clv * (tpr_coef * true_positive_rates + fpr_coef * false_positive_rates)
-    empc = (N * gamma_cdf_1_diff - M * gamma_cdf_diff).sum()
+    temp_1 = mean_gamma * (clv * (1 - delta) * positive_class_prob * true_positive_rates)
+    temp_2 = clv * (tpr_coef * true_positive_rates + fpr_coef * false_positive_rates)
+    empc = (temp_1 * gamma_cdf_1_diff - temp_2 * gamma_cdf_diff).sum()
 
     customer_threshold = (
         gamma_cdf_diff * (positive_class_prob * true_positive_rates + negative_class_prob * false_positive_rates)

@@ -483,7 +483,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ):
+    ) -> 'CSTreeClassifier':
         """
         Build an example-dependent cost-sensitive decision tree from the training set.
 

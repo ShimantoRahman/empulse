@@ -154,9 +154,7 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
 
         dataset = load_churn_tv_subscriptions()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
     """
     module_path = dirname(__file__)
@@ -341,9 +339,7 @@ def load_upsell_bank_telemarketing(
 
         dataset = load_upsell_bank_telemarketing()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
@@ -596,9 +592,7 @@ def load_give_me_some_credit(
 
         dataset = load_give_me_some_credit()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
@@ -863,9 +857,7 @@ def load_credit_scoring_pakdd(
 
         dataset = load_credit_scoring_pakdd()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
@@ -1092,9 +1084,9 @@ def _creditscoring_costmat(income, debt, pi_1, cost_mat_parameters):
     # Calculate credit line Cl
     def calculate_cl(k, inc_i, cl_max, debt_i, int_r, n_term):
         cl_k = k * inc_i
-        A = calculate_a(cl_k, int_r, n_term)
-        Cl_debt = calculate_pv(inc_i * min(A / inc_i, 1 - debt_i), int_r, n_term)
-        return min(cl_k, cl_max, Cl_debt)
+        a = calculate_a(cl_k, int_r, n_term)
+        cl_debt = calculate_pv(inc_i * min(a / inc_i, 1 - debt_i), int_r, n_term)
+        return min(cl_k, cl_max, cl_debt)
 
     # calculate costs
     def calculate_cost_fn(cl_i, lgd):

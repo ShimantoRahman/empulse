@@ -5,7 +5,7 @@ from numbers import Integral
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 
@@ -131,7 +131,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         )
         self.n_jobs = n_jobs
 
-    def fit(self, X: ArrayLike, y: ArrayLike, **loss_params) -> 'ProfLogitClassifier':
+    def fit(self, X: ArrayLike, y: ArrayLike, **loss_params: Any) -> 'ProfLogitClassifier':
         """
         Fit ProfLogit model.
 
@@ -149,7 +149,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         """
         return super().fit(X, y, **loss_params)
 
-    def _fit(self, X: np.ndarray, y: np.ndarray, **loss_params) -> 'ProfLogitClassifier':
+    def _fit(self, X: np.ndarray, y: np.ndarray, **loss_params: Any) -> 'ProfLogitClassifier':
         optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
         optimize_fn = _optimize if self.optimize_fn is None else self.optimize_fn
         optimize_fn = partial(optimize_fn, **optimizer_params)
@@ -195,7 +195,15 @@ def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercep
     return loss - penalty
 
 
-def _optimize(objective, X, max_iter=1000, tolerance=1e-4, patience=250, bounds=(-5, 5), **kwargs) -> OptimizeResult:
+def _optimize(
+    objective: Callable,
+    X: NDArray,
+    max_iter: int = 1000,
+    tolerance: float = 1e-4,
+    patience: int = 250,
+    bounds: tuple[float | int, float | int] = (-5, 5),
+    **kwargs: Any,
+) -> OptimizeResult:
     rga = Generation(**kwargs)
     previous_score = np.inf
     iter_stagnant = 0

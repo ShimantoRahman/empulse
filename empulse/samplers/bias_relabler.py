@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Callable
-from typing import TYPE_CHECKING, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -180,7 +180,7 @@ class BiasRelabler(BaseSampler):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
         strategy: Callable | Strategy = 'statistical parity',
         transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,

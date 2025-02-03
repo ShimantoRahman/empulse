@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import scipy.stats as st
@@ -144,12 +144,17 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', RobustCSClassifier(
-                CSBoostClassifier()
-            ).set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                (
+                    'model',
+                    RobustCSClassifier(CSBoostClassifier()).set_fit_request(
+                        fn_cost=True, fp_cost=True
+                    ),
+                ),
+            ]
+        )
 
         cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
 
@@ -173,18 +178,23 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', RobustCSClassifier(
-                CSLogitClassifier()
-            ).set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                (
+                    'model',
+                    RobustCSClassifier(CSLogitClassifier()).set_fit_request(
+                        fn_cost=True, fp_cost=True
+                    ),
+                ),
+            ]
+        )
         param_grid = {'model__estimator__C': np.logspace(-5, 2, 5)}
         scorer = make_scorer(
             expected_cost_loss,
             response_method='predict_proba',
             greater_is_better=False,
-            normalize=True
+            normalize=True,
         )
         scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)
 
@@ -211,8 +221,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
     def __init__(
         self,
-        estimator,
-        outlier_estimator=None,
+        estimator: Any,
+        outlier_estimator: Any = None,
         *,
         outlier_threshold: float = 2.5,
         detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
@@ -241,7 +251,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params,
+        **fit_params: Any,
     ) -> 'RobustCSLogitClassifier':  # noqa: F821
         """
         Fit the estimator with the adjusted costs.

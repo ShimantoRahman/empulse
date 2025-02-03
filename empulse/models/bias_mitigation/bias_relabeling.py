@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -166,7 +166,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
         strategy: StrategyFn | Strategy = 'statistical parity',
         transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
@@ -183,7 +183,7 @@ class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
     ) -> 'BiasRelabelingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.

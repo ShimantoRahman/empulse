@@ -1,6 +1,6 @@
 import warnings
 from numbers import Real
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -214,7 +214,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params,
+        **fit_params: Any,
     ) -> 'CSBoostClassifier':
         """
         Fit the model.
@@ -260,7 +260,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
         fp_cost: ArrayLike | float = 0.0,
-        **fit_params,
+        **fit_params: Any,
     ) -> 'CSBoostClassifier':
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
