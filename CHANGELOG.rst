@@ -1,6 +1,11 @@
 `Unreleased`_
 =============
 
+- ...
+
+`0.6.0`_ (05-02-2025)
+=====================
+
 - |MajorFeature| Add :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`,
   and :class:`~empulse.models.CSBaggingClassifier` to support cost-sensitive decision tree and ensemble models
 - |Enhancement| Add support for scikit-learn 1.5.2 (previously Empulse only supported scikit-learn 1.6.0 and above).
@@ -76,7 +81,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.6.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.7.0...main
+.. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0
 .. _0.6.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0
 .. _0.5.2: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.2
 .. _0.5.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.1
