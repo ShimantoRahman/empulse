@@ -128,6 +128,7 @@ class Metric:
         self._fn_cost = 0
         self._aliases = {}
         self._defaults = {}
+        self._built = False
 
     @property
     def tp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
@@ -402,6 +403,7 @@ class Metric:
         -------
         Metric
         """
+        self._built = True
         terms = self.tp_cost + self.tn_cost + self.fp_cost + self.fn_cost
         random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
         n_random = len(random_symbols)
@@ -476,6 +478,9 @@ class Metric:
         score: float
             The computed metric score or loss.
         """
+        if not self._built:
+            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
+
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
 
@@ -541,7 +546,7 @@ class Metric:
 
             f0, f1 = _compute_convex_hull(y_true, y_score)
 
-            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args}
+            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args if str(key) in kwargs}
             bounds = []
             for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1, strict=False)), len(f0) - 2):
                 bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))

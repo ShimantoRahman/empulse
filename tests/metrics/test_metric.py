@@ -177,11 +177,7 @@ def test_metric_arraylikes(y_true_and_prediction):
 
 
 def test_metric_uniform_dist(y_true_and_prediction):
-    (
-        customer_lifetime_value,
-        incentive_cost,
-        contact_cost,
-    ) = 100, 10, 1
+    customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
     y, y_proba = y_true_and_prediction
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Uniform('gamma', alpha, beta)
@@ -196,6 +192,23 @@ def test_metric_uniform_dist(y_true_and_prediction):
     metric_result = profit_func(
         y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, beta=1, alpha=0
     )
+    assert pytest.approx(metric_result) == 21.14892314814815
+
+
+def test_metric_uniform_dist_no_params(y_true_and_prediction):
+    customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
+    y, y_proba = y_true_and_prediction
+    clv, d, f = sympy.symbols('clv d f')
+    gamma = Uniform('gamma', 0, 1)
+    profit_func = (
+        Metric('max profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+
+    metric_result = profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost)
     assert pytest.approx(metric_result) == 21.14892314814815
 
 
