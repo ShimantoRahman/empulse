@@ -40,7 +40,7 @@ uses Sympy under the hood to compute the metric.
 
 .. code-block:: python
 
-    from sympy import symbols
+    import sympy
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
@@ -53,7 +53,7 @@ In this case, we want to implement a maximum profit metric, so will pass the ``k
 
     from empulse.metrics import Metric
 
-    mpc_score = Metric(kind='max_profit')
+    mpc_score = Metric(kind='max profit')
 
 Afterwards we can start assembling all parts of the cost-benefit matrix.
 
@@ -80,7 +80,7 @@ Now that the metric is built, you can use it like any other metric in scikit-lea
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     y_proba = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
 
-    mpc_score(y, y_proba, clv=100, d=10, f=1, gamma=0.3)
+    mpc_score(y_true, y_proba, clv=100, d=10, f=1, gamma=0.3)
 
 One issue with the current implementation is that the arguments ``d``, ``f`` and ``gamma`` not very descriptive.
 We can easily change this by using the ``alias`` method before building the metric.
@@ -88,7 +88,7 @@ We can easily change this by using the ``alias`` method before building the metr
 .. code-block:: python
 
     mpc_score = (
-        Metric(kind='max_profit')
+        Metric(kind='max profit')
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -96,7 +96,7 @@ We can easily change this by using the ``alias`` method before building the metr
         .build()
     )
 
-    mpc_score(y, y_proba, clv=100, incentive_cost=10, contact_cost=1, accept_rate=0.3)
+    mpc_score(y_true, y_proba, clv=100, incentive_cost=10, contact_cost=1, accept_rate=0.3)
 
 One final improvement we can make is set the default values for the cost-benefit matrix,
 through the ``set_default`` method.
@@ -104,7 +104,7 @@ through the ``set_default`` method.
 .. code-block:: python
 
     mpc_score = (
-        Metric(kind='max_profit')
+        Metric(kind='max profit')
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -113,7 +113,7 @@ through the ``set_default`` method.
         .build()
     )
 
-    mpc_score(y, y_proba, clv=100)
+    mpc_score(y_true, y_proba, clv=100)
 
 Implementing the EMPC measure
 -----------------------------
@@ -135,7 +135,7 @@ The only thing that you need to change from the MPC example above, is to define 
     gamma = sympy.stats.Beta('gamma', alpha, beta)
 
     empc_score = (
-        Metric(kind="expected_max_profit")
+        Metric(kind="max profit")
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -144,7 +144,7 @@ The only thing that you need to change from the MPC example above, is to define 
         .build()
     )
 
-    empc_score(y, y_proba, clv=100)
+    empc_score(y_true, y_proba, clv=100)
 
 Implementing expected cost and savings
 --------------------------------------
@@ -169,7 +169,7 @@ Expected Cost
         .build()
     )
 
-    expected_cost_loss(y, y_proba, clv=100)
+    expected_cost_loss(y_true, y_proba, clv=100)
 
 Expected Savings
 ~~~~~~~~~~~~~~~~
@@ -188,4 +188,4 @@ Expected Savings
         .build()
     )
 
-    expected_savings_score(y, y_proba, clv=100)
+    expected_savings_score(y_true, y_proba, clv=100)
