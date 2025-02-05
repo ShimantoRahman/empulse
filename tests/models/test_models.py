@@ -7,7 +7,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
-from sklearn.utils.estimator_checks import parametrize_with_checks
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
@@ -26,6 +25,7 @@ from empulse.models import (
     ProfLogitClassifier,
     RobustCSClassifier,
 )
+from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),

@@ -7,11 +7,11 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
+from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ...metrics import cost_loss
+from ...utils._sklearn_compat import type_of_target, validate_data
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -190,6 +190,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.min_gain = min_gain
         self.pruned = pruned
         self.random_state = random_state
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -519,7 +525,9 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
+            raise ValueError(
+                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
+            )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

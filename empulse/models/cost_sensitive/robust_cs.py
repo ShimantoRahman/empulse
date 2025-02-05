@@ -8,9 +8,9 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fi
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
-from sklearn.utils.validation import _estimator_has
 
 from ..._common import Parameter
+from ...utils._sklearn_compat import _estimator_has
 from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -384,6 +384,12 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     @property
     def classes_(self):  # noqa: D102
         return self.estimator_.classes_
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()

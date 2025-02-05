@@ -6,10 +6,10 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
+from ...utils._sklearn_compat import type_of_target, validate_data
 
 
 def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
@@ -193,6 +193,12 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         self.strategy = strategy
         self.transform_feature = transform_feature
 
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
@@ -222,7 +228,9 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
+            raise ValueError(
+                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
+            )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

@@ -9,11 +9,11 @@ from numpy.testing import assert_array_equal
 from sklearn.base import clone
 from sklearn.datasets import make_blobs, make_classification
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils import get_tags
 from sklearn.utils._testing import SkipTest, assert_allclose, raises, set_random_state
 from sklearn.utils.estimator_checks import _enforce_estimator_tags_X
 
 from empulse.samplers import BiasRelabler, CostSensitiveSampler
+from empulse.utils._sklearn_compat import get_tags
 
 
 def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, expected_failed_checks=None):

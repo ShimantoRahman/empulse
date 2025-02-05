@@ -8,8 +8,9 @@ from numpy.typing import ArrayLike
 from scipy.special import expit
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
+
+from ...utils._sklearn_compat import type_of_target, validate_data
 
 
 class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
@@ -40,6 +41,12 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         self.optimizer_params = optimizer_params
         self.optimize_fn = optimize_fn
 
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
@@ -51,7 +58,9 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
+            raise ValueError(
+                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
+            )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

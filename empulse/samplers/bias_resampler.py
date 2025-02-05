@@ -9,9 +9,8 @@ from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.estimator_checks import ClassifierTags
-from sklearn.utils.multiclass import type_of_target
 
+from ..utils._sklearn_compat import ClassifierTags, type_of_target
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:
@@ -166,6 +165,12 @@ class BiasResampler(BaseSampler):
         self.strategy = strategy
         self.transform_feature = transform_feature
         self.random_state = random_state
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()

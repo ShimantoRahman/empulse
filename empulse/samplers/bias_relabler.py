@@ -6,11 +6,11 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
-from sklearn.utils import ClassifierTags, _safe_indexing
+from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
 
-from empulse.samplers._strategies import Strategy, StrategyFn
+from ..utils._sklearn_compat import ClassifierTags, type_of_target
+from ._strategies import Strategy, StrategyFn
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -189,6 +189,12 @@ class BiasRelabler(BaseSampler):
         self.estimator = estimator
         self.transform_feature = transform_feature
         self.strategy = strategy
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()

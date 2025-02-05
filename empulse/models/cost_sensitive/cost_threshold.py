@@ -10,9 +10,10 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
+from ...utils._sklearn_compat import validate_data
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -143,6 +144,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
