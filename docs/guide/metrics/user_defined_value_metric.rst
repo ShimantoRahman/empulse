@@ -20,7 +20,7 @@ In the case of customer churn, the costs and benefits are defined as follows:
   A proportion :math:`\gamma` of the churners accept the offer and stay with the company,
   retaining their Customer Lifetime Value :math:`CLV`.
   The remaining proportion :math:`1 - \gamma` of the churners leave the company and do not accept the offer.
-  This results in a true positive benefit of :math:`\gamma (CLV-d-f) - (1-\gamma)(d+f)`.
+  This results in a true positive benefit of :math:`\gamma (CLV-d-f) - (1-\gamma) f`.
 
 - **False positive**: The company contacts the non-churner with cost :math:`f` and
   sends an incentive offer with cost :math:`d`.
@@ -119,9 +119,7 @@ Implementing the EMPC measure
 -----------------------------
 
 The biggest difference between the Maximum Profit function and the Expected Maximum Profit function
-is that the latter requires the user to define a weighted probability density function (PDF)
-of the joint distribution of the stochastic benefits and costs.
-The weighted PDF is defined as the product of the PDF and the step size of the benefits and costs.
+is that the costs and benefits can be stochastic.
 
 In the case of customer churn, there is only one stochastic variable,
 the proportion of churners who accept the offer :math:`\gamma`.
@@ -145,6 +143,45 @@ The only thing that you need to change from the MPC example above, is to define 
     )
 
     empc_score(y_true, y_proba, clv=100)
+
+You can also define :math:`\gamma` to follow a Uniform distribution with from 0 to 1.
+
+.. code-block:: python
+
+    clv, d, f = sympy.symbols('clv d f')
+    gamma = sympy.stats.Uniform('gamma', 0, 1)
+
+    empc_score = (
+        Metric(kind="max profit")
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1)
+        .build()
+    )
+
+    empc_score(y_true, y_proba, clv=100)
+
+Or instead of making :math:`\gamma` a stochastic variable, you can make :math:`\clv` a stochastic variable.
+We'll define :math:`\clv` to follow a Gamma distribution with parameters :math:`\alpha` and :math:`\beta`.
+
+.. code-block:: python
+
+    d, f, gamma, alpha, beta = sympy.symbols('d f gamma alpha beta')
+    clv = sympy.stats.Gamma('clv', alpha, beta)
+
+    empc_score = (
+        Metric(kind="max profit")
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
+        .build()
+    )
+
+    empc_score(y_true, y_proba, alpha=6, beta=10)
 
 Implementing expected cost and savings
 --------------------------------------
