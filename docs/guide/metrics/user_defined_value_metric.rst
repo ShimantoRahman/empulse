@@ -163,8 +163,8 @@ You can also define :math:`\gamma` to follow a Uniform distribution with from 0 
 
     empc_score(y_true, y_proba, clv=100)
 
-Or instead of making :math:`\gamma` a stochastic variable, you can make :math:`\clv` a stochastic variable.
-We'll define :math:`\clv` to follow a Gamma distribution with parameters :math:`\alpha` and :math:`\beta`.
+Or instead of making :math:`\gamma` a stochastic variable, you can make :math:`clv` a stochastic variable.
+We'll define :math:`clv` to follow a Gamma distribution with parameters :math:`\alpha` and :math:`\beta`.
 
 .. code-block:: python
 
