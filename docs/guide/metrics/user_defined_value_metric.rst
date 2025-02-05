@@ -1,13 +1,11 @@
 .. _user_defined_value_metric:
 
-=========================
-User-Defined Value Metric
-=========================
+==============================================
+Define your own cost-sensitive or value metric
+==============================================
 
-Empulse allows users to define their own value metric, following the Expected Maximum Profit (EMP) specification.
-This is useful for when the default metrics are not appropriate for the user's application.
-The user-defined value metric can be either deterministic or stochastic,
-using the :func:`empulse.metrics.max_profit` and :func:`empulse.metrics.emp` functions, respectively.
+Empulse allows users to define their own cost-senstive/value metric using the :class:`empulse.metrics.Metric` class.
+This is useful for when the default metrics are not appropriate for the your application.
 
 As an example, we will redefine the Maximum Profit measure for customer churn (MPC) and
 Expected Maximum Profit measure for customer churn (EMPC).
@@ -15,9 +13,6 @@ Expected Maximum Profit measure for customer churn (EMPC).
 Implementing the MPC measure
 ----------------------------
 
-The Maximum Profit function :func:`empulse.metrics.max_profit`
-requires the user to define the costs and benefits of each possible model prediction
-(true positive, false positive, true negative and false negative).
 In the case of customer churn, the costs and benefits are defined as follows:
 
 - **True positive**: The company contacts the churner with cost :math:`f` and
@@ -38,30 +33,92 @@ In the case of customer churn, the costs and benefits are defined as follows:
 - **False negative**: The company does not contact the churner and the customer leaves the company.
   Since the company does not take action, this has no cost or benefit.
 
+
+To define out cost-benefits matrix, we can use Sympy to define the variables and equations.
+Sympy is a Python library for symbolic mathematics and the :class:`empulse.metrics.Metric` class
+uses Sympy under the hood to compute the metric.
+
 .. code-block:: python
 
-    from empulse.metrics import max_profit_score
+    from sympy import symbols
+
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+
+:class:`empulse.metrics.Metric` class uses a builder design pattern to step-by-step define the metric.
+First, you need to define which type of metric you want to implement.
+In this case, we want to implement a maximum profit metric, so will pass the ``kind`` as ``"max_profit"``.
+
+
+.. code-block:: python
+
+    from empulse.metrics import Metric
+
+    mpc_score = Metric(kind='max_profit')
+
+Afterwards we can start assembling all parts of the cost-benefit matrix.
+
+1. We can add the true positive benefit when a churner accepts the offer and stays with the company;
+2. the true possitive benefit when a churner does not accept the offer and leaves the company;
+3. the false positive cost when a non-churner accepts the offer and stays with the company.
+
+.. code-block:: python
+
+    mpc_score.add_tp_benefit(gamma * (clv - d - f))
+    mpc_score.add_tp_benefit((1 - gamma) * -f)
+    mpc_score.add_fp_cost(d + f)
+
+Now that we have established the cost-benefit matrix, we just need to build the metric before we can use it!
+
+.. code-block:: python
+
+    mpc_score.build()
+
+Now that the metric is built, you can use it like any other metric in scikit-learn.
+
+.. code-block:: python
 
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    y_proba = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
 
-    clv = 200  # customer lifetime value
-    d = 10  # cost of incentive offer
-    f = 1  # cost of contacting customer
-    gamma = 0.3  # proportion of churners who accept the offer
-    tp_benefit = gamma * (clv - d - f) - (1 - gamma) * (d + f)
-    fp_cost = d + f
+    mpc_score(y, y_proba, clv=100, d=10, f=1, gamma=0.3)
 
-    max_profit_score(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
+One issue with the current implementation is that the arguments ``d``, ``f`` and ``gamma`` not very descriptive.
+We can easily change this by using the ``alias`` method before building the metric.
 
-Note that when computing the Maximum Profit for customer churn,
-the :func:`empulse.metrics.mpc` should be preferred over the :func:`empulse.metrics.max_profit` function.
+.. code-block:: python
+
+    mpc_score = (
+        Metric(kind='max_profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .build()
+    )
+
+    mpc_score(y, y_proba, clv=100, incentive_cost=10, contact_cost=1, accept_rate=0.3)
+
+One final improvement we can make is set the default values for the cost-benefit matrix,
+through the ``set_default`` method.
+
+.. code-block:: python
+
+    mpc_score = (
+        Metric(kind='max_profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
+        .build()
+    )
+
+    mpc_score(y, y_proba, clv=100)
 
 Implementing the EMPC measure
 -----------------------------
 
-The biggest difference between the Maximum Profit function :func:`empulse.metrics.max_profit`
-and the Expected Maximum Profit function :func:`empulse.metrics.emp`
+The biggest difference between the Maximum Profit function and the Expected Maximum Profit function
 is that the latter requires the user to define a weighted probability density function (PDF)
 of the joint distribution of the stochastic benefits and costs.
 The weighted PDF is defined as the product of the PDF and the step size of the benefits and costs.
@@ -69,90 +126,66 @@ The weighted PDF is defined as the product of the PDF and the step size of the b
 In the case of customer churn, there is only one stochastic variable,
 the proportion of churners who accept the offer :math:`\gamma`.
 :math:`\gamma` follows a Beta distribution with parameters :math:`\alpha` and :math:`\beta`.
-Here the weighted PDF function needs to determine the product of :math:`h(\gamma)` and :math:`\Delta \gamma`
-of the following equation:
 
-:math:`EMPC \approx \sum_\gamma [[\gamma (clv - d - f) - (1 - \gamma) f] \pi_0 F_0(T) - (d+f) \pi_1 F_1(T) ] \cdot \underbrace{h(\gamma) \Delta \gamma}_{\text{weighted pdf}}`
-
-Since the weighted PDF function only received the benefits, costs and step sizes as input,
-gamma will need to be derived from the benefits and costs.
-
-.. math::
-
-    b_0 &= \gamma (CLV - d - f) - (1 - \gamma) f \\
-    b_0 &= \gamma (CLV - d) - f  \\
-    \gamma &= \frac{b_0 + f}{(CLV - d)} \\
-
-To compute :math:`h(\gamma)`, we need to compute the PDF of :math:`\gamma`,
-which can be done through the ``pdf()`` method of :data:`scipy:scipy.stats.beta`.
-
-To compute :math:`\Delta \gamma`, we need to compute the step size of :math:`\gamma`.
-Assume two consecutive values of :math:`\gamma` are :math:`\gamma_0` and :math:`\gamma_1`.
-We can take the difference between the two values of the profit to compute the step size of :math:`\gamma`:
-
-.. math::
-
-    \Delta \gamma &= \gamma_1 - \gamma_0 \\
-    \Delta \gamma &= \frac{b_1 + f}{(CLV - d)} - \frac{b_0 + f}{(CLV - d)} \\
-    \Delta \gamma &= \frac{b_1 - b_0}{(CLV - d)} \\
-
-The weighted PDF function can now be implemented as follows:
+The only thing that you need to change from the MPC example above, is to define ``gamma`` as a stochastic variable.
 
 .. code-block:: python
 
-    from scipy.stats import beta
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = sympy.stats.Beta('gamma', alpha, beta)
 
-    def weighted_pdf(b0, b1, c0, c1, b0_step, b1_step, c0_step, c1_step):
-        gamma = (b0 + f) / (clv - d)
-        gamma_step = b0_step / (clv - d)
-        return beta.pdf(gamma, a=6, b=14) * gamma_step
-
-Since the true positive is stochastic since it depends on :math:`\gamma`,
-the value for ``tp_benefit`` should be set to a range of values, with a minimum and maximum value.
-The minimum value is the benefit when :math:`\gamma = 0` and the maximum value is the benefit when :math:`\gamma = 1`.
-
-For :math:`\gamma = 0`:
-
-.. math::
-
-    b_0 &= \gamma (CLV - d - f) - (1 - \gamma) f \\
-    b_0 &= 0 (CLV - d - f) - (1 - 0) f \\
-    b_0 &= -f \\
-
-For :math:`\gamma = 1`:
-
-.. math::
-
-    b_1 &= \gamma (CLV - d - f) - (1 - \gamma) f \\
-    b_1 &= 1 (CLV - d - f) - (1 - 1) f \\
-    b_1 &= CLV - d - f \\
-
-When all combined the EMPC measure can be implemented as follows:
-
-.. code-block:: python
-
-    from empulse.metrics import emp
-    from scipy.stats import beta
-
-    y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-
-    clv = 200  # customer lifetime value
-    d = 10  # cost of incentive offer
-    f = 1  # cost of contacting customer
-    tp_benefit = (-f, clv - d - f)  # range of values for the stochastic true positive benefit
-    fp_cost = d + f  # deterministic cost of false positive
-
-    def weighted_pdf(b0, b1, c0, c1, b0_step, b1_step, c0_step, c1_step):
-        gamma = (b0 + f) / (clv - d)
-        gamma_step = b0_step / (clv - d)
-        return beta.pdf(gamma, a=6, b=14) * gamma_step
-
-    emp(
-        y_true,
-        y_pred,
-        weighted_pdf=weighted_pdf,
-        tp_benefit=tp_benefit,
-        fp_cost=fp_cost,
-        n_buckets=1000  # number of buckets to use for the approximation
+    empc_score = (
+        Metric(kind="expected_max_profit")
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1, alpha=6, beta=14)
+        .build()
     )
+
+    empc_score(y, y_proba, clv=100)
+
+Implementing expected cost and savings
+--------------------------------------
+
+Now that we have defined the cost-benefit matrix,
+we can also create expected cost and savings metrics by just changing the ``kind`` of metric.
+
+Expected Cost
+~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+
+    expected_cost_loss = (
+        Metric(kind='cost')  # change the kind to 'savings'
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
+        .build()
+    )
+
+    expected_cost_loss(y, y_proba, clv=100)
+
+Expected Savings
+~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+
+    expected_savings_score = (
+        Metric(kind='savings')  # change the kind to 'savings'
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
+        .build()
+    )
+
+    expected_savings_score(y, y_proba, clv=100)

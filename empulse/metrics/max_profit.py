@@ -16,12 +16,10 @@ def max_profit_score(
     """
     :func:`~empulse.metrics.max_profit()` but only returning the MP score.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
-
     .. seealso::
         :func:`~empulse.metrics.max_profit` : To also return the threshold at which the maximum profit is achieved.
 
-        :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
+        :func:`~empulse.metrics.Metric` : To create a stochastic version of the maximum profit.
 
     Parameters
     ----------
@@ -105,12 +103,10 @@ def max_profit(
     """
     Maximum Profit Measure (MP).
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
-
     .. seealso::
         :func:`~empulse.metrics.max_profit_score` : To only return the maximum profit score.
 
-        :func:`~empulse.metrics.emp` : For a stochastic version of the maximum profit.
+        :func:`~empulse.metrics.Metric` : To create a stochastic version of the maximum profit.
 
     Parameters
     ----------

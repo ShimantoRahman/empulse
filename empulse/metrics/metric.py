@@ -29,6 +29,8 @@ class Metric:
     Stochastic variables are supported, and can be specified using sympy.stats random variables.
     Make sure that you add the parameters of the random variables as keyword arguments when calling the metric function.
 
+    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+
     Parameters
     ----------
     kind : {'max profit', 'cost', 'savings'}

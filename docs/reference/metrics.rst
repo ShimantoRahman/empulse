@@ -15,8 +15,6 @@ General Metrics
    :template: base.rst
 
    Metric
-   emp
-   emp_score
    max_profit
    max_profit_score
    lift_score
