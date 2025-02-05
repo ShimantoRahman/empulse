@@ -262,7 +262,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             map_thresholded_score_to_label = np.array([neg_label_idx, pos_label_idx])
 
         denominator = fp_cost - tn_cost + fn_cost - tp_cost
-        denominator = np.clip(denominator, np.finfo(float).eps, denominator)  # Avoid division by zero
+        # Avoid division by zero
+        if isinstance(denominator, Real):
+            if denominator == 0:
+                denominator += np.finfo(float).eps
+        else:
+            denominator = np.clip(denominator, np.finfo(float).eps, denominator)
         optimal_thresholds = (fp_cost - tn_cost) / denominator
 
         return self.classes_[map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]]

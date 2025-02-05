@@ -10,6 +10,8 @@
 - |API| Removed numba as a dependency for Empulse. This will reduce the installation time and the size of the package.
 - |Fix| Fix :func:`~empulse.metrics.Metric` when defining stochastic variable with fixed values.
 - |Fix| Fix :func:`~empulse.metrics.Metric` when stochastic variable has infinite bounds.
+- |Fix| Fix :func:`~empulse.models.CSThresholdClassifier`
+  when costs of predicting positive and negative classes are equal.
 - |Fix| Fix documentation linking issues to sklearn
 
 `0.6.0`_ (28-01-2025)
