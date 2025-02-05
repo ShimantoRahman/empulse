@@ -2,7 +2,7 @@ import pytest
 import sympy
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
-from sympy.stats import Beta, Uniform
+from sympy.stats import Beta, Normal, Uniform
 
 from empulse.metrics import Metric, empc_score, expected_cost_loss_churn, expected_savings_score, mpc_score
 
@@ -210,6 +210,23 @@ def test_metric_uniform_dist_no_params(y_true_and_prediction):
 
     metric_result = profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost)
     assert pytest.approx(metric_result) == 21.14892314814815
+
+
+def test_metric_normal_dist(y_true_and_prediction):
+    accept_rate, incentive_cost, contact_cost = 0.3, 10, 1
+    y, y_proba = y_true_and_prediction
+    gamma, d, f, mu, sigma = sympy.symbols('gamma d f mu sigma')
+    clv = Normal('clv', mu, sigma)
+    profit_func = (
+        Metric('max profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+
+    metric_result = profit_func(y, y_proba, gamma=accept_rate, d=incentive_cost, f=contact_cost, mu=100, sigma=10)
+    assert pytest.approx(metric_result) == 12.150199167337625
 
 
 def test_metric_alias(y_true_and_prediction):

@@ -532,6 +532,8 @@ class Metric:
         def compute_integral(integrand, lower_bound, upper_bound, tpr, fpr, random_var):
             integrand = integrand.subs('F_0', tpr).subs('F_1', fpr).evalf()
             if not integrand.free_symbols:  # if the integrand is constant
+                if integrand == 0:
+                    return 0
                 return float(integrand * (upper_bound - lower_bound))
             integrand_func = lambdify(random_var, integrand)
             result, _ = quad(integrand_func, lower_bound, upper_bound)
