@@ -7,6 +7,7 @@
 - |API| Removed the ``emp_score`` and ``emp`` functions from the :mod:`~empulse.metrics` module.
   Use the :func:`~empulse.metrics.Metric` class instead to define custom expected maximum profit measures.
   For more information, read the :ref:`User Guide <user_defined_value_metric>`.
+- |API| Removed numba as a dependency for Empulse. This will reduce the installation time and the size of the package.
 - |Fix| Fix :func:`~empulse.metrics.Metric` when defining stochastic variable with fixed values.
 - |Fix| Fix :func:`~empulse.metrics.Metric` when stochastic variable has infinite bounds.
 - |Fix| Fix documentation linking issues to sklearn

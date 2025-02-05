@@ -1,7 +1,4 @@
-from collections.abc import Generator
-
 import numpy as np
-from numba import njit
 from numpy.typing import ArrayLike
 
 
@@ -88,22 +85,3 @@ def _compute_profits(
     profit_matrix = np.dot(confusion_matrix.T, cost_benefits) / n_samples
     customer_thresholds = np.sum(confusion_matrix, axis=0) / n_samples
     return profit_matrix, customer_thresholds
-
-
-@njit
-def _range(start: float, stop: float | None = None, step: float | None = None) -> Generator[float, None, None]:
-    if stop is None:
-        stop = start
-        start = 0.0
-    if step is None:
-        step = 1.0
-    if step < 0:
-        raise ValueError('step cannot be smaller than 0')
-    if start > stop:
-        raise ValueError('start cannot be greater than stop')
-
-    while True:
-        yield start
-        start += step
-        if start > stop:
-            break
