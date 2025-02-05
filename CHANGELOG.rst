@@ -3,6 +3,10 @@
 
 - |MajorFeature| Add :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`,
   and :class:`~empulse.models.CSBaggingClassifier` to support cost-sensitive decision tree and ensemble models
+- |Enhancement| Add support for scikit-learn 1.5.2 (previously Empulse only supported scikit-learn 1.6.0 and above).
+- |API| Removed the ``emp_score`` and ``emp`` functions from the :mod:`~empulse.metrics` module.
+  Use the :func:`~empulse.metrics.Metric` class instead to define custom expected maximum profit measures.
+  For more information, read the :ref:`User Guide <user_defined_value_metric>`.
 - |Fix| Fix documentation linking issues to sklearn
 
 `0.6.0`_ (28-01-2025)
