@@ -8,6 +8,7 @@
   Use the :func:`~empulse.metrics.Metric` class instead to define custom expected maximum profit measures.
   For more information, read the :ref:`User Guide <user_defined_value_metric>`.
 - |Fix| Fix :func:`~empulse.metrics.Metric` when defining stochastic variable with fixed values.
+- |Fix| Fix :func:`~empulse.metrics.Metric` when stochastic variable has infinite bounds.
 - |Fix| Fix documentation linking issues to sklearn
 
 `0.6.0`_ (28-01-2025)
