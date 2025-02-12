@@ -3,6 +3,7 @@ from datetime import datetime
 
 import numpy as np
 from joblib import Parallel, delayed
+from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
@@ -118,7 +119,7 @@ class Generation:
     ):
         super().__init__()
         self.name = 'RGA'
-        self.population = []
+        self.population: NDArray[np.float64] = np.empty(0)
 
         if population_size is not None:
             if not isinstance(population_size, int):
@@ -148,16 +149,15 @@ class Generation:
         self.n_jobs = n_jobs
 
         # Attributes
-        self._n_mating_pairs = None
-        self.population = None
+        self._n_mating_pairs: int | None = None
         self.elite_pool = None
-        self.fx_best = []
-        self.fitness = None
+        self.fx_best: list = []
+        self.fitness: NDArray[np.float64] = np.empty(0)
         self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)
-        self.lower_bounds = None
-        self.upper_bounds = None
-        self.delta_bounds = None
-        self.n_dim = None
+        self.lower_bounds: float | None = None
+        self.upper_bounds: float | None = None
+        self.delta_bounds: float | None = None
+        self.n_dim: int | None = None
 
     def optimize(self, objective: Callable, bounds: list[tuple[float, float]]) -> Generator['Generation', None, None]:
         """
@@ -183,9 +183,9 @@ class Generation:
             for t in bounds
         ):
             raise ValueError('`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).')
-        array_bounds = np.asarray(bounds, dtype=np.float64).T
-        self.lower_bounds = array_bounds[0]
-        self.upper_bounds = array_bounds[1]
+        array_bounds: NDArray[np.float64] = np.asarray(bounds, dtype=np.float64).T
+        self.lower_bounds = float(array_bounds[0])
+        self.upper_bounds = float(array_bounds[1])
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
@@ -215,11 +215,17 @@ class Generation:
             self._insert_elites()  # survivor selection: overlapping-generation model
             self._update_elite_pool()
 
-    def _generate_population(self):
+    def _generate_population(self) -> NDArray[np.float64]:
+        if self.n_dim is None:
+            raise ValueError('`n_dim` must be set.')
+        if self.population_size is None:
+            raise ValueError('`population_size` must be set.')
         population = self.rng.rand(self.population_size, self.n_dim)
-        return self.lower_bounds + population * self.delta_bounds
+        return self.lower_bounds + population * self.delta_bounds  # type: ignore
 
     def _evaluate(self, objective: Callable) -> bool:
+        if self.population_size is None:
+            raise ValueError('`population_size` must be set.')
         fitness_values = Parallel(n_jobs=self.n_jobs)(
             delayed(self._update_fitness)(objective, ix) for ix in range(self.population_size)
         )
