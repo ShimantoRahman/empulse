@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
 
-from ..utils._sklearn_compat import ClassifierTags, type_of_target
+from ..utils._sklearn_compat import ClassifierTags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:
@@ -144,7 +144,7 @@ class BiasResampler(BaseSampler):
         'transform_feature': [callable, None],
         'random_state': ['random_state'],
     }
-    _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
+    _strategy_mapping: ClassVar[dict[Strategy, StrategyFn]] = {
         'statistical parity': _independent_weights,
         'demographic parity': _independent_weights,
     }
@@ -157,7 +157,7 @@ class BiasResampler(BaseSampler):
     def __init__(
         self,
         *,
-        strategy: Callable | Strategy = 'statistical parity',
+        strategy: StrategyFn | Strategy = 'statistical parity',
         transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
         random_state: RandomState | int | None = None,
     ):
@@ -206,11 +206,11 @@ class BiasResampler(BaseSampler):
 
     def _fit_resample(
         self,
-        X: _XT,
-        y: _YT,
+        X: NDArray,
+        y: NDArray,
         *,
         sensitive_feature: ArrayLike | None = None,
-    ) -> tuple[_XT, _YT]:
+    ) -> tuple[NDArray, NDArray]:
         """
         Resample the data according to the strategy.
 
@@ -231,7 +231,7 @@ class BiasResampler(BaseSampler):
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
-        self.classes_ = np.unique(y)
+        self.classes_: NDArray[np.int64] = np.unique(y)
         if len(self.classes_) == 1:
             self.sample_indices_ = np.arange(len(y))
             return X, y
@@ -241,6 +241,7 @@ class BiasResampler(BaseSampler):
         if sensitive_feature is None:
             self.sample_indices_ = np.arange(len(y))
             return X, y
+        sensitive_feature = np.asarray(sensitive_feature)
 
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)

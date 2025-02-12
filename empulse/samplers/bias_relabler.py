@@ -9,8 +9,8 @@ from sklearn.base import clone
 from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
 
-from ..utils._sklearn_compat import ClassifierTags, type_of_target
-from ._strategies import Strategy, StrategyFn
+from ..utils._sklearn_compat import ClassifierTags, type_of_target  # type: ignore
+from ._strategies import Strategy
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 else:
     _XT = TypeVar('_XT', bound=ArrayLike)
     _YT = TypeVar('_YT', bound=ArrayLike)
+
+StrategyFn = Callable[[np.ndarray, np.ndarray], int]
 
 
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
@@ -168,7 +170,7 @@ class BiasRelabler(BaseSampler):
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_feature': [callable, None],
     }
-    _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
+    _strategy_mapping: ClassVar[dict[Strategy, StrategyFn]] = {
         'statistical parity': _independent_pairs,
         'demographic parity': _independent_pairs,
     }
@@ -182,7 +184,7 @@ class BiasRelabler(BaseSampler):
         self,
         estimator: Any,
         *,
-        strategy: Callable | Strategy = 'statistical parity',
+        strategy: StrategyFn | Strategy = 'statistical parity',
         transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         super().__init__()
@@ -249,7 +251,9 @@ class BiasRelabler(BaseSampler):
         """
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
-    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
+    def _fit_resample(
+        self, X: NDArray, y: NDArray, *, sensitive_feature: ArrayLike | None = None
+    ) -> tuple[NDArray, NDArray]:
         """
         Fit the estimator and relabel the data according to the strategy.
 
@@ -271,7 +275,7 @@ class BiasRelabler(BaseSampler):
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
-        self.classes_ = np.unique(y)
+        self.classes_: NDArray[np.int64] = np.unique(y)
         if len(self.classes_) == 1:
             return X, y
         y_binarized = np.where(y == self.classes_[1], 1, 0)
