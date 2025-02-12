@@ -10,16 +10,19 @@ Cost-Sensitive and Value-driven Models
 ======================================
 
 .. autosummary::
-   :toctree: generated/
-   :nosignatures:
-   :template: base.rst
+    :toctree: generated/
+    :nosignatures:
+    :template: base.rst
 
-   B2BoostClassifier
-   CSBoostClassifier
-   CSLogitClassifier
-   CSThresholdClassifier
-   RobustCSClassifier
-   ProfLogitClassifier
+    B2BoostClassifier
+    CSBaggingClassifier
+    CSBoostClassifier
+    CSForestClassifier
+    CSLogitClassifier
+    CSThresholdClassifier
+    CSTreeClassifier
+    RobustCSClassifier
+    ProfLogitClassifier
 
 Bias Mitigation Models
 ======================

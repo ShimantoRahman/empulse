@@ -93,6 +93,11 @@ numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
 autodoc_typehints = "none"
 doctest_test_doctest_blocks = 'default'
+myst_heading_anchors = 3
+
+suppress_warnings = [
+    'myst.header',  # Suppress warnings about document headings
+]
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 add_function_parentheses = False
@@ -107,7 +112,6 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "imblearn": ("https://imbalanced-learn.org/stable", None),
 }
-intersphinx_disabled_reftypes = ["*"]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']

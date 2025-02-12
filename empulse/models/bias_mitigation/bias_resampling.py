@@ -1,14 +1,15 @@
-from typing import Callable, ClassVar, Optional, Union
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ...samplers import BiasResampler
 from ...samplers._strategies import Strategy, StrategyFn
+from ...utils._sklearn_compat import type_of_target, validate_data
 
 
 class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
@@ -173,14 +174,20 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
-        strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: StrategyFn | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
         self.transform_feature = transform_feature
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -190,7 +197,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
     ) -> 'BiasResamplingClassifier':
         """
         Fit the estimator and resample the instances according to the strategy.
@@ -213,7 +220,9 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
+            raise ValueError(
+                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
+            )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

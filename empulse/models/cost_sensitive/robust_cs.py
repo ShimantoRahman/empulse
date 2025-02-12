@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import scipy.stats as st
@@ -8,9 +8,9 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fi
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
-from sklearn.utils.validation import _estimator_has
 
 from ..._common import Parameter
+from ...utils._sklearn_compat import _estimator_has
 from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -144,12 +144,17 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', RobustCSClassifier(
-                CSBoostClassifier()
-            ).set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                (
+                    'model',
+                    RobustCSClassifier(CSBoostClassifier()).set_fit_request(
+                        fn_cost=True, fp_cost=True
+                    ),
+                ),
+            ]
+        )
 
         cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
 
@@ -173,18 +178,23 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', RobustCSClassifier(
-                CSLogitClassifier()
-            ).set_fit_request(fn_cost=True, fp_cost=True))
-        ])
+        pipeline = Pipeline(
+            [
+                ('scaler', StandardScaler()),
+                (
+                    'model',
+                    RobustCSClassifier(CSLogitClassifier()).set_fit_request(
+                        fn_cost=True, fp_cost=True
+                    ),
+                ),
+            ]
+        )
         param_grid = {'model__estimator__C': np.logspace(-5, 2, 5)}
         scorer = make_scorer(
             expected_cost_loss,
             response_method='predict_proba',
             greater_is_better=False,
-            normalize=True
+            normalize=True,
         )
         scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)
 
@@ -211,8 +221,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
     def __init__(
         self,
-        estimator,
-        outlier_estimator=None,
+        estimator: Any,
+        outlier_estimator: Any = None,
         *,
         outlier_threshold: float = 2.5,
         detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
@@ -241,7 +251,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params,
+        **fit_params: Any,
     ) -> 'RobustCSLogitClassifier':  # noqa: F821
         """
         Fit the estimator with the adjusted costs.
@@ -281,10 +291,10 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         )
 
         self.costs_ = {
-            'tp_cost': tp_cost if isinstance(tp_cost, (int, float)) else np.array(tp_cost),  # take copy of the array
-            'tn_cost': tn_cost if isinstance(tn_cost, (int, float)) else np.array(tn_cost),
-            'fn_cost': fn_cost if isinstance(fn_cost, (int, float)) else np.array(fn_cost),
-            'fp_cost': fp_cost if isinstance(fp_cost, (int, float)) else np.array(fp_cost),
+            'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
+            'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
+            'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
+            'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),
         }
         # only fit on the costs that are arrays and have a standard deviation greater than 0
         should_fit = [
@@ -326,7 +336,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         for cost_name in self.costs_:
             if cost_name in should_fit:
                 target = self.costs_[cost_name]
-                if cost_name in ['tp_cost', 'fn_cost']:
+                if cost_name in {'tp_cost', 'fn_cost'}:
                     X_relevant, target_relevant = X[y > 0], target[y > 0]
                 else:
                     X_relevant, target_relevant = X[y == 0], target[y == 0]
@@ -374,6 +384,12 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     @property
     def classes_(self):  # noqa: D102
         return self.estimator_.classes_
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()

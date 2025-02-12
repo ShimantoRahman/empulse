@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import ClassifierTags, check_random_state
+from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
+from ..utils._sklearn_compat import ClassifierTags
 
 
 class CostSensitiveSampler(BaseSampler):
@@ -124,6 +125,12 @@ class CostSensitiveSampler(BaseSampler):
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
 
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
@@ -185,6 +192,7 @@ class CostSensitiveSampler(BaseSampler):
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
                 f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.',
                 UserWarning,
+                stacklevel=2,
             )
             fp_cost = 1
             fn_cost = 1

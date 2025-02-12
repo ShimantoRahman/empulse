@@ -1,8 +1,8 @@
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
@@ -10,9 +10,10 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
+from ...utils._sklearn_compat import validate_data
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -125,11 +126,11 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
         calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
-        pos_label=None,
-        random_state=None,
+        pos_label: int | bool | str | None = None,
+        random_state: int | np.random.RandomState | None = None,
         tp_cost: ArrayLike | float = 0.0,
         tn_cost: ArrayLike | float = 0.0,
         fn_cost: ArrayLike | float = 0.0,
@@ -143,6 +144,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -198,12 +205,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     def predict(
         self,
-        X,
+        X: NDArray,
         tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ):
+    ) -> NDArray:
         """
         Predict the target of new samples.
 
@@ -255,7 +262,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             map_thresholded_score_to_label = np.array([neg_label_idx, pos_label_idx])
 
         denominator = fp_cost - tn_cost + fn_cost - tp_cost
-        denominator = np.clip(denominator, np.finfo(float).eps, denominator)  # Avoid division by zero
+        # Avoid division by zero
+        if isinstance(denominator, Real):
+            if denominator == 0:
+                denominator += np.finfo(float).eps
+        else:
+            denominator = np.clip(denominator, np.finfo(float).eps, denominator)
         optimal_thresholds = (fp_cost - tn_cost) / denominator
 
         return self.classes_[map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]]

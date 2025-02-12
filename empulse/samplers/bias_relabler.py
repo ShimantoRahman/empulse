@@ -1,15 +1,16 @@
 import warnings
-from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
-from sklearn.utils import ClassifierTags, _safe_indexing
+from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
 
-from empulse.samplers._strategies import Strategy, StrategyFn
+from ..utils._sklearn_compat import ClassifierTags, type_of_target
+from ._strategies import Strategy, StrategyFn
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -31,7 +32,11 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: np.ndarray) -> int:
 
     # no swapping needed if one of the groups is empty
     if n_sensitive == 0 or n_not_sensitive == 0:
-        warnings.warn('sensitive_feature only contains one class, no relabeling is performed.', UserWarning)
+        warnings.warn(
+            'sensitive_feature only contains one class, no relabeling is performed.',
+            UserWarning,
+            stacklevel=2,
+        )
         return 0
 
     pos_ratio_sensitive = np.sum(_safe_indexing(y_true, sensitive_indices)) / n_sensitive
@@ -175,22 +180,28 @@ class BiasRelabler(BaseSampler):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
-        strategy: Union[Callable, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: Callable | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         super().__init__()
         self.estimator = estimator
         self.transform_feature = transform_feature
         self.strategy = strategy
 
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
 
-    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
+    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 
@@ -217,7 +228,7 @@ class BiasRelabler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
@@ -238,7 +249,7 @@ class BiasRelabler(BaseSampler):
         """
         return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
 
-    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: Optional[ArrayLike] = None) -> tuple[_XT, _YT]:
+    def _fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 

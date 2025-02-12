@@ -21,7 +21,7 @@ def extract_code_blocks(docstring):
 def get_all_functions_and_classes(module):
     """Get all functions and classes from a module."""
     functions_and_classes = []
-    for name, obj in inspect.getmembers(module):
+    for _, obj in inspect.getmembers(module):
         if (inspect.isfunction(obj) or inspect.isclass(obj)) and obj.__module__ == module.__name__:
             functions_and_classes.append(obj)
     return functions_and_classes
@@ -31,7 +31,7 @@ def iter_modules(module_name):
     """Recursively iterate through all submodules."""
     module = importlib.import_module(module_name)
     if hasattr(module, '__path__'):
-        for _, submodule_name, is_pkg in pkgutil.walk_packages(module.__path__, module.__name__ + '.'):
+        for _, submodule_name, _ in pkgutil.walk_packages(module.__path__, module.__name__ + '.'):
             yield from iter_modules(submodule_name)
     else:
         yield module

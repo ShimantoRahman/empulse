@@ -1,6 +1,27 @@
 `Unreleased`_
 =============
 
+- ...
+
+`0.6.0`_ (05-02-2025)
+=====================
+
+- |MajorFeature| Add :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`,
+  and :class:`~empulse.models.CSBaggingClassifier` to support cost-sensitive decision tree and ensemble models
+- |Enhancement| Add support for scikit-learn 1.5.2 (previously Empulse only supported scikit-learn 1.6.0 and above).
+- |API| Removed the ``emp_score`` and ``emp`` functions from the :mod:`~empulse.metrics` module.
+  Use the :func:`~empulse.metrics.Metric` class instead to define custom expected maximum profit measures.
+  For more information, read the :ref:`User Guide <user_defined_value_metric>`.
+- |API| Removed numba as a dependency for Empulse. This will reduce the installation time and the size of the package.
+- |Fix| Fix :func:`~empulse.metrics.Metric` when defining stochastic variable with fixed values.
+- |Fix| Fix :func:`~empulse.metrics.Metric` when stochastic variable has infinite bounds.
+- |Fix| Fix :func:`~empulse.models.CSThresholdClassifier`
+  when costs of predicting positive and negative classes are equal.
+- |Fix| Fix documentation linking issues to sklearn
+
+`0.6.0`_ (28-01-2025)
+=====================
+
 - |MajorFeature| Add :class:`~empulse.metrics.Metric` to easily build your own value-driven and cost-sensitive metrics
 - |Feature| Add support for LightGBM and Catboost models in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier`
@@ -8,6 +29,15 @@
   now take a ``model`` argument to calculate the objective for either XGBoost, LightGBM or Catboost models.
 - |API| XGBoost is now an optional dependency together with LightGBM and Catboost. To install the package with
   XGBoost, LightGBM and Catboost support, use the following command: ``pip install empulse[optional]``
+- |API| Renamed ``y_pred_baseline`` and ``y_proba_baseline`` to ``baseline`` in :func:`~empulse.metrics.savings_score`
+  and :func:`~empulse.metrics.expected_savings_score`. It now accepts the following arguments:
+
+  - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
+    depending on which is better.
+  - If ``'prior'``, the baseline model is a model that predicts the prior probability of
+    the majority or minority class depending on which is better (not available for savings score).
+  - If array-like, target probabilities of the baseline model.
+
 - |Feature| Add parameter validation for all models and samplers
 - |API| Make all arguments of dataset loaders keyword-only
 - |Fix| Update the descriptions attached to each dataset to match information found in the user guide
@@ -51,7 +81,9 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.5.2...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.7.0...main
+.. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0
+.. _0.6.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0
 .. _0.5.2: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.2
 .. _0.5.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.1
 .. _0.5.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.0

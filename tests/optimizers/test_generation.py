@@ -6,7 +6,7 @@ import pytest
 from empulse.optimizers import Generation
 
 
-@pytest.fixture()
+@pytest.fixture
 def generation():
     return Generation(
         population_size=10,
@@ -135,5 +135,5 @@ def test_rga_fitness_calculation(generation):
     assert generation.population.shape == (10, 1)
     assert generation.fitness.shape == (10,)
     # Check if fitness is calculated correctly
-    for fitness_val, x in zip(generation.fitness, generation.population):
+    for fitness_val, x in zip(generation.fitness, generation.population, strict=False):
         assert fitness_val == pytest.approx(objective(x))

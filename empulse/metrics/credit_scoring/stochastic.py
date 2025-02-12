@@ -105,7 +105,7 @@ def empcs_score(
     ...     response_method='predict_proba',
     ...     roi=0.2,
     ...     success_rate=0.5,
-    ...     default_rate=0.1
+    ...     default_rate=0.1,
     ... )
     >>> np.mean(cross_val_score(model, X, y, cv=cv, scoring=scorer))
     0.14904
@@ -220,9 +220,9 @@ def empcs(
         true_positive_rates = true_positive_rates[:-cutoff]
         false_positive_rates = false_positive_rates[:-cutoff]
 
-    M = positive_class_prob * true_positive_rates * lambda_cdf_sum / 2
-    N = roi * false_positive_rates * negative_class_prob
-    partial_default_term = np.sum(alpha * lambda_cdf_diff * (M - N))
+    temp_1 = positive_class_prob * true_positive_rates * lambda_cdf_sum / 2
+    temp_2 = roi * false_positive_rates * negative_class_prob
+    partial_default_term = np.sum(alpha * lambda_cdf_diff * (temp_1 - temp_2))
     full_default_term = default_rate * (
         positive_class_prob * true_positive_rates[-1] - roi * negative_class_prob * false_positive_rates[-1]
     )

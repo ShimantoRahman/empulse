@@ -32,9 +32,8 @@ classifiers = [
 ]
 requires-python = ">= 3.10"
 dependencies = [
-    "numba>=0.61.0",
     "numpy>=1.24.4",
-    "scikit-learn>=1.6.0",
+    "scikit-learn>=1.5.2",
     "imbalanced-learn>=0.13.0",
     "scipy>=1.10.1",
     "joblib>=1.3.2",
@@ -60,6 +59,7 @@ optional = [
 
 test = [
     "empulse[optional]",
+    "scikit-learn>=1.6.1",
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
     "tox>=4.13.0",
@@ -75,7 +75,7 @@ docs = [
 ]
 
 lint = [
-    "ruff>=0.9.2",
+    "ruff>=0.9.4",
     "pre-commit>=4.0.1",
 ]
 
@@ -104,42 +104,79 @@ exclude = ["docs", "notebooks"]
 [tool.ruff.lint]
 extend-select = [  # find all rules at https://docs.astral.sh/ruff/rules
     "A",  # flake8-builtins
+    "ANN",  # flake8-annotations
+    "B",  # flake8-bugbear
     "BLE",  # flake8-blind-except
+    "C4",  # flake8-comprehensions
     "D",  # pydocstyle
     "E",  # pycodestyle
     "F",  # pyflakes
     "I",  # isort
+    "ISC",  # flake8-implicit-str-concat
     "ICN",  # flake8-import-conventions
     "INP",  # flake8-no-pep420
+    "N",  # pep8-naming
     "NPY",  # numpy-specific rules
     "PD",  # pandas-vet
     "PGH004",  # blanket-noqa
     "PIE",  # flake8-pie
+    "PLC",  # pylint conventions
+    "PLE",  # pylint errors
+    # pylint refactor
+    "PLR1714",
+    "PLR1716",
+    "PLR1730",
+    "PLR1733",
+    "PLR1736",
+    "PLR2044",
+    "PLR5501",
+    "PLR6201",
+    "PLW",  # pylint warnings
     "RSE",  # flake8-raise
     "RUF",  # ruff-specific rules
     "SIM",  # flake8-simplify
+    "UP",  # pyupgrade
     "T20",  # flake8-print
     "TC",  # flake8-type-checking
 ]
 ignore = [
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed in {name}
     "E731",  # do not assign a `lambda` expression, use a `def`
-    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D100",  # Missing docstring in public module
     "D104",  # Missing docstring in public package
     "D105",  # Missing docstring in magic method
     "D301",  # Use r""" if any backslashes in a docstring
+    "PLW2901",  # `for` loop variable overwritten by assignment target
+    "PLC2701",  # Private name import {name} from external module {module}
+    "PLC0415",  # `import` should be at the top-level of a file
 ]
+allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
 
 [tool.ruff.format]
 quote-style = "single"
+docstring-code-format = true
+docstring-code-line-length = 90
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed in {name}
     "E731",  # do not assign a `lambda` expression, use a `def`
-    "RUF002",  # Docstring contains ambiguous `–` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
     "D",  # pydocstyle
     "NPY002",  # Replace legacy `np.random.random` call with `np.random.Generator`
+    "PLW2901",  # `for` loop variable overwritten by assignment target
+    "PLC2701",  # Private name import {name} from external module {module}
+    "PLC0415",  # `import` should be at the top-level of a file
 ]
+
+[tool.ruff.lint.flake8-annotations]
+ignore-fully-untyped = true  # gradually type-check the codebase
+mypy-init-return = true
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "return_X_y_costs"]
+
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]

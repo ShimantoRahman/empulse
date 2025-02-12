@@ -1,17 +1,18 @@
+from collections.abc import Callable
 from itertools import product
-from typing import Callable, ClassVar, Optional, Union
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
+from ...utils._sklearn_compat import type_of_target, validate_data
 
 
-def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray):
+def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
     """Convert group weights to sample weights."""
     sample_weight = np.empty(len(y_true))
     for target_class, sensitive_val in product(np.unique(y_true), np.unique(sensitive_feature)):
@@ -183,14 +184,20 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
-        estimator,
+        estimator: Any,
         *,
-        strategy: Union[StrategyFn, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        strategy: StrategyFn | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
         self.transform_feature = transform_feature
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -200,7 +207,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: Optional[ArrayLike] = None, **fit_params
+        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
     ) -> 'BiasReweighingClassifier':
         """
         Fit the estimator and reweigh the instances according to the strategy.
@@ -221,7 +228,9 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
+            raise ValueError(
+                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
+            )
         self.classes_ = np.unique(y)
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")

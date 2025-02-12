@@ -1,6 +1,6 @@
 from itertools import islice, pairwise
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import sympy
@@ -71,7 +71,9 @@ class Metric:
         import sympy as sp
         from empulse.metrics import Metric
 
-        clv, d, f, alpha, beta = sp.symbols('clv d f alpha beta')  # define deterministic variables
+        clv, d, f, alpha, beta = sp.symbols(
+            'clv d f alpha beta'
+        )  # define deterministic variables
         gamma = sp.stats.Beta('gamma', alpha, beta)  # define gamma to follow a Beta distribution
 
         empc_score = (
@@ -109,7 +111,9 @@ class Metric:
         y_true = [1, 0, 1, 0, 1]
         y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
 
-        cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+        cost_loss(
+            y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
+        )
     """
 
     METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'cost', 'savings']
@@ -124,6 +128,7 @@ class Metric:
         self._fn_cost = 0
         self._aliases = {}
         self._defaults = {}
+        self._built = False
 
     @property
     def tp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
@@ -398,11 +403,16 @@ class Metric:
         -------
         Metric
         """
+        self._built = True
+        terms = self.tp_cost + self.tn_cost + self.fp_cost + self.fn_cost
+        random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
+        n_random = len(random_symbols)
+
+        if self.kind in {'cost', 'savings'} and n_random > 0:
+            raise NotImplementedError('Random variables are not supported for cost and savings metrics')
+
         if self.kind == 'max profit':
             self.profit_function = self._build_max_profit()
-            random_symbols = [symbol for symbol in self.profit_function.free_symbols if is_random(symbol)]
-            n_random = len(random_symbols)
-
             if n_random == 0:
                 self._score_function = self._compute_deterministic(self.profit_function)
             elif n_random == 1:
@@ -468,6 +478,9 @@ class Metric:
         score: float
             The computed metric score or loss.
         """
+        if not self._built:
+            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
+
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
 
@@ -489,7 +502,7 @@ class Metric:
     def _compute_deterministic(self, profit_function):
         calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
+        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
             y_true = np.asarray(y_true)
             y_score = np.asarray(y_score)
 
@@ -499,7 +512,7 @@ class Metric:
             tprs, fprs = _compute_convex_hull(y_true, y_score)
 
             profits = np.zeros_like(tprs)
-            for i, (tpr, fpr) in enumerate(zip(tprs, fprs)):
+            for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
                 profits[i] = calculate_profit(pi_0=pi0, pi_1=pi1, F_0=tpr, F_1=fpr, **kwargs)
 
             return profits.max()
@@ -519,12 +532,14 @@ class Metric:
         def compute_integral(integrand, lower_bound, upper_bound, tpr, fpr, random_var):
             integrand = integrand.subs('F_0', tpr).subs('F_1', fpr).evalf()
             if not integrand.free_symbols:  # if the integrand is constant
+                if integrand == 0:
+                    return 0
                 return float(integrand * (upper_bound - lower_bound))
             integrand_func = lambdify(random_var, integrand)
             result, _ = quad(integrand_func, lower_bound, upper_bound)
             return result
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs) -> float:
+        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
             y_true = np.asarray(y_true)
             y_score = np.asarray(y_score)
 
@@ -533,9 +548,9 @@ class Metric:
 
             f0, f1 = _compute_convex_hull(y_true, y_score)
 
-            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args if key in kwargs}
+            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args if str(key) in kwargs}
             bounds = []
-            for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1)), len(f0) - 2):
+            for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1, strict=False)), len(f0) - 2):
                 bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))
             if isinstance(upper_bound := random_var_bounds[1], sympy.Symbol | sympy.Expr):
                 upper_bound = upper_bound.subs(dist_vals)
@@ -546,7 +561,7 @@ class Metric:
 
             integrand_ = integrand.subs(kwargs).subs(dist_vals).subs('pi_0', pi0).subs('pi_1', pi1)
             score = 0
-            for (lower_bound, upper_bound), tpr, fpr in zip(pairwise(bounds), f0, f1):
+            for (lower_bound, upper_bound), tpr, fpr in zip(pairwise(bounds), f0, f1, strict=False):
                 score += compute_integral(integrand_, lower_bound, upper_bound, tpr, fpr, random_symbol)
             return score
 
@@ -587,9 +602,9 @@ class Metric:
                 s = latex(profit_function, mode='plain', order=None)
 
             s = s.replace('F_{0}', 'F_{0}(T)').replace('F_{1}', 'F_{1}(T)')
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'
         elif self.kind == 'cost':
-            y, s, i, N = sympy.symbols('y s i N')
+            y, s, i, N = sympy.symbols('y s i N')  # noqa: N806
             cost_function = (1 / N) * sympy.Sum(
                 y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
                 (i, 0, N),
@@ -600,17 +615,17 @@ class Metric:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
             s = latex(cost_function, mode='plain', order=None)
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'
         elif self.kind == 'savings':
-            y, s, i, N, c0, c1 = sympy.symbols('y s i N Cost_{0} Cost_{1}')
+            y, s, i, N, c0, c1 = sympy.symbols('y s i N Cost_{0} Cost_{1}')  # noqa: N806
             cost_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
                 y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
                 (i, 0, N),
             )
 
             for symbol in cost_function.free_symbols:
-                if symbol not in (N, c0, c1):
+                if symbol not in {N, c0, c1}:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
             s = latex(cost_function, mode='plain', order=None)
-            return '$\\displaystyle %s$' % s
+            return f'$\\displaystyle {s}$'

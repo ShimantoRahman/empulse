@@ -41,7 +41,7 @@ def execute_code_blocks(code_blocks):
 )
 def test_code_blocks_in_user_guides(file_path):
     """Test that code blocks in user guide files execute without errors."""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         content = f.read()
     code_blocks = extract_code_blocks(content)
     execute_code_blocks(code_blocks)

@@ -1,6 +1,7 @@
 import numbers
+from collections.abc import Callable
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -82,10 +83,10 @@ def _validate_input(
 def _compute_expected_cost(
     y_true: NDArray,
     y_pred: NDArray,
-    tp_cost: Union[NDArray, float] = 0.0,
-    tn_cost: Union[NDArray, float] = 0.0,
-    fn_cost: Union[NDArray, float] = 0.0,
-    fp_cost: Union[NDArray, float] = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> NDArray:
     return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) + (1 - y_true) * (
         y_pred * fp_cost + (1 - y_pred) * tn_cost
@@ -95,10 +96,10 @@ def _compute_expected_cost(
 def _compute_log_expected_cost(
     y_true: NDArray,
     y_pred: NDArray,
-    tp_cost: Union[NDArray, float] = 0.0,
-    tn_cost: Union[NDArray, float] = 0.0,
-    fn_cost: Union[NDArray, float] = 0.0,
-    fp_cost: Union[NDArray, float] = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> NDArray:
     epsilon = np.finfo(y_pred.dtype).eps
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
@@ -114,10 +115,10 @@ def cost_loss(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     *,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -249,10 +250,10 @@ def expected_cost_loss(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -370,10 +371,10 @@ def expected_log_cost_loss(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -475,11 +476,11 @@ def savings_score(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     *,
-    y_pred_baseline: ArrayLike | None = None,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    baseline: ArrayLike | Literal['zero_one'] = 'zero_one',
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """
@@ -515,9 +516,9 @@ def savings_score(
                   See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
                   for more information.
 
-    y_pred_baseline : 1D array-like, shape=(n_samples,), default=None
+    baseline : 'zero_one' or 1D array-like, shape=(n_samples,), default='zero_one'
         Predicted labels or calibrated probabilities of the baseline model.
-        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
+        If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
         depending on which is better.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -602,7 +603,7 @@ def savings_score(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if y_pred_baseline is None:
+    if baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -625,10 +626,10 @@ def savings_score(
             ),
         )
     else:
-        y_pred_baseline = np.asarray(y_pred_baseline)
+        baseline = np.asarray(baseline)
         cost_base = cost_loss(
             y_true,
-            y_pred_baseline,
+            baseline,
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
@@ -646,11 +647,11 @@ def expected_savings_score(
     y_true: ArrayLike,
     y_proba: ArrayLike,
     *,
-    y_proba_baseline: ArrayLike | None = None,
-    tp_cost: Union[float, ArrayLike] = 0.0,
-    fp_cost: Union[float, ArrayLike] = 0.0,
-    tn_cost: Union[float, ArrayLike] = 0.0,
-    fn_cost: Union[float, ArrayLike] = 0.0,
+    baseline: Literal['zero_one', 'prior'] | ArrayLike = 'zero_one',
+    tp_cost: float | ArrayLike = 0.0,
+    fp_cost: float | ArrayLike = 0.0,
+    tn_cost: float | ArrayLike = 0.0,
+    fn_cost: float | ArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """
@@ -676,10 +677,14 @@ def expected_savings_score(
     y_proba : 1D array-like, shape=(n_samples,)
         Target probabilities, should lie between 0 and 1.
 
-    y_proba_baseline : 1D array-like, shape=(n_samples,), default=None
-        Target probabilities of the baseline model.
-        If ``None``, the baseline model is a naive model that predicts all zeros or all ones
-        depending on which is better.
+    baseline : {'zero_one', 'prior'} or 1D array-like, shape=(n_samples,), default='zero_one'
+        
+        - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
+          depending on which is better.
+        - If ``'prior'``, the baseline model is a model that predicts the prior probability of 
+          the majority or minority class depending on which is better.
+        - If array-like, target probabilities of the baseline model.
+        
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -762,7 +767,7 @@ def expected_savings_score(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if y_proba_baseline is None:
+    if baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -784,11 +789,34 @@ def expected_savings_score(
                 check_input=False,
             ),
         )
+    elif baseline == 'prior':
+        prior_pos = np.mean(y_true)
+        prior_neg = 1 - prior_pos
+        cost_base = min(
+            cost_loss(
+                y_true,
+                np.full_like(y_true, prior_pos),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
+            cost_loss(
+                y_true,
+                np.full_like(y_true, prior_neg),
+                tp_cost=tp_cost,
+                fp_cost=fp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                check_input=False,
+            ),
+        )
     else:
-        y_proba_baseline = np.asarray(y_proba_baseline)
+        baseline = np.asarray(baseline)
         cost_base = expected_cost_loss(
             y_true,
-            y_proba_baseline,
+            baseline,
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
@@ -810,10 +838,10 @@ def expected_savings_score(
 def make_objective_aec(
     model: Literal['catboost'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> tuple['AECObjective', 'AECMetric']: ...
 
 
@@ -821,20 +849,20 @@ def make_objective_aec(
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
 
 
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit'],
     *,
-    tp_cost: Union[ArrayLike, float] = 0.0,
-    tn_cost: Union[ArrayLike, float] = 0.0,
-    fn_cost: Union[ArrayLike, float] = 0.0,
-    fp_cost: Union[ArrayLike, float] = 0.0,
+    tp_cost: ArrayLike | float = 0.0,
+    tn_cost: ArrayLike | float = 0.0,
+    fn_cost: ArrayLike | float = 0.0,
+    fp_cost: ArrayLike | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjective', 'AECMetric']:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
@@ -1053,7 +1081,7 @@ class AECObjective:
         gradient = y_proba * (1 - y_proba) * cost
         hessian = np.abs((1 - 2 * y_proba) * gradient)
         # convert from two arrays to one list of tuples
-        return list(zip(-gradient, -hessian))
+        return list(zip(-gradient, -hessian, strict=False))
 
 
 class AECMetric:

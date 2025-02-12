@@ -1,5 +1,5 @@
+from collections.abc import Callable, Generator
 from datetime import datetime
-from typing import Callable, Generator, Optional
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -107,14 +107,14 @@ class Generation:
 
     def __init__(
         self,
-        population_size: Optional[int] = None,
+        population_size: int | None = None,
         crossover_rate: float = 0.8,
         mutation_rate: float = 0.1,
         elitism: float = 0.05,
         verbose: bool = False,
         logging_fn: Callable = print,
-        random_state: Optional[int] = None,
-        n_jobs: Optional[int] = 1,
+        random_state: int | None = None,
+        n_jobs: int | None = 1,
     ):
         super().__init__()
         self.name = 'RGA'
@@ -179,7 +179,7 @@ class Generation:
         # Check bounds
         bounds = list(bounds)
         if not all(
-            isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], (int, float)) and isinstance(t[1], (int, float))
+            isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], int | float) and isinstance(t[1], int | float)
             for t in bounds
         ):
             raise ValueError('`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).')
@@ -219,14 +219,14 @@ class Generation:
         population = self.rng.rand(self.population_size, self.n_dim)
         return self.lower_bounds + population * self.delta_bounds
 
-    def _evaluate(self, objective) -> bool:
+    def _evaluate(self, objective: Callable) -> bool:
         fitness_values = Parallel(n_jobs=self.n_jobs)(
             delayed(self._update_fitness)(objective, ix) for ix in range(self.population_size)
         )
         self.fitness = np.asarray(fitness_values)
         return False
 
-    def _update_fitness(self, objective, index: int) -> float:
+    def _update_fitness(self, objective: Callable, index: int) -> float:
         fitness_value = float(self.fitness[index])
         if np.isnan(fitness_value):
             self.result.nfev += 1
@@ -344,13 +344,9 @@ class Generation:
         )
 
     def _log_progress(self):
-        status_msg = 'Iter = {:5d}; nfev = {:6d}; fx = {:.4f}'.format(
-            self.result.nit,
-            self.result.nfev,
-            self.fx_best[-1],
-        )
+        status_msg = f'Iter = {self.result.nit:5d}; nfev = {self.result.nfev:6d}; fx = {self.fx_best[-1]:.4f}'
         self.logging_fn(status_msg)
 
     def _log_end(self, stop_time):
         self.logging_fn(self.result)
-        self.logging_fn('# ---  {} ({})  --- #'.format(self.name, stop_time))
+        self.logging_fn(f'# ---  {self.name} ({stop_time})  --- #')

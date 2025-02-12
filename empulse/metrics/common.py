@@ -1,7 +1,4 @@
-from typing import Generator, Optional
-
 import numpy as np
-from numba import njit
 from numpy.typing import ArrayLike
 
 
@@ -52,7 +49,7 @@ def _compute_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[n
 
     # calculate the TP & FP at each new lead targeted
     true_positives = np.pad(np.cumsum(sorted_labels), pad_width=(1, 0))
-    false_positives = np.pad(np.cumsum((sorted_labels == 0)), pad_width=(1, 0))
+    false_positives = np.pad(np.cumsum(sorted_labels == 0), pad_width=(1, 0))
 
     # merge consecutive equal prediction values
     duplicated_prediction_indices = np.where(np.diff(sorted_predictions) == 0)[0] + 1
@@ -88,22 +85,3 @@ def _compute_profits(
     profit_matrix = np.dot(confusion_matrix.T, cost_benefits) / n_samples
     customer_thresholds = np.sum(confusion_matrix, axis=0) / n_samples
     return profit_matrix, customer_thresholds
-
-
-@njit
-def _range(start: float, stop: Optional[float] = None, step: Optional[float] = None) -> Generator[float, None, None]:
-    if stop is None:
-        stop = start
-        start = 0.0
-    if step is None:
-        step = 1.0
-    if step < 0:
-        raise ValueError('step cannot be smaller than 0')
-    if start > stop:
-        raise ValueError('start cannot be greater than stop')
-
-    while True:
-        yield start
-        start += step
-        if start > stop:
-            break

@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Callable, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy import ndarray
@@ -285,7 +286,7 @@ class AECObjectiveAcquisition:
         )
         gradient = y_proba * (1 - y_proba) * cost
         hessian = np.abs((1 - 2 * y_proba) * gradient)
-        return list(zip(-gradient, -hessian))
+        return list(zip(-gradient, -hessian, strict=False))
 
 
 class AECMetricAcquisition:

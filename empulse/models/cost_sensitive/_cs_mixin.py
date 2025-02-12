@@ -16,6 +16,8 @@ class CostSensitiveMixin:
         fn_cost: ArrayLike | float | Parameter,
         fp_cost: ArrayLike | float | Parameter,
         caller: str = 'fit',
+        force_array: bool = False,
+        n_samples: int | None = None,
     ) -> tuple[
         NDArray | float,
         NDArray | float,
@@ -45,17 +47,24 @@ class CostSensitiveMixin:
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
                 f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
                 UserWarning,
+                stacklevel=2,
             )
             fp_cost = 1
             fn_cost = 1
 
-        if not isinstance(tp_cost, Real):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(tn_cost, Real):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, Real):
-            fn_cost = np.asarray(fn_cost)
-        if not isinstance(fp_cost, Real):
-            fp_cost = np.asarray(fp_cost)
+        if force_array:
+            tp_cost = np.asarray(tp_cost) if not isinstance(tp_cost, Real) else np.full(n_samples, tp_cost)
+            tn_cost = np.asarray(tn_cost) if not isinstance(tn_cost, Real) else np.full(n_samples, tn_cost)
+            fn_cost = np.asarray(fn_cost) if not isinstance(fn_cost, Real) else np.full(n_samples, fn_cost)
+            fp_cost = np.asarray(fp_cost) if not isinstance(fp_cost, Real) else np.full(n_samples, fp_cost)
+        else:
+            if not isinstance(tp_cost, Real):
+                tp_cost = np.asarray(tp_cost)
+            if not isinstance(tn_cost, Real):
+                tn_cost = np.asarray(tn_cost)
+            if not isinstance(fn_cost, Real):
+                fn_cost = np.asarray(fn_cost)
+            if not isinstance(fp_cost, Real):
+                fp_cost = np.asarray(fp_cost)
 
         return tp_cost, tn_cost, fn_cost, fp_cost

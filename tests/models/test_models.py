@@ -7,7 +7,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
-from sklearn.utils.estimator_checks import parametrize_with_checks
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
@@ -17,23 +16,30 @@ from empulse.models import (
     BiasRelabelingClassifier,
     BiasResamplingClassifier,
     BiasReweighingClassifier,
+    CSBaggingClassifier,
     CSBoostClassifier,
+    CSForestClassifier,
     CSLogitClassifier,
     CSThresholdClassifier,
+    CSTreeClassifier,
     ProfLogitClassifier,
     RobustCSClassifier,
 )
+from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
-    B2BoostClassifier(
-        XGBClassifier(n_estimators=2, max_depth=1),
-    ),
+    B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
     ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10}),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
     CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
     CSLogitClassifier(fp_cost=1, fn_cost=1),
+    CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1),
+    CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1),
+    CSBaggingClassifier(
+        estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), n_estimators=2, fp_cost=1, fn_cost=1
+    ),
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
 )
@@ -54,7 +60,7 @@ def expected_failed_checks(estimator):
     return {}
 
 
-@parametrize_with_checks([est for est in ESTIMATORS], expected_failed_checks=expected_failed_checks)
+@parametrize_with_checks(list(ESTIMATORS), expected_failed_checks=expected_failed_checks)
 def test_estimators(estimator, check):
     """Check the compatibility with scikit-learn API"""
     check(estimator)
@@ -131,12 +137,15 @@ def data():
     return load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     'classifier',
     [
         CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
         CSBoostClassifier(),
-        CSLogitClassifier(optimizer_params={'max_iter': 100}),
+        CSLogitClassifier(optimizer_params={'max_iter': 10}),
+        CSTreeClassifier(max_depth=2),
+        CSForestClassifier(n_estimators=3, max_depth=1),
         RobustCSClassifier(estimator=CSBoostClassifier()),
     ],
 )

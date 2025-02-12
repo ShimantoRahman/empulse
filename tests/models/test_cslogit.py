@@ -1,5 +1,9 @@
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from empulse.models import CSLogitClassifier
 
@@ -21,7 +25,7 @@ def test_works_with_time_stopping_condition(X, y):
 
     from empulse.optimizers import Generation
 
-    def optimize(objective, X, max_time=1, **kwargs) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, max_time: int | float = 1, **kwargs: Any) -> OptimizeResult:
         rga = Generation(**kwargs)
         assert max_time == 0.1
         bounds = [(-10, 10)] * X.shape[1]
@@ -52,7 +56,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
     import numpy as np
     from scipy.optimize import OptimizeResult, minimize
 
-    def optimize(objective, X, max_iter=10000, **kwargs) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, max_iter: int = 10000, **kwargs: Any) -> OptimizeResult:
         assert max_iter == 2
         initial_guess = np.zeros(X.shape[1], order='F', dtype=X.dtype)
         result = minimize(

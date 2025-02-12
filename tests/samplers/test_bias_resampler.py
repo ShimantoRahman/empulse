@@ -37,7 +37,7 @@ def test_bias_resampler_unbalanced():
     X_re, y_re = BiasResampler().fit_resample(X, y, sensitive_feature=X[:, 0])
     assert statistical_parity(y_re, X_re[:, 0]) == 0.0
     # check the indices of the resampled data still match their target value in y
-    for index, target in zip(X_re, y_re):
+    for index, target in zip(X_re, y_re, strict=False):
         assert y[index[1]] == target
 
 

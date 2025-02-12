@@ -154,16 +154,14 @@ def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: boo
 
         dataset = load_churn_tv_subscriptions()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(
         join(module_path, 'data', 'churn_tv_subscriptions.csv.gz'), delimiter=',', compression='gzip'
     )
-    with open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst')) as f:
+    with open(join(module_path, 'descriptions', 'churn_tv_subscriptions.rst'), encoding='utf-8') as f:
         description = f.read()
     data = raw_data.iloc[:, 1:-5]
 
@@ -341,15 +339,13 @@ def load_upsell_bank_telemarketing(
 
         dataset = load_upsell_bank_telemarketing()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'bankmarketing.csv.gz'), delimiter=';', compression='gzip')
-    with open(join(module_path, 'descriptions', 'bankmarketing.rst')) as f:
+    with open(join(module_path, 'descriptions', 'bankmarketing.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # only use features pre-contact:
@@ -596,15 +592,13 @@ def load_give_me_some_credit(
 
         dataset = load_give_me_some_credit()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring1.csv.gz'), delimiter=',', compression='gzip')
-    with open(join(module_path, 'descriptions', 'creditscoring1.rst')) as f:
+    with open(join(module_path, 'descriptions', 'creditscoring1.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # Exclude MonthlyIncome = nan or =0 or DebtRatio >1
@@ -863,15 +857,13 @@ def load_credit_scoring_pakdd(
 
         dataset = load_credit_scoring_pakdd()
         X_train, X_test, y_train, y_test = train_test_split(
-            dataset.data,
-            dataset.target,
-            random_state=42
+            dataset.data, dataset.target, random_state=42
         )
 
     """
     module_path = dirname(__file__)
     raw_data = pd.read_csv(join(module_path, 'data', 'creditscoring2.csv.gz'), delimiter='\t', compression='gzip')
-    with open(join(module_path, 'descriptions', 'creditscoring2.rst')) as f:
+    with open(join(module_path, 'descriptions', 'creditscoring2.rst'), encoding='utf-8') as f:
         description = f.read()
 
     # Exclude TARGET_LABEL_BAD=1 == 'N'
@@ -1092,9 +1084,9 @@ def _creditscoring_costmat(income, debt, pi_1, cost_mat_parameters):
     # Calculate credit line Cl
     def calculate_cl(k, inc_i, cl_max, debt_i, int_r, n_term):
         cl_k = k * inc_i
-        A = calculate_a(cl_k, int_r, n_term)
-        Cl_debt = calculate_pv(inc_i * min(A / inc_i, 1 - debt_i), int_r, n_term)
-        return min(cl_k, cl_max, Cl_debt)
+        a = calculate_a(cl_k, int_r, n_term)
+        cl_debt = calculate_pv(inc_i * min(a / inc_i, 1 - debt_i), int_r, n_term)
+        return min(cl_k, cl_max, cl_debt)
 
     # calculate costs
     def calculate_cost_fn(cl_i, lgd):

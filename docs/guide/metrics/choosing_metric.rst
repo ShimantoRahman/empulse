@@ -203,11 +203,10 @@ For a brief summary of what each metric does and why it is useful, see the table
       * Measures how much profit a classifier would make if it were to be used at the optimal decision threshold.
         The optimal decision threshold maximizes the profit and is calculated by the metric.
         It does **NOT** take the instance-dependent costs into account, rather it evaluates global classifier performance.
-    - * :func:`~empulse.metrics.emp_score`
-      * Similar to the maximum profit score, but takes the expected value of the cost-benefit distribution.
-        This allows you to express uncertainty over certain costs or benefits.
-        Note that the "expected" does not refer to the class probabilities,
-        but to the expected value of the cost-benefit distribution.
+    - * :class:`~empulse.metrics.Metric`
+      * Allows you to define your own cost-benefit or cost matrix and use it as a metric.
+        You can define a maximum profit, expected cost and savings metric.
+        Read more in :ref:`user_defined_value_metric`.
 
 (Expected) Cost Loss
 --------------------

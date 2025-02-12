@@ -1,7 +1,8 @@
 import random
 import unittest
+from collections.abc import Generator
 from itertools import islice
-from typing import ClassVar, Generator
+from typing import ClassVar
 
 import numpy as np
 
@@ -17,7 +18,7 @@ class BaseTestMetric:
         def metric(self):
             return ...
 
-        def assertAlmostEqualMetric(self, generated: tuple[float, float], expected: tuple[float, float]):
+        def assertAlmostEqualMetric(self, generated: tuple[float, float], expected: tuple[float, float]) -> None:
             """Assert that the generated value and threshold is equal to the expected value and threshold."""
             self.assertAlmostEqual(generated[0], expected[0])
             self.assertAlmostEqual(generated[1], expected[1])
@@ -555,7 +556,7 @@ class BaseTestMetric:
             y_true = np.array(y_true)
             y_score = np.array(y_score)
 
-            for params, expected in zip(self.parameters, self.expected_values['different_parameters']):
+            for params, expected in zip(self.parameters, self.expected_values['different_parameters'], strict=False):
                 with self.subTest(params):
                     self.assertAlmostEqualMetric(self.metric(y_true, y_score, **params), expected)
 
@@ -574,12 +575,12 @@ class BaseTestRelationMetrics:
         def generate_data(self) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
             """Generates data for the metric."""
             while True:
-                N_SAMPLES = 1000
+                n_samples = 1000
                 positive_class_prior = random.random()
-                n_positive_class = int(positive_class_prior * N_SAMPLES)
+                n_positive_class = int(positive_class_prior * n_samples)
                 if n_positive_class == 0:
                     n_positive_class = 1
-                n_negative_class = N_SAMPLES - n_positive_class
+                n_negative_class = n_samples - n_positive_class
                 random_param = lambda x: random.random() * x
                 positive_class_predictions = np.random.beta(random_param(20), random_param(20), n_positive_class)
                 negative_class_predictions = np.random.beta(random_param(20), random_param(20), n_negative_class)
@@ -598,7 +599,7 @@ class BaseTestRelationMetrics:
         def test_deterministic_metric_lower_bound(self):
             """Test whether the deterministic metric is lower or equal than the stochastic metric."""
             for params, (y_true, y_pred) in zip(
-                islice(self.generate_parameters(), 100), islice(self.generate_data(), 100)
+                islice(self.generate_parameters(), 100), islice(self.generate_data(), 100), strict=False
             ):
                 stochastic_score, _ = self.stochastic_metric(y_true, y_pred, **params)
                 params = self.to_deterministic_params(params)

@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Callable
 from itertools import product
-from typing import TYPE_CHECKING, Callable, ClassVar, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -8,9 +9,8 @@ from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.estimator_checks import ClassifierTags
-from sklearn.utils.multiclass import type_of_target
 
+from ..utils._sklearn_compat import ClassifierTags, type_of_target
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:
@@ -157,14 +157,20 @@ class BiasResampler(BaseSampler):
     def __init__(
         self,
         *,
-        strategy: Union[Callable, Strategy] = 'statistical parity',
-        transform_feature: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        random_state: Optional[Union[RandomState, int]] = None,
+        strategy: Callable | Strategy = 'statistical parity',
+        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
+        random_state: RandomState | int | None = None,
     ):
         super().__init__()
         self.strategy = strategy
         self.transform_feature = transform_feature
         self.random_state = random_state
+
+    def _more_tags(self):
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -177,7 +183,7 @@ class BiasResampler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -203,7 +209,7 @@ class BiasResampler(BaseSampler):
         X: _XT,
         y: _YT,
         *,
-        sensitive_feature: Optional[ArrayLike] = None,
+        sensitive_feature: ArrayLike | None = None,
     ) -> tuple[_XT, _YT]:
         """
         Resample the data according to the strategy.
@@ -249,7 +255,11 @@ class BiasResampler(BaseSampler):
 
         unique_attr = np.unique(sensitive_feature)
         if len(unique_attr) == 1:
-            warnings.warn('sensitive_feature only contains one class, no resampling is performed.', UserWarning)
+            warnings.warn(
+                'sensitive_feature only contains one class, no resampling is performed.',
+                UserWarning,
+                stacklevel=2,
+            )
             self.sample_indices_ = np.arange(len(y))
             return X, y
 
