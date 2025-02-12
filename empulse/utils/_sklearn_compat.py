@@ -1,3 +1,4 @@
+# type: ignore
 """
 Ease developer experience to support multiple versions of scikit-learn.
 
