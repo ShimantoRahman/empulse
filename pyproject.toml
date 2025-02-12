@@ -180,3 +180,6 @@ extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "ret
 
 [tool.ruff.lint.pylint]
 allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]
+
+[tool.mypy]
+ignore_missing_imports = true
