@@ -126,8 +126,8 @@ class Metric:
         self._tn_benefit = 0
         self._fp_cost = 0
         self._fn_cost = 0
-        self._aliases = {}
-        self._defaults = {}
+        self._aliases: dict[str, str] = {}
+        self._defaults: dict[str, Any] = {}
         self._built = False
 
     @property

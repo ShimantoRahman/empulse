@@ -12,7 +12,7 @@ from scipy.special import expit
 from empulse.optimizers import Generation
 
 from ..metrics import empc_score
-from ._base import BaseLogitClassifier
+from ._base import BaseLogitClassifier, OptimizeFn
 
 
 class ProfLogitClassifier(BaseLogitClassifier):
@@ -151,9 +151,11 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
     def _fit(self, X: np.ndarray, y: np.ndarray, **loss_params: Any) -> 'ProfLogitClassifier':
         optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
-        optimize_fn = _optimize if self.optimize_fn is None else self.optimize_fn
+        optimize_fn: OptimizeFn = _optimize if self.optimize_fn is None else self.optimize_fn
         optimize_fn = partial(optimize_fn, **optimizer_params)
 
+        if isinstance(self.loss, str) or self.loss is None:
+            raise ValueError('Loss function must be a Callable.')
         objective = partial(
             _objective,
             X=X,
@@ -207,9 +209,9 @@ def _optimize(
     rga = Generation(**kwargs)
     previous_score = np.inf
     iter_stagnant = 0
-    bounds = [bounds] * X.shape[1]
+    bounds_per_instance = [bounds] * X.shape[1]
 
-    for _ in islice(rga.optimize(objective, bounds), max_iter):
+    for _ in islice(rga.optimize(objective, bounds_per_instance), max_iter):
         score = rga.result.fun
         relative_improvement = (score - previous_score) / previous_score if previous_score != np.inf else np.inf
         previous_score = score

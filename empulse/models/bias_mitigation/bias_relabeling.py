@@ -8,8 +8,10 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
 from ...samplers import BiasRelabler
-from ...samplers._strategies import Strategy, StrategyFn
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...samplers._strategies import Strategy
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+
+StrategyFn = Callable[[np.ndarray, np.ndarray], int]
 
 
 class BiasRelabelingClassifier(ClassifierMixin, BaseEstimator):

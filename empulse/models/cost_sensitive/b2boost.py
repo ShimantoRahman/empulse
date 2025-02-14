@@ -1,6 +1,6 @@
 import warnings
 from numbers import Real
-from typing import ClassVar
+from typing import ClassVar, override
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -239,14 +239,15 @@ class B2BoostClassifier(BaseBoostClassifier):
             contact_cost=contact_cost,
         )
 
-    def _fit(
+    @override
+    def _fit(  # type: ignore[override]
         self,
         X: np.ndarray,
         y: np.ndarray,
-        accept_rate: float | None = None,
-        clv: float | ArrayLike | None = None,
-        incentive_fraction: float | None = None,
-        contact_cost: float | None = None,
+        accept_rate: float,
+        clv: float | ArrayLike,
+        incentive_fraction: float,
+        contact_cost: float,
     ) -> 'B2BoostClassifier':
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
@@ -291,7 +292,7 @@ class B2BoostClassifier(BaseBoostClassifier):
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif isinstance(self.estimator, CatBoostClassifier):
-            objective, metric = make_objective_churn(
+            objective, metric = make_objective_churn(  # type: ignore[assignment]
                 'catboost',
                 clv=clv,
                 incentive_fraction=incentive_fraction,

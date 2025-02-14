@@ -51,7 +51,7 @@ def lift_score(y_true: ArrayLike, y_score: ArrayLike, *, fraction: float = 0.1, 
     sorted_labels = y_true[sorted_indices]
     top_fraction = int(round(len(sorted_labels) * fraction, 0))
 
-    n_positives_top_fraction = np.sum(sorted_labels[:top_fraction])
+    n_positives_top_fraction: int = np.sum(sorted_labels[:top_fraction])
     prop_positives_top_fraction = n_positives_top_fraction / top_fraction
 
-    return prop_positives_top_fraction / np.mean(y_true)
+    return prop_positives_top_fraction / y_true.mean()

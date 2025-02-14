@@ -3,28 +3,19 @@ from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 
 if TYPE_CHECKING:
     try:
+        from lightgbm import Dataset
         from xgboost import DMatrix
+
+        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
     except ImportError:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=np.ndarray)
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
-    else:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
+        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
 else:
-    Matrix = TypeVar('Matrix', bound=np.ndarray)
+    Matrix = TypeVar('Matrix', bound=NDArray)
 
 from empulse.metrics.churn._validation import _validate_input_mpc
 
@@ -129,7 +120,7 @@ def make_objective_churn(
 
     """
     if model == 'xgboost':
-        objective = partial(
+        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
             _objective,
             accept_rate=accept_rate,
             clv=clv,

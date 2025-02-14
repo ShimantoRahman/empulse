@@ -183,3 +183,4 @@ allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]
 
 [tool.mypy]
 ignore_missing_imports = true
+follow_imports = "skip"  # do not follow imports for not (gradually type-check the codebase)

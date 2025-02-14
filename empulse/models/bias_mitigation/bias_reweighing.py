@@ -9,7 +9,7 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:

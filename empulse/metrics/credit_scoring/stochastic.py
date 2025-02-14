@@ -222,7 +222,7 @@ def empcs(
 
     temp_1 = positive_class_prob * true_positive_rates * lambda_cdf_sum / 2
     temp_2 = roi * false_positive_rates * negative_class_prob
-    partial_default_term = np.sum(alpha * lambda_cdf_diff * (temp_1 - temp_2))
+    partial_default_term: float = np.sum(alpha * lambda_cdf_diff * (temp_1 - temp_2))
     full_default_term = default_rate * (
         positive_class_prob * true_positive_rates[-1] - roi * negative_class_prob * false_positive_rates[-1]
     )
