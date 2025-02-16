@@ -38,28 +38,28 @@ class Metric:
 
     Attributes
     ----------
-    tp_benefit : sympy.Symbol | sympy.Expr
+    tp_benefit : sympy.Expr
         The benefit of a true positive.
 
-    tn_benefit : sympy.Symbol | sympy.Expr
+    tn_benefit : sympy.Expr
         The benefit of a true negative.
 
-    fp_benefit : sympy.Symbol | sympy.Expr
+    fp_benefit : sympy.Expr
         The benefit of a false positive.
 
-    fn_benefit : sympy.Symbol | sympy.Expr
+    fn_benefit : sympy.Expr
         The benefit of a false negative.
 
-    tp_cost : sympy.Symbol | sympy.Expr
+    tp_cost : sympy.Expr
         The cost of a true positive.
 
-    tn_cost : sympy.Symbol | sympy.Expr
+    tn_cost : sympy.Expr
         The cost of a true negative.
 
-    fp_cost : sympy.Symbol | sympy.Expr
+    fp_cost : sympy.Expr
         The cost of a false positive.
 
-    fn_cost : sympy.Symbol | sympy.Expr
+    fn_cost : sympy.Expr
         The cost of a false negative.
 
     Examples
@@ -131,44 +131,44 @@ class Metric:
         self._built = False
 
     @property
-    def tp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def tp_benefit(self) -> sympy.Expr:  # noqa: D102
         return self._tp_benefit
 
     @property
-    def tn_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def tn_benefit(self) -> sympy.Expr:  # noqa: D102
         return self._tn_benefit
 
     @property
-    def fp_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def fp_benefit(self) -> sympy.Expr:  # noqa: D102
         return -self._fp_cost
 
     @property
-    def fn_benefit(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def fn_benefit(self) -> sympy.Expr:  # noqa: D102
         return -self._fn_cost
 
     @property
-    def tp_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def tp_cost(self) -> sympy.Expr:  # noqa: D102
         return -self._tp_benefit
 
     @property
-    def tn_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def tn_cost(self) -> sympy.Expr:  # noqa: D102
         return -self._tn_benefit
 
     @property
-    def fp_cost(self) -> sympy.Symbol | sympy.Expr:  # noqa: D102
+    def fp_cost(self) -> sympy.Expr:  # noqa: D102
         return self._fp_cost
 
     @property
     def fn_cost(self):  # noqa: D102
         return self._fn_cost
 
-    def add_tp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_tp_benefit(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the benefit of classifying a true positive.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the benefit of classifying a true positive.
 
         Returns
@@ -180,13 +180,13 @@ class Metric:
         self._tp_benefit += term
         return self
 
-    def add_tn_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_tn_benefit(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the benefit of classifying a true negative.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the benefit of classifying a true negative.
 
         Returns
@@ -198,13 +198,13 @@ class Metric:
         self._tn_benefit += term
         return self
 
-    def add_fp_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_fp_benefit(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the benefit of classifying a false positive.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the benefit of classifying a false positive.
 
         Returns
@@ -216,13 +216,13 @@ class Metric:
         self._fp_cost -= term
         return self
 
-    def add_fn_benefit(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_fn_benefit(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the benefit of classifying a false negative.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the benefit of classifying a false negative.
 
         Returns
@@ -234,13 +234,13 @@ class Metric:
         self._fn_cost -= term
         return self
 
-    def add_tp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_tp_cost(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the cost of classifying a true positive.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the cost of classifying a true positive.
 
         Returns
@@ -252,13 +252,13 @@ class Metric:
         self._tp_benefit -= term
         return self
 
-    def add_tn_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_tn_cost(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the cost of classifying a true negative.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the cost of classifying a true negative.
 
         Returns
@@ -270,13 +270,13 @@ class Metric:
         self._tn_benefit -= term
         return self
 
-    def add_fp_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_fp_cost(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the cost of classifying a false positive.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the cost of classifying a false positive.
 
         Returns
@@ -288,13 +288,13 @@ class Metric:
         self._fp_cost += term
         return self
 
-    def add_fn_cost(self, term: sympy.Symbol | sympy.Expr | str) -> 'Metric':
+    def add_fn_cost(self, term: sympy.Expr | str) -> 'Metric':
         """
         Add a term to the cost of classifying a false negative.
 
         Parameters
         ----------
-        term: sympy.Symbol | sympy.Expr | str
+        term: sympy.Expr | str
             The term to add to the cost of classifying a false negative.
 
         Returns
