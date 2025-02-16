@@ -122,11 +122,11 @@ class Metric:
         if kind not in self.METRIC_TYPES:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         self.kind = kind
-        self._tp_benefit = 0
-        self._tn_benefit = 0
-        self._fp_cost = 0
-        self._fn_cost = 0
-        self._aliases: dict[str, str] = {}
+        self._tp_benefit = sympy.core.numbers.Zero()
+        self._tn_benefit = sympy.core.numbers.Zero()
+        self._fp_cost = sympy.core.numbers.Zero()
+        self._fn_cost = sympy.core.numbers.Zero()
+        self._aliases: dict[str, str | sympy.Symbol] = {}
         self._defaults: dict[str, Any] = {}
         self._built = False
 
