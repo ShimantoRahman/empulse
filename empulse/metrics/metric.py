@@ -306,7 +306,7 @@ class Metric:
         self._fn_cost += term
         return self
 
-    def alias(self, alias: str | dict[str, sympy.Symbol | str], symbol: sympy.Symbol = None) -> 'Metric':
+    def alias(self, alias: str | dict[str, sympy.Symbol | str], symbol: sympy.Symbol | None = None) -> 'Metric':
         """
         Add an alias for a symbol.
 
@@ -347,8 +347,10 @@ class Metric:
         """
         if isinstance(alias, dict):
             self._aliases.update(alias)
-        else:
+        elif symbol is not None:
             self._aliases[alias] = symbol
+        else:
+            raise ValueError('Either a dictionary or both an alias and a symbol should be provided')
         return self
 
     def set_default(self, **defaults: float) -> 'Metric':
