@@ -90,6 +90,8 @@ class CostSensitiveMixin:
             fn_cost = 1
 
         if force_array:
+            if n_samples is None:
+                raise ValueError('n_samples should be set when force_array is True.')
             tp_cost = np.asarray(tp_cost) if not isinstance(tp_cost, Real) else np.full(n_samples, tp_cost)
             tn_cost = np.asarray(tn_cost) if not isinstance(tn_cost, Real) else np.full(n_samples, tn_cost)
             fn_cost = np.asarray(fn_cost) if not isinstance(fn_cost, Real) else np.full(n_samples, fn_cost)
