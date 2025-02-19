@@ -684,11 +684,14 @@ class Metric:
             random_symbols = [symbol for symbol in profit_function.free_symbols if is_random(symbol)]
 
             if random_symbols:
-                random_symbol = random_symbols[0]
-                h = sympy.Function('h')(random_symbol)
-                integrand = profit_function * h
-                lower_bound, upper_bound = pspace(random_symbol).domain.set.args[:2]
-                integral = sympy.Integral(integrand, (random_symbol, lower_bound, upper_bound))
+                integrand = profit_function
+                for random_symbol in random_symbols:
+                    integrand *= density(random_symbol).pdf(random_symbol)
+                integral = integrand
+                for random_symbol in random_symbols:
+                    lower_bound, upper_bound = pspace(random_symbol).domain.set.args[:2]
+                    integral = sympy.Integral(integral, (random_symbol, lower_bound, upper_bound))
+
                 s = latex(integral, mode='plain', order=None)
             else:
                 s = latex(profit_function, mode='plain', order=None)
