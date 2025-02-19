@@ -1,17 +1,21 @@
 from itertools import islice, pairwise
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Protocol
 
 import numpy as np
 import sympy
-from numpy.typing import ArrayLike
-from scipy.integrate import quad
+from numpy.typing import ArrayLike, NDArray
+from scipy.integrate import dblquad, quad
 from sympy import solve
 from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 from sympy.utilities import lambdify
 
 from ._convex_hull import _compute_convex_hull
+
+
+class MetricFn(Protocol):  # noqa: D101
+    def __call__(self, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float: ...  # noqa: D102
 
 
 class Metric:
@@ -122,10 +126,10 @@ class Metric:
         if kind not in self.METRIC_TYPES:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         self.kind = kind
-        self._tp_benefit = sympy.core.numbers.Zero()
-        self._tn_benefit = sympy.core.numbers.Zero()
-        self._fp_cost = sympy.core.numbers.Zero()
-        self._fn_cost = sympy.core.numbers.Zero()
+        self._tp_benefit: sympy.Expr = sympy.core.numbers.Zero()
+        self._tn_benefit: sympy.Expr = sympy.core.numbers.Zero()
+        self._fp_cost: sympy.Expr = sympy.core.numbers.Zero()
+        self._fn_cost: sympy.Expr = sympy.core.numbers.Zero()
         self._aliases: dict[str, str | sympy.Symbol] = {}
         self._defaults: dict[str, Any] = {}
         self._built = False
@@ -414,45 +418,18 @@ class Metric:
             raise NotImplementedError('Random variables are not supported for cost and savings metrics')
 
         if self.kind == 'max profit':
-            self.profit_function = self._build_max_profit()
+            self.profit_function = self._build_profit_function()
             if n_random == 0:
-                self._score_function = self._compute_deterministic(self.profit_function)
+                self._score_function = self._build_max_profit_deterministic(self.profit_function)
             elif n_random == 1:
-                self._score_function = self._compute_one_stochastic(self.profit_function, random_symbols[0])
+                self._score_function = self._build_max_profit_stochastic_one(self.profit_function, random_symbols[0])
             else:
-                raise NotImplementedError('Only zero or one random variable is supported')
+                self._score_function = self._build_max_profit_stochastic(self.profit_function, random_symbols)
         elif self.kind == 'cost':
-            y, s = sympy.symbols('y s')
-            cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
-                (1 - s) * self.tn_cost + s * self.fp_cost
-            )
-            cost_funct = lambdify(list(cost_function.free_symbols), cost_function)
-
-            def cost_loss(y_true, y_score, **kwargs):
-                return np.mean(cost_funct(y=y_true, s=y_score, **kwargs))
-
-            self._score_function = cost_loss
+            self._score_function = self._build_cost_loss()
 
         elif self.kind == 'savings':
-            y, s = sympy.symbols('y s')
-            cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
-                (1 - s) * self.tn_cost + s * self.fp_cost
-            )
-            all_zero_function = cost_function.subs(s, 0)
-            all_one_function = cost_function.subs(s, 1)
-
-            cost_func = lambdify(list(cost_function.free_symbols), cost_function)
-            all_zero_func = lambdify(list(all_zero_function.free_symbols), all_zero_function)
-            all_one_func = lambdify(list(all_one_function.free_symbols), all_one_function)
-
-            def savings(y_true, y_score, **kwargs):
-                # it is possible that with the substitution of the symbols, the function becomes a constant
-                all_zero_score = np.mean(all_zero_func(y=y_true, **kwargs)) if all_zero_function != 0 else 0
-                all_one_score = np.mean(all_one_func(y=y_true, **kwargs)) if all_one_function != 0 else 0
-                cost_base = min(all_zero_score, all_one_score)
-                return 1 - np.mean(cost_func(y=y_true, s=y_score, **kwargs)) / cost_base
-
-            self._score_function = savings
+            self._score_function = self._build_savings_score()
         else:
             raise NotImplementedError(f'Kind {self.kind} is not supported')
         return self
@@ -501,13 +478,10 @@ class Metric:
 
         return self._score_function(y_true, y_score, **kwargs)
 
-    def _compute_deterministic(self, profit_function):
+    def _build_max_profit_deterministic(self, profit_function):
         calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
-            y_true = np.asarray(y_true)
-            y_score = np.asarray(y_score)
-
+        def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             pi0 = float(np.mean(y_true))
             pi1 = 1 - pi0
 
@@ -521,55 +495,133 @@ class Metric:
 
         return score_function
 
-    def _compute_one_stochastic(self, profit_function, random_symbol):
+    def _build_max_profit_stochastic_one(self, profit_function, random_symbol):
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         bound_eq = solve(profit_function - profit_prime, random_symbol)[0]
-
         compute_bounds = lambdify(list(bound_eq.free_symbols), bound_eq)
+
         random_var_bounds = pspace(random_symbol).domain.set.args
         distribution_args = pspace(random_symbol).distribution.args
 
         integrand = profit_function * density(random_symbol).pdf(random_symbol)
 
-        def compute_integral(integrand, lower_bound, upper_bound, tpr, fpr, random_var):
-            integrand = integrand.subs('F_0', tpr).subs('F_1', fpr).evalf()
-            if not integrand.free_symbols:  # if the integrand is constant
-                if integrand == 0:
+        def compute_integral(integrand, lower_bound, upper_bound, true_positive_rate, false_positive_rate, random_var):
+            integrand = integrand.subs('F_0', true_positive_rate).subs('F_1', false_positive_rate).evalf()
+            if not integrand.free_symbols:  # if the integrand is constant, no need to call quad
+                if integrand == 0:  # need this separate path since sometimes upper or lower bound can be infinite
                     return 0
                 return float(integrand * (upper_bound - lower_bound))
-            integrand_func = lambdify(random_var, integrand)
-            result, _ = quad(integrand_func, lower_bound, upper_bound)
+            integrand_fn = lambdify(random_var, integrand)
+            result, _ = quad(integrand_fn, lower_bound, upper_bound)
             return result
 
         def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
-            y_true = np.asarray(y_true)
-            y_score = np.asarray(y_score)
+            positive_class_prior = float(np.mean(y_true))
+            negative_class_prior = 1 - positive_class_prior
+            true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
 
-            pi0 = float(np.mean(y_true))
-            pi1 = 1 - pi0
-
-            f0, f1 = _compute_convex_hull(y_true, y_score)
-
-            dist_vals = {str(key): kwargs.pop(str(key)) for key in distribution_args if str(key) in kwargs}
+            distribution_parameters = {  # distribution parameters of the random variable
+                str(key): kwargs.pop(str(key)) for key in distribution_args if str(key) in kwargs
+            }
             bounds = []
-            for (tpr0, fpr0), (tpr1, fpr1) in islice(pairwise(zip(f0, f1, strict=False)), len(f0) - 2):
-                bounds.append(compute_bounds(F_0=tpr0, F_1=fpr0, F_2=tpr1, F_3=fpr1, pi_0=pi0, pi_1=pi1, **kwargs))
-            if isinstance(upper_bound := random_var_bounds[1], sympy.Symbol | sympy.Expr):
-                upper_bound = upper_bound.subs(dist_vals)
+            for (tpr0, fpr0), (tpr1, fpr1) in islice(
+                pairwise(zip(true_positive_rates, false_positive_rates, strict=False)), len(true_positive_rates) - 2
+            ):
+                bounds.append(
+                    compute_bounds(
+                        F_0=tpr0,
+                        F_1=fpr0,
+                        F_2=tpr1,
+                        F_3=fpr1,
+                        pi_0=positive_class_prior,
+                        pi_1=negative_class_prior,
+                        **kwargs,
+                    )
+                )
+
+            # bounds of the random variable can be parameterized by the user
+            # if so substitute the parameters in the bounds with the user provided values
+            if isinstance(upper_bound := random_var_bounds[1], sympy.Expr):
+                upper_bound = upper_bound.subs(distribution_parameters)
             bounds.append(upper_bound)
-            if isinstance(lower_bound := random_var_bounds[0], sympy.Symbol | sympy.Expr):
-                lower_bound = lower_bound.subs(dist_vals)
+            if isinstance(lower_bound := random_var_bounds[0], sympy.Expr):
+                lower_bound = lower_bound.subs(distribution_parameters)
             bounds.insert(0, lower_bound)
 
-            integrand_ = integrand.subs(kwargs).subs(dist_vals).subs('pi_0', pi0).subs('pi_1', pi1)
+            integrand_ = (
+                integrand.subs(kwargs)
+                .subs(distribution_parameters)
+                .subs('pi_0', positive_class_prior)
+                .subs('pi_1', negative_class_prior)
+            )
             score = 0
-            for (lower_bound, upper_bound), tpr, fpr in zip(pairwise(bounds), f0, f1, strict=False):
+            for (lower_bound, upper_bound), tpr, fpr in zip(
+                pairwise(bounds), true_positive_rates, false_positive_rates, strict=False
+            ):
                 score += compute_integral(integrand_, lower_bound, upper_bound, tpr, fpr, random_symbol)
             return score
 
         return score_function
 
-    def _build_max_profit(self) -> sympy.Expr:
+    def _build_max_profit_stochastic(self, profit_function, random_symbols):
+        # n_random = len(random_symbols)
+        random_variables_bounds = [pspace(random_symbol).domain.set.args for random_symbol in random_symbols]
+        distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
+        distribution_args = [arg for args in distributions_args for arg in args]
+
+        integrand = profit_function
+        for random_symbol in random_symbols:
+            integrand *= density(random_symbol).pdf(random_symbol)
+
+        def compute_integral(
+            integrand, random_variables_bounds, true_positive_rates, false_positive_rates, random_variables
+        ):
+            if len(random_variables) > 2:
+                raise NotImplementedError('Only zero, one or two random variables are supported')
+
+            integrands = [
+                lambdify(random_variables, integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
+                for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=False)
+            ]
+
+            # print(inspect.getsource(integrands[0]))
+
+            # TODO: check whether this can be vectorized
+            def integrand_fn(*random_vars):
+                # scores = [integrand(*random_vars) for integrand in integrands]
+                # TODO: check if reversed is correct
+                # TODO: check whether it can be passed as kwargs
+                scores = [integrand(*reversed(random_vars)) for integrand in integrands]
+                return max(scores)
+
+            lower_bounds = [bound[0] for bound in random_variables_bounds]
+            upper_bounds = [bound[1] for bound in random_variables_bounds]
+            result, _ = dblquad(integrand_fn, lower_bounds[0], upper_bounds[0], lower_bounds[1], upper_bounds[1])
+            return result
+
+        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
+            positive_class_prior = float(np.mean(y_true))
+            negative_class_prior = 1 - positive_class_prior
+            true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
+
+            distribution_parameters = {  # distribution parameters of the random variable
+                str(key): kwargs.pop(str(key)) for key in distribution_args if str(key) in kwargs
+            }
+
+            integrand_ = (
+                integrand.subs(kwargs)
+                .subs(distribution_parameters)
+                .subs('pi_0', positive_class_prior)
+                .subs('pi_1', negative_class_prior)
+            )
+
+            return compute_integral(
+                integrand_, random_variables_bounds, true_positive_rates, false_positive_rates, random_symbols
+            )
+
+        return score_function
+
+    def _build_profit_function(self) -> sympy.Expr:
         pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
         profit_function = (
             self._tp_benefit * pos_prior * tpr
@@ -578,6 +630,44 @@ class Metric:
             - neg_prior * self.fp_cost * fpr
         )
         return profit_function
+
+    def _build_savings_score(self) -> MetricFn:
+        cost_function = self._build_cost_function()
+        all_zero_function, all_one_function = self._build_naive_cost_functions(cost_function)
+
+        cost_func = lambdify(list(cost_function.free_symbols), cost_function)
+        all_zero_func = lambdify(list(all_zero_function.free_symbols), all_zero_function)
+        all_one_func = lambdify(list(all_one_function.free_symbols), all_one_function)
+
+        def savings(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+            # it is possible that with the substitution of the symbols, the function becomes a constant
+            all_zero_score: float = np.mean(all_zero_func(y=y_true, **kwargs)) if all_zero_function != 0 else 0  # type: ignore[assignment]
+            all_one_score: float = np.mean(all_one_func(y=y_true, **kwargs)) if all_one_function != 0 else 0  # type: ignore[assignment]
+            cost_base = min(all_zero_score, all_one_score)
+            return float(1 - np.mean(cost_func(y=y_true, s=y_score, **kwargs)) / cost_base)
+
+        return savings
+
+    def _build_cost_loss(self) -> MetricFn:
+        cost_function = self._build_cost_function()
+        cost_funct = lambdify(list(cost_function.free_symbols), cost_function)
+
+        def cost_loss(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+            return float(np.mean(cost_funct(y=y_true, s=y_score, **kwargs)))
+
+        return cost_loss
+
+    def _build_cost_function(self) -> sympy.Expr:
+        y, s = sympy.symbols('y s')
+        cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
+            (1 - s) * self.tn_cost + s * self.fp_cost
+        )
+        return cost_function
+
+    def _build_naive_cost_functions(self, cost_function: sympy.Expr) -> tuple[sympy.Expr, sympy.Expr]:
+        all_zero_function = cost_function.subs('s', 0)
+        all_one_function = cost_function.subs('s', 1)
+        return all_zero_function, all_one_function
 
     def __repr__(self) -> str:
         return (
@@ -590,7 +680,7 @@ class Metric:
         from sympy.printing.latex import latex
 
         if self.kind == 'max profit':
-            profit_function = self._build_max_profit()
+            profit_function = self._build_profit_function()
             random_symbols = [symbol for symbol in profit_function.free_symbols if is_random(symbol)]
 
             if random_symbols:
