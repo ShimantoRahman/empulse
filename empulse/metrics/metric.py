@@ -692,35 +692,36 @@ class Metric:
                     lower_bound, upper_bound = pspace(random_symbol).domain.set.args[:2]
                     integral = sympy.Integral(integral, (random_symbol, lower_bound, upper_bound))
 
-                s = latex(integral, mode='plain', order=None)
+                output = latex(integral, mode='plain', order=None)
             else:
-                s = latex(profit_function, mode='plain', order=None)
+                output = latex(profit_function, mode='plain', order=None)
 
-            s = s.replace('F_{0}', 'F_{0}(T)').replace('F_{1}', 'F_{1}(T)')
-            return f'$\\displaystyle {s}$'
+            output = output.replace('F_{0}', 'F_{0}(T)').replace('F_{1}', 'F_{1}(T)')
         elif self.kind == 'cost':
-            y, s, i, N = sympy.symbols('y s i N')  # noqa: N806
-            cost_function = (1 / N) * sympy.Sum(
-                y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
-                (i, 0, N),
-            )
+            i, N = sympy.symbols('i N')  # noqa: N806
+            cost_function = (1 / N) * sympy.Sum(self._format_cost_function(), (i, 0, N))
 
             for symbol in cost_function.free_symbols:
                 if symbol != N:
                     cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
-            s = latex(cost_function, mode='plain', order=None)
-            return f'$\\displaystyle {s}$'
+            output = latex(cost_function, mode='plain', order=None)
         elif self.kind == 'savings':
-            y, s, i, N, c0, c1 = sympy.symbols('y s i N Cost_{0} Cost_{1}')  # noqa: N806
-            cost_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
-                y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * ((1 - s) * self.tn_cost + s * self.fp_cost),
-                (i, 0, N),
-            )
+            i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # noqa: N806
+            savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(self._format_cost_function(), (i, 0, N))
 
-            for symbol in cost_function.free_symbols:
+            for symbol in savings_function.free_symbols:
                 if symbol not in {N, c0, c1}:
-                    cost_function = cost_function.subs(symbol, str(symbol) + '_i')
+                    savings_function = savings_function.subs(symbol, str(symbol) + '_i')
 
-            s = latex(cost_function, mode='plain', order=None)
-            return f'$\\displaystyle {s}$'
+            output = latex(savings_function, mode='plain', order=None)
+        else:
+            return repr(self)
+        return f'$\\displaystyle {output}$'
+
+    def _format_cost_function(self):
+        y, s = sympy.symbols('y s')
+        cost_function = y * (s * self.tp_cost + (1 - s) * self.fn_cost) + (1 - y) * (
+            (1 - s) * self.tn_cost + s * self.fp_cost
+        )
+        return cost_function
