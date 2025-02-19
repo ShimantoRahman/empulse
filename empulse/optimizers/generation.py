@@ -154,9 +154,9 @@ class Generation:
         self.fx_best: list = []
         self.fitness: NDArray[np.float64] = np.empty(0)
         self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)
-        self.lower_bounds: float | None = None
-        self.upper_bounds: float | None = None
-        self.delta_bounds: float | None = None
+        self.lower_bounds: NDArray | None = None
+        self.upper_bounds: NDArray | None = None
+        self.delta_bounds: NDArray | None = None
         self.n_dim: int | None = None
 
     def optimize(self, objective: Callable, bounds: list[tuple[float, float]]) -> Generator['Generation', None, None]:
@@ -184,8 +184,8 @@ class Generation:
         ):
             raise ValueError('`bounds` must be a sequence of tuples of two numbers (lower_bound, upper_bound).')
         array_bounds: NDArray[np.float64] = np.asarray(bounds, dtype=np.float64).T
-        self.lower_bounds = float(array_bounds[0])
-        self.upper_bounds = float(array_bounds[1])
+        self.lower_bounds = array_bounds[0]
+        self.upper_bounds = array_bounds[1]
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
