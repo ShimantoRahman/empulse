@@ -4,29 +4,19 @@ from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy import ndarray
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 
 if TYPE_CHECKING:
     try:
+        from lightgbm import Dataset
         from xgboost import DMatrix
-    except ImportError:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=np.ndarray)
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
-    else:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
-else:
-    Matrix = TypeVar('Matrix', bound=np.ndarray)
 
+        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
+    except ImportError:
+        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
+else:
+    Matrix = TypeVar('Matrix', bound=NDArray)
 
 from empulse.metrics.acquisition._validation import _validate_input_deterministic
 
@@ -128,7 +118,7 @@ def make_objective_acquisition(
         Annals of Operations Research, 1-27.
     """
     if model == 'xgboost':
-        objective = partial(
+        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
             _objective,
             contribution=contribution,
             contact_cost=contact_cost,

@@ -3,7 +3,7 @@
 
 - ...
 
-`0.6.0`_ (05-02-2025)
+`0.7.0`_ (05-02-2025)
 =====================
 
 - |MajorFeature| Add :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`,

@@ -26,6 +26,9 @@ lint:
 	ruff check --fix
 	ruff format
 
+typecheck:
+	mypy empulse
+
 pre-commit:
 	pre-commit run --all-files
 

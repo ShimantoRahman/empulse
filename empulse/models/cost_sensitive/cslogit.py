@@ -13,7 +13,7 @@ from sklearn.utils._param_validation import StrOptions
 
 from ..._common import Parameter
 from ...metrics import make_objective_aec
-from .._base import BaseLogitClassifier
+from .._base import BaseLogitClassifier, OptimizeFn
 from ._cs_mixin import CostSensitiveMixin
 
 Loss = Literal['average expected cost']
@@ -344,9 +344,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 fit_intercept=self.fit_intercept,
             )
 
-            optimize_fn = _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
+            optimize_fn: OptimizeFn = _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
             self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
-        elif isinstance(self.loss, Callable):
+        elif self.loss is not None and not isinstance(self.loss, str):
             objective = partial(
                 _objective_callable,
                 X=X,

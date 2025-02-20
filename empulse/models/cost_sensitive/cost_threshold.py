@@ -13,7 +13,7 @@ from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, proces
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
-from ...utils._sklearn_compat import validate_data
+from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -250,7 +250,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict'
         )
 
-        estimator = getattr(self, 'estimator_', self.estimator)
+        estimator: Any = getattr(self, 'estimator_', self.estimator)
 
         y_score = estimator.predict_proba(X)[:, 1]
 

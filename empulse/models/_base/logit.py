@@ -1,16 +1,39 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from numbers import Real
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Protocol
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
+from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
 
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+
+
+class OptimizeFnKwargs(Protocol):
+    def __call__(self, objective: Callable, X: NDArray, **kwargs: Any) -> OptimizeResult: ...
+
+
+class OptimizeFnNoKwargs(Protocol):
+    def __call__(self, objective: Callable, X: NDArray) -> OptimizeResult: ...
+
+
+OptimizeFn = OptimizeFnKwargs | OptimizeFnNoKwargs | Callable
+
+
+class LossFnKwargs(Protocol):
+    def __call__(self, y_true: NDArray, y_proba: NDArray, **kwargs: Any) -> float: ...
+
+
+class LossFnNoKwargs(Protocol):
+    def __call__(self, y_true: NDArray, y_proba: NDArray) -> float: ...
+
+
+LossFn = LossFnKwargs | LossFnNoKwargs
 
 
 class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):

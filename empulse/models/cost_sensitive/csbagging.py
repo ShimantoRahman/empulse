@@ -15,7 +15,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ...metrics import savings_score
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 from .cslogit import CSLogitClassifier
 from .cstree import CSTreeClassifier
@@ -169,7 +169,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         n_estimators: int = 10,
         estimator_params: tuple = tuple(),  # noqa: C408
         max_samples: int | float | None = None,
-        max_features: int | float | None = None,
+        max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
         bootstrap: bool = True,
         bootstrap_features: bool = False,
         combination: str = 'majority_voting',
@@ -551,7 +551,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         combination: Literal['majority_voting', 'weighted_voting', 'stacking', 'stacking_proba'] = 'majority_voting',
         n_jobs: int = 1,
         random_state: int | np.random.RandomState | None = None,
-        verbose: bool = 0,
+        verbose: bool | int = 0,
     ):
         super().__init__(
             estimator=estimator,

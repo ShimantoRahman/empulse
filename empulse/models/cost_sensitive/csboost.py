@@ -300,7 +300,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif isinstance(self.estimator, CatBoostClassifier):
-            objective, metric = make_objective_aec(
+            objective, metric = make_objective_aec(  # type: ignore[assignment]
                 'catboost',
                 tp_cost=tp_cost,
                 tn_cost=tn_cost,

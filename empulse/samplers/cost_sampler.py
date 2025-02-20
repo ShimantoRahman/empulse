@@ -8,7 +8,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
-from ..utils._sklearn_compat import ClassifierTags
+from ..utils._sklearn_compat import ClassifierTags  # type: ignore
 
 
 class CostSensitiveSampler(BaseSampler):
@@ -185,8 +185,8 @@ class CostSensitiveSampler(BaseSampler):
             fn_cost = self.fn_cost
 
         if (
-            all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
-            and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0
+            all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))  # type: ignore
+            and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore
         ):
             warnings.warn(
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '

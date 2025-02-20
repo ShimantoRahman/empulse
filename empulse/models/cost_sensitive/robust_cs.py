@@ -10,7 +10,7 @@ from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 
 from ..._common import Parameter
-from ...utils._sklearn_compat import _estimator_has
+from ...utils._sklearn_compat import _estimator_has  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -252,7 +252,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         **fit_params: Any,
-    ) -> 'RobustCSLogitClassifier':  # noqa: F821
+    ) -> 'RobustCSClassifier':
         """
         Fit the estimator with the adjusted costs.
 
@@ -290,7 +290,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
 
-        self.costs_ = {
+        self.costs_: dict[CostStr, int | float | np.ndarray] = {
             'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
             'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
             'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
@@ -309,7 +309,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                             f"Cost '{self.detect_outliers_for}' is not an array or has a standard deviation of 0."
                             ' Cannot detect outliers for this cost.'
                         )
-                    should_fit = [self.detect_outliers_for]
+                    should_fit = [self.detect_outliers_for]  # type: ignore[list-item]
                 else:
                     raise ValueError(
                         f"Invalid cost name '{self.detect_outliers_for}' in detect_outliers_for."
@@ -336,6 +336,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         for cost_name in self.costs_:
             if cost_name in should_fit:
                 target = self.costs_[cost_name]
+                if not isinstance(target, np.ndarray):
+                    raise ValueError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
                 if cost_name in {'tp_cost', 'fn_cost'}:
                     X_relevant, target_relevant = X[y > 0], target[y > 0]
                 else:

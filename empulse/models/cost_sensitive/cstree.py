@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ...metrics import cost_loss
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 

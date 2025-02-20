@@ -12,7 +12,7 @@ try:
 except ImportError:
     LGBMClassifier = None
 
-from ...utils._sklearn_compat import type_of_target, validate_data
+from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, ABC):

@@ -1,5 +1,6 @@
 import warnings
 from numbers import Real
+from typing import Literal, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -8,6 +9,42 @@ from ..._common import Parameter
 
 
 class CostSensitiveMixin:
+    @overload
+    def _check_costs(
+        self,
+        *,
+        tp_cost: ArrayLike | float | Parameter,
+        tn_cost: ArrayLike | float | Parameter,
+        fn_cost: ArrayLike | float | Parameter,
+        fp_cost: ArrayLike | float | Parameter,
+        caller: str = 'fit',
+        force_array: Literal[True] = True,
+        n_samples: int,
+    ) -> tuple[
+        NDArray,
+        NDArray,
+        NDArray,
+        NDArray,
+    ]: ...
+
+    @overload
+    def _check_costs(
+        self,
+        *,
+        tp_cost: ArrayLike | float | Parameter,
+        tn_cost: ArrayLike | float | Parameter,
+        fn_cost: ArrayLike | float | Parameter,
+        fp_cost: ArrayLike | float | Parameter,
+        caller: str = 'fit',
+        force_array: Literal[False] = False,
+        n_samples: int | None = None,
+    ) -> tuple[
+        NDArray | float,
+        NDArray | float,
+        NDArray | float,
+        NDArray | float,
+    ]: ...
+
     def _check_costs(
         self,
         *,
@@ -31,13 +68,13 @@ class CostSensitiveMixin:
         Overwrite costs set in constructor if they are set in the fit/predict method.
         """
         if tp_cost is Parameter.UNCHANGED:
-            tp_cost = self.tp_cost
+            tp_cost = self.tp_cost  # type: ignore[attr-defined]
         if tn_cost is Parameter.UNCHANGED:
-            tn_cost = self.tn_cost
+            tn_cost = self.tn_cost  # type: ignore[attr-defined]
         if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost
+            fn_cost = self.fn_cost  # type: ignore[attr-defined]
         if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost
+            fp_cost = self.fp_cost  # type: ignore[attr-defined]
 
         if (
             all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost))
@@ -53,6 +90,8 @@ class CostSensitiveMixin:
             fn_cost = 1
 
         if force_array:
+            if n_samples is None:
+                raise ValueError('n_samples should be set when force_array is True.')
             tp_cost = np.asarray(tp_cost) if not isinstance(tp_cost, Real) else np.full(n_samples, tp_cost)
             tn_cost = np.asarray(tn_cost) if not isinstance(tn_cost, Real) else np.full(n_samples, tn_cost)
             fn_cost = np.asarray(fn_cost) if not isinstance(fn_cost, Real) else np.full(n_samples, fn_cost)

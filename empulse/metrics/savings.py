@@ -9,23 +9,14 @@ from scipy.special import expit
 
 if TYPE_CHECKING:
     try:
+        from lightgbm import Dataset
         from xgboost import DMatrix
+
+        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
     except ImportError:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=np.ndarray)
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, Dataset))
-    else:
-        try:
-            from lightgbm import Dataset
-        except ImportError:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix))
-        else:
-            Matrix = TypeVar('Matrix', bound=(np.ndarray, DMatrix, Dataset))
+        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
 else:
-    Matrix = TypeVar('Matrix', bound=np.ndarray)
+    Matrix = TypeVar('Matrix', bound=NDArray)
 
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
@@ -826,7 +817,7 @@ def expected_savings_score(
 
     # avoid division by zero
     if cost_base == 0.0:
-        cost_base = np.finfo(float).eps
+        cost_base = float(np.finfo(float).eps)
 
     cost = expected_cost_loss(
         y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
@@ -925,7 +916,9 @@ def make_objective_aec(
            European Journal of Operational Research, 297(1), 291-300.
     """
     if model == 'xgboost':
-        objective = partial(_objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
+            _objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+        )
         update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
 
@@ -957,7 +950,7 @@ def make_objective_aec(
             AECMetric(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost),
         )
     elif model == 'cslogit':
-        objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        objective = partial(_objective_cslogit, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[assignment]
         update_wrapper(objective, _objective_cslogit)
     else:
         raise ValueError(
