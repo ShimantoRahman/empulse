@@ -16,18 +16,25 @@ def y_true_and_prediction():
     return y, y_proba
 
 
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
 @pytest.mark.parametrize(
     'customer_lifetime_value, incentive_cost, contact_cost, gamma_alpha, gamma_beta',
     [(100, 10, 1, 6, 14), (200, 20, 2, 8, 16), (150, 15, 1.5, 10, 20)],
 )
 def test_metric_vs_empc_score(
-    customer_lifetime_value, incentive_cost, contact_cost, gamma_alpha, gamma_beta, y_true_and_prediction
+    customer_lifetime_value,
+    incentive_cost,
+    contact_cost,
+    gamma_alpha,
+    gamma_beta,
+    y_true_and_prediction,
+    integration_method,
 ):
     y, y_proba = y_true_and_prediction
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Beta('gamma', alpha, beta)
     profit_func = (
-        Metric('max profit')
+        Metric('max profit', integration_method=integration_method, random_state=12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -46,7 +53,12 @@ def test_metric_vs_empc_score(
         beta=gamma_beta,
         alpha=gamma_alpha,
     )
-    assert pytest.approx(metric_result) == empc_result
+    if integration_method == 'monte-carlo':  # Monte Carlo methods have higher variance
+        assert pytest.approx(metric_result, rel=1e-2) == empc_result
+    elif integration_method == 'quasi-monte-carlo':  # Quasi-Monte Carlo methods have lower variance
+        assert pytest.approx(metric_result, rel=1e-4) == empc_result
+    else:
+        assert pytest.approx(metric_result) == empc_result
 
 
 @pytest.mark.parametrize(
@@ -176,13 +188,14 @@ def test_metric_arraylikes(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
-def test_metric_uniform_dist(y_true_and_prediction):
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+def test_metric_uniform_dist(y_true_and_prediction, integration_method):
     customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
     y, y_proba = y_true_and_prediction
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Uniform('gamma', alpha, beta)
     profit_func = (
-        Metric('max profit')
+        Metric('max profit', integration_method=integration_method, random_state=12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -192,16 +205,20 @@ def test_metric_uniform_dist(y_true_and_prediction):
     metric_result = profit_func(
         y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, beta=1, alpha=0
     )
-    assert pytest.approx(metric_result) == 21.14892314814815
+    if integration_method == 'monte-carlo':
+        assert pytest.approx(metric_result, rel=1e-2) == 21.14892314814815
+    else:
+        assert pytest.approx(metric_result) == 21.14892314814815
 
 
-def test_metric_uniform_dist_no_params(y_true_and_prediction):
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+def test_metric_uniform_dist_no_params(y_true_and_prediction, integration_method):
     customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
     y, y_proba = y_true_and_prediction
     clv, d, f = sympy.symbols('clv d f')
     gamma = Uniform('gamma', 0, 1)
     profit_func = (
-        Metric('max profit')
+        Metric('max profit', integration_method=integration_method, random_state=12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -209,16 +226,20 @@ def test_metric_uniform_dist_no_params(y_true_and_prediction):
     )
 
     metric_result = profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost)
-    assert pytest.approx(metric_result) == 21.14892314814815
+    if integration_method == 'monte-carlo':
+        assert pytest.approx(metric_result, rel=1e-2) == 21.14892314814815
+    else:
+        assert pytest.approx(metric_result) == 21.14892314814815
 
 
-def test_metric_normal_dist(y_true_and_prediction):
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+def test_metric_normal_dist(y_true_and_prediction, integration_method):
     accept_rate, incentive_cost, contact_cost = 0.3, 10, 1
     y, y_proba = y_true_and_prediction
     gamma, d, f, mu, sigma = sympy.symbols('gamma d f mu sigma')
     clv = Normal('clv', mu, sigma)
     profit_func = (
-        Metric('max profit')
+        Metric('max profit', integration_method=integration_method, random_state=12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -226,7 +247,10 @@ def test_metric_normal_dist(y_true_and_prediction):
     )
 
     metric_result = profit_func(y, y_proba, gamma=accept_rate, d=incentive_cost, f=contact_cost, mu=100, sigma=10)
-    assert pytest.approx(metric_result) == 12.150199167337625
+    if integration_method == 'monte-carlo':
+        assert pytest.approx(metric_result, rel=1e-2) == 12.150199167337625
+    else:
+        assert pytest.approx(metric_result) == 12.150199167337625
 
 
 def test_metric_alias(y_true_and_prediction):
