@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from itertools import islice, pairwise
 from numbers import Real
 from typing import Any, ClassVar, Final, Literal, Protocol
@@ -5,7 +6,6 @@ from typing import Any, ClassVar, Final, Literal, Protocol
 import numpy as np
 import scipy
 import sympy
-from jedi.inference.gradual.typing import Callable
 from numpy.typing import ArrayLike, NDArray
 from scipy.integrate import dblquad, nquad, quad, tplquad
 from scipy.stats._qmc import Sobol
@@ -546,7 +546,7 @@ class Metric:
         if self.kind == 'max profit':
             self.profit_function = self._build_profit_function()
             if n_random == 0:
-                self._score_function = self._build_max_profit_deterministic(self.profit_function)
+                self._score_function = self._build_max_profit_deterministic(self.profit_function, deterministic_symbols)
             else:
                 self._score_function = self._build_max_profit_stochastic(
                     self.profit_function, random_symbols, deterministic_symbols
@@ -560,10 +560,11 @@ class Metric:
             raise NotImplementedError(f'Kind {self.kind} is not supported')
         return self
 
-    def _build_max_profit_deterministic(self, profit_function):
+    def _build_max_profit_deterministic(self, profit_function, deterministic_symbols):
         """Compute the maximum profit for all deterministic variables."""
         calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
+        @_check_parameters(*deterministic_symbols)
         def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             pi0 = float(np.mean(y_true))
             pi1 = 1 - pi0
@@ -585,23 +586,25 @@ class Metric:
         n_random = len(random_symbols)
         if self.integration_method == 'auto':
             if n_random == 1:
-                return self._build_max_profit_stochastic_piecewise(self.profit_function, random_symbols[0])
+                return self._build_max_profit_stochastic_piecewise(
+                    self.profit_function, random_symbols[0], deterministic_symbols
+                )
             elif n_random == 2:
-                return self._build_max_profit_stochastic_quad(profit_function, random_symbols)
+                return self._build_max_profit_stochastic_quad(profit_function, random_symbols, deterministic_symbols)
             elif self._support_all_distributions(random_symbols):
                 return self._build_max_profit_stochastic_qmc(profit_function, random_symbols, deterministic_symbols)
             else:
-                return self._build_max_profit_stochastic_mc(profit_function, random_symbols)
+                return self._build_max_profit_stochastic_mc(profit_function, random_symbols, deterministic_symbols)
         elif self.integration_method == 'quad':
-            return self._build_max_profit_stochastic_quad(profit_function, random_symbols)
+            return self._build_max_profit_stochastic_quad(profit_function, random_symbols, deterministic_symbols)
         elif self.integration_method == 'monte-carlo':
-            return self._build_max_profit_stochastic_mc(profit_function, random_symbols)
+            return self._build_max_profit_stochastic_mc(profit_function, random_symbols, deterministic_symbols)
         elif self.integration_method == 'quasi-monte-carlo':
             return self._build_max_profit_stochastic_qmc(profit_function, random_symbols, deterministic_symbols)
         else:
             raise ValueError(f'Integration method {self.integration_method} is not supported')
 
-    def _build_max_profit_stochastic_piecewise(self, profit_function, random_symbol):
+    def _build_max_profit_stochastic_piecewise(self, profit_function, random_symbol, deterministic_symbols):
         """
         Compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -618,6 +621,11 @@ class Metric:
 
         integrand = profit_function * density(random_symbol).pdf(random_symbol)
 
+        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in distribution_args):
+            dist_params = []
+        else:
+            dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
+
         def compute_integral(integrand, lower_bound, upper_bound, true_positive_rate, false_positive_rate, random_var):
             integrand = integrand.subs('F_0', true_positive_rate).subs('F_1', false_positive_rate).evalf()
             if not integrand.free_symbols:  # if the integrand is constant, no need to call quad
@@ -628,7 +636,8 @@ class Metric:
             result, _ = quad(integrand_fn, lower_bound, upper_bound)
             return result
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
+        @_check_parameters(*deterministic_symbols, *dist_params)
+        def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             positive_class_prior = float(np.mean(y_true))
             negative_class_prior = 1 - positive_class_prior
             true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -676,7 +685,7 @@ class Metric:
 
         return score_function
 
-    def _build_max_profit_stochastic_quad(self, profit_function, random_symbols):
+    def _build_max_profit_stochastic_quad(self, profit_function, random_symbols, deterministic_symbols):
         """
         Compute the maximum profit for one or more stochastic variables using quad integration.
 
@@ -692,6 +701,11 @@ class Metric:
         integrand = profit_function
         for random_symbol in random_symbols:
             integrand *= density(random_symbol).pdf(random_symbol)
+
+        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in distribution_args):
+            dist_params = []
+        else:
+            dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
         def compute_integral(integrand, bounds, true_positive_rates, false_positive_rates, random_variables):
             integrands = [
@@ -712,7 +726,8 @@ class Metric:
                 result, _ = nquad(integrand_fn, *bounds)
             return result
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
+        @_check_parameters(*deterministic_symbols, *dist_params)
+        def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             positive_class_prior = float(np.mean(y_true))
             negative_class_prior = 1 - positive_class_prior
             true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -737,7 +752,7 @@ class Metric:
 
         return score_function
 
-    def _build_max_profit_stochastic_mc(self, profit_function, random_symbols):
+    def _build_max_profit_stochastic_mc(self, profit_function, random_symbols, deterministic_symbols):
         """
         Compute the maximum profit for one or more stochastic variables using Monte Carlo (MC) integration.
 
@@ -753,12 +768,15 @@ class Metric:
                 sympy.stats.sample(random_var, size=(self.n_mc_samples,), seed=self._rng)
                 for random_var in random_symbols
             ]
+            dist_params = []
         else:
             cached_dist_params = {str(arg): arg for arg in distribution_args}
             param_grid_needs_recompute = True
             param_grid = None
+            dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
+        @_check_parameters(*deterministic_symbols, *dist_params)
+        def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             positive_class_prior = float(np.mean(y_true))
             negative_class_prior = 1 - positive_class_prior
             true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -820,7 +838,7 @@ class Metric:
                 for random_var in random_symbols
             ]
             param_grid = [dist.ppf(sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
-            dist_params = None
+            dist_params = []
 
         else:
             cached_dist_params = {str(arg): arg for arg in distribution_args}
@@ -829,10 +847,8 @@ class Metric:
             param_grid = None
             dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-        params_to_check = dist_params + deterministic_symbols if dist_params is not None else deterministic_symbols
-
-        @_check_parameters(*params_to_check)
-        def score_function(y_true: ArrayLike, y_score: ArrayLike, **kwargs: Any) -> float:
+        @_check_parameters(*deterministic_symbols, *dist_params)
+        def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             positive_class_prior = float(np.mean(y_true))
             negative_class_prior = 1 - positive_class_prior
             true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -986,7 +1002,7 @@ class Metric:
         return cost_function
 
 
-def _check_parameters(*parameters: str | sympy.Expr) -> Callable:
+def _check_parameters(*parameters: str | sympy.Expr) -> Callable[[MetricFn], MetricFn]:
     """
     Check if all parameters are provided.
 
@@ -996,7 +1012,7 @@ def _check_parameters(*parameters: str | sympy.Expr) -> Callable:
     """
 
     def decorator(func: MetricFn) -> MetricFn:
-        def wrapper(y_true, y_score, **kwargs):
+        def wrapper(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
             for value in parameters:
                 if str(value) not in kwargs:
                     raise ValueError(f'Metric expected a value for {value}, did not receive it.')

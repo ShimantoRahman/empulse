@@ -309,3 +309,49 @@ def test_metric_set_default(y_true_and_prediction):
         normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
+
+
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+def test_missing_arguments(y_true_and_prediction, integration_method):
+    customer_lifetime_value, incentive_fraction, contact_cost = 100, 0.05, 1
+    y, y_proba = y_true_and_prediction
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = Uniform('gamma', alpha, beta)
+    profit_func = (
+        Metric('max profit', integration_method=integration_method, random_state=12)
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+    with pytest.raises(ValueError, match='Metric expected a value for clv, did not receive it.'):
+        profit_func(y, y_proba, d=incentive_fraction, f=contact_cost, alpha=6, beta=14)
+    with pytest.raises(ValueError, match='Metric expected a value for d, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, f=contact_cost, alpha=6, beta=14)
+    with pytest.raises(ValueError, match='Metric expected a value for f, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, alpha=6, beta=14)
+    with pytest.raises(ValueError, match='Metric expected a value for alpha, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, beta=14)
+    with pytest.raises(ValueError, match='Metric expected a value for beta, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, alpha=6)
+
+
+def test_missing_arguments_deterministic(y_true_and_prediction):
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    y, y_proba = y_true_and_prediction
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+    profit_func = (
+        Metric('max profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+    with pytest.raises(ValueError, match='Metric expected a value for clv, did not receive it.'):
+        profit_func(y, y_proba, d=incentive_fraction, f=contact_cost, gamma=accept_rate)
+    with pytest.raises(ValueError, match='Metric expected a value for d, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, f=contact_cost, gamma=accept_rate)
+    with pytest.raises(ValueError, match='Metric expected a value for f, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, gamma=accept_rate)
+    with pytest.raises(ValueError, match='Metric expected a value for gamma, did not receive it.'):
+        profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost)
