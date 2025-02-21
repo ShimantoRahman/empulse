@@ -115,8 +115,8 @@ def _build_max_profit_deterministic(profit_function, deterministic_symbols):
     return score_function
 
 
-def _support_all_distributions(self, random_symbols):
-    return all(pspace(r).distribution.__class__ in self._sympy_dist_to_scipy for r in random_symbols)
+def _support_all_distributions(random_symbols):
+    return all(pspace(r).distribution.__class__ in _sympy_dist_to_scipy for r in random_symbols)
 
 
 def _build_max_profit_stochastic(
