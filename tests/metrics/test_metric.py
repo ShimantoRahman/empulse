@@ -16,7 +16,7 @@ def y_true_and_prediction():
     return y, y_proba
 
 
-@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
 @pytest.mark.parametrize(
     'customer_lifetime_value, incentive_cost, contact_cost, gamma_alpha, gamma_beta',
     [(100, 10, 1, 6, 14), (200, 20, 2, 8, 16), (150, 15, 1.5, 10, 20)],
@@ -188,7 +188,7 @@ def test_metric_arraylikes(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
-@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
 def test_metric_uniform_dist(y_true_and_prediction, integration_method):
     customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
     y, y_proba = y_true_and_prediction
@@ -211,7 +211,7 @@ def test_metric_uniform_dist(y_true_and_prediction, integration_method):
         assert pytest.approx(metric_result) == 21.14892314814815
 
 
-@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
 def test_metric_uniform_dist_no_params(y_true_and_prediction, integration_method):
     customer_lifetime_value, incentive_cost, contact_cost = 100, 10, 1
     y, y_proba = y_true_and_prediction
@@ -232,7 +232,7 @@ def test_metric_uniform_dist_no_params(y_true_and_prediction, integration_method
         assert pytest.approx(metric_result) == 21.14892314814815
 
 
-@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
 def test_metric_normal_dist(y_true_and_prediction, integration_method):
     accept_rate, incentive_cost, contact_cost = 0.3, 10, 1
     y, y_proba = y_true_and_prediction
@@ -311,7 +311,7 @@ def test_metric_set_default(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
-@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
 def test_missing_arguments(y_true_and_prediction, integration_method):
     customer_lifetime_value, incentive_fraction, contact_cost = 100, 0.05, 1
     y, y_proba = y_true_and_prediction
@@ -336,7 +336,7 @@ def test_missing_arguments(y_true_and_prediction, integration_method):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, alpha=6)
 
 
-@pytest.mark.parametrize('kind', ['max profit', 'cost', 'savings'])
+@pytest.mark.parametrize('kind', Metric.METRIC_TYPES)
 def test_missing_arguments_deterministic(y_true_and_prediction, kind):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
