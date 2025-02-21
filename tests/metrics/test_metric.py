@@ -357,6 +357,24 @@ def test_missing_arguments_deterministic(y_true_and_prediction):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost)
 
 
+def test_random_var_cost_loss():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = Uniform('gamma', alpha, beta)
+    cost_func = Metric('cost').add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
+    with pytest.raises(NotImplementedError, match='Random variables are not supported for the cost metric.'):
+        cost_func.build()
+
+
+def test_random_var_savings_score():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = Uniform('gamma', alpha, beta)
+    savings_func = (
+        Metric('savings').add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
+    )
+    with pytest.raises(NotImplementedError, match='Random variables are not supported for the savings metric.'):
+        savings_func.build()
+
+
 # # Extract sympy distributions from _sympy_dist_to_scipy
 # sympy_distributions = list(Metric._sympy_dist_to_scipy.keys())
 #
