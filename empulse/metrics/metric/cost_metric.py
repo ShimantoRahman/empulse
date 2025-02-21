@@ -60,9 +60,3 @@ def _format_cost_function(
     y, s = sympy.symbols('y s')
     cost_function = y * (s * tp_cost + (1 - s) * fn_cost) + (1 - y) * ((1 - s) * tn_cost + s * fp_cost)
     return cost_function
-
-
-def _cost_loss_to_str(
-    name: str, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> str:
-    return f'{name}(tp_cost={-tp_benefit}, tn_cost={-tn_benefit}, fp_cost={fp_cost}, fn_cost={fn_cost})'
