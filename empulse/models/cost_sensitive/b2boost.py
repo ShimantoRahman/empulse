@@ -1,6 +1,6 @@
 import warnings
 from numbers import Real
-from typing import ClassVar, override
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -239,7 +239,6 @@ class B2BoostClassifier(BaseBoostClassifier):
             contact_cost=contact_cost,
         )
 
-    @override
     def _fit(  # type: ignore[override]
         self,
         X: np.ndarray,
