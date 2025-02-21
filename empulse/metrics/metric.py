@@ -73,13 +73,35 @@ class Metric:
           The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions
           present in :mod:`sympy:sympy.stats`:
 
-            - :class:`sympy:sympy.stats.Normal`
-            - :class:`sympy:sympy.stats.Beta`
-            - :class:`~sympy:sympy.stats.ChiSquared`
-            - :class:`~sympy:sympy.stats.Exponential`
-            - :class:`~sympy:sympy.stats.Gamma`
-            - :class:`~sympy:sympy.stats.Laplace`
-            - :class:`~sympy:sympy.stats.LogNormal`
+            - :class:`sympy.stats.Arcsin`
+            - :class:`sympy.stats.Beta`
+            - :class:`sympy.stats.BetaPrime`
+            - :class:`sympy.stats.Chi`
+            - :class:`sympy.stats.ChiSquared`
+            - :class:`sympy.stats.Erlang`
+            - :class:`sympy.stats.Exponential`
+            - :class:`sympy.stats.ExGaussian`
+            - :class:`sympy.stats.F`
+            - :class:`sympy.stats.Gamma`
+            - :class:`sympy.stats.GammaInverse`
+            - :class:`sympy.stats.GaussianInverse`
+            - :class:`sympy.stats.Gompertz`
+            - :class:`sympy.stats.Laplace`
+            - :class:`sympy.stats.Levy`
+            - :class:`sympy.stats.Logistic`
+            - :class:`sympy.stats.LogNormal`
+            - :class:`sympy.stats.Lomax`
+            - :class:`sympy.stats.Normal`
+            - :class:`sympy.stats.Maxwell`
+            - :class:`sympy.stats.Moyal`
+            - :class:`sympy.stats.Nakagami`
+            - :class:`sympy.stats.Pareto`
+            - :class:`sympy.stats.PowerFunction`
+            - :class:`sympy.stats.StudentT`
+            - :class:`sympy.stats.Trapezoidal`
+            - :class:`sympy.stats.Triangular`
+            - :class:`sympy.stats.Uniform`
+            - :class:`sympy.stats.VonMises`
 
     n_mc_samples_exp : int, default=16 (-> 2**16 = 65536)
         ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
@@ -181,16 +203,36 @@ class Metric:
             scipy.stats.rv_continuous | scipy.stats.rv_discrete,
         ]
     ] = {
-        sympy.stats.crv_types.NormalDistribution: scipy.stats.norm,
+        sympy.stats.crv_types.ArcsinDistribution: scipy.stats.arcsine,
         sympy.stats.crv_types.BetaDistribution: scipy.stats.beta,
-        # sympy.stats.drv_types.NegativeBinomialDistribution: scipy.stats.binom,
+        sympy.stats.crv_types.BetaPrimeDistribution: scipy.stats.betaprime,
+        sympy.stats.crv_types.ChiDistribution: scipy.stats.chi,
         sympy.stats.crv_types.ChiSquaredDistribution: scipy.stats.chi2,
+        # sympy.stats.crv_types.Erlang: scipy.stats.chi2
+        # Erlang internally calls GammaDistribution so should be supported
+        sympy.stats.crv_types.ExGaussianDistribution: scipy.stats.exponnorm,
         sympy.stats.crv_types.ExponentialDistribution: scipy.stats.expon,
+        sympy.stats.crv_types.FDistribution: scipy.stats.f,
         sympy.stats.crv_types.GammaDistribution: scipy.stats.gamma,
+        sympy.stats.crv_types.GammaInverseDistribution: scipy.stats.invgamma,
+        sympy.stats.crv_types.GompertzDistribution: scipy.stats.gompertz,
         sympy.stats.crv_types.LaplaceDistribution: scipy.stats.laplace,
+        sympy.stats.crv_types.LevyDistribution: scipy.stats.levy,
+        sympy.stats.crv_types.LogisticDistribution: scipy.stats.logistic,
         sympy.stats.crv_types.LogNormalDistribution: scipy.stats.lognorm,
-        sympy.stats.drv_types.PoissonDistribution: scipy.stats.poisson,
+        sympy.stats.crv_types.LomaxDistribution: scipy.stats.lomax,
+        sympy.stats.crv_types.MaxwellDistribution: scipy.stats.maxwell,
+        sympy.stats.crv_types.MoyalDistribution: scipy.stats.moyal,
+        sympy.stats.crv_types.NakagamiDistribution: scipy.stats.nakagami,
+        sympy.stats.crv_types.NormalDistribution: scipy.stats.norm,
+        sympy.stats.crv_types.ParetoDistribution: scipy.stats.pareto,
+        sympy.stats.crv_types.PowerFunctionDistribution: scipy.stats.powerlaw,
+        sympy.stats.crv_types.StudentTDistribution: scipy.stats.t,
+        sympy.stats.crv_types.TrapezoidalDistribution: scipy.stats.trapezoid,
+        sympy.stats.crv_types.TriangularDistribution: scipy.stats.triang,
         sympy.stats.crv_types.UniformDistribution: scipy.stats.uniform,
+        sympy.stats.crv_types.VonMisesDistribution: scipy.stats.vonmises,
+        sympy.stats.crv_types.GaussianInverseDistribution: scipy.stats.wald,
     }
 
     def __init__(

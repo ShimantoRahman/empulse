@@ -355,3 +355,27 @@ def test_missing_arguments_deterministic(y_true_and_prediction):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, gamma=accept_rate)
     with pytest.raises(ValueError, match='Metric expected a value for gamma, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost)
+
+
+# # Extract sympy distributions from _sympy_dist_to_scipy
+# sympy_distributions = list(Metric._sympy_dist_to_scipy.keys())
+#
+# @pytest.mark.parametrize('sympy_dist', sympy_distributions)
+# def test_sympy_distributions(sympy_dist):
+#     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+#     gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, (alpha, beta))
+#
+#     profit_func = (
+#         Metric('max profit')
+#         .add_tp_benefit(gamma * (clv - d - f))
+#         .add_tp_benefit((1 - gamma) * -f)
+#         .add_fp_cost('d + f')
+#         .build()
+#     )
+#
+#     y_true = [1, 0, 1, 0, 1]
+#     y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+#
+#     # Test with some default values
+#     result = profit_func(y_true, y_proba, clv=100, d=10, f=1, alpha=0.5, beta=1)
+#     assert isinstance(result, float)
