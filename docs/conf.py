@@ -111,6 +111,7 @@ intersphinx_mapping = {
     "lightgbm": ("https://lightgbm.readthedocs.io/en/latest/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "imblearn": ("https://imbalanced-learn.org/stable", None),
+    "sympy": ("https://docs.sympy.org/latest/", None)
 }
 
 templates_path = ['_templates']

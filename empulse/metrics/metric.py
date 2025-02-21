@@ -70,21 +70,26 @@ class Metric:
         - If ``'monte-carlo'``, the metric is integrated using a Monte Carlo simulation.
           The monte-carlo simulation is less accurate but faster than quad for many stochastic variables.
         - If ``'quasi-monte-carlo'``, the metric is integrated using a Quasi Monte Carlo simulation.
-          The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions:
-            - :class:`~sympy.stats.crv_types.NormalDistribution`
-            - :class:`~sympy.stats.crv_types.BetaDistribution`
-            - :class:`~sympy.stats.crv_types.ChiSquaredDistribution`
-            - :class:`~sympy.stats.crv_types.ExponentialDistribution`
-            - :class:`~sympy.stats.crv_types.GammaDistribution`
-            - :class:`~sympy.stats.crv_types.LaplaceDistribution`
-            - :class:`~sympy.stats.crv_types.LogNormalDistribution`
+          The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions
+          present in :mod:`sympy:sympy.stats`:
+
+            - :class:`sympy:sympy.stats.Normal`
+            - :class:`sympy:sympy.stats.Beta`
+            - :class:`~sympy:sympy.stats.ChiSquared`
+            - :class:`~sympy:sympy.stats.Exponential`
+            - :class:`~sympy:sympy.stats.Gamma`
+            - :class:`~sympy:sympy.stats.Laplace`
+            - :class:`~sympy:sympy.stats.LogNormal`
 
     n_mc_samples_exp : int, default=16 (-> 2**16 = 65536)
-        The number of (Quasi-) Monte Carlo samples to use when ``integration_technique'monte-carlo'``.
+        ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
+        ``integration_technique'monte-carlo'``.
+        Increasing the number of samples, improves the accuracy of the metric estimation, but slows down the speed.
         This argument is ignored when the ``integration_technique='quad'``.
 
     random_state : int | np.random.RandomState | None, default=None
-        The random state to use when the ``integration_technique'monte-carlo'``.
+        The random state to use when ``integration_technique='monte-carlo'`` or
+        ``integration_technique='quasi-monte-carlo'``.
         Determines the points sampled from the distribution of the stochastic variables.
         This argument is ignored when ``integration_technique='quad'``.
 
