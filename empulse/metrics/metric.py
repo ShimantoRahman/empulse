@@ -84,7 +84,7 @@ class Metric:
     n_mc_samples_exp : int, default=16 (-> 2**16 = 65536)
         ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
         ``integration_technique'monte-carlo'``.
-        Increasing the number of samples, improves the accuracy of the metric estimation, but slows down the speed.
+        Increasing the number of samples improves the accuracy of the metric estimation, but slows down the speed.
         This argument is ignored when the ``integration_technique='quad'``.
 
     random_state : int | np.random.RandomState | None, default=None
