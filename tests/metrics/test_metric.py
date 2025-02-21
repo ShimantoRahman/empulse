@@ -336,16 +336,13 @@ def test_missing_arguments(y_true_and_prediction, integration_method):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, alpha=6)
 
 
-def test_missing_arguments_deterministic(y_true_and_prediction):
+@pytest.mark.parametrize('kind', ['max profit', 'cost', 'savings'])
+def test_missing_arguments_deterministic(y_true_and_prediction, kind):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
     profit_func = (
-        Metric('max profit')
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost('d + f')
-        .build()
+        Metric(kind).add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost('d + f').build()
     )
     with pytest.raises(ValueError, match='Metric expected a value for clv, did not receive it.'):
         profit_func(y, y_proba, d=incentive_fraction, f=contact_cost, gamma=accept_rate)

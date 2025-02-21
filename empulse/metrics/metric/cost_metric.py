@@ -4,7 +4,7 @@ import numpy as np
 import sympy
 from numpy.typing import NDArray
 
-from .common import MetricFn
+from .common import MetricFn, _check_parameters
 
 
 def _build_cost_loss(
@@ -21,6 +21,7 @@ def _build_cost_loss(
         raise NotImplementedError('Random variables are not supported for the cost metric.')
     cost_funct = sympy.lambdify(list(cost_function.free_symbols), cost_function)
 
+    @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
     def cost_loss(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
         return float(np.mean(cost_funct(y=y_true, s=y_score, **kwargs)))
 

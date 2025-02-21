@@ -4,7 +4,7 @@ import numpy as np
 import sympy
 from numpy.typing import NDArray
 
-from .common import MetricFn
+from .common import MetricFn, _check_parameters
 from .cost_metric import _build_cost_function, _format_cost_function
 
 
@@ -26,6 +26,7 @@ def _build_savings_score(
     all_zero_func = sympy.lambdify(list(all_zero_function.free_symbols), all_zero_function)
     all_one_func = sympy.lambdify(list(all_one_function.free_symbols), all_one_function)
 
+    @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
     def savings(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
         # it is possible that with the substitution of the symbols, the function becomes a constant
         all_zero_score: float = np.mean(all_zero_func(y=y_true, **kwargs)) if all_zero_function != 0 else 0  # type: ignore[assignment]
