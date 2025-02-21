@@ -1,0 +1,9 @@
+﻿CSBaggingClassifier
+===================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSBaggingClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__
