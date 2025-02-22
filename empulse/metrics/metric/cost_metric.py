@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -34,6 +35,19 @@ def _build_cost_function(
     y, s = sympy.symbols('y s')
     cost_function = y * (s * tp_cost + (1 - s) * fn_cost) + (1 - y) * ((1 - s) * tn_cost + s * fp_cost)
     return cost_function
+
+
+def _build_cost_gradient_logit(
+    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> Callable:
+    y, s, x = sympy.symbols('y s x')
+    gradient = x * s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
+    gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
+
+    def cost_gradient_logit(x: NDArray, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> NDArray:
+        return np.mean(gradient_fn(y=y_true, s=y_score, x=x, **kwargs), axis=0)
+
+    return cost_gradient_logit
 
 
 def _cost_loss_to_latex(

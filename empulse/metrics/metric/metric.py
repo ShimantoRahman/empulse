@@ -2,10 +2,11 @@ from numbers import Real
 from typing import Any, ClassVar, Final, Literal, Protocol
 
 import numpy as np
+import scipy
 import sympy
 from numpy.typing import ArrayLike, NDArray
 
-from .cost_metric import _build_cost_loss, _cost_loss_to_latex
+from .cost_metric import _build_cost_gradient_logit, _build_cost_loss, _cost_loss_to_latex
 from .max_profit_metric import _build_max_profit_score, _max_profit_score_to_latex
 from .savings_metric import _build_savings_score, _savings_score_to_latex
 
@@ -207,11 +208,17 @@ class Metric:
                 f'Supported values are {self.INTEGRATION_METHODS}'
             )
         self.kind = kind
+
+        def not_defined(*args, **kwargs):
+            raise NotImplementedError
+
+        self.build_gradient_logit = not_defined
         if kind == 'max profit':
             self.build_metric = _build_max_profit_score
             self.metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
             self.build_metric = _build_cost_loss
+            self.build_gradient_logit = _build_cost_gradient_logit
             self.metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
             self.build_metric = _build_savings_score
@@ -491,6 +498,35 @@ class Metric:
         self._defaults.update(defaults)
         return self
 
+    def build(self) -> 'Metric':
+        """
+        Build the metric function.
+
+        This function should be called last after adding all the terms.
+        After calling this function, the metric function can be called with the true labels and predicted probabilities.
+
+        Returns
+        -------
+        Metric
+        """
+        self._built = True
+        self._score_function = self.build_metric(
+            tp_benefit=self.tp_benefit,
+            tn_benefit=self.tn_benefit,
+            fp_cost=self.fp_cost,
+            fn_cost=self.fn_cost,
+            integration_method=self.integration_method,
+            n_mc_samples=self.n_mc_samples,
+            rng=self._rng,
+        )
+        self._gradient_logit_function = self.build_gradient_logit(
+            tp_benefit=self.tp_benefit,
+            tn_benefit=self.tn_benefit,
+            fp_cost=self.fp_cost,
+            fn_cost=self.fn_cost,
+        )
+        return self
+
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs: ArrayLike | float) -> float:
         """
         Compute the metric score or loss.
@@ -535,28 +571,19 @@ class Metric:
 
         return self._score_function(y_true, y_score, **kwargs)
 
-    def build(self) -> 'Metric':
-        """
-        Build the metric function.
+    def _objective_logit(
+        self, features: NDArray, weights: NDArray, y_true: NDArray, **kwargs: NDArray | float
+    ) -> tuple[float | NDArray]:
+        y_pred = scipy.special.expit(np.dot(weights, features.T))
 
-        This function should be called last after adding all the terms.
-        After calling this function, the metric function can be called with the true labels and predicted probabilities.
+        if y_pred.ndim == 1:
+            y_pred = np.expand_dims(y_pred, axis=1)
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
 
-        Returns
-        -------
-        Metric
-        """
-        self._built = True
-        self._score_function = self.build_metric(
-            tp_benefit=self.tp_benefit,
-            tn_benefit=self.tn_benefit,
-            fp_cost=self.fp_cost,
-            fn_cost=self.fn_cost,
-            integration_method=self.integration_method,
-            n_mc_samples=self.n_mc_samples,
-            rng=self._rng,
-        )
-        return self
+        value = self.__call__(y_true, y_pred, **kwargs)
+        gradient = self._gradient_logit_function(features, y_true, y_pred, **kwargs)
+        return value, gradient
 
     def __repr__(self) -> str:
         return (
