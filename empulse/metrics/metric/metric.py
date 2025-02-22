@@ -209,10 +209,10 @@ class Metric:
             )
         self.kind = kind
 
-        def not_defined(*args, **kwargs):
-            raise NotImplementedError
+        def gradient_logit_undefined(*args, **kwargs):
+            raise NotImplementedError(f'Gradient of the logit function is not defined for this kind={self.kind}')
 
-        self.build_gradient_logit = not_defined
+        self.build_gradient_logit = gradient_logit_undefined
         if kind == 'max profit':
             self.build_metric = _build_max_profit_score
             self.metric_to_latex = _max_profit_score_to_latex
