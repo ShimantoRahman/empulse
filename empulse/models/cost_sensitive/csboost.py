@@ -246,8 +246,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
         Returns
         -------
-        self : B2BoostClassifier
-            Fitted B2Boost model.
+        self : CSBoostClassifier
+            Fitted CSBoost model.
         """
         return super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **fit_params)
 
