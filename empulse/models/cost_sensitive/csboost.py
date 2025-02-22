@@ -323,6 +323,6 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 self.estimator_.fit(X, y, sample_weight=indices, **fit_params)
             return self
         else:
-            raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
+            raise ValueError('estimator must be an instance of XGBClassifier, LGBMClassifier or CatBoostClassifier')
         self.estimator_.fit(X, y, **fit_params)
         return self
