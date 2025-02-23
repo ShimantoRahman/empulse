@@ -107,6 +107,11 @@ markers = [
 line-length = 120
 exclude = ["docs", "notebooks"]
 
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
+docstring-code-line-length = 90
+
 [tool.ruff.lint]
 extend-select = [# find all rules at https://docs.astral.sh/ruff/rules
     "A", # flake8-builtins
@@ -157,11 +162,6 @@ ignore = [
     "PLC0415", # `import` should be at the top-level of a file
 ]
 allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
-
-[tool.ruff.format]
-quote-style = "single"
-docstring-code-format = true
-docstring-code-line-length = 90
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
