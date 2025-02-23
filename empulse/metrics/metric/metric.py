@@ -6,7 +6,12 @@ import scipy
 import sympy
 from numpy.typing import ArrayLike, NDArray
 
-from .cost_metric import _build_cost_gradient_logit, _build_cost_loss, _cost_loss_to_latex
+from .cost_metric import (
+    _build_cost_gradient_hessian_gboost,
+    _build_cost_gradient_logit,
+    _build_cost_loss,
+    _cost_loss_to_latex,
+)
 from .max_profit_metric import _build_max_profit_score, _max_profit_score_to_latex
 from .savings_metric import _build_savings_score, _savings_score_to_latex
 
@@ -212,13 +217,20 @@ class Metric:
         def gradient_logit_undefined(*args, **kwargs):
             raise NotImplementedError(f'Gradient of the logit function is not defined for this kind={self.kind}')
 
+        def gradient_hessian_gboost_undefined(*args, **kwargs):
+            raise NotImplementedError(
+                f'Gradient and Hessian of the gradient boosting function is not defined for this kind={self.kind}'
+            )
+
         self.build_gradient_logit = gradient_logit_undefined
+        self.build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
         if kind == 'max profit':
             self.build_metric = _build_max_profit_score
             self.metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
             self.build_metric = _build_cost_loss
             self.build_gradient_logit = _build_cost_gradient_logit
+            self.build_gradient_hessian_gboost = _build_cost_gradient_hessian_gboost
             self.metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
             self.build_metric = _build_savings_score
@@ -525,6 +537,12 @@ class Metric:
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
+        self._gradient_hessian_gboost_function = self.build_gradient_hessian_gboost(
+            tp_benefit=self.tp_benefit,
+            tn_benefit=self.tn_benefit,
+            fp_cost=self.fp_cost,
+            fn_cost=self.fn_cost,
+        )
         return self
 
     def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs: ArrayLike | float) -> float:
@@ -555,7 +573,11 @@ class Metric:
 
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
+        kwargs = self._prepare_kwargs(**kwargs)
+        return self._score_function(y_true, y_score, **kwargs)
 
+    def _prepare_kwargs(self, **kwargs: ArrayLike | float) -> dict[str, NDArray | float]:
+        """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
         # Use default values if not provided in kwargs
         for key, value in self._defaults.items():
             kwargs.setdefault(key, value)
@@ -569,11 +591,12 @@ class Metric:
             if alias in kwargs:
                 kwargs[symbol] = kwargs.pop(alias)
 
-        return self._score_function(y_true, y_score, **kwargs)
+        return kwargs
 
     def _objective_logit(
         self, features: NDArray, weights: NDArray, y_true: NDArray, **kwargs: NDArray | float
     ) -> tuple[float | NDArray]:
+        kwargs = self._prepare_kwargs(**kwargs)
         y_pred = scipy.special.expit(np.dot(weights, features.T))
 
         if y_pred.ndim == 1:
@@ -584,6 +607,25 @@ class Metric:
         value = self.__call__(y_true, y_pred, **kwargs)
         gradient = self._gradient_logit_function(features, y_true, y_pred, **kwargs)
         return value, gradient
+
+    def _objective_gradient_boost(
+        self, y_score: NDArray, y_true: NDArray, **kwargs: NDArray | float
+    ) -> tuple[NDArray | NDArray]:
+        kwargs = self._prepare_kwargs(**kwargs)
+
+        if isinstance(y_true, np.ndarray):
+            pass
+        elif hasattr(y_true, 'get_label'):
+            y_true = y_true.get_label()
+        else:
+            raise TypeError(
+                f'Expected y_true to be of type numpy.ndarray or xgboost.DMatrix, got {type(y_true)} instead.'
+            )
+
+        y_proba = scipy.special.expit(y_score)
+
+        gradient, hessian = self._gradient_hessian_gboost_function(y_true, y_proba, **kwargs)
+        return gradient, hessian
 
     def __repr__(self) -> str:
         return (

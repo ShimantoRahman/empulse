@@ -50,6 +50,23 @@ def _build_cost_gradient_logit(
     return cost_gradient_logit
 
 
+def _build_cost_gradient_hessian_gboost(
+    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> Callable:
+    y, s, nabla = sympy.symbols('y s nabla')
+    gradient = s * (1 - s) * y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
+    gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
+    hessian = (1 - 2 * s) * nabla
+    hessian_fn = sympy.lambdify(list(hessian.free_symbols), hessian)
+
+    def cost_gradient_hessian_gboost(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> tuple[NDArray, NDArray]:
+        gradient = gradient_fn(y=y_true, s=y_score, **kwargs)
+        hessian = np.abs(hessian_fn(s=y_score, nabla=gradient))
+        return gradient, hessian
+
+    return cost_gradient_hessian_gboost
+
+
 def _cost_loss_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
