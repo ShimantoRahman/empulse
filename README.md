@@ -116,13 +116,13 @@ Empulse offers a wide range of profit and cost metrics that are tailored to spec
 - and fraud detection (coming soon).
 
 For other use cases, the package provides a generic implementations for:
+- the [Metric](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.Metric.html) class to define your own custom metrics,
 - the [cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.cost_loss.html),
 - the [expected cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_cost_loss.html),
 - the [expected log cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_log_cost_loss.html),
 - the [savings score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.savings_score.html),
 - the [expected savings score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.expected_savings_score.html),
-- the [maximum profit score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.max_profit_score.html),
-- and the [expected maximum profit score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.emp_score.html).
+- and the [maximum profit score](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.max_profit_score.html).
 
 ### Flexible profit-driven and cost-sensitive models
 
