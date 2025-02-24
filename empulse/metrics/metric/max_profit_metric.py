@@ -375,9 +375,9 @@ def _build_max_profit_stochastic_qmc(profit_function, random_symbols, determinis
         param_grid_needs_recompute = False
         # convert to scipy distributions
         scipy_distributions = [
-            _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](
-                *[float(arg) for arg in pspace(random_var).distribution.args]
-            )
+            _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
+                float(arg) for arg in pspace(random_var).distribution.args
+            ])
             for random_var in random_symbols
         ]
         param_grid = [dist.ppf(sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
@@ -407,9 +407,9 @@ def _build_max_profit_stochastic_qmc(profit_function, random_symbols, determinis
             if cached_dist_params != distribution_parameters:
                 cached_dist_params = distribution_parameters
                 scipy_distributions = [
-                    _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](
-                        *[float(arg) for arg in pspace(random_var.subs(cached_dist_params)).distribution.args]
-                    )
+                    _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
+                        float(arg) for arg in pspace(random_var.subs(cached_dist_params)).distribution.args
+                    ])
                     for random_var in random_symbols
                 ]
                 param_grid = [dist.ppf(sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]

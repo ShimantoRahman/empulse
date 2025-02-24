@@ -13,20 +13,18 @@ def test_independent_sample_weights():
     weights = _independent_sample_weights(y_true, protected_attr)
     assert np.allclose(
         weights,
-        np.array(
-            [
-                0.375,
-                0.375,
-                0.375,
-                0.375,
-                1,
-                0.33333333,
-                0.33333333,
-                0.75,
-                0.33333333,
-                0.75,
-            ]
-        ),  # divided by 2 because of the normalization
+        np.array([
+            0.375,
+            0.375,
+            0.375,
+            0.375,
+            1,
+            0.33333333,
+            0.33333333,
+            0.75,
+            0.33333333,
+            0.75,
+        ]),  # divided by 2 because of the normalization
     )
 
 

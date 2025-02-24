@@ -273,12 +273,10 @@ class BiasResampler(BaseSampler):
             n_samples = int(class_weights[target_class, sensitive_val] * len(idx_class_sensitive))
             if n_samples > len(idx_class_sensitive):  # oversampling
                 indices = np.concatenate((indices, idx_class_sensitive))
-                indices = np.concatenate(
-                    (
-                        indices,
-                        random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True),
-                    )
-                )
+                indices = np.concatenate((
+                    indices,
+                    random_state.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True),
+                ))
             else:  # undersampling
                 indices = np.concatenate((indices, random_state.choice(idx_class_sensitive, n_samples, replace=False)))
 

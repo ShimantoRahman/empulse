@@ -389,20 +389,18 @@ def load_upsell_bank_telemarketing(
     data.loc[:, 'housing'] = data['housing'].map({'yes': 1, 'no': 0})
     data.loc[:, 'loan'] = data['loan'].map({'yes': 1, 'no': 0})
 
-    data = data.astype(
-        {
-            'age': np.uint8,
-            'balance': np.int32,
-            'previous': np.uint8,
-            'job': 'category',
-            'marital': 'category',
-            'education': 'category',
-            'default': np.uint8,
-            'housing': np.uint8,
-            'loan': np.uint8,
-            'poutcome': 'category',
-        }
-    )
+    data = data.astype({
+        'age': np.uint8,
+        'balance': np.int32,
+        'previous': np.uint8,
+        'job': 'category',
+        'marital': 'category',
+        'education': 'category',
+        'default': np.uint8,
+        'housing': np.uint8,
+        'loan': np.uint8,
+        'poutcome': 'category',
+    })
 
     data = data.rename(
         columns={
@@ -662,20 +660,18 @@ def load_give_me_some_credit(
     # Reorder columns
     data = data.reindex(columns=new_order)
 
-    data = data.astype(
-        {
-            'monthly_income': np.float64,
-            'debt_ratio': np.float64,
-            'revolving_utilization': np.float64,
-            'age': np.uint8,
-            'n_dependents': np.uint8,
-            'n_open_credit_lines': np.uint8,
-            'n_real_estate_loans': np.uint8,
-            'n_times_late_30_59_days': np.uint8,
-            'n_times_late_60_89_days': np.uint8,
-            'n_times_late_over_90_days': np.uint8,
-        }
-    )
+    data = data.astype({
+        'monthly_income': np.float64,
+        'debt_ratio': np.float64,
+        'revolving_utilization': np.float64,
+        'age': np.uint8,
+        'n_dependents': np.uint8,
+        'n_open_credit_lines': np.uint8,
+        'n_real_estate_loans': np.uint8,
+        'n_times_late_30_59_days': np.uint8,
+        'n_times_late_60_89_days': np.uint8,
+        'n_times_late_over_90_days': np.uint8,
+    })
 
     if return_X_y_costs:
         if as_frame:
@@ -943,24 +939,20 @@ def load_credit_scoring_pakdd(
     data = data.rename(columns=column_mapping)
 
     # remap values of matiral_status to more readable values
-    data.loc[:, 'marital_status'] = data['marital_status'].map(
-        {
-            'S': 'single',
-            'M': 'married',
-            'D': 'divorced',
-            'W': 'widowed',
-            'O': 'other',
-        }
-    )
+    data.loc[:, 'marital_status'] = data['marital_status'].map({
+        'S': 'single',
+        'M': 'married',
+        'D': 'divorced',
+        'W': 'widowed',
+        'O': 'other',
+    })
     # remap values of residence_type to more readable values
-    data.loc[:, 'residence_type'] = data['residence_type'].map(
-        {
-            'P': 'owned',
-            'A': 'rented',
-            'C': 'parents',
-            'O': 'other',
-        }
-    )
+    data.loc[:, 'residence_type'] = data['residence_type'].map({
+        'P': 'owned',
+        'A': 'rented',
+        'C': 'parents',
+        'O': 'other',
+    })
 
     # Desired column order
     new_order = [
@@ -995,36 +987,34 @@ def load_credit_scoring_pakdd(
     # Reorder columns
     data = data.reindex(columns=new_order)
 
-    data = data.astype(
-        {
-            'age': np.uint8,
-            'personal_net_income': np.float32,
-            'partner_income': np.float32,
-            'months_in_residence': np.uint8,
-            'months_in_the_job': np.uint8,
-            'payment_day': np.uint8,
-            'n_banking_accounts': np.uint8,
-            'n_additional_cards': np.uint8,
-            'is_male': np.uint8,
-            'has_residential_phone': np.uint8,
-            'has_mobile_phone': np.uint8,
-            'has_contact_phone': np.uint8,
-            'has_same_postal_address': np.uint8,
-            'has_other_card': np.uint8,
-            'has_card_insurance': np.uint8,
-            'lives_in_work_town': np.uint8,
-            'lives_in_work_state': np.uint8,
-            'filled_in_mothers_name': np.uint8,
-            'filled_in_fathers_name': np.uint8,
-            'shop_rank': 'category',
-            'marital_status': 'category',
-            'residence_type': 'category',
-            'area_code_residential_phone': 'category',
-            'shop_code': 'category',
-            'application_booth_code': 'category',
-            'profession_code': 'category',
-        }
-    )
+    data = data.astype({
+        'age': np.uint8,
+        'personal_net_income': np.float32,
+        'partner_income': np.float32,
+        'months_in_residence': np.uint8,
+        'months_in_the_job': np.uint8,
+        'payment_day': np.uint8,
+        'n_banking_accounts': np.uint8,
+        'n_additional_cards': np.uint8,
+        'is_male': np.uint8,
+        'has_residential_phone': np.uint8,
+        'has_mobile_phone': np.uint8,
+        'has_contact_phone': np.uint8,
+        'has_same_postal_address': np.uint8,
+        'has_other_card': np.uint8,
+        'has_card_insurance': np.uint8,
+        'lives_in_work_town': np.uint8,
+        'lives_in_work_state': np.uint8,
+        'filled_in_mothers_name': np.uint8,
+        'filled_in_fathers_name': np.uint8,
+        'shop_rank': 'category',
+        'marital_status': 'category',
+        'residence_type': 'category',
+        'area_code_residential_phone': 'category',
+        'shop_code': 'category',
+        'application_booth_code': 'category',
+        'profession_code': 'category',
+    })
 
     # remove flag_card_insurance_option
     data = data.drop(['has_card_insurance'], axis=1)

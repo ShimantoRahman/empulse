@@ -284,13 +284,11 @@ def _compute_integration_bounds(
         clv_bounds = (fpr_coef * fpr_diff - tpr_coef * tpr_diff) / (denominator * tpr_diff)
     # add zero and infinity to bounds
     if clv_bounds.ndim == 2:
-        return np.concatenate(
-            [
-                np.zeros((1, clv_bounds.shape[1])),
-                clv_bounds,
-                np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf),
-            ]
-        )
+        return np.concatenate([
+            np.zeros((1, clv_bounds.shape[1])),
+            clv_bounds,
+            np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf),
+        ])
     elif clv_bounds.ndim == 1:
         return np.concatenate([[0], clv_bounds, [np.inf]]).reshape(-1, 1)
     else:

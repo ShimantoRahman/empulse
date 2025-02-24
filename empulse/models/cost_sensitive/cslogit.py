@@ -164,12 +164,10 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline(
-            [
-                ('scaler', StandardScaler()),
-                ('model', CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True)),
-            ]
-        )
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True)),
+        ])
 
         cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
 
@@ -193,12 +191,10 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fn_cost = np.random.rand(y.size)
         fp_cost = 5
 
-        pipeline = Pipeline(
-            [
-                ('scaler', StandardScaler()),
-                ('model', CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True)),
-            ]
-        )
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True)),
+        ])
         param_grid = {'model__C': np.logspace(-5, 2, 5)}
         scorer = make_scorer(
             expected_cost_loss,
