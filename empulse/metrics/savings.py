@@ -944,6 +944,7 @@ def make_objective_aec(
             return _objective_boost(
                 y_pred, train_data, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
+
     elif model == 'catboost':
         return (
             AECObjective(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost),

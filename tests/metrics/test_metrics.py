@@ -586,7 +586,10 @@ class BaseTestRelationMetrics:
                 negative_class_predictions = np.random.beta(random_param(20), random_param(20), n_negative_class)
                 predictions = np.concatenate([positive_class_predictions, negative_class_predictions])
                 labels = np.concatenate(
-                    [np.ones(n_positive_class, dtype=np.int8), np.zeros(n_negative_class, dtype=np.int8)]
+                    [
+                        np.ones(n_positive_class, dtype=np.int8),
+                        np.zeros(n_negative_class, dtype=np.int8),
+                    ]
                 )
                 yield labels, predictions
 

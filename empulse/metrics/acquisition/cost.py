@@ -157,6 +157,7 @@ def make_objective_acquisition(
                 direct_selling=direct_selling,
                 commission=commission,
             )
+
     elif model == 'catboost':
         return (
             AECObjectiveAcquisition(

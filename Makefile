@@ -23,8 +23,8 @@ tox:
 	uvx --with tox-uv tox -f tests
 
 lint:
-	uvx ruff check --fix
-	uvx ruff format
+	uvx ruff check --fix --preview
+	uvx ruff format --preview
 
 typecheck:
 	uvx mypy empulse

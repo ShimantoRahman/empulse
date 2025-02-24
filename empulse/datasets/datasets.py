@@ -944,11 +944,22 @@ def load_credit_scoring_pakdd(
 
     # remap values of matiral_status to more readable values
     data.loc[:, 'marital_status'] = data['marital_status'].map(
-        {'S': 'single', 'M': 'married', 'D': 'divorced', 'W': 'widowed', 'O': 'other'}
+        {
+            'S': 'single',
+            'M': 'married',
+            'D': 'divorced',
+            'W': 'widowed',
+            'O': 'other',
+        }
     )
     # remap values of residence_type to more readable values
     data.loc[:, 'residence_type'] = data['residence_type'].map(
-        {'P': 'owned', 'A': 'rented', 'C': 'parents', 'O': 'other'}
+        {
+            'P': 'owned',
+            'A': 'rented',
+            'C': 'parents',
+            'O': 'other',
+        }
     )
 
     # Desired column order

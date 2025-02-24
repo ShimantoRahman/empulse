@@ -157,6 +157,7 @@ def make_objective_churn(
                 incentive_fraction=incentive_fraction,
                 contact_cost=contact_cost,
             )
+
     elif model == 'catboost':
         return (
             AECObjectiveChurn(
