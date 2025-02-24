@@ -324,15 +324,15 @@ def test_missing_arguments(y_true_and_prediction, integration_method):
         .add_fp_cost('d + f')
         .build()
     )
-    with pytest.raises(ValueError, match='Metric expected a value for clv, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for clv, did not receive it.'):
         profit_func(y, y_proba, d=incentive_fraction, f=contact_cost, alpha=6, beta=14)
-    with pytest.raises(ValueError, match='Metric expected a value for d, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for d, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, f=contact_cost, alpha=6, beta=14)
-    with pytest.raises(ValueError, match='Metric expected a value for f, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for f, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, alpha=6, beta=14)
-    with pytest.raises(ValueError, match='Metric expected a value for alpha, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for alpha, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, beta=14)
-    with pytest.raises(ValueError, match='Metric expected a value for beta, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for beta, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost, alpha=6)
 
 
@@ -344,13 +344,13 @@ def test_missing_arguments_deterministic(y_true_and_prediction, kind):
     profit_func = (
         Metric(kind).add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost('d + f').build()
     )
-    with pytest.raises(ValueError, match='Metric expected a value for clv, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for clv, did not receive it.'):
         profit_func(y, y_proba, d=incentive_fraction, f=contact_cost, gamma=accept_rate)
-    with pytest.raises(ValueError, match='Metric expected a value for d, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for d, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, f=contact_cost, gamma=accept_rate)
-    with pytest.raises(ValueError, match='Metric expected a value for f, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for f, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, gamma=accept_rate)
-    with pytest.raises(ValueError, match='Metric expected a value for gamma, did not receive it.'):
+    with pytest.raises(ValueError, match=r'Metric expected a value for gamma, did not receive it.'):
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost)
 
 
@@ -358,7 +358,7 @@ def test_random_var_cost_loss():
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Uniform('gamma', alpha, beta)
     cost_func = Metric('cost').add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
-    with pytest.raises(NotImplementedError, match='Random variables are not supported for the cost metric.'):
+    with pytest.raises(NotImplementedError, match=r'Random variables are not supported for the cost metric.'):
         cost_func.build()
 
 
@@ -368,7 +368,7 @@ def test_random_var_savings_score():
     savings_func = (
         Metric('savings').add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
     )
-    with pytest.raises(NotImplementedError, match='Random variables are not supported for the savings metric.'):
+    with pytest.raises(NotImplementedError, match=r'Random variables are not supported for the savings metric.'):
         savings_func.build()
 
 
