@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --all-extras --only-group docs --link-mode=copy
+          uv export --only-group=docs | uv pip install --requirements=-
       - name: Sphinx build
         run: |
           sphinx-build docs _build
