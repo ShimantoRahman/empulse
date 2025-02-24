@@ -18,10 +18,10 @@ jobs:
       fail-fast: true
       matrix:
         env:
-          - "3.13-tests"
-          - "3.12-tests"
-          - "3.11-tests"
-          - "3.10-tests"
+          - "py313-tests"
+          - "py312-tests"
+          - "py311-tests"
+          - "py310-tests"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +31,5 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
-      - name: Install dependencies
-        run: uv sync
       - name: Run set suite
         run: uvx --with tox-uv tox -e ${{ matrix.env }}
