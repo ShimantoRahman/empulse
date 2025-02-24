@@ -93,9 +93,9 @@ version = { attr = "empulse.__version__" }
 [tool.setuptools.packages.find]
 include = ["empulse*"]
 exclude = [
-    "docs",
-    "tests",
-    "notebooks",
+    "docs*",
+    "tests*",
+    "notebooks*",
 ]
 
 [tool.pytest.ini_options]
