@@ -1,7 +1,0 @@
-sphinx==8.1.3
-pydata-sphinx-theme==0.16.1
-sphinx-copybutton==0.5.2
-sphinxcontrib-sass==0.3.4
-myst-parser==4.0.0
-numpydoc==1.8.0
-requests==2.31.0
