@@ -32,7 +32,8 @@ classifiers = [
 ]
 requires-python = ">= 3.10"
 dependencies = [
-    "numpy>=1.24.4",
+    "numpy>=1.24.4; python_version < '3.13'",
+    "numpy>=2.0.0; python_version >= '3.13'",
     "scikit-learn>=1.5.2",
     "imbalanced-learn>=0.13.0",
     "scipy>=1.10.1",
@@ -54,6 +55,7 @@ optional = [
     "catboost>=1.2.7; python_version < '3.13'",
 ]
 
+[dependency-groups]
 test = [
     "empulse[optional]",
     "scikit-learn>=1.6.1",
@@ -63,6 +65,7 @@ test = [
 ]
 
 docs = [
+    "empulse[optional]",
     "sphinx>=7.2.6",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx-copybutton>=0.5.2",
@@ -77,9 +80,14 @@ lint = [
 ]
 
 dev = [
-    "empulse[test,docs,lint]",
+    { include-group = "test" },
+    { include-group = "docs" },
+    { include-group = "lint" },
     "twine>=4.0.2",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [tool.setuptools]
 include-package-data = true

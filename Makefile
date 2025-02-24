@@ -18,13 +18,13 @@ doctest:
 	pytest --doctest-modules empulse/
 
 tox:
-	tox -e py312-lint
-	tox -e py312-docs
-	tox -f tests -p
+	uvx --with tox-uv tox -e py312-lint
+	uvx --with tox-uv tox -e py312-docs
+	uvx --with tox-uv tox -f tests
 
 lint:
-	ruff check --fix
-	ruff format
+	uvx ruff check --fix
+	uvx ruff format
 
 typecheck:
 	mypy empulse
