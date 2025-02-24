@@ -31,21 +31,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
-      - name: Extract Python version
-        id: extract-version
-        run: echo "VERSION=${{ matrix.env }}" | sed 's/-tests//' | tee -a $GITHUB_ENV
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with .
-      - name: Install Python
-        if: env.VERSION != '3.13'
-        run: uv python install --python-preference only-managed ${{ env.VERSION }}
-      - name: Setup test suite
-        run: tox run -vv --notest --skip-missing-interpreters false -e py${{ matrix.env }}
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Run test suite
-        run: tox run --skip-pkg-install -e py${{ matrix.env }}
-        env:
-          PYTEST_ADDOPTS: "-vv --durations=20"
-          DIFF_AGAINST: HEAD
-          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Install dependencies
+        run: uv sync
+      - name: Run set suite
+        run: uvx --with tox-uv tox -e ${{ matrix.env }}
