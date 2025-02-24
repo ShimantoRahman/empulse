@@ -12,11 +12,11 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.11
+          python-version: 3.12
       - name: Install dependencies
         run: |
-          pip install -r docs/requirements_docs.txt
-          pip install -r requirements.txt
+          pip install uv
+          uv sync --all-extras --only-group docs --link-mode=copy
       - name: Sphinx build
         run: |
           sphinx-build docs _build
