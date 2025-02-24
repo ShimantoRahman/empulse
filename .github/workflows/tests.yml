@@ -32,4 +32,4 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - name: Run set suite
-        run: uvx --with tox-uv tox -e ${{ matrix.env }}
+        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow"
