@@ -215,12 +215,18 @@ class Metric:
         self.kind = kind
 
         def gradient_logit_undefined(*args, **kwargs):
-            raise NotImplementedError(f'Gradient of the logit function is not defined for this kind={self.kind}')
+            def undefined_fn(*args, **kwargs):
+                raise NotImplementedError(f'Gradient of the logit function is not defined for this kind={self.kind}')
+
+            return undefined_fn
 
         def gradient_hessian_gboost_undefined(*args, **kwargs):
-            raise NotImplementedError(
-                f'Gradient and Hessian of the gradient boosting function is not defined for this kind={self.kind}'
-            )
+            def undefined_fn(*args, **kwargs):
+                raise NotImplementedError(
+                    f'Gradient and Hessian of the gradient boosting function is not defined for this kind={self.kind}'
+                )
+
+            return undefined_fn
 
         self.build_gradient_logit = gradient_logit_undefined
         self.build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
