@@ -52,24 +52,28 @@ Then, the workflow would look as follows:
     $ python -m venv env
     $ source env/bin/activate
 
-4. Install `Empulse` in development mode::
+4. Install uv::
 
-    $ pip install -e ".[dev]"
+    $ pip install uv
 
-5. Install pre-commit hooks that will check your commits::
+5. Install `Empulse` with development dependencies::
+
+    $ uv sync
+
+6. Install pre-commit hooks that will check your commits::
 
     $ pre-commit install --install-hooks
 
-6. Create a new branch from ``main``::
+7. Create a new branch from ``main``::
 
     $ git checkout main
     $ git branch fix_bug
     $ git checkout fix_bug
 
-7. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
-8. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
+8. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
+9. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
 
-    $ tox -f tests
+    $ uvx --with tox-uv tox -f tests
 
 9. Remember to update documentation if required.
 10. If your development modifies `Empulse` behavior, update the ``CHANGELOG.rst`` file with what you improved.
