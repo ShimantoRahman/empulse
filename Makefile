@@ -6,16 +6,16 @@ clean:
 	powershell Remove-Item -Recurse -Force *.egg-info\
 
 build: clean
-	python setup.py sdist bdist_wheel
+	uv run python setup.py sdist bdist_wheel
 
 upload: build
-	twine upload dist/*
+	uvx twine upload dist/*
 
 test:
 	pytest --cov-report term --cov=empulse tests/
 
 doctest:
-	pytest --doctest-modules empulse/
+	uv run pytest --doctest-modules empulse/
 
 tox:
 	uvx --with tox-uv tox -e py312-lint
@@ -27,10 +27,10 @@ lint:
 	uvx ruff format
 
 typecheck:
-	mypy empulse
+	uvx mypy empulse
 
 pre-commit:
-	pre-commit run --all-files
+	uvx pre-commit run --all-files
 
 # Content from the docs directory Makefile
 # You can set these variables from the command line, and also
