@@ -13,6 +13,8 @@ upload: build
 
 test:
 	pytest --cov-report term --cov=empulse tests/
+	coverage html
+	start chrome "%CD%\htmlcov\index.html"
 
 doctest:
 	uv run pytest --doctest-modules empulse/
