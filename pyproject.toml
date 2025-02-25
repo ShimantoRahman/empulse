@@ -84,6 +84,7 @@ dev = [
     { include-group = "docs" },
     { include-group = "lint" },
     "twine>=4.0.2",
+    "jupyter>=1.1.1",
 ]
 
 [tool.uv]
