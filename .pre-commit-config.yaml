@@ -13,3 +13,8 @@ repos:
     hooks:
       - id: check-yaml
       - id: check-toml
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.6.3
+    hooks:
+      - id: uv-lock # Make sure uv.lock is up-to-date with pyproject.toml.
