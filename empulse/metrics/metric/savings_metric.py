@@ -25,12 +25,17 @@ def _build_savings_score(
     cost_func = sympy.lambdify(list(cost_function.free_symbols), cost_function)
     all_zero_func = sympy.lambdify(list(all_zero_function.free_symbols), all_zero_function)
     all_one_func = sympy.lambdify(list(all_one_function.free_symbols), all_one_function)
+    zero_params_str = {str(symbol) for symbol in all_zero_function.free_symbols}
+    one_params_str = {str(symbol) for symbol in all_one_function.free_symbols}
 
     @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
     def savings(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+        # by prediction all ones or all zeros, parts of the cost function can be simplified
+        zero_parameters = {k: v for k, v in kwargs.items() if k in zero_params_str}
+        one_parameters = {k: v for k, v in kwargs.items() if k in one_params_str}
         # it is possible that with the substitution of the symbols, the function becomes a constant
-        all_zero_score: float = np.mean(all_zero_func(y=y_true, **kwargs)) if all_zero_function != 0 else 0  # type: ignore[assignment]
-        all_one_score: float = np.mean(all_one_func(y=y_true, **kwargs)) if all_one_function != 0 else 0  # type: ignore[assignment]
+        all_zero_score: float = np.mean(all_zero_func(y=y_true, **zero_parameters)) if all_zero_function != 0 else 0  # type: ignore[assignment]
+        all_one_score: float = np.mean(all_one_func(y=y_true, **one_parameters)) if all_one_function != 0 else 0  # type: ignore[assignment]
         cost_base = min(all_zero_score, all_one_score)
         return float(1 - np.mean(cost_func(y=y_true, s=y_score, **kwargs)) / cost_base)
 

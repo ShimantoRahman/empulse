@@ -1,10 +1,19 @@
+import numpy as np
 import pytest
 import sympy
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sympy.stats import Beta, Normal, Uniform
 
-from empulse.metrics import Metric, empc_score, expected_cost_loss_churn, expected_savings_score, mpc_score
+from empulse.metrics import (
+    Metric,
+    empc_score,
+    expected_cost_loss,
+    expected_cost_loss_churn,
+    expected_savings_score,
+    max_profit_score,
+    mpc_score,
+)
 
 
 @pytest.fixture(scope='module')
@@ -91,6 +100,37 @@ def test_metric_vs_mpc_score(customer_lifetime_value, incentive_cost, contact_co
 
 
 @pytest.mark.parametrize(
+    'customer_lifetime_value, incentive_cost, contact_cost, accept_rate',
+    [(100, 10, 1, 0.3), (200, 20, 2, 0.2), (150, 15, 1.5, 0.4)],
+)
+def test_metric_vs_mpc_score_inversed(
+    customer_lifetime_value, incentive_cost, contact_cost, accept_rate, y_true_and_prediction
+):
+    y, y_proba = y_true_and_prediction
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+    profit_func = (
+        Metric('max profit')
+        .add_tp_cost(-gamma * (clv - d - f))
+        .add_tp_cost(-(1 - gamma) * -f)
+        .add_fp_benefit(-d - f)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
+    )
+    mpc_result = mpc_score(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        incentive_cost=incentive_cost,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    assert pytest.approx(metric_result) == mpc_result
+
+
+@pytest.mark.parametrize(
     'customer_lifetime_value, incentive_fraction, contact_cost, accept_rate',
     [(100, 0.05, 1, 0.3), (200, 0.1, 2, 0.2), (150, 0.15, 1.5, 0.4)],
 )
@@ -151,6 +191,207 @@ def test_metric_vs_savings(customer_lifetime_value, incentive_cost, contact_cost
         fp_cost=fp_cost,
     )
     assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_upsell_savings(y_true_and_prediction):
+    """Case from Bank Telemarketing Upsell Campaign dataset"""
+    y, y_proba = y_true_and_prediction
+    contact_cost, interest_rate, deposit_fraction = 1, 0.02463333, 0.25
+    balance = np.arange(len(y))
+    c, r, d, b = sympy.symbols('c r d b')
+    profit_func = (
+        Metric('savings')
+        .add_tp_cost(c)
+        .add_fp_cost(c)
+        .add_fn_cost(r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        contact_cost=contact_cost,
+        interest_rate=interest_rate,
+        deposit_fraction=deposit_fraction,
+        balance=balance,
+    )
+    savings_result = expected_savings_score(
+        y,
+        y_proba,
+        tp_cost=contact_cost,
+        fp_cost=contact_cost,
+        fn_cost=interest_rate * deposit_fraction * balance,
+    )
+    assert pytest.approx(metric_result) == savings_result
+
+
+def test_metric_upsell_cost(y_true_and_prediction):
+    """Case from Bank Telemarketing Upsell Campaign dataset"""
+    y, y_proba = y_true_and_prediction
+    contact_cost, interest_rate, deposit_fraction = 1, 0.02463333, 0.25
+    balance = np.arange(len(y))
+    c, r, d, b = sympy.symbols('c r d b')
+    profit_func = (
+        Metric('cost')
+        .add_tp_cost(c)
+        .add_fp_cost(c)
+        .add_fn_cost(r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        contact_cost=contact_cost,
+        interest_rate=interest_rate,
+        deposit_fraction=deposit_fraction,
+        balance=balance,
+    )
+    cost_result = expected_cost_loss(
+        y,
+        y_proba,
+        tp_cost=contact_cost,
+        fp_cost=contact_cost,
+        fn_cost=interest_rate * deposit_fraction * balance,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_upsell_cost_inverse(y_true_and_prediction):
+    """Case from Bank Telemarketing Upsell Campaign dataset"""
+    y, y_proba = y_true_and_prediction
+    contact_cost, interest_rate, deposit_fraction = 1, 0.02463333, 0.25
+    balance = np.arange(len(y))
+    c, r, d, b = sympy.symbols('c r d b')
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit(-c)
+        .add_fp_benefit(-c)
+        .add_fn_benefit(-r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        contact_cost=contact_cost,
+        interest_rate=interest_rate,
+        deposit_fraction=deposit_fraction,
+        balance=balance,
+    )
+    cost_result = expected_cost_loss(
+        y,
+        y_proba,
+        tp_cost=contact_cost,
+        fp_cost=contact_cost,
+        fn_cost=interest_rate * deposit_fraction * balance,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_upsell_cost_inverse_matrix(y_true_and_prediction):
+    """Case from Bank Telemarketing Upsell Campaign dataset"""
+    y, y_proba = y_true_and_prediction
+    contact_cost, interest_rate, deposit_fraction = 1, 0.02463333, 0.25
+    balance = np.arange(len(y))
+    c, r, d, b = sympy.symbols('c r d b')
+    profit_func = (
+        Metric('cost')
+        .add_tn_cost(c)
+        .add_fn_cost(c)
+        .add_fp_cost(r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        contact_cost=contact_cost,
+        interest_rate=interest_rate,
+        deposit_fraction=deposit_fraction,
+        balance=balance,
+    )
+    cost_result = expected_cost_loss(
+        y,
+        y_proba,
+        tn_cost=contact_cost,
+        fn_cost=contact_cost,
+        fp_cost=interest_rate * deposit_fraction * balance,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_upsell_max_profit(y_true_and_prediction):
+    """Case from Bank Telemarketing Upsell Campaign dataset"""
+    y, y_proba = y_true_and_prediction
+    contact_cost, interest_rate, deposit_fraction, balance = 1, 0.02463333, 0.25, 100
+    c, r, d, b = sympy.symbols('c r d b')
+    profit_func = (
+        Metric('max profit')
+        .add_tp_cost(c)
+        .add_fp_cost(c)
+        .add_fn_cost(r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+        .build()
+    )
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        contact_cost=contact_cost,
+        interest_rate=interest_rate,
+        deposit_fraction=deposit_fraction,
+        balance=balance,
+    )
+    profit_result = max_profit_score(
+        y,
+        y_proba,
+        tp_benefit=-contact_cost,
+        fp_cost=contact_cost,
+        fn_cost=interest_rate * deposit_fraction * balance,
+    )
+    assert pytest.approx(metric_result) == profit_result
+
+
+def test_metric_str_symbols(y_true_and_prediction):
+    y, y_proba = y_true_and_prediction
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit('a')
+        .add_tp_cost('k')
+        .add_tn_benefit('b')
+        .add_tn_cost('b')
+        .add_fp_benefit('c')
+        .add_fp_cost('c')
+        .add_fn_benefit('d')
+        .add_fn_cost('d')
+        .build()
+    )
+
+    metric_result = profit_func(y, y_proba, a=1, k=1)
+    assert pytest.approx(metric_result) == 0.0
 
 
 def test_metric_arraylikes(y_true_and_prediction):
@@ -285,6 +526,47 @@ def test_metric_alias(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
+def test_metric_alias_symbols(y_true_and_prediction):
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    y, y_proba = y_true_and_prediction
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit(gamma * (clv - delta * clv - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(delta * clv + f)
+        .alias('incentive_fraction', delta)
+        .alias('contact_cost', f)
+        .alias('accept_rate', gamma)
+        .build()
+    )
+    metric_result = profit_func(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    cost_result = expected_cost_loss_churn(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
+def test_metric_alias_wrong_types(y_true_and_prediction):
+    clv = sympy.symbols('clv')
+    profit_func = Metric('cost').add_tp_benefit(clv)
+    with pytest.raises(ValueError, match=r'Either a dictionary or both an alias and a symbol should be provided'):
+        profit_func.alias(None)  # type: ignore
+
+
 def test_metric_set_default(y_true_and_prediction):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
@@ -309,6 +591,27 @@ def test_metric_set_default(y_true_and_prediction):
         normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
+
+
+def test_calling_before_building():
+    clv = sympy.symbols('clv')
+    profit_func = Metric('max profit').add_tp_benefit(clv)
+    with pytest.raises(
+        ValueError, match=r'The metric function has not been built. Call the build method before calling the metric'
+    ):
+        profit_func(np.array([1]), np.array([1]), d=0.05, f=1, gamma=0.3)
+
+
+def test_unsupported_kind():
+    clv = sympy.symbols('clv')
+    with pytest.raises(ValueError, match=r'Kind unsupported is not supported. Supported values are'):
+        Metric('unsupported').add_tp_benefit(clv).build()  # type: ignore
+
+
+def test_unsupported_integration_method():
+    clv = sympy.symbols('clv')
+    with pytest.raises(ValueError, match=r'Integration method unsupported is not supported. Supported values are'):
+        Metric('max profit', integration_method='unsupported').add_tp_benefit(clv).build()  # type: ignore
 
 
 @pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
@@ -370,6 +673,87 @@ def test_random_var_savings_score():
     )
     with pytest.raises(NotImplementedError, match=r'Random variables are not supported for the savings metric.'):
         savings_func.build()
+
+
+@pytest.mark.parametrize('kind', ['max profit', 'savings'])
+def test_objective_logit_unsupported(kind):
+    clv = sympy.symbols('clv')
+    metric = Metric(kind).add_tp_benefit(clv).build()
+    with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for this kind'):
+        metric._objective_logit(np.array([1]), np.array([1]), np.array([1]))
+
+
+@pytest.mark.parametrize('kind', ['max profit', 'savings'])
+def test_objective_boost_unsupported(kind):
+    clv = sympy.symbols('clv')
+    metric = Metric(kind).add_tp_benefit(clv).build()
+    with pytest.raises(
+        NotImplementedError,
+        match=r'Gradient and Hessian of the gradient boosting function is not defined for this kind',
+    ):
+        metric._objective_gradient_boost(np.array([1]), np.array([1]))
+
+
+def test_repr_metric():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = Uniform('gamma', alpha, beta)
+    profit_func = (
+        Metric('max profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+    assert repr(profit_func) == (
+        "Metric(kind='max profit', integration_method='auto', n_mc_samples=65536, random_state=RandomState(MT19937), "
+        'tp_benefit=-f*(1 - gamma) + (clv - d - f)*gamma, tn_benefit=0, fp_cost=d + f, fn_cost=0)'
+    )
+
+
+def test_repr_latex_max_profit():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = Uniform('gamma', alpha, beta)
+    profit_func = (
+        Metric('max profit')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .build()
+    )
+    assert profit_func._repr_latex_() == (
+        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(f \\left(1 - '
+        '\\gamma\\right) - \\left(clv - d - f\\right) \\gamma\\right) - F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
+        '+ \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha \\leq \\gamma \\\\0 & \\text{otherwise} '
+        '\\end{cases}\\, d\\gamma$'
+    )
+
+
+def test_repr_latex_savings():
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+    savings_func = (
+        Metric('savings')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .build()
+    )
+    assert savings_func._repr_latex_() == (
+        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - \\gamma_{i}\\right) - '
+        '\\gamma_{i} \\left(clv_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} \\left(1 - y_{i}\\right) \\left(d_{i} + '
+        'f_{i}\\right)\\right)}{N \\min\\left(Cost_{0}, Cost_{1}\\right)}$'
+    )
+
+
+def test_repr_latex_cost():
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+    cost_func = (
+        Metric('cost').add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f).build()
+    )
+    assert cost_func._repr_latex_() == (
+        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - \\gamma_{i}\\right) - '
+        '\\gamma_{i} \\left(clv_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} \\left(1 - y_{i}\\right) \\left(d_{i} + '
+        'f_{i}\\right)\\right)}{N}$'
+    )
 
 
 # # Extract sympy distributions from _sympy_dist_to_scipy

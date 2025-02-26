@@ -209,7 +209,7 @@ class Metric:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         if integration_method not in self.INTEGRATION_METHODS:
             raise ValueError(
-                f'Integration technique {integration_method} is not supported. '
+                f'Integration method {integration_method} is not supported. '
                 f'Supported values are {self.INTEGRATION_METHODS}'
             )
         self.kind = kind
@@ -470,7 +470,7 @@ class Metric:
         if isinstance(alias, dict):
             self._aliases.update(alias)
         elif symbol is not None:
-            self._aliases[alias] = symbol
+            self._aliases[alias] = str(symbol)
         else:
             raise ValueError('Either a dictionary or both an alias and a symbol should be provided')
         return self
@@ -610,8 +610,8 @@ class Metric:
         if y_true.ndim == 1:
             y_true = np.expand_dims(y_true, axis=1)
 
-        value = self.__call__(y_true, y_pred, **kwargs)
         gradient = self._gradient_logit_function(features, y_true, y_pred, **kwargs)
+        value = self.__call__(y_true, y_pred, **kwargs)
         return value, gradient
 
     def _objective_gradient_boost(
@@ -635,7 +635,10 @@ class Metric:
 
     def __repr__(self) -> str:
         return (
-            f'{self.__class__.__name__}(tp_benefit={self.tp_benefit}, '
+            f'{self.__class__.__name__}('
+            f"kind='{self.kind}', integration_method='{self.integration_method}', "
+            f'n_mc_samples={self.n_mc_samples}, random_state={self._rng}, '
+            f'tp_benefit={self.tp_benefit}, '
             f'tn_benefit={self.tn_benefit}, fp_cost={self.fp_cost}, '
             f'fn_cost={self.fn_cost})'
         )
