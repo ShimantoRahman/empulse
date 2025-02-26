@@ -12,8 +12,8 @@ upload: build
 	uvx twine upload dist/*
 
 test:
-	pytest --cov-report term --cov=empulse tests/
-	coverage html
+	uv run pytest --cov-report term --cov=empulse tests/
+	uv run coverage html
 	start chrome "%CD%\htmlcov\index.html"
 
 doctest:
