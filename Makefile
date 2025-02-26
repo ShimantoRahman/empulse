@@ -6,7 +6,7 @@ clean:
 	powershell Remove-Item -Recurse -Force *.egg-info\
 
 build: clean
-	uv run python setup.py sdist bdist_wheel
+	uv build
 
 upload: build
 	uvx twine upload dist/*
