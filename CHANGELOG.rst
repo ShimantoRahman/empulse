@@ -1,7 +1,9 @@
 `Unreleased`_
 =============
 
-- ...
+- |Enhancement| Add support for more than one stochastic variable when building maximum profit metrics with
+  :class:`~empulse.metrics.Metric`
+- |Fix| Fix datasets not properly being packaged together with the package
 
 `0.7.0`_ (05-02-2025)
 =====================
@@ -45,6 +47,7 @@
 
 `0.5.2`_ (12-01-2025)
 =====================
+
 - |Feature| Allow :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`
   to calculate the savings score over the baseline model instead of a naive model,
   by setting the ``y_pred_baseline`` and ``y_proba_baseline`` parameters, respectively.
@@ -57,6 +60,7 @@
 
 `0.5.1`_ (05-01-2025)
 =====================
+
 - |Fix| Fixed documentation build issue
 
 `0.5.0`_ (05-01-2025)
