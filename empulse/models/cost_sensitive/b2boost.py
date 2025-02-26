@@ -314,7 +314,7 @@ class B2BoostClassifier(BaseBoostClassifier):
                 self.estimator_.fit(X, y, sample_weight=indices)
             return self
         else:
-            raise ValueError('estimator must be an instance of XGBClassifier or LGBMClassifier')
+            raise ValueError('estimator must be an instance of XGBClassifier, LGBMClassifier or CatBoostClassifier')
 
         self.estimator_.fit(X, y)
         return self
