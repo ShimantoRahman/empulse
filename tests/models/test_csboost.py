@@ -1,8 +1,10 @@
+from unittest import mock
+
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
 
-from empulse.models import CSBoostClassifier
+import empulse.models
 
 # Define the classifiers to test
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
@@ -23,10 +25,18 @@ def test_csboost_different_classifiers(library, classifier_name, dataset):
     classifier_class = getattr(classifier_module, classifier_name)
 
     X, y, fn_cost, fp_cost = dataset
-    model = CSBoostClassifier(estimator=classifier_class(n_estimators=2, verbose=0))
+    model = empulse.models.CSBoostClassifier(estimator=classifier_class(n_estimators=2, verbose=0))
     model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
     y_pred = model.predict(X)
     y_proba = model.predict_proba(X)
 
     assert y_pred.shape == y.shape
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
+
+
+def test_csboost_when_xgboost_is_missing(dataset):
+    X, y, fn_cost, fp_cost = dataset
+    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', None):
+        model = empulse.models.CSBoostClassifier()
+        with pytest.raises(ImportError, match=r'XGBoost package is required to use CSBoostClassifier.'):
+            model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
