@@ -17,7 +17,7 @@ def _build_cost_loss(
     n_mc_samples: int,
     rng: np.random.RandomState,
 ) -> MetricFn:
-    cost_function = _build_cost_function(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
+    cost_function = _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
     if any(sympy.stats.rv.is_random(symbol) for symbol in cost_function.free_symbols):
         raise NotImplementedError('Random variables are not supported for the cost metric.')
     cost_funct = sympy.lambdify(list(cost_function.free_symbols), cost_function)
@@ -29,7 +29,7 @@ def _build_cost_loss(
     return cost_loss
 
 
-def _build_cost_function(
+def _build_cost_equation(
     tp_cost: sympy.Expr, tn_cost: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> sympy.Expr:
     y, s = sympy.symbols('y s')
@@ -37,7 +37,7 @@ def _build_cost_function(
     return cost_function
 
 
-def _build_cost_gradient_logit(
+def _build_cost_logit_objective(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> Callable:
     y, s, x = sympy.symbols('y s x')
@@ -50,11 +50,11 @@ def _build_cost_gradient_logit(
     return cost_gradient_logit
 
 
-def _build_cost_gradient_hessian_gboost(
+def _build_cost_gradient_boost_objective(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> Callable:
     y, s, nabla = sympy.symbols('y s nabla')
-    gradient = s * (1 - s) * y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
+    gradient = s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
     gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
     hessian = (1 - 2 * s) * nabla
     hessian_fn = sympy.lambdify(list(hessian.free_symbols), hessian)

@@ -5,7 +5,7 @@ import sympy
 from numpy.typing import NDArray
 
 from .common import MetricFn, _check_parameters
-from .cost_metric import _build_cost_function, _format_cost_function
+from .cost_metric import _build_cost_equation, _format_cost_function
 
 
 def _build_savings_score(
@@ -17,7 +17,7 @@ def _build_savings_score(
     n_mc_samples: int,
     rng: np.random.RandomState,
 ) -> MetricFn:
-    cost_function = _build_cost_function(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
+    cost_function = _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
     if any(sympy.stats.rv.is_random(symbol) for symbol in cost_function.free_symbols):
         raise NotImplementedError('Random variables are not supported for the savings metric.')
     all_zero_function, all_one_function = _build_naive_cost_functions(cost_function)

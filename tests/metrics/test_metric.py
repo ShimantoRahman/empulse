@@ -11,6 +11,8 @@ from empulse.metrics import (
     expected_cost_loss,
     expected_cost_loss_churn,
     expected_savings_score,
+    make_objective_aec,
+    make_objective_churn,
     max_profit_score,
     mpc_score,
 )
@@ -675,12 +677,79 @@ def test_random_var_savings_score():
         savings_func.build()
 
 
+def test_objective_aec_gradient_boost(y_true_and_prediction):
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    y, y_proba = y_true_and_prediction
+
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit(gamma * (clv - delta * clv - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(delta * clv + f)
+        .build()
+    )
+    gradient, hessian = profit_func.gradient_boost_objective(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        delta=incentive_fraction,
+        f=contact_cost,
+        gamma=accept_rate,
+    )
+    objective = make_objective_churn(
+        model='xgboost',
+        clv=customer_lifetime_value,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    gradient_true, hessian_true = objective(y_proba, y)
+    assert np.allclose(gradient, gradient_true)
+    assert np.allclose(hessian, hessian_true)
+
+
+def test_objective_aec_logit():
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    X, y = make_classification(random_state=12)
+    weights = np.zeros(X.shape[1])
+
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    profit_func = (
+        Metric('cost')
+        .add_tp_benefit(gamma * (clv - delta * clv - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(delta * clv + f)
+        .build()
+    )
+    metric, gradient = profit_func.logit_objective(
+        X,
+        weights,
+        y,
+        clv=customer_lifetime_value,
+        delta=incentive_fraction,
+        f=contact_cost,
+        gamma=accept_rate,
+    )
+    tp_benefit = accept_rate * (customer_lifetime_value - incentive_fraction * customer_lifetime_value - contact_cost)
+    tp_benefit += (1 - accept_rate) * -contact_cost
+    fp_cost = incentive_fraction * customer_lifetime_value + contact_cost
+    objective = make_objective_aec(
+        model='cslogit',
+        tp_cost=-tp_benefit,
+        fp_cost=fp_cost,
+    )
+    metric_true, gradient_true = objective(X, weights, y)
+    assert pytest.approx(metric) == metric_true
+    assert np.allclose(gradient, gradient_true)
+
+
 @pytest.mark.parametrize('kind', ['max profit', 'savings'])
 def test_objective_logit_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(kind).add_tp_benefit(clv).build()
     with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for this kind'):
-        metric._objective_logit(np.array([1]), np.array([1]), np.array([1]))
+        metric.logit_objective(np.array([1]), np.array([1]), np.array([1]))
 
 
 @pytest.mark.parametrize('kind', ['max profit', 'savings'])
@@ -691,7 +760,7 @@ def test_objective_boost_unsupported(kind):
         NotImplementedError,
         match=r'Gradient and Hessian of the gradient boosting function is not defined for this kind',
     ):
-        metric._objective_gradient_boost(np.array([1]), np.array([1]))
+        metric.gradient_boost_objective(np.array([1]), np.array([1]))
 
 
 def test_repr_metric():

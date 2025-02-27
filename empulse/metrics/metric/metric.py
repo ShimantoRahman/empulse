@@ -7,8 +7,8 @@ import sympy
 from numpy.typing import ArrayLike, NDArray
 
 from .cost_metric import (
-    _build_cost_gradient_hessian_gboost,
-    _build_cost_gradient_logit,
+    _build_cost_gradient_boost_objective,
+    _build_cost_logit_objective,
     _build_cost_loss,
     _cost_loss_to_latex,
 )
@@ -235,8 +235,8 @@ class Metric:
             self.metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
             self.build_metric = _build_cost_loss
-            self.build_gradient_logit = _build_cost_gradient_logit
-            self.build_gradient_hessian_gboost = _build_cost_gradient_hessian_gboost
+            self.build_gradient_logit = _build_cost_logit_objective
+            self.build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
             self.metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
             self.build_metric = _build_savings_score
@@ -551,38 +551,7 @@ class Metric:
         )
         return self
 
-    def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **kwargs: ArrayLike | float) -> float:
-        """
-        Compute the metric score or loss.
-
-        The :meth:`empulse.metrics.Metric.build` method should be called before calling this method.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities or decision scores (based on the chosen metric).
-
-        kwargs: float or array-like of shape (n_samples,)
-            The values of the costs and benefits defined in the metric.
-            Can either be their symbols or their aliases.
-
-        Returns
-        -------
-        score: float
-            The computed metric score or loss.
-        """
-        if not self._built:
-            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
-
-        y_true = np.asarray(y_true)
-        y_score = np.asarray(y_score)
-        kwargs = self._prepare_kwargs(**kwargs)
-        return self._score_function(y_true, y_score, **kwargs)
-
-    def _prepare_kwargs(self, **kwargs: ArrayLike | float) -> dict[str, NDArray | float]:
+    def _prepare_parameters(self, **kwargs: ArrayLike | float) -> dict[str, NDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
         # Use default values if not provided in kwargs
         for key, value in self._defaults.items():
@@ -599,10 +568,75 @@ class Metric:
 
         return kwargs
 
-    def _objective_logit(
-        self, features: NDArray, weights: NDArray, y_true: NDArray, **kwargs: NDArray | float
+    def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **parameters: ArrayLike | float) -> float:
+        """
+        Compute the metric score or loss.
+
+        The :meth:`empulse.metrics.Metric.build` method should be called before calling this method.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities or decision scores (based on the chosen metric).
+
+            - If ``kind='max profit'``, the predicted labels are the decision scores.
+            - If ``kind='cost'``, the predicted labels are the (calibrated) probabilities.
+            - If ``kind='savings'``, the predicted labels are the (calibrated) probabilities.
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        score: float
+            The computed metric score or loss.
+        """
+        if not self._built:
+            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
+
+        y_true = np.asarray(y_true)
+        y_score = np.asarray(y_score)
+        parameters = self._prepare_parameters(**parameters)
+        return self._score_function(y_true, y_score, **parameters)
+
+    def logit_objective(
+        self, features: NDArray, weights: NDArray, y_true: NDArray, **parameters: NDArray | float
     ) -> tuple[float | NDArray]:
-        kwargs = self._prepare_kwargs(**kwargs)
+        """
+        Compute the metric loss and its gradient with respect to the logistic regression weights.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        weights : NDArray of shape (n_features,)
+            The weights of the logistic regression model.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        value : float
+            The metric loss to be minimized.
+        gradient : NDArray of shape (n_features,)
+            The gradient of the metric loss with respect to the logistic regression weights.
+        """
+        parameters = self._prepare_parameters(**parameters)
         y_pred = scipy.special.expit(np.dot(weights, features.T))
 
         if y_pred.ndim == 1:
@@ -610,14 +644,38 @@ class Metric:
         if y_true.ndim == 1:
             y_true = np.expand_dims(y_true, axis=1)
 
-        gradient = self._gradient_logit_function(features, y_true, y_pred, **kwargs)
-        value = self.__call__(y_true, y_pred, **kwargs)
+        gradient = self._gradient_logit_function(features, y_true, y_pred, **parameters)
+        value = self.__call__(y_true, y_pred, **parameters)
         return value, gradient
 
-    def _objective_gradient_boost(
-        self, y_score: NDArray, y_true: NDArray, **kwargs: NDArray | float
+    def gradient_boost_objective(
+        self, y_true: NDArray, y_score: NDArray, **parameters: NDArray | float
     ) -> tuple[NDArray | NDArray]:
-        kwargs = self._prepare_kwargs(**kwargs)
+        """
+        Compute the gradient and hessian of the metric loss with respect to the gradient boosting weights.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        y_score : NDArray of shape (n_samples,)
+            The predicted probabilities or decision scores.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient : NDArray of shape (n_samples,)
+            The gradient of the metric loss with respect to the gradient boosting weights.
+        hessian : NDArray of shape (n_samples,)
+            The hessian of the metric loss with respect to the gradient boosting weights.
+        """
+        parameters = self._prepare_parameters(**parameters)
 
         if isinstance(y_true, np.ndarray):
             pass
@@ -625,12 +683,12 @@ class Metric:
             y_true = y_true.get_label()
         else:
             raise TypeError(
-                f'Expected y_true to be of type numpy.ndarray or xgboost.DMatrix, got {type(y_true)} instead.'
+                f'Expected y_true to be of type numpy.ndarray, lightgbm.Dataset, or xgboost.DMatrix, '
+                f'got {type(y_true)} instead.'
             )
 
         y_proba = scipy.special.expit(y_score)
-
-        gradient, hessian = self._gradient_hessian_gboost_function(y_true, y_proba, **kwargs)
+        gradient, hessian = self._gradient_hessian_gboost_function(y_true, y_proba, **parameters)
         return gradient, hessian
 
     def __repr__(self) -> str:
