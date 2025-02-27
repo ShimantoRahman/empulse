@@ -7,7 +7,7 @@ from numpy import ndarray
 from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     try:
         from lightgbm import Dataset
         from xgboost import DMatrix

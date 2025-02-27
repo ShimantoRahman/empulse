@@ -102,7 +102,7 @@ class CostSensitiveSampler(BaseSampler):
         'fn_cost': [Real, 'array-like'],
     }
 
-    if TYPE_CHECKING:
+    if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
         def set_fit_resample_request(self, *, fp_cost=False, fn_cost=False):  # noqa: D102
             pass

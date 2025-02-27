@@ -12,7 +12,7 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from ..utils._sklearn_compat import ClassifierTags, type_of_target  # type: ignore
 from ._strategies import Strategy
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
     _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
@@ -175,7 +175,7 @@ class BiasRelabler(BaseSampler):
         'demographic parity': _independent_pairs,
     }
 
-    if TYPE_CHECKING:
+    if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
         def set_fit_resample_request(self, sensitive_feature=False):  # noqa: D102
             pass
