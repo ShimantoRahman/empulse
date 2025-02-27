@@ -1,9 +1,12 @@
+from unittest import mock
+
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 from xgboost import XGBClassifier
 
+import empulse.models
 from empulse.models import B2BoostClassifier
 
 
@@ -145,3 +148,11 @@ def test_b2boost_different_classifiers(library, classifier_name, dataset):
 
     assert y_pred.shape == y.shape
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
+
+
+def test_b2boost_when_xgboost_is_missing(dataset):
+    X, y = dataset
+    with mock.patch.object(empulse.models.cost_sensitive.b2boost, 'XGBClassifier', None):
+        model = B2BoostClassifier()
+        with pytest.raises(ImportError, match=r'XGBoost package is required to use B2BoostClassifier.'):
+            model.fit(X, y)

@@ -260,7 +260,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         if self.estimator is None:
             if XGBClassifier is None:
                 raise ImportError(
-                    'XGBoost package is required to use CSBoostClassifier. '
+                    'XGBoost package is required to use B2BoostClassifier. '
                     'Install optional dependencies through pip install empulse[optional] or '
                     'pip install xgboost'
                 )
