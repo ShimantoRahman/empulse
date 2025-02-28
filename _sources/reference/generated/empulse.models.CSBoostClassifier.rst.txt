@@ -1,0 +1,9 @@
+﻿CSBoostClassifier
+=================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSBoostClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

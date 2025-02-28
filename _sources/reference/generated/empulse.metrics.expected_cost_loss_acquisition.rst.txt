@@ -1,0 +1,6 @@
+﻿expected\_cost\_loss\_acquisition
+=================================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: expected_cost_loss_acquisition
