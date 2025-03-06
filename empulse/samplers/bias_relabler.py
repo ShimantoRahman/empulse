@@ -18,8 +18,8 @@ if TYPE_CHECKING:  # pragma: no cover
     _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
     _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
 else:
-    _XT = TypeVar('_XT', bound=ArrayLike)
-    _YT = TypeVar('_YT', bound=ArrayLike)
+    _XT = TypeVar('_XT', NDArray, ArrayLike)
+    _YT = TypeVar('_YT', NDArray, ArrayLike)
 
 StrategyFn = Callable[[np.ndarray, np.ndarray], int]
 
@@ -203,35 +203,7 @@ class BiasRelabler(BaseSampler):
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
 
-    def fit_relabel(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
-        """
-        Fit the estimator and relabel the data according to the strategy.
-
-        Calls the fit_resample method to be compatible with the imbalance-learn API.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_features)
-        y : 1D array-like, shape=(n_samples,)
-        sensitive_feature : 1D array-like, shape=(n_samples,)
-            Sensitive feature used to determine the number of promotion and demotion pairs.
-
-        Returns
-        -------
-        X : 2D array-like, shape=(n_samples, n_features)
-            Original training data.
-        y : np.ndarray
-            Relabeled target values.
-        """
-        return self.fit_resample(X, y, sensitive_feature=sensitive_feature)
-
-    def fit_resample(
-        self,
-        X: _XT,
-        y: _YT,
-        *,
-        sensitive_feature: ArrayLike | None = None,
-    ) -> tuple[_XT, _YT]:
+    def fit_resample(self, X: _XT, y: _YT, *, sensitive_feature: ArrayLike | None = None) -> tuple[_XT, _YT]:
         """
         Fit the estimator and relabel the data according to the strategy.
 
