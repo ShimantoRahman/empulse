@@ -45,7 +45,9 @@ def test_metric_vs_empc_score(
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Beta('gamma', alpha, beta)
     profit_func = (
-        Metric('max profit', integration_method=integration_method, random_state=12)
+        Metric('max profit')
+        .set_integration_method(integration_method)
+        .set_random_state(12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -438,7 +440,9 @@ def test_metric_uniform_dist(y_true_and_prediction, integration_method):
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Uniform('gamma', alpha, beta)
     profit_func = (
-        Metric('max profit', integration_method=integration_method, random_state=12)
+        Metric('max profit')
+        .set_integration_method(integration_method)
+        .set_random_state(12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -461,7 +465,9 @@ def test_metric_uniform_dist_no_params(y_true_and_prediction, integration_method
     clv, d, f = sympy.symbols('clv d f')
     gamma = Uniform('gamma', 0, 1)
     profit_func = (
-        Metric('max profit', integration_method=integration_method, random_state=12)
+        Metric('max profit')
+        .set_integration_method(integration_method)
+        .set_random_state(12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -482,7 +488,9 @@ def test_metric_normal_dist(y_true_and_prediction, integration_method):
     gamma, d, f, mu, sigma = sympy.symbols('gamma d f mu sigma')
     clv = Normal('clv', mu, sigma)
     profit_func = (
-        Metric('max profit', integration_method=integration_method, random_state=12)
+        Metric('max profit')
+        .set_integration_method(integration_method)
+        .set_random_state(12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -613,7 +621,7 @@ def test_unsupported_kind():
 def test_unsupported_integration_method():
     clv = sympy.symbols('clv')
     with pytest.raises(ValueError, match=r'Integration method unsupported is not supported. Supported values are'):
-        Metric('max profit', integration_method='unsupported').add_tp_benefit(clv).build()  # type: ignore
+        Metric('max profit').set_integration_method('unsupported').add_tp_benefit(clv).build()  # type: ignore
 
 
 @pytest.mark.parametrize('integration_method', Metric.INTEGRATION_METHODS)
@@ -623,7 +631,9 @@ def test_missing_arguments(y_true_and_prediction, integration_method):
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = Uniform('gamma', alpha, beta)
     profit_func = (
-        Metric('max profit', integration_method=integration_method, random_state=12)
+        Metric('max profit')
+        .set_integration_method(integration_method)
+        .set_random_state(12)
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')

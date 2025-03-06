@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Any, ClassVar, Final, Literal, Protocol
+from typing import Any, ClassVar, Literal, Protocol
 
 import numpy as np
 import scipy
@@ -55,90 +55,47 @@ class Metric:
           This metric supports passing instance-dependent costs in the form of array-likes.
           This metric does not support stochastic variables.
 
-    integration_method : {'auto', 'quad', 'monte-carlo'}, default='auto'
-        The integration method to use when the metric has stochastic variables.
-
-        - If ``'auto'``, the integration method is automatically chosen based on the number of stochastic variables,
-          balancing accuracy with execution speed.
-          For a single stochastic variables, piecewise integration is used. This is the most accurate method.
-          For two stochastic variables, 'quad' is used,
-          and for more than two stochastic variables, 'quasi-monte-carlo' is used if all distribution are supported.
-          Otherwise, 'monte-carlo' is used.
-        - If ``'quad'``, the metric is integrated using the quad function from scipy.
-          Be careful, as this can be slow for more than 2 stochastic variables.
-        - If ``'monte-carlo'``, the metric is integrated using a Monte Carlo simulation.
-          The monte-carlo simulation is less accurate but faster than quad for many stochastic variables.
-        - If ``'quasi-monte-carlo'``, the metric is integrated using a Quasi Monte Carlo simulation.
-          The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions
-          present in :mod:`sympy:sympy.stats`:
-
-            - :class:`sympy.stats.Arcsin`
-            - :class:`sympy.stats.Beta`
-            - :class:`sympy.stats.BetaPrime`
-            - :class:`sympy.stats.Chi`
-            - :class:`sympy.stats.ChiSquared`
-            - :class:`sympy.stats.Erlang`
-            - :class:`sympy.stats.Exponential`
-            - :class:`sympy.stats.ExGaussian`
-            - :class:`sympy.stats.F`
-            - :class:`sympy.stats.Gamma`
-            - :class:`sympy.stats.GammaInverse`
-            - :class:`sympy.stats.GaussianInverse`
-            - :class:`sympy.stats.Gompertz`
-            - :class:`sympy.stats.Laplace`
-            - :class:`sympy.stats.Levy`
-            - :class:`sympy.stats.Logistic`
-            - :class:`sympy.stats.LogNormal`
-            - :class:`sympy.stats.Lomax`
-            - :class:`sympy.stats.Normal`
-            - :class:`sympy.stats.Maxwell`
-            - :class:`sympy.stats.Moyal`
-            - :class:`sympy.stats.Nakagami`
-            - :class:`sympy.stats.Pareto`
-            - :class:`sympy.stats.PowerFunction`
-            - :class:`sympy.stats.StudentT`
-            - :class:`sympy.stats.Trapezoidal`
-            - :class:`sympy.stats.Triangular`
-            - :class:`sympy.stats.Uniform`
-            - :class:`sympy.stats.VonMises`
-
-    n_mc_samples_exp : int, default=16 (-> 2**16 = 65536)
-        ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
-        ``integration_technique'monte-carlo'``.
-        Increasing the number of samples improves the accuracy of the metric estimation, but slows down the speed.
-        This argument is ignored when the ``integration_technique='quad'``.
-
-    random_state : int | np.random.RandomState | None, default=None
-        The random state to use when ``integration_technique='monte-carlo'`` or
-        ``integration_technique='quasi-monte-carlo'``.
-        Determines the points sampled from the distribution of the stochastic variables.
-        This argument is ignored when ``integration_technique='quad'``.
-
     Attributes
     ----------
     tp_benefit : sympy.Expr
         The benefit of a true positive.
+        See :meth:`~empulse.metrics.Metric.add_tp_benefit` for more details.
 
     tn_benefit : sympy.Expr
         The benefit of a true negative.
+        See :meth:`~empulse.metrics.Metric.add_tn_benefit` for more details.
 
     fp_benefit : sympy.Expr
         The benefit of a false positive.
+        See :meth:`~empulse.metrics.Metric.add_fp_benefit` for more details.
 
     fn_benefit : sympy.Expr
         The benefit of a false negative.
+        See :meth:`~empulse.metrics.Metric.add_fn_benefit` for more details.
 
     tp_cost : sympy.Expr
         The cost of a true positive.
+        See :meth:`~empulse.metrics.Metric.add_tp_cost` for more details.
 
     tn_cost : sympy.Expr
         The cost of a true negative.
+        See :meth:`~empulse.metrics.Metric.add_tn_cost` for more details.
 
     fp_cost : sympy.Expr
         The cost of a false positive.
+        See :meth:`~empulse.metrics.Metric.add_fp_cost` for more details.
 
     fn_cost : sympy.Expr
         The cost of a false negative.
+        See :meth:`~empulse.metrics.Metric.add_fn_cost` for more details.
+
+    integration_method : {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}
+        The integration method to use when the metric has stochastic variables.
+        See :meth:`~empulse.metrics.Metric.set_integration_method` for more details.
+
+    n_mc_samples : int
+        The number of samples to use when using Monte Carlo methods to estimate the metric value.
+        See :meth:`~empulse.metrics.Metric.set_n_mc_samples_exp` for more details.
 
     Examples
     --------
@@ -192,26 +149,38 @@ class Metric:
         cost_loss(
             y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
         )
+
+    Using the Metric class as a context manager (automatically builds after assembling the components).
+    Also adding default values for some of the parameters.
+
+    .. code-block:: python
+
+        import sympy as sp
+        from empulse.metrics import Metric
+
+        clv, delta, f, gamma = sp.symbols('clv delta f gamma')
+
+        with Metric(kind='cost') as cost_loss:
+            cost_loss.add_tp_benefit(gamma * (clv - delta * clv - f))
+            cost_loss.add_tp_benefit((1 - gamma) * -f)
+            cost_loss.add_fp_cost(delta * clv + f)
+            cost_loss.alias('incentive_fraction', delta)
+            cost_loss.alias('contact_cost', f)
+            cost_loss.alias('accept_rate', gamma)
+            cost_loss.set_default(incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)
+
+        y_true = [1, 0, 1, 0, 1]
+        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+
+        cost_loss(y_true, y_proba, clv=100)
     """
 
     METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'cost', 'savings']
     INTEGRATION_METHODS: ClassVar[list[str]] = ['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']
 
-    def __init__(
-        self,
-        kind: Literal['max profit', 'cost', 'savings'],
-        *,
-        integration_method: Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo'] = 'auto',
-        n_mc_samples_exp: int = 16,
-        random_state: int | np.random.RandomState | None = None,
-    ) -> None:
+    def __init__(self, kind: Literal['max profit', 'cost', 'savings']) -> None:
         if kind not in self.METRIC_TYPES:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
-        if integration_method not in self.INTEGRATION_METHODS:
-            raise ValueError(
-                f'Integration method {integration_method} is not supported. '
-                f'Supported values are {self.INTEGRATION_METHODS}'
-            )
         self.kind = kind
 
         def gradient_logit_undefined(*args, **kwargs):
@@ -241,9 +210,9 @@ class Metric:
         elif kind == 'savings':
             self.build_metric = _build_savings_score
             self.metric_to_latex = _savings_score_to_latex
-        self.integration_method = integration_method
-        self.n_mc_samples: Final[int] = 2**n_mc_samples_exp
-        self._rng = np.random.RandomState(random_state)
+        self.integration_method = 'auto'
+        self.n_mc_samples: int = 2**16
+        self._rng = np.random.RandomState(None)
         self._tp_benefit: sympy.Expr = sympy.core.numbers.Zero()
         self._tn_benefit: sympy.Expr = sympy.core.numbers.Zero()
         self._fp_cost: sympy.Expr = sympy.core.numbers.Zero()
@@ -516,12 +485,190 @@ class Metric:
         self._defaults.update(defaults)
         return self
 
+    def set_integration_method(
+        self, integration_method: Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']
+    ) -> 'Metric':
+        """
+        Set the integration method to use when the metric has stochastic variables.
+
+        Parameters
+        ----------
+        integration_method: {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}, default='auto'
+            The integration method to use when the metric has stochastic variables.
+
+            - If ``'auto'``, the integration method is automatically chosen based on the number of stochastic variables,
+              balancing accuracy with execution speed.
+              For a single stochastic variables, piecewise integration is used. This is the most accurate method.
+              For two stochastic variables, 'quad' is used,
+              and for more than two stochastic variables, 'quasi-monte-carlo' is used if all distribution are supported.
+              Otherwise, 'monte-carlo' is used.
+            - If ``'quad'``, the metric is integrated using the quad function from scipy.
+              Be careful, as this can be slow for more than 2 stochastic variables.
+            - If ``'monte-carlo'``, the metric is integrated using a Monte Carlo simulation.
+              The monte-carlo simulation is less accurate but faster than quad for many stochastic variables.
+            - If ``'quasi-monte-carlo'``, the metric is integrated using a Quasi Monte Carlo simulation.
+              The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions
+              present in :mod:`sympy:sympy.stats`:
+
+                - :class:`sympy.stats.Arcsin`
+                - :class:`sympy.stats.Beta`
+                - :class:`sympy.stats.BetaPrime`
+                - :class:`sympy.stats.Chi`
+                - :class:`sympy.stats.ChiSquared`
+                - :class:`sympy.stats.Erlang`
+                - :class:`sympy.stats.Exponential`
+                - :class:`sympy.stats.ExGaussian`
+                - :class:`sympy.stats.F`
+                - :class:`sympy.stats.Gamma`
+                - :class:`sympy.stats.GammaInverse`
+                - :class:`sympy.stats.GaussianInverse`
+                - :class:`sympy.stats.Gompertz`
+                - :class:`sympy.stats.Laplace`
+                - :class:`sympy.stats.Levy`
+                - :class:`sympy.stats.Logistic`
+                - :class:`sympy.stats.LogNormal`
+                - :class:`sympy.stats.Lomax`
+                - :class:`sympy.stats.Normal`
+                - :class:`sympy.stats.Maxwell`
+                - :class:`sympy.stats.Moyal`
+                - :class:`sympy.stats.Nakagami`
+                - :class:`sympy.stats.Pareto`
+                - :class:`sympy.stats.PowerFunction`
+                - :class:`sympy.stats.StudentT`
+                - :class:`sympy.stats.Trapezoidal`
+                - :class:`sympy.stats.Triangular`
+                - :class:`sympy.stats.Uniform`
+                - :class:`sympy.stats.VonMises`
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import Metric
+
+            clv, d, f, alpha, beta = sp.symbols('clv d f alpha beta')
+            gamma = sp.stats.Beta('gamma', alpha, beta)
+            empc_score = (
+                Metric(kind='max profit')
+                .add_tp_benefit(gamma * (clv - d - f))
+                .add_tp_benefit((1 - gamma) * -f)
+                .add_fp_cost(d + f)
+                .set_integration_method('quad')
+                .build()
+            )
+            y_true = [1, 0, 1, 0, 1]
+            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)
+        """
+        if integration_method not in self.INTEGRATION_METHODS:
+            raise ValueError(
+                f'Integration method {integration_method} is not supported. '
+                f'Supported values are {self.INTEGRATION_METHODS}'
+            )
+        self.integration_method = integration_method
+        return self
+
+    def set_random_state(self, random_state: int | np.random.RandomState) -> 'Metric':
+        """
+        Set the random state to use when using monte-carlo methods to estimate the metric value.
+
+        Parameters
+        ----------
+        random_state: int | np.random.RandomState
+            The random state to use when ``integration_technique='monte-carlo'`` or
+            ``integration_technique='quasi-monte-carlo'``.
+            Determines the points sampled from the distribution of the stochastic variables.
+            This argument is ignored when ``integration_technique='quad'``.
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import Metric
+
+            clv, d, f, alpha, beta = sp.symbols('clv d f alpha beta')
+            gamma = sp.stats.Beta('gamma', alpha, beta)
+            empc_score = (
+                Metric(kind='max profit')
+                .add_tp_benefit(gamma * (clv - d - f))
+                .add_tp_benefit((1 - gamma) * -f)
+                .add_fp_cost(d + f)
+                .set_integration_method('quasi-monte-carlo')
+                .set_random_state(42)
+                .build()
+            )
+            y_true = [1, 0, 1, 0, 1]
+            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)
+        """
+        self._rng = np.random.RandomState(random_state)
+        return self
+
+    def set_n_mc_samples_exp(self, n_mc_samples_exp: int) -> 'Metric':
+        """
+        Set the number of (Quasi-) Monte Carlo samples to use.
+
+        This is ignored when is ``integration_technique='quad'``.
+
+        Parameters
+        ----------
+        n_mc_samples_exp: int
+            ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
+            ``integration_technique'monte-carlo'``.
+            Increasing the number of samples improves the accuracy of the metric estimation, but slows down the speed.
+            This argument is ignored when the ``integration_technique='quad'``.
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import Metric
+
+            clv, d, f, alpha, beta = sp.symbols('clv d f alpha beta')
+            gamma = sp.stats.Beta('gamma', alpha, beta)
+            empc_score = (
+                Metric(kind='max profit')
+                .add_tp_benefit(gamma * (clv - d - f))
+                .add_tp_benefit((1 - gamma) * -f)
+                .add_fp_cost(d + f)
+                .set_integration_method('monte-carlo')
+                .set_n_mc_samples_exp(15)
+                .build()
+            )
+            y_true = [1, 0, 1, 0, 1]
+            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)
+        """
+        self.n_mc_samples = 2**n_mc_samples_exp
+        return self
+
     def build(self) -> 'Metric':
         """
         Build the metric function.
 
-        This function should be called last after adding all the terms.
+        This function should be called last after adding all the cost-benefit terms.
         After calling this function, the metric function can be called with the true labels and predicted probabilities.
+
+        This function is automatically called when using
+        the :class:`~empulse.metrics.Metric` class as a context manager.
 
         Returns
         -------
