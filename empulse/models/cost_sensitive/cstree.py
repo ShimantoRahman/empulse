@@ -4,14 +4,14 @@ from numbers import Integral, Real
 from typing import ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ...metrics import cost_loss
-from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -191,19 +191,19 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.pruned = pruned
         self.random_state = random_state
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
         return tags
 
-    def _node_cost(self, y_true, cost_mat):
+    def _node_cost(self, y_true: NDArray, cost_mat: NDArray) -> tuple[float, int, float]:
         """
         Private function to calculate the cost of a node.
 
@@ -212,7 +212,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        cost_mat : array-like of shape = [n_samples, 4]
+        cost_mat : array of shape = [n_samples, 4]
             Cost matrix of the classification problem
             Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
@@ -261,15 +261,17 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             else:
                 costs *= -np.log(pi)
 
-        y_pred = np.argmin(costs)
+        y_pred = int(np.argmin(costs))
 
         # Calculate the predicted probability of a node using laplace correction.
         n_positives = y_true.sum()
         y_prob = (n_positives + 1.0) / (n_samples + 2.0)
 
-        return costs[y_pred], y_pred, y_prob
+        return float(costs[y_pred]), y_pred, y_prob
 
-    def _calculate_gain(self, cost_base, y_true, X, cost_mat, split):
+    def _calculate_gain(
+        self, cost_base: float, y_true: NDArray, X: NDArray, cost_mat: NDArray, split: tuple[int, float]
+    ) -> tuple[float, int]:
         """
         Private function to calculate the gain in cost of using split in the current node.
 
@@ -281,7 +283,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        X : array-like of shape = [n_samples, n_features]
+        X : array of shape = [n_samples, n_features]
             The input samples.
 
         cost_mat : array-like of shape = [n_samples, 4]
@@ -310,7 +312,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         # Check if one of the leafs is empty
         # TODO: This must be check in _best_split
         if np.nonzero(filter_Xl)[0].shape[0] in {0, n_samples}:  # One leaft is empty
-            return 0.0, 0.0
+            return 0.0, 0
 
         # Split X in Xl and Xr according to rule split
         Xl_cost, Xl_pred, _ = self._node_cost(y_true[filter_Xl], cost_mat[filter_Xl, :])
@@ -326,7 +328,9 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return gain, Xl_pred
 
-    def _best_split(self, y_true, X, cost_mat):
+    def _best_split(
+        self, y_true: NDArray, X: NDArray, cost_mat: NDArray
+    ) -> tuple[tuple[np.signedinteger, float], float, int, int, float]:
         """Private function to calculate the split that gives the best gain.
 
         Parameters
@@ -334,12 +338,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        X : array-like of shape = [n_samples, n_features]
+        X : array of shape = [n_samples, n_features]
             The input samples.
 
         cost_mat : array-like of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         Returns
@@ -392,7 +396,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             y_prob,
         )
 
-    def _tree_grow(self, y_true, X, cost_mat, level=0):
+    def _tree_grow(self, y_true: NDArray, X: NDArray, cost_mat: NDArray, level: int = 0) -> dict:
         """Private recursive function to grow the decision tree.
 
         Parameters
@@ -400,12 +404,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        X : array-like of shape = [n_samples, n_features]
+        X : array shape = [n_samples, n_features]
             The input samples.
 
-        cost_mat : array-like of shape = [n_samples, 4]
+        cost_mat : array of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         Returns
@@ -444,7 +448,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         if 0 < self.min_samples_split < 1:
             min_samples_split = ceil(self.min_samples_split * n_samples)
         else:
-            min_samples_split = self.min_samples_split
+            min_samples_split = int(self.min_samples_split)
         if n_samples <= min_samples_split:
             return tree
 
@@ -457,7 +461,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         if 0 < self.min_samples_leaf < 1:
             min_samples_leaf = ceil(self.min_samples_leaf * n_samples)
         else:
-            min_samples_leaf = self.min_samples_leaf
+            min_samples_leaf = int(self.min_samples_leaf)
         if min(n_samples_Xl, n_samples_Xr) <= min_samples_leaf:
             return tree
 
@@ -472,12 +476,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return tree
 
     class _Tree:
-        def __init__(self):
-            self.n_nodes = 0
-            self.tree = {}
-            self.tree_pruned = {}
-            self.nodes = []
-            self.n_nodes_pruned = 0
+        def __init__(self) -> None:
+            self.n_nodes: int = 0
+            self.tree: dict = {}
+            self.tree_pruned: dict = {}
+            self.nodes: list = []
+            self.n_nodes_pruned: int = 0
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
@@ -569,7 +573,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return self
 
-    def _nodes(self, tree):
+    def _nodes(self, tree: dict) -> list:
         """Private function that find the number of nodes in a tree.
 
         Parameters
@@ -581,7 +585,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         nodes : array like of shape [n_nodes]
         """
 
-        def recourse(temp_tree_, nodes):
+        def recourse(temp_tree_: dict, nodes: list) -> None:
             if isinstance(temp_tree_, dict) and temp_tree_['split'] != -1:
                 nodes.append(temp_tree_['node'])
                 if temp_tree_['split'] != -1:
@@ -589,11 +593,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                         recourse(temp_tree_[k], nodes)
             return None
 
-        nodes_ = []
+        nodes_: list = []
         recourse(tree, nodes_)
         return nodes_
 
-    def _classify(self, X, tree, proba=False):
+    def _classify(self, X: NDArray, tree: dict, proba: bool = False) -> NDArray:
         """Private function that classify a dataset using tree.
 
         Parameters
@@ -635,7 +639,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return predicted
 
-    def predict(self, X):
+    def predict(self, X: ArrayLike) -> NDArray:
         """Predict class of X.
 
         The predicted class for each sample in X is returned.
@@ -659,7 +663,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_pred = np.where(y_pred == 1, self.classes_[1], self.classes_[0])
         return y_pred
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: ArrayLike) -> NDArray:
         """Predict class probabilities of the input samples X.
 
         Parameters
@@ -683,7 +687,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return prob
 
-    def _delete_node(self, tree, node):
+    def _delete_node(self, tree: dict, node: int) -> dict:
         """Private function that eliminate node from tree.
 
         Parameters
@@ -700,7 +704,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         # Calculate gains
         temp_tree = copy.deepcopy(tree)
 
-        def recourse(temp_tree_, del_node):
+        def recourse(temp_tree_: dict, del_node: int) -> None:
             if isinstance(temp_tree_, dict) and temp_tree_['split'] != -1:
                 if temp_tree_['node'] == del_node:
                     del temp_tree_['sr']
@@ -715,20 +719,20 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         recourse(temp_tree, node)
         return temp_tree
 
-    def _pruning(self, X, y_true, cost_mat):
+    def _pruning(self, X: NDArray, y_true: NDArray, cost_mat: NDArray) -> None:
         """Private function that prune the decision tree.
 
         Parameters
         ----------
-        X : array-like of shape = [n_samples, n_features]
+        X : array of shape = [n_samples, n_features]
             The input samples.
 
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        cost_mat : array-like of shape = [n_samples, 4]
+        cost_mat : array of shape = [n_samples, 4]
             Cost matrix of the classification problem
-            Where the columns represents the costs of: false positives, false negatives,
+            Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.
 
         """
@@ -751,7 +755,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             tn_cost=tn_cost,
         )
         if cost_base == 0:
-            cost_base = np.finfo(float).eps
+            cost_base = float(np.finfo(float).eps)
 
         for m, node in enumerate(nodes):
             # Create temporal tree by eliminating node from tree_pruned
@@ -790,19 +794,19 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             if best_node != 0:
                 self._pruning(X, y_true, cost_mat)
 
-    def pruning(self, X, y, cost_mat):
+    def pruning(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> None:
         """
         Prune the decision tree.
 
         Parameters
         ----------
-        X : array-like of shape = [n_samples, n_features]
+        X : array of shape = [n_samples, n_features]
             The input samples.
 
         y_true : array indicator matrix
             Ground truth (correct) labels.
 
-        cost_mat : array-like of shape = [n_samples, 4]
+        cost_mat : array of shape = [n_samples, 4]
             Cost matrix of the classification problem
             Where the columns represent the costs of: false positives, false negatives,
             true positives and true negatives, for each example.

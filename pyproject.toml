@@ -205,3 +205,10 @@ allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]
 [tool.mypy]
 ignore_missing_imports = true
 allow_redefinition = true  # sometimes mypy cannot infer the type correctly, especially when using np.typing.ArrayLike
+warn_redundant_casts = true
+strict_equality = true
+no_implicit_reexport = true
+no_implicit_optional = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_untyped_calls = true

@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
 
-from ..utils._sklearn_compat import ClassifierTags, type_of_target  # type: ignore
+from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -151,7 +151,7 @@ class BiasResampler(BaseSampler):
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False):  # noqa: D102
+        def set_fit_resample_request(self, sensitive_feature: bool = False) -> 'BiasResampler':  # noqa: D102
             pass
 
     def __init__(
@@ -166,13 +166,13 @@ class BiasResampler(BaseSampler):
         self.transform_feature = transform_feature
         self.random_state = random_state
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
         tags.sampler_tags.sample_indices = True

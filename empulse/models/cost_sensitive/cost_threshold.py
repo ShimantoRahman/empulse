@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
+from sklearn.base import BaseEstimator
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
@@ -13,7 +14,7 @@ from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, proces
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 
@@ -128,7 +129,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         self,
         estimator: Any,
         *,
-        calibrator: Literal['sigmoid', 'isotonic'] | object | None = 'sigmoid',
+        calibrator: Literal['sigmoid', 'isotonic'] | BaseEstimator | None = 'sigmoid',
         pos_label: int | bool | str | None = None,
         random_state: int | np.random.RandomState | None = None,
         tp_cost: ArrayLike | float = 0.0,
@@ -145,19 +146,19 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.input_tags.sparse = False
         return tags
 
     @property
-    def classes_(self):  # noqa: D102
+    def classes_(self) -> NDArray:  # noqa: D102
         if estimator := getattr(self, 'estimator_', None):
             return estimator.classes_
         try:
@@ -166,7 +167,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
-    def _get_calibrator(self, estimator):
+    def _get_calibrator(self, estimator: Any) -> Any:
         if self.calibrator == 'sigmoid':
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(estimator, method='sigmoid', cv=cv, ensemble=False)
@@ -174,9 +175,9 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(estimator, method='isotonic', cv=cv, ensemble=False)
         else:
-            return self.calibrator.set_params(estimator=estimator)
+            return self.calibrator.set_params(estimator=estimator)  # type: ignore[union-attr]
 
-    def _fit(self, X, y, **params):
+    def _fit(self, X: ArrayLike, y: ArrayLike, **params: Any) -> 'CSThresholdClassifier':
         """Fit the classifier.
 
         Parameters
@@ -272,7 +273,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
         return self.classes_[map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]]
 
-    def get_metadata_routing(self):
+    def get_metadata_routing(self) -> MetadataRouter:
         """Get metadata routing of this object.
 
         Please check :ref:`User Guide <sklearn:metadata_routing>` on how the routing

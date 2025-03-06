@@ -767,7 +767,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-):
+) -> Dataset | tuple:
     """
     Load the credit scoring PAKDD 2009 competition dataset (binary classification).
 
@@ -1047,7 +1047,9 @@ def load_credit_scoring_pakdd(
         )
 
 
-def _creditscoring_costmat(income, debt, pi_1, cost_mat_parameters):
+def _creditscoring_costmat(
+    income: NDArray, debt: NDArray, pi_1: float, cost_mat_parameters: dict[str, float]
+) -> NDArray:
     """Private function to calculate the cost matrix of credit scoring models.
 
     Parameters
@@ -1076,24 +1078,26 @@ def _creditscoring_costmat(income, debt, pi_1, cost_mat_parameters):
         true positives and true negatives, for each example.
     """
 
-    def calculate_a(cl_i, int_, n_term):
+    def calculate_a(cl_i: float, int_: float, n_term: float) -> float:
         return cl_i * ((int_ * (1 + int_) ** n_term) / ((1 + int_) ** n_term - 1))
 
-    def calculate_pv(a, int_, n_term):
+    def calculate_pv(a: float, int_: float, n_term: float) -> float:
         return a / int_ * (1 - 1 / (1 + int_) ** n_term)
 
     # Calculate credit line Cl
-    def calculate_cl(k, inc_i, cl_max, debt_i, int_r, n_term):
+    def calculate_cl(k: float, inc_i: float, cl_max: float, debt_i: float, int_r: float, n_term: float) -> float:
         cl_k = k * inc_i
         a = calculate_a(cl_k, int_r, n_term)
         cl_debt = calculate_pv(inc_i * min(a / inc_i, 1 - debt_i), int_r, n_term)
         return min(cl_k, cl_max, cl_debt)
 
     # calculate costs
-    def calculate_cost_fn(cl_i, lgd):
+    def calculate_cost_fn(cl_i: float, lgd: float) -> float:
         return cl_i * lgd
 
-    def calculate_cost_fp(cl_i, int_r, n_term, int_cf, pi_1, lgd, cl_avg):
+    def calculate_cost_fp(
+        cl_i: float, int_r: float, n_term: float, int_cf: float, pi_1: float, lgd: float, cl_avg: float
+    ) -> float:
         a = calculate_a(cl_i, int_r, n_term)
         pv = calculate_pv(a, int_cf, n_term)
         r = pv - cl_i

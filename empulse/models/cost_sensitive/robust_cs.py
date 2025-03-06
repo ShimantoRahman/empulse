@@ -10,7 +10,7 @@ from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 
 from ..._common import Parameter
-from ...utils._sklearn_compat import _estimator_has, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, _estimator_has, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -381,16 +381,16 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         return self.estimator_.decision_function(X)
 
     @property
-    def classes_(self):  # noqa: D102
+    def classes_(self) -> int:  # noqa: D102
         return self.estimator_.classes_
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True

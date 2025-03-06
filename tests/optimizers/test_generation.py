@@ -23,7 +23,7 @@ def test_rga_init(generation):
     assert generation.population_size == 10
     assert generation.crossover_rate == 0.8
     assert generation.mutation_rate == 0.1
-    assert generation.elitism == 0.05
+    assert generation.elitism_fraction == 0.05
     assert generation.verbose is False
     assert generation.rng is not None
     assert generation.n_jobs == 1

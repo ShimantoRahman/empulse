@@ -1,5 +1,5 @@
 import numbers
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
@@ -1036,13 +1036,21 @@ def _objective_boost(
 class AECObjective:
     """AEC objective for catboost."""
 
-    def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
+    def __init__(
+        self,
+        tp_cost: NDArray | float = 0.0,
+        tn_cost: NDArray | float = 0.0,
+        fn_cost: NDArray | float = 0.0,
+        fp_cost: NDArray | float = 0.0,
+    ):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
-    def calc_ders_range(self, predictions, targets, weights):
+    def calc_ders_range(
+        self, predictions: Sequence[float], targets: NDArray, weights: NDArray
+    ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
 
@@ -1081,17 +1089,23 @@ class AECObjective:
 class AECMetric:
     """AEC metric for catboost."""
 
-    def __init__(self, tp_cost=0.0, tn_cost=0.0, fn_cost=0.0, fp_cost=0.0):
+    def __init__(
+        self,
+        tp_cost: NDArray | float = 0.0,
+        tn_cost: NDArray | float = 0.0,
+        fn_cost: NDArray | float = 0.0,
+        fp_cost: NDArray | float = 0.0,
+    ) -> None:
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
-    def is_max_optimal(self):
+    def is_max_optimal(self) -> bool:
         """Return whether great values of metric are better."""
         return False
 
-    def evaluate(self, predictions, targets, weights):
+    def evaluate(self, predictions: Sequence[float], targets: Sequence[float], weights: NDArray) -> tuple[float, float]:
         """
         Evaluate metric value.
 
@@ -1131,7 +1145,7 @@ class AECMetric:
             check_input=False,
         ), 1
 
-    def get_final_error(self, error, weight):
+    def get_final_error(self, error: float, weight: float) -> float:
         """
         Return final value of metric based on error and weight.
 

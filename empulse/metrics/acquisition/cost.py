@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
@@ -245,7 +245,9 @@ class AECObjectiveAcquisition:
         self.direct_selling = direct_selling
         self.commission = commission
 
-    def calc_ders_range(self, predictions, targets, weights):
+    def calc_ders_range(
+        self, predictions: Sequence[float], targets: NDArray, weights: Sequence[float]
+    ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
 
@@ -297,11 +299,13 @@ class AECMetricAcquisition:
         self.direct_selling = direct_selling
         self.commission = commission
 
-    def is_max_optimal(self):
+    def is_max_optimal(self) -> bool:
         """Return whether great values of metric are better."""
         return False
 
-    def evaluate(self, predictions, targets, weights):
+    def evaluate(
+        self, predictions: Sequence[float], targets: Sequence[float], weights: Sequence[float]
+    ) -> tuple[float, float]:
         """
         Evaluate metric value.
 
@@ -335,7 +339,7 @@ class AECMetricAcquisition:
             check_input=False,
         ), 1
 
-    def get_final_error(self, error, weight):
+    def get_final_error(self, error: float, weight: float) -> float:
         """
         Return final value of metric based on error and weight.
 

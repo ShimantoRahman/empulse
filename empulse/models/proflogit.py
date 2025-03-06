@@ -177,7 +177,16 @@ class ProfLogitClassifier(BaseLogitClassifier):
         return self
 
 
-def _objective(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
+def _objective(
+    weights: NDArray,
+    X: NDArray,
+    y: NDArray,
+    loss_fn: Callable,
+    C: float,
+    l1_ratio: float,
+    soft_threshold: bool,
+    fit_intercept: bool,
+) -> float:
     """ProfLogit's objective function (maximization problem)."""
     # b is the vector holding the regression coefficients (no intercept)
     b = weights.copy()[1:] if fit_intercept else weights

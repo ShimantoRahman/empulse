@@ -1,5 +1,6 @@
 from collections.abc import MutableMapping
 from numbers import Real
+from types import TracebackType
 from typing import Any, ClassVar, Literal
 
 import numpy as np
@@ -187,13 +188,15 @@ class Metric:
         self.kind = kind
 
         def gradient_logit_undefined(*args: Any, **kwargs: Any) -> LogitObjective:
-            def undefined_fn(*args, **kwargs):
+            def undefined_fn(x: NDArray, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> NDArray[np.floating]:
                 raise NotImplementedError(f'Gradient of the logit function is not defined for kind={self.kind}')
 
             return undefined_fn
 
         def gradient_hessian_gboost_undefined(*args: Any, **kwargs: Any) -> BoostObjective:
-            def undefined_fn(*args, **kwargs):
+            def undefined_fn(
+                y_true: NDArray, y_score: NDArray, **kwargs: Any
+            ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
                 raise NotImplementedError(
                     f'Gradient and Hessian of the gradient boosting function is not defined for kind={self.kind}'
                 )
@@ -253,7 +256,7 @@ class Metric:
         return self._fp_cost
 
     @property
-    def fn_cost(self):  # noqa: D102
+    def fn_cost(self) -> sympy.Expr:  # noqa: D102
         return self._fn_cost
 
     def add_tp_benefit(self, term: sympy.Expr | str) -> 'Metric':
@@ -862,8 +865,10 @@ class Metric:
             tp_benefit=self.tp_benefit, tn_benefit=self.tn_benefit, fp_cost=self.fp_cost, fn_cost=self.fn_cost
         )
 
-    def __enter__(self):
+    def __enter__(self) -> 'Metric':
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
+    ) -> None:
         self.build()

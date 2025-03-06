@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
 from sklearn.utils._param_validation import HasMethods
@@ -12,7 +13,7 @@ try:
 except ImportError:
     LGBMClassifier = None  # type: ignore[misc, assignment]
 
-from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, ABC):
@@ -43,23 +44,23 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
     }
 
-    def __init__(self, estimator=None):
+    def __init__(self, estimator: Any = None) -> None:
         self.estimator = estimator
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
         return tags
 
     @_fit_context(prefer_skip_nested_validation=True)
-    def fit(self, X, y, **fit_params):
+    def fit(self, X: ArrayLike, y: ArrayLike, **fit_params: Any) -> 'BaseBoostClassifier':
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
@@ -74,9 +75,9 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         return self._fit(X, y, **fit_params)
 
     @abstractmethod
-    def _fit(self, X, y, **fit_params): ...
+    def _fit(self, X: NDArray, y: NDArray, **fit_params: Any) -> 'BaseBoostClassifier': ...
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: ArrayLike) -> NDArray:
         """
         Predict class probabilities for X.
 
@@ -99,7 +100,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
 
         return self.estimator_.predict_proba(X)
 
-    def predict(self, X):
+    def predict(self, X: ArrayLike) -> NDArray:
         """
         Predict class labels for X.
 

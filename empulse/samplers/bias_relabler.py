@@ -9,7 +9,7 @@ from sklearn.base import clone
 from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
 
-from ..utils._sklearn_compat import ClassifierTags, type_of_target  # type: ignore
+from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -177,7 +177,7 @@ class BiasRelabler(BaseSampler):
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature=False):  # noqa: D102
+        def set_fit_resample_request(self, sensitive_feature: bool = False) -> 'BiasRelabler':  # noqa: D102
             pass
 
     def __init__(
@@ -192,13 +192,13 @@ class BiasRelabler(BaseSampler):
         self.transform_feature = transform_feature
         self.strategy = strategy
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
         return tags
@@ -297,14 +297,14 @@ class BiasRelabler(BaseSampler):
         return X, relabled_y
 
 
-def _get_demotion_candidates(y_pred, y_true, n_pairs):
+def _get_demotion_candidates(y_pred: NDArray, y_true: NDArray, n_pairs: int) -> NDArray:
     """Return the n_pairs instances with the lowest probability of being positive class label."""
     positive_indices = np.where(y_true == 1)[0]
     positive_predictions = y_pred[positive_indices]
     return positive_indices[np.argsort(positive_predictions)[:n_pairs]]
 
 
-def _get_promotion_candidates(y_pred, y_true, n_pairs):
+def _get_promotion_candidates(y_pred: NDArray, y_true: NDArray, n_pairs: int) -> NDArray:
     """Return the n_pairs instances with the lowest probability of being negative class label."""
     negative_indices = np.where(y_true == 0)[0]
     negative_predictions = y_pred[negative_indices]

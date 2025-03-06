@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Sequence
 from itertools import islice, pairwise
 from typing import Any
 
@@ -96,7 +97,9 @@ def _build_profit_function(
     return profit_function
 
 
-def _build_max_profit_deterministic(profit_function, deterministic_symbols):
+def _build_max_profit_deterministic(
+    profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]
+) -> MetricFn:
     """Compute the maximum profit for all deterministic variables."""
     calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
@@ -115,13 +118,18 @@ def _build_max_profit_deterministic(profit_function, deterministic_symbols):
     return score_function
 
 
-def _support_all_distributions(random_symbols):
+def _support_all_distributions(random_symbols: Iterable[sympy.Symbol]) -> bool:
     return all(pspace(r).distribution.__class__ in _sympy_dist_to_scipy for r in random_symbols)
 
 
 def _build_max_profit_stochastic(
-    profit_function, random_symbols, deterministic_symbols, integration_method, n_mc_samples, rng
-):
+    profit_function: sympy.Expr,
+    random_symbols: Sequence[sympy.Symbol],
+    deterministic_symbols: Iterable[sympy.Symbol],
+    integration_method: str,
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> MetricFn:
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)
     if integration_method == 'auto':
@@ -151,7 +159,9 @@ def _build_max_profit_stochastic(
         raise ValueError(f'Integration method {integration_method} is not supported')
 
 
-def _build_max_profit_stochastic_piecewise(profit_function, random_symbol, deterministic_symbols):
+def _build_max_profit_stochastic_piecewise(
+    profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
+) -> MetricFn:
     """
     Compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -173,7 +183,14 @@ def _build_max_profit_stochastic_piecewise(profit_function, random_symbol, deter
     else:
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    def compute_integral(integrand, lower_bound, upper_bound, true_positive_rate, false_positive_rate, random_var):
+    def compute_integral(
+        integrand: sympy.Expr,
+        lower_bound: float,
+        upper_bound: float,
+        true_positive_rate: float,
+        false_positive_rate: float,
+        random_var: sympy.Symbol,
+    ) -> float:
         integrand = integrand.subs('F_0', true_positive_rate).subs('F_1', false_positive_rate).evalf()
         if not integrand.free_symbols:  # if the integrand is constant, no need to call quad
             if integrand == 0:  # need this separate path since sometimes upper or lower bound can be infinite
@@ -223,7 +240,7 @@ def _build_max_profit_stochastic_piecewise(profit_function, random_symbol, deter
             .subs('pi_0', positive_class_prior)
             .subs('pi_1', negative_class_prior)
         )
-        score = 0
+        score = 0.0
         for (lower_bound, upper_bound), tpr, fpr in zip(
             pairwise(bounds), true_positive_rates, false_positive_rates, strict=False
         ):
@@ -233,7 +250,9 @@ def _build_max_profit_stochastic_piecewise(profit_function, random_symbol, deter
     return score_function
 
 
-def _build_max_profit_stochastic_quad(profit_function, random_symbols, deterministic_symbols):
+def _build_max_profit_stochastic_quad(
+    profit_function: sympy.Expr, random_symbols: Sequence[sympy.Symbol], deterministic_symbols: Iterable[sympy.Symbol]
+) -> MetricFn:
     """
     Compute the maximum profit for one or more stochastic variables using quad integration.
 
@@ -255,13 +274,19 @@ def _build_max_profit_stochastic_quad(profit_function, random_symbols, determini
     else:
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    def compute_integral(integrand, bounds, true_positive_rates, false_positive_rates, random_variables):
+    def compute_integral(
+        integrand: sympy.Expr,
+        bounds: Iterable[float],
+        true_positive_rates: Iterable[float],
+        false_positive_rates: Iterable[float],
+        random_variables: Iterable[sympy.Symbol],
+    ) -> float:
         integrands = [
             lambdify(random_variables, integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
             for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
         ]
 
-        def integrand_fn(*random_vars):
+        def integrand_fn(*random_vars: float) -> float:
             return max(integrand(*reversed(random_vars)) for integrand in integrands)
 
         if n_random == 1:
@@ -299,7 +324,13 @@ def _build_max_profit_stochastic_quad(profit_function, random_symbols, determini
     return score_function
 
 
-def _build_max_profit_stochastic_mc(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng):
+def _build_max_profit_stochastic_mc(
+    profit_function: sympy.Expr,
+    random_symbols: Sequence[sympy.Symbol],
+    deterministic_symbols: Iterable[sympy.Symbol],
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> MetricFn:
     """
     Compute the maximum profit for one or more stochastic variables using Monte Carlo (MC) integration.
 
@@ -364,7 +395,13 @@ def _build_max_profit_stochastic_mc(profit_function, random_symbols, determinist
     return score_function
 
 
-def _build_max_profit_stochastic_qmc(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng):
+def _build_max_profit_stochastic_qmc(
+    profit_function: sympy.Expr,
+    random_symbols: Sequence[sympy.Symbol],
+    deterministic_symbols: Iterable[sympy.Symbol],
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> MetricFn:
     distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
     distribution_args = [arg for args in distributions_args for arg in args]
     # Generate a Sobol sequence for QMC sampling
@@ -387,7 +424,7 @@ def _build_max_profit_stochastic_qmc(profit_function, random_symbols, determinis
         cached_dist_params = {str(arg): arg for arg in distribution_args}
         scipy_distributions = None
         param_grid_needs_recompute = True
-        param_grid = None
+        param_grid = []
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
     @_check_parameters(*deterministic_symbols, *dist_params)

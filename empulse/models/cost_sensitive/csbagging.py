@@ -2,11 +2,12 @@ import contextlib
 import itertools
 import numbers
 from abc import ABCMeta, abstractmethod
+from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, Literal
 
 import numpy as np
 from joblib import Parallel, cpu_count, delayed
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import ClassifierMixin, _fit_context, clone
 from sklearn.ensemble import BaseEnsemble
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
@@ -15,7 +16,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ...metrics import savings_score
-from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 from .cslogit import CSLogitClassifier
 from .cstree import CSTreeClassifier
@@ -23,7 +24,7 @@ from .cstree import CSTreeClassifier
 MAX_INT = np.iinfo(np.int32).max
 
 
-def _partition_estimators(n_estimators, n_jobs):
+def _partition_estimators(n_estimators: int, n_jobs: int) -> tuple[int, list[int], list[int]]:
     """Private function used to partition estimators between jobs."""
     # Compute the number of jobs
     n_jobs = min(cpu_count(), n_estimators) if n_jobs == -1 else min(n_jobs, n_estimators)
@@ -36,7 +37,15 @@ def _partition_estimators(n_estimators, n_jobs):
     return n_jobs, n_estimators_per_job.tolist(), [0, *starts.tolist()]
 
 
-def _parallel_build_estimators(n_estimators, ensemble, X, y, cost_mat, seeds, verbose):
+def _parallel_build_estimators(
+    n_estimators: int,
+    ensemble: 'BaseBagging',
+    X: NDArray,
+    y: NDArray,
+    cost_mat: NDArray,
+    seeds: Sequence[int],
+    verbose: int,
+) -> tuple[list[Any], list[NDArray], list[NDArray]]:
     """Private function used to build a batch of estimators within a job."""
     # Retrieve settings
     n_samples, n_features = X.shape
@@ -102,7 +111,14 @@ def _parallel_build_estimators(n_estimators, ensemble, X, y, cost_mat, seeds, ve
     return estimators, estimators_samples, estimators_features
 
 
-def _parallel_predict_proba(estimators, estimators_features, X, n_classes, combination, estimators_weight):
+def _parallel_predict_proba(
+    estimators: Iterable,
+    estimators_features: list[NDArray],
+    X: NDArray,
+    n_classes: int,
+    combination: str,
+    estimators_weight: list[float],
+) -> NDArray:
     """Private function used to compute (proba-)predictions within a job."""
     n_samples = X.shape[0]
     proba = np.zeros((n_samples, n_classes))
@@ -117,7 +133,14 @@ def _parallel_predict_proba(estimators, estimators_features, X, n_classes, combi
     return proba
 
 
-def _parallel_predict(estimators, estimators_features, X, n_classes, combination, estimators_weight):
+def _parallel_predict(
+    estimators: Iterable,
+    estimators_features: list[NDArray],
+    X: NDArray,
+    n_classes: int,
+    combination: str,
+    estimators_weight: list[float],
+) -> NDArray:
     """Private function used to compute predictions within a job."""
     n_samples = X.shape[0]
     pred = np.zeros((n_samples, n_classes))
@@ -135,7 +158,13 @@ def _parallel_predict(estimators, estimators_features, X, n_classes, combination
     return pred
 
 
-def _create_stacking_set(estimators, estimators_features, estimators_weight, X, combination):
+def _create_stacking_set(
+    estimators: Sequence,
+    estimators_features: list[NDArray],
+    estimators_weight: NDArray,
+    X: NDArray,
+    combination: str,
+) -> NDArray:
     """Private function used to create the stacking training set."""
     n_samples = X.shape[0]
 
@@ -324,10 +353,12 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
 
         return self
 
-    def _fit_stacking_model(self, X, y, cost_mat):
+    def _fit_stacking_model(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> 'BaseBagging':
         """Private function used to fit the stacking model."""
         final_estimator = self.final_estimator if self.final_estimator is not None else CSLogitClassifier()
         self.final_estimator_ = clone(final_estimator)
+        if self.estimators_ is None or self.estimators_weight_ is None:
+            raise RuntimeError('You must call fit() before calling fit_stacking_model().')
         X_stacking = _create_stacking_set(
             self.estimators_,
             self.estimators_features_,
@@ -350,9 +381,11 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         return self
 
     # TODO: _evaluate_oob_savings in parallel
-    def _evaluate_oob_savings(self, X, y, cost_mat):
+    def _evaluate_oob_savings(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> 'BaseBagging':
         """Private function used to calculate the OOB Savings of each estimator."""
         estimators_weight = []
+        if self.estimators_ is None or self.estimators_samples_ is None or self.estimators_features_ is None:
+            raise RuntimeError('You must call fit() before calling _evaluate_oob_savings().')
         for estimator, samples, features in zip(
             self.estimators_, self.estimators_samples_, self.estimators_features_, strict=False
         ):
@@ -572,19 +605,19 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
             verbose=verbose,
         )
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
         return tags
 
-    def predict(self, X):
+    def predict(self, X: ArrayLike) -> NDArray:
         """Predict class for X.
 
         The predicted class of an input sample is computed as the class with
@@ -603,6 +636,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
             The predicted classes.
         """
         check_is_fitted(self)
+        self.estimators_: list[Any]  # refine since check_is_fitted is true
         X = validate_data(self, X, reset=False)
 
         if self.n_features_ != X.shape[1]:
@@ -662,7 +696,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         else:
             raise ValueError('Invalid combination method.')
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: ArrayLike) -> NDArray:
         """Predict class probabilities for X.
 
         The predicted class probabilities of an input sample is computed as

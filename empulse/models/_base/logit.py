@@ -11,7 +11,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
 
-from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 class OptimizeFnKwargs(Protocol):
@@ -64,20 +64,20 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         self.optimizer_params = optimizer_params
         self.optimize_fn = optimize_fn
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
         return tags
 
     @_fit_context(prefer_skip_nested_validation=True)
-    def fit(self, X, y, **fit_params):
+    def fit(self, X: ArrayLike, y: ArrayLike, **fit_params: Any) -> 'BaseLogitClassifier':
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
@@ -95,7 +95,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):
         return self._fit(X, y, **fit_params)
 
     @abstractmethod
-    def _fit(self, X, y, **fit_params): ...
+    def _fit(self, X: NDArray, y: NDArray, **fit_params: Any) -> 'BaseLogitClassifier': ...
 
     def predict_proba(self, X: ArrayLike) -> np.ndarray:
         """

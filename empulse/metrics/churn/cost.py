@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
@@ -236,7 +236,9 @@ class AECObjectiveChurn:
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
 
-    def calc_ders_range(self, predictions, targets, weights):
+    def calc_ders_range(
+        self, predictions: Sequence[float], targets: NDArray, weights: NDArray
+    ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
 
@@ -288,11 +290,11 @@ class AECMetricChurn:
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
 
-    def is_max_optimal(self):
+    def is_max_optimal(self) -> bool:
         """Return whether great values of metric are better."""
         return False
 
-    def evaluate(self, predictions, targets, weights):
+    def evaluate(self, predictions: Sequence[float], targets: NDArray, weights: NDArray) -> tuple[float, float]:
         """
         Evaluate metric value.
 
@@ -329,7 +331,7 @@ class AECMetricChurn:
             check_input=False,
         ), 1
 
-    def get_final_error(self, error, weight):
+    def get_final_error(self, error: float, weight: float) -> float:
         """
         Return final value of metric based on error and weight.
 

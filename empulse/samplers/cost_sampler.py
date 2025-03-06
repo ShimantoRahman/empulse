@@ -8,7 +8,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
-from ..utils._sklearn_compat import ClassifierTags  # type: ignore
+from ..utils._sklearn_compat import ClassifierTags, Tags  # type: ignore
 
 
 class CostSensitiveSampler(BaseSampler):
@@ -104,7 +104,7 @@ class CostSensitiveSampler(BaseSampler):
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, *, fp_cost=False, fn_cost=False):  # noqa: D102
+        def set_fit_resample_request(self, *, fp_cost: bool = False, fn_cost: bool = False) -> 'CostSensitiveSampler':  # noqa: D102
             pass
 
     def __init__(
@@ -125,13 +125,13 @@ class CostSensitiveSampler(BaseSampler):
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags = ClassifierTags(multi_class=False)
         tags.sampler_tags.sample_indices = True
@@ -176,8 +176,8 @@ class CostSensitiveSampler(BaseSampler):
         self,
         X: NDArray,
         y: NDArray,
-        fp_cost: float | ArrayLike = 0.0,
-        fn_cost: float | ArrayLike = 0.0,
+        fp_cost: float | ArrayLike | Parameter = 0.0,
+        fn_cost: float | ArrayLike | Parameter = 0.0,
     ) -> tuple[NDArray, NDArray]:
         if fp_cost is Parameter.UNCHANGED:
             fp_cost = self.fp_cost
@@ -185,8 +185,8 @@ class CostSensitiveSampler(BaseSampler):
             fn_cost = self.fn_cost
 
         if (
-            all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))  # type: ignore
-            and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore
+            all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
+            and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore[misc, arg-type]
         ):
             warnings.warn(
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '

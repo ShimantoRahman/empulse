@@ -3,13 +3,13 @@ from itertools import product
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
-from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
@@ -193,13 +193,13 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         self.strategy = strategy
         self.transform_feature = transform_feature
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, bool]:
         return {
             'binary_only': True,
             'poor_score': True,
         }
 
-    def __sklearn_tags__(self):
+    def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
@@ -252,13 +252,14 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: ArrayLike) -> NDArray:
         """
         Predict class probabilities for X.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
+            Features to predict.
 
         Returns
         -------
@@ -270,13 +271,14 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
         return self.estimator_.predict_proba(X)
 
-    def predict(self, X):
+    def predict(self, X: ArrayLike) -> NDArray:
         """
         Predict class labels for X.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
+            Features to predict.
 
         Returns
         -------

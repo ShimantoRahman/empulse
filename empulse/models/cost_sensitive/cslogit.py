@@ -329,7 +329,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
         if self.loss == 'average expected cost':
             loss = make_objective_aec(model='cslogit', **loss_params)
-            objective = partial(
+            objective: Callable[
+                [NDArray, NDArray, NDArray], float | tuple[float, NDArray] | tuple[float, NDArray, NDArray]
+            ] = partial(
                 _objective_jacobian,
                 X=X,
                 y=y,
@@ -411,7 +413,16 @@ def _optimize_jacobian(
     return result
 
 
-def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
+def _objective_jacobian(
+    weights: NDArray,
+    X: NDArray,
+    y: NDArray,
+    loss_fn: Callable,
+    C: float,
+    l1_ratio: float,
+    soft_threshold: bool,
+    fit_intercept: bool,
+) -> tuple[float, NDArray]:
     """Compute the objective function and its gradient using elastic net regularization."""
     if soft_threshold:
         b = weights.copy()[1:] if fit_intercept else weights.copy()
@@ -433,7 +444,16 @@ def _objective_jacobian(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
     return loss + penalty, gradient + gradient_penalty
 
 
-def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit_intercept):
+def _objective_callable(
+    weights: NDArray,
+    X: NDArray,
+    y: NDArray,
+    loss_fn: Callable,
+    C: float,
+    l1_ratio: float,
+    soft_threshold: bool,
+    fit_intercept: bool,
+) -> float | tuple[float, NDArray] | tuple[float, NDArray, NDArray]:
     """Objective function (minimization problem)."""
     # b is the vector holding the regression coefficients (no intercept)
     b = weights.copy()[1:] if fit_intercept else weights
@@ -465,13 +485,13 @@ def _objective_callable(weights, X, y, loss_fn, C, l1_ratio, soft_threshold, fit
         return loss + _compute_penalty(b, C, l1_ratio)
 
 
-def _compute_penalty(b, C, l1_ratio):
+def _compute_penalty(b: NDArray, C: float, l1_ratio: float) -> float:
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
     return penalty
 
 
-def _check_optimize_result(result):
+def _check_optimize_result(result: OptimizeResult) -> None:
     """
     Check the OptimizeResult for successful convergence.
 

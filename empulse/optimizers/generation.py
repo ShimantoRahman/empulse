@@ -1,4 +1,4 @@
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import datetime
 
 import numpy as np
@@ -126,6 +126,8 @@ class Generation:
                 raise TypeError('`pop_size` must be an int.')
             if population_size < 10:
                 raise ValueError('`pop_size` must be >= 10.')
+        if population_size is None:
+            population_size = -1
         self.population_size = population_size
 
         if not 0.0 <= crossover_rate <= 1.0:
@@ -138,7 +140,8 @@ class Generation:
 
         if not 0.0 <= elitism <= 1.0:
             raise ValueError('`elitism` must be in [0, 1].')
-        self.elitism = elitism
+        self.elitism_fraction: float = elitism
+        self.elitism = 0  # determined later
 
         self.verbose = verbose
         self.logging_fn = logging_fn
@@ -150,14 +153,14 @@ class Generation:
 
         # Attributes
         self._n_mating_pairs: int | None = None
-        self.elite_pool = None
+        self.elite_pool: list[tuple] = []
         self.fx_best: list = []
         self.fitness: NDArray[np.float64] = np.empty(0)
         self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)
-        self.lower_bounds: NDArray | None = None
-        self.upper_bounds: NDArray | None = None
-        self.delta_bounds: NDArray | None = None
-        self.n_dim: int | None = None
+        self.lower_bounds: NDArray = np.asarray(0)
+        self.upper_bounds: NDArray = np.asarray(0)
+        self.delta_bounds: NDArray = np.asarray(0)
+        self.n_dim: int = 0
 
     def optimize(self, objective: Callable, bounds: list[tuple[float, float]]) -> Generator['Generation', None, None]:
         """
@@ -192,10 +195,10 @@ class Generation:
         self.n_dim = len(bounds)
 
         # Check population size
-        if self.population_size is None:
+        if self.population_size <= 0:
             self.population_size = self.n_dim * 10
 
-        self.elitism = int(max(1, round(self.population_size * self.elitism)))
+        self.elitism = int(max(1, round(self.population_size * self.elitism_fraction)))
         self._n_mating_pairs = int(self.population_size / 2)  # Constant for crossover
         self.fitness = np.empty(self.population_size) * np.nan
 
@@ -242,7 +245,7 @@ class Generation:
         else:
             return fitness_value
 
-    def _crossover(self):
+    def _crossover(self) -> None:
         """Perform local arithmetic crossover."""
         # Make iterator for pairs
         match_parents = (
@@ -262,8 +265,12 @@ class Generation:
                 self.fitness[ix1] = np.nan
                 self.fitness[ix2] = np.nan
 
-    def _mutate(self):
+    def _mutate(self) -> None:
         """Perform uniform random mutation."""
+        if self.population_size is None:
+            raise ValueError('`population_size` must be set.')
+        if self.n_dim is None:
+            raise ValueError('`n_dim` must be set.')
         for ix in range(self.population_size):
             if self.rng.uniform() < self.mutation_rate:
                 mutant = self.population[ix]  # inplace
@@ -275,12 +282,12 @@ class Generation:
                 mutant[rnd_gene] = rnd_val
                 self.fitness[ix] = np.nan
 
-    def _select(self):
+    def _select(self) -> None:
         """Perform linear scaling selection."""
         fitness_values = np.copy(self.fitness)
-        min_fitness = np.min(fitness_values)
-        avg_fitness = np.mean(fitness_values)
-        max_fitness = np.max(fitness_values)
+        min_fitness = float(np.min(fitness_values))
+        avg_fitness = float(np.mean(fitness_values))
+        max_fitness = float(np.max(fitness_values))
 
         # Linear scaling
         if min_fitness < 0:
@@ -312,17 +319,17 @@ class Generation:
         self.population = self.population[select_ix]
         self.fitness = self.fitness[select_ix]
 
-    def _get_sorted_non_nan_ix(self):
+    def _get_sorted_non_nan_ix(self) -> list[tuple]:
         """Get indices sorted according to non-nan fitness values."""
         non_nan_fx = ((ix, fx) for ix, fx in enumerate(self.fitness) if ~np.isnan(fx))
         sorted_list = sorted(non_nan_fx, key=lambda t: t[1])
         return sorted_list
 
-    def _insert_elites(self):
+    def _insert_elites(self) -> None:
         """Update population by replacing the worst solutions of the current with the ones from the elite pool."""
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
-            worst_ix = [t[0] for t in sorted_fx][: self.elitism]
+            worst_ix: Iterable = [t[0] for t in sorted_fx][: self.elitism]
         else:
             worst_ix = np.argsort(self.fitness)[: self.elitism]
         for i, ix in enumerate(worst_ix):
@@ -330,12 +337,12 @@ class Generation:
             self.population[ix] = elite
             self.fitness[ix] = fitness_elite
 
-    def _update_elite_pool(self):
+    def _update_elite_pool(self) -> None:
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
-            elite_ix = [t[0] for t in sorted_fx][-self.elitism :]
+            elite_ix: Sequence = [t[0] for t in sorted_fx][-self.elitism :]
         else:
-            elite_ix = np.argsort(self.fitness)[-self.elitism :]
+            elite_ix = list(np.argsort(self.fitness)[-self.elitism :])
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])
@@ -343,7 +350,7 @@ class Generation:
         self.result.fun = self.fx_best[-1]
         self.result.nit = len(self.fx_best)
 
-    def _log_start(self):
+    def _log_start(self) -> None:
         self.logging_fn(
             '# ---  {} ({})  --- #'.format(
                 self.name,
@@ -351,10 +358,10 @@ class Generation:
             )
         )
 
-    def _log_progress(self):
+    def _log_progress(self) -> None:
         status_msg = f'Iter = {self.result.nit:5d}; nfev = {self.result.nfev:6d}; fx = {self.fx_best[-1]:.4f}'
         self.logging_fn(status_msg)
 
-    def _log_end(self, stop_time):
+    def _log_end(self, stop_time: float) -> None:
         self.logging_fn(self.result)
         self.logging_fn(f'# ---  {self.name} ({stop_time})  --- #')
