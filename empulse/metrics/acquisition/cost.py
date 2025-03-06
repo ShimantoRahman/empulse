@@ -210,7 +210,7 @@ def _objective(
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
     elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()
+        y_true = dtrain.get_label()  # type: ignore[assignment]
     else:
         raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
 

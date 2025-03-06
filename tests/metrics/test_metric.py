@@ -758,7 +758,7 @@ def test_objective_aec_logit():
 def test_objective_logit_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(kind).add_tp_benefit(clv).build()
-    with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for this kind'):
+    with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for kind'):
         metric.logit_objective(np.array([1]), np.array([1]), np.array([1]))
 
 
@@ -768,7 +768,7 @@ def test_objective_boost_unsupported(kind):
     metric = Metric(kind).add_tp_benefit(clv).build()
     with pytest.raises(
         NotImplementedError,
-        match=r'Gradient and Hessian of the gradient boosting function is not defined for this kind',
+        match=r'Gradient and Hessian of the gradient boosting function is not defined for kind',
     ):
         metric.gradient_boost_objective(np.array([1]), np.array([1]))
 

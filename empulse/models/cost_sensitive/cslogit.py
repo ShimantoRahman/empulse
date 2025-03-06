@@ -257,10 +257,10 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         X: ArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float = Parameter.UNCHANGED,
+        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         **loss_params: Any,
     ) -> 'CSLogitClassifier':
         """

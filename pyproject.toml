@@ -204,5 +204,4 @@ allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]
 
 [tool.mypy]
 ignore_missing_imports = true
-follow_imports = "silent"  # do not follow imports for not (gradually type-check the codebase)
 allow_redefinition = true  # sometimes mypy cannot infer the type correctly, especially when using np.typing.ArrayLike

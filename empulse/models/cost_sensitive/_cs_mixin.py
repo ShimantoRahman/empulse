@@ -76,10 +76,7 @@ class CostSensitiveMixin:
         if fp_cost is Parameter.UNCHANGED:
             fp_cost = self.fp_cost  # type: ignore[attr-defined]
 
-        if (
-            all(isinstance(cost, Real) for cost in (tp_cost, tn_cost, fn_cost, fp_cost))
-            and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0
-        ):
+        if all_costs_zero(tp_cost, tn_cost, fn_cost, fp_cost):
             warnings.warn(
                 'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
                 f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
@@ -107,3 +104,19 @@ class CostSensitiveMixin:
                 fp_cost = np.asarray(fp_cost)
 
         return tp_cost, tn_cost, fn_cost, fp_cost
+
+
+def all_float(*arrays: ArrayLike | float | Parameter) -> bool:
+    return all(isinstance(array, Real) and not isinstance(array, Parameter) for array in arrays)
+
+
+def all_costs_zero(
+    tp_cost: ArrayLike | float | Parameter,
+    tn_cost: ArrayLike | float | Parameter,
+    fn_cost: ArrayLike | float | Parameter,
+    fp_cost: ArrayLike | float | Parameter,
+) -> bool:
+    return (
+        all_float(tp_cost, tn_cost, fn_cost, fp_cost)
+        and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0  # type: ignore[misc, arg-type]
+    )

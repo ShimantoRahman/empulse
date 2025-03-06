@@ -1,14 +1,14 @@
 import numbers
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from .._validation import _check_fraction, _check_gt_one, _check_positive, _check_shape, _check_y_pred, _check_y_true
 
 
 def _validate_input(
     y_true: ArrayLike, y_pred: ArrayLike, clv: float | ArrayLike, d: float, f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[NDArray, NDArray, NDArray | float]:
     y_true = _check_y_true(y_true)
     y_pred = _check_y_pred(y_pred)
     _check_shape(y_true, y_pred)
@@ -30,7 +30,7 @@ def _validate_input(
 
 def _validate_input_emp(
     y_true: ArrayLike, y_pred: ArrayLike, alpha: float, beta: float, clv: float | ArrayLike, d: float, f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[NDArray, NDArray, NDArray | float]:
     _check_gt_one(alpha, 'alpha')
     _check_gt_one(beta, 'beta')
     return _validate_input(y_true, y_pred, clv, d, f)
@@ -38,7 +38,7 @@ def _validate_input_emp(
 
 def _validate_input_mp(
     y_true: ArrayLike, y_pred: ArrayLike, gamma: float, clv: float | ArrayLike, d: float, f: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[NDArray, NDArray, NDArray | float]:
     _check_fraction(gamma, 'gamma')
     return _validate_input(y_true, y_pred, clv, d, f)
 
@@ -50,7 +50,7 @@ def _validate_input_mpc(
     accept_rate: float,
     incentive_fraction: float,
     contact_cost: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[NDArray, NDArray, NDArray | float]:
     y_true = _check_y_true(y_true)
     y_pred = _check_y_pred(y_pred)
     _check_shape(y_true, y_pred)
@@ -70,7 +70,7 @@ def _validate_input_empb(
     beta: float,
     incentive_fraction: float,
     contact_cost: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | float]:
+) -> tuple[NDArray, NDArray, NDArray]:
     y_true = _check_y_true(y_true)
     y_pred = _check_y_pred(y_pred)
     _check_shape(y_true, y_pred)
@@ -81,3 +81,25 @@ def _validate_input_empb(
     _check_positive(contact_cost, 'contact_cost')
 
     return y_true, y_pred, clv
+
+
+def _validate_input_cost_loss_churn(
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    clv: ArrayLike,
+    accept_rate: float,
+    incentive_fraction: float | ArrayLike,
+    contact_cost: float,
+) -> tuple[NDArray, NDArray, NDArray, NDArray | float]:
+    y_true = _check_y_true(y_true)
+    y_pred = _check_y_pred(y_pred)
+    _check_shape(y_true, y_pred)
+    clv = np.asarray(clv)
+    _check_fraction(accept_rate, 'accept_rate')
+    if isinstance(incentive_fraction, float | int):
+        _check_fraction(incentive_fraction, 'incentive_fraction')
+    else:
+        incentive_fraction = np.asarray(incentive_fraction)
+    _check_positive(contact_cost, 'contact_cost')
+
+    return y_true, y_pred, clv, incentive_fraction

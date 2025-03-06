@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     Matrix = TypeVar('Matrix', bound=NDArray)
 
-from empulse.metrics.churn._validation import _validate_input_mpc
+from empulse.metrics.churn._validation import _validate_input_cost_loss_churn
 
 
 @overload
@@ -25,8 +25,8 @@ def make_objective_churn(
     model: Literal['catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: float | ArrayLike = 200,
-    incentive_fraction: float | ArrayLike = 0.05,
+    clv: float | NDArray = 200,
+    incentive_fraction: float | NDArray = 0.05,
     contact_cost: float = 15,
 ) -> tuple['AECObjectiveChurn', 'AECMetricChurn']: ...
 
@@ -36,8 +36,8 @@ def make_objective_churn(
     model: Literal['xgboost', 'lightgbm'],
     *,
     accept_rate: float = 0.3,
-    clv: float | ArrayLike = 200,
-    incentive_fraction: float | ArrayLike = 0.05,
+    clv: float | NDArray = 200,
+    incentive_fraction: float | NDArray = 0.05,
     contact_cost: float = 15,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
 
@@ -46,8 +46,8 @@ def make_objective_churn(
     model: Literal['xgboost', 'lightgbm', 'catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: float | ArrayLike = 200,
-    incentive_fraction: float | ArrayLike = 0.05,
+    clv: float | NDArray = 200,
+    incentive_fraction: float | NDArray = 0.05,
     contact_cost: float = 15,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
     """
@@ -75,7 +75,7 @@ def make_objective_churn(
     accept_rate : float, default=0.3
         Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
-    clv : float or 1D array-like, shape=(n_samples), default=200
+    clv : float or 1D array, shape=(n_samples), default=200
         If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
         If ``array``: individualized customer lifetime value of each customer when retained
         (``mean(clv) > incentive_cost``).
@@ -182,8 +182,8 @@ def _objective(
     y_pred: np.ndarray,
     dtrain: Matrix,
     accept_rate: float = 0.3,
-    clv: float | ArrayLike = 200,
-    incentive_fraction: float | ArrayLike = 0.05,
+    clv: float | NDArray = 200,
+    incentive_fraction: float | NDArray = 0.05,
     contact_cost: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -207,7 +207,7 @@ def _objective(
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
     elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()
+        y_true = dtrain.get_label()  # type: ignore[assignment]
     else:
         raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
     y_pred = 1 / (1 + np.exp(-y_pred))
@@ -227,8 +227,8 @@ class AECObjectiveChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
-        incentive_fraction: float | ArrayLike = 0.05,
+        clv: float | NDArray = 200,
+        incentive_fraction: float | NDArray = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -279,8 +279,8 @@ class AECMetricChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
-        incentive_fraction: float | ArrayLike = 0.05,
+        clv: float | NDArray = 200,
+        incentive_fraction: float | NDArray = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -424,7 +424,7 @@ def expected_cost_loss_churn(
 
     """  # noqa: D401
     if check_input:
-        y_true, y_proba, clv = _validate_input_mpc(
+        y_true, y_proba, clv, incentive_fraction = _validate_input_cost_loss_churn(
             y_true,
             y_proba,
             clv=clv,
@@ -436,6 +436,7 @@ def expected_cost_loss_churn(
         y_true = np.asarray(y_true)
         y_proba = np.asarray(y_proba)
         clv = np.asarray(clv)
+        incentive_fraction = np.asarray(incentive_fraction)
 
     incentive_cost = incentive_fraction * clv
     profits = y_proba * (

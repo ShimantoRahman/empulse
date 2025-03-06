@@ -9,15 +9,15 @@ from sklearn.base import clone
 try:
     from xgboost import XGBClassifier
 except ImportError:
-    XGBClassifier = None
+    XGBClassifier = None  # type: ignore[misc, assignment]
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
-    LGBMClassifier = None
+    LGBMClassifier = None  # type: ignore[misc, assignment]
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None
+    CatBoostClassifier = None  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
 from ...metrics import make_objective_churn
@@ -256,6 +256,8 @@ class B2BoostClassifier(BaseBoostClassifier):
             incentive_fraction = self.incentive_fraction
         if contact_cost is Parameter.UNCHANGED:
             contact_cost = self.contact_cost
+        if not isinstance(clv, float | int):
+            clv = np.asarray(clv)
 
         if self.estimator is None:
             if XGBClassifier is None:

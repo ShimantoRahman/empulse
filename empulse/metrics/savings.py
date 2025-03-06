@@ -829,10 +829,10 @@ def expected_savings_score(
 def make_objective_aec(
     model: Literal['catboost'],
     *,
-    tp_cost: ArrayLike | float = 0.0,
-    tn_cost: ArrayLike | float = 0.0,
-    fn_cost: ArrayLike | float = 0.0,
-    fp_cost: ArrayLike | float = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> tuple['AECObjective', 'AECMetric']: ...
 
 
@@ -840,20 +840,20 @@ def make_objective_aec(
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
-    tp_cost: ArrayLike | float = 0.0,
-    tn_cost: ArrayLike | float = 0.0,
-    fn_cost: ArrayLike | float = 0.0,
-    fp_cost: ArrayLike | float = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
 
 
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit'],
     *,
-    tp_cost: ArrayLike | float = 0.0,
-    tn_cost: ArrayLike | float = 0.0,
-    fn_cost: ArrayLike | float = 0.0,
-    fp_cost: ArrayLike | float = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjective', 'AECMetric']:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
@@ -876,19 +876,19 @@ def make_objective_aec(
         - 'catboost' : :class:`catboost.CatBoostClassifier`
         - 'cslogit' : :class:`~empulse.models.CSLogitClassifier`
 
-    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+    tp_cost : float or np.array, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+    fp_cost : float or np.array, shape=(n_samples,), default=0.0
         Cost of false positives. If ``float``, then all false positives have the same cost.
         If array-like, then it is the cost of each false positive classification.
 
-    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+    tn_cost : float or np.array, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
 
-    fn_cost : float or array-like, shape=(n_samples,), default=0.0
+    fn_cost : float or np.array, shape=(n_samples,), default=0.0
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
         If array-like, then it is the cost of each false negative classification.
 
@@ -965,10 +965,10 @@ def _objective_cslogit(
     features: np.ndarray,
     weights: np.ndarray,
     y_true: np.ndarray,
-    tp_cost: float = 0.0,
-    tn_cost: float = 0.0,
-    fn_cost: float = 0.0,
-    fp_cost: float = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> tuple[float, np.ndarray]:
     y_pred = expit(np.dot(weights, features.T))
 
@@ -996,10 +996,10 @@ def _objective_cslogit(
 def _objective_boost(
     y_pred: np.ndarray,
     dtrain: Matrix,
-    tp_cost: float = 0.0,
-    tn_cost: float = 0.0,
-    fn_cost: float = 0.0,
-    fp_cost: float = 0.0,
+    tp_cost: NDArray | float = 0.0,
+    tn_cost: NDArray | float = 0.0,
+    fn_cost: NDArray | float = 0.0,
+    fp_cost: NDArray | float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Create an objective function for the AEC measure.
@@ -1022,7 +1022,7 @@ def _objective_boost(
     if isinstance(dtrain, np.ndarray):
         y_true = dtrain
     elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()
+        y_true = dtrain.get_label()  # type: ignore[assignment]
     else:
         raise TypeError(f'Expected dtrain to be of type numpy.ndarray or xgboost.DMatrix, got {type(dtrain)} instead.')
 

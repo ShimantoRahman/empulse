@@ -10,7 +10,7 @@ from sklearn.utils.validation import check_is_fitted
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
-    LGBMClassifier = None
+    LGBMClassifier = None  # type: ignore[misc, assignment]
 
 from ...utils._sklearn_compat import type_of_target, validate_data  # type: ignore[attr-defined]
 

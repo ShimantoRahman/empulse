@@ -270,7 +270,7 @@ def empc(
         clv = np.asarray(clv)
 
     if isinstance(clv, np.ndarray):
-        clv = clv.mean()
+        clv = float(np.mean(clv))
 
     delta = incentive_cost / clv
     phi = contact_cost / clv

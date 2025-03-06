@@ -9,15 +9,15 @@ from sklearn.base import clone
 try:
     from xgboost import XGBClassifier
 except ImportError:
-    XGBClassifier = None
+    XGBClassifier = None  # type: ignore[assignment, misc]
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
-    LGBMClassifier = None
+    LGBMClassifier = None  # type: ignore[assignment, misc]
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None
+    CatBoostClassifier = None  # type: ignore[assignment, misc]
 
 from ..._common import Parameter
 from ...metrics import make_objective_aec

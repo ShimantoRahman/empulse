@@ -186,6 +186,8 @@ class Generation:
         array_bounds: NDArray[np.float64] = np.asarray(bounds, dtype=np.float64).T
         self.lower_bounds = array_bounds[0]
         self.upper_bounds = array_bounds[1]
+        if self.lower_bounds is None or self.upper_bounds is None:
+            raise ValueError('`lower_bounds` and `upper_bounds` are None.')
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
