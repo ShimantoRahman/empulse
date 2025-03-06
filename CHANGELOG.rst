@@ -6,6 +6,7 @@
 - |Enhancement| Allow :class:`~empulse.metrics.Metric` to be used as a context manager.
   This ensures the metric is always built after defining the cost-benefit elements.
 - |Fix| Fix datasets not properly being packaged together with the package
+- |Fix| Fix :class:`~empulse.models.RobustCSClassifier` when array-like parameters are passed to fit method.
 
 `0.7.0`_ (05-02-2025)
 =====================

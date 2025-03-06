@@ -10,7 +10,7 @@ from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 
 from ..._common import Parameter
-from ...utils._sklearn_compat import _estimator_has  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import _estimator_has, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -282,6 +282,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self : RobustCSLogitClassifier
             Fitted RobustCSLogitClassifier model.
         """
+        X, y = validate_data(self, X, y)
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
