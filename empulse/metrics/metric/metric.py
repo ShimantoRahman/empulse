@@ -1,11 +1,13 @@
+from collections.abc import MutableMapping
 from numbers import Real
-from typing import Any, ClassVar, Literal, Protocol
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import scipy
 import sympy
 from numpy.typing import ArrayLike, NDArray
 
+from .common import BoostObjective, LogitObjective
 from .cost_metric import (
     _build_cost_gradient_boost_objective,
     _build_cost_logit_objective,
@@ -14,10 +16,6 @@ from .cost_metric import (
 )
 from .max_profit_metric import _build_max_profit_score, _max_profit_score_to_latex
 from .savings_metric import _build_savings_score, _savings_score_to_latex
-
-
-class MetricFn(Protocol):  # noqa: D101
-    def __call__(self, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float: ...  # noqa: D102
 
 
 class Metric:
@@ -188,13 +186,13 @@ class Metric:
             raise ValueError(f'Kind {kind} is not supported. Supported values are {self.METRIC_TYPES}')
         self.kind = kind
 
-        def gradient_logit_undefined(*args, **kwargs):
+        def gradient_logit_undefined(*args: Any, **kwargs: Any) -> LogitObjective:
             def undefined_fn(*args, **kwargs):
                 raise NotImplementedError(f'Gradient of the logit function is not defined for kind={self.kind}')
 
             return undefined_fn
 
-        def gradient_hessian_gboost_undefined(*args, **kwargs):
+        def gradient_hessian_gboost_undefined(*args: Any, **kwargs: Any) -> BoostObjective:
             def undefined_fn(*args, **kwargs):
                 raise NotImplementedError(
                     f'Gradient and Hessian of the gradient boosting function is not defined for kind={self.kind}'
@@ -222,7 +220,7 @@ class Metric:
         self._tn_benefit: sympy.Expr = sympy.core.numbers.Zero()
         self._fp_cost: sympy.Expr = sympy.core.numbers.Zero()
         self._fn_cost: sympy.Expr = sympy.core.numbers.Zero()
-        self._aliases: dict[str, str | sympy.Symbol] = {}
+        self._aliases: MutableMapping[str, str | sympy.Symbol] = {}
         self._defaults: dict[str, Any] = {}
         self._built = False
 
@@ -402,14 +400,17 @@ class Metric:
         self._fn_cost += term
         return self
 
-    def alias(self, alias: str | dict[str, sympy.Symbol | str], symbol: sympy.Symbol | None = None) -> 'Metric':
+    def alias(
+        self, alias: str | MutableMapping[str, sympy.Symbol | str], symbol: sympy.Symbol | None = None
+    ) -> 'Metric':
         """
         Add an alias for a symbol.
 
         Parameters
         ----------
-        alias: str | dict[str, sympy.Symbol | str]
-            The alias to add. If a dictionary is passed, the keys are the aliases and the values are the symbols.
+        alias: str | MutableMapping[str, sympy.Symbol | str]
+            The alias to add. If a MutableMapping (.e.g, dictionary) is passed,
+            the keys are the aliases and the values are the symbols.
         symbol: sympy.Symbol, optional
             The symbol to alias to.
 
@@ -441,7 +442,7 @@ class Metric:
                 y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
             )
         """
-        if isinstance(alias, dict):
+        if isinstance(alias, MutableMapping):
             self._aliases.update(alias)
         elif symbol is not None:
             self._aliases[alias] = str(symbol)
@@ -618,7 +619,9 @@ class Metric:
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
             empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)
         """
-        self._rng = np.random.RandomState(random_state)
+        if isinstance(random_state, int):
+            random_state = np.random.RandomState(random_state)
+        self._rng = random_state
         return self
 
     def set_n_mc_samples_exp(self, n_mc_samples_exp: int) -> 'Metric':
@@ -689,13 +692,13 @@ class Metric:
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
         )
-        self._gradient_logit_function = self.build_gradient_logit(
+        self._gradient_logit_function: LogitObjective = self.build_gradient_logit(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
-        self._gradient_hessian_gboost_function = self.build_gradient_hessian_gboost(
+        self._gradient_hessian_gboost_function: BoostObjective = self.build_gradient_hessian_gboost(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
@@ -717,6 +720,7 @@ class Metric:
         for alias, symbol in self._aliases.items():
             if alias in kwargs:
                 kwargs[symbol] = kwargs.pop(alias)
+        kwargs: dict[str, NDArray | float]  # redefine kwargs as mypy doesn't understand the above
 
         return kwargs
 
@@ -761,7 +765,7 @@ class Metric:
 
     def logit_objective(
         self, features: NDArray, weights: NDArray, y_true: NDArray, **parameters: NDArray | float
-    ) -> tuple[float | NDArray]:
+    ) -> tuple[float, NDArray]:
         """
         Compute the metric loss and its gradient with respect to the logistic regression weights.
 
@@ -802,7 +806,7 @@ class Metric:
 
     def gradient_boost_objective(
         self, y_true: NDArray, y_score: NDArray, **parameters: NDArray | float
-    ) -> tuple[NDArray | NDArray]:
+    ) -> tuple[NDArray, NDArray]:
         """
         Compute the gradient and hessian of the metric loss with respect to the gradient boosting weights.
 

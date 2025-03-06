@@ -1,11 +1,10 @@
-from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 import sympy
 from numpy.typing import NDArray
 
-from .common import MetricFn, _check_parameters
+from .common import BoostObjective, LogitObjective, MetricFn, _check_parameters
 
 
 def _build_cost_loss(
@@ -39,7 +38,7 @@ def _build_cost_equation(
 
 def _build_cost_logit_objective(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> Callable:
+) -> LogitObjective:
     y, s, x = sympy.symbols('y s x')
     gradient = x * s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
     gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
@@ -52,7 +51,7 @@ def _build_cost_logit_objective(
 
 def _build_cost_gradient_boost_objective(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> Callable:
+) -> BoostObjective:
     y, s, nabla = sympy.symbols('y s nabla')
     gradient = s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
     gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
