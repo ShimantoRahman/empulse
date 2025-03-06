@@ -175,8 +175,13 @@ class Metric:
         cost_loss(y_true, y_proba, clv=100)
     """
 
-    METRIC_TYPES: ClassVar[list[str]] = ['max profit', 'cost', 'savings']
-    INTEGRATION_METHODS: ClassVar[list[str]] = ['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']
+    METRIC_TYPES: ClassVar[list[Literal['max profit', 'cost', 'savings']]] = ['max profit', 'cost', 'savings']
+    INTEGRATION_METHODS: ClassVar[list[Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']]] = [
+        'auto',
+        'quad',
+        'quasi-monte-carlo',
+        'monte-carlo',
+    ]
 
     def __init__(self, kind: Literal['max profit', 'cost', 'savings']) -> None:
         if kind not in self.METRIC_TYPES:
