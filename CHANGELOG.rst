@@ -3,6 +3,8 @@
 
 - |Enhancement| Add support for more than one stochastic variable when building maximum profit metrics with
   :class:`~empulse.metrics.Metric`
+- |Enhancement| Allow :class:`~empulse.metrics.Metric` to be used as a context manager.
+  This ensures the metric is always built after defining the cost-benefit elements.
 - |Fix| Fix datasets not properly being packaged together with the package
 
 `0.7.0`_ (05-02-2025)

@@ -825,6 +825,38 @@ def test_repr_latex_cost():
     )
 
 
+def test_metric_context_manager(y_true_and_prediction):
+    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
+    y, y_proba = y_true_and_prediction
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    with Metric('cost') as profit_func:
+        profit_func.add_tp_benefit(gamma * (clv - delta * clv - f))
+        profit_func.add_tp_benefit((1 - gamma) * -f)
+        profit_func.add_fp_cost(delta * clv + f)
+        profit_func.alias({'incentive_fraction': 'delta', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+
+    assert profit_func._built
+
+    metric_result = profit_func(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    cost_result = expected_cost_loss_churn(
+        y,
+        y_proba,
+        clv=customer_lifetime_value,
+        incentive_fraction=incentive_fraction,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+        normalize=True,
+    )
+    assert pytest.approx(metric_result) == cost_result
+
+
 # # Extract sympy distributions from _sympy_dist_to_scipy
 # sympy_distributions = list(Metric._sympy_dist_to_scipy.keys())
 #
