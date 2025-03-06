@@ -96,7 +96,7 @@ default-groups = ["dev"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-empulse = ["datasets/data/*.csv.gz", "datasets/descriptions/*.rst"]
+empulse = ["datasets/data/*.csv.gz", "datasets/descriptions/*.rst", "py.typed"]
 
 [tool.setuptools.dynamic]
 version = { attr = "empulse.__version__" }

@@ -1,6 +1,7 @@
 `Unreleased`_
 =============
 
+- |Feature| Type hints are now available for all functions and classes.
 - |Enhancement| Add support for more than one stochastic variable when building maximum profit metrics with
   :class:`~empulse.metrics.Metric`
 - |Enhancement| Allow :class:`~empulse.metrics.Metric` to be used as a context manager.
