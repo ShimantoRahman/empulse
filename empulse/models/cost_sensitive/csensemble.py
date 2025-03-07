@@ -2,9 +2,9 @@ from numbers import Integral
 from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
 from sklearn.utils._param_validation import HasMethods, Interval, RealNotInt, StrOptions
 
+from ..._types import FloatArrayLike, ParameterConstraint
 from .csbagging import BaggingClassifier
 from .cstree import CSTreeClassifier
 
@@ -153,7 +153,7 @@ class CSForestClassifier(BaggingClassifier):
            2015, http://arxiv.org/abs/1505.04637.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'combination': [StrOptions({'majority_voting', 'weighted_voting'})],
         'max_depth': [Interval(Integral, 1, None, closed='left'), None],
         'min_samples_split': [
@@ -172,10 +172,10 @@ class CSForestClassifier(BaggingClassifier):
         self,
         n_estimators: int = 100,
         *,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float = 'auto',
         max_samples: int | float = 1.0,
@@ -333,7 +333,7 @@ class CSBaggingClassifier(BaggingClassifier):
            2015, http://arxiv.org/abs/1505.04637.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict']), HasMethods(['fit', 'predict_proba']), None],
         'final_estimator': [HasMethods(['fit', 'predict']), HasMethods(['fit', 'predict_proba']), None],
         'combination': [StrOptions({'majority_voting', 'weighted_voting', 'stacking', 'stacking_proba'})],
@@ -346,10 +346,10 @@ class CSBaggingClassifier(BaggingClassifier):
         *,
         final_estimator: Any = None,
         n_estimators: int = 10,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         max_samples: float | int = 0.5,
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float = 'auto',
         combination: Literal['majority_voting', 'weighted_voting', 'stacking', 'stacking_proba'] = 'majority_voting',

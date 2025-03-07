@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -7,12 +8,18 @@ from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...samplers import BiasResampler
 from ...samplers._strategies import Strategy, StrategyFn
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
-class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
+
+class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
 
@@ -166,7 +173,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
         'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
         'transform_feature': [callable, None],
@@ -177,7 +184,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         estimator: Any,
         *,
         strategy: StrategyFn | Strategy = 'statistical parity',
-        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
+        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -195,10 +202,8 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
-    @_fit_context(prefer_skip_nested_validation=True)
-    def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
-    ) -> 'BiasResamplingClassifier':
+    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
+    def fit(self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any) -> Self:
         """
         Fit the estimator and resample the instances according to the strategy.
 
@@ -239,13 +244,13 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
 
         return self
 
-    def predict_proba(self, X: NDArray) -> NDArray:
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
         Predict class probabilities for X.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
 
         Returns
         -------
@@ -254,21 +259,22 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+        return y_proba
 
-        return self.estimator_.predict_proba(X)
-
-    def predict(self, X: NDArray) -> NDArray:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
         Predict class labels for X.
 
         Parameters
         ----------
-        X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+        X : 2D array-like, shape=(n_samples, n_dim)
 
         Returns
         -------
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
             Predicted class labels.
         """
-        y_pred = self.predict_proba(X)
-        return self.classes_[np.argmax(y_pred, axis=1)]
+        y_proba = self.predict_proba(X)
+        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
+        return y_pred

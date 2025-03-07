@@ -1,7 +1,8 @@
 import copy
+import sys
 from math import ceil
 from numbers import Integral, Real
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -10,12 +11,18 @@ from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import cost_loss
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
-class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
+
+class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """
     Decision tree classifier to optimize instance-dependent cost loss.
 
@@ -130,7 +137,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
            http://doi.org/10.1016/j.eswa.2015.04.042
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
@@ -161,10 +168,10 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     def __init__(
         self,
         *,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] = 'direct_cost',
         criterion_weight: bool = False,
         num_pct: int = 100,
@@ -203,7 +210,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
-    def _node_cost(self, y_true: NDArray, cost_mat: NDArray) -> tuple[float, int, float]:
+    def _node_cost(self, y_true: NDArray[Any], cost_mat: FloatNDArray) -> tuple[float, int, float]:
         """
         Private function to calculate the cost of a node.
 
@@ -270,7 +277,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return float(costs[y_pred]), y_pred, y_prob
 
     def _calculate_gain(
-        self, cost_base: float, y_true: NDArray, X: NDArray, cost_mat: NDArray, split: tuple[int, float]
+        self, cost_base: float, y_true: NDArray[Any], X: FloatNDArray, cost_mat: FloatNDArray, split: tuple[int, float]
     ) -> tuple[float, int]:
         """
         Private function to calculate the gain in cost of using split in the current node.
@@ -329,8 +336,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return gain, Xl_pred
 
     def _best_split(
-        self, y_true: NDArray, X: NDArray, cost_mat: NDArray
-    ) -> tuple[tuple[np.signedinteger, float], float, int, int, float]:
+        self, y_true: NDArray[Any], X: FloatNDArray, cost_mat: FloatNDArray
+    ) -> tuple[tuple[np.signedinteger[Any], float], float, int, int, float]:
         """Private function to calculate the split that gives the best gain.
 
         Parameters
@@ -396,7 +403,9 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             y_prob,
         )
 
-    def _tree_grow(self, y_true: NDArray, X: NDArray, cost_mat: NDArray, level: int = 0) -> dict:
+    def _tree_grow(
+        self, y_true: NDArray[Any], X: FloatNDArray, cost_mat: FloatNDArray, level: int = 0
+    ) -> dict[str, Any]:
         """Private recursive function to grow the decision tree.
 
         Parameters
@@ -478,22 +487,22 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     class _Tree:
         def __init__(self) -> None:
             self.n_nodes: int = 0
-            self.tree: dict = {}
-            self.tree_pruned: dict = {}
-            self.nodes: list = []
+            self.tree: dict[Any, Any] = {}
+            self.tree_pruned: dict[Any, Any] = {}
+            self.nodes: list[Any] = []
             self.n_nodes_pruned: int = 0
 
-    @_fit_context(prefer_skip_nested_validation=True)
+    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ) -> 'CSTreeClassifier':
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+    ) -> Self:
         """
         Build an example-dependent cost-sensitive decision tree from the training set.
 
@@ -573,7 +582,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return self
 
-    def _nodes(self, tree: dict) -> list:
+    def _nodes(self, tree: dict[Any, Any]) -> list[Any]:
         """Private function that find the number of nodes in a tree.
 
         Parameters
@@ -585,7 +594,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         nodes : array like of shape [n_nodes]
         """
 
-        def recourse(temp_tree_: dict, nodes: list) -> None:
+        def recourse(temp_tree_: dict[Any, Any], nodes: list[Any]) -> None:
             if isinstance(temp_tree_, dict) and temp_tree_['split'] != -1:
                 nodes.append(temp_tree_['node'])
                 if temp_tree_['split'] != -1:
@@ -593,11 +602,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                         recourse(temp_tree_[k], nodes)
             return None
 
-        nodes_: list = []
+        nodes_: list[Any] = []
         recourse(tree, nodes_)
         return nodes_
 
-    def _classify(self, X: NDArray, tree: dict, proba: bool = False) -> NDArray:
+    def _classify(self, X: FloatNDArray, tree: dict[Any, Any], proba: bool = False) -> NDArray[Any]:
         """Private function that classify a dataset using tree.
 
         Parameters
@@ -639,7 +648,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return predicted
 
-    def predict(self, X: ArrayLike) -> NDArray:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """Predict class of X.
 
         The predicted class for each sample in X is returned.
@@ -663,7 +672,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_pred = np.where(y_pred == 1, self.classes_[1], self.classes_[0])
         return y_pred
 
-    def predict_proba(self, X: ArrayLike) -> NDArray:
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities of the input samples X.
 
         Parameters
@@ -687,7 +696,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return prob
 
-    def _delete_node(self, tree: dict, node: int) -> dict:
+    def _delete_node(self, tree: dict[Any, Any], node: int) -> dict[Any, Any]:
         """Private function that eliminate node from tree.
 
         Parameters
@@ -704,7 +713,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         # Calculate gains
         temp_tree = copy.deepcopy(tree)
 
-        def recourse(temp_tree_: dict, del_node: int) -> None:
+        def recourse(temp_tree_: dict[Any, Any], del_node: int) -> None:
             if isinstance(temp_tree_, dict) and temp_tree_['split'] != -1:
                 if temp_tree_['node'] == del_node:
                     del temp_tree_['sr']
@@ -719,7 +728,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         recourse(temp_tree, node)
         return temp_tree
 
-    def _pruning(self, X: NDArray, y_true: NDArray, cost_mat: NDArray) -> None:
+    def _pruning(self, X: FloatNDArray, y_true: NDArray[Any], cost_mat: FloatNDArray) -> None:
         """Private function that prune the decision tree.
 
         Parameters
@@ -794,7 +803,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             if best_node != 0:
                 self._pruning(X, y_true, cost_mat)
 
-    def pruning(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> None:
+    def pruning(self, X: FloatNDArray, y: NDArray[Any], cost_mat: FloatNDArray) -> None:
         """
         Prune the decision tree.
 

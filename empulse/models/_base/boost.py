@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
@@ -8,6 +9,13 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fi
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted
 
+from ..._types import FloatNDArray, ParameterConstraint
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
@@ -16,7 +24,7 @@ except ImportError:
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
-class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, ABC):
+class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, ABC):  # type: ignore[misc]
     """
     Base class for cost-sensitive boosting classifiers.
 
@@ -40,7 +48,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
     The subclasses should implement the `fit` method to fit the base estimator with instance-specific costs.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
     }
 
@@ -59,8 +67,8 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         tags.classifier_tags.poor_score = True
         return tags
 
-    @_fit_context(prefer_skip_nested_validation=True)
-    def fit(self, X: ArrayLike, y: ArrayLike, **fit_params: Any) -> 'BaseBoostClassifier':
+    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
+    def fit(self, X: ArrayLike, y: ArrayLike, **fit_params: Any) -> Self:
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
@@ -75,9 +83,9 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         return self._fit(X, y, **fit_params)
 
     @abstractmethod
-    def _fit(self, X: NDArray, y: NDArray, **fit_params: Any) -> 'BaseBoostClassifier': ...
+    def _fit(self, X: NDArray[Any], y: NDArray[Any], **fit_params: Any) -> Self: ...
 
-    def predict_proba(self, X: ArrayLike) -> NDArray:
+    def predict_proba(self, X: ArrayLike) -> FloatNDArray:
         """
         Predict class probabilities for X.
 
@@ -94,13 +102,14 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         X = validate_data(self, X, reset=False)
 
         if LGBMClassifier is not None and isinstance(self.estimator_, LGBMClassifier):
-            y_proba = self.estimator_.predict_proba(X, raw_score=True)
-            y_proba = expit(y_proba)
+            y_proba: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
+            y_proba: FloatNDArray = expit(y_proba)
             return np.column_stack([1 - y_proba, y_proba])
 
-        return self.estimator_.predict_proba(X)
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)  # type: ignore[no-redef]
+        return y_proba
 
-    def predict(self, X: ArrayLike) -> NDArray:
+    def predict(self, X: ArrayLike) -> NDArray[Any]:
         """
         Predict class labels for X.
 
@@ -113,5 +122,6 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
             Predicted class labels.
         """
-        y_pred = self.predict_proba(X)
-        return self.classes_[np.argmax(y_pred, axis=1)]
+        y_proba = self.predict_proba(X)
+        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
+        return y_pred

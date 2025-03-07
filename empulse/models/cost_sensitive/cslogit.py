@@ -1,3 +1,4 @@
+import sys
 import warnings
 from collections.abc import Callable
 from functools import partial
@@ -5,18 +6,24 @@ from numbers import Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils._param_validation import StrOptions
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import make_objective_aec
-from .._base import BaseLogitClassifier, OptimizeFn
+from .._base import BaseLogitClassifier, LossFn, OptimizeFn
 from ._cs_mixin import CostSensitiveMixin
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 Loss = Literal['average expected cost']
+GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
 
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
@@ -214,7 +221,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseLogitClassifier._parameter_constraints,
         'loss': [StrOptions({'average expected cost'}), callable, None],
         'tp_cost': ['array-like', Real],
@@ -230,13 +237,13 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: Loss | Callable = 'average expected cost',
-        optimize_fn: Callable | None = None,
+        loss: Loss | LossFn = 'average expected cost',
+        optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
     ):
         super().__init__(
             C=C,
@@ -254,15 +261,15 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **loss_params: Any,
-    ) -> 'CSLogitClassifier':
+    ) -> Self:
         """
         Fit the model.
 
@@ -294,19 +301,20 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             Fitted model.
 
         """
-        return super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
+        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
+        return self
 
     def _fit(
         self,
-        X: np.ndarray,
-        y: np.ndarray,
+        X: FloatNDArray,
+        y: IntNDArray,
         *,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         **loss_params: Any,
-    ) -> 'CSLogitClassifier':
+    ) -> Self:
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
@@ -330,7 +338,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         if self.loss == 'average expected cost':
             loss = make_objective_aec(model='cslogit', **loss_params)
             objective: Callable[
-                [NDArray, NDArray, NDArray], float | tuple[float, NDArray] | tuple[float, NDArray, NDArray]
+                [FloatNDArray, FloatNDArray, IntNDArray],
+                float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray],
             ] = partial(
                 _objective_jacobian,
                 X=X,
@@ -342,7 +351,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 fit_intercept=self.fit_intercept,
             )
 
-            optimize_fn: OptimizeFn = _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
+            optimize_fn: Callable[..., OptimizeResult] = (
+                _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
+            )
             self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
         elif self.loss is not None and not isinstance(self.loss, str):
             objective = partial(
@@ -355,7 +366,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 soft_threshold=self.soft_threshold,
                 fit_intercept=self.fit_intercept,
             )
-            optimize_fn = self._optimize if self.optimize_fn is None else self.optimize_fn
+            optimize_fn: Callable[..., OptimizeResult] = (
+                self._optimize if self.optimize_fn is None else self.optimize_fn
+            )  # type: ignore[no-redef]
 
             self.result_ = optimize_fn(objective, X=X, **optimizer_params)
         else:
@@ -369,7 +382,11 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     @staticmethod
     def _optimize(
-        objective: Callable, X: NDArray, max_iter: int = 1000, tolerance: float = 1e-4, **kwargs: Any
+        objective: Callable[[FloatNDArray], float],
+        X: FloatNDArray,
+        max_iter: int = 1000,
+        tolerance: float = 1e-4,
+        **kwargs: Any,
     ) -> OptimizeResult:
         initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
 
@@ -391,7 +408,11 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
 
 def _optimize_jacobian(
-    objective: Callable, X: NDArray, max_iter: int = 1000, tolerance: float = 1e-4, **kwargs: Any
+    objective: Callable[[FloatNDArray], tuple[float, FloatNDArray]],
+    X: FloatNDArray,
+    max_iter: int = 1000,
+    tolerance: float = 1e-4,
+    **kwargs: Any,
 ) -> OptimizeResult:
     initial_weights = np.zeros(X.shape[1], order='F', dtype=X.dtype)
 
@@ -414,15 +435,15 @@ def _optimize_jacobian(
 
 
 def _objective_jacobian(
-    weights: NDArray,
-    X: NDArray,
-    y: NDArray,
-    loss_fn: Callable,
+    weights: FloatNDArray,
+    X: FloatNDArray,
+    y: IntNDArray,
+    loss_fn: GradientLossFn,
     C: float,
     l1_ratio: float,
     soft_threshold: bool,
     fit_intercept: bool,
-) -> tuple[float, NDArray]:
+) -> tuple[float, FloatNDArray]:
     """Compute the objective function and its gradient using elastic net regularization."""
     if soft_threshold:
         b = weights.copy()[1:] if fit_intercept else weights.copy()
@@ -445,15 +466,15 @@ def _objective_jacobian(
 
 
 def _objective_callable(
-    weights: NDArray,
-    X: NDArray,
-    y: NDArray,
-    loss_fn: Callable,
+    weights: FloatNDArray,
+    X: FloatNDArray,
+    y: IntNDArray,
+    loss_fn: LossFn,
     C: float,
     l1_ratio: float,
     soft_threshold: bool,
     fit_intercept: bool,
-) -> float | tuple[float, NDArray] | tuple[float, NDArray, NDArray]:
+) -> float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]:
     """Objective function (minimization problem)."""
     # b is the vector holding the regression coefficients (no intercept)
     b = weights.copy()[1:] if fit_intercept else weights
@@ -485,9 +506,9 @@ def _objective_callable(
         return loss + _compute_penalty(b, C, l1_ratio)
 
 
-def _compute_penalty(b: NDArray, C: float, l1_ratio: float) -> float:
+def _compute_penalty(b: FloatNDArray, C: float, l1_ratio: float) -> float:
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
-    penalty = regularization_term / C
+    penalty = float(regularization_term / C)
     return penalty
 
 

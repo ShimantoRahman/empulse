@@ -1,10 +1,18 @@
+import sys
 import warnings
 from numbers import Real
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
+
+from ..._types import FloatArrayLike, ParameterConstraint
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 try:
     from xgboost import XGBClassifier
@@ -17,7 +25,7 @@ except ImportError:
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None  # type: ignore[misc, assignment]
+    CatBoostClassifier = None
 
 from ..._common import Parameter
 from ...metrics import make_objective_churn
@@ -168,7 +176,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         Annals of Operations Research, 1-27.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseBoostClassifier._parameter_constraints,
         'accept_rate': [Real],
         'clv': ['array-like', Real],
@@ -181,7 +189,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
         *,
         accept_rate: float = 0.3,
-        clv: float | ArrayLike = 200,
+        clv: float | FloatArrayLike = 200,
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
     ) -> None:
@@ -200,7 +208,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         incentive_fraction: float | Parameter = Parameter.UNCHANGED,
         contact_cost: float | Parameter = Parameter.UNCHANGED,
-    ) -> 'B2BoostClassifier':
+    ) -> Self:
         """
         Fit the model.
 
@@ -230,7 +238,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
-        return super().fit(
+        super().fit(
             X,
             y,
             accept_rate=accept_rate,
@@ -238,16 +246,17 @@ class B2BoostClassifier(BaseBoostClassifier):
             incentive_fraction=incentive_fraction,
             contact_cost=contact_cost,
         )
+        return self
 
     def _fit(  # type: ignore[override]
         self,
-        X: np.ndarray,
-        y: np.ndarray,
+        X: NDArray[Any],
+        y: NDArray[Any],
         accept_rate: float | Parameter,
-        clv: float | ArrayLike | Parameter,
+        clv: float | FloatArrayLike | Parameter,
         incentive_fraction: float | Parameter,
         contact_cost: float | Parameter,
-    ) -> 'B2BoostClassifier':
+    ) -> Self:
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
         if clv is Parameter.UNCHANGED:

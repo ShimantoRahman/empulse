@@ -1,22 +1,28 @@
+import sys
 from numbers import Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
 import scipy.stats as st
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...utils._sklearn_compat import Tags, _estimator_has, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 
 
-class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):
+class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):  # type: ignore[misc]
     """
     Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
 
@@ -204,7 +210,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
            Advances in Data Analysis and Classification, 17(4), 1057-1079.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
         'outlier_estimator': [HasMethods(['fit', 'predict']), None],
         'outlier_threshold': [Interval(Real, 0, None, closed='right')],
@@ -222,10 +228,10 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         *,
         outlier_threshold: float = 2.5,
         detect_outliers_for: Literal['all'] | CostStr | list[CostStr] = 'all',
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
     ):
         super().__init__()
         self.estimator = estimator
@@ -237,18 +243,18 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
-    @_fit_context(prefer_skip_nested_validation=False)
+    @_fit_context(prefer_skip_nested_validation=False)  # type: ignore[misc]
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **fit_params: Any,
-    ) -> 'RobustCSClassifier':
+    ) -> Self:
         """
         Fit the estimator with the adjusted costs.
 
@@ -287,7 +293,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
 
-        self.costs_: dict[CostStr, int | float | np.ndarray] = {
+        self.costs_: dict[CostStr, int | float | FloatNDArray] = {
             'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
             'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
             'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
@@ -365,24 +371,28 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
         return self
 
-    @available_if(_estimator_has('predict'))
-    def predict(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
+    @available_if(_estimator_has('predict'))  # type: ignore[misc]
+    def predict(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
-        return self.estimator_.predict(X)
+        y_pred: FloatNDArray = self.estimator_.predict(X)
+        return y_pred
 
-    @available_if(_estimator_has('predict_proba'))
-    def predict_proba(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
+    @available_if(_estimator_has('predict_proba'))  # type: ignore[misc]
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
-        return self.estimator_.predict_proba(X)
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+        return y_proba
 
-    @available_if(_estimator_has('decision_function'))
-    def decision_function(self, X: ArrayLike) -> np.ndarray:  # noqa: D102
+    @available_if(_estimator_has('decision_function'))  # type: ignore[misc]
+    def decision_function(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
         check_is_fitted(self, 'estimator_')
-        return self.estimator_.decision_function(X)
+        y_score: FloatNDArray = self.estimator_.decision_function(X)
+        return y_score
 
     @property
-    def classes_(self) -> int:  # noqa: D102
-        return self.estimator_.classes_
+    def classes_(self) -> NDArray[Any]:  # noqa: D102
+        classes: NDArray[Any] = self.estimator_.classes_
+        return classes
 
     def _more_tags(self) -> dict[str, bool]:
         return {

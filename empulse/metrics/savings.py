@@ -844,13 +844,24 @@ def make_objective_aec(
 
 @overload
 def make_objective_aec(
-    model: Literal['xgboost', 'lightgbm', 'cslogit'],
+    model: Literal['xgboost', 'lightgbm'],
     *,
     tp_cost: FloatNDArray | float = 0.0,
     tn_cost: FloatNDArray | float = 0.0,
     fn_cost: FloatNDArray | float = 0.0,
     fp_cost: FloatNDArray | float = 0.0,
 ) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
+
+
+@overload
+def make_objective_aec(
+    model: Literal['cslogit'],
+    *,
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]: ...
 
 
 def make_objective_aec(
@@ -860,7 +871,11 @@ def make_objective_aec(
     tn_cost: FloatNDArray | float = 0.0,
     fn_cost: FloatNDArray | float = 0.0,
     fp_cost: FloatNDArray | float = 0.0,
-) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] | tuple['AECObjective', 'AECMetric']:
+) -> (
+    Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]
+    | Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
+    | tuple['AECObjective', 'AECMetric']
+):
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
 

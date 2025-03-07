@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 from functools import partial
 from itertools import islice
@@ -5,14 +6,20 @@ from numbers import Integral
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 
 from empulse.optimizers import Generation
 
+from .._types import FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import empc_score
-from ._base import BaseLogitClassifier, OptimizeFn
+from ._base import BaseLogitClassifier, LossFn, OptimizeFn
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class ProfLogitClassifier(BaseLogitClassifier):
@@ -103,7 +110,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
     .. [3] https://github.com/estripling/proflogit/tree/master
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseLogitClassifier._parameter_constraints,
         'loss': [callable, None],
         'n_jobs': [None, Integral],
@@ -115,8 +122,8 @@ class ProfLogitClassifier(BaseLogitClassifier):
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: Callable = empc_score,
-        optimize_fn: Callable | None = None,
+        loss: LossFn = empc_score,
+        optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
         n_jobs: int | None = None,
     ):
@@ -131,7 +138,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         )
         self.n_jobs = n_jobs
 
-    def fit(self, X: ArrayLike, y: ArrayLike, **loss_params: Any) -> 'ProfLogitClassifier':
+    def fit(self, X: ArrayLike, y: ArrayLike, **loss_params: Any) -> Self:
         """
         Fit ProfLogit model.
 
@@ -147,9 +154,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
         self : ProfLogitClassifier
             Fitted ProfLogit model.
         """
-        return super().fit(X, y, **loss_params)
+        super().fit(X, y, **loss_params)
+        return self
 
-    def _fit(self, X: np.ndarray, y: np.ndarray, **loss_params: Any) -> 'ProfLogitClassifier':
+    def _fit(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> Self:
         optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
         optimize_fn: OptimizeFn = _optimize if self.optimize_fn is None else self.optimize_fn
         optimize_fn = partial(optimize_fn, **optimizer_params)
@@ -178,10 +186,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
 
 def _objective(
-    weights: NDArray,
-    X: NDArray,
-    y: NDArray,
-    loss_fn: Callable,
+    weights: FloatNDArray,
+    X: FloatNDArray,
+    y: IntNDArray,
+    loss_fn: LossFn,
     C: float,
     l1_ratio: float,
     soft_threshold: bool,
@@ -203,12 +211,12 @@ def _objective(
     loss = loss_fn(y, y_pred)
     regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
     penalty = regularization_term / C
-    return loss - penalty
+    return float(loss - penalty)
 
 
 def _optimize(
-    objective: Callable,
-    X: NDArray,
+    objective: Callable[[FloatNDArray], float],
+    X: FloatNDArray,
     max_iter: int = 1000,
     tolerance: float = 1e-4,
     patience: int = 250,

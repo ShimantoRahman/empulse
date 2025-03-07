@@ -1,3 +1,4 @@
+import sys
 from numbers import Real
 from typing import Any, ClassVar, Literal
 
@@ -14,11 +15,17 @@ from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, proces
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
-class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
+
+class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # type: ignore[misc]
     r"""
     Classifier that sets the decision threshold to optimize the instance-dependent cost loss.
 
@@ -114,7 +121,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba'])],
         'calibrator': [HasMethods(['fit', 'predict_proba']), StrOptions({'sigmoid', 'isotonic'}), None],
         'pos_label': [Real, str, 'boolean', None],
@@ -132,10 +139,10 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         calibrator: Literal['sigmoid', 'isotonic'] | BaseEstimator | None = 'sigmoid',
         pos_label: int | bool | str | None = None,
         random_state: int | np.random.RandomState | None = None,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
     ):
         super().__init__(estimator, response_method='predict_proba')
         self.calibrator = calibrator
@@ -158,12 +165,14 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         return tags
 
     @property
-    def classes_(self) -> NDArray:  # noqa: D102
+    def classes_(self) -> NDArray[Any]:  # noqa: D102
         if estimator := getattr(self, 'estimator_', None):
-            return estimator.classes_
+            classes: NDArray[Any] = estimator.classes_
+            return classes
         try:
             check_is_fitted(self.estimator)
-            return self.estimator.classes_
+            classes: NDArray[Any] = self.estimator.classes_  # type: ignore[no-redef]
+            return classes
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
@@ -177,7 +186,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
         else:
             return self.calibrator.set_params(estimator=estimator)  # type: ignore[union-attr]
 
-    def _fit(self, X: ArrayLike, y: ArrayLike, **params: Any) -> 'CSThresholdClassifier':
+    def _fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
         """Fit the classifier.
 
         Parameters
@@ -206,12 +215,12 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
 
     def predict(
         self,
-        X: NDArray,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ) -> NDArray:
+        X: FloatNDArray,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+    ) -> NDArray[Any]:
         """
         Predict the target of new samples.
 
@@ -271,7 +280,10 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):
             denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
         optimal_thresholds = (fp_cost - tn_cost) / denominator
 
-        return self.classes_[map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]]
+        y_pred: NDArray[Any] = self.classes_[
+            map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]
+        ]
+        return y_pred
 
     def get_metadata_routing(self) -> MetadataRouter:
         """Get metadata routing of this object.

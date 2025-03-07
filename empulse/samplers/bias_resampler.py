@@ -1,3 +1,4 @@
+import sys
 import warnings
 from collections.abc import Callable
 from itertools import product
@@ -13,6 +14,11 @@ from sklearn.utils._param_validation import StrOptions
 from .._types import IntNDArray, ParameterConstraint
 from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
@@ -152,7 +158,7 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, sensitive_feature: bool = False) -> 'BiasResampler':  # noqa: D102
+        def set_fit_resample_request(self, sensitive_feature: bool = False) -> Self:  # noqa: D102
             pass
 
     def __init__(

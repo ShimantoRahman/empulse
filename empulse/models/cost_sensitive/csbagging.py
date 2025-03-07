@@ -1,6 +1,7 @@
 import contextlib
 import itertools
 import numbers
+import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, Literal
@@ -15,11 +16,17 @@ from sklearn.utils.random import sample_without_replacement
 from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import savings_score
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 from .cslogit import CSLogitClassifier
 from .cstree import CSTreeClassifier
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 MAX_INT = np.iinfo(np.int32).max
 
@@ -40,12 +47,12 @@ def _partition_estimators(n_estimators: int, n_jobs: int) -> tuple[int, list[int
 def _parallel_build_estimators(
     n_estimators: int,
     ensemble: 'BaseBagging',
-    X: NDArray,
-    y: NDArray,
-    cost_mat: NDArray,
+    X: FloatNDArray,
+    y: IntNDArray,
+    cost_mat: FloatNDArray,
     seeds: Sequence[int],
     verbose: int,
-) -> tuple[list[Any], list[NDArray], list[NDArray]]:
+) -> tuple[list[Any], list[NDArray[np.bool_]], list[IntNDArray]]:
     """Private function used to build a batch of estimators within a job."""
     # Retrieve settings
     n_samples, n_features = X.shape
@@ -78,7 +85,7 @@ def _parallel_build_estimators(
 
         # Draw features
         if bootstrap_features:
-            features = random_state.randint(0, n_features, max_features)
+            features: IntNDArray = random_state.randint(0, n_features, max_features)
         else:
             features = sample_without_replacement(n_features, max_features, random_state=random_state)
 
@@ -112,13 +119,13 @@ def _parallel_build_estimators(
 
 
 def _parallel_predict_proba(
-    estimators: Iterable,
-    estimators_features: list[NDArray],
-    X: NDArray,
+    estimators: Iterable[Any],
+    estimators_features: list[IntNDArray],
+    X: FloatNDArray,
     n_classes: int,
     combination: str,
     estimators_weight: list[float],
-) -> NDArray:
+) -> FloatNDArray:
     """Private function used to compute (proba-)predictions within a job."""
     n_samples = X.shape[0]
     proba = np.zeros((n_samples, n_classes))
@@ -134,13 +141,13 @@ def _parallel_predict_proba(
 
 
 def _parallel_predict(
-    estimators: Iterable,
-    estimators_features: list[NDArray],
-    X: NDArray,
+    estimators: Iterable[Any],
+    estimators_features: list[IntNDArray],
+    X: FloatNDArray,
     n_classes: int,
     combination: str,
     estimators_weight: list[float],
-) -> NDArray:
+) -> FloatNDArray:
     """Private function used to compute predictions within a job."""
     n_samples = X.shape[0]
     pred = np.zeros((n_samples, n_classes))
@@ -159,12 +166,12 @@ def _parallel_predict(
 
 
 def _create_stacking_set(
-    estimators: Sequence,
-    estimators_features: list[NDArray],
-    estimators_weight: NDArray,
-    X: NDArray,
+    estimators: Sequence[Any],
+    estimators_features: list[IntNDArray],
+    estimators_weight: FloatNDArray,
+    X: FloatNDArray,
     combination: str,
-) -> NDArray:
+) -> FloatNDArray:
     """Private function used to create the stacking training set."""
     n_samples = X.shape[0]
 
@@ -183,20 +190,20 @@ def _create_stacking_set(
     return X_stacking
 
 
-class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
+class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):  # type: ignore[misc]
     """Base class for Bagging meta-estimator."""
 
     @abstractmethod
     def __init__(
         self,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         estimator: Any = None,
         final_estimator: Any = None,
         n_estimators: int = 10,
-        estimator_params: tuple = tuple(),  # noqa: C408
+        estimator_params: tuple[Any, ...] = tuple(),  # noqa: C408
         max_samples: int | float | None = None,
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
         bootstrap: bool = True,
@@ -225,17 +232,17 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         self.random_state = random_state
         self.verbose = verbose
 
-    @_fit_context(prefer_skip_nested_validation=True)
+    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-    ) -> 'BaseBagging':
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+    ) -> Self:
         """Build a Bagging ensemble of estimators from the training set (X, y).
 
         Parameters
@@ -353,7 +360,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
 
         return self
 
-    def _fit_stacking_model(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> 'BaseBagging':
+    def _fit_stacking_model(self, X: FloatNDArray, y: IntNDArray, cost_mat: FloatNDArray) -> Self:
         """Private function used to fit the stacking model."""
         final_estimator = self.final_estimator if self.final_estimator is not None else CSLogitClassifier()
         self.final_estimator_ = clone(final_estimator)
@@ -381,7 +388,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         return self
 
     # TODO: _evaluate_oob_savings in parallel
-    def _evaluate_oob_savings(self, X: NDArray, y: NDArray, cost_mat: NDArray) -> 'BaseBagging':
+    def _evaluate_oob_savings(self, X: FloatNDArray, y: IntNDArray, cost_mat: FloatNDArray) -> Self:
         """Private function used to calculate the OOB Savings of each estimator."""
         estimators_weight = []
         if self.estimators_ is None or self.estimators_samples_ is None or self.estimators_features_ is None:
@@ -440,7 +447,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):
         return self
 
 
-class BaggingClassifier(ClassifierMixin, BaseBagging):
+class BaggingClassifier(ClassifierMixin, BaseBagging):  # type: ignore[misc]
     """
     A Bagging classifier.
 
@@ -543,7 +550,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
            1996.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'n_estimators': [Interval(numbers.Integral, 1, None, closed='left')],
         'tp_cost': ['array-like', numbers.Real],
         'tn_cost': ['array-like', numbers.Real],
@@ -572,11 +579,11 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         estimator: Any = None,
         final_estimator: Any = None,
         n_estimators: int = 10,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
-        estimator_params: tuple = tuple(),  # noqa: C408
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
+        estimator_params: tuple[Any, ...] = tuple(),  # noqa: C408
         max_samples: int | float | None = None,
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
         bootstrap: bool = True,
@@ -617,7 +624,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
         tags.classifier_tags.poor_score = True
         return tags
 
-    def predict(self, X: ArrayLike) -> NDArray:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """Predict class for X.
 
         The predicted class of an input sample is computed as the class with
@@ -654,7 +661,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
                 X,
                 self.combination,
             )
-            return self.final_estimator_.predict(X_stacking)
+            y_pred: NDArray[Any] = self.final_estimator_.predict(X_stacking)
 
         elif self.combination in {'majority_voting', 'weighted_voting'}:
             # Parallel loop
@@ -675,7 +682,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
 
                 proba = sum(all_proba) / self.n_estimators
 
-                return self.classes_.take(np.argmax(proba, axis=1), axis=0)
+                y_pred = self.classes_.take(np.argmax(proba, axis=1), axis=0)
             else:
                 all_pred = Parallel(n_jobs=n_jobs, verbose=self.verbose)(
                     delayed(_parallel_predict)(
@@ -692,11 +699,12 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
                 # Reduce
                 pred = sum(all_pred) / self.n_estimators
 
-                return self.classes_.take(np.argmax(pred, axis=1), axis=0)
+                y_pred = self.classes_.take(np.argmax(pred, axis=1), axis=0)
         else:
             raise ValueError('Invalid combination method.')
+        return y_pred
 
-    def predict_proba(self, X: ArrayLike) -> NDArray:
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities for X.
 
         The predicted class probabilities of an input sample is computed as
@@ -745,7 +753,7 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):
 
         # Reduce
         if self.combination == 'majority_voting':
-            proba = sum(all_proba) / self.n_estimators
+            proba: FloatNDArray = sum(all_proba) / self.n_estimators
         elif self.combination == 'weighted_voting':
             proba = sum(all_proba)
         elif self.combination in {'stacking', 'stacking_proba'}:

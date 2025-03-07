@@ -3,9 +3,10 @@ from numbers import Real
 from typing import Literal, overload
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray
 
 
 class CostSensitiveMixin:
@@ -13,53 +14,53 @@ class CostSensitiveMixin:
     def _check_costs(
         self,
         *,
-        tp_cost: ArrayLike | float | Parameter,
-        tn_cost: ArrayLike | float | Parameter,
-        fn_cost: ArrayLike | float | Parameter,
-        fp_cost: ArrayLike | float | Parameter,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
         caller: str = 'fit',
         force_array: Literal[True] = True,
         n_samples: int,
     ) -> tuple[
-        NDArray,
-        NDArray,
-        NDArray,
-        NDArray,
+        FloatNDArray,
+        FloatNDArray,
+        FloatNDArray,
+        FloatNDArray,
     ]: ...
 
     @overload
     def _check_costs(
         self,
         *,
-        tp_cost: ArrayLike | float | Parameter,
-        tn_cost: ArrayLike | float | Parameter,
-        fn_cost: ArrayLike | float | Parameter,
-        fp_cost: ArrayLike | float | Parameter,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
         caller: str = 'fit',
         force_array: Literal[False] = False,
         n_samples: int | None = None,
     ) -> tuple[
-        NDArray | float,
-        NDArray | float,
-        NDArray | float,
-        NDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
     ]: ...
 
     def _check_costs(
         self,
         *,
-        tp_cost: ArrayLike | float | Parameter,
-        tn_cost: ArrayLike | float | Parameter,
-        fn_cost: ArrayLike | float | Parameter,
-        fp_cost: ArrayLike | float | Parameter,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
         caller: str = 'fit',
         force_array: bool = False,
         n_samples: int | None = None,
     ) -> tuple[
-        NDArray | float,
-        NDArray | float,
-        NDArray | float,
-        NDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
     ]:
         """
         Check if costs are set and return them.
@@ -111,10 +112,10 @@ def all_float(*arrays: ArrayLike | float | Parameter) -> bool:
 
 
 def all_costs_zero(
-    tp_cost: ArrayLike | float | Parameter,
-    tn_cost: ArrayLike | float | Parameter,
-    fn_cost: ArrayLike | float | Parameter,
-    fp_cost: ArrayLike | float | Parameter,
+    tp_cost: FloatArrayLike | float | Parameter,
+    tn_cost: FloatArrayLike | float | Parameter,
+    fn_cost: FloatArrayLike | float | Parameter,
+    fp_cost: FloatArrayLike | float | Parameter,
 ) -> bool:
     return (
         all_float(tp_cost, tn_cost, fn_cost, fp_cost)

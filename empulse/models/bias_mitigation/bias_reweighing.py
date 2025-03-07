@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 from itertools import product
 from typing import Any, ClassVar
@@ -8,11 +9,19 @@ from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
-def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
+
+def _to_sample_weights(
+    group_weights: FloatNDArray, y_true: FloatNDArray, sensitive_feature: IntNDArray
+) -> FloatNDArray:
     """Convert group weights to sample weights."""
     sample_weight = np.empty(len(y_true))
     for target_class, sensitive_val in product(np.unique(y_true), np.unique(sensitive_feature)):
@@ -24,12 +33,12 @@ def _to_sample_weights(group_weights: np.ndarray, y_true: np.ndarray, sensitive_
     return sample_weight / np.max(sample_weight)
 
 
-def _independent_sample_weights(y_true: np.ndarray, sensitive_feature: np.ndarray) -> np.ndarray:
+def _independent_sample_weights(y_true: FloatNDArray, sensitive_feature: IntNDArray) -> FloatNDArray:
     group_weights = _independent_weights(y_true, sensitive_feature)
     return _to_sample_weights(group_weights, y_true, sensitive_feature)
 
 
-class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
+class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """
     Classifier which reweighs instances during training to remove bias against a subgroup.
 
@@ -171,7 +180,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
         'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
         'transform_feature': [callable, None],
@@ -187,7 +196,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         estimator: Any,
         *,
         strategy: StrategyFn | Strategy = 'statistical parity',
-        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
+        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
     ):
         self.estimator = estimator
         self.strategy = strategy
@@ -205,10 +214,8 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
-    @_fit_context(prefer_skip_nested_validation=True)
-    def fit(
-        self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any
-    ) -> 'BiasReweighingClassifier':
+    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
+    def fit(self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any) -> Self:
         """
         Fit the estimator and reweigh the instances according to the strategy.
 
@@ -252,7 +259,7 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
 
         return self
 
-    def predict_proba(self, X: ArrayLike) -> NDArray:
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
         Predict class probabilities for X.
 
@@ -268,10 +275,10 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+        return y_proba
 
-        return self.estimator_.predict_proba(X)
-
-    def predict(self, X: ArrayLike) -> NDArray:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
         Predict class labels for X.
 
@@ -285,5 +292,6 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):
         y_pred : 1D numpy.ndarray, shape=(n_samples,)
             Predicted class labels.
         """
-        y_pred = self.predict_proba(X)
-        return self.classes_[np.argmax(y_pred, axis=1)]
+        y_proba = self.predict_proba(X)
+        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
+        return y_pred

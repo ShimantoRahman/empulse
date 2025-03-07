@@ -1,10 +1,18 @@
+import sys
 import warnings
 from numbers import Real
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
+
+from ..._types import FloatArrayLike, ParameterConstraint
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 try:
     from xgboost import XGBClassifier
@@ -17,7 +25,7 @@ except ImportError:
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None  # type: ignore[assignment, misc]
+    CatBoostClassifier = None
 
 from ..._common import Parameter
 from ...metrics import make_objective_aec
@@ -182,7 +190,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseBoostClassifier._parameter_constraints,
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],
@@ -194,10 +202,10 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
         *,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
     ) -> None:
         super().__init__(estimator=estimator)
         self.tp_cost = tp_cost
@@ -207,15 +215,15 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
-        tp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: ArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **fit_params: Any,
-    ) -> 'CSBoostClassifier':
+    ) -> Self:
         """
         Fit the model.
 
@@ -249,19 +257,20 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self : CSBoostClassifier
             Fitted CSBoost model.
         """
-        return super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **fit_params)
+        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **fit_params)
+        return self
 
     def _fit(
         self,
-        X: np.ndarray,
-        y: np.ndarray,
+        X: NDArray[Any],
+        y: NDArray[Any],
         *,
-        tp_cost: ArrayLike | float = 0.0,
-        tn_cost: ArrayLike | float = 0.0,
-        fn_cost: ArrayLike | float = 0.0,
-        fp_cost: ArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
         **fit_params: Any,
-    ) -> 'CSBoostClassifier':
+    ) -> Self:
         tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
             tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
