@@ -113,7 +113,7 @@ class Generation:
         mutation_rate: float = 0.1,
         elitism: float = 0.05,
         verbose: bool = False,
-        logging_fn: Callable = print,
+        logging_fn: Callable[[str], None] = print,
         random_state: int | None = None,
         n_jobs: int | None = 1,
     ):
@@ -153,16 +153,18 @@ class Generation:
 
         # Attributes
         self._n_mating_pairs: int | None = None
-        self.elite_pool: list[tuple] = []
-        self.fx_best: list = []
+        self.elite_pool: list[tuple[NDArray[np.float64], np.float64]] = []  # individual, fitness
+        self.fx_best: list[np.float64] = []
         self.fitness: NDArray[np.float64] = np.empty(0)
         self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)
-        self.lower_bounds: NDArray = np.asarray(0)
-        self.upper_bounds: NDArray = np.asarray(0)
-        self.delta_bounds: NDArray = np.asarray(0)
+        self.lower_bounds: NDArray[np.float64] = np.asarray(0.0)
+        self.upper_bounds: NDArray[np.float64] = np.asarray(0.0)
+        self.delta_bounds: NDArray[np.float64] = np.asarray(0.0)
         self.n_dim: int = 0
 
-    def optimize(self, objective: Callable, bounds: list[tuple[float, float]]) -> Generator['Generation', None, None]:
+    def optimize(
+        self, objective: Callable[[NDArray[np.float64]], float], bounds: list[tuple[float, float]]
+    ) -> Generator['Generation', None, None]:
         """
         Optimize the objective function.
 
@@ -228,7 +230,7 @@ class Generation:
         population = self.rng.rand(self.population_size, self.n_dim)
         return self.lower_bounds + population * self.delta_bounds  # type: ignore
 
-    def _evaluate(self, objective: Callable) -> bool:
+    def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> bool:
         if self.population_size is None:
             raise ValueError('`population_size` must be set.')
         fitness_values = Parallel(n_jobs=self.n_jobs)(
@@ -237,7 +239,7 @@ class Generation:
         self.fitness = np.asarray(fitness_values)
         return False
 
-    def _update_fitness(self, objective: Callable, index: int) -> float:
+    def _update_fitness(self, objective: Callable[[NDArray[np.float64]], float], index: int) -> float:
         fitness_value = float(self.fitness[index])
         if np.isnan(fitness_value):
             self.result.nfev += 1
@@ -319,7 +321,7 @@ class Generation:
         self.population = self.population[select_ix]
         self.fitness = self.fitness[select_ix]
 
-    def _get_sorted_non_nan_ix(self) -> list[tuple]:
+    def _get_sorted_non_nan_ix(self) -> list[tuple[int, float]]:
         """Get indices sorted according to non-nan fitness values."""
         non_nan_fx = ((ix, fx) for ix, fx in enumerate(self.fitness) if ~np.isnan(fx))
         sorted_list = sorted(non_nan_fx, key=lambda t: t[1])
@@ -329,7 +331,7 @@ class Generation:
         """Update population by replacing the worst solutions of the current with the ones from the elite pool."""
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
-            worst_ix: Iterable = [t[0] for t in sorted_fx][: self.elitism]
+            worst_ix: Iterable[int] = [t[0] for t in sorted_fx][: self.elitism]
         else:
             worst_ix = np.argsort(self.fitness)[: self.elitism]
         for i, ix in enumerate(worst_ix):
@@ -340,7 +342,7 @@ class Generation:
     def _update_elite_pool(self) -> None:
         if any(np.isnan(fx) for fx in self.fitness):
             sorted_fx = self._get_sorted_non_nan_ix()
-            elite_ix: Sequence = [t[0] for t in sorted_fx][-self.elitism :]
+            elite_ix: Sequence[int] = [t[0] for t in sorted_fx][-self.elitism :]
         else:
             elite_ix = list(np.argsort(self.fitness)[-self.elitism :])
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
