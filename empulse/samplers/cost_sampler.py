@@ -1,17 +1,18 @@
 import warnings
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import check_random_state
-from sklearn.utils._param_validation import Interval, Real, StrOptions, _Constraint
+from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
+from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
 from ..utils._sklearn_compat import ClassifierTags, Tags  # type: ignore
 
 
-class CostSensitiveSampler(BaseSampler):
+class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
     """
     Sampler which performs cost-proportionate resampling.
 
@@ -93,7 +94,7 @@ class CostSensitiveSampler(BaseSampler):
     """
 
     _sampling_type: ClassVar[str] = 'bypass'
-    _parameter_constraints: ClassVar[dict[str, list[_Constraint | str]]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
         'percentile_threshold': [Interval(Real, 0, 1, closed='both')],
@@ -114,8 +115,8 @@ class CostSensitiveSampler(BaseSampler):
         oversampling_norm: float = 0.1,
         percentile_threshold: float = 0.975,
         random_state: int | np.random.RandomState | None = None,
-        fp_cost: float | ArrayLike = 0.0,
-        fn_cost: float | ArrayLike = 0.0,
+        fp_cost: float | FloatArrayLike = 0.0,
+        fn_cost: float | FloatArrayLike = 0.0,
     ):
         super().__init__()
         self.method = method
@@ -144,7 +145,7 @@ class CostSensitiveSampler(BaseSampler):
         *,
         fp_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
         fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> tuple[NDArray[Any], NDArray[Any]]:
         """
         Resample the dataset.
 
@@ -170,15 +171,18 @@ class CostSensitiveSampler(BaseSampler):
         y_resampled : ndarray of shape (n_samples_new,)
             The corresponding label of `X_resampled`.
         """
-        return super().fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+        X, y = super().fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+        X: NDArray[Any]
+        y: NDArray[Any]
+        return X, y
 
     def _fit_resample(
         self,
-        X: NDArray,
-        y: NDArray,
-        fp_cost: float | ArrayLike | Parameter = 0.0,
-        fn_cost: float | ArrayLike | Parameter = 0.0,
-    ) -> tuple[NDArray, NDArray]:
+        X: NDArray[Any],
+        y: IntNDArray,
+        fp_cost: float | FloatArrayLike | Parameter = 0.0,
+        fn_cost: float | FloatArrayLike | Parameter = 0.0,
+    ) -> tuple[NDArray[Any], NDArray[Any]]:
         if fp_cost is Parameter.UNCHANGED:
             fp_cost = self.fp_cost
         if fn_cost is Parameter.UNCHANGED:

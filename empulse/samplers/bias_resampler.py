@@ -1,29 +1,30 @@
 import warnings
 from collections.abc import Callable
 from itertools import product
-from typing import TYPE_CHECKING, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
-from sklearn.utils._param_validation import StrOptions, _Constraint
+from sklearn.utils._param_validation import StrOptions
 
+from .._types import IntNDArray, ParameterConstraint
 from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
-    _XT = TypeVar('_XT', NDArray, pd.DataFrame, ArrayLike)
-    _YT = TypeVar('_YT', NDArray, pd.Series, ArrayLike)
+    _XT = TypeVar('_XT', NDArray[Any], pd.DataFrame, ArrayLike)
+    _YT = TypeVar('_YT', NDArray[Any], pd.Series, ArrayLike)
 else:
     _XT = TypeVar('_XT', bound=ArrayLike)
     _YT = TypeVar('_YT', bound=ArrayLike)
 
 
-class BiasResampler(BaseSampler):
+class BiasResampler(BaseSampler):  # type: ignore[misc]
     """
     Sampler which resamples instances to remove bias against a subgroup.
 
@@ -139,7 +140,7 @@ class BiasResampler(BaseSampler):
 
     _estimator_type: ClassVar[str] = 'sampler'
     _sampling_type: ClassVar[str] = 'bypass'
-    _parameter_constraints: ClassVar[dict[str, list[_Constraint | str | callable | None]]] = {
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_feature': [callable, None],
         'random_state': ['random_state'],
@@ -158,7 +159,7 @@ class BiasResampler(BaseSampler):
         self,
         *,
         strategy: StrategyFn | Strategy = 'statistical parity',
-        transform_feature: Callable[[np.ndarray], np.ndarray] | None = None,
+        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
         random_state: RandomState | int | None = None,
     ):
         super().__init__()
@@ -202,15 +203,18 @@ class BiasResampler(BaseSampler):
         y : 1D array-like, shape=(n_samples,)
             Resampled target values.
         """
-        return super().fit_resample(X, y, sensitive_feature=sensitive_feature)
+        X, y = super().fit_resample(X, y, sensitive_feature=sensitive_feature)
+        X: _XT
+        y: _YT
+        return X, y
 
     def _fit_resample(
         self,
-        X: NDArray,
-        y: NDArray,
+        X: NDArray[Any],
+        y: IntNDArray,
         *,
         sensitive_feature: ArrayLike | None = None,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> tuple[NDArray[Any], IntNDArray]:
         """
         Resample the data according to the strategy.
 

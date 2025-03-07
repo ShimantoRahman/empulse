@@ -1,13 +1,15 @@
 from collections.abc import Callable
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 
+from .._types import FloatNDArray, IntNDArray
+
 Strategy = Literal['statistical parity', 'demographic parity']
-StrategyFn = Callable[[np.ndarray, np.ndarray], np.ndarray]
+StrategyFn = Callable[[FloatNDArray, IntNDArray], FloatNDArray]
 
 
-def _independent_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.ndarray:
+def _independent_weights(y_true: FloatNDArray, protected_attr: IntNDArray) -> FloatNDArray:
     """
     Compute weights so that y would be statistically independent of the protected attribute.
 
@@ -30,5 +32,6 @@ def _independent_weights(y_true: np.ndarray, protected_attr: np.ndarray) -> np.n
     if protected_attr.ndim == 2:
         protected_attr = protected_attr.reshape(-1)
     joint_prob = np.histogram2d(y_true, protected_attr, bins=(2, 2))[0] / len(y_true)
-    epsilon: np.floating = np.finfo(float).eps  # to avoid division by zero
-    return (1 / (joint_prob + epsilon)) * prior_protected_attr * prior_y
+    epsilon: np.floating[Any] = np.finfo(float).eps  # to avoid division by zero
+    weights: FloatNDArray = (1 / (joint_prob + epsilon)) * prior_protected_attr * prior_y
+    return weights
