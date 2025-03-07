@@ -215,7 +215,7 @@ def _compute_profit_acquisition(
     direct_selling: float = 1,
     commission: float = 0.1,
     check_input: bool = True,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatNDArray, FloatNDArray]:
     if check_input:
         y_true, y_pred = _validate_input_deterministic(
             y_true, y_pred, contribution, contact_cost, sales_cost, direct_selling, commission

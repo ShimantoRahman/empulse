@@ -249,7 +249,7 @@ def _compute_profit_churn(
     f: float = 1,
     gamma: float = 0.3,
     check_input: bool = True,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatNDArray, FloatNDArray]:
     if check_input:
         y_true, y_score, clv = _validate_input_mp(y_true, y_score, gamma, clv, d, f)
     else:

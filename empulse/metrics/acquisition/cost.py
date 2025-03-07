@@ -3,22 +3,22 @@ from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy import ndarray
-from numpy.typing import NDArray
 from scipy.special import expit
+
+from ..._types import FloatArrayLike, FloatNDArray
 
 if TYPE_CHECKING:  # pragma: no cover
     try:
         from lightgbm import Dataset
         from xgboost import DMatrix
 
-        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
+        Matrix = TypeVar('Matrix', bound=FloatNDArray | DMatrix | Dataset)
     except ImportError:
-        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
+        Matrix = TypeVar('Matrix', bound=FloatNDArray)  # type: ignore[misc]
 else:
-    Matrix = TypeVar('Matrix', bound=NDArray)
+    Matrix = TypeVar('Matrix', bound=FloatNDArray)
 
-from ..._types import FloatArrayLike
+
 from ._validation import _validate_input_deterministic
 
 
@@ -43,7 +43,7 @@ def make_objective_acquisition(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 def make_objective_acquisition(
@@ -54,7 +54,10 @@ def make_objective_acquisition(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> tuple['AECObjectiveAcquisition', 'AECMetricAcquisition'] | Callable[[ndarray, Matrix], tuple[ndarray, ndarray]]:
+) -> (
+    tuple['AECObjectiveAcquisition', 'AECMetricAcquisition']
+    | Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]
+):
     """
     Create an objective function for the Expected Cost measure for customer acquisition.
 
@@ -119,7 +122,7 @@ def make_objective_acquisition(
         Annals of Operations Research, 1-27.
     """
     if model == 'xgboost':
-        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
+        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective,
             contribution=contribution,
             contact_cost=contact_cost,
@@ -130,7 +133,7 @@ def make_objective_acquisition(
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
 
-        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
+        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the churn AEC measure.
 
@@ -182,14 +185,14 @@ def make_objective_acquisition(
 
 
 def _objective(
-    y_pred: np.ndarray,
+    y_pred: FloatNDArray,
     dtrain: Matrix,
     contribution: float = 7_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatNDArray, FloatNDArray]:
     """
     Create an objective function for `XGBoostClassifier` for customer acquisition.
 
@@ -247,7 +250,7 @@ class AECObjectiveAcquisition:
         self.commission = commission
 
     def calc_ders_range(
-        self, predictions: Sequence[float], targets: NDArray, weights: Sequence[float]
+        self, predictions: Sequence[float], targets: FloatNDArray, weights: Sequence[float]
     ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
@@ -442,5 +445,5 @@ def expected_cost_loss_acquisition(
         + (1 - y_true) * y_proba * contact_cost
     )
     if normalize:
-        return costs.mean()
-    return costs.sum()
+        return float(np.mean(costs))
+    return float(np.sum(costs))

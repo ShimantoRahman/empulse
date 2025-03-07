@@ -3,21 +3,22 @@ from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.special import expit
+
+from ..._types import FloatArrayLike, FloatNDArray
 
 if TYPE_CHECKING:  # pragma: no cover
     try:
         from lightgbm import Dataset
         from xgboost import DMatrix
 
-        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
+        Matrix = TypeVar('Matrix', bound=FloatNDArray | DMatrix | Dataset)
     except ImportError:
-        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
+        Matrix = TypeVar('Matrix', bound=FloatNDArray)  # type: ignore[misc]
 else:
-    Matrix = TypeVar('Matrix', bound=NDArray)
+    Matrix = TypeVar('Matrix', bound=FloatNDArray)
 
-from ..._types import FloatArrayLike
+
 from ._validation import _validate_input_cost_loss_churn
 
 
@@ -26,8 +27,8 @@ def make_objective_churn(
     model: Literal['catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: float | NDArray = 200,
-    incentive_fraction: float | NDArray = 0.05,
+    clv: float | FloatNDArray = 200,
+    incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 15,
 ) -> tuple['AECObjectiveChurn', 'AECMetricChurn']: ...
 
@@ -37,20 +38,20 @@ def make_objective_churn(
     model: Literal['xgboost', 'lightgbm'],
     *,
     accept_rate: float = 0.3,
-    clv: float | NDArray = 200,
-    incentive_fraction: float | NDArray = 0.05,
+    clv: float | FloatNDArray = 200,
+    incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 15,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 def make_objective_churn(
     model: Literal['xgboost', 'lightgbm', 'catboost'],
     *,
     accept_rate: float = 0.3,
-    clv: float | NDArray = 200,
-    incentive_fraction: float | NDArray = 0.05,
+    clv: float | FloatNDArray = 200,
+    incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 15,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
+) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
     """
     Create an objective function for the Expected Cost measure for customer churn.
 
@@ -121,7 +122,7 @@ def make_objective_churn(
 
     """
     if model == 'xgboost':
-        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
+        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective,
             accept_rate=accept_rate,
             clv=clv,
@@ -131,7 +132,7 @@ def make_objective_churn(
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
 
-        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
+        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the churn AEC measure.
 
@@ -180,13 +181,13 @@ def make_objective_churn(
 
 
 def _objective(
-    y_pred: np.ndarray,
+    y_pred: FloatNDArray,
     dtrain: Matrix,
     accept_rate: float = 0.3,
-    clv: float | NDArray = 200,
-    incentive_fraction: float | NDArray = 0.05,
+    clv: float | FloatNDArray = 200,
+    incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 1,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatNDArray, FloatNDArray]:
     """
     Objective function for XGBoost to maximize the profit of a churn model.
 
@@ -228,8 +229,8 @@ class AECObjectiveChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: float | NDArray = 200,
-        incentive_fraction: float | NDArray = 0.05,
+        clv: float | FloatNDArray = 200,
+        incentive_fraction: float | FloatNDArray = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -238,7 +239,7 @@ class AECObjectiveChurn:
         self.contact_cost = contact_cost
 
     def calc_ders_range(
-        self, predictions: Sequence[float], targets: NDArray, weights: NDArray
+        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
     ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
@@ -282,8 +283,8 @@ class AECMetricChurn:
     def __init__(
         self,
         accept_rate: float = 0.3,
-        clv: float | NDArray = 200,
-        incentive_fraction: float | NDArray = 0.05,
+        clv: float | FloatNDArray = 200,
+        incentive_fraction: float | FloatNDArray = 0.05,
         contact_cost: float = 1,
     ):
         self.accept_rate = accept_rate
@@ -295,7 +296,9 @@ class AECMetricChurn:
         """Return whether great values of metric are better."""
         return False
 
-    def evaluate(self, predictions: Sequence[float], targets: NDArray, weights: NDArray) -> tuple[float, float]:
+    def evaluate(
+        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
+    ) -> tuple[float, float]:
         """
         Evaluate metric value.
 
@@ -446,5 +449,5 @@ def expected_cost_loss_churn(
         contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
     if normalize:
-        return profits.mean()
-    return profits.sum()
+        return float(np.mean(profits))
+    return float(np.sum(profits))

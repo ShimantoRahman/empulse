@@ -2,8 +2,8 @@ from typing import Any
 
 import numpy as np
 import sympy
-from numpy.typing import NDArray
 
+from ..._types import FloatNDArray
 from .common import BoostObjective, LogitObjective, MetricFn, _check_parameters
 
 
@@ -22,7 +22,7 @@ def _build_cost_loss(
     cost_funct = sympy.lambdify(list(cost_function.free_symbols), cost_function)
 
     @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
-    def cost_loss(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def cost_loss(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         return float(np.mean(cost_funct(y=y_true, s=y_score, **kwargs)))
 
     return cost_loss
@@ -43,8 +43,11 @@ def _build_cost_logit_objective(
     gradient = x * s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
     gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
 
-    def cost_gradient_logit(x: NDArray, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> NDArray:
-        return np.mean(gradient_fn(y=y_true, s=y_score, x=x, **kwargs), axis=0)
+    def cost_gradient_logit(
+        x: FloatNDArray, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+    ) -> FloatNDArray:
+        gradient: FloatNDArray = np.mean(gradient_fn(y=y_true, s=y_score, x=x, **kwargs), axis=0)
+        return gradient
 
     return cost_gradient_logit
 
@@ -58,7 +61,9 @@ def _build_cost_gradient_boost_objective(
     hessian = (1 - 2 * s) * nabla
     hessian_fn = sympy.lambdify(list(hessian.free_symbols), hessian)
 
-    def cost_gradient_hessian_gboost(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> tuple[NDArray, NDArray]:
+    def cost_gradient_hessian_gboost(
+        y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+    ) -> tuple[FloatNDArray, FloatNDArray]:
         gradient = gradient_fn(y=y_true, s=y_score, **kwargs)
         hessian = np.abs(hessian_fn(s=y_score, nabla=gradient))
         return gradient, hessian

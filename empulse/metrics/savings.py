@@ -4,21 +4,24 @@ from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.special import expit
 
+from .._types import FloatArrayLike, FloatNDArray
+
 if TYPE_CHECKING:  # pragma: no cover
+    from numpy.typing import NDArray
+
     try:
         from lightgbm import Dataset
         from xgboost import DMatrix
 
-        Matrix = TypeVar('Matrix', bound=NDArray | DMatrix | Dataset)
+        Matrix = TypeVar('Matrix', bound=FloatNDArray | DMatrix | Dataset)
     except ImportError:
-        Matrix = TypeVar('Matrix', bound=NDArray)  # type: ignore[misc]
+        Matrix = TypeVar('Matrix', bound=FloatNDArray)  # type: ignore[misc]
 else:
-    Matrix = TypeVar('Matrix', bound=NDArray)
+    Matrix = TypeVar('Matrix', bound=FloatNDArray)
 
-from .._types import FloatArrayLike, FloatNDArray
+
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
 
@@ -97,7 +100,7 @@ def _compute_log_expected_cost(
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     inverse_y_pred = 1 - y_pred
     log_y_pred = np.log(y_pred)
-    log_inv_y_pred = np.log(inverse_y_pred)
+    log_inv_y_pred: NDArray[np.floating[Any]] = np.log(inverse_y_pred)
     return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) + (1 - y_true) * (
         log_y_pred * fp_cost + log_inv_y_pred * tn_cost
     )
@@ -234,7 +237,7 @@ def cost_loss(
     cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
 
     if normalize:
-        return cost.mean()
+        return float(np.mean(cost))
     return float(np.sum(cost))
 
 
@@ -355,7 +358,7 @@ def expected_cost_loss(
     cost = _compute_expected_cost(y_true, y_proba, tp_cost, tn_cost, fn_cost, fp_cost)
 
     if normalize:
-        return cost.mean()
+        return float(np.mean(cost))
     return float(np.sum(cost))
 
 
@@ -460,8 +463,8 @@ def expected_log_cost_loss(
     )
     cost = _compute_log_expected_cost(y_true, y_proba, tp_cost, tn_cost, fn_cost, fp_cost)
     if normalize:
-        return cost.mean()
-    return cost.sum()
+        return float(np.mean(cost))
+    return float(np.sum(cost))
 
 
 def savings_score(
@@ -632,6 +635,8 @@ def savings_score(
     cost = cost_loss(
         y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
     )
+    if cost_base == 0.0:
+        cost_base = float(np.finfo(float).eps)
     return 1.0 - cost / cost_base
 
 
@@ -830,10 +835,10 @@ def expected_savings_score(
 def make_objective_aec(
     model: Literal['catboost'],
     *,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
 ) -> tuple['AECObjective', 'AECMetric']: ...
 
 
@@ -841,21 +846,21 @@ def make_objective_aec(
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'cslogit'],
     *,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]]: ...
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 def make_objective_aec(
     model: Literal['xgboost', 'lightgbm', 'catboost', 'cslogit'],
     *,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] | tuple['AECObjective', 'AECMetric']:
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] | tuple['AECObjective', 'AECMetric']:
     """
     Create an objective function for the Average Expected Cost (AEC) measure.
 
@@ -917,13 +922,13 @@ def make_objective_aec(
            European Journal of Operational Research, 297(1), 291-300.
     """
     if model == 'xgboost':
-        objective: Callable[[np.ndarray, Matrix], tuple[np.ndarray, np.ndarray]] = partial(
+        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
         update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
 
-        def objective(y_pred: np.ndarray, train_data: Matrix) -> tuple[np.ndarray, np.ndarray]:
+        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the AEC measure.
 
@@ -963,14 +968,14 @@ def make_objective_aec(
 
 
 def _objective_cslogit(
-    features: np.ndarray,
-    weights: np.ndarray,
-    y_true: np.ndarray,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> tuple[float, np.ndarray]:
+    features: FloatNDArray,
+    weights: FloatNDArray,
+    y_true: FloatNDArray,
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> tuple[float, FloatNDArray]:
     y_pred = expit(np.dot(weights, features.T))
 
     if y_pred.ndim == 1:
@@ -995,13 +1000,13 @@ def _objective_cslogit(
 
 
 def _objective_boost(
-    y_pred: np.ndarray,
+    y_pred: FloatNDArray,
     dtrain: Matrix,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> tuple[np.ndarray, np.ndarray]:
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> tuple[FloatNDArray, FloatNDArray]:
     """
     Create an objective function for the AEC measure.
 
@@ -1039,10 +1044,10 @@ class AECObjective:
 
     def __init__(
         self,
-        tp_cost: NDArray | float = 0.0,
-        tn_cost: NDArray | float = 0.0,
-        fn_cost: NDArray | float = 0.0,
-        fp_cost: NDArray | float = 0.0,
+        tp_cost: FloatNDArray | float = 0.0,
+        tn_cost: FloatNDArray | float = 0.0,
+        fn_cost: FloatNDArray | float = 0.0,
+        fp_cost: FloatNDArray | float = 0.0,
     ):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -1050,7 +1055,7 @@ class AECObjective:
         self.fp_cost = fp_cost
 
     def calc_ders_range(
-        self, predictions: Sequence[float], targets: NDArray, weights: NDArray
+        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
     ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
@@ -1092,10 +1097,10 @@ class AECMetric:
 
     def __init__(
         self,
-        tp_cost: NDArray | float = 0.0,
-        tn_cost: NDArray | float = 0.0,
-        fn_cost: NDArray | float = 0.0,
-        fp_cost: NDArray | float = 0.0,
+        tp_cost: FloatNDArray | float = 0.0,
+        tn_cost: FloatNDArray | float = 0.0,
+        fn_cost: FloatNDArray | float = 0.0,
+        fp_cost: FloatNDArray | float = 0.0,
     ) -> None:
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -1106,7 +1111,9 @@ class AECMetric:
         """Return whether great values of metric are better."""
         return False
 
-    def evaluate(self, predictions: Sequence[float], targets: Sequence[float], weights: NDArray) -> tuple[float, float]:
+    def evaluate(
+        self, predictions: Sequence[float], targets: Sequence[float], weights: FloatNDArray
+    ) -> tuple[float, float]:
         """
         Evaluate metric value.
 

@@ -1,8 +1,9 @@
 import numpy as np
-from numpy.typing import ArrayLike
+
+from .._types import FloatArrayLike, FloatNDArray
 
 
-def classification_threshold(y_true: ArrayLike, y_score: ArrayLike, customer_threshold: float) -> float:
+def classification_threshold(y_true: FloatArrayLike, y_score: FloatArrayLike, customer_threshold: float) -> float:
     """
     Return classification threshold for given customer threshold.
 
@@ -36,12 +37,14 @@ def classification_threshold(y_true: ArrayLike, y_score: ArrayLike, customer_thr
     y_score = np.asarray(y_score)
     confusion_matrix, sorted_indices, duplicated_prediction_indices = _compute_confusion_matrix(y_true, y_score)
     classification_thresholds = np.pad(y_score[sorted_indices], pad_width=(1, 0), constant_values=1)
-    classification_thresholds = np.delete(classification_thresholds, duplicated_prediction_indices)
+    classification_thresholds = np.delete(classification_thresholds, duplicated_prediction_indices)  # type: ignore[arg-type]
     customer_thresholds = np.sum(confusion_matrix, axis=0) / y_score.shape[0]
     return float(classification_thresholds[np.argmin(np.abs(customer_thresholds - customer_threshold))])
 
 
-def _compute_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _compute_confusion_matrix(
+    y_true: FloatNDArray, y_pred: FloatNDArray
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
     # sort true labels and predictions by highest to the lowest predicted score
     sorted_indices = y_pred.argsort()[::-1]
     sorted_labels = y_true[sorted_indices]
@@ -59,7 +62,7 @@ def _compute_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[n
     return np.array([true_positives, false_positives]), sorted_indices, duplicated_prediction_indices
 
 
-def _compute_prior_class_probabilities(y_true: np.ndarray) -> tuple[float, float]:
+def _compute_prior_class_probabilities(y_true: FloatNDArray) -> tuple[float, float]:
     """Calculate prior class probabilities from target values."""
     positive_class_prob = float(np.mean(y_true))  # pi_0
     negative_class_prob = 1 - positive_class_prob  # pi_1
@@ -68,8 +71,8 @@ def _compute_prior_class_probabilities(y_true: np.ndarray) -> tuple[float, float
 
 
 def _compute_tpr_fpr_diffs(
-    true_positive_rates: np.ndarray, false_positive_rates: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+    true_positive_rates: FloatNDArray, false_positive_rates: FloatNDArray
+) -> tuple[FloatNDArray, FloatNDArray]:
     """Calculate differences between subsequent true positive rates and false positive rates."""
     tpr_diff = np.diff(true_positive_rates, axis=0)  # F_0(T_i) - F_0(T_{i-1})
     fpr_diff = np.diff(false_positive_rates, axis=0)  # F_1(T_i) - F_1(T_{i-1})
@@ -78,8 +81,8 @@ def _compute_tpr_fpr_diffs(
 
 
 def _compute_profits(
-    y_true: np.ndarray, y_pred: np.ndarray, cost_benefits: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+    y_true: FloatNDArray, y_pred: FloatNDArray, cost_benefits: FloatNDArray
+) -> tuple[FloatNDArray, FloatNDArray]:
     n_samples = y_pred.shape[0]
     confusion_matrix, _, _ = _compute_confusion_matrix(y_true, y_pred)
     profit_matrix = np.dot(confusion_matrix.T, cost_benefits) / n_samples

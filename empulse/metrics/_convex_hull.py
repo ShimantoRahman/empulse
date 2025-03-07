@@ -2,10 +2,12 @@ import numpy as np
 from scipy.spatial import ConvexHull, QhullError
 from sklearn.metrics import roc_curve
 
+from .._types import FloatNDArray
+
 
 def _compute_convex_hull(
-    y_true: np.ndarray, y_pred: np.ndarray, expand_dims: bool = False
-) -> tuple[np.ndarray, np.ndarray]:
+    y_true: FloatNDArray, y_pred: FloatNDArray, expand_dims: bool = False
+) -> tuple[FloatNDArray, FloatNDArray]:
     """
     Compute the convex hull points of the ROC curve.
 
@@ -48,8 +50,8 @@ def _compute_convex_hull(
     convex_hull_fpr = fpr[ind]
     convex_hull_tpr = tpr[ind]
     ind_upper_triangle = convex_hull_fpr < convex_hull_tpr  # only consider points above the 45° line
-    convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])  # type: ignore
-    convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])  # type: ignore
+    convex_hull_fpr = np.concatenate([[0], convex_hull_fpr[ind_upper_triangle], [1]])
+    convex_hull_tpr = np.concatenate([[0], convex_hull_tpr[ind_upper_triangle], [1]])
     ind = np.argsort(convex_hull_fpr)  # sort along the x-axis
     convex_hull_fpr = convex_hull_fpr[ind]
     convex_hull_tpr = convex_hull_tpr[ind]

@@ -2,8 +2,8 @@ from typing import Any
 
 import numpy as np
 import sympy
-from numpy.typing import NDArray
 
+from ..._types import FloatNDArray
 from .common import MetricFn, _check_parameters
 from .cost_metric import _build_cost_equation, _format_cost_function
 
@@ -29,13 +29,13 @@ def _build_savings_score(
     one_params_str = {str(symbol) for symbol in all_one_function.free_symbols}
 
     @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
-    def savings(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def savings(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         # by prediction all ones or all zeros, parts of the cost function can be simplified
         zero_parameters = {k: v for k, v in kwargs.items() if k in zero_params_str}
         one_parameters = {k: v for k, v in kwargs.items() if k in one_params_str}
         # it is possible that with the substitution of the symbols, the function becomes a constant
-        all_zero_score: float = np.mean(all_zero_func(y=y_true, **zero_parameters)) if all_zero_function != 0 else 0  # type: ignore[assignment]
-        all_one_score: float = np.mean(all_one_func(y=y_true, **one_parameters)) if all_one_function != 0 else 0  # type: ignore[assignment]
+        all_zero_score = float(np.mean(all_zero_func(y=y_true, **zero_parameters))) if all_zero_function != 0 else 0.0
+        all_one_score = float(np.mean(all_one_func(y=y_true, **one_parameters))) if all_one_function != 0 else 0.0
         cost_base = min(all_zero_score, all_one_score)
         return float(1 - np.mean(cost_func(y=y_true, s=y_score, **kwargs)) / cost_base)
 

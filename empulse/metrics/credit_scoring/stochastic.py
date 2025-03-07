@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 
-from ..._types import FloatArrayLike
+from ..._types import FloatArrayLike, FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp
@@ -238,8 +238,8 @@ def empcs(
 
 
 def _compute_lambda_cdf(
-    roi: float, tpr_diff: np.ndarray, fpr_diff: np.ndarray, positive_class_prob: float, negative_class_prob: float
-) -> tuple[np.ndarray, np.ndarray]:
+    roi: float, tpr_diff: FloatNDArray, fpr_diff: FloatNDArray, positive_class_prob: float, negative_class_prob: float
+) -> tuple[FloatNDArray, FloatNDArray]:
     # ignore division by zero warning
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=RuntimeWarning)

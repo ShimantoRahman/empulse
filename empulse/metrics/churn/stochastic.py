@@ -4,7 +4,7 @@ import numpy as np
 from packaging.version import Version
 from scipy import stats as st
 
-from ..._types import FloatArrayLike
+from ..._types import FloatArrayLike, FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp, _validate_input_empb
@@ -306,10 +306,10 @@ def _compute_gamma_bounds(
     tpr_coef: float,
     fpr_coef: float,
     delta: float,
-    tpr_diff: np.ndarray,
-    fpr_diff: np.ndarray,
+    tpr_diff: FloatNDArray,
+    fpr_diff: FloatNDArray,
     positive_class_prob: float,
-) -> np.ndarray:
+) -> FloatNDArray:
     """Compute the gamma bounds of the integral."""
     numerator = fpr_coef * fpr_diff + tpr_coef * tpr_diff
     denominator = positive_class_prob * (1 - delta) * tpr_diff
@@ -613,7 +613,7 @@ def auepc_score(
     stop_index: int = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)  # type: ignore[assignment]
 
     # Calculate the AUEPC
-    score = np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits))  # type: ignore[attr-defined]
+    score = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits)))  # type: ignore[attr-defined]
     if normalize:
         score /= (stop_index - 1) / len(profits)
     return score

@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import scipy.stats as st
 
-from ..._types import FloatArrayLike
+from ..._types import FloatArrayLike, FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_stochastic
@@ -274,9 +274,9 @@ def _compute_integration_bounds(
     tpr_coef: float,
     fpr_coef: float,
     denominator: float,
-    tpr_diff: np.ndarray,
-    fpr_diff: np.ndarray,
-) -> np.ndarray:
+    tpr_diff: FloatNDArray,
+    fpr_diff: FloatNDArray,
+) -> FloatNDArray:
     """Compute the integration bounds for the contribution of a new customer."""
     # ignore division by zero warning
     with warnings.catch_warnings():
@@ -290,6 +290,7 @@ def _compute_integration_bounds(
             np.full(shape=(1, clv_bounds.shape[1]), fill_value=np.inf),
         ])
     elif clv_bounds.ndim == 1:
-        return np.concatenate([[0], clv_bounds, [np.inf]]).reshape(-1, 1)
+        integration_bounds: FloatNDArray = np.concatenate([[0], clv_bounds, [np.inf]]).reshape(-1, 1)
+        return integration_bounds
     else:
         raise ValueError(f'Invalid number of dimensions: {clv_bounds.ndim}')

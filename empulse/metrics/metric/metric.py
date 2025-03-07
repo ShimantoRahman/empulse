@@ -6,8 +6,8 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 import scipy
 import sympy
-from numpy.typing import ArrayLike, NDArray
 
+from ..._types import FloatArrayLike, FloatNDArray
 from .common import BoostObjective, LogitObjective
 from .cost_metric import (
     _build_cost_gradient_boost_objective,
@@ -188,15 +188,17 @@ class Metric:
         self.kind = kind
 
         def gradient_logit_undefined(*args: Any, **kwargs: Any) -> LogitObjective:
-            def undefined_fn(x: NDArray, y_true: NDArray, y_score: NDArray, **kwargs: Any) -> NDArray[np.floating]:
+            def undefined_fn(
+                x: FloatNDArray, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+            ) -> FloatNDArray:
                 raise NotImplementedError(f'Gradient of the logit function is not defined for kind={self.kind}')
 
             return undefined_fn
 
         def gradient_hessian_gboost_undefined(*args: Any, **kwargs: Any) -> BoostObjective:
             def undefined_fn(
-                y_true: NDArray, y_score: NDArray, **kwargs: Any
-            ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+                y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+            ) -> tuple[FloatNDArray, FloatNDArray]:
                 raise NotImplementedError(
                     f'Gradient and Hessian of the gradient boosting function is not defined for kind={self.kind}'
                 )
@@ -709,7 +711,7 @@ class Metric:
         )
         return self
 
-    def _prepare_parameters(self, **kwargs: ArrayLike | float) -> dict[str, NDArray | float]:
+    def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
         # Use default values if not provided in kwargs
         for key, value in self._defaults.items():
@@ -723,11 +725,11 @@ class Metric:
         for alias, symbol in self._aliases.items():
             if alias in kwargs:
                 kwargs[symbol] = kwargs.pop(alias)
-        kwargs: dict[str, NDArray | float]  # redefine kwargs as mypy doesn't understand the above
+        kwargs: dict[str, FloatNDArray | float]  # redefine kwargs as mypy doesn't understand the above
 
         return kwargs
 
-    def __call__(self, y_true: ArrayLike, y_score: ArrayLike, **parameters: ArrayLike | float) -> float:
+    def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
         """
         Compute the metric score or loss.
 
@@ -767,8 +769,8 @@ class Metric:
         return self._score_function(y_true, y_score, **parameters)
 
     def logit_objective(
-        self, features: NDArray, weights: NDArray, y_true: NDArray, **parameters: NDArray | float
-    ) -> tuple[float, NDArray]:
+        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[float, FloatNDArray]:
         """
         Compute the metric loss and its gradient with respect to the logistic regression weights.
 
@@ -808,8 +810,8 @@ class Metric:
         return value, gradient
 
     def gradient_boost_objective(
-        self, y_true: NDArray, y_score: NDArray, **parameters: NDArray | float
-    ) -> tuple[NDArray, NDArray]:
+        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray]:
         """
         Compute the gradient and hessian of the metric loss with respect to the gradient boosting weights.
 

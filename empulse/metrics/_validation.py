@@ -9,8 +9,8 @@ from .._types import FloatArrayLike, FloatNDArray
 
 
 def _check_y_true(y_true: FloatArrayLike) -> FloatNDArray:
-    y_true = np.asarray(y_true)
-    y_true = column_or_1d(y_true)
+    y_true: FloatNDArray = np.asarray(y_true)
+    y_true: FloatNDArray = column_or_1d(y_true)
     _check_numeric(y_true)
     _check_nan(y_true)
     _check_inf(y_true)
@@ -20,8 +20,8 @@ def _check_y_true(y_true: FloatArrayLike) -> FloatNDArray:
 
 
 def _check_y_pred(y_pred: FloatArrayLike) -> FloatNDArray:
-    y_pred = np.asarray(y_pred)
-    y_pred = column_or_1d(y_pred)
+    y_pred: FloatNDArray = np.asarray(y_pred)
+    y_pred: FloatNDArray = column_or_1d(y_pred)
     _check_nan(y_pred)
     _check_inf(y_pred)
     return y_pred

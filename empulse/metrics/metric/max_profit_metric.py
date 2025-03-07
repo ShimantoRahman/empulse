@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 import scipy
 import sympy
-from numpy.typing import NDArray
 from scipy.integrate import dblquad, nquad, quad, tplquad
 from scipy.stats._qmc import Sobol
 from sympy import solve
@@ -13,6 +12,7 @@ from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 from sympy.utilities import lambdify
 
+from ..._types import FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from .common import MetricFn, _check_parameters
 
@@ -104,7 +104,7 @@ def _build_max_profit_deterministic(
     calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
     @_check_parameters(*deterministic_symbols)
-    def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         pi0 = float(np.mean(y_true))
         pi1 = 1 - pi0
         tprs, fprs = _compute_convex_hull(y_true, y_score)
@@ -198,10 +198,11 @@ def _build_max_profit_stochastic_piecewise(
             return float(integrand * (upper_bound - lower_bound))
         integrand_fn = lambdify(random_var, integrand)
         result, _ = quad(integrand_fn, lower_bound, upper_bound)
+        result: float
         return result
 
     @_check_parameters(*deterministic_symbols, *dist_params)
-    def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -287,7 +288,7 @@ def _build_max_profit_stochastic_quad(
         ]
 
         def integrand_fn(*random_vars: float) -> float:
-            return max(integrand(*reversed(random_vars)) for integrand in integrands)
+            return float(max(integrand(*reversed(random_vars)) for integrand in integrands))
 
         if n_random == 1:
             result, _ = quad(integrand_fn, *bounds)
@@ -297,10 +298,10 @@ def _build_max_profit_stochastic_quad(
             result, _ = tplquad(integrand_fn, *bounds)
         else:
             result, _ = nquad(integrand_fn, *bounds)
-        return result
+        return float(result)
 
     @_check_parameters(*deterministic_symbols, *dist_params)
-    def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -351,7 +352,7 @@ def _build_max_profit_stochastic_mc(
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
     @_check_parameters(*deterministic_symbols, *dist_params)
-    def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
@@ -428,7 +429,7 @@ def _build_max_profit_stochastic_qmc(
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
     @_check_parameters(*deterministic_symbols, *dist_params)
-    def score_function(y_true: NDArray, y_score: NDArray, **kwargs: Any) -> float:
+    def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
