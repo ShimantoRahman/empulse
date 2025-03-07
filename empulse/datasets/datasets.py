@@ -4,10 +4,11 @@ from typing import Generic, Literal, TypeVar, overload
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
 
-Frame = TypeVar('Frame', pd.DataFrame, NDArray)
-Series = TypeVar('Series', pd.Series, NDArray)
+from .._types import FloatNDArray
+
+Frame = TypeVar('Frame', pd.DataFrame, FloatNDArray)
+Series = TypeVar('Series', pd.Series, FloatNDArray)
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,7 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[False] = False,
     return_X_y_costs: Literal[False] = False,
-) -> Dataset[NDArray, NDArray]: ...
+) -> Dataset[FloatNDArray, FloatNDArray]: ...
 
 
 @overload
@@ -80,10 +81,17 @@ def load_churn_tv_subscriptions(
     *,
     as_frame: Literal[False] = False,
     return_X_y_costs: Literal[True],
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]: ...
 
 
-def load_churn_tv_subscriptions(*, as_frame: bool = False, return_X_y_costs: bool = False) -> Dataset | tuple:
+def load_churn_tv_subscriptions(
+    *, as_frame: bool = False, return_X_y_costs: bool = False
+) -> (
+    Dataset[pd.DataFrame, pd.Series]
+    | Dataset[FloatNDArray, FloatNDArray]
+    | tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]
+    | tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]
+):
     """
     Load the TV Subscription Churn dataset (binary classification).
 
@@ -211,7 +219,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> Dataset[NDArray, NDArray]: ...
+) -> Dataset[FloatNDArray, FloatNDArray]: ...
 
 
 @overload
@@ -233,7 +241,7 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]: ...
 
 
 def load_upsell_bank_telemarketing(
@@ -243,7 +251,12 @@ def load_upsell_bank_telemarketing(
     interest_rate: float = 0.02463333,
     term_deposit_fraction: float = 0.25,
     contact_cost: float = 1,
-) -> Dataset | tuple:
+) -> (
+    Dataset[pd.DataFrame, pd.Series]
+    | Dataset[FloatNDArray, FloatNDArray]
+    | tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]
+    | tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]
+):
     """
     Load the bank telemarketing dataset (binary classification).
 
@@ -375,13 +388,13 @@ def load_upsell_bank_telemarketing(
 
     # Filter if balance>0
     raw_data = raw_data.loc[raw_data['balance'] > 0]
-    target = (raw_data.y.to_numpy() == 'yes').astype(np.int8)  # type: ignore
+    target = (raw_data.y.to_numpy() == 'yes').astype(np.int8)
     data = raw_data[
         ['age', 'balance', 'previous', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'poutcome']
     ]
 
     fp_cost = contact_cost
-    fn_cost = np.maximum(data['balance'].to_numpy() * interest_rate * term_deposit_fraction, contact_cost)  # type: ignore
+    fn_cost = np.maximum(data['balance'].to_numpy() * interest_rate * term_deposit_fraction, contact_cost)
     tp_cost = contact_cost
     tn_cost = 0.0
 
@@ -464,7 +477,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[NDArray, NDArray]: ...
+) -> Dataset[FloatNDArray, FloatNDArray]: ...
 
 
 @overload
@@ -492,7 +505,7 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]: ...
 
 
 def load_give_me_some_credit(
@@ -505,7 +518,12 @@ def load_give_me_some_credit(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset | tuple:
+) -> (
+    Dataset[pd.DataFrame, pd.Series]
+    | Dataset[FloatNDArray, FloatNDArray]
+    | tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]
+    | tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]
+):
     """
     Load the "Give Me Some Credit" Kaggle credit scoring competition dataset (binary classification).
 
@@ -726,7 +744,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset[NDArray, NDArray]: ...
+) -> Dataset[FloatNDArray, FloatNDArray]: ...
 
 
 @overload
@@ -754,7 +772,7 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> tuple[NDArray, NDArray, NDArray, NDArray, NDArray, NDArray]: ...
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]: ...
 
 
 def load_credit_scoring_pakdd(
@@ -767,7 +785,12 @@ def load_credit_scoring_pakdd(
     loss_given_default: float = 0.75,
     term_length_months: int = 24,
     loan_to_income_ratio: float = 3,
-) -> Dataset | tuple:
+) -> (
+    Dataset[pd.DataFrame, pd.Series]
+    | Dataset[FloatNDArray, FloatNDArray]
+    | tuple[pd.DataFrame, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]
+    | tuple[FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray, FloatNDArray]
+):
     """
     Load the credit scoring PAKDD 2009 competition dataset (binary classification).
 
@@ -902,7 +925,7 @@ def load_credit_scoring_pakdd(
 
     n_samples = data.shape[0]
     pi_1 = target.mean()
-    monthly_income = data['PERSONAL_NET_INCOME'].to_numpy() * 0.33  # type: ignore
+    monthly_income = data['PERSONAL_NET_INCOME'].to_numpy() * 0.33
     cost_mat = _creditscoring_costmat(monthly_income, np.zeros(n_samples), pi_1, cost_mat_parameters)
 
     # unroll into separate costs
@@ -1048,8 +1071,8 @@ def load_credit_scoring_pakdd(
 
 
 def _creditscoring_costmat(
-    income: NDArray, debt: NDArray, pi_1: float, cost_mat_parameters: dict[str, float]
-) -> NDArray:
+    income: FloatNDArray, debt: FloatNDArray, pi_1: float, cost_mat_parameters: dict[str, float]
+) -> FloatNDArray:
     """Private function to calculate the cost matrix of credit scoring models.
 
     Parameters
@@ -1074,15 +1097,15 @@ def _creditscoring_costmat(
     -------
     cost_mat : array-like of shape = [n_samples, 4]
         Cost matrix of the classification problem
-        Where the columns represents the costs of: false positives, false negatives,
+        Where the columns represent the costs of: false positives, false negatives,
         true positives and true negatives, for each example.
     """
 
     def calculate_a(cl_i: float, int_: float, n_term: float) -> float:
-        return cl_i * ((int_ * (1 + int_) ** n_term) / ((1 + int_) ** n_term - 1))
+        return float(cl_i * ((int_ * (1 + int_) ** n_term) / ((1 + int_) ** n_term - 1)))
 
     def calculate_pv(a: float, int_: float, n_term: float) -> float:
-        return a / int_ * (1 - 1 / (1 + int_) ** n_term)
+        return float(a / int_ * (1 - 1 / (1 + int_) ** n_term))
 
     # Calculate credit line Cl
     def calculate_cl(k: float, inc_i: float, cl_max: float, debt_i: float, int_r: float, n_term: float) -> float:

@@ -8,7 +8,7 @@ from imblearn.base import BaseSampler
 from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import _safe_indexing, check_random_state
-from sklearn.utils._param_validation import StrOptions
+from sklearn.utils._param_validation import StrOptions, _Constraint
 
 from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
@@ -139,7 +139,7 @@ class BiasResampler(BaseSampler):
 
     _estimator_type: ClassVar[str] = 'sampler'
     _sampling_type: ClassVar[str] = 'bypass'
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[dict[str, list[_Constraint | str | callable | None]]] = {
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_feature': [callable, None],
         'random_state': ['random_state'],

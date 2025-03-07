@@ -5,7 +5,7 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import check_random_state
-from sklearn.utils._param_validation import Interval, Real, StrOptions
+from sklearn.utils._param_validation import Interval, Real, StrOptions, _Constraint
 
 from .._common import Parameter
 from ..utils._sklearn_compat import ClassifierTags, Tags  # type: ignore
@@ -93,7 +93,7 @@ class CostSensitiveSampler(BaseSampler):
     """
 
     _sampling_type: ClassVar[str] = 'bypass'
-    _parameter_constraints: ClassVar[dict[str, list]] = {
+    _parameter_constraints: ClassVar[dict[str, list[_Constraint | str]]] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
         'percentile_threshold': [Interval(Real, 0, 1, closed='both')],
