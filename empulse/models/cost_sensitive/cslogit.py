@@ -366,9 +366,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
                 soft_threshold=self.soft_threshold,
                 fit_intercept=self.fit_intercept,
             )
-            optimize_fn: Callable[..., OptimizeResult] = (
+            optimize_fn: Callable[..., OptimizeResult] = (  # type: ignore[no-redef]
                 self._optimize if self.optimize_fn is None else self.optimize_fn
-            )  # type: ignore[no-redef]
+            )
 
             self.result_ = optimize_fn(objective, X=X, **optimizer_params)
         else:
