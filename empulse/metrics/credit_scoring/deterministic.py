@@ -1,13 +1,13 @@
 import numpy as np
-from numpy.typing import ArrayLike
 
+from ..._types import FloatArrayLike, FloatNDArray
 from ..common import _compute_profits
 from ._validation import _validate_input_mp
 
 
 def mpcs_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     loan_lost_rate: float = 0.275,
     roi: float = 0.2644,
@@ -97,8 +97,8 @@ def mpcs_score(
 
 
 def mpcs(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     loan_lost_rate: float = 0.275,
     roi: float = 0.2644,
@@ -175,12 +175,12 @@ def mpcs(
 
 
 def _compute_profit_credit_scoring(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     frac_loan_lost: float = 0.275,
     roi: float = 0.2644,
     check_input: bool = True,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatNDArray, FloatNDArray]:
     if check_input:
         y_true, y_score = _validate_input_mp(y_true, y_score, frac_loan_lost, roi)
     else:

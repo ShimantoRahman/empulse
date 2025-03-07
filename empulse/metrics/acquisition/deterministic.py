@@ -1,15 +1,15 @@
 from functools import lru_cache
 
 import numpy as np
-from numpy.typing import ArrayLike
 
+from ..._types import FloatArrayLike, FloatNDArray
 from ..common import _compute_profits
 from ._validation import _validate_input_deterministic
 
 
 def mpa_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     contribution: float = 8_000,
     contact_cost: float = 50,
@@ -118,8 +118,8 @@ def mpa_score(
 
 
 def mpa(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     contribution: float = 8_000,
     contact_cost: float = 50,
@@ -207,8 +207,8 @@ def mpa(
 
 
 def _compute_profit_acquisition(
-    y_true: ArrayLike,
-    y_pred: ArrayLike,
+    y_true: FloatArrayLike,
+    y_pred: FloatArrayLike,
     contribution: float = 8_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
@@ -234,7 +234,7 @@ def _compute_cost_benefits(
     sales_cost: float,
     direct_selling: float,
     commission: float,
-) -> np.ndarray:
+) -> FloatNDArray:
     true_positive_benefit = direct_selling * (contribution - contact_cost - sales_cost) + (1 - direct_selling) * (
         (1 - commission) * contribution - contact_cost
     )

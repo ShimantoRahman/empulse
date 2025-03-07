@@ -1,10 +1,10 @@
 import warnings
 
 import numpy as np
-from numpy.typing import ArrayLike
 from packaging.version import Version
 from scipy import stats as st
 
+from ..._types import FloatArrayLike
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp, _validate_input_empb
@@ -14,12 +14,12 @@ if Version(np.version.version) < Version('2.0.0'):
 
 
 def empc_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     alpha: float = 6,
     beta: float = 14,
-    clv: float | ArrayLike = 200,
+    clv: float | FloatArrayLike = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,
@@ -153,12 +153,12 @@ def empc_score(
 
 
 def empc(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     alpha: float = 6,
     beta: float = 14,
-    clv: float | ArrayLike = 200,
+    clv: float | FloatArrayLike = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,
@@ -322,10 +322,10 @@ def _compute_gamma_bounds(
 
 
 def empb_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
-    clv: ArrayLike,
+    clv: FloatArrayLike,
     alpha: float = 6,
     beta: float = 14,
     incentive_fraction: float = 0.05,
@@ -403,10 +403,10 @@ def empb_score(
 
 
 def empb(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
-    clv: ArrayLike,
+    clv: FloatArrayLike,
     alpha: float = 6,
     beta: float = 14,
     incentive_fraction: float = 0.05,
@@ -503,10 +503,10 @@ def empb(
 
 
 def auepc_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
-    clv: ArrayLike,
+    clv: FloatArrayLike,
     alpha: float = 6,
     beta: float = 14,
     incentive_fraction: float = 0.05,

@@ -1,12 +1,14 @@
 import numpy as np
-from numpy.typing import ArrayLike
 
+from .._types import FloatArrayLike, FloatNDArray
 from ._validation import _check_binary, _check_fraction, _check_shape, _check_variance, _check_y_pred, _check_y_true
 
 
-def _validate_input(y_true: ArrayLike, y_score: ArrayLike, fraction: float) -> tuple[np.ndarray, np.ndarray]:
-    y_true = _check_y_true(y_true)
-    y_score = _check_y_pred(y_score)
+def _validate_input(
+    y_true: FloatArrayLike, y_score: FloatArrayLike, fraction: float
+) -> tuple[FloatNDArray, FloatNDArray]:
+    y_true: FloatNDArray = _check_y_true(y_true)
+    y_score: FloatNDArray = _check_y_pred(y_score)
     _check_shape(y_true, y_score)
     _check_binary(y_true)
     _check_variance(y_true)
@@ -16,7 +18,9 @@ def _validate_input(y_true: ArrayLike, y_score: ArrayLike, fraction: float) -> t
     return y_true, y_score
 
 
-def lift_score(y_true: ArrayLike, y_score: ArrayLike, *, fraction: float = 0.1, check_input: bool = True) -> float:
+def lift_score(
+    y_true: FloatArrayLike, y_score: FloatArrayLike, *, fraction: float = 0.1, check_input: bool = True
+) -> float:
     """
     Compute the lift score for the top fraction of predictions.
 

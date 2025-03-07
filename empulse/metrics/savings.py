@@ -1,10 +1,10 @@
 import numbers
 from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from scipy.special import expit
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -18,24 +18,25 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     Matrix = TypeVar('Matrix', bound=NDArray)
 
+from .._types import FloatArrayLike, FloatNDArray
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
 
 def _validate_input(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
-    tp_cost: float | ArrayLike,
-    fp_cost: float | ArrayLike,
-    tn_cost: float | ArrayLike,
-    fn_cost: float | ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
+    tp_cost: float | FloatArrayLike,
+    fp_cost: float | FloatArrayLike,
+    tn_cost: float | FloatArrayLike,
+    fn_cost: float | FloatArrayLike,
     check_input: bool,
 ) -> tuple[
-    NDArray,
-    NDArray,
-    float | NDArray,
-    float | NDArray,
-    float | NDArray,
-    float | NDArray,
+    FloatNDArray,
+    FloatNDArray,
+    float | FloatNDArray,
+    float | FloatNDArray,
+    float | FloatNDArray,
+    float | FloatNDArray,
 ]:
     if check_input:
         y_true = _check_y_true(y_true)
@@ -72,27 +73,27 @@ def _validate_input(
 
 
 def _compute_expected_cost(
-    y_true: NDArray,
-    y_pred: NDArray,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> NDArray:
+    y_true: FloatNDArray,
+    y_pred: FloatNDArray,
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> FloatNDArray:
     return y_true * (y_pred * tp_cost + (1 - y_pred) * fn_cost) + (1 - y_true) * (
         y_pred * fp_cost + (1 - y_pred) * tn_cost
     )
 
 
 def _compute_log_expected_cost(
-    y_true: NDArray,
-    y_pred: NDArray,
-    tp_cost: NDArray | float = 0.0,
-    tn_cost: NDArray | float = 0.0,
-    fn_cost: NDArray | float = 0.0,
-    fp_cost: NDArray | float = 0.0,
-) -> NDArray:
-    epsilon = np.finfo(y_pred.dtype).eps
+    y_true: FloatNDArray,
+    y_pred: FloatNDArray,
+    tp_cost: FloatNDArray | float = 0.0,
+    tn_cost: FloatNDArray | float = 0.0,
+    fn_cost: FloatNDArray | float = 0.0,
+    fp_cost: FloatNDArray | float = 0.0,
+) -> FloatNDArray:
+    epsilon: np.floating[Any] = np.finfo(y_pred.dtype).eps  # type: ignore[arg-type]
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     inverse_y_pred = 1 - y_pred
     log_y_pred = np.log(y_pred)
@@ -103,13 +104,13 @@ def _compute_log_expected_cost(
 
 
 def cost_loss(
-    y_true: ArrayLike,
-    y_pred: ArrayLike,
+    y_true: FloatArrayLike,
+    y_pred: FloatArrayLike,
     *,
-    tp_cost: float | ArrayLike = 0.0,
-    fp_cost: float | ArrayLike = 0.0,
-    tn_cost: float | ArrayLike = 0.0,
-    fn_cost: float | ArrayLike = 0.0,
+    tp_cost: float | FloatArrayLike = 0.0,
+    fp_cost: float | FloatArrayLike = 0.0,
+    tn_cost: float | FloatArrayLike = 0.0,
+    fn_cost: float | FloatArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -234,17 +235,17 @@ def cost_loss(
 
     if normalize:
         return cost.mean()
-    return np.sum(cost)
+    return float(np.sum(cost))
 
 
 def expected_cost_loss(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
     *,
-    tp_cost: float | ArrayLike = 0.0,
-    fp_cost: float | ArrayLike = 0.0,
-    tn_cost: float | ArrayLike = 0.0,
-    fn_cost: float | ArrayLike = 0.0,
+    tp_cost: float | FloatArrayLike = 0.0,
+    fp_cost: float | FloatArrayLike = 0.0,
+    tn_cost: float | FloatArrayLike = 0.0,
+    fn_cost: float | FloatArrayLike = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -355,17 +356,17 @@ def expected_cost_loss(
 
     if normalize:
         return cost.mean()
-    return np.sum(cost)
+    return float(np.sum(cost))
 
 
 def expected_log_cost_loss(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
     *,
-    tp_cost: ArrayLike | float = 0.0,
-    tn_cost: ArrayLike | float = 0.0,
-    fn_cost: ArrayLike | float = 0.0,
-    fp_cost: ArrayLike | float = 0.0,
+    tp_cost: FloatArrayLike | float = 0.0,
+    tn_cost: FloatArrayLike | float = 0.0,
+    fn_cost: FloatArrayLike | float = 0.0,
+    fp_cost: FloatArrayLike | float = 0.0,
     normalize: bool = False,
     check_input: bool = True,
 ) -> float:
@@ -464,14 +465,14 @@ def expected_log_cost_loss(
 
 
 def savings_score(
-    y_true: ArrayLike,
-    y_pred: ArrayLike,
+    y_true: FloatArrayLike,
+    y_pred: FloatArrayLike,
     *,
-    baseline: ArrayLike | Literal['zero_one'] = 'zero_one',
-    tp_cost: float | ArrayLike = 0.0,
-    fp_cost: float | ArrayLike = 0.0,
-    tn_cost: float | ArrayLike = 0.0,
-    fn_cost: float | ArrayLike = 0.0,
+    baseline: FloatArrayLike | Literal['zero_one'] = 'zero_one',
+    tp_cost: float | FloatArrayLike = 0.0,
+    fp_cost: float | FloatArrayLike = 0.0,
+    tn_cost: float | FloatArrayLike = 0.0,
+    fn_cost: float | FloatArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """
@@ -635,14 +636,14 @@ def savings_score(
 
 
 def expected_savings_score(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
     *,
-    baseline: Literal['zero_one', 'prior'] | ArrayLike = 'zero_one',
-    tp_cost: float | ArrayLike = 0.0,
-    fp_cost: float | ArrayLike = 0.0,
-    tn_cost: float | ArrayLike = 0.0,
-    fn_cost: float | ArrayLike = 0.0,
+    baseline: Literal['zero_one', 'prior'] | FloatArrayLike = 'zero_one',
+    tp_cost: float | FloatArrayLike = 0.0,
+    fp_cost: float | FloatArrayLike = 0.0,
+    tn_cost: float | FloatArrayLike = 0.0,
+    fn_cost: float | FloatArrayLike = 0.0,
     check_input: bool = True,
 ) -> float:
     """

@@ -3,7 +3,7 @@ from functools import partial, update_wrapper
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from scipy.special import expit
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -17,7 +17,8 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     Matrix = TypeVar('Matrix', bound=NDArray)
 
-from empulse.metrics.churn._validation import _validate_input_cost_loss_churn
+from ..._types import FloatArrayLike
+from ._validation import _validate_input_cost_loss_churn
 
 
 @overload
@@ -352,12 +353,12 @@ class AECMetricChurn:
 
 
 def expected_cost_loss_churn(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
     *,
     accept_rate: float = 0.3,
-    clv: float | ArrayLike = 200,
-    incentive_fraction: float | ArrayLike = 0.05,
+    clv: float | FloatArrayLike = 200,
+    incentive_fraction: float | FloatArrayLike = 0.05,
     contact_cost: float = 1,
     normalize: bool = False,
     check_input: bool = True,

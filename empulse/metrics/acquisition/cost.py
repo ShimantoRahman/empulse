@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import numpy as np
 from numpy import ndarray
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from scipy.special import expit
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -18,7 +18,8 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     Matrix = TypeVar('Matrix', bound=NDArray)
 
-from empulse.metrics.acquisition._validation import _validate_input_deterministic
+from ..._types import FloatArrayLike
+from ._validation import _validate_input_deterministic
 
 
 @overload
@@ -360,8 +361,8 @@ class AECMetricAcquisition:
 
 
 def expected_cost_loss_acquisition(
-    y_true: ArrayLike,
-    y_proba: ArrayLike,
+    y_true: FloatArrayLike,
+    y_proba: FloatArrayLike,
     *,
     contribution: float = 7_000,
     contact_cost: float = 50,

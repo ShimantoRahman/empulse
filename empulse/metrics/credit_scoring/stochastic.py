@@ -1,16 +1,16 @@
 import warnings
 
 import numpy as np
-from numpy.typing import ArrayLike
 
+from ..._types import FloatArrayLike
 from .._convex_hull import _compute_convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp
 
 
 def empcs_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     success_rate: float = 0.55,
     default_rate: float = 0.1,
@@ -121,8 +121,8 @@ def empcs_score(
 
 
 def empcs(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     success_rate: float = 0.55,
     default_rate: float = 0.1,

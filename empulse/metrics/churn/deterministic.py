@@ -1,15 +1,15 @@
 from functools import lru_cache
 
 import numpy as np
-from numpy.typing import ArrayLike
 
+from ..._types import FloatArrayLike, FloatNDArray
 from ..common import _compute_profits
 from ._validation import _validate_input_mp
 
 
 def mpc_score(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     accept_rate: float = 0.3,
     clv: float = 200,
@@ -133,11 +133,11 @@ def mpc_score(
 
 
 def mpc(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
     *,
     accept_rate: float = 0.3,
-    clv: ArrayLike | float = 200,
+    clv: FloatArrayLike | float = 200,
     incentive_cost: float = 10,
     contact_cost: float = 1,
     check_input: bool = True,
@@ -242,9 +242,9 @@ def mpc(
 
 
 def _compute_profit_churn(
-    y_true: ArrayLike,
-    y_score: ArrayLike,
-    clv: ArrayLike | float = 200,
+    y_true: FloatArrayLike,
+    y_score: FloatArrayLike,
+    clv: FloatArrayLike | float = 200,
     d: float = 10,
     f: float = 1,
     gamma: float = 0.3,
@@ -263,7 +263,7 @@ def _compute_profit_churn(
 
 
 @lru_cache(maxsize=1)
-def _compute_cost_benefits(gamma: float, clv: float, d: float, f: float) -> np.ndarray:
+def _compute_cost_benefits(gamma: float, clv: float, d: float, f: float) -> FloatNDArray:
     delta = d / clv
     phi = f / clv
 
