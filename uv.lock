@@ -625,6 +625,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "sympy" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -690,6 +691,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.5.2" },
     { name = "scipy", specifier = ">=1.10.1" },
     { name = "sympy", specifier = ">=1.12.1" },
+    { name = "typing-extensions", specifier = ">=4.0.0" },
     { name = "xgboost", marker = "extra == 'optional'", specifier = ">=1.7.4" },
 ]
 provides-extras = ["optional"]
