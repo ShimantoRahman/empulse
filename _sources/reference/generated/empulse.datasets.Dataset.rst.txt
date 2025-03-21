@@ -1,0 +1,9 @@
+﻿Dataset
+=======
+
+.. currentmodule:: empulse.datasets
+
+.. autoclass:: Dataset
+   :members:
+   :inherited-members:
+   :special-members: __call__
