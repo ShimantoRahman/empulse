@@ -208,6 +208,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         clv: ArrayLike | float | Parameter = Parameter.UNCHANGED,
         incentive_fraction: float | Parameter = Parameter.UNCHANGED,
         contact_cost: float | Parameter = Parameter.UNCHANGED,
+        fit_params: dict[str, Any] | None = None,
     ) -> Self:
         """
         Fit the model.
@@ -233,6 +234,9 @@ class B2BoostClassifier(BaseBoostClassifier):
         contact_cost : float, default=1
             Constant cost of contact (``contact_cost > 0``).
 
+        fit_params : dict, optional
+            Additional parameters to pass to the estimator's fit method.
+
         Returns
         -------
         self : B2BoostClassifier
@@ -245,17 +249,19 @@ class B2BoostClassifier(BaseBoostClassifier):
             clv=clv,
             incentive_fraction=incentive_fraction,
             contact_cost=contact_cost,
+            fit_params=fit_params,
         )
         return self
 
-    def _fit(  # type: ignore[override]
+    def _fit(
         self,
         X: NDArray[Any],
         y: NDArray[Any],
-        accept_rate: float | Parameter,
-        clv: float | FloatArrayLike | Parameter,
-        incentive_fraction: float | Parameter,
-        contact_cost: float | Parameter,
+        accept_rate: float | Parameter = Parameter.UNCHANGED,
+        clv: float | FloatArrayLike | Parameter = Parameter.UNCHANGED,
+        incentive_fraction: float | Parameter = Parameter.UNCHANGED,
+        contact_cost: float | Parameter = Parameter.UNCHANGED,
+        fit_params: dict[str, Any] | None = None,
     ) -> Self:
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
@@ -326,6 +332,7 @@ class B2BoostClassifier(BaseBoostClassifier):
             return self
         else:
             raise ValueError('estimator must be an instance of XGBClassifier, LGBMClassifier or CatBoostClassifier')
-
-        self.estimator_.fit(X, y)
+        if fit_params is None:
+            fit_params = {}
+        self.estimator_.fit(X, y, **fit_params)
         return self

@@ -1,5 +1,6 @@
 import sys
 import warnings
+from functools import partial
 from numbers import Real
 from typing import Any, ClassVar
 
@@ -28,7 +29,7 @@ except ImportError:
     CatBoostClassifier = None
 
 from ..._common import Parameter
-from ...metrics import make_objective_aec
+from ...metrics import Metric, make_objective_aec
 from .._base import BaseBoostClassifier
 from ._cs_mixin import CostSensitiveMixin
 
@@ -206,12 +207,14 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
+        loss: Metric | None = None,
     ) -> None:
         super().__init__(estimator=estimator)
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+        self.loss = loss
 
     def fit(
         self,
@@ -222,7 +225,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **fit_params: Any,
+        fit_params: dict[str, Any] | None = None,
+        **loss_params: Any,
     ) -> Self:
         """
         Fit the model.
@@ -252,12 +256,24 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fit_params : dict
             Additional keyword arguments to pass to the estimator's fit method.
 
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
         Returns
         -------
         self : CSBoostClassifier
             Fitted CSBoost model.
         """
-        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **fit_params)
+        super().fit(
+            X,
+            y,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
+            fit_params=fit_params,
+            **loss_params,
+        )
         return self
 
     def _fit(
@@ -269,69 +285,69 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        **fit_params: Any,
+        fit_params: dict[str, Any] | None = None,
+        **loss_params: Any,
     ) -> Self:
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-        )
+        if fit_params is None:
+            fit_params = {}
+
+        if self.loss is None:
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
 
         if self.estimator is None:
-            if XGBClassifier is None:
-                raise ImportError(
-                    'XGBoost package is required to use CSBoostClassifier. '
-                    'Install optional dependencies through pip install empulse[optional] or '
-                    'pip install xgboost'
-                )
-            objective = make_objective_aec(
-                'xgboost',
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-            )
-            self.estimator_ = XGBClassifier(objective=objective)
-        elif isinstance(self.estimator, XGBClassifier):
-            objective = make_objective_aec(
-                'xgboost',
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-            )
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif isinstance(self.estimator, LGBMClassifier):
-            objective = make_objective_aec(
-                'lightgbm',
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-            )
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif isinstance(self.estimator, CatBoostClassifier):
-            objective, metric = make_objective_aec(  # type: ignore[assignment]
-                'catboost',
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-            )
-            self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
+            self._initialize_default_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+        else:
+            self._initialize_custom_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+
+        if not isinstance(self.estimator, CatBoostClassifier):
+            self.estimator_.fit(X, y, **fit_params)
+        else:
             indices = np.arange(X.shape[0])
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     'ignore',
-                    message='Can\'t optimze method "calc_ders_range" because self argument is used',
+                    message='Can\'t optimize method "calc_ders_range" because self argument is used',
                     category=UserWarning,
                 )
                 warnings.filterwarnings(
                     'ignore',
-                    message='Can\'t optimze method "evaluate" because self argument is used',
+                    message='Can\'t optimize method "evaluate" because self argument is used',
                     category=UserWarning,
                 )
                 self.estimator_.fit(X, y, sample_weight=indices, **fit_params)
-            return self
-        else:
-            raise ValueError('estimator must be an instance of XGBClassifier, LGBMClassifier or CatBoostClassifier')
-        self.estimator_.fit(X, y, **fit_params)
         return self
+
+    def _initialize_default_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+        if XGBClassifier is None:
+            raise ImportError(
+                'XGBoost package is required to use CSBoostClassifier. '
+                'Install optional dependencies through `pip install empulse[optional]` or '
+                '`pip install xgboost`'
+            )
+        objective = self._get_objective('xgboost', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+        self.estimator_ = XGBClassifier(objective=objective)
+
+    def _initialize_custom_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+        if isinstance(self.estimator, XGBClassifier):
+            objective = self._get_objective('xgboost', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, LGBMClassifier):
+            objective = self._get_objective('lightgbm', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+        elif isinstance(self.estimator, CatBoostClassifier):
+            self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+        else:
+            raise ValueError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
+
+    def _initialize_catboost_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+        objective, metric = make_objective_aec(
+            'catboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+        )
+        self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
+
+    def _get_objective(self, framework, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+        if self.loss is None:
+            return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        return partial(self.loss.gradient_boost_objective, **loss_params)

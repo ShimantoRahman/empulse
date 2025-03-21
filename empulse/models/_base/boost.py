@@ -68,7 +68,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
         return tags
 
     @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(self, X: ArrayLike, y: ArrayLike, **fit_params: Any) -> Self:
+    def fit(self, X: ArrayLike, y: ArrayLike, fit_params: dict[str, Any] | None = None, **loss_params: Any) -> Self:
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
@@ -80,10 +80,12 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
             raise ValueError("Classifier can't train when only one class is present.")
         y = np.where(y == self.classes_[1], 1, 0)
 
-        return self._fit(X, y, **fit_params)
+        return self._fit(X, y, fit_params=fit_params, **loss_params)
 
     @abstractmethod
-    def _fit(self, X: NDArray[Any], y: NDArray[Any], **fit_params: Any) -> Self: ...
+    def _fit(
+        self, X: NDArray[Any], y: NDArray[Any], fit_params: dict[str, Any] | None = None, **loss_params: Any
+    ) -> Self: ...
 
     def predict_proba(self, X: ArrayLike) -> FloatNDArray:
         """
