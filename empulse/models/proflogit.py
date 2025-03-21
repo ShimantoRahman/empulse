@@ -13,7 +13,7 @@ from scipy.special import expit
 from empulse.optimizers import Generation
 
 from .._types import FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import empc_score
+from ..metrics import Metric, empc_score
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
 
 if sys.version_info >= (3, 11):
@@ -122,7 +122,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: LossFn = empc_score,
+        loss: LossFn | Metric = empc_score,
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
         n_jobs: int | None = None,
@@ -163,7 +163,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         optimize_fn = partial(optimize_fn, **optimizer_params)
 
         if isinstance(self.loss, str) or self.loss is None:
-            raise ValueError('Loss function must be a Callable.')
+            raise ValueError('Loss function must be a Callable or an instance of the Metric class.')
         objective = partial(
             _objective,
             X=X,

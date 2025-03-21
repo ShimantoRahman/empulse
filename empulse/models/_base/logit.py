@@ -13,6 +13,7 @@ from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 if sys.version_info >= (3, 11):
@@ -61,7 +62,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[
         fit_intercept: bool = True,
         soft_threshold: bool = True,
         l1_ratio: float = 1.0,
-        loss: str | LossFn | None = None,
+        loss: str | LossFn | Metric | None = None,
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
     ):

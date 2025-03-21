@@ -14,7 +14,7 @@ from sklearn.utils._param_validation import StrOptions
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import make_objective_aec
+from ...metrics import Metric, make_objective_aec
 from .._base import BaseLogitClassifier, LossFn, OptimizeFn
 from ._cs_mixin import CostSensitiveMixin
 
@@ -57,7 +57,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : {'average expected cost'} or Callable, default='average expected cost'
+    loss : {'average expected cost'}, Callable or Metric, default='average expected cost'
         Loss function which should be minimized.
 
         - If ``str``, then it should be one of the following:
@@ -66,6 +66,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
               see :func:`~empulse.metrics.expected_cost_loss`.
 
         - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
+
+        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.
 
         By default, loss function is minimized, customize behaviour in `optimize_fn`.
 
@@ -237,7 +240,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: Loss | LossFn = 'average expected cost',
+        loss: Loss | LossFn | Metric = 'average expected cost',
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
@@ -295,6 +298,9 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
+        loss_params : dict[str, Any]
+            Additional parameters passed to the loss function.
+
         Returns
         -------
         self : CSLogitClassifier
@@ -315,65 +321,58 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fp_cost: FloatArrayLike | float = 0.0,
         **loss_params: Any,
     ) -> Self:
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-        )
-
         optimizer_params = self.optimizer_params or {}
 
-        # Assume that the loss function takes the following parameters:
-        if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
-            tp_cost = np.expand_dims(tp_cost, axis=1)
-        if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
-            tn_cost = np.expand_dims(tn_cost, axis=1)
-        if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
-            fn_cost = np.expand_dims(fn_cost, axis=1)
-        if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
-            fp_cost = np.expand_dims(fp_cost, axis=1)
-        loss_params['tp_cost'] = tp_cost
-        loss_params['tn_cost'] = tn_cost
-        loss_params['fn_cost'] = fn_cost
-        loss_params['fp_cost'] = fp_cost
+        if not isinstance(self.loss, Metric):
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
+
+            if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
+                tp_cost = np.expand_dims(tp_cost, axis=1)
+            if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
+                tn_cost = np.expand_dims(tn_cost, axis=1)
+            if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
+                fn_cost = np.expand_dims(fn_cost, axis=1)
+            if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
+                fp_cost = np.expand_dims(fp_cost, axis=1)
+
+            # Assume that the loss function takes the following parameters:
+            loss_params['tp_cost'] = tp_cost
+            loss_params['tn_cost'] = tn_cost
+            loss_params['fn_cost'] = fn_cost
+            loss_params['fp_cost'] = fp_cost
 
         if self.loss == 'average expected cost':
             loss = make_objective_aec(model='cslogit', **loss_params)
-            objective: Callable[
-                [FloatNDArray, FloatNDArray, IntNDArray],
-                float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray],
-            ] = partial(
-                _objective_jacobian,
-                X=X,
-                y=y,
-                loss_fn=loss,
-                C=self.C,
-                l1_ratio=self.l1_ratio,
-                soft_threshold=self.soft_threshold,
-                fit_intercept=self.fit_intercept,
-            )
-
-            optimize_fn: Callable[..., OptimizeResult] = (
-                _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
-            )
-            self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
+            objective = _objective_jacobian
+            optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
         elif self.loss is not None and not isinstance(self.loss, str):
-            objective = partial(
-                _objective_callable,
-                X=X,
-                y=y,
-                loss_fn=partial(self.loss, **loss_params),
-                C=self.C,
-                l1_ratio=self.l1_ratio,
-                soft_threshold=self.soft_threshold,
-                fit_intercept=self.fit_intercept,
-            )
-            optimize_fn: Callable[..., OptimizeResult] = (  # type: ignore[no-redef]
-                self._optimize if self.optimize_fn is None else self.optimize_fn
-            )
-
-            self.result_ = optimize_fn(objective, X=X, **optimizer_params)
+            loss = partial(self.loss, **loss_params)
+            objective = _objective_callable
+            optimize_fn = self._optimize
+        elif isinstance(self.loss, Metric):
+            loss = partial(self.loss, **loss_params)
+            objective = _objective_jacobian
+            optimize_fn = _optimize_jacobian
         else:
             raise ValueError(f'Invalid loss function: {self.loss}')
 
+        partial_objective: Callable[
+            [FloatNDArray, FloatNDArray, IntNDArray],
+            float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray],
+        ] = partial(
+            objective,
+            X=X,
+            y=y,
+            loss_fn=loss,
+            C=self.C,
+            l1_ratio=self.l1_ratio,
+            soft_threshold=self.soft_threshold,
+            fit_intercept=self.fit_intercept,
+        )
+        optimize_fn = optimize_fn if self.optimize_fn is None else self.optimize_fn
+        self.result_ = optimize_fn(objective=partial_objective, X=X, **optimizer_params)
         self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
         if self.fit_intercept:
             self.intercept_ = self.result_.x[0]
