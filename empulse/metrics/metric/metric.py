@@ -1,4 +1,5 @@
 from collections.abc import MutableMapping
+from enum import Enum, auto
 from numbers import Real
 from types import TracebackType
 from typing import Any, ClassVar, Literal
@@ -17,6 +18,13 @@ from .cost_metric import (
 )
 from .max_profit_metric import _build_max_profit_score, _max_profit_score_to_latex
 from .savings_metric import _build_savings_score, _savings_score_to_latex
+
+
+class Direction(Enum):
+    """Optimization direction of metric."""
+
+    MAXIMIZE = auto()
+    MINIMIZE = auto()
 
 
 class Metric:
@@ -87,6 +95,9 @@ class Metric:
     fn_cost : sympy.Expr
         The cost of a false negative.
         See :meth:`~empulse.metrics.Metric.add_fn_cost` for more details.
+
+    direction: Direction
+        Whether the metric is to be maximized or minimized.
 
     integration_method : {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}
         The integration method to use when the metric has stochastic variables.
@@ -208,14 +219,17 @@ class Metric:
         self.build_gradient_logit = gradient_logit_undefined
         self.build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
         if kind == 'max profit':
+            self.direction = Direction.MAXIMIZE
             self.build_metric = _build_max_profit_score
             self.metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
+            self.direction = Direction.MINIMIZE
             self.build_metric = _build_cost_loss
             self.build_gradient_logit = _build_cost_logit_objective
             self.build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
             self.metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
+            self.direction = Direction.MAXIMIZE
             self.build_metric = _build_savings_score
             self.metric_to_latex = _savings_score_to_latex
         self.integration_method = 'auto'
