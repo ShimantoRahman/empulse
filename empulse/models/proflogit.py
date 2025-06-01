@@ -14,6 +14,7 @@ from empulse.optimizers import Generation
 
 from .._types import FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import Metric, empc_score
+from ..metrics.metric.metric import Direction
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
 
 if sys.version_info >= (3, 11):
@@ -59,6 +60,8 @@ class ProfLogitClassifier(BaseLogitClassifier):
           to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
 
         By default, loss function is maximized, customize behaviour in `optimize_fn`.
+        If the loss function in an instance of :class:`~empulse.metrics.Metric` then the optimization direction is
+        automatically determined.
 
     optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
@@ -172,11 +175,15 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
         if isinstance(self.loss, str) or self.loss is None:
             raise ValueError('Loss function must be a Callable or an instance of the Metric class.')
+        if isinstance(self.loss, Metric) and self.loss.direction == Direction.MINIMIZE:
+            loss_fn = lambda *args, **kwargs: -self.loss(*args, **kwargs)
+        else:
+            loss_fn = self.loss
         objective = partial(
             _objective,
             X=X,
             y=y,
-            loss_fn=partial(self.loss, **loss_params),
+            loss_fn=partial(loss_fn, **loss_params),
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
