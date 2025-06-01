@@ -782,7 +782,7 @@ class Metric:
         parameters = self._prepare_parameters(**parameters)
         return self._score_function(y_true, y_score, **parameters)
 
-    def logit_objective(
+    def _logit_objective(
         self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[float, FloatNDArray]:
         """
@@ -823,7 +823,7 @@ class Metric:
         value = self.__call__(y_true, y_pred, **parameters)
         return value, gradient
 
-    def gradient_boost_objective(
+    def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:
         """
@@ -866,6 +866,46 @@ class Metric:
         gradient, hessian = self._gradient_hessian_gboost_function(y_true, y_proba, **parameters)
         return gradient, hessian
 
+    def _bayes_minimum_risk_thresholds(self, **parameters: FloatNDArray | float) -> FloatNDArray | float:
+        """
+        Compute the optimal thresholds for the Bayes minimum risk decision rule.
+
+        Parameters
+        ----------
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+
+        Returns
+        -------
+        optimal_thresholds : float or NDArray of shape (n_samples,)
+            The optimal thresholds for the Bayes minimum risk decision rule.
+        """
+        parameters = self._prepare_parameters(**parameters)
+
+        denominator_expression = self.fp_cost - self.tn_cost + self.fn_cost - self.tp_cost
+        denominator_params = _filter_parameters(denominator_expression, parameters)
+        denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)(
+            **denominator_params
+        )
+        numerator_expression = self.fp_cost - self.tn_cost
+        numerator_params = _filter_parameters(numerator_expression, parameters)
+        numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)(**numerator_params)
+        # Avoid division by zero
+        if isinstance(denominator, float | int):
+            if denominator == 0:
+                denominator += float(np.finfo(float).eps)
+        else:
+            denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
+        optimal_thresholds: FloatNDArray | float = numerator / denominator
+
+        return optimal_thresholds
+
     def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}('
@@ -888,3 +928,28 @@ class Metric:
         self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
     ) -> None:
         self.build()
+
+
+def _filter_parameters(
+    expression: sympy.Expr, parameters: dict[str, float | FloatNDArray]
+) -> dict[str, float | FloatNDArray]:
+    """
+    Filter the parameters dictionary to only include those that are free symbols in the expression.
+
+    Parameters
+    ----------
+    expression : sympy.Expr
+        The expression to filter the parameters against.
+
+    parameters : dict[str, float | FloatNDArray]
+        The parameters dictionary to filter.
+        Keys are parameter names and values are their corresponding values.
+
+    Returns
+    -------
+    filtered_parameters : dict[str, float | FloatNDArray]
+        A dictionary containing only the parameters that are free symbols in the expression.
+    """
+    free_symbols = {str(symbol) for symbol in expression.free_symbols}
+    filtered_parameters = {key: value for key, value in parameters.items() if key in free_symbols}
+    return filtered_parameters

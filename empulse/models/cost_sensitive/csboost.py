@@ -212,7 +212,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
-        'loss': [HasMethods('gradient_boost_objective'), None],
+        'loss': [HasMethods('_gradient_boost_objective'), None],
     }
 
     def __init__(
@@ -424,7 +424,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         if self.loss is None:
             return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[arg-type, misc]
         if framework == 'xgboost':
-            return partial(self.loss.gradient_boost_objective, **loss_params)
+            return partial(self.loss._gradient_boost_objective, **loss_params)
         elif framework == 'lightgbm':
 
             def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
@@ -446,11 +446,11 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 hessian : np.ndarray
                     Hessian of the objective function.
                 """
-                return self.loss.gradient_boost_objective(y_true, y_score, **loss_params)  # type: ignore[union-attr]
+                return self.loss._gradient_boost_objective(y_true, y_score, **loss_params)  # type: ignore[union-attr]
 
             return objective
         else:
-            return CatboostObjective(self.loss.gradient_boost_objective, **loss_params), CatboostMetric(
+            return CatboostObjective(self.loss._gradient_boost_objective, **loss_params), CatboostMetric(
                 self.loss, **loss_params
             )
 

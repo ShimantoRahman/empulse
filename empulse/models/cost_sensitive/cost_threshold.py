@@ -16,6 +16,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
+from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
@@ -49,6 +50,17 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
 
     random_state : int or None, default=None
         Random state for the calibrator. Ignored when `calibrator` is an Estimator.
+
+    loss : Metric or None, default=None
+        The loss function to use for computing the optimal decision threshold.
+
+        - If None, the optimal decision threshold is computed based on
+          ``tp_cost``, ``tn_cost``, ``fn_cost``, and ``fp_cost``.
+        - If a :class:`~empulse.metrics.Metric`,
+          the optimal decision threshold is computed based on the loss parameters provided to
+          the :meth:`predict` method.
+
+        Read the :ref:`User Guide <metric_class_in_model>` for more information.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -126,6 +138,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         'calibrator': [HasMethods(['fit', 'predict_proba']), StrOptions({'sigmoid', 'isotonic'}), None],
         'pos_label': [Real, str, 'boolean', None],
         'random_state': ['random_state'],
+        'loss': [HasMethods('_gradient_boost_objective'), None],
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
@@ -139,6 +152,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         calibrator: Literal['sigmoid', 'isotonic'] | BaseEstimator | None = 'sigmoid',
         pos_label: int | bool | str | None = None,
         random_state: int | np.random.RandomState | None = None,
+        loss: Metric | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
@@ -148,6 +162,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         self.calibrator = calibrator
         self.pos_label = pos_label
         self.random_state = random_state
+        self.loss = loss
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
@@ -220,6 +235,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **loss_params: Any,
     ) -> NDArray[Any]:
         """
         Predict the target of new samples.
@@ -245,6 +261,9 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
         Returns
         -------
         class_labels : ndarray of shape (n_samples,)
@@ -256,13 +275,21 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         """
         check_is_fitted(self)
 
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict'
-        )
+        if self.loss is None:
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict'
+            )
 
-        estimator: Any = getattr(self, 'estimator_', self.estimator)
-
-        y_score = estimator.predict_proba(X)[:, 1]
+            denominator = fp_cost - tn_cost + fn_cost - tp_cost
+            # Avoid division by zero
+            if isinstance(denominator, float | int):
+                if denominator == 0:
+                    denominator += float(np.finfo(float).eps)
+            else:
+                denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
+            optimal_thresholds = (fp_cost - tn_cost) / denominator
+        else:
+            optimal_thresholds = self.loss._bayes_minimum_risk_thresholds(**loss_params)
 
         if self.pos_label is None:
             map_thresholded_score_to_label = np.array([0, 1])
@@ -271,15 +298,8 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
             neg_label_idx = np.flatnonzero(self.classes_ != self.pos_label)[0]
             map_thresholded_score_to_label = np.array([neg_label_idx, pos_label_idx])
 
-        denominator = fp_cost - tn_cost + fn_cost - tp_cost
-        # Avoid division by zero
-        if isinstance(denominator, float | int):
-            if denominator == 0:
-                denominator += float(np.finfo(float).eps)
-        else:
-            denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
-        optimal_thresholds = (fp_cost - tn_cost) / denominator
-
+        estimator: Any = getattr(self, 'estimator_', self.estimator)
+        y_score = estimator.predict_proba(X)[:, 1]
         y_pred: NDArray[Any] = self.classes_[
             map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]
         ]

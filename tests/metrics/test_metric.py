@@ -699,7 +699,7 @@ def test_objective_aec_gradient_boost(y_true_and_prediction):
         .add_fp_cost(delta * clv + f)
         .build()
     )
-    gradient, hessian = profit_func.gradient_boost_objective(
+    gradient, hessian = profit_func._gradient_boost_objective(
         y,
         y_proba,
         clv=customer_lifetime_value,
@@ -732,7 +732,7 @@ def test_objective_aec_logit():
         .add_fp_cost(delta * clv + f)
         .build()
     )
-    metric, gradient = profit_func.logit_objective(
+    metric, gradient = profit_func._logit_objective(
         X,
         weights,
         y,
@@ -759,7 +759,7 @@ def test_objective_logit_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(kind).add_tp_benefit(clv).build()
     with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for kind'):
-        metric.logit_objective(np.array([1]), np.array([1]), np.array([1]))
+        metric._logit_objective(np.array([1]), np.array([1]), np.array([1]))
 
 
 @pytest.mark.parametrize('kind', ['max profit', 'savings'])
@@ -770,7 +770,7 @@ def test_objective_boost_unsupported(kind):
         NotImplementedError,
         match=r'Gradient and Hessian of the gradient boosting function is not defined for kind',
     ):
-        metric.gradient_boost_objective(np.array([1]), np.array([1]))
+        metric._gradient_boost_objective(np.array([1]), np.array([1]))
 
 
 def test_repr_metric():

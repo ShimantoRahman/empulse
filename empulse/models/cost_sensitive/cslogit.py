@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.utils._param_validation import StrOptions
+from sklearn.utils._param_validation import HasMethods, StrOptions
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
@@ -227,7 +227,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseLogitClassifier._parameter_constraints,
-        'loss': [StrOptions({'average expected cost'}), callable, None],
+        'loss': [StrOptions({'average expected cost'}), HasMethods('_logit_objective'), callable, None],
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
