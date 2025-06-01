@@ -24,6 +24,7 @@ else:
     from typing_extensions import Self
 Loss = Literal['average expected cost']
 GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
+ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]
 
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
@@ -345,10 +346,12 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
         if self.loss == 'average expected cost':
             loss = make_objective_aec(model='cslogit', **loss_params)
-            objective = _objective_jacobian
+            objective: ObjectiveFn = _objective_jacobian
             optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
         elif self.loss is not None and not isinstance(self.loss, str):
-            loss = partial(self.loss, **loss_params)
+            loss: Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]] = partial(  # type: ignore[no-redef]
+                self.loss, **loss_params
+            )
             objective = _objective_callable
             optimize_fn = self._optimize
         elif isinstance(self.loss, Metric):
@@ -359,7 +362,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             raise ValueError(f'Invalid loss function: {self.loss}')
 
         partial_objective: Callable[
-            [FloatNDArray, FloatNDArray, IntNDArray],
+            [FloatNDArray],
             float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray],
         ] = partial(
             objective,
@@ -371,7 +374,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept,
         )
-        optimize_fn = optimize_fn if self.optimize_fn is None else self.optimize_fn
+        optimize_fn: Callable[..., OptimizeResult] = optimize_fn if self.optimize_fn is None else self.optimize_fn  # type: ignore[no-redef]
         self.result_ = optimize_fn(objective=partial_objective, X=X, **optimizer_params)
         self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
         if self.fit_intercept:

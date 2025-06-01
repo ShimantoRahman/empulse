@@ -3,8 +3,10 @@ from typing import Any
 
 import numpy as np
 import pytest
+import sympy
 from numpy.typing import NDArray
 
+from empulse.metrics import Metric
 from empulse.models import CSLogitClassifier
 
 
@@ -90,3 +92,28 @@ def test_works_with_different_loss(X, y):
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.success is True
+
+
+def test_cslogit_metric_loss(X, y):
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+
+    cost_loss = (
+        Metric('cost')
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .alias('accept_rate', gamma)
+        .alias('incentive_cost', d)
+        .alias('contact_cost', f)
+        .build()
+    )
+    rng = np.random.RandomState(42)
+    accept_rate = rng.random(len(y))
+    clv = rng.random(len(y)) * 200
+
+    model = CSLogitClassifier(loss=cost_loss)
+    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
+    y_proba = model.predict_proba(X)[:, 1]
+    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
+    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
+    assert score < inverse_score
