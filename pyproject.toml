@@ -55,6 +55,7 @@ optional = [
     "xgboost>=1.7.4",
     "lightgbm>=4.5.0",
     "catboost>=1.2.7; python_version < '3.13'",
+    "catboost>=1.2.8; python_version >= '3.13'",
 ]
 
 [dependency-groups]
