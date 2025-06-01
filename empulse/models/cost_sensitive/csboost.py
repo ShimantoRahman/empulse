@@ -1,14 +1,20 @@
 import sys
 import warnings
+from collections.abc import Callable, Sequence
 from functools import partial
 from numbers import Real
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy.special import expit
 from sklearn.base import clone
+from sklearn.utils._param_validation import HasMethods
 
-from ..._types import FloatArrayLike, ParameterConstraint
+from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
+
+if TYPE_CHECKING:
+    from ...metrics.savings import AECMetric, AECObjective
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -32,6 +38,11 @@ from ..._common import Parameter
 from ...metrics import Metric, make_objective_aec
 from .._base import BaseBoostClassifier
 from ._cs_mixin import CostSensitiveMixin
+
+# Hessian is 0 at score 0.5
+# which means that at initialization the model doesn't do anything
+# therefore we add a small nudge which kickstarts the optimization algorithm
+_BASE_SCORE = 0.5 + 1e-3
 
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
@@ -197,6 +208,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
+        'loss': [HasMethods('gradient_boost_objective'), None],
     }
 
     def __init__(
@@ -290,6 +302,9 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     ) -> Self:
         if fit_params is None:
             fit_params = {}
+        # allow sample weights still to be passed as kwargs to comply with sklearn interface
+        if 'sample_weight' in loss_params:
+            fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
         if self.loss is None:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
@@ -297,12 +312,18 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             )
 
         if self.estimator is None:
-            self._initialize_default_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            self._initialize_default_estimator(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+            )
         else:
-            self._initialize_custom_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            self._initialize_custom_estimator(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+            )
 
-        if not isinstance(self.estimator, CatBoostClassifier):
+        if isinstance(self.estimator_, XGBClassifier):
             self.estimator_.fit(X, y, **fit_params)
+        elif isinstance(self.estimator_, LGBMClassifier):
+            self.estimator_.fit(X, y, init_score=np.full(y.shape, _BASE_SCORE), **fit_params)
         else:
             indices = np.arange(X.shape[0])
             with warnings.catch_warnings():
@@ -316,38 +337,223 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                     message='Can\'t optimize method "evaluate" because self argument is used',
                     category=UserWarning,
                 )
-                self.estimator_.fit(X, y, sample_weight=indices, **fit_params)
+                if 'sample_weight' in fit_params:
+                    raise ValueError('Sample weights are not allowed when training CatboostClassifier.')
+                self.estimator_.fit(X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE), **fit_params)
         return self
 
-    def _initialize_default_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+    def _initialize_default_estimator(
+        self,
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> None:
         if XGBClassifier is None:
             raise ImportError(
-                'XGBoost package is required to use CSBoostClassifier. '
+                f'XGBoost package is required to use {type(self).__name__}. '
                 'Install optional dependencies through `pip install empulse[optional]` or '
                 '`pip install xgboost`'
             )
         objective = self._get_objective('xgboost', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
-        self.estimator_ = XGBClassifier(objective=objective)
+        self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE)
 
-    def _initialize_custom_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+    def _initialize_custom_estimator(
+        self,
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> None:
         if isinstance(self.estimator, XGBClassifier):
-            objective = self._get_objective('xgboost', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
+            objective = self._get_objective(
+                'xgboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+            )
+            self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE)
         elif isinstance(self.estimator, LGBMClassifier):
-            objective = self._get_objective('lightgbm', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            objective = self._get_objective(
+                'lightgbm', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+            )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif isinstance(self.estimator, CatBoostClassifier):
-            self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            # self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+            loss_function, eval_metric = self._get_objective(
+                'catboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+            )
+            self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
         else:
             raise ValueError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
 
-    def _initialize_catboost_estimator(self, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
-        objective, metric = make_objective_aec(
-            'catboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-        )
-        self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
+    @overload
+    def _get_objective(
+        self,
+        framework: Literal['xgboost', 'lightgbm'],
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> Callable[..., Any]: ...
 
-    def _get_objective(self, framework, tp_cost, tn_cost, fn_cost, fp_cost, **loss_params):
+    @overload
+    def _get_objective(
+        self,
+        framework: Literal['catboost'],
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> tuple['AECObjective', 'AECMetric'] | tuple['CatboostObjective', 'CatboostMetric']: ...
+
+    def _get_objective(
+        self,
+        framework: Literal['xgboost', 'lightgbm', 'catboost'],
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> Callable[..., Any] | tuple['AECObjective', 'AECMetric'] | tuple['CatboostObjective', 'CatboostMetric']:
         if self.loss is None:
-            return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        return partial(self.loss.gradient_boost_objective, **loss_params)
+            return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[arg-type, misc]
+        if framework == 'xgboost':
+            return partial(self.loss.gradient_boost_objective, **loss_params)
+        elif framework == 'lightgbm':
+
+            def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+                """
+                Create an objective function for the AEC measure.
+
+                Parameters
+                ----------
+                y_true : np.ndarray
+                    Ground truth labels
+                y_score : np.ndarray
+                    Predicted labels
+
+                Returns
+                -------
+                gradient  : np.ndarray
+                    Gradient of the objective function.
+
+                hessian : np.ndarray
+                    Hessian of the objective function.
+                """
+                return self.loss.gradient_boost_objective(y_true, y_score, **loss_params)  # type: ignore[union-attr]
+
+            return objective
+        else:
+            return CatboostObjective(self.loss.gradient_boost_objective, **loss_params), CatboostMetric(
+                self.loss, **loss_params
+            )
+
+
+class CatboostObjective:
+    """AEC objective for catboost."""
+
+    def __init__(
+        self, objective: Callable[..., tuple[FloatNDArray, FloatNDArray]], **loss_params: FloatNDArray | float
+    ):
+        self.objective = objective
+        self.loss_params = loss_params
+
+    def calc_ders_range(
+        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
+    ) -> list[tuple[float, float]]:
+        """
+        Compute first and second derivative of the loss function with respect to the predicted value for each object.
+
+        Parameters
+        ----------
+        predictions : indexed container of floats
+            Current predictions for each object.
+
+        targets : indexed container of floats
+            Target values you provided with the dataset.
+
+        weights : float, optional (default=None)
+            Instance weight.
+
+        Returns
+        -------
+            der1 : list-like object of float
+            der2 : list-like object of float
+
+        """
+        weights = weights.astype(int)
+        # Use weights as a proxy to index the costs
+        loss_params = {
+            name: value[weights] if isinstance(value, np.ndarray) else value
+            for (name, value) in self.loss_params.items()
+        }
+
+        gradient, hessian = self.objective(targets, predictions, **loss_params)
+        # convert from two arrays to one list of tuples
+        return list(zip(-gradient, -hessian, strict=False))
+
+
+class CatboostMetric:
+    """AEC metric for catboost."""
+
+    def __init__(self, metric: Callable[..., float], **loss_params: FloatNDArray | float):
+        self.metric = metric
+        self.loss_params = loss_params
+
+    def is_max_optimal(self) -> bool:
+        """Return whether great values of metric are better."""
+        return False
+
+    def evaluate(
+        self, predictions: Sequence[float], targets: Sequence[float], weights: FloatNDArray
+    ) -> tuple[float, float]:
+        """
+        Evaluate metric value.
+
+        Parameters
+        ----------
+        approxes : list of indexed containers (containers with only __len__ and __getitem__ defined) of float
+            Vectors of approx labels.
+
+        targets : one dimensional indexed container of float
+            Vectors of true labels.
+
+        weights : one dimensional indexed container of float, optional (default=None)
+            Weight for each instance.
+
+        Returns
+        -------
+            weighted error : float
+            total weight : float
+
+        """
+        weights = weights.astype(int)
+        # Use weights as a proxy to index the costs
+        loss_params = {
+            name: value[weights] if isinstance(value, np.ndarray) else value
+            for (name, value) in self.loss_params.items()
+        }
+
+        y_proba = expit(predictions)
+        return self.metric(targets, y_proba, **loss_params), 1
+
+    def get_final_error(self, error: float, weight: float) -> float:
+        """
+        Return final value of metric based on error and weight.
+
+        Parameters
+        ----------
+        error : float
+            Sum of errors in all instances.
+
+        weight : float
+            Sum of weights of all instances.
+
+        Returns
+        -------
+        metric value : float
+
+        """
+        return error
