@@ -1,0 +1,9 @@
+﻿BiasReweighingClassifier
+========================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: BiasReweighingClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

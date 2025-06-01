@@ -1,0 +1,1420 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.metrics.metric.metric &#8212; Empulse 0.8.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=486e5634"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/metrics/metric/metric';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.8.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.metrics.metric.metric</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.metrics.metric.metric</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">MutableMapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">auto</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numbers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Real</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">TracebackType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sympy</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">FloatNDArray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.common</span><span class="w"> </span><span class="kn">import</span> <span class="n">BoostObjective</span><span class="p">,</span> <span class="n">LogitObjective</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.cost_metric</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_build_cost_gradient_boost_objective</span><span class="p">,</span>
+    <span class="n">_build_cost_logit_objective</span><span class="p">,</span>
+    <span class="n">_build_cost_loss</span><span class="p">,</span>
+    <span class="n">_cost_loss_to_latex</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.max_profit_metric</span><span class="w"> </span><span class="kn">import</span> <span class="n">_build_max_profit_score</span><span class="p">,</span> <span class="n">_max_profit_score_to_latex</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.savings_metric</span><span class="w"> </span><span class="kn">import</span> <span class="n">_build_savings_score</span><span class="p">,</span> <span class="n">_savings_score_to_latex</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Direction</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Optimization direction of metric.&quot;&quot;&quot;</span>
+
+    <span class="n">MAXIMIZE</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+    <span class="n">MINIMIZE</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Metric">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Metric</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to create a custom value/cost-sensitive metric.</span>
+
+<span class="sd">    The Metric class uses the Builder pattern to create a custom metric.</span>
+<span class="sd">    You start by specifying the kind of metric you want to compute and then add the terms that make up the metric.</span>
+<span class="sd">    These terms come from the cost-benefits matrix of the classification problem.</span>
+<span class="sd">    After you have added all the terms, you can call the :meth:`~empulse.metrics.Metric.build`</span>
+<span class="sd">    method to create the metric function.</span>
+<span class="sd">    Then you can call the metric function with the true labels and predicted probabilities to compute the metric value.</span>
+
+<span class="sd">    The costs and benefits are specified using sympy symbols or expressions.</span>
+<span class="sd">    Stochastic variables are supported, and can be specified using sympy.stats random variables.</span>
+<span class="sd">    Make sure that you add the parameters of the stochastic variables</span>
+<span class="sd">    as keyword arguments when calling the metric function.</span>
+<span class="sd">    Stochastic variables are assumed to be independent of each other.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;user_defined_value_metric&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kind : {&#39;max profit&#39;, &#39;cost&#39;, &#39;savings&#39;}</span>
+<span class="sd">        The kind of metric to compute.</span>
+
+<span class="sd">        - If ``max profit``, the metric computes the maximum profit that can be achieved by a classifier.</span>
+<span class="sd">          The metric determines the optimal threshold that maximizes the profit.</span>
+<span class="sd">          This metric supports the use of stochastic variables.</span>
+<span class="sd">        - If ``&#39;cost&#39;``, the metric computes the expected cost loss of a classifier.</span>
+<span class="sd">          This metric supports passing instance-dependent costs in the form of array-likes.</span>
+<span class="sd">          This metric does not support stochastic variables.</span>
+<span class="sd">        - If ``&#39;savings&#39;``, the metric computes the savings that can be achieved by a classifier</span>
+<span class="sd">          over a naive classifier which always predicts 0 or 1 (whichever is better).</span>
+<span class="sd">          This metric supports passing instance-dependent costs in the form of array-likes.</span>
+<span class="sd">          This metric does not support stochastic variables.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tp_benefit : sympy.Expr</span>
+<span class="sd">        The benefit of a true positive.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_tp_benefit` for more details.</span>
+
+<span class="sd">    tn_benefit : sympy.Expr</span>
+<span class="sd">        The benefit of a true negative.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_tn_benefit` for more details.</span>
+
+<span class="sd">    fp_benefit : sympy.Expr</span>
+<span class="sd">        The benefit of a false positive.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_fp_benefit` for more details.</span>
+
+<span class="sd">    fn_benefit : sympy.Expr</span>
+<span class="sd">        The benefit of a false negative.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_fn_benefit` for more details.</span>
+
+<span class="sd">    tp_cost : sympy.Expr</span>
+<span class="sd">        The cost of a true positive.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_tp_cost` for more details.</span>
+
+<span class="sd">    tn_cost : sympy.Expr</span>
+<span class="sd">        The cost of a true negative.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_tn_cost` for more details.</span>
+
+<span class="sd">    fp_cost : sympy.Expr</span>
+<span class="sd">        The cost of a false positive.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_fp_cost` for more details.</span>
+
+<span class="sd">    fn_cost : sympy.Expr</span>
+<span class="sd">        The cost of a false negative.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.add_fn_cost` for more details.</span>
+
+<span class="sd">    direction: Direction</span>
+<span class="sd">        Whether the metric is to be maximized or minimized.</span>
+
+<span class="sd">    integration_method : {&#39;auto&#39;, &#39;quad&#39;, &#39;monte-carlo&#39;, &#39;quasi-monte-carlo&#39;}</span>
+<span class="sd">        The integration method to use when the metric has stochastic variables.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.set_integration_method` for more details.</span>
+
+<span class="sd">    n_mc_samples : int</span>
+<span class="sd">        The number of samples to use when using Monte Carlo methods to estimate the metric value.</span>
+<span class="sd">        See :meth:`~empulse.metrics.Metric.set_n_mc_samples_exp` for more details.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Reimplementing :func:`~empulse.metrics.empc_score` using the :class:`Metric` class.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import sympy as sp</span>
+<span class="sd">        from empulse.metrics import Metric</span>
+
+<span class="sd">        clv, d, f, alpha, beta = sp.symbols(</span>
+<span class="sd">            &#39;clv d f alpha beta&#39;</span>
+<span class="sd">        )  # define deterministic variables</span>
+<span class="sd">        gamma = sp.stats.Beta(&#39;gamma&#39;, alpha, beta)  # define gamma to follow a Beta distribution</span>
+
+<span class="sd">        empc_score = (</span>
+<span class="sd">            Metric(kind=&#39;max profit&#39;)</span>
+<span class="sd">            .add_tp_benefit(gamma * (clv - d - f))  # when churner accepts offer</span>
+<span class="sd">            .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer</span>
+<span class="sd">            .add_fp_cost(d + f)  # when you send an offer to a non-churner</span>
+<span class="sd">            .alias({&#39;incentive_cost&#39;: &#39;d&#39;, &#39;contact_cost&#39;: &#39;f&#39;})</span>
+<span class="sd">            .build()</span>
+<span class="sd">        )</span>
+
+<span class="sd">        y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+
+<span class="sd">        empc_score(y_true, y_proba, clv=100, incentive_cost=10, contact_cost=1, alpha=6, beta=14)</span>
+
+<span class="sd">    Reimplementing :func:`~empulse.metrics.expected_cost_loss_churn` using the :class:`Metric` class.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import sympy as sp</span>
+<span class="sd">        from empulse.metrics import Metric</span>
+
+<span class="sd">        clv, delta, f, gamma = sp.symbols(&#39;clv delta f gamma&#39;)</span>
+
+<span class="sd">        cost_loss = (</span>
+<span class="sd">            Metric(kind=&#39;cost&#39;)</span>
+<span class="sd">            .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer</span>
+<span class="sd">            .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer</span>
+<span class="sd">            .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner</span>
+<span class="sd">            .alias({&#39;incentive_fraction&#39;: &#39;delta&#39;, &#39;contact_cost&#39;: &#39;f&#39;, &#39;accept_rate&#39;: &#39;gamma&#39;})</span>
+<span class="sd">            .build()</span>
+<span class="sd">        )</span>
+
+<span class="sd">        y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+
+<span class="sd">        cost_loss(</span>
+<span class="sd">            y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3</span>
+<span class="sd">        )</span>
+
+<span class="sd">    Using the Metric class as a context manager (automatically builds after assembling the components).</span>
+<span class="sd">    Also adding default values for some of the parameters.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import sympy as sp</span>
+<span class="sd">        from empulse.metrics import Metric</span>
+
+<span class="sd">        clv, delta, f, gamma = sp.symbols(&#39;clv delta f gamma&#39;)</span>
+
+<span class="sd">        with Metric(kind=&#39;cost&#39;) as cost_loss:</span>
+<span class="sd">            cost_loss.add_tp_benefit(gamma * (clv - delta * clv - f))</span>
+<span class="sd">            cost_loss.add_tp_benefit((1 - gamma) * -f)</span>
+<span class="sd">            cost_loss.add_fp_cost(delta * clv + f)</span>
+<span class="sd">            cost_loss.alias(&#39;incentive_fraction&#39;, delta)</span>
+<span class="sd">            cost_loss.alias(&#39;contact_cost&#39;, f)</span>
+<span class="sd">            cost_loss.alias(&#39;accept_rate&#39;, gamma)</span>
+<span class="sd">            cost_loss.set_default(incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)</span>
+
+<span class="sd">        y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">        y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+
+<span class="sd">        cost_loss(y_true, y_proba, clv=100)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">METRIC_TYPES</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;max profit&#39;</span><span class="p">,</span> <span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;savings&#39;</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;max profit&#39;</span><span class="p">,</span> <span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;savings&#39;</span><span class="p">]</span>
+    <span class="n">INTEGRATION_METHODS</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;quad&#39;</span><span class="p">,</span> <span class="s1">&#39;quasi-monte-carlo&#39;</span><span class="p">,</span> <span class="s1">&#39;monte-carlo&#39;</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;quad&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;quasi-monte-carlo&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;monte-carlo&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;max profit&#39;</span><span class="p">,</span> <span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;savings&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">METRIC_TYPES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Kind </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s1"> is not supported. Supported values are </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">METRIC_TYPES</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="n">kind</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">gradient_logit_undefined</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LogitObjective</span><span class="p">:</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">undefined_fn</span><span class="p">(</span>
+                <span class="n">x</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Gradient of the logit function is not defined for kind=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">undefined_fn</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">gradient_hessian_gboost_undefined</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BoostObjective</span><span class="p">:</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">undefined_fn</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+            <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Gradient and Hessian of the gradient boosting function is not defined for kind=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">undefined_fn</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_logit</span> <span class="o">=</span> <span class="n">gradient_logit_undefined</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_hessian_gboost</span> <span class="o">=</span> <span class="n">gradient_hessian_gboost_undefined</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;max profit&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">Direction</span><span class="o">.</span><span class="n">MAXIMIZE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_metric</span> <span class="o">=</span> <span class="n">_build_max_profit_score</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metric_to_latex</span> <span class="o">=</span> <span class="n">_max_profit_score_to_latex</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;cost&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">Direction</span><span class="o">.</span><span class="n">MINIMIZE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_metric</span> <span class="o">=</span> <span class="n">_build_cost_loss</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_logit</span> <span class="o">=</span> <span class="n">_build_cost_logit_objective</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_hessian_gboost</span> <span class="o">=</span> <span class="n">_build_cost_gradient_boost_objective</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metric_to_latex</span> <span class="o">=</span> <span class="n">_cost_loss_to_latex</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;savings&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">Direction</span><span class="o">.</span><span class="n">MAXIMIZE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">build_metric</span> <span class="o">=</span> <span class="n">_build_savings_score</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metric_to_latex</span> <span class="o">=</span> <span class="n">_savings_score_to_latex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integration_method</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_mc_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">16</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tp_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">numbers</span><span class="o">.</span><span class="n">Zero</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tn_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">numbers</span><span class="o">.</span><span class="n">Zero</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fp_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">numbers</span><span class="o">.</span><span class="n">Zero</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fn_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">numbers</span><span class="o">.</span><span class="n">Zero</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Symbol</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_built</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tp_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tp_benefit</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tn_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tn_benefit</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fp_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_fp_cost</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fn_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_fn_cost</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tp_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_tp_benefit</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tn_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_tn_benefit</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fp_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fp_cost</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fn_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">:</span>  <span class="c1"># noqa: D102</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fn_cost</span>
+
+<div class="viewcode-block" id="Metric.add_tp_benefit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_tp_benefit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_tp_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the benefit of classifying a true positive.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the benefit of classifying a true positive.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tp_benefit</span> <span class="o">+=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_tn_benefit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_tn_benefit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_tn_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the benefit of classifying a true negative.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the benefit of classifying a true negative.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tn_benefit</span> <span class="o">+=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_fp_benefit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_fp_benefit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_fp_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the benefit of classifying a false positive.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the benefit of classifying a false positive.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fp_cost</span> <span class="o">-=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_fn_benefit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_fn_benefit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_fn_benefit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the benefit of classifying a false negative.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the benefit of classifying a false negative.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fn_cost</span> <span class="o">-=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_tp_cost">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_tp_cost">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_tp_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the cost of classifying a true positive.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the cost of classifying a true positive.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tp_benefit</span> <span class="o">-=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_tn_cost">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_tn_cost">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_tn_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the cost of classifying a true negative.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the cost of classifying a true negative.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tn_benefit</span> <span class="o">-=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_fp_cost">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_fp_cost">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_fp_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the cost of classifying a false positive.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the cost of classifying a false positive.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fp_cost</span> <span class="o">+=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.add_fn_cost">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.add_fn_cost">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_fn_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a term to the cost of classifying a false negative.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        term: sympy.Expr | str</span>
+<span class="sd">            The term to add to the cost of classifying a false negative.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">sympify</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fn_cost</span> <span class="o">+=</span> <span class="n">term</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.alias">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.alias">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">alias</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">alias</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Symbol</span> <span class="o">|</span> <span class="nb">str</span><span class="p">],</span> <span class="n">symbol</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Symbol</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add an alias for a symbol.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        alias: str | MutableMapping[str, sympy.Symbol | str]</span>
+<span class="sd">            The alias to add. If a MutableMapping (.e.g, dictionary) is passed,</span>
+<span class="sd">            the keys are the aliases and the values are the symbols.</span>
+<span class="sd">        symbol: sympy.Symbol, optional</span>
+<span class="sd">            The symbol to alias to.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import sympy as sp</span>
+<span class="sd">            from empulse.metrics import Metric</span>
+
+<span class="sd">            clv, delta, f, gamma = sp.symbols(&#39;clv delta f gamma&#39;)</span>
+<span class="sd">            cost_loss = (</span>
+<span class="sd">                Metric(kind=&#39;cost&#39;)</span>
+<span class="sd">                .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer</span>
+<span class="sd">                .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer</span>
+<span class="sd">                .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner</span>
+<span class="sd">                .alias({&#39;incentive_fraction&#39;: &#39;delta&#39;, &#39;contact_cost&#39;: &#39;f&#39;, &#39;accept_rate&#39;: &#39;gamma&#39;})</span>
+<span class="sd">                .build()</span>
+<span class="sd">            )</span>
+
+<span class="sd">            y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+<span class="sd">            cost_loss(</span>
+<span class="sd">                y_true, y_proba, clv=100, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3</span>
+<span class="sd">            )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">symbol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">alias</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">symbol</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Either a dictionary or both an alias and a symbol should be provided&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.set_default">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.set_default">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">defaults</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set default values for symbols or their aliases.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        defaults: float</span>
+<span class="sd">            Default values for symbols or their aliases.</span>
+<span class="sd">            These default values will be used if not provided in __call__.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import sympy as sp</span>
+<span class="sd">            from empulse.metrics import Metric</span>
+
+<span class="sd">            clv, delta, f, gamma = sp.symbols(&#39;clv delta f gamma&#39;)</span>
+<span class="sd">            cost_loss = (</span>
+<span class="sd">                Metric(kind=&#39;cost&#39;)</span>
+<span class="sd">                .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer</span>
+<span class="sd">                .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer</span>
+<span class="sd">                .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner</span>
+<span class="sd">                .alias({&#39;incentive_fraction&#39;: &#39;delta&#39;, &#39;contact_cost&#39;: &#39;f&#39;, &#39;accept_rate&#39;: &#39;gamma&#39;})</span>
+<span class="sd">                .set_default(incentive_fraction=0.05, contact_cost=1, accept_rate=0.3)</span>
+<span class="sd">                .build()</span>
+<span class="sd">            )</span>
+
+<span class="sd">            y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+<span class="sd">            cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_defaults</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">defaults</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.set_integration_method">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.set_integration_method">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_integration_method</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">integration_method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;quad&#39;</span><span class="p">,</span> <span class="s1">&#39;quasi-monte-carlo&#39;</span><span class="p">,</span> <span class="s1">&#39;monte-carlo&#39;</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the integration method to use when the metric has stochastic variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        integration_method: {&#39;auto&#39;, &#39;quad&#39;, &#39;monte-carlo&#39;, &#39;quasi-monte-carlo&#39;}, default=&#39;auto&#39;</span>
+<span class="sd">            The integration method to use when the metric has stochastic variables.</span>
+
+<span class="sd">            - If ``&#39;auto&#39;``, the integration method is automatically chosen based on the number of stochastic variables,</span>
+<span class="sd">              balancing accuracy with execution speed.</span>
+<span class="sd">              For a single stochastic variables, piecewise integration is used. This is the most accurate method.</span>
+<span class="sd">              For two stochastic variables, &#39;quad&#39; is used,</span>
+<span class="sd">              and for more than two stochastic variables, &#39;quasi-monte-carlo&#39; is used if all distribution are supported.</span>
+<span class="sd">              Otherwise, &#39;monte-carlo&#39; is used.</span>
+<span class="sd">            - If ``&#39;quad&#39;``, the metric is integrated using the quad function from scipy.</span>
+<span class="sd">              Be careful, as this can be slow for more than 2 stochastic variables.</span>
+<span class="sd">            - If ``&#39;monte-carlo&#39;``, the metric is integrated using a Monte Carlo simulation.</span>
+<span class="sd">              The monte-carlo simulation is less accurate but faster than quad for many stochastic variables.</span>
+<span class="sd">            - If ``&#39;quasi-monte-carlo&#39;``, the metric is integrated using a Quasi Monte Carlo simulation.</span>
+<span class="sd">              The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions</span>
+<span class="sd">              present in :mod:`sympy:sympy.stats`:</span>
+
+<span class="sd">                - :class:`sympy.stats.Arcsin`</span>
+<span class="sd">                - :class:`sympy.stats.Beta`</span>
+<span class="sd">                - :class:`sympy.stats.BetaPrime`</span>
+<span class="sd">                - :class:`sympy.stats.Chi`</span>
+<span class="sd">                - :class:`sympy.stats.ChiSquared`</span>
+<span class="sd">                - :class:`sympy.stats.Erlang`</span>
+<span class="sd">                - :class:`sympy.stats.Exponential`</span>
+<span class="sd">                - :class:`sympy.stats.ExGaussian`</span>
+<span class="sd">                - :class:`sympy.stats.F`</span>
+<span class="sd">                - :class:`sympy.stats.Gamma`</span>
+<span class="sd">                - :class:`sympy.stats.GammaInverse`</span>
+<span class="sd">                - :class:`sympy.stats.GaussianInverse`</span>
+<span class="sd">                - :class:`sympy.stats.Gompertz`</span>
+<span class="sd">                - :class:`sympy.stats.Laplace`</span>
+<span class="sd">                - :class:`sympy.stats.Levy`</span>
+<span class="sd">                - :class:`sympy.stats.Logistic`</span>
+<span class="sd">                - :class:`sympy.stats.LogNormal`</span>
+<span class="sd">                - :class:`sympy.stats.Lomax`</span>
+<span class="sd">                - :class:`sympy.stats.Normal`</span>
+<span class="sd">                - :class:`sympy.stats.Maxwell`</span>
+<span class="sd">                - :class:`sympy.stats.Moyal`</span>
+<span class="sd">                - :class:`sympy.stats.Nakagami`</span>
+<span class="sd">                - :class:`sympy.stats.Pareto`</span>
+<span class="sd">                - :class:`sympy.stats.PowerFunction`</span>
+<span class="sd">                - :class:`sympy.stats.StudentT`</span>
+<span class="sd">                - :class:`sympy.stats.Trapezoidal`</span>
+<span class="sd">                - :class:`sympy.stats.Triangular`</span>
+<span class="sd">                - :class:`sympy.stats.Uniform`</span>
+<span class="sd">                - :class:`sympy.stats.VonMises`</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import sympy as sp</span>
+<span class="sd">            from empulse.metrics import Metric</span>
+
+<span class="sd">            clv, d, f, alpha, beta = sp.symbols(&#39;clv d f alpha beta&#39;)</span>
+<span class="sd">            gamma = sp.stats.Beta(&#39;gamma&#39;, alpha, beta)</span>
+<span class="sd">            empc_score = (</span>
+<span class="sd">                Metric(kind=&#39;max profit&#39;)</span>
+<span class="sd">                .add_tp_benefit(gamma * (clv - d - f))</span>
+<span class="sd">                .add_tp_benefit((1 - gamma) * -f)</span>
+<span class="sd">                .add_fp_cost(d + f)</span>
+<span class="sd">                .set_integration_method(&#39;quad&#39;)</span>
+<span class="sd">                .build()</span>
+<span class="sd">            )</span>
+<span class="sd">            y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+<span class="sd">            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">integration_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">INTEGRATION_METHODS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Integration method </span><span class="si">{</span><span class="n">integration_method</span><span class="si">}</span><span class="s1"> is not supported. &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Supported values are </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">INTEGRATION_METHODS</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integration_method</span> <span class="o">=</span> <span class="n">integration_method</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.set_random_state">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.set_random_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_random_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the random state to use when using monte-carlo methods to estimate the metric value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        random_state: int | np.random.RandomState</span>
+<span class="sd">            The random state to use when ``integration_technique=&#39;monte-carlo&#39;`` or</span>
+<span class="sd">            ``integration_technique=&#39;quasi-monte-carlo&#39;``.</span>
+<span class="sd">            Determines the points sampled from the distribution of the stochastic variables.</span>
+<span class="sd">            This argument is ignored when ``integration_technique=&#39;quad&#39;``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import sympy as sp</span>
+<span class="sd">            from empulse.metrics import Metric</span>
+
+<span class="sd">            clv, d, f, alpha, beta = sp.symbols(&#39;clv d f alpha beta&#39;)</span>
+<span class="sd">            gamma = sp.stats.Beta(&#39;gamma&#39;, alpha, beta)</span>
+<span class="sd">            empc_score = (</span>
+<span class="sd">                Metric(kind=&#39;max profit&#39;)</span>
+<span class="sd">                .add_tp_benefit(gamma * (clv - d - f))</span>
+<span class="sd">                .add_tp_benefit((1 - gamma) * -f)</span>
+<span class="sd">                .add_fp_cost(d + f)</span>
+<span class="sd">                .set_integration_method(&#39;quasi-monte-carlo&#39;)</span>
+<span class="sd">                .set_random_state(42)</span>
+<span class="sd">                .build()</span>
+<span class="sd">            )</span>
+<span class="sd">            y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+<span class="sd">            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">random_state</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">random_state</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.set_n_mc_samples_exp">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.set_n_mc_samples_exp">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_n_mc_samples_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_mc_samples_exp</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the number of (Quasi-) Monte Carlo samples to use.</span>
+
+<span class="sd">        This is ignored when is ``integration_technique=&#39;quad&#39;``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_mc_samples_exp: int</span>
+<span class="sd">            ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when</span>
+<span class="sd">            ``integration_technique&#39;monte-carlo&#39;``.</span>
+<span class="sd">            Increasing the number of samples improves the accuracy of the metric estimation, but slows down the speed.</span>
+<span class="sd">            This argument is ignored when the ``integration_technique=&#39;quad&#39;``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import sympy as sp</span>
+<span class="sd">            from empulse.metrics import Metric</span>
+
+<span class="sd">            clv, d, f, alpha, beta = sp.symbols(&#39;clv d f alpha beta&#39;)</span>
+<span class="sd">            gamma = sp.stats.Beta(&#39;gamma&#39;, alpha, beta)</span>
+<span class="sd">            empc_score = (</span>
+<span class="sd">                Metric(kind=&#39;max profit&#39;)</span>
+<span class="sd">                .add_tp_benefit(gamma * (clv - d - f))</span>
+<span class="sd">                .add_tp_benefit((1 - gamma) * -f)</span>
+<span class="sd">                .add_fp_cost(d + f)</span>
+<span class="sd">                .set_integration_method(&#39;monte-carlo&#39;)</span>
+<span class="sd">                .set_n_mc_samples_exp(15)</span>
+<span class="sd">                .build()</span>
+<span class="sd">            )</span>
+<span class="sd">            y_true = [1, 0, 1, 0, 1]</span>
+<span class="sd">            y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]</span>
+<span class="sd">            empc_score(y_true, y_proba, clv=100, d=10, f=1, alpha=6, beta=14)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_mc_samples</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">n_mc_samples_exp</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Metric.build">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.build">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build the metric function.</span>
+
+<span class="sd">        This function should be called last after adding all the cost-benefit terms.</span>
+<span class="sd">        After calling this function, the metric function can be called with the true labels and predicted probabilities.</span>
+
+<span class="sd">        This function is automatically called when using</span>
+<span class="sd">        the :class:`~empulse.metrics.Metric` class as a context manager.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_built</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_score_function</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_metric</span><span class="p">(</span>
+            <span class="n">tp_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">,</span>
+            <span class="n">tn_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_benefit</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">integration_method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">integration_method</span><span class="p">,</span>
+            <span class="n">n_mc_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_mc_samples</span><span class="p">,</span>
+            <span class="n">rng</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gradient_logit_function</span><span class="p">:</span> <span class="n">LogitObjective</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_logit</span><span class="p">(</span>
+            <span class="n">tp_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">,</span>
+            <span class="n">tn_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_benefit</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gradient_hessian_gboost_function</span><span class="p">:</span> <span class="n">BoostObjective</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_gradient_hessian_gboost</span><span class="p">(</span>
+            <span class="n">tp_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">,</span>
+            <span class="n">tn_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_benefit</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Swap aliases with the appropriate symbols and convert the values to numpy arrays.&quot;&quot;&quot;</span>
+        <span class="c1"># Use default values if not provided in kwargs</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_defaults</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Real</span><span class="p">):</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="c1"># Map aliases to the appropriate symbols</span>
+        <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="n">symbol</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">]</span>  <span class="c1"># redefine kwargs as mypy doesn&#39;t understand the above</span>
+
+        <span class="k">return</span> <span class="n">kwargs</span>
+
+<div class="viewcode-block" id="Metric.__call__">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the metric score or loss.</span>
+
+<span class="sd">        The :meth:`empulse.metrics.Metric.build` method should be called before calling this method.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true: array-like of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+
+<span class="sd">        y_score: array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted labels, probabilities or decision scores (based on the chosen metric).</span>
+
+<span class="sd">            - If ``kind=&#39;max profit&#39;``, the predicted labels are the decision scores.</span>
+<span class="sd">            - If ``kind=&#39;cost&#39;``, the predicted labels are the (calibrated) probabilities.</span>
+<span class="sd">            - If ``kind=&#39;savings&#39;``, the predicted labels are the (calibrated) probabilities.</span>
+
+<span class="sd">        parameters: float or array-like of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        score: float</span>
+<span class="sd">            The computed metric score or loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_built</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The metric function has not been built. Call the build method before calling the metric&#39;</span><span class="p">)</span>
+
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">y_score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_score</span><span class="p">)</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_parameters</span><span class="p">(</span><span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_score_function</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Metric.logit_objective">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.logit_objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_objective</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the metric loss and its gradient with respect to the logistic regression weights.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        features : NDArray of shape (n_samples, n_features)</span>
+<span class="sd">            The features of the samples.</span>
+<span class="sd">        weights : NDArray of shape (n_features,)</span>
+<span class="sd">            The weights of the logistic regression model.</span>
+<span class="sd">        y_true : NDArray of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+<span class="sd">        parameters : float or NDArray of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            The metric loss to be minimized.</span>
+<span class="sd">        gradient : NDArray of shape (n_features,)</span>
+<span class="sd">            The gradient of the metric loss with respect to the logistic regression weights.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_parameters</span><span class="p">(</span><span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">expit</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">features</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_true</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">gradient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gradient_logit_function</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">gradient</span></div>
+
+
+<div class="viewcode-block" id="Metric.gradient_boost_objective">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.gradient_boost_objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gradient_boost_objective</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient and hessian of the metric loss with respect to the gradient boosting weights.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true : NDArray of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+<span class="sd">        y_score : NDArray of shape (n_samples,)</span>
+<span class="sd">            The predicted probabilities or decision scores.</span>
+<span class="sd">        parameters : float or NDArray of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gradient : NDArray of shape (n_samples,)</span>
+<span class="sd">            The gradient of the metric loss with respect to the gradient boosting weights.</span>
+<span class="sd">        hessian : NDArray of shape (n_samples,)</span>
+<span class="sd">            The hessian of the metric loss with respect to the gradient boosting weights.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_parameters</span><span class="p">(</span><span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="s1">&#39;get_label&#39;</span><span class="p">):</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">y_true</span><span class="o">.</span><span class="n">get_label</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Expected y_true to be of type numpy.ndarray, lightgbm.Dataset, or xgboost.DMatrix, &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span><span class="si">}</span><span class="s1"> instead.&#39;</span>
+            <span class="p">)</span>
+
+        <span class="n">y_proba</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">expit</span><span class="p">(</span><span class="n">y_score</span><span class="p">)</span>
+        <span class="n">gradient</span><span class="p">,</span> <span class="n">hessian</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gradient_hessian_gboost_function</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gradient</span><span class="p">,</span> <span class="n">hessian</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">(&#39;</span>
+            <span class="sa">f</span><span class="s2">&quot;kind=&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">&#39;, integration_method=&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">integration_method</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
+            <span class="sa">f</span><span class="s1">&#39;n_mc_samples=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_mc_samples</span><span class="si">}</span><span class="s1">, random_state=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="si">}</span><span class="s1">, &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;tp_benefit=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_benefit</span><span class="si">}</span><span class="s1">, &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;tn_benefit=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_benefit</span><span class="si">}</span><span class="s1">, fp_cost=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="si">}</span><span class="s1">, &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;fn_cost=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="si">}</span><span class="s1">)&#39;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repr_latex_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_to_latex</span><span class="p">(</span>
+            <span class="n">tp_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">,</span> <span class="n">tn_benefit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_benefit</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Metric&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="ne">BaseException</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">traceback</span><span class="p">:</span> <span class="n">TracebackType</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build</span><span class="p">()</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>
