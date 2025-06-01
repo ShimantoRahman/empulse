@@ -1,11 +1,10 @@
 import sys
-import warnings
 from numbers import Real
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
-from sklearn.base import clone
+import sympy
+from numpy.typing import ArrayLike
 
 from ..._types import FloatArrayLike, ParameterConstraint
 
@@ -28,11 +27,12 @@ except ImportError:
     CatBoostClassifier = None
 
 from ..._common import Parameter
-from ...metrics import make_objective_churn
+from ...metrics import Metric
 from .._base import BaseBoostClassifier
+from .csboost import CSBoostClassifier
 
 
-class B2BoostClassifier(BaseBoostClassifier):
+class B2BoostClassifier(CSBoostClassifier):
     """
     Gradient boosting model to optimize instance-dependent cost loss for customer churn.
 
@@ -193,7 +193,19 @@ class B2BoostClassifier(BaseBoostClassifier):
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
     ) -> None:
-        super().__init__(estimator=estimator)
+        lifetime, delta, f, gamma = sympy.symbols('clv delta f gamma')
+        loss = (
+            Metric('cost')
+            .add_tp_benefit(gamma * (lifetime - lifetime * delta - f))
+            .add_tp_benefit((1 - gamma) * -f)
+            .add_fp_cost(lifetime * delta + f)
+            .alias('accept_rate', gamma)
+            .alias('incentive_fraction', delta)
+            .alias('contact_cost', f)
+            .alias('clv', lifetime)
+            .build()
+        )
+        super().__init__(estimator=estimator, loss=loss)
         self.clv = clv
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost
@@ -201,7 +213,7 @@ class B2BoostClassifier(BaseBoostClassifier):
 
     def fit(
         self,
-        X: ArrayLike,
+        X: FloatArrayLike,
         y: ArrayLike,
         *,
         accept_rate: float | Parameter = Parameter.UNCHANGED,
@@ -209,6 +221,7 @@ class B2BoostClassifier(BaseBoostClassifier):
         incentive_fraction: float | Parameter = Parameter.UNCHANGED,
         contact_cost: float | Parameter = Parameter.UNCHANGED,
         fit_params: dict[str, Any] | None = None,
+        **loss_params: Any,
     ) -> Self:
         """
         Fit the model.
@@ -237,32 +250,14 @@ class B2BoostClassifier(BaseBoostClassifier):
         fit_params : dict, optional
             Additional parameters to pass to the estimator's fit method.
 
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function.
+
         Returns
         -------
         self : B2BoostClassifier
             Fitted B2Boost model.
         """
-        super().fit(
-            X,
-            y,
-            accept_rate=accept_rate,
-            clv=clv,
-            incentive_fraction=incentive_fraction,
-            contact_cost=contact_cost,
-            fit_params=fit_params,
-        )
-        return self
-
-    def _fit(
-        self,
-        X: NDArray[Any],
-        y: NDArray[Any],
-        accept_rate: float | Parameter = Parameter.UNCHANGED,
-        clv: float | FloatArrayLike | Parameter = Parameter.UNCHANGED,
-        incentive_fraction: float | Parameter = Parameter.UNCHANGED,
-        contact_cost: float | Parameter = Parameter.UNCHANGED,
-        fit_params: dict[str, Any] | None = None,
-    ) -> Self:
         if accept_rate is Parameter.UNCHANGED:
             accept_rate = self.accept_rate
         if clv is Parameter.UNCHANGED:
@@ -274,65 +269,14 @@ class B2BoostClassifier(BaseBoostClassifier):
         if not isinstance(clv, float | int):
             clv = np.asarray(clv)
 
-        if self.estimator is None:
-            if XGBClassifier is None:
-                raise ImportError(
-                    'XGBoost package is required to use B2BoostClassifier. '
-                    'Install optional dependencies through pip install empulse[optional] or '
-                    'pip install xgboost'
-                )
-            objective = make_objective_churn(
-                model='xgboost',
-                clv=clv,
-                incentive_fraction=incentive_fraction,
-                contact_cost=contact_cost,
-                accept_rate=accept_rate,
-            )
-            self.estimator_ = XGBClassifier(objective=objective)
-        elif isinstance(self.estimator, XGBClassifier):
-            objective = make_objective_churn(
-                model='xgboost',
-                clv=clv,
-                incentive_fraction=incentive_fraction,
-                contact_cost=contact_cost,
-                accept_rate=accept_rate,
-            )
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif isinstance(self.estimator, LGBMClassifier):
-            objective = make_objective_churn(
-                model='lightgbm',
-                clv=clv,
-                incentive_fraction=incentive_fraction,
-                contact_cost=contact_cost,
-                accept_rate=accept_rate,
-            )
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif isinstance(self.estimator, CatBoostClassifier):
-            objective, metric = make_objective_churn(  # type: ignore[assignment]
-                'catboost',
-                clv=clv,
-                incentive_fraction=incentive_fraction,
-                contact_cost=contact_cost,
-                accept_rate=accept_rate,
-            )
-            self.estimator_ = clone(self.estimator).set_params(loss_function=objective, eval_metric=metric)
-            indices = np.arange(X.shape[0])
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    'ignore',
-                    message='Can\'t optimze method "calc_ders_range" because self argument is used',
-                    category=UserWarning,
-                )
-                warnings.filterwarnings(
-                    'ignore',
-                    message='Can\'t optimze method "evaluate" because self argument is used',
-                    category=UserWarning,
-                )
-                self.estimator_.fit(X, y, sample_weight=indices)
-            return self
-        else:
-            raise ValueError('estimator must be an instance of XGBClassifier, LGBMClassifier or CatBoostClassifier')
-        if fit_params is None:
-            fit_params = {}
-        self.estimator_.fit(X, y, **fit_params)
+        super().fit(
+            X,
+            y,
+            accept_rate=accept_rate,
+            clv=clv,
+            incentive_fraction=incentive_fraction,
+            contact_cost=contact_cost,
+            fit_params=fit_params,
+            **loss_params,
+        )
         return self
