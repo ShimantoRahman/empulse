@@ -104,6 +104,10 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
+    loss : :class:`empulse.metrics.Metric`, default=None
+        Loss function to optimize. Metric parameters are passed as ``loss_params``
+          to the :Meth:`~empulse.models.CSBoostClassifier.fit` method.
+
     Attributes
     ----------
     classes_ : numpy.ndarray, shape=(n_classes,)

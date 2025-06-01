@@ -50,9 +50,15 @@ class ProfLogitClassifier(BaseLogitClassifier):
         For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : Callable, default= :func:`empulse.metrics.empc_score`
-        Loss function. Should be a Callable with signature ``loss(y_true, y_score)``.
-        By default, expects a loss function to maximize, customize behaviour in `optimize_fn`.
+    loss : Callable or :class:`empulse.metrics.Metric`, default= :func:`empulse.metrics.empc_score`
+        Loss function to optimize.
+
+        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
+
+        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
+
+        By default, loss function is maximized, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
@@ -145,7 +151,9 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_features)
+            Training data.
         y : 1D array-like, shape=(n_samples,)
+            Target values.
         loss_params : dict
             Additional keyword arguments passed to `loss`.
 

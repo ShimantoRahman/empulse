@@ -58,7 +58,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : {'average expected cost'}, Callable or Metric, default='average expected cost'
+    loss : {'average expected cost'}, Callable or :class:`empulse.metrics.Metric`, default='average expected cost'
         Loss function which should be minimized.
 
         - If ``str``, then it should be one of the following:
