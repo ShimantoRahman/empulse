@@ -1,27 +1,12 @@
 import numbers
 from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 from scipy.special import expit
 
 from .._types import FloatArrayLike, FloatNDArray
-
-if TYPE_CHECKING:  # pragma: no cover
-    from numpy.typing import NDArray
-
-    try:
-        from lightgbm import Dataset
-        from xgboost import DMatrix
-
-        Matrix = TypeVar('Matrix', bound=FloatNDArray | DMatrix | Dataset)
-    except ImportError:
-        Matrix = TypeVar('Matrix', bound=FloatNDArray)  # type: ignore[misc]
-else:
-    Matrix = TypeVar('Matrix', bound=FloatNDArray)
-
-
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 
 
@@ -100,7 +85,7 @@ def _compute_log_expected_cost(
     y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     inverse_y_pred = 1 - y_pred
     log_y_pred = np.log(y_pred)
-    log_inv_y_pred: NDArray[np.floating[Any]] = np.log(inverse_y_pred)
+    log_inv_y_pred: FloatNDArray = np.log(inverse_y_pred)
     return y_true * (log_y_pred * tp_cost + log_inv_y_pred * fn_cost) + (1 - y_true) * (
         log_y_pred * fp_cost + log_inv_y_pred * tn_cost
     )
@@ -850,7 +835,7 @@ def make_objective_aec(
     tn_cost: FloatNDArray | float = 0.0,
     fn_cost: FloatNDArray | float = 0.0,
     fp_cost: FloatNDArray | float = 0.0,
-) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
+) -> Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 @overload
@@ -872,7 +857,7 @@ def make_objective_aec(
     fn_cost: FloatNDArray | float = 0.0,
     fp_cost: FloatNDArray | float = 0.0,
 ) -> (
-    Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]
+    Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]
     | Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
     | tuple['AECObjective', 'AECMetric']
 ):
@@ -937,22 +922,22 @@ def make_objective_aec(
            European Journal of Operational Research, 297(1), 291-300.
     """
     if model == 'xgboost':
-        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
+        objective: Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective_boost, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
         )
         update_wrapper(objective, _objective_boost)
     elif model == 'lightgbm':
 
-        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
+        def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the AEC measure.
 
             Parameters
             ----------
-            y_pred : np.ndarray
-                Predicted values.
-            train_data : xgboost.DMatrix, lightgbm.Dataset or numpy.ndarray
-                Training data.
+            y_true : np.ndarray
+                Ground truth labels
+            y_score : np.ndarray
+                Predicted labels
 
             Returns
             -------
@@ -962,9 +947,7 @@ def make_objective_aec(
             hessian : np.ndarray
                 Hessian of the objective function.
             """
-            return _objective_boost(
-                y_pred, train_data, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
+            return _objective_boost(y_true, y_score, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
 
     elif model == 'catboost':
         return (
@@ -1015,8 +998,8 @@ def _objective_cslogit(
 
 
 def _objective_boost(
-    y_pred: FloatNDArray,
-    dtrain: Matrix,
+    y_true: FloatNDArray,
+    y_score: FloatNDArray,
     tp_cost: FloatNDArray | float = 0.0,
     tn_cost: FloatNDArray | float = 0.0,
     fn_cost: FloatNDArray | float = 0.0,
@@ -1027,10 +1010,10 @@ def _objective_boost(
 
     Parameters
     ----------
-    y_pred : np.ndarray
-        Predicted values.
-    dtrain : xgboost.DMatrix, lightgbm.Dataset or numpy.ndarray
-        Training data.
+    y_true : np.ndarray
+        Ground truth labels (0 or 1).
+    y_score : np.ndarray
+        Predicted scores.
 
     Returns
     -------
@@ -1040,17 +1023,10 @@ def _objective_boost(
     hessian : np.ndarray
         Hessian of the objective function.
     """
-    if isinstance(dtrain, np.ndarray):
-        y_true = dtrain
-    elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()  # type: ignore[assignment]
-    else:
-        raise TypeError(f'Expected dtrain to be of type numpy.ndarray or xgboost.DMatrix, got {type(dtrain)} instead.')
-
-    y_pred = expit(y_pred)
+    y_proba = expit(y_score)
     cost = y_true * (tp_cost - fn_cost) + (1 - y_true) * (fp_cost - tn_cost)
-    gradient = y_pred * (1 - y_pred) * cost
-    hessian = np.abs((1 - 2 * y_pred) * gradient)
+    gradient = y_proba * (1 - y_proba) * cost
+    hessian = np.abs((1 - 2 * y_proba) * gradient)
     return gradient, hessian
 
 

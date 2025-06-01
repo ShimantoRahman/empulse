@@ -1,24 +1,11 @@
 from collections.abc import Callable, Sequence
 from functools import partial, update_wrapper
-from typing import TYPE_CHECKING, Literal, TypeVar, overload
+from typing import Literal, overload
 
 import numpy as np
 from scipy.special import expit
 
 from ..._types import FloatArrayLike, FloatNDArray
-
-if TYPE_CHECKING:  # pragma: no cover
-    try:
-        from lightgbm import Dataset
-        from xgboost import DMatrix
-
-        Matrix = TypeVar('Matrix', bound=FloatNDArray | DMatrix | Dataset)
-    except ImportError:
-        Matrix = TypeVar('Matrix', bound=FloatNDArray)  # type: ignore[misc]
-else:
-    Matrix = TypeVar('Matrix', bound=FloatNDArray)
-
-
 from ._validation import _validate_input_cost_loss_churn
 
 
@@ -41,7 +28,7 @@ def make_objective_churn(
     clv: float | FloatNDArray = 200,
     incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 15,
-) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
+) -> Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 def make_objective_churn(
@@ -51,7 +38,10 @@ def make_objective_churn(
     clv: float | FloatNDArray = 200,
     incentive_fraction: float | FloatNDArray = 0.05,
     contact_cost: float = 15,
-) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] | tuple['AECObjectiveChurn', 'AECMetricChurn']:
+) -> (
+    Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]
+    | tuple['AECObjectiveChurn', 'AECMetricChurn']
+):
     """
     Create an objective function for the Expected Cost measure for customer churn.
 
@@ -122,7 +112,7 @@ def make_objective_churn(
 
     """
     if model == 'xgboost':
-        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
+        objective: Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective,
             accept_rate=accept_rate,
             clv=clv,
@@ -132,16 +122,16 @@ def make_objective_churn(
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
 
-        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
+        def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the churn AEC measure.
 
             Parameters
             ----------
-            y_pred : np.ndarray
+            y_true : np.ndarray
+                Ground truth labels.
+            y_score : np.ndarray
                 Predicted values.
-            train_data : xgb.DMatrix or np.ndarray
-                Training data.
 
             Returns
             -------
@@ -152,8 +142,8 @@ def make_objective_churn(
                 Hessian of the objective function.
             """
             return _objective(
-                y_pred,
-                train_data,
+                y_true,
+                y_score,
                 accept_rate=accept_rate,
                 clv=clv,
                 incentive_fraction=incentive_fraction,
@@ -181,8 +171,8 @@ def make_objective_churn(
 
 
 def _objective(
-    y_pred: FloatNDArray,
-    dtrain: Matrix,
+    y_true: FloatNDArray,
+    y_score: FloatNDArray,
     accept_rate: float = 0.3,
     clv: float | FloatNDArray = 200,
     incentive_fraction: float | FloatNDArray = 0.05,
@@ -193,10 +183,10 @@ def _objective(
 
     Parameters
     ----------
-    y_pred : np.ndarray
-        Predicted values.
-    dtrain : xgb.DMatrix or np.ndarray
-        Training data.
+    y_true : np.ndarray
+        Ground truth labels (0 or 1).
+    y_score : np.ndarray
+        Predicted scores.
 
     Returns
     -------
@@ -206,20 +196,14 @@ def _objective(
     hessian : np.ndarray
         Hessian of the objective function.
     """
-    if isinstance(dtrain, np.ndarray):
-        y_true = dtrain
-    elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()  # type: ignore[assignment]
-    else:
-        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
-    y_pred = 1 / (1 + np.exp(-y_pred))
+    y_proba = expit(y_score)
 
     incentive_cost = incentive_fraction * clv
     profits = (
         contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
-    gradient = y_pred * (1 - y_pred) * profits
-    hessian = np.abs((1 - 2 * y_pred) * gradient)
+    gradient = y_proba * (1 - y_proba) * profits
+    hessian = np.abs((1 - 2 * y_proba) * gradient)
     return gradient, hessian
 
 

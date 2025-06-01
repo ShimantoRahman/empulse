@@ -714,7 +714,7 @@ def test_objective_aec_gradient_boost(y_true_and_prediction):
         contact_cost=contact_cost,
         accept_rate=accept_rate,
     )
-    gradient_true, hessian_true = objective(y_proba, y)
+    gradient_true, hessian_true = objective(y, y_proba)
     assert np.allclose(gradient, gradient_true)
     assert np.allclose(hessian, hessian_true)
 

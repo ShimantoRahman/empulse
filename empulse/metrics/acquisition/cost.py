@@ -43,7 +43,7 @@ def make_objective_acquisition(
     sales_cost: float = 500,
     direct_selling: float = 1,
     commission: float = 0.1,
-) -> Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]: ...
+) -> Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]: ...
 
 
 def make_objective_acquisition(
@@ -56,7 +56,7 @@ def make_objective_acquisition(
     commission: float = 0.1,
 ) -> (
     tuple['AECObjectiveAcquisition', 'AECMetricAcquisition']
-    | Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]]
+    | Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]]
 ):
     """
     Create an objective function for the Expected Cost measure for customer acquisition.
@@ -122,7 +122,7 @@ def make_objective_acquisition(
         Annals of Operations Research, 1-27.
     """
     if model == 'xgboost':
-        objective: Callable[[FloatNDArray, Matrix], tuple[FloatNDArray, FloatNDArray]] = partial(
+        objective: Callable[[FloatNDArray, FloatNDArray], tuple[FloatNDArray, FloatNDArray]] = partial(
             _objective,
             contribution=contribution,
             contact_cost=contact_cost,
@@ -133,16 +133,16 @@ def make_objective_acquisition(
         update_wrapper(objective, _objective)
     elif model == 'lightgbm':
 
-        def objective(y_pred: FloatNDArray, train_data: Matrix) -> tuple[FloatNDArray, FloatNDArray]:
+        def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
             """
             Create an objective function for the churn AEC measure.
 
             Parameters
             ----------
-            y_pred : np.ndarray
+            y_true : np.ndarray
+                Ground truth labels.
+            y_score : np.ndarray
                 Predicted values.
-            train_data : xgb.DMatrix or np.ndarray
-                Training data.
 
             Returns
             -------
@@ -153,8 +153,8 @@ def make_objective_acquisition(
                 Hessian of the objective function.
             """
             return _objective(
-                y_pred,
-                train_data,
+                y_true,
+                y_score,
                 contribution=contribution,
                 contact_cost=contact_cost,
                 sales_cost=sales_cost,
@@ -185,8 +185,8 @@ def make_objective_acquisition(
 
 
 def _objective(
-    y_pred: FloatNDArray,
-    dtrain: Matrix,
+    y_true: FloatNDArray,
+    y_score: FloatNDArray,
     contribution: float = 7_000,
     contact_cost: float = 50,
     sales_cost: float = 500,
@@ -198,10 +198,10 @@ def _objective(
 
     Parameters
     ----------
-    y_pred : np.ndarray
+    y_true : np.ndarray
+        Ground truth labels.
+    y_score : np.ndarray
         Predicted values.
-    dtrain : xgb.DMatrix or np.ndarray
-        Training data.
 
     Returns
     -------
@@ -211,14 +211,7 @@ def _objective(
     hessian : np.ndarray
         Hessian of the objective function.
     """
-    if isinstance(dtrain, np.ndarray):
-        y_true = dtrain
-    elif hasattr(dtrain, 'get_label'):
-        y_true = dtrain.get_label()  # type: ignore[assignment]
-    else:
-        raise TypeError(f'Expected dtrain to be of type np.ndarray or xgb.DMatrix, got {type(dtrain)} instead.')
-
-    y_pred = 1 / (1 + np.exp(-y_pred))
+    y_proba = expit(y_score)
     cost = (
         y_true
         * (
@@ -227,8 +220,8 @@ def _objective(
         )
         + (1 - y_true) * contact_cost
     )
-    gradient = y_pred * (1 - y_pred) * cost
-    hessian = np.abs((1 - 2 * y_pred) * gradient)
+    gradient = y_proba * (1 - y_proba) * cost
+    hessian = np.abs((1 - 2 * y_proba) * gradient)
     return gradient, hessian
 
 
