@@ -1,6 +1,16 @@
 `Unreleased`_
 =============
 
+...
+
+`0.8.0`_ (01-06-2025)
+=====================
+
+- |Feature| :class:`~empulse.models.CSBoostClassifier`, :class:`~empulse.models.CSLogitClassifier`, and
+  :class:`~empulse.models.ProfLogitClassifier` can now take
+  a :class:`~empulse.metrics.Metric` instance as their loss function.
+  Internally, the metric instance is converted to the appropriate loss function for the model.
+  For more information, read the :ref:`User Guide <metric_class_in_model>`.
 - |Feature| Type hints are now available for all functions and classes.
 - |Enhancement| Add support for more than one stochastic variable when building maximum profit metrics with
   :class:`~empulse.metrics.Metric`
@@ -8,6 +18,7 @@
   This ensures the metric is always built after defining the cost-benefit elements.
 - |Fix| Fix datasets not properly being packaged together with the package
 - |Fix| Fix :class:`~empulse.models.RobustCSClassifier` when array-like parameters are passed to fit method.
+- |Fix| Fix boosting models being biased towards the positive class.
 
 `0.7.0`_ (05-02-2025)
 =====================
@@ -89,7 +100,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.7.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.8.0...main
+.. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0
 .. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0
 .. _0.6.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0
 .. _0.5.2: https://github.com/ShimantoRahman/empulse/releases/tag/0.5.2
