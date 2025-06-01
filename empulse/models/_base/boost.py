@@ -84,7 +84,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
 
     @abstractmethod
     def _fit(
-        self, X: NDArray[Any], y: NDArray[Any], fit_params: dict[str, Any] | None = None, **loss_params: Any
+        self, X: NDArray[Any], y: NDArray[Any], *, fit_params: dict[str, Any] | None = None, **loss_params: Any
     ) -> Self: ...
 
     def predict_proba(self, X: ArrayLike) -> FloatNDArray:
