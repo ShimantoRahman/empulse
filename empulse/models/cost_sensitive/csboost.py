@@ -3,7 +3,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
 from numbers import Real
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -24,15 +24,15 @@ else:
 try:
     from xgboost import XGBClassifier
 except ImportError:
-    XGBClassifier = None  # type: ignore[assignment, misc]
+    XGBClassifier = TypeVar('XGBClassifier')  # type: ignore[misc, assignment]
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
-    LGBMClassifier = None  # type: ignore[assignment, misc]
+    LGBMClassifier = TypeVar('LGBMClassifier')  # type: ignore[misc, assignment]
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None
+    CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
 from ...metrics import Metric, make_objective_aec

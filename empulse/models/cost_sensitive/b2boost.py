@@ -1,6 +1,6 @@
 import sys
 from numbers import Real
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 import numpy as np
 import sympy
@@ -16,15 +16,15 @@ else:
 try:
     from xgboost import XGBClassifier
 except ImportError:
-    XGBClassifier = None  # type: ignore[misc, assignment]
+    XGBClassifier = TypeVar('XGBClassifier')  # type: ignore[misc, assignment]
 try:
     from lightgbm import LGBMClassifier
 except ImportError:
-    LGBMClassifier = None  # type: ignore[misc, assignment]
+    LGBMClassifier = TypeVar('LGBMClassifier')  # type: ignore[misc, assignment]
 try:
     from catboost import CatBoostClassifier
 except ImportError:
-    CatBoostClassifier = None
+    CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
 from ...metrics import Metric
