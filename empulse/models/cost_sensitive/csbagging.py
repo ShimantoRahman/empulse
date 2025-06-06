@@ -116,11 +116,7 @@ def _parallel_build_estimators(
                 key: (value.reshape(-1)[indices] if isinstance(value, np.ndarray) else value)
                 for key, value in loss_params.items()
             }
-            estimator.fit(
-                (X[indices])[:, features],
-                y[indices],
-                **params,
-            )
+            estimator.fit((X[indices])[:, features], y[indices], **params)
         samples = sample_counts > 0.0
 
         estimators.append(estimator)
