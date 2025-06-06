@@ -40,9 +40,9 @@ from .._base import BaseBoostClassifier
 from ._cs_mixin import CostSensitiveMixin
 
 # Hessian is 0 at score 0.5
-# which means that at initialization the model doesn't do anything
-# therefore we add a small nudge which kickstarts the optimization algorithm
-_BASE_SCORE = 0.5 + 1e-3
+# which means that at initialization the model optimization doesn't do anything
+# therefore we add a small nudge which kickstarts the optimization algorithm (so hessian is not 0)
+_BASE_SCORE = 0.5 + 1e-2
 
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
