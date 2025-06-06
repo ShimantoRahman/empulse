@@ -236,13 +236,14 @@ def set_metric_loss(estimator, loss):
         raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
 
 
+@pytest.mark.parametrize('kind', ['cost', 'savings'])
 @pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
-def test_metric_api_consistency(estimator, dataset):
+def test_metric_api_consistency(estimator, dataset, kind):
     """Test that the metric API is consistent with the cost matrix API."""
     X, y, _, _ = dataset
     a, b = sympy.symbols('a b')
 
-    with Metric('cost') as cost_loss:
+    with Metric(kind) as cost_loss:
         cost_loss.add_fn_cost(a)
         cost_loss.add_fp_cost(b)
 
