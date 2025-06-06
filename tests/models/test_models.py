@@ -244,8 +244,7 @@ def test_metric_api_consistency(estimator, dataset, kind):
     a, b = sympy.symbols('a b')
 
     with Metric(kind) as cost_loss:
-        cost_loss.add_fn_cost(a)
-        cost_loss.add_fp_cost(b)
+        cost_loss.add_fn_cost(a).add_fp_cost(b)
 
     model_metric = set_metric_loss(clone(estimator), cost_loss)
     model = clone(estimator)
