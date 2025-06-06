@@ -835,6 +835,9 @@ class Metric:
             y_pred = np.expand_dims(y_pred, axis=1)
         if y_true.ndim == 1:
             y_true = np.expand_dims(y_true, axis=1)
+        for key, value in parameters.items():
+            if isinstance(value, np.ndarray) and value.ndim == 1:
+                parameters[key] = np.expand_dims(value, axis=1)
 
         gradient = self._gradient_logit_function(features, y_true, y_pred, **parameters)
         value = self._score_logit_function(y_true, y_pred, **parameters)

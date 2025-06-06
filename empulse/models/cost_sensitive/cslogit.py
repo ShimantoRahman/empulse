@@ -348,16 +348,16 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             loss = make_objective_aec(model='cslogit', **loss_params)
             objective: ObjectiveFn = _objective_jacobian
             optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
+        elif isinstance(self.loss, Metric):
+            loss = partial(self.loss._logit_objective, **loss_params)
+            objective = _objective_jacobian
+            optimize_fn = _optimize_jacobian
         elif self.loss is not None and not isinstance(self.loss, str):
             loss: Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]] = partial(  # type: ignore[no-redef]
                 self.loss, **loss_params
             )
             objective = _objective_callable
             optimize_fn = self._optimize
-        elif isinstance(self.loss, Metric):
-            loss = partial(self.loss, **loss_params)
-            objective = _objective_jacobian
-            optimize_fn = _optimize_jacobian
         else:
             raise ValueError(f'Invalid loss function: {self.loss}')
 

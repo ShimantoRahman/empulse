@@ -4,6 +4,8 @@
 - |Feature| Allow savings metrics to be used in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.CSLogitClassifier` as the objective function.
 - |Fix| Fix error when importing Empulse without any optional dependencies installed.
+- |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly using the gradient
+  when using a custom loss function from :class:`~empulse.metrics.Metric`.
 
 `0.8.0`_ (01-06-2025)
 =====================
