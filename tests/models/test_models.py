@@ -299,10 +299,7 @@ def test_data_format_metric_loss(estimator, dataset):
 
     tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
     with Metric('cost') as cost_loss:
-        cost_loss.add_tp_cost(tp)
-        cost_loss.add_tn_cost(tn)
-        cost_loss.add_fn_cost(fn)
-        cost_loss.add_fp_cost(fp)
+        cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 
@@ -311,3 +308,21 @@ def test_data_format_metric_loss(estimator, dataset):
         estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
     else:
         estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_metric_loss_all_default_params(estimator, dataset):
+    """Test that the metric loss works with all default parameters."""
+    X, y, _, _ = dataset
+
+    fn, fp = sympy.symbols('fn fp')
+    with Metric('cost') as cost_loss:
+        cost_loss.add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+
+    if isinstance(estimator, CSThresholdClassifier):
+        estimator.fit(X, y)
+        estimator.predict(X)
+    else:
+        estimator.fit(X, y)
