@@ -54,11 +54,23 @@ The table below summarizes the Empulse models that support custom metrics:
       - Maximum profit
     * - :class:`~empulse.models.CSLogitClassifier`
       - ✅
-      - ❌
+      - ✅
       - ❌
     * - :class:`~empulse.models.CSBoostClassifier`
       - ✅
+      - ✅
       - ❌
+    * - :class:`~empulse.models.CSTreeClassifier`
+      - ✅
+      - ✅
+      - ❌
+    * - :class:`~empulse.models.CSForestClassifier`
+      - ✅
+      - ✅
+      - ❌
+    * - :class:`~empulse.models.CSBaggingClassifier`
+      - ✅
+      - ✅
       - ❌
     * - :class:`~empulse.models.CSThresholdClassifier`
       - ✅
