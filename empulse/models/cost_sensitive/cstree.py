@@ -7,12 +7,12 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
-from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
+from sklearn.utils._param_validation import HasMethods, Interval, RealNotInt, StrOptions
 from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
-from ...metrics import cost_loss
+from ...metrics import Metric, cost_loss
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
@@ -64,10 +64,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    criterion : {"direct_cost", "pi_cost", "gini_cost" or "entropy_cost"}, default="direct_cost"
-        The function to measure the quality of a split. Supported criteria are
-        "direct_cost" for the Direct Cost impurity measure, "pi_cost", "gini_cost",
-        and "entropy_cost".
+    criterion : {"direct_cost", "pi_cost", "gini_cost" or "entropy_cost"} or Metric, default="direct_cost"
+        The function to measure the quality of a split.
+
+        - If ``str``: Supported criteria are "direct_cost" for the Direct Cost impurity measure,
+          "pi_cost", "gini_cost", and "entropy_cost".
+        - If :class:`empulse.metrics.Metric`: metric determines how to calculate the quality of a split.
 
     criterion_weight : bool, default=False
         Whenever or not to weight the gain according to the population distribution.
@@ -142,7 +144,10 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
-        'criterion': [StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'})],
+        'criterion': [
+            StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'}),
+            HasMethods('_gradient_boost_objective'),
+        ],
         'criterion_weight': ['boolean'],
         'num_pct': [Interval(Real, left=0, right=100, closed='both')],
         'max_features': [
@@ -172,7 +177,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] = 'direct_cost',
+        criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] | Metric = 'direct_cost',
         criterion_weight: bool = False,
         num_pct: int = 100,
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float | None = None,
@@ -262,7 +267,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             costs *= pi
         elif self.criterion == 'gini_cost':
             costs *= pi**2
-        elif self.criterion in 'entropy_cost':
+        elif self.criterion == 'entropy_cost':
             if pi[0] == 0 or pi[1] == 0:
                 costs *= 0
             else:
@@ -502,6 +507,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **loss_params: Any,
     ) -> Self:
         """
         Build an example-dependent cost-sensitive decision tree from the training set.
@@ -530,6 +536,9 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
         Returns
         -------
         self : object
@@ -545,15 +554,20 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")
         y = np.where(y == self.classes_[1], 1, 0)
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            force_array=True,
-            n_samples=len(y),
-        )
-        cost_mat = np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
+
+        if isinstance(self.criterion, Metric):
+            cost_mat = self.criterion._get_cost_matrix(n_samples=len(y), **loss_params)
+        else:
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+                force_array=True,
+                n_samples=len(y),
+            )
+            cost_mat = np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
+
         self._rng = check_random_state(self.random_state)
         _, self.n_features_ = X.shape
 

@@ -1,6 +1,9 @@
 `Unreleased`_
 =============
 
+- |Feature| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`, and
+  :class:`~empulse.models.CSBaggingClassifier` can now take
+  a :class:`~empulse.metrics.Metric` instance as their loss function.
 - |Feature| Allow savings metrics to be used in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.CSLogitClassifier` as the objective function.
 - |Fix| Fix error when importing Empulse without any optional dependencies installed.

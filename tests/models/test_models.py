@@ -59,6 +59,10 @@ def expected_failed_checks(estimator):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
     if isinstance(estimator, B2BoostClassifier):
         return {'check_estimators_pickle': 'Currently B2Boost is not pickleable since metric class uses closures.'}
+    if isinstance(estimator, CSTreeClassifier | CSForestClassifier):
+        return {
+            'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
+        }
     return {}
 
 

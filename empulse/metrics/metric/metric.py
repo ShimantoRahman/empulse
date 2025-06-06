@@ -908,14 +908,9 @@ class Metric:
         """
         parameters = self._prepare_parameters(**parameters)
 
-        denominator_expression = self.fp_cost - self.tn_cost + self.fn_cost - self.tp_cost
-        denominator_params = _filter_parameters(denominator_expression, parameters)
-        denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)(
-            **denominator_params
-        )
-        numerator_expression = self.fp_cost - self.tn_cost
-        numerator_params = _filter_parameters(numerator_expression, parameters)
-        numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)(**numerator_params)
+        denominator = _evaluate_expression(self.fp_cost - self.tn_cost + self.fn_cost - self.tp_cost, **parameters)
+        numerator = _evaluate_expression(self.fp_cost - self.tn_cost, **parameters)
+
         # Avoid division by zero
         if isinstance(denominator, float | int):
             if denominator == 0:
@@ -925,6 +920,44 @@ class Metric:
         optimal_thresholds: FloatNDArray | float = numerator / denominator
 
         return optimal_thresholds
+
+    def _get_cost_matrix(self, n_samples: int, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the cost matrix based on the metric's costs and benefits.
+
+        Parameters
+        ----------
+        n_samples : int
+            The number of samples for which to compute the cost matrix.
+            This is used to ensure that the cost matrix has the correct shape.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+        Returns
+        -------
+        cost_matrix : NDArray of shape (4, 1, N)
+            The cost matrix consisting of fp_cost, fn_cost, tp_cost, and tn_cost (in that order).
+        """
+        parameters = self._prepare_parameters(**parameters)
+
+        fp_cost = _evaluate_expression(self.fp_cost, **parameters)
+        fn_cost = _evaluate_expression(self.fn_cost, **parameters)
+        tp_cost = _evaluate_expression(self.tp_cost, **parameters)
+        tn_cost = _evaluate_expression(self.tn_cost, **parameters)
+
+        # Ensure all costs and benefits are numpy arrays with the same length
+        if isinstance(fp_cost, float | int):
+            fp_cost = np.full(n_samples, fp_cost)
+        if isinstance(fn_cost, float | int):
+            fn_cost = np.full(n_samples, fn_cost)
+        if isinstance(tp_cost, float | int):
+            tp_cost = np.full(n_samples, tp_cost)
+        if isinstance(tn_cost, float | int):
+            tn_cost = np.full(n_samples, tn_cost)
+
+        return np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
 
     def __repr__(self) -> str:
         return (
@@ -973,3 +1006,26 @@ def _filter_parameters(
     free_symbols = {str(symbol) for symbol in expression.free_symbols}
     filtered_parameters = {key: value for key, value in parameters.items() if key in free_symbols}
     return filtered_parameters
+
+
+def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | float) -> FloatNDArray | float:
+    """
+    Evaluate a sympy expression with the given parameters.
+
+    Parameters
+    ----------
+    expression : sympy.Expr
+        The sympy expression to convert.
+    parameters : float or NDArray of shape (n_samples,)
+        The parameter values for the costs and benefits defined in the metric.
+        If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+        You can set the parameter values for either the symbol names or their aliases.
+
+    Returns
+    -------
+    function : callable
+        A numpy function that computes the value of the expression with the given parameters.
+    """
+    filtered_parameters = _filter_parameters(expression, parameters)
+    result: float | FloatNDArray = sympy.lambdify(list(expression.free_symbols), expression)(**filtered_parameters)
+    return result

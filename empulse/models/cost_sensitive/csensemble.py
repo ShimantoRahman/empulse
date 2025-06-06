@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.utils._param_validation import HasMethods, Interval, RealNotInt, StrOptions
 
 from ..._types import FloatArrayLike, ParameterConstraint
+from ...metrics import Metric
 from .csbagging import BaggingClassifier
 from .cstree import CSTreeClassifier
 
@@ -155,6 +156,10 @@ class CSForestClassifier(BaggingClassifier):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'combination': [StrOptions({'majority_voting', 'weighted_voting'})],
+        'criterion': [
+            StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'}),
+            HasMethods('_gradient_boost_objective'),
+        ],
         'max_depth': [Interval(Integral, 1, None, closed='left'), None],
         'min_samples_split': [
             Interval(Integral, 2, None, closed='left'),
@@ -177,6 +182,7 @@ class CSForestClassifier(BaggingClassifier):
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
         combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
+        criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] | Metric = 'direct_cost',
         max_features: Literal['auto', 'sqrt', 'log2'] | int | float = 'auto',
         max_samples: int | float = 1.0,
         max_depth: int | None = None,
@@ -193,6 +199,7 @@ class CSForestClassifier(BaggingClassifier):
             estimator=CSTreeClassifier(max_features=1.0),
             n_estimators=n_estimators,
             estimator_params=(
+                'criterion',
                 'max_depth',
                 'min_samples_split',
                 'min_samples_leaf',
@@ -211,6 +218,7 @@ class CSForestClassifier(BaggingClassifier):
             random_state=random_state,
             verbose=verbose,
         )
+        self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf

@@ -17,7 +17,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import savings_score
+from ...metrics import Metric, savings_score
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 from .cslogit import CSLogitClassifier
@@ -52,6 +52,7 @@ def _parallel_build_estimators(
     cost_mat: FloatNDArray,
     seeds: Sequence[int],
     verbose: int,
+    loss_params: dict[str, Any],
 ) -> tuple[list[Any], list[NDArray[np.bool_]], list[IntNDArray]]:
     """Private function used to build a batch of estimators within a job."""
     # Retrieve settings
@@ -97,18 +98,28 @@ def _parallel_build_estimators(
 
         sample_counts = np.bincount(indices, minlength=n_samples)
 
-        fp_cost = cost_mat[:, 0]
-        fn_cost = cost_mat[:, 1]
-        tp_cost = cost_mat[:, 2]
-        tn_cost = cost_mat[:, 3]
-        estimator.fit(
-            (X[indices])[:, features],
-            y[indices],
-            fp_cost=fp_cost[indices],
-            fn_cost=fn_cost[indices],
-            tp_cost=tp_cost[indices],
-            tn_cost=tn_cost[indices],
-        )
+        if not loss_params:
+            fp_cost = cost_mat[:, 0]
+            fn_cost = cost_mat[:, 1]
+            tp_cost = cost_mat[:, 2]
+            tn_cost = cost_mat[:, 3]
+            estimator.fit(
+                (X[indices])[:, features],
+                y[indices],
+                fp_cost=fp_cost[indices],
+                fn_cost=fn_cost[indices],
+                tp_cost=tp_cost[indices],
+                tn_cost=tn_cost[indices],
+            )
+        else:
+            params = {
+                key: (value[indices] if isinstance(value, np.ndarray) else value) for key, value in loss_params.items()
+            }
+            estimator.fit(
+                (X[indices])[:, features],
+                y[indices],
+                **params,
+            )
         samples = sample_counts > 0.0
 
         estimators.append(estimator)
@@ -242,6 +253,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):  # type:
         tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **loss_params: Any,
     ) -> Self:
         """Build a Bagging ensemble of estimators from the training set (X, y).
 
@@ -270,6 +282,9 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):  # type:
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
         Returns
         -------
         self : object
@@ -287,15 +302,21 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):  # type:
         if len(self.classes_) == 1:
             raise ValueError("Classifier can't train when only one class is present.")
         y = np.where(y == self.classes_[1], 1, 0)
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            force_array=True,
-            n_samples=len(y),
-        )
-        cost_mat = np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
+
+        if hasattr(self, 'criterion') and isinstance(self.criterion, Metric):  # set by subclasses
+            cost_mat = self.criterion._get_cost_matrix(len(y), **loss_params)
+        elif hasattr(self.estimator, 'criterion') and isinstance(self.estimator.criterion, Metric):
+            cost_mat = self.estimator.criterion._get_cost_matrix(len(y), **loss_params)
+        else:
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+                force_array=True,
+                n_samples=len(y),
+            )
+            cost_mat = np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
 
         # Remap output
         n_samples, self.n_features_ = X.shape
@@ -344,6 +365,7 @@ class BaseBagging(CostSensitiveMixin, BaseEnsemble, metaclass=ABCMeta):  # type:
                 cost_mat,
                 seeds[starts[i] : starts[i + 1]],
                 verbose=self.verbose,
+                loss_params=loss_params,
             )
             for i in range(n_jobs)
         )
