@@ -216,22 +216,27 @@ class Metric:
 
             return undefined_fn
 
-        self.build_gradient_logit = gradient_logit_undefined
-        self.build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
+        self._build_gradient_logit = gradient_logit_undefined
+        self._build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
+        self._build_logit_metric = None  # if None, will use the same function as _build_metric for logit objective
         if kind == 'max profit':
             self.direction = Direction.MAXIMIZE
-            self.build_metric = _build_max_profit_score
-            self.metric_to_latex = _max_profit_score_to_latex
+            self._build_metric = _build_max_profit_score
+            self._metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
             self.direction = Direction.MINIMIZE
-            self.build_metric = _build_cost_loss
-            self.build_gradient_logit = _build_cost_logit_objective
-            self.build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
-            self.metric_to_latex = _cost_loss_to_latex
+            self._build_metric = _build_cost_loss
+            self._build_gradient_logit = _build_cost_logit_objective
+            self._build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
+            self._metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
             self.direction = Direction.MAXIMIZE
-            self.build_metric = _build_savings_score
-            self.metric_to_latex = _savings_score_to_latex
+            self._build_metric = _build_savings_score
+            # savings is just a rescaling of cost, so we can use the same functions
+            self._build_logit_metric = _build_cost_loss
+            self._build_gradient_logit = _build_cost_logit_objective
+            self._build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
+            self._metric_to_latex = _savings_score_to_latex
         self.integration_method = 'auto'
         self.n_mc_samples: int = 2**16
         self._rng = np.random.RandomState(None)
@@ -702,7 +707,7 @@ class Metric:
         Metric
         """
         self._built = True
-        self._score_function = self.build_metric(
+        self._score_function = self._build_metric(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
@@ -711,13 +716,25 @@ class Metric:
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
         )
-        self._gradient_logit_function: LogitObjective = self.build_gradient_logit(
+        if self._build_logit_metric is not None:
+            self._score_logit_function = self._build_logit_metric(
+                tp_benefit=self.tp_benefit,
+                tn_benefit=self.tn_benefit,
+                fp_cost=self.fp_cost,
+                fn_cost=self.fn_cost,
+                integration_method=self.integration_method,
+                n_mc_samples=self.n_mc_samples,
+                rng=self._rng,
+            )
+        else:
+            self._score_logit_function = self._score_function
+        self._gradient_logit_function: LogitObjective = self._build_gradient_logit(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
-        self._gradient_hessian_gboost_function: BoostObjective = self.build_gradient_hessian_gboost(
+        self._gradient_hessian_gboost_function: BoostObjective = self._build_gradient_hessian_gboost(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
@@ -820,7 +837,7 @@ class Metric:
             y_true = np.expand_dims(y_true, axis=1)
 
         gradient = self._gradient_logit_function(features, y_true, y_pred, **parameters)
-        value = self.__call__(y_true, y_pred, **parameters)
+        value = self._score_logit_function(y_true, y_pred, **parameters)
         return value, gradient
 
     def _gradient_boost_objective(
@@ -917,7 +934,7 @@ class Metric:
         )
 
     def _repr_latex_(self) -> str:
-        return self.metric_to_latex(
+        return self._metric_to_latex(
             tp_benefit=self.tp_benefit, tn_benefit=self.tn_benefit, fp_cost=self.fp_cost, fn_cost=self.fn_cost
         )
 

@@ -754,7 +754,7 @@ def test_objective_aec_logit():
     assert np.allclose(gradient, gradient_true)
 
 
-@pytest.mark.parametrize('kind', ['max profit', 'savings'])
+@pytest.mark.parametrize('kind', ['max profit'])
 def test_objective_logit_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(kind).add_tp_benefit(clv).build()
@@ -762,7 +762,7 @@ def test_objective_logit_unsupported(kind):
         metric._logit_objective(np.array([1]), np.array([1]), np.array([1]))
 
 
-@pytest.mark.parametrize('kind', ['max profit', 'savings'])
+@pytest.mark.parametrize('kind', ['max profit'])
 def test_objective_boost_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(kind).add_tp_benefit(clv).build()
