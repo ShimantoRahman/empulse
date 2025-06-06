@@ -175,7 +175,8 @@ def test_cost_loss_performance(classifier, data):
 @pytest.fixture(scope='module')
 def dataset():
     X, y = make_classification(n_samples=50, random_state=42)
-    fn_cost = np.random.rand(y.size)
+    rng = np.random.default_rng(42)
+    fn_cost = rng.random(y.size)
     fp_cost = 5
     return X, y, fn_cost, fp_cost
 
