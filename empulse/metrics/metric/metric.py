@@ -750,7 +750,7 @@ class Metric:
 
         for key, value in kwargs.items():
             if not isinstance(value, Real):
-                kwargs[key] = np.asarray(value)
+                kwargs[key] = np.asarray(value).reshape(-1)
 
         # Map aliases to the appropriate symbols
         for alias, symbol in self._aliases.items():
@@ -937,7 +937,7 @@ class Metric:
 
         Returns
         -------
-        cost_matrix : NDArray of shape (4, 1, N)
+        cost_matrix : NDArray of shape (N, 4)
             The cost matrix consisting of fp_cost, fn_cost, tp_cost, and tn_cost (in that order).
         """
         parameters = self._prepare_parameters(**parameters)

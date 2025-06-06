@@ -104,6 +104,12 @@ class CostSensitiveMixin:
             if not isinstance(fp_cost, Real):
                 fp_cost = np.asarray(fp_cost)
 
+        # Normalize shapes to (1, N)
+        tp_cost = tp_cost.reshape(-1) if isinstance(tp_cost, np.ndarray) else tp_cost
+        tn_cost = tn_cost.reshape(-1) if isinstance(tn_cost, np.ndarray) else tn_cost
+        fn_cost = fn_cost.reshape(-1) if isinstance(fn_cost, np.ndarray) else fn_cost
+        fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
+
         return tp_cost, tn_cost, fn_cost, fp_cost
 
 

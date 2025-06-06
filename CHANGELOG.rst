@@ -9,6 +9,7 @@
 - |Fix| Fix error when importing Empulse without any optional dependencies installed.
 - |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly using the gradient
   when using a custom loss function from :class:`~empulse.metrics.Metric`.
+- |Fix| Fix models throwing errors when differently shaped costs are passed to the fit or predict method.
 
 `0.8.0`_ (01-06-2025)
 =====================

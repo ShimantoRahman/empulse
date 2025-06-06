@@ -2,6 +2,8 @@ import inspect
 
 import numpy as np
 import pytest
+import sympy
+from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -10,7 +12,7 @@ from sklearn.utils._param_validation import InvalidParameterError
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
-from empulse.metrics import cost_loss
+from empulse.metrics import Metric, cost_loss
 from empulse.models import (
     B2BoostClassifier,
     BiasRelabelingClassifier,
@@ -42,6 +44,14 @@ ESTIMATORS = (
     ),
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
+)
+METRIC_ESTIMATORS = (
+    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
+    CSBoostClassifier(),
+    CSLogitClassifier(optimizer_params={'max_iter': 10}),
+    CSTreeClassifier(max_depth=2),
+    CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
+    # RobustCSClassifier(estimator=CSBoostClassifier()),
 )
 
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
@@ -212,3 +222,92 @@ def test_invalid_params(estimator_class, dataset):
             model = estimator_class(**invalid_params)
         with pytest.raises(InvalidParameterError):
             model.fit(X, y)
+
+
+def set_metric_loss(estimator, loss):
+    """Set the metric loss for the estimator."""
+    if hasattr(estimator, 'loss'):
+        return estimator.set_params(loss=loss)
+    elif hasattr(estimator, 'criterion'):
+        return estimator.set_params(criterion=loss)
+    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'criterion'):
+        return estimator.set_params(estimator__criterion=loss)
+    else:
+        raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_metric_api_consistency(estimator, dataset):
+    """Test that the metric API is consistent with the cost matrix API."""
+    X, y, _, _ = dataset
+    a, b = sympy.symbols('a b')
+
+    with Metric('cost') as cost_loss:
+        cost_loss.add_fn_cost(a)
+        cost_loss.add_fp_cost(b)
+
+    model_metric = set_metric_loss(clone(estimator), cost_loss)
+    model = clone(estimator)
+
+    if isinstance(model, CSThresholdClassifier):
+        model.fit(X, y)
+        model_metric.fit(X, y)
+
+        preds_metric = model_metric.predict(X, a=1, b=1)
+        preds_metric_weighted = model_metric.predict(X, a=1, b=10)
+        preds = model.predict(X, fp_cost=1, fn_cost=1)
+        assert np.allclose(preds_metric, preds)
+        assert not np.allclose(preds_metric_weighted, preds)
+    else:
+        model_metric.fit(X, y, a=1, b=1)
+        model.fit(X, y, fp_cost=1, fn_cost=1)
+
+        preds_metric = model_metric.predict_proba(X)[:, 1]
+        preds = model.predict_proba(X)[:, 1]
+        assert np.allclose(preds_metric, preds)
+
+        model_metric.fit(X, y, a=1, b=10)
+        preds_metric_weighted = model_metric.predict_proba(X)[:, 1]
+        assert not np.allclose(preds_metric_weighted, preds)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_data_format(estimator, dataset):
+    """Test that the estimators accept data in different formats."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
+    fn_cost = np.ones(y.size)
+    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
+
+    estimator = clone(estimator)
+    if isinstance(estimator, CSThresholdClassifier):
+        estimator.fit(X, y)
+        estimator.predict(X, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+    else:
+        estimator.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, tp_cost=tp_cost, tn_cost=tn_cost)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_data_format_metric_loss(estimator, dataset):
+    """Test that the estimators accept data in different formats when using metric loss."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
+    fn_cost = np.ones(y.size)
+    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
+
+    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
+    with Metric('cost') as cost_loss:
+        cost_loss.add_tp_cost(tp)
+        cost_loss.add_tn_cost(tn)
+        cost_loss.add_fn_cost(fn)
+        cost_loss.add_fp_cost(fp)
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+
+    if isinstance(estimator, CSThresholdClassifier):
+        estimator.fit(X, y)
+        estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+    else:
+        estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)

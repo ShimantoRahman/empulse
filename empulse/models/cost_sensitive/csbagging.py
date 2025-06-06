@@ -113,7 +113,8 @@ def _parallel_build_estimators(
             )
         else:
             params = {
-                key: (value[indices] if isinstance(value, np.ndarray) else value) for key, value in loss_params.items()
+                key: (value.reshape(-1)[indices] if isinstance(value, np.ndarray) else value)
+                for key, value in loss_params.items()
             }
             estimator.fit(
                 (X[indices])[:, features],
