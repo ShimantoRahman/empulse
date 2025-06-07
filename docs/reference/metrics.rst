@@ -6,6 +6,21 @@ empulse.metrics
 The :mod:`~empulse.metrics` module contains a collection of metrics for evaluating the performance of
 models in the context of customer churn, credit scoring, and acquisition.
 
+
+Build your own cost-sensitive metric
+------------------------------------
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+   :template: base.rst
+
+   Metric
+   MetricStrategy
+   MaxProfitStrategy
+   CostStrategy
+   SavingsStrategy
+
 General Metrics
 ---------------
 
@@ -14,7 +29,6 @@ General Metrics
    :nosignatures:
    :template: base.rst
 
-   Metric
    max_profit
    max_profit_score
    lift_score
