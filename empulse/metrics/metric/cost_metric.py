@@ -19,9 +19,6 @@ def _build_cost_loss(
     tn_benefit: sympy.Expr,
     fp_cost: sympy.Expr,
     fn_cost: sympy.Expr,
-    integration_method: str,
-    n_mc_samples: int,
-    rng: np.random.RandomState,
 ) -> MetricFn:
     cost_function = _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
     if any(sympy.stats.rv.is_random(symbol) for symbol in cost_function.free_symbols):
@@ -83,9 +80,6 @@ def _build_cost_optimal_threshold(
     tn_benefit: sympy.Expr,
     fp_cost: sympy.Expr,
     fn_cost: sympy.Expr,
-    integration_method: str,
-    n_mc_samples: int,
-    rng: np.random.RandomState,
 ) -> ThresholdFn:
     denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
     numerator_expression = fp_cost + tn_benefit

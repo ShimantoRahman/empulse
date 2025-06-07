@@ -14,7 +14,7 @@ from empulse.optimizers import Generation
 
 from .._types import FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import Metric, empc_score
-from ..metrics.metric.metric import Direction
+from ..metrics.metric.common import Direction
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
 
 if sys.version_info >= (3, 11):

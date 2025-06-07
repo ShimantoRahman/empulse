@@ -4,7 +4,7 @@
 Define your own cost-sensitive or value metric
 ==============================================
 
-Empulse allows users to define their own cost-senstive/value metric using the :class:`empulse.metrics.Metric` class.
+Empulse allows users to define their own cost-sensitive/value metric using the :class:`empulse.metrics.Metric` class.
 This is useful for when the default metrics are not appropriate for the your application.
 
 As an example, we will redefine the Maximum Profit measure for customer churn (MPC) and
@@ -46,19 +46,19 @@ uses Sympy under the hood to compute the metric.
 
 :class:`empulse.metrics.Metric` class uses a builder design pattern to step-by-step define the metric.
 First, you need to define which type of metric you want to implement.
-In this case, we want to implement a maximum profit metric, so will pass the ``kind`` as ``"max_profit"``.
+In this case, we want to implement a maximum profit metric, so we use the :class:`empulse.metrics.MaxProfitStrategy`.
 
 
 .. code-block:: python
 
-    from empulse.metrics import Metric
+    from empulse.metrics import Metric, MaxProfitStrategy
 
-    mpc_score = Metric(kind='max profit')
+    mpc_score = Metric(MaxProfitStrategy())
 
 Afterwards we can start assembling all parts of the cost-benefit matrix.
 
 1. We can add the true positive benefit when a churner accepts the offer and stays with the company;
-2. the true possitive benefit when a churner does not accept the offer and leaves the company;
+2. the true positive benefit when a churner does not accept the offer and leaves the company;
 3. the false positive cost when a non-churner accepts the offer and stays with the company.
 
 .. code-block:: python
@@ -88,7 +88,7 @@ We can easily change this by using the ``alias`` method before building the metr
 .. code-block:: python
 
     mpc_score = (
-        Metric(kind='max profit')
+        Metric(MaxProfitStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -104,7 +104,7 @@ through the ``set_default`` method.
 .. code-block:: python
 
     mpc_score = (
-        Metric(kind='max profit')
+        Metric(MaxProfitStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -133,7 +133,7 @@ The only thing that you need to change from the MPC example above, is to define 
     gamma = sympy.stats.Beta('gamma', alpha, beta)
 
     empc_score = (
-        Metric(kind="max profit")
+        Metric(MaxProfitStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -152,7 +152,7 @@ You can also define :math:`\gamma` to follow a Uniform distribution with from 0 
     gamma = sympy.stats.Uniform('gamma', 0, 1)
 
     empc_score = (
-        Metric(kind="max profit")
+        Metric(MaxProfitStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -172,7 +172,7 @@ We'll define :math:`clv` to follow a Gamma distribution with parameters :math:`\
     clv = sympy.stats.Gamma('clv', alpha, beta)
 
     empc_score = (
-        Metric(kind="max profit")
+        Metric(MaxProfitStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -187,17 +187,19 @@ Implementing expected cost and savings
 --------------------------------------
 
 Now that we have defined the cost-benefit matrix,
-we can also create expected cost and savings metrics by just changing the ``kind`` of metric.
+we can also create expected cost and savings metrics by just changing the ``strategy`` of metric.
 
 Expected Cost
 ~~~~~~~~~~~~~
 
 .. code-block:: python
 
+    from empulse.metrics import CostStrategy
+
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     expected_cost_loss = (
-        Metric(kind='cost')  # change the kind to 'savings'
+        Metric(CostStrategy())  # change the kind to cost
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -213,10 +215,12 @@ Expected Savings
 
 .. code-block:: python
 
+    from empulse.metrics import SavingsStrategy
+
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     expected_savings_score = (
-        Metric(kind='savings')  # change the kind to 'savings'
+        Metric(SavingsStrategy())  # change the strategy to savings
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)

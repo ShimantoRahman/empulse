@@ -15,7 +15,7 @@ from sympy.utilities import lambdify
 from ..._types import FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from ..common import classification_threshold
-from .common import MetricFn, _check_parameters
+from .common import MetricFn, RateFn, ThresholdFn, _check_parameters
 
 _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
@@ -91,7 +91,7 @@ def _build_max_profit_optimal_threshold(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.RandomState,
-) -> MetricFn:
+) -> ThresholdFn:
     random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 
@@ -113,7 +113,7 @@ def _build_max_profit_optimal_rate(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.RandomState,
-) -> MetricFn:
+) -> RateFn:
     random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from enum import Enum, auto
 from typing import Any, ParamSpec, Protocol, TypeVar
 
 import sympy
@@ -8,6 +9,13 @@ from ..._types import FloatNDArray
 T = TypeVar('T', bound=Callable[..., Any])
 P = ParamSpec('P')
 R = TypeVar('R')
+
+
+class Direction(Enum):
+    """Optimization direction of metric."""
+
+    MAXIMIZE = auto()
+    MINIMIZE = auto()
 
 
 class MetricFn(Protocol):  # noqa: D101

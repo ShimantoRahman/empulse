@@ -15,7 +15,7 @@ For example defining a custom metric and using it in a model can be done as foll
 
     import numpy as np
     import sympy
-    from empulse.metrics import Metric
+    from empulse.metrics import Metric, CostStrategy
     from empulse.models import CSBoostClassifier
     from sklearn.datasets import make_classification
 
@@ -26,7 +26,7 @@ For example defining a custom metric and using it in a model can be done as foll
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     cost_loss = (
-        Metric('cost')
+        Metric(CostStrategy())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -49,9 +49,9 @@ The table below summarizes the Empulse models that support custom metrics:
     :header-rows: 1
 
     * - Model
-      - Cost
-      - Savings
-      - Maximum profit
+      - :class:`~empulse.metrics.CostStrategy`
+      - :class:`~empulse.metrics.SavingsStrategy`
+      - :class:`~empulse.metrics.MaxProfitStrategy`
     * - :class:`~empulse.models.CSLogitClassifier`
       - ✅
       - ✅
