@@ -4,7 +4,14 @@ import numpy as np
 import sympy
 
 from ..._types import FloatNDArray
-from .common import BoostObjective, LogitObjective, MetricFn, _check_parameters
+from .common import (
+    BoostObjective,
+    LogitObjective,
+    MetricFn,
+    ThresholdFn,
+    _check_parameters,
+    _filter_parameters,
+)
 
 
 def _build_cost_loss(
@@ -69,6 +76,38 @@ def _build_cost_gradient_boost_objective(
         return gradient, hessian
 
     return cost_gradient_hessian_gboost
+
+
+def _build_cost_optimal_threshold(
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+    integration_method: str,
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> ThresholdFn:
+    denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
+    numerator_expression = fp_cost + tn_benefit
+    calculate_denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)
+    calculate_numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)
+
+    @_check_parameters(*denominator_expression.free_symbols)
+    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
+        denominator_parameters = _filter_parameters(denominator_expression, parameters)
+        numerator_parameters = _filter_parameters(numerator_expression, parameters)
+        denominator = calculate_denominator(**denominator_parameters)
+        numerator = calculate_numerator(**numerator_parameters)
+        # Avoid division by zero
+        if isinstance(denominator, float | int):
+            if denominator == 0:
+                denominator += float(np.finfo(float).eps)
+        else:
+            denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
+        optimal_thresholds: FloatNDArray | float = numerator / denominator
+        return optimal_thresholds
+
+    return threshold_function
 
 
 def _cost_loss_to_latex(

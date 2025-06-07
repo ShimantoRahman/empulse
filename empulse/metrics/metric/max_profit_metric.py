@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from itertools import islice, pairwise
 from typing import Any
 
@@ -14,6 +14,7 @@ from sympy.utilities import lambdify
 
 from ..._types import FloatNDArray
 from .._convex_hull import _compute_convex_hull
+from ..common import classification_threshold
 from .common import MetricFn, _check_parameters
 
 _sympy_dist_to_scipy: dict[
@@ -62,9 +63,7 @@ def _build_max_profit_score(
     n_mc_samples: int,
     rng: np.random.RandomState,
 ) -> MetricFn:
-    terms = tp_benefit + tn_benefit + fp_cost + fn_cost
-    random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
-    deterministic_symbols = [symbol for symbol in terms.free_symbols if not is_random(symbol)]
+    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 
     profit_function = _build_profit_function(
@@ -84,6 +83,60 @@ def _build_max_profit_score(
     return max_profit_score
 
 
+def _build_max_profit_optimal_threshold(
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+    integration_method: str,
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> MetricFn:
+    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
+    n_random = len(random_symbols)
+
+    profit_function = _build_profit_function(
+        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+    )
+    if n_random == 0:
+        optimal_threshold = _build_max_profit_threshold_deterministic(profit_function, deterministic_symbols)
+    else:
+        optimal_threshold = _build_max_profit_threshold_deterministic(profit_function, deterministic_symbols)
+    return optimal_threshold
+
+
+def _build_max_profit_optimal_rate(
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+    integration_method: str,
+    n_mc_samples: int,
+    rng: np.random.RandomState,
+) -> MetricFn:
+    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
+    n_random = len(random_symbols)
+
+    profit_function = _build_profit_function(
+        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+    )
+    if n_random == 0:
+        optimal_rate = _build_max_profit_rate_deterministic(profit_function, deterministic_symbols)
+    else:
+        optimal_rate = _build_max_profit_rate_deterministic(profit_function, deterministic_symbols)
+    return optimal_rate
+
+
+def _identify_symbols(
+    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> tuple[list[sympy.Symbol], list[sympy.Symbol]]:
+    """Identify random and deterministic symbols in the profit function."""
+    terms = tp_benefit + tn_benefit + fp_cost + fn_cost
+    random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
+    deterministic_symbols = [symbol for symbol in terms.free_symbols if not is_random(symbol)]
+    return random_symbols, deterministic_symbols
+
+
 def _build_profit_function(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> sympy.Expr:
@@ -97,6 +150,20 @@ def _build_profit_function(
     return profit_function
 
 
+def _calculate_profits_deterministic(
+    y_true: FloatNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, float, float]:
+    pi0 = float(np.mean(y_true))
+    pi1 = 1 - pi0
+    tprs, fprs = _compute_convex_hull(y_true, y_score)
+
+    profits = np.zeros_like(tprs)
+    for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
+        profits[i] = calculate_profit(pi_0=pi0, pi_1=pi1, F_0=tpr, F_1=fpr, **kwargs)
+
+    return profits, tprs, fprs, pi0, pi1
+
+
 def _build_max_profit_deterministic(
     profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]
 ) -> MetricFn:
@@ -105,17 +172,45 @@ def _build_max_profit_deterministic(
 
     @_check_parameters(*deterministic_symbols)
     def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        pi0 = float(np.mean(y_true))
-        pi1 = 1 - pi0
-        tprs, fprs = _compute_convex_hull(y_true, y_score)
-
-        profits = np.zeros_like(tprs)
-        for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
-            profits[i] = calculate_profit(pi_0=pi0, pi_1=pi1, F_0=tpr, F_1=fpr, **kwargs)
-
+        profits, *_ = _calculate_profits_deterministic(y_true, y_score, calculate_profit, **kwargs)
         return float(profits.max())
 
     return score_function
+
+
+def _calculate_optimal_rate_deterministic(
+    y_true: FloatNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
+) -> float:
+    profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(y_true, y_score, calculate_profit, **kwargs)
+    best_index = np.argmax(profits)
+    return float(tprs[best_index] * pi0 + fprs[best_index] * pi1)
+
+
+def _build_max_profit_rate_deterministic(
+    profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]
+) -> MetricFn:
+    """Calculate the optimal predicted positive rate."""
+    calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
+
+    @_check_parameters(*deterministic_symbols)
+    def rate_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        return _calculate_optimal_rate_deterministic(y_true, y_score, calculate_profit, **kwargs)
+
+    return rate_function
+
+
+def _build_max_profit_threshold_deterministic(
+    profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]
+) -> MetricFn:
+    """Calculate the optimal classification threshold."""
+    calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
+
+    @_check_parameters(*deterministic_symbols)
+    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        threshold = _calculate_optimal_rate_deterministic(y_true, y_score, calculate_profit, **kwargs)
+        return classification_threshold(y_true, y_score, threshold)
+
+    return threshold_function
 
 
 def _support_all_distributions(random_symbols: Iterable[sympy.Symbol]) -> bool:

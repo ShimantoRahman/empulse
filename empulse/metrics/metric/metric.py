@@ -9,14 +9,20 @@ import scipy
 import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
-from .common import BoostObjective, LogitObjective
+from .common import BoostObjective, LogitObjective, RateFn, ThresholdFn, _evaluate_expression
 from .cost_metric import (
     _build_cost_gradient_boost_objective,
     _build_cost_logit_objective,
     _build_cost_loss,
+    _build_cost_optimal_threshold,
     _cost_loss_to_latex,
 )
-from .max_profit_metric import _build_max_profit_score, _max_profit_score_to_latex
+from .max_profit_metric import (
+    _build_max_profit_optimal_rate,
+    _build_max_profit_optimal_threshold,
+    _build_max_profit_score,
+    _max_profit_score_to_latex,
+)
 from .savings_metric import _build_savings_score, _savings_score_to_latex
 
 
@@ -216,18 +222,39 @@ class Metric:
 
             return undefined_fn
 
+        def optimal_threshold_undefined(*args: Any, **kwargs: Any) -> ThresholdFn:
+            def undefined_fn(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> FloatNDArray | float:
+                raise NotImplementedError(
+                    f'Optimal classification threshold function is not defined for kind={self.kind}'
+                )
+
+            return undefined_fn
+
+        def optimal_rate_undefined(*args: Any, **kwargs: Any) -> RateFn:
+            def undefined_fn(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+                raise NotImplementedError(
+                    f'Optimal positive prediction rate function is not defined for kind={self.kind}'
+                )
+
+            return undefined_fn
+
         self._build_gradient_logit = gradient_logit_undefined
         self._build_gradient_hessian_gboost = gradient_hessian_gboost_undefined
         self._build_logit_metric = None  # if None, will use the same function as _build_metric for logit objective
+        self._build_optimal_threshold = optimal_threshold_undefined
+        self._build_optimal_rate = optimal_rate_undefined
         if kind == 'max profit':
             self.direction = Direction.MAXIMIZE
             self._build_metric = _build_max_profit_score
+            self._build_optimal_threshold = _build_max_profit_optimal_threshold
+            self._build_optimal_rate = _build_max_profit_optimal_rate
             self._metric_to_latex = _max_profit_score_to_latex
         elif kind == 'cost':
             self.direction = Direction.MINIMIZE
             self._build_metric = _build_cost_loss
             self._build_gradient_logit = _build_cost_logit_objective
             self._build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
+            self._build_optimal_threshold = _build_cost_optimal_threshold
             self._metric_to_latex = _cost_loss_to_latex
         elif kind == 'savings':
             self.direction = Direction.MAXIMIZE
@@ -236,6 +263,7 @@ class Metric:
             self._build_logit_metric = _build_cost_loss
             self._build_gradient_logit = _build_cost_logit_objective
             self._build_gradient_hessian_gboost = _build_cost_gradient_boost_objective
+            self._build_optimal_threshold = _build_cost_optimal_threshold
             self._metric_to_latex = _savings_score_to_latex
         self.integration_method = 'auto'
         self.n_mc_samples: int = 2**16
@@ -740,6 +768,24 @@ class Metric:
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
+        self._optimal_threshold: ThresholdFn = self._build_optimal_threshold(
+            tp_benefit=self.tp_benefit,
+            tn_benefit=self.tn_benefit,
+            fp_cost=self.fp_cost,
+            fn_cost=self.fn_cost,
+            integration_method=self.integration_method,
+            n_mc_samples=self.n_mc_samples,
+            rng=self._rng,
+        )
+        self._optimal_rate: RateFn = self._build_optimal_rate(
+            tp_benefit=self.tp_benefit,
+            tn_benefit=self.tn_benefit,
+            fp_cost=self.fp_cost,
+            fn_cost=self.fn_cost,
+            integration_method=self.integration_method,
+            n_mc_samples=self.n_mc_samples,
+            rng=self._rng,
+        )
         return self
 
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
@@ -791,13 +837,91 @@ class Metric:
         score: float
             The computed metric score or loss.
         """
-        if not self._built:
-            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
-
+        self._check_built()
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
         parameters = self._prepare_parameters(**parameters)
         return self._score_function(y_true, y_score, **parameters)
+
+    def optimal_threshold(
+        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+    ) -> FloatNDArray | float:
+        """
+        Compute the optimal classification threshold(s).
+
+        i.e. the score threshold at which an observation should be classified as positive to optimize the metric.
+        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.
+        For class-dependent costs and benefits, this will return a single threshold value.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities or decision scores (based on the chosen metric).
+
+            - If ``kind='max profit'``, the predicted labels are the decision scores.
+            - If ``kind='cost'``, the predicted labels are the (calibrated) probabilities.
+            - If ``kind='savings'``, the predicted labels are the (calibrated) probabilities.
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate: float | FloatNDArray
+            The computed optimal classification threshold(s).
+        """
+        self._check_built()
+        y_true = np.asarray(y_true)
+        y_score = np.asarray(y_score)
+        parameters = self._prepare_parameters(**parameters)
+        return self._optimal_threshold(y_true, y_score, **parameters)
+
+    def optimal_rate(
+        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+    ) -> float:
+        """
+        Compute the optimal predicted positive rate.
+
+        i.e. the fraction of observations that should be classified as positive to optimize the metric.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities or decision scores (based on the chosen metric).
+
+            - If ``kind='max profit'``, the predicted labels are the decision scores.
+            - If ``kind='cost'``, the predicted labels are the (calibrated) probabilities.
+            - If ``kind='savings'``, the predicted labels are the (calibrated) probabilities.
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate: float
+            The computed optimal predicted positive rate.
+        """
+        self._check_built()
+        y_true = np.asarray(y_true)
+        y_score = np.asarray(y_score)
+        parameters = self._prepare_parameters(**parameters)
+        return self._optimal_rate(y_true, y_score, **parameters)
 
     def _logit_objective(
         self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
@@ -886,41 +1010,6 @@ class Metric:
         gradient, hessian = self._gradient_hessian_gboost_function(y_true, y_proba, **parameters)
         return gradient, hessian
 
-    def _bayes_minimum_risk_thresholds(self, **parameters: FloatNDArray | float) -> FloatNDArray | float:
-        """
-        Compute the optimal thresholds for the Bayes minimum risk decision rule.
-
-        Parameters
-        ----------
-        parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-
-        Returns
-        -------
-        optimal_thresholds : float or NDArray of shape (n_samples,)
-            The optimal thresholds for the Bayes minimum risk decision rule.
-        """
-        parameters = self._prepare_parameters(**parameters)
-
-        denominator = _evaluate_expression(self.fp_cost - self.tn_cost + self.fn_cost - self.tp_cost, **parameters)
-        numerator = _evaluate_expression(self.fp_cost - self.tn_cost, **parameters)
-
-        # Avoid division by zero
-        if isinstance(denominator, float | int):
-            if denominator == 0:
-                denominator += float(np.finfo(float).eps)
-        else:
-            denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
-        optimal_thresholds: FloatNDArray | float = numerator / denominator
-
-        return optimal_thresholds
-
     def _get_cost_matrix(self, n_samples: int, **parameters: FloatNDArray | float) -> FloatNDArray:
         """
         Compute the cost matrix based on the metric's costs and benefits.
@@ -959,6 +1048,10 @@ class Metric:
 
         return np.column_stack((fp_cost, fn_cost, tp_cost, tn_cost))
 
+    def _check_built(self) -> None:
+        if not self._built:
+            raise ValueError('The metric function has not been built. Call the build method before calling the metric')
+
     def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}('
@@ -981,51 +1074,3 @@ class Metric:
         self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
     ) -> None:
         self.build()
-
-
-def _filter_parameters(
-    expression: sympy.Expr, parameters: dict[str, float | FloatNDArray]
-) -> dict[str, float | FloatNDArray]:
-    """
-    Filter the parameters dictionary to only include those that are free symbols in the expression.
-
-    Parameters
-    ----------
-    expression : sympy.Expr
-        The expression to filter the parameters against.
-
-    parameters : dict[str, float | FloatNDArray]
-        The parameters dictionary to filter.
-        Keys are parameter names and values are their corresponding values.
-
-    Returns
-    -------
-    filtered_parameters : dict[str, float | FloatNDArray]
-        A dictionary containing only the parameters that are free symbols in the expression.
-    """
-    free_symbols = {str(symbol) for symbol in expression.free_symbols}
-    filtered_parameters = {key: value for key, value in parameters.items() if key in free_symbols}
-    return filtered_parameters
-
-
-def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | float) -> FloatNDArray | float:
-    """
-    Evaluate a sympy expression with the given parameters.
-
-    Parameters
-    ----------
-    expression : sympy.Expr
-        The sympy expression to convert.
-    parameters : float or NDArray of shape (n_samples,)
-        The parameter values for the costs and benefits defined in the metric.
-        If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-        You can set the parameter values for either the symbol names or their aliases.
-
-    Returns
-    -------
-    function : callable
-        A numpy function that computes the value of the expression with the given parameters.
-    """
-    filtered_parameters = _filter_parameters(expression, parameters)
-    result: float | FloatNDArray = sympy.lambdify(list(expression.free_symbols), expression)(**filtered_parameters)
-    return result

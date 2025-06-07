@@ -289,7 +289,7 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
                 denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
             optimal_thresholds = (fp_cost - tn_cost) / denominator
         else:
-            optimal_thresholds = self.loss._bayes_minimum_risk_thresholds(**loss_params)
+            optimal_thresholds = self.loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
 
         if self.pos_label is None:
             map_thresholded_score_to_label = np.array([0, 1])
