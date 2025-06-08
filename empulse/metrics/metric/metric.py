@@ -574,7 +574,7 @@ class Metric:
         """
         Compute the optimal predicted positive rate.
 
-        i.e. the fraction of observations that should be classified as positive to optimize the metric.
+        i.e., the fraction of observations that should be classified as positive to optimize the metric.
 
         Parameters
         ----------
