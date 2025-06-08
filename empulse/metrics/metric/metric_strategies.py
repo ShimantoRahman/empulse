@@ -18,6 +18,7 @@ from .cost_metric import (
     _build_cost_gradient_boost_objective,
     _build_cost_logit_objective,
     _build_cost_loss,
+    _build_cost_optimal_rate,
     _build_cost_optimal_threshold,
     _cost_loss_to_latex,
 )
@@ -477,6 +478,12 @@ class CostStrategy(MetricStrategy):
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
+        self._optimal_rate: RateFn = _build_cost_optimal_rate(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
         self._gradient_logit_function: LogitObjective = _build_cost_logit_objective(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
@@ -550,6 +557,33 @@ class CostStrategy(MetricStrategy):
             The optimal classification threshold(s).
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
+
+    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the predicted positive rate to optimize the metric value.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate: float
+            The optimal predicted positive rate.
+        """
+        return self._optimal_rate(y_true, y_score, **parameters)
 
     def logit_objective(
         self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
@@ -655,6 +689,12 @@ class SavingsStrategy(MetricStrategy):
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
+        self._optimal_rate: RateFn = _build_cost_optimal_rate(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
         self._score_logit_function = _build_cost_loss(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
@@ -734,6 +774,33 @@ class SavingsStrategy(MetricStrategy):
             The optimal classification threshold(s).
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
+
+    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the predicted positive rate to optimize the metric value.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate: float
+            The optimal predicted positive rate.
+        """
+        return self._optimal_rate(y_true, y_score, **parameters)
 
     def logit_objective(
         self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float

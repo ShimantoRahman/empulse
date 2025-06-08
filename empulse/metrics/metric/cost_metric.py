@@ -8,6 +8,7 @@ from .common import (
     BoostObjective,
     LogitObjective,
     MetricFn,
+    RateFn,
     ThresholdFn,
     _check_parameters,
     _filter_parameters,
@@ -102,6 +103,37 @@ def _build_cost_optimal_threshold(
         return optimal_thresholds
 
     return threshold_function
+
+
+def _build_cost_optimal_rate(
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+) -> RateFn:
+    denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
+    numerator_expression = fp_cost + tn_benefit
+    calculate_denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)
+    calculate_numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)
+
+    @_check_parameters(*denominator_expression.free_symbols)
+    def rate_function(y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+        parameters = {
+            key: float(np.mean(parameter)) if isinstance(parameter, np.ndarray) else parameter
+            for key, parameter in parameters.items()
+        }
+        denominator_parameters = _filter_parameters(denominator_expression, parameters)
+        numerator_parameters = _filter_parameters(numerator_expression, parameters)
+        denominator = calculate_denominator(**denominator_parameters)
+        numerator = calculate_numerator(**numerator_parameters)
+        # Avoid division by zero
+        if denominator == 0.0:
+            denominator += float(np.finfo(float).eps)
+        optimal_threshold: FloatNDArray | float = numerator / denominator
+        optimal_rate = float(np.mean(y_score > optimal_threshold))
+        return optimal_rate
+
+    return rate_function
 
 
 def _cost_loss_to_latex(

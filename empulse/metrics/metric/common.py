@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from enum import Enum, auto
+from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 
 import sympy
@@ -54,6 +55,7 @@ def _check_parameters(*parameters: str | sympy.Expr) -> Callable[[Callable[P, R]
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             for value in parameters:
                 if str(value) not in kwargs:
