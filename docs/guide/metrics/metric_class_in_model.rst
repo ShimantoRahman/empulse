@@ -75,7 +75,7 @@ The table below summarizes the Empulse models that support custom metrics:
     * - :class:`~empulse.models.CSThresholdClassifier`
       - ✅
       - ✅
-      - ✅ (no stochastic variables)
+      - ✅
     * - :class:`~empulse.models.ProfLogitClassifier`
       - ✅
       - ✅
