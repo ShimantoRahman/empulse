@@ -42,14 +42,14 @@ class Metric:
     strategy : MetricStrategy
         The strategy to use for computing the metric.
 
-        - If :class:`~empulse.metrics.MaxProfitStrategy`,
+        - If :class:`~empulse.metrics.MaxProfit`,
           the metric computes the maximum profit that can be achieved by a classifier.
           The metric determines the optimal threshold that maximizes the profit.
           This metric supports the use of stochastic variables.
-        - If :class:`~empulse.metrics.CostStrategy`, the metric computes the expected cost loss of a classifier.
+        - If :class:`~empulse.metrics.Cost`, the metric computes the expected cost loss of a classifier.
           This metric supports passing instance-dependent costs in the form of array-likes.
           This metric does not support stochastic variables.
-        - If :class:`~empulse.metrics.SavingsStrategy`,
+        - If :class:`~empulse.metrics.Savings`,
           the metric computes the savings that can be achieved by a classifier
           over a naive classifier which always predicts 0 or 1 (whichever is better).
           This metric supports passing instance-dependent costs in the form of array-likes.
@@ -99,7 +99,7 @@ class Metric:
     .. code-block:: python
 
         import sympy as sp
-        from empulse.metrics import Metric, MaxProfitStrategy
+        from empulse.metrics import Metric, MaxProfit
 
         clv, d, f, alpha, beta = sp.symbols(
             'clv d f alpha beta'
@@ -107,7 +107,7 @@ class Metric:
         gamma = sp.stats.Beta('gamma', alpha, beta)  # define gamma to follow a Beta distribution
 
         empc_score = (
-            Metric(MaxProfitStrategy())
+            Metric(MaxProfit())
             .add_tp_benefit(gamma * (clv - d - f))  # when churner accepts offer
             .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
             .add_fp_cost(d + f)  # when you send an offer to a non-churner
@@ -125,12 +125,12 @@ class Metric:
     .. code-block:: python
 
         import sympy as sp
-        from empulse.metrics import Metric, CostStrategy
+        from empulse.metrics import Metric, Cost
 
         clv, delta, f, gamma = sp.symbols('clv delta f gamma')
 
         cost_loss = (
-            Metric(CostStrategy())
+            Metric(Cost())
             .add_tp_benefit(gamma * (clv - delta * clv - f))  # when churner accepts offer
             .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
             .add_fp_cost(delta * clv + f)  # when you send an offer to a non-churner
@@ -151,11 +151,11 @@ class Metric:
     .. code-block:: python
 
         import sympy as sp
-        from empulse.metrics import Metric, CostStrategy
+        from empulse.metrics import Metric, Cost
 
         clv, delta, f, gamma = sp.symbols('clv delta f gamma')
 
-        with Metric(CostStrategy()) as cost_loss:
+        with Metric(Cost()) as cost_loss:
             cost_loss.add_tp_benefit(gamma * (clv - delta * clv - f))
             cost_loss.add_tp_benefit((1 - gamma) * -f)
             cost_loss.add_fp_cost(delta * clv + f)
@@ -504,9 +504,9 @@ class Metric:
         y_score: array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfitStrategy`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.CostStrategy`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.SavingsStrategy`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
+            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
 
         parameters: float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -545,9 +545,9 @@ class Metric:
         y_score: array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfitStrategy`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.CostStrategy`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.SavingsStrategy`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
+            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
 
         parameters: float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -584,9 +584,9 @@ class Metric:
         y_score: array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfitStrategy`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.CostStrategy`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.SavingsStrategy`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
+            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
+            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
 
         parameters: float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.

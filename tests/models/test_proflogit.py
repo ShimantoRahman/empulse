@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.metrics import CostStrategy, MaxProfitStrategy, Metric, SavingsStrategy
+from empulse.metrics import Cost, MaxProfit, Metric, Savings
 from empulse.models import ProfLogitClassifier
 
 
@@ -256,7 +256,7 @@ def test_proflogit_metric_cost_loss(X, y):
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     cost_loss = (
-        Metric(CostStrategy())
+        Metric(Cost())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -283,7 +283,7 @@ def test_proflogit_metric_savings_score(X, y):
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     cost_loss = (
-        Metric(SavingsStrategy())
+        Metric(Savings())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -310,7 +310,7 @@ def test_proflogit_metric_max_profit_score(X, y):
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     cost_loss = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')

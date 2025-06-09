@@ -27,7 +27,7 @@ except ImportError:
     CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
-from ...metrics import CostStrategy, Metric
+from ...metrics import Cost, Metric
 from .._base import BaseBoostClassifier
 from .csboost import CSBoostClassifier
 
@@ -195,7 +195,7 @@ class B2BoostClassifier(CSBoostClassifier):
     ) -> None:
         lifetime, delta, f, gamma = sympy.symbols('clv delta f gamma')
         loss = (
-            Metric(CostStrategy())
+            Metric(Cost())
             .add_tp_benefit(gamma * (lifetime - lifetime * delta - f))
             .add_tp_benefit((1 - gamma) * -f)
             .add_fp_cost(lifetime * delta + f)

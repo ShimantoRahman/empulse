@@ -17,9 +17,9 @@ Build your own cost-sensitive metric
 
    Metric
    MetricStrategy
-   MaxProfitStrategy
-   CostStrategy
-   SavingsStrategy
+   MaxProfit
+   Cost
+   Savings
 
 General Metrics
 ---------------

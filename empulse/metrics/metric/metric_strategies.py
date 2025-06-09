@@ -218,7 +218,7 @@ class MetricStrategy(ABC):
         return f'{self.__class__.__name__}(direction={self.direction})'
 
 
-class MaxProfitStrategy(MetricStrategy):
+class MaxProfit(MetricStrategy):
     """
     Strategy for the Expected Maximum Profit (EMP) metric.
 
@@ -452,7 +452,7 @@ class MaxProfitStrategy(MetricStrategy):
         )
 
 
-class CostStrategy(MetricStrategy):
+class Cost(MetricStrategy):
     """Strategy for the Expected Cost metric."""
 
     def __init__(self) -> None:
@@ -663,7 +663,7 @@ class CostStrategy(MetricStrategy):
         return _cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
 
-class SavingsStrategy(MetricStrategy):
+class Savings(MetricStrategy):
     """Strategy for the Expected Savings metric."""
 
     def __init__(self) -> None:

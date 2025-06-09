@@ -14,7 +14,7 @@ from .common import classification_threshold
 from .credit_scoring import empcs, empcs_score, mpcs, mpcs_score
 from .lift import lift_score
 from .max_profit import max_profit, max_profit_score
-from .metric import CostStrategy, MaxProfitStrategy, Metric, MetricStrategy, SavingsStrategy
+from .metric import Cost, MaxProfit, Metric, MetricStrategy, Savings
 from .savings import (
     cost_loss,
     expected_cost_loss,
@@ -25,11 +25,11 @@ from .savings import (
 )
 
 __all__ = [
-    'CostStrategy',
-    'MaxProfitStrategy',
+    'Cost',
+    'MaxProfit',
     'Metric',
     'MetricStrategy',
-    'SavingsStrategy',
+    'Savings',
     'auepc_score',
     'classification_threshold',
     'cost_loss',

@@ -1,4 +1,4 @@
 from .metric import Metric
-from .metric_strategies import CostStrategy, MaxProfitStrategy, MetricStrategy, SavingsStrategy
+from .metric_strategies import Cost, MaxProfit, MetricStrategy, Savings
 
-__all__ = ['CostStrategy', 'MaxProfitStrategy', 'Metric', 'MetricStrategy', 'SavingsStrategy']
+__all__ = ['Cost', 'MaxProfit', 'Metric', 'MetricStrategy', 'Savings']

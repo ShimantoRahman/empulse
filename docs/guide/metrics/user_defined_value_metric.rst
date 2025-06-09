@@ -46,14 +46,14 @@ uses Sympy under the hood to compute the metric.
 
 :class:`empulse.metrics.Metric` class uses a builder design pattern to step-by-step define the metric.
 First, you need to define which type of metric you want to implement.
-In this case, we want to implement a maximum profit metric, so we use the :class:`empulse.metrics.MaxProfitStrategy`.
+In this case, we want to implement a maximum profit metric, so we use the :class:`empulse.metrics.MaxProfit` strategy.
 
 
 .. code-block:: python
 
-    from empulse.metrics import Metric, MaxProfitStrategy
+    from empulse.metrics import Metric, MaxProfit
 
-    mpc_score = Metric(MaxProfitStrategy())
+    mpc_score = Metric(MaxProfit())
 
 Afterwards we can start assembling all parts of the cost-benefit matrix.
 
@@ -88,7 +88,7 @@ We can easily change this by using the ``alias`` method before building the metr
 .. code-block:: python
 
     mpc_score = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -104,7 +104,7 @@ through the ``set_default`` method.
 .. code-block:: python
 
     mpc_score = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -133,7 +133,7 @@ The only thing that you need to change from the MPC example above, is to define 
     gamma = sympy.stats.Beta('gamma', alpha, beta)
 
     empc_score = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -152,7 +152,7 @@ You can also define :math:`\gamma` to follow a Uniform distribution with from 0 
     gamma = sympy.stats.Uniform('gamma', 0, 1)
 
     empc_score = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -172,7 +172,7 @@ We'll define :math:`clv` to follow a Gamma distribution with parameters :math:`\
     clv = sympy.stats.Gamma('clv', alpha, beta)
 
     empc_score = (
-        Metric(MaxProfitStrategy())
+        Metric(MaxProfit())
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -194,12 +194,12 @@ Expected Cost
 
 .. code-block:: python
 
-    from empulse.metrics import CostStrategy
+    from empulse.metrics import Cost
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     expected_cost_loss = (
-        Metric(CostStrategy())  # change the kind to cost
+        Metric(Cost())  # change the kind to cost
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
@@ -215,12 +215,12 @@ Expected Savings
 
 .. code-block:: python
 
-    from empulse.metrics import SavingsStrategy
+    from empulse.metrics import Savings
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
     expected_savings_score = (
-        Metric(SavingsStrategy())  # change the strategy to savings
+        Metric(Savings())  # change the strategy to savings
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)

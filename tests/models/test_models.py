@@ -12,7 +12,7 @@ from sklearn.utils._param_validation import InvalidParameterError
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
-from empulse.metrics import CostStrategy, Metric, SavingsStrategy, cost_loss
+from empulse.metrics import Cost, Metric, Savings, cost_loss
 from empulse.models import (
     B2BoostClassifier,
     BiasRelabelingClassifier,
@@ -236,7 +236,7 @@ def set_metric_loss(estimator, loss):
         raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
 
 
-@pytest.mark.parametrize('kind', [CostStrategy(), SavingsStrategy()])
+@pytest.mark.parametrize('kind', [Cost(), Savings()])
 @pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
 def test_metric_api_consistency(estimator, dataset, kind):
     """Test that the metric API is consistent with the cost matrix API."""
@@ -298,7 +298,7 @@ def test_data_format_metric_loss(estimator, dataset):
     fp_cost = np.expand_dims(np.ones(y.size), axis=0)
 
     tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    with Metric(CostStrategy()) as cost_loss:
+    with Metric(Cost()) as cost_loss:
         cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
@@ -316,7 +316,7 @@ def test_metric_loss_all_default_params(estimator, dataset):
     X, y, _, _ = dataset
 
     fn, fp = sympy.symbols('fn fp')
-    with Metric(CostStrategy()) as cost_loss:
+    with Metric(Cost()) as cost_loss:
         cost_loss.add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
