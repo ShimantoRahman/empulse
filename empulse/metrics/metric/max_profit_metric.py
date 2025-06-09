@@ -154,6 +154,14 @@ def _build_max_profit_score(
     return max_profit_score
 
 
+def _to_threshold_function(rate_function: RateFn) -> ThresholdFn:
+    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        rate = rate_function(y_true, y_score, **kwargs)
+        return classification_threshold(y_true, y_score, rate)
+
+    return threshold_function
+
+
 def _build_max_profit_optimal_threshold(
     tp_benefit: sympy.Expr,
     tn_benefit: sympy.Expr,
@@ -163,17 +171,16 @@ def _build_max_profit_optimal_threshold(
     n_mc_samples: int,
     rng: np.random.RandomState,
 ) -> ThresholdFn:
-    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
-    n_random = len(random_symbols)
-
-    profit_function = _build_profit_function(
-        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+    rate_fn = _build_max_profit_optimal_rate(
+        tp_benefit=tp_benefit,
+        tn_benefit=tn_benefit,
+        fp_cost=fp_cost,
+        fn_cost=fn_cost,
+        integration_method=integration_method,
+        n_mc_samples=n_mc_samples,
+        rng=rng,
     )
-    if n_random == 0:
-        optimal_threshold = _build_max_profit_threshold_deterministic(profit_function, deterministic_symbols)
-    else:
-        optimal_threshold = _build_max_profit_threshold_deterministic(profit_function, deterministic_symbols)
-    return optimal_threshold
+    return _to_threshold_function(rate_fn)
 
 
 def _build_max_profit_optimal_rate(
@@ -318,20 +325,6 @@ def _build_max_profit_rate_stochastic(
         )
     else:
         raise ValueError(f'Integration method {integration_method} is not supported')
-
-
-def _build_max_profit_threshold_deterministic(
-    profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]
-) -> MetricFn:
-    """Calculate the optimal classification threshold."""
-    calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
-
-    @_check_parameters(*deterministic_symbols)
-    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        threshold = _calculate_optimal_rate_deterministic(y_true, y_score, calculate_profit, **kwargs)
-        return classification_threshold(y_true, y_score, threshold)
-
-    return threshold_function
 
 
 def compute_piecewise_bounds(
