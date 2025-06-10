@@ -458,10 +458,16 @@ def _objective_jacobian(
         b = weights[1:] if fit_intercept else weights
 
     loss, gradient = loss_fn(X, weights, y)
-    # loss, gradient = loss_fn(expit(np.dot(weights, X.T)))
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
+    if l1_ratio == 0.0:
+        regularization_term = 0.5 * np.sum(b**2)
+        gradient_penalty = b
+    elif l1_ratio == 1.0:
+        regularization_term = np.sum(np.abs(b))
+        gradient_penalty = np.sign(b)
+    else:
+        regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
+        gradient_penalty = (1 - l1_ratio) * b + l1_ratio * np.sign(b)
     penalty = regularization_term / C
-    gradient_penalty = (1 - l1_ratio) * b + l1_ratio * np.sign(b)
     if fit_intercept:
         gradient_penalty = np.hstack((np.array([0]), gradient_penalty))
     return loss + penalty, gradient + gradient_penalty
