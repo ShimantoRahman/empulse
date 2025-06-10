@@ -10,14 +10,14 @@ from empulse.metrics import (
     MaxProfit,
     Metric,
     Savings,
-    empc_score,
+    empc,
     expected_cost_loss,
     expected_cost_loss_churn,
     expected_savings_score,
     make_objective_aec,
     make_objective_churn,
     max_profit_score,
-    mpc_score,
+    mpc,
 )
 
 METRIC_STRATEGIES = [
@@ -61,10 +61,13 @@ def test_metric_vs_empc_score(
         .build()
     )
 
-    metric_result = profit_func(
+    metric_val = profit_func(
         y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, beta=gamma_beta, alpha=gamma_alpha
     )
-    empc_result = empc_score(
+    metric_rate = profit_func.optimal_rate(
+        y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, beta=gamma_beta, alpha=gamma_alpha
+    )
+    empc_val, empc_rate = empc(
         y,
         y_proba,
         clv=customer_lifetime_value,
@@ -74,11 +77,14 @@ def test_metric_vs_empc_score(
         alpha=gamma_alpha,
     )
     if integration_method == 'monte-carlo':  # Monte Carlo methods have higher variance
-        assert pytest.approx(metric_result, rel=1e-2) == empc_result
+        assert pytest.approx(metric_val, rel=1e-2) == empc_val
+        assert pytest.approx(metric_rate, rel=1e-2) == empc_rate
     elif integration_method == 'quasi-monte-carlo':  # Quasi-Monte Carlo methods have lower variance
-        assert pytest.approx(metric_result, rel=1e-4) == empc_result
+        assert pytest.approx(metric_val, rel=1e-4) == empc_val
+        assert pytest.approx(metric_rate, rel=1e-4) == empc_rate
     else:
-        assert pytest.approx(metric_result) == empc_result
+        assert pytest.approx(metric_val) == empc_val
+        assert pytest.approx(metric_rate) == empc_rate
 
 
 @pytest.mark.parametrize(
@@ -96,10 +102,13 @@ def test_metric_vs_mpc_score(customer_lifetime_value, incentive_cost, contact_co
         .build()
     )
 
-    metric_result = profit_func(
+    metric_val = profit_func(
         y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
     )
-    mpc_result = mpc_score(
+    metric_rate = profit_func.optimal_rate(
+        y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
+    )
+    mpc_val, mpc_rate = mpc(
         y,
         y_proba,
         clv=customer_lifetime_value,
@@ -107,7 +116,8 @@ def test_metric_vs_mpc_score(customer_lifetime_value, incentive_cost, contact_co
         contact_cost=contact_cost,
         accept_rate=accept_rate,
     )
-    assert pytest.approx(metric_result) == mpc_result
+    assert pytest.approx(metric_val) == mpc_val
+    assert pytest.approx(metric_rate) == mpc_rate
 
 
 @pytest.mark.parametrize(
@@ -127,10 +137,13 @@ def test_metric_vs_mpc_score_inversed(
         .build()
     )
 
-    metric_result = profit_func(
+    metric_val = profit_func(
         y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
     )
-    mpc_result = mpc_score(
+    metric_rate = profit_func.optimal_rate(
+        y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
+    )
+    mpc_val, mpc_rate = mpc(
         y,
         y_proba,
         clv=customer_lifetime_value,
@@ -138,7 +151,8 @@ def test_metric_vs_mpc_score_inversed(
         contact_cost=contact_cost,
         accept_rate=accept_rate,
     )
-    assert pytest.approx(metric_result) == mpc_result
+    assert pytest.approx(metric_val) == mpc_val
+    assert pytest.approx(metric_rate) == mpc_rate
 
 
 @pytest.mark.parametrize(
