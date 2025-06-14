@@ -788,3 +788,14 @@ class BaggingClassifier(ClassifierMixin, BaseBagging):  # type: ignore[misc]
             raise ValueError('Invalid combination method.')
 
         return proba
+
+    def _get_metric_loss(self) -> Metric | None:
+        """Return the metric used for the loss function."""
+        if hasattr(self, 'criterion') and isinstance(self.criterion, Metric):
+            return self.criterion
+        elif hasattr(self.estimator, 'criterion') and isinstance(self.estimator.criterion, Metric):
+            return self.estimator.criterion
+        elif hasattr(self.estimator, 'loss') and isinstance(self.estimator.loss, Metric):
+            return self.estimator.loss
+        else:
+            return None

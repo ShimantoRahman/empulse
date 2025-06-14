@@ -201,6 +201,10 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         else:
             return self.calibrator.set_params(estimator=estimator)  # type: ignore[union-attr]
 
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        return self.loss
+
     def _fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
         """Fit the classifier.
 

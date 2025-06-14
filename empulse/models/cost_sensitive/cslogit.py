@@ -263,6 +263,12 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
 
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None
+
     def fit(
         self,
         X: FloatArrayLike,

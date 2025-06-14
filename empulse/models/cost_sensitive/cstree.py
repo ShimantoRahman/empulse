@@ -215,6 +215,12 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         tags.classifier_tags.poor_score = True
         return tags
 
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        if isinstance(self.criterion, Metric):
+            return self.criterion
+        return None
+
     def _node_cost(self, y_true: NDArray[Any], cost_mat: FloatNDArray) -> tuple[float, int, float]:
         """
         Private function to calculate the cost of a node.

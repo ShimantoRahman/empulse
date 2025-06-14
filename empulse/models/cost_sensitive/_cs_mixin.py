@@ -7,6 +7,7 @@ from numpy.typing import ArrayLike
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray
+from ...metrics import Metric
 
 
 class CostSensitiveMixin:
@@ -111,6 +112,10 @@ class CostSensitiveMixin:
         fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
 
         return tp_cost, tn_cost, fn_cost, fp_cost
+
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        return None
 
 
 def all_float(*arrays: ArrayLike | float | Parameter) -> bool:

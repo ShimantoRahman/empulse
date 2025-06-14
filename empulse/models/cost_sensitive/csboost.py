@@ -454,6 +454,10 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 self.loss, **loss_params
             )
 
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        return self.loss
+
 
 class CatboostObjective:
     """AEC objective for catboost."""
