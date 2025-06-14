@@ -40,7 +40,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     ----------
     estimator : Estimator
         The cost-sensitive classifier to fit.
-        The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method.
+        The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method
+        or should use :class:`~empulse.metrics.Metric` as their loss/criterion.
 
     outlier_estimator : Estimator, optional
         The outlier estimator to fit to the costs.
@@ -64,6 +65,13 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
+
+        .. note::
+            This parameter is ignored if the underlying estimator
+            uses :class:`~empulse.metrics.Metric` as its loss/criterion.
+            Then all costs that are marked as outlier-sensitive in the metric loss
+            are used for outlier detection.
+            This can be done through the :meth: `~empulse.metrics.Metric.mark_outlier_sensitive` method.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
