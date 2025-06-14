@@ -471,6 +471,7 @@ class Metric:
         Examples
         --------
         .. code-block:: python
+
             import numpy as np
             import sympy as sp
             from empulse.metrics import Metric, Cost

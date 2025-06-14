@@ -11,6 +11,10 @@
   a :class:`~empulse.metrics.Metric` instance as their criterion to optimize.
 - |Feature| :class:`~empulse.models.CSThresholdClassifier` can now take
   a :class:`~empulse.metrics.Metric` instance to choose the optimal decision threshold.
+- |Feature| :class:`~empulse.models.RobustCSClassifier` can now take estimators with a
+  :class:`~empulse.metrics.Metric` instance as the loss function or criterion.
+  :class:`~empulse.models.RobustCSClassifier` will treat any cost marked as outlier sensitive.
+  This can be done by using the :meth:`~empulse.metrics.Metric.mark_outlier_sensitive` method.
 - |Feature| Allow savings metrics to be used in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.CSLogitClassifier` as the objective function.
   Internally, the expected cost loss is used to train the model,

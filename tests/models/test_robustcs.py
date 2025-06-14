@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
+import sympy
 from sklearn.linear_model import HuberRegressor
 
+from empulse.metrics import Cost, Metric
 from empulse.models import CSLogitClassifier, RobustCSClassifier
 
 
@@ -55,3 +57,30 @@ def test_detect_outliers_for(data, detect_outliers_for):
             assert not np.array_equal(clf.costs_[cost_name], original_cost)
         elif isinstance(original_cost, np.ndarray) and cost_name not in detect_outliers_for:
             assert np.array_equal(clf.costs_[cost_name], original_cost)
+
+
+def test_robustcs_metric_loss(data):
+    X, y = data
+
+    clv, d, f, gamma = sympy.symbols('clv d f gamma')
+    cost_loss = (
+        Metric(Cost())
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost('d + f')
+        .alias('accept_rate', gamma)
+        .alias('incentive_cost', d)
+        .alias('contact_cost', f)
+        .mark_outlier_sensitive(clv)
+        .mark_outlier_sensitive(d)
+        .build()
+    )
+    rng = np.random.default_rng(42)
+    clv_val = rng.uniform(100, 200, size=X.shape[0])
+    d_val = rng.uniform(0, 100, size=X.shape[0])
+    model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
+    model.fit(X, y, clv=clv_val, accept_rate=0.3, incentive_cost=d_val, contact_cost=1)
+    assert hasattr(model, 'estimator_')
+    assert hasattr(model, 'outlier_estimators_')
+    assert not np.array_equal(model.costs_['clv'], clv_val)
+    assert not np.array_equal(model.costs_['d'], d_val)

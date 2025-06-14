@@ -1,6 +1,7 @@
 import sys
+from collections.abc import MutableMapping
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, TypeVar
 
 import numpy as np
 import scipy.stats as st
@@ -20,6 +21,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
+K = TypeVar('K')
+V = TypeVar('V')
 
 
 class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):  # type: ignore[misc]
@@ -131,6 +134,24 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
         model = RobustCSClassifier(CSLogitClassifier(C=0.1))
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
+    Example with Metric loss:
+
+    .. code-block:: python
+
+        import numpy as np
+        import sympy as sp
+        from empulse.metrics import Metric, Cost
+        from empulse.models import CSLogitClassifier, RobustCSClassifier
+        from sklearn.datasets import make_classification
+
+        X, y = make_classification()
+        a, b = sp.symbols('a b')
+        cost_loss = Metric(Cost()).add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a).build()
+        fn_cost = np.random.rand(y.size)
+
+        model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
+        model.fit(X, y, a=np.random.rand(y.size), b=5)
 
     Example with passing instance-dependent costs through cross-validation:
 
@@ -289,18 +310,73 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             Fitted RobustCSLogitClassifier model.
         """
         X, y = validate_data(self, X, y)
-        tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-        )
 
-        self.costs_: dict[CostStr, int | float | FloatNDArray] = {
-            'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
-            'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
-            'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
-            'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),
-        }
+        if (
+            isinstance(self.estimator, CostSensitiveMixin)
+            and (metric_loss := self.estimator._get_metric_loss()) is not None
+        ):
+            self.costs_: dict[str, int | float | FloatNDArray] = {}
+            outlier_symbols = metric_loss._outlier_sensitive_symbols
+
+            self.outlier_estimators_ = {}
+            for symbol in outlier_symbols:
+                target = fit_params.get(str(symbol))
+                if target is None:
+                    alias = _invert_dict(metric_loss._aliases)[str(symbol)]
+                    target = fit_params.get(alias)
+                    if target is None:
+                        raise ValueError(f"Cost '{symbol}' is not provided in fit_params.")
+                if not isinstance(target, np.ndarray):
+                    raise ValueError(f"Cost '{symbol}' is not an array. Cannot detect outliers for this cost.")
+                pos_symbols = metric_loss.tp_cost.free_symbols | metric_loss.fn_cost.free_symbols
+                neg_symbols = metric_loss.tn_cost.free_symbols | metric_loss.fp_cost.free_symbols
+                if symbol in pos_symbols and symbol not in neg_symbols:
+                    X_relevant, target_relevant = X[y > 0], target[y > 0]
+                elif symbol in neg_symbols and symbol not in pos_symbols:
+                    X_relevant, target_relevant = X[y == 0], target[y == 0]
+                else:
+                    X_relevant, target_relevant = X.copy(), target.copy()
+
+                if X_relevant.size > 0:
+                    outlier_estimator = clone(
+                        self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
+                    ).fit(X_relevant, target_relevant)
+                    cost_predictions = outlier_estimator.predict(X)
+                    residuals = np.abs(target - cost_predictions)
+                    std_residuals = residuals / st.sem(target)
+                    outliers = std_residuals > self.outlier_threshold
+                    fit_params[str(symbol)] = np.where(outliers, cost_predictions, target)
+                    self.costs_[str(symbol)] = fit_params[str(symbol)]
+                    self.outlier_estimators_[str(symbol)] = outlier_estimator
+                imputed_costs = {}
+        else:
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
+            self.costs_ = {
+                'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # take copy of the array
+                'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
+                'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
+                'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),
+            }
+            should_fit = self._determine_outlier_costs()
+            self._fit_outlier_estimators(X, y, should_fit)
+            imputed_costs = self.costs_.copy()
+
+        # with the imputed costs fit the estimator
+        self.estimator_ = clone(self.estimator).fit(X, y, **imputed_costs, **fit_params)
+
+        if hasattr(self.estimator_, 'n_features_in_'):
+            self.n_features_in_ = self.estimator_.n_features_in_
+        if hasattr(self.estimator_, 'feature_names_in_'):
+            self.feature_names_in_ = self.estimator_.feature_names_in_
+
+        return self
+
+    def _determine_outlier_costs(self) -> list[str]:
+        """Determine which costs to fit the outlier estimator on."""
         # only fit on the costs that are arrays and have a standard deviation greater than 0
-        should_fit = [
+        should_fit: list[str] = [
             cost_name for cost_name, cost in self.costs_.items() if isinstance(cost, np.ndarray) and np.std(cost) > 0
         ]
 
@@ -334,8 +410,10 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     " Must be one of 'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', or a list of these."
                 )
 
-        self.outlier_estimators_ = {}
+        return should_fit
 
+    def _fit_outlier_estimators(self, X: FloatNDArray, y: FloatNDArray, should_fit: list[str]) -> None:
+        self.outlier_estimators_ = {}
         for cost_name in self.costs_:
             if cost_name in should_fit:
                 target = self.costs_[cost_name]
@@ -360,16 +438,6 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     self.outlier_estimators_[cost_name] = None
             else:
                 self.outlier_estimators_[cost_name] = None
-
-        # with the imputed costs fit the estimator
-        self.estimator_ = clone(self.estimator).fit(X, y, **self.costs_, **fit_params)
-
-        if hasattr(self.estimator_, 'n_features_in_'):
-            self.n_features_in_ = self.estimator_.n_features_in_
-        if hasattr(self.estimator_, 'feature_names_in_'):
-            self.feature_names_in_ = self.estimator_.feature_names_in_
-
-        return self
 
     @available_if(_estimator_has('predict'))  # type: ignore[misc]
     def predict(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
@@ -405,3 +473,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
         return tags
+
+
+def _invert_dict(d: MutableMapping[K, V]) -> dict[V, K]:
+    """Invert a dictionary, swapping keys and values."""
+    return {v: k for k, v in d.items()}
