@@ -878,25 +878,74 @@ def test_metric_context_manager(y_true_and_prediction):
     assert pytest.approx(metric_result) == cost_result
 
 
-# # Extract sympy distributions from _sympy_dist_to_scipy
-# sympy_distributions = list(Metric._sympy_dist_to_scipy.keys())
-#
-# @pytest.mark.parametrize('sympy_dist', sympy_distributions)
-# def test_sympy_distributions(sympy_dist):
-#     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
-#     gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, (alpha, beta))
-#
-#     profit_func = (
-#         Metric('max profit')
-#         .add_tp_benefit(gamma * (clv - d - f))
-#         .add_tp_benefit((1 - gamma) * -f)
-#         .add_fp_cost('d + f')
-#         .build()
-#     )
-#
-#     y_true = [1, 0, 1, 0, 1]
-#     y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
-#
-#     # Test with some default values
-#     result = profit_func(y_true, y_proba, clv=100, d=10, f=1, alpha=0.5, beta=1)
-#     assert isinstance(result, float)
+_sympy_dist_to_scipy: list[
+    tuple[
+        sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
+        tuple[float, ...],
+        ...,
+    ],
+] = [
+    (sympy.stats.crv_types.ArcsinDistribution, (0, 1)),
+    (sympy.stats.crv_types.BetaDistribution, (6, 14)),
+    (sympy.stats.crv_types.BetaPrimeDistribution, (6, 14)),
+    (sympy.stats.crv_types.ChiDistribution, (6,)),
+    (sympy.stats.crv_types.ChiSquaredDistribution, (6,)),
+    (sympy.stats.crv_types.ExGaussianDistribution, (0.3, 0.1, 1)),
+    (sympy.stats.crv_types.ExponentialDistribution, (6,)),
+    (sympy.stats.crv_types.FDistributionDistribution, (6, 14)),
+    (sympy.stats.crv_types.GammaDistribution, (6, 14)),
+    (sympy.stats.crv_types.GammaInverseDistribution, (6, 14)),
+    (sympy.stats.crv_types.LaplaceDistribution, (6, 14)),
+    (sympy.stats.crv_types.LogisticDistribution, (6, 14)),
+    (sympy.stats.crv_types.LogNormalDistribution, (1e-3, 0.1)),
+    (sympy.stats.crv_types.LomaxDistribution, (6, 14)),
+    (sympy.stats.crv_types.MaxwellDistribution, (6,)),
+    (sympy.stats.crv_types.MoyalDistribution, (6, 14)),
+    (sympy.stats.crv_types.NakagamiDistribution, (6, 14)),
+    (sympy.stats.crv_types.NormalDistribution, (6, 14)),
+    (sympy.stats.crv_types.PowerFunctionDistribution, (6, 0, 1)),
+    (sympy.stats.crv_types.StudentTDistribution, (6,)),
+    (sympy.stats.crv_types.TrapezoidalDistribution, (1, 2, 3, 4)),
+    (sympy.stats.crv_types.TriangularDistribution, (0, 1, 0.3)),
+    (sympy.stats.crv_types.UniformDistribution, (6, 14)),
+    (sympy.stats.crv_types.GaussianInverseDistribution, (6, 14)),
+]
+
+
+@pytest.mark.parametrize('sympy_dist_map', _sympy_dist_to_scipy)
+def test_sympy_distributions(sympy_dist_map):
+    sympy_dist = sympy_dist_map[0]
+    params = sympy_dist_map[1]
+    clv, d, f = sympy.symbols('clv d f')
+    random_symbol_params = tuple(sympy.symbols([f'param_{i}' for i in range(len(params))]))
+    param_values_dict = {f'param_{i}': params[i] for i in range(len(params))}
+    # if isinstance(sympy_dist, sympy.stats.crv_types.FDistributionDistribution):
+    #     gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, d1=random_symbol_params[0], d2=random_symbol_params[1])
+    # else:
+    gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, random_symbol_params)
+
+    profit_func = (
+        Metric(MaxProfit())
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .build()
+    )
+
+    profit_func_qmc = (
+        Metric(MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=9, random_state=12))
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .build()
+    )
+
+    y_true = [1, 0, 1, 0, 1]
+    y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+
+    # Test with some default values
+    result = profit_func(y_true, y_proba, clv=100, d=10, f=1, **param_values_dict)
+    result_qmc = profit_func_qmc(y_true, y_proba, clv=100, d=10, f=1, **param_values_dict)
+    assert isinstance(result, float) and not np.isnan(result)
+    assert isinstance(result_qmc, float) and not np.isnan(result)
+    assert pytest.approx(result, rel=1e-1) == result_qmc

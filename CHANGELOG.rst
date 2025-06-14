@@ -10,6 +10,8 @@
 - |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly using the gradient
   when using a custom loss function from :class:`~empulse.metrics.Metric`.
 - |Fix| Fix models throwing errors when differently shaped costs are passed to the fit or predict method.
+- |Fix| Fix sympy distribution parameters not being properly translated to scipy distribution parameters when
+  using the :class:`~empulse.metrics.MaxProfit` strategy with the quasi monte-carlo integration method.
 
 `0.8.0`_ (01-06-2025)
 =====================

@@ -30,12 +30,10 @@ _sympy_dist_to_scipy: dict[
     # Erlang internally calls GammaDistribution so should be supported
     sympy.stats.crv_types.ExGaussianDistribution: scipy.stats.exponnorm,
     sympy.stats.crv_types.ExponentialDistribution: scipy.stats.expon,
-    sympy.stats.crv_types.FDistribution: scipy.stats.f,
+    sympy.stats.crv_types.FDistributionDistribution: scipy.stats.f,
     sympy.stats.crv_types.GammaDistribution: scipy.stats.gamma,
     sympy.stats.crv_types.GammaInverseDistribution: scipy.stats.invgamma,
-    sympy.stats.crv_types.GompertzDistribution: scipy.stats.gompertz,
     sympy.stats.crv_types.LaplaceDistribution: scipy.stats.laplace,
-    sympy.stats.crv_types.LevyDistribution: scipy.stats.levy,
     sympy.stats.crv_types.LogisticDistribution: scipy.stats.logistic,
     sympy.stats.crv_types.LogNormalDistribution: scipy.stats.lognorm,
     sympy.stats.crv_types.LomaxDistribution: scipy.stats.lomax,
@@ -43,14 +41,40 @@ _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.MoyalDistribution: scipy.stats.moyal,
     sympy.stats.crv_types.NakagamiDistribution: scipy.stats.nakagami,
     sympy.stats.crv_types.NormalDistribution: scipy.stats.norm,
-    sympy.stats.crv_types.ParetoDistribution: scipy.stats.pareto,
     sympy.stats.crv_types.PowerFunctionDistribution: scipy.stats.powerlaw,
     sympy.stats.crv_types.StudentTDistribution: scipy.stats.t,
     sympy.stats.crv_types.TrapezoidalDistribution: scipy.stats.trapezoid,
     sympy.stats.crv_types.TriangularDistribution: scipy.stats.triang,
     sympy.stats.crv_types.UniformDistribution: scipy.stats.uniform,
-    sympy.stats.crv_types.VonMisesDistribution: scipy.stats.vonmises,
-    sympy.stats.crv_types.GaussianInverseDistribution: scipy.stats.wald,
+    sympy.stats.crv_types.GaussianInverseDistribution: scipy.stats.invgauss,
+}
+
+_sympy_dist_to_scipy_params: dict[
+    sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
+    Callable[..., dict[str, float]],
+] = {
+    sympy.stats.crv_types.ExponentialDistribution: lambda rate: {'loc': 0, 'scale': 1 / rate},
+    sympy.stats.crv_types.GammaDistribution: lambda k, theta: {'a': k, 'scale': theta},
+    sympy.stats.crv_types.GammaInverseDistribution: lambda a, b: {'a': a, 'scale': b},
+    sympy.stats.crv_types.FDistributionDistribution: lambda d1, d2: {'dfn': d1, 'dfd': d2},
+    sympy.stats.crv_types.LomaxDistribution: lambda alpha, lamb: {'c': alpha, 'scale': lamb},
+    sympy.stats.crv_types.LogNormalDistribution: lambda mu, sigma: {'s': sigma, 'loc': mu},
+    sympy.stats.crv_types.MaxwellDistribution: lambda a: {'loc': 0, 'scale': a},
+    sympy.stats.crv_types.NakagamiDistribution: lambda mu, omega: {'nu': mu, 'scale': np.sqrt(omega)},
+    sympy.stats.crv_types.TrapezoidalDistribution: lambda a, b, c, d: {
+        'loc': a,
+        'scale': d - a,
+        'c': (b - a) / (d - a),
+        'd': (c - a) / (d - a),
+    },
+    sympy.stats.crv_types.TriangularDistribution: lambda a, b, c: {'loc': a, 'scale': b - a, 'c': (c - a) / (b - a)},
+    sympy.stats.crv_types.UniformDistribution: lambda a, b: {'loc': a, 'scale': b - a},
+    sympy.stats.crv_types.GaussianInverseDistribution: lambda mu, lamb: {'mu': mu / lamb, 'scale': lamb},
+    sympy.stats.crv_types.ExGaussianDistribution: lambda mean, std, rate: {
+        'loc': mean,
+        'scale': std,
+        'K': 1 / (std * rate),
+    },
 }
 
 
@@ -708,12 +732,24 @@ def _build_max_profit_stochastic_qmc(
         # If all distribution parameters are fixed, then the param grid can be pre-computed.
         param_grid_needs_recompute = False
         # convert to scipy distributions
-        scipy_distributions = [
-            _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
-                float(arg) for arg in pspace(random_var).distribution.args
-            ])
-            for random_var in random_symbols
-        ]
+        scipy_distributions = []
+        for random_var in random_symbols:
+            sympy_distribution = pspace(random_var).distribution.__class__
+            scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
+            sympy_dist_params = [float(arg) for arg in pspace(random_var).distribution.args]
+            if sympy_distribution in _sympy_dist_to_scipy_params:
+                scipy_dist_kwargs = _sympy_dist_to_scipy_params[sympy_distribution](*sympy_dist_params)
+                scipy_distributions.append(scipy_distribution(**scipy_dist_kwargs))
+            else:
+                scipy_dist_params = sympy_dist_params
+                scipy_distributions.append(scipy_distribution(*scipy_dist_params))
+
+        # scipy_distributions = [
+        #     _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
+        #         float(arg) for arg in pspace(random_var).distribution.args
+        #     ])
+        #     for random_var in random_symbols
+        # ]
         param_grid = [dist.ppf(sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
         dist_params = []
 
@@ -739,12 +775,25 @@ def _build_max_profit_stochastic_qmc(
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, distribution_args)
             if cached_dist_params != distribution_parameters:
                 cached_dist_params = distribution_parameters
-                scipy_distributions = [
-                    _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
+                scipy_distributions = []
+                for random_var in random_symbols:
+                    sympy_distribution = pspace(random_var).distribution.__class__
+                    scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
+                    sympy_dist_params = [
                         float(arg) for arg in pspace(random_var.subs(cached_dist_params)).distribution.args
-                    ])
-                    for random_var in random_symbols
-                ]
+                    ]
+                    if sympy_distribution in _sympy_dist_to_scipy_params:
+                        scipy_dist_kwargs = _sympy_dist_to_scipy_params[sympy_distribution](*sympy_dist_params)
+                        scipy_distributions.append(scipy_distribution(**scipy_dist_kwargs))
+                    else:
+                        scipy_dist_params = sympy_dist_params
+                        scipy_distributions.append(scipy_distribution(*scipy_dist_params))
+                # scipy_distributions = [
+                #     _sympy_dist_to_scipy[pspace(random_var).distribution.__class__](*[
+                #         float(arg) for arg in pspace(random_var.subs(cached_dist_params)).distribution.args
+                #     ])
+                #     for random_var in random_symbols
+                # ]
                 param_grid = [dist.ppf(sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
 
             profit_integrand = (

@@ -253,9 +253,7 @@ class MaxProfit(MetricStrategy):
             - :class:`sympy.stats.Gamma`
             - :class:`sympy.stats.GammaInverse`
             - :class:`sympy.stats.GaussianInverse`
-            - :class:`sympy.stats.Gompertz`
             - :class:`sympy.stats.Laplace`
-            - :class:`sympy.stats.Levy`
             - :class:`sympy.stats.Logistic`
             - :class:`sympy.stats.LogNormal`
             - :class:`sympy.stats.Lomax`
@@ -263,13 +261,11 @@ class MaxProfit(MetricStrategy):
             - :class:`sympy.stats.Maxwell`
             - :class:`sympy.stats.Moyal`
             - :class:`sympy.stats.Nakagami`
-            - :class:`sympy.stats.Pareto`
             - :class:`sympy.stats.PowerFunction`
             - :class:`sympy.stats.StudentT`
             - :class:`sympy.stats.Trapezoidal`
             - :class:`sympy.stats.Triangular`
             - :class:`sympy.stats.Uniform`
-            - :class:`sympy.stats.VonMises`
 
     n_mc_samples_exp: int
         ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
