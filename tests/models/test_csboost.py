@@ -19,6 +19,7 @@ def dataset():
     return X, y, fn_cost, fp_cost
 
 
+@pytest.mark.filterwarnings('ignore::UserWarning')
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
 def test_csboost_different_classifiers(library, classifier_name, dataset):
     # Import the classifier dynamically

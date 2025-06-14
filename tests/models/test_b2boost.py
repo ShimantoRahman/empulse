@@ -134,6 +134,7 @@ def dataset():
     return X, y
 
 
+@pytest.mark.filterwarnings('ignore::UserWarning')
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
 def test_b2boost_different_classifiers(library, classifier_name, dataset):
     # Import the classifier dynamically

@@ -115,6 +115,12 @@ exclude = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+filterwarnings = [
+    "ignore:L-BFGS failed to converge",  # max_iter is set low for speed, so this warning is expected
+    "ignore:lbfgs failed to converge",  # max_iter is set low for speed, so this warning is expected
+    "ignore:All costs are zero",  # sklearn's tests don't use costs, so this warning is expected
+    "ignore:Failed to import numba",  # don't use numba in tests
+]
 
 [tool.coverage.run]
 omit = ["empulse/utils/_sklearn_compat.py"]
