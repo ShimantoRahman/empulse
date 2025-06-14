@@ -1,17 +1,34 @@
 `Unreleased`_
 =============
 
+- |Feature| Added :meth:`~empulse.metrics.Metric.optimal_threshold` and
+  :meth:`~empulse.metrics.Metric.optimal_rate` methods to calculate the optimal threshold(s)
+  and optimal predicted positive rate for a given metric.
+  This is useful for determining the best decision threshold and predicted positive rate
+  for a cost-sensitive or value-driven model.
 - |Feature| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`, and
   :class:`~empulse.models.CSBaggingClassifier` can now take
-  a :class:`~empulse.metrics.Metric` instance as their loss function.
+  a :class:`~empulse.metrics.Metric` instance as their criterion to optimize.
+- |Feature| :class:`~empulse.models.CSThresholdClassifier` can now take
+  a :class:`~empulse.metrics.Metric` instance to choose the optimal decision threshold.
 - |Feature| Allow savings metrics to be used in :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.CSLogitClassifier` as the objective function.
+  Internally, the expected cost loss is used to train the model,
+  since the expected savings score is just a transformation of the expected cost loss.
+- |API| `kind` argument to :class:`~empulse.metrics.Metric` has been replaced by `strategy`.
+  The :class:`~empulse.metrics.Metric` class now takes a :class:`~empulse.metrics.MetricStrategy` instance.
+  This change allows for more flexibility in defining the metric strategy.
+  The currently available strategies are:
+    - :class:`~empulse.metrics.MaxProfit` for the expected maximum profit score
+    - :class:`~empulse.metrics.Cost` for the expected cost loss
+    - :class:`~empulse.metrics.Savings` for the expected savings score
 - |Fix| Fix error when importing Empulse without any optional dependencies installed.
 - |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly using the gradient
   when using a custom loss function from :class:`~empulse.metrics.Metric`.
 - |Fix| Fix models throwing errors when differently shaped costs are passed to the fit or predict method.
 - |Fix| Fix sympy distribution parameters not being properly translated to scipy distribution parameters when
-  using the :class:`~empulse.metrics.MaxProfit` strategy with the quasi monte-carlo integration method.
+  using the :class:`~empulse.metrics.MaxProfit` strategy (formerly `kind='max profit'`)
+  with the quasi monte-carlo integration method.
 
 `0.8.0`_ (01-06-2025)
 =====================
