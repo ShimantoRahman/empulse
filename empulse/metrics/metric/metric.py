@@ -178,6 +178,7 @@ class Metric:
         self._fn_cost: sympy.Expr = sympy.core.numbers.Zero()
         self._aliases: MutableMapping[str, str | sympy.Symbol] = {}
         self._defaults: dict[str, Any] = {}
+        self._outlier_sensitive_symbols: set[sympy.Symbol] = set()
         self._built = False
 
     @property
@@ -447,6 +448,48 @@ class Metric:
 
         """
         self._defaults.update(defaults)
+        return self
+
+    def mark_outlier_sensitive(self, symbol: str | sympy.Symbol) -> Self:
+        """
+        Mark a symbol as outlier-sensitive.
+
+        This is used to indicate that the symbol is sensitive to outliers.
+        When the metric is used as a loss function or criterion for training a model,
+        :class:`~empulse.models.RobustCSClassifier` will impute outliers for this symbol's value.
+        This is ignored when not using a :class:`~empulse.models.RobustCSClassifier` model.
+
+        Parameters
+        ----------
+        symbol: str | sympy.Symbol
+            The symbol to mark as outlier-sensitive.
+
+        Returns
+        -------
+        Metric
+
+        Examples
+        --------
+        .. code-block:: python
+            import numpy as np
+            import sympy as sp
+            from empulse.metrics import Metric, Cost
+            from empulse.models import CSLogitClassifier, RobustCSClassifier
+            from sklearn.datasets import make_classification
+
+            X, y = make_classification()
+            a, b = sp.symbols('a b')
+            cost_loss = Metric(Cost()).add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a).build()
+            fn_cost = np.random.rand(y.size)
+
+            model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
+            model.fit(X, y, a=np.random.rand(y.size), b=5)
+        """
+        if isinstance(symbol, str):
+            symbol = sympy.sympify(symbol)
+        if not isinstance(symbol, sympy.Symbol):
+            raise ValueError('The symbol must be a sympy.Symbol or a string that can be converted to a sympy.Symbol')
+        self._outlier_sensitive_symbols.add(symbol)
         return self
 
     def build(self) -> Self:
