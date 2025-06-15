@@ -15,6 +15,7 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric, make_objective_aec
+from ...metrics._loss import cy_logit_loss_gradient
 from .._base import BaseLogitClassifier, LossFn, OptimizeFn
 from ._cs_mixin import CostSensitiveMixin
 
@@ -355,9 +356,26 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             objective: ObjectiveFn = _objective_jacobian
             optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
         elif isinstance(self.loss, Metric):
-            loss = partial(self.loss._logit_objective, **loss_params)
-            objective = _objective_jacobian
-            optimize_fn = _optimize_jacobian
+            grad_const, loss_const1, loss_const2 = self.loss._prepare_logit_objective(X, y, **loss_params)
+            loss = partial(
+                cy_logit_loss_gradient,
+                grad_const=grad_const,
+                loss_const1=loss_const1.reshape(-1),
+                loss_const2=loss_const2.reshape(-1),
+                features=X,
+                C=self.C,
+                l1_ratio=self.l1_ratio,
+                soft_threshold=self.soft_threshold,
+                fit_intercept=self.fit_intercept,
+            )
+            self.result_ = _optimize_jacobian(objective=loss, X=X, **optimizer_params)
+            self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
+            if self.fit_intercept:
+                self.intercept_ = self.result_.x[0]
+            return self
+            # loss = partial(self.loss._logit_objective, **loss_params)
+            # objective = _objective_jacobian
+            # optimize_fn = _optimize_jacobian
         elif self.loss is not None and not isinstance(self.loss, str):
             loss: Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]] = partial(  # type: ignore[no-redef]
                 self.loss, **loss_params

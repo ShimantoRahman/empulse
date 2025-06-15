@@ -321,7 +321,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             )
         else:
             self._initialize_custom_estimator(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+                y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
 
         if isinstance(self.estimator_, XGBClassifier):
@@ -365,6 +365,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def _initialize_custom_estimator(
         self,
+        y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
         fn_cost: FloatNDArray | FloatArrayLike | float,
@@ -373,18 +374,18 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     ) -> None:
         if isinstance(self.estimator, XGBClassifier):
             objective = self._get_objective(
-                'xgboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+                'xgboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE)
         elif isinstance(self.estimator, LGBMClassifier):
             objective = self._get_objective(
-                'lightgbm', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+                'lightgbm', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif isinstance(self.estimator, CatBoostClassifier):
             # self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
             loss_function, eval_metric = self._get_objective(
-                'catboost', tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+                'catboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
             self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
         else:
@@ -394,6 +395,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     def _get_objective(
         self,
         framework: Literal['xgboost', 'lightgbm'],
+        y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
         fn_cost: FloatNDArray | FloatArrayLike | float,
@@ -405,6 +407,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     def _get_objective(
         self,
         framework: Literal['catboost'],
+        y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
         fn_cost: FloatNDArray | FloatArrayLike | float,
@@ -415,6 +418,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     def _get_objective(
         self,
         framework: Literal['xgboost', 'lightgbm', 'catboost'],
+        y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
         fn_cost: FloatNDArray | FloatArrayLike | float,
@@ -425,6 +429,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[arg-type, misc]
         if framework == 'xgboost':
             return partial(self.loss._gradient_boost_objective, **loss_params)
+            # grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            # return partial(cy_boost_grad_hess, grad_const=grad_const)
         elif framework == 'lightgbm':
 
             def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:

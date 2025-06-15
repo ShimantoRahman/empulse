@@ -20,6 +20,8 @@ from .cost_metric import (
     _build_cost_loss,
     _build_cost_optimal_rate,
     _build_cost_optimal_threshold,
+    _build_cost_prepare_gradient_boost_objective,
+    _build_cost_prepare_logit_objective,
     _cost_loss_to_latex,
 )
 from .max_profit_metric import (
@@ -171,6 +173,37 @@ class MetricStrategy(ABC):
         """
         raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
 
+    def prepare_logit_objective(
+        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[float, FloatNDArray]:
+        """
+        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        loss_const1 : NDArray of shape (n_features,)
+            The first constant term of the loss function.
+        loss_const2 : NDArray of shape (n_features,)
+            The second constant term of the loss function.
+        """
+        raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
+
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:
@@ -199,6 +232,31 @@ class MetricStrategy(ABC):
             The gradient of the metric loss with respect to the gradient boosting weights.
         hessian : NDArray of shape (n_samples,)
             The hessian of the metric loss with respect to the gradient boosting weights.
+        """
+        raise NotImplementedError(
+            f'Gradient and Hessian of the gradient boosting function is not defined for the {self.name} strategy'
+        )
+
+    def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the gradient's constant term of the metric wrt gradient boost.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
         """
         raise NotImplementedError(
             f'Gradient and Hessian of the gradient boosting function is not defined for the {self.name} strategy'
@@ -492,6 +550,18 @@ class Cost(MetricStrategy):
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
+        self._prepare_logit_objective: LogitObjective = _build_cost_prepare_logit_objective(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        self._prepare_boost_objective: BoostObjective = _build_cost_prepare_gradient_boost_objective(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
         return self
 
     def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
@@ -617,6 +687,39 @@ class Cost(MetricStrategy):
         gradient = self._gradient_logit_function(features, y_true, y_proba, **parameters)
         return value, gradient
 
+    def prepare_logit_objective(
+        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+        """
+        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        loss_const1 : NDArray of shape (n_features,)
+            The first constant term of the loss function.
+        loss_const2 : NDArray of shape (n_features,)
+            The second constant term of the loss function.
+        """
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        return self._prepare_logit_objective(features, y_true, **parameters)
+
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
     ) -> tuple[FloatNDArray, FloatNDArray]:
@@ -647,6 +750,31 @@ class Cost(MetricStrategy):
             The hessian of the metric loss with respect to the gradient boosting weights.
         """
         return self._gradient_hessian_gboost_function(y_true, y_score, **kwargs)
+
+    def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the gradient's constant term of the metric wrt gradient boost.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        """
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        return self._prepare_boost_objective(y_true, **parameters)
 
     def to_latex(
         self,

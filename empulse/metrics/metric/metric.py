@@ -10,7 +10,6 @@ else:
     from typing_extensions import Self
 
 import numpy as np
-import scipy
 import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
@@ -690,6 +689,41 @@ class Metric:
 
         return self.strategy.logit_objective(features, weights, y_true, **parameters)
 
+    def _prepare_logit_objective(
+        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+        """
+        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        loss_const1 : NDArray of shape (n_features,)
+            The first constant term of the loss function.
+        loss_const2 : NDArray of shape (n_features,)
+            The second constant term of the loss function.
+        """
+        parameters = self._prepare_parameters(**parameters)
+        for key, value in parameters.items():
+            if isinstance(value, np.ndarray) and value.ndim == 1:
+                parameters[key] = np.expand_dims(value, axis=1)
+        return self.strategy.prepare_logit_objective(features, y_true, **parameters)
+
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:
@@ -718,9 +752,37 @@ class Metric:
             The hessian of the metric loss with respect to the gradient boosting weights.
         """
         parameters = self._prepare_parameters(**parameters)
-        y_proba = scipy.special.expit(y_score)
+        # y_proba = scipy.special.expit(y_score)
+        y_proba = y_score
         gradient, hessian = self.strategy.gradient_boost_objective(y_true, y_proba, **parameters)
         return gradient, hessian
+
+    def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the gradient's constant term of the metric wrt gradient boost.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        """
+        parameters = self._prepare_parameters(**parameters)
+        for key, value in parameters.items():
+            if isinstance(value, np.ndarray) and value.ndim == 1:
+                parameters[key] = np.expand_dims(value, axis=1)
+        return self.strategy.prepare_boost_objective(y_true, **parameters)
 
     def _get_cost_matrix(self, n_samples: int, **parameters: FloatNDArray | float) -> FloatNDArray:
         """

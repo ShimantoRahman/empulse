@@ -57,6 +57,34 @@ def _build_cost_logit_objective(
     return cost_gradient_logit
 
 
+def _build_cost_prepare_logit_objective(
+    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> LogitObjective:
+    y, x = sympy.symbols('y x')
+    gradient_const = x * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
+    gradient_fn = sympy.lambdify(list(gradient_const.free_symbols), gradient_const)
+    loss_const1 = y * -tp_benefit - fp_cost + fp_cost * y
+    if isinstance(loss_const1, sympy.core.numbers.Zero):
+        loss_const1_fn = lambda y, **kwargs: np.zeros(y.shape, dtype=np.float64)
+    else:
+        loss_const1_fn = sympy.lambdify(list(loss_const1.free_symbols), loss_const1)
+    loss_const2 = y * fn_cost - tn_benefit + tn_benefit * y
+    if isinstance(loss_const2, sympy.core.numbers.Zero):
+        loss_const2_fn = lambda y, **kwargs: np.zeros(y.shape, dtype=np.float64)
+    else:
+        loss_const2_fn = sympy.lambdify(list(loss_const2.free_symbols), loss_const2)
+
+    def cost_gradient_logit_consts(
+        x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
+    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+        gradient_const: FloatNDArray = gradient_fn(y=y_true, x=x, **kwargs)
+        loss_const1_value: FloatNDArray = loss_const1_fn(y=y_true, **kwargs)
+        loss_const2_value: FloatNDArray = loss_const2_fn(y=y_true, **kwargs)
+        return gradient_const, loss_const1_value, loss_const2_value
+
+    return cost_gradient_logit_consts
+
+
 def _build_cost_gradient_boost_objective(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> BoostObjective:
@@ -74,6 +102,19 @@ def _build_cost_gradient_boost_objective(
         return gradient, hessian
 
     return cost_gradient_hessian_gboost
+
+
+def _build_cost_prepare_gradient_boost_objective(
+    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> BoostObjective:
+    y = sympy.symbols('y')
+    gradient_const = y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
+    gradient_const_fn = sympy.lambdify(list(gradient_const.free_symbols), gradient_const)
+
+    def cost_gradient_const(y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray:
+        return gradient_const_fn(y=y_true, **kwargs)
+
+    return cost_gradient_const
 
 
 def _build_cost_optimal_threshold(
