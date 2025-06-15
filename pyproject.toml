@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [
     { name = "Shimanto Rahman", email = "shimanto.rahman@ugent.be" },
 ]
-license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -22,7 +22,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
