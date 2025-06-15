@@ -1,0 +1,9 @@
+﻿Metric
+======
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: Metric
+   :members:
+   :inherited-members:
+   :special-members: __call__

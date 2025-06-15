@@ -1,0 +1,51 @@
+/**
+ * This is a general styling sheet.
+ * It should be used for customizations that affect multiple pages.
+ *
+ * This file is compiled into css/custom.css by sphinxcontrib.sass, see:
+ * https://sass-lang.com/guide/
+ */
+
+/* Article content */
+
+.bd-article {
+  h1 {
+    font-weight: 500;
+    margin-bottom: 2rem;
+  }
+
+  h2 {
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  // Avoid changing the aspect ratio of images; add some padding so that at least
+  // there is some space between image and background in dark mode
+  img {
+    height: unset !important;
+    padding: 1%;
+  }
+
+  // Resize table of contents to make the top few levels of headings more visible
+  li.toctree-l1 {
+    padding-bottom: 0.5em;
+
+    > a {
+      font-size: 150%;
+      font-weight: bold;
+    }
+  }
+
+  li.toctree-l2,
+  li.toctree-l3,
+  li.toctree-l4 {
+    margin-left: 15px;
+  }
+}
+
+/* Primary Sidebar */
+
+.bd-sidebar-primary {
+  width: 22.5%;
+  min-width: 16rem;
+}
