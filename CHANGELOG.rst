@@ -1,6 +1,11 @@
 `Unreleased`_
 =============
 
+...
+
+`0.9.0`_ (15-06-2025)
+=====================
+
 - |Feature| Added :meth:`~empulse.metrics.Metric.optimal_threshold` and
   :meth:`~empulse.metrics.Metric.optimal_rate` methods to calculate the optimal threshold(s)
   and optimal predicted positive rate for a given metric.
@@ -23,9 +28,11 @@
   The :class:`~empulse.metrics.Metric` class now takes a :class:`~empulse.metrics.MetricStrategy` instance.
   This change allows for more flexibility in defining the metric strategy.
   The currently available strategies are:
+
     - :class:`~empulse.metrics.MaxProfit` for the expected maximum profit score
     - :class:`~empulse.metrics.Cost` for the expected cost loss
     - :class:`~empulse.metrics.Savings` for the expected savings score
+
 - |Fix| Fix error when importing Empulse without any optional dependencies installed.
 - |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly using the gradient
   when using a custom loss function from :class:`~empulse.metrics.Metric`.
@@ -131,7 +138,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.8.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.9.0...main
+.. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
 .. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0
 .. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0
 .. _0.6.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0
