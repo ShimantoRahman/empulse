@@ -102,10 +102,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Intercept of the logit model.
         Only available when ``fit_intercept=True``.
 
-    Notes
-    -----
-    Original implementation of ProfLogit [3]_ in Python.
-
     References
     ----------
     .. [1] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
@@ -116,7 +112,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Snoeck, M. (2015). Profit Maximizing Logistic Regression Modeling for
         Customer Churn Prediction. IEEE International Conference on
         Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.
-    .. [3] https://github.com/estripling/proflogit/tree/master
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
