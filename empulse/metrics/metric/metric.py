@@ -446,7 +446,17 @@ class Metric:
             cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
 
         """
-        self._defaults.update(defaults)
+        # Convert aliases to symbol names before storing defaults
+        converted_defaults = {}
+        for key, value in defaults.items():
+            if key in self._aliases:
+                symbol_name = str(self._aliases[key])
+                converted_defaults[symbol_name] = value
+            else:
+                converted_defaults[key] = value
+
+        self._defaults.update(converted_defaults)
+
         return self
 
     def mark_outlier_sensitive(self, symbol: str | sympy.Symbol) -> Self:
@@ -517,6 +527,11 @@ class Metric:
 
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
+        # Map aliases to the appropriate symbols
+        for alias, symbol in self._aliases.items():
+            if alias in kwargs:
+                kwargs[symbol] = kwargs.pop(alias)
+
         # Use default values if not provided in kwargs
         for key, value in self._defaults.items():
             kwargs.setdefault(key, value)
@@ -525,10 +540,13 @@ class Metric:
             if not isinstance(value, Real):
                 kwargs[key] = np.asarray(value).reshape(-1)
 
-        # Map aliases to the appropriate symbols
-        for alias, symbol in self._aliases.items():
-            if alias in kwargs:
-                kwargs[symbol] = kwargs.pop(alias)
+        # convert any ints to floats
+        for key, value in kwargs.items():
+            if isinstance(value, np.ndarray) and not np.issubdtype(value.dtype, np.floating):
+                kwargs[key] = value.astype(np.float64)
+            elif isinstance(value, int):
+                kwargs[key] = float(value)
+
         kwargs: dict[str, FloatNDArray | float]  # redefine kwargs as mypy doesn't understand the above
 
         return kwargs
