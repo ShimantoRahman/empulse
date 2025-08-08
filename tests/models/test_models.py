@@ -260,19 +260,23 @@ def test_metric_api_consistency(estimator, dataset, kind):
         preds_metric = model_metric.predict(X, a=1, b=1)
         preds_metric_weighted = model_metric.predict(X, a=1, b=10)
         preds = model.predict(X, fp_cost=1, fn_cost=1)
-        assert np.allclose(preds_metric, preds)
-        assert not np.allclose(preds_metric_weighted, preds)
+        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
+        assert not np.allclose(preds_metric_weighted, preds), (
+            'Predictions of the metric API do not change with weights.'
+        )
     else:
         model_metric.fit(X, y, a=1, b=1)
         model.fit(X, y, fp_cost=1, fn_cost=1)
 
         preds_metric = model_metric.predict_proba(X)[:, 1]
         preds = model.predict_proba(X)[:, 1]
-        assert np.allclose(preds_metric, preds)
+        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
 
         model_metric.fit(X, y, a=1, b=10)
         preds_metric_weighted = model_metric.predict_proba(X)[:, 1]
-        assert not np.allclose(preds_metric_weighted, preds)
+        assert not np.allclose(preds_metric_weighted, preds), (
+            'Predictions of the metric API do not change with weights.'
+        )
 
 
 @pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
