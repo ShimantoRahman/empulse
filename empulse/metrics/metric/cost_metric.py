@@ -75,12 +75,15 @@ def _build_cost_prepare_logit_objective(
         loss_const2_fn = sympy.lambdify(list(loss_const2.free_symbols), loss_const2)
 
     def cost_gradient_logit_consts(
-        x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
+        x: FloatNDArray, y_true: FloatNDArray, **kwargs: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-        gradient_const: FloatNDArray = gradient_fn(y=y_true, x=x, **kwargs)
-        loss_const1_value: FloatNDArray = loss_const1_fn(y=y_true, **kwargs)
-        loss_const2_value: FloatNDArray = loss_const2_fn(y=y_true, **kwargs)
-        return gradient_const, loss_const1_value, loss_const2_value
+        gradient_const_params = _filter_parameters(gradient_const, kwargs)
+        loss_const1_params = _filter_parameters(loss_const1, kwargs)
+        loss_const2_params = _filter_parameters(loss_const2, kwargs)
+        gradient_const_value: FloatNDArray = gradient_fn(y=y_true, x=x, **gradient_const_params)
+        loss_const1_value: FloatNDArray = loss_const1_fn(y=y_true, **loss_const1_params)
+        loss_const2_value: FloatNDArray = loss_const2_fn(y=y_true, **loss_const2_params)
+        return gradient_const_value, loss_const1_value, loss_const2_value
 
     return cost_gradient_logit_consts
 
