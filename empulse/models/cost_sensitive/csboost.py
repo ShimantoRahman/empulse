@@ -317,7 +317,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
         if self.estimator is None:
             self._initialize_default_estimator(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+                y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
         else:
             self._initialize_custom_estimator(
@@ -348,6 +348,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def _initialize_default_estimator(
         self,
+        y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
         fn_cost: FloatNDArray | FloatArrayLike | float,
@@ -360,7 +361,9 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 'Install optional dependencies through `pip install empulse[optional]` or '
                 '`pip install xgboost`'
             )
-        objective = self._get_objective('xgboost', tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
+        objective = self._get_objective(
+            'xgboost', y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+        )
         self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE)
 
     def _initialize_custom_estimator(
