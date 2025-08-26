@@ -1,36 +1,247 @@
-from typing import Any
+import sys
+from typing import Any, ClassVar
 
 import numpy as np
 import sympy
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 from ..._types import FloatNDArray
 from .common import (
-    BoostObjective,
-    LogitObjective,
+    BoostGradientConst,
+    Direction,
+    LogitConsts,
     MetricFn,
     RateFn,
+    SympyFnPickleMixin,
     ThresholdFn,
     _check_parameters,
-    _filter_parameters,
+    _safe_lambdify,
+    _safe_run_lambda,
+    _safe_run_lambda_array,
 )
+from .metric_strategies import MetricStrategy
 
 
-def _build_cost_loss(
-    tp_benefit: sympy.Expr,
-    tn_benefit: sympy.Expr,
-    fp_cost: sympy.Expr,
-    fn_cost: sympy.Expr,
-) -> MetricFn:
-    cost_function = _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost)
-    if any(sympy.stats.rv.is_random(symbol) for symbol in cost_function.free_symbols):
-        raise NotImplementedError('Random variables are not supported for the cost metric.')
-    cost_funct = sympy.lambdify(list(cost_function.free_symbols), cost_function)
+class Cost(MetricStrategy):
+    """Strategy for the Expected Cost metric."""
 
-    @_check_parameters(*(tp_benefit + tn_benefit + fp_cost + fn_cost).free_symbols)
-    def cost_loss(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        return float(np.mean(cost_funct(y=y_true, s=y_score, **kwargs)))
+    def __init__(self) -> None:
+        super().__init__(name='cost', direction=Direction.MINIMIZE)
 
-    return cost_loss
+    def build(
+        self,
+        tp_benefit: sympy.Expr,
+        tn_benefit: sympy.Expr,
+        fp_cost: sympy.Expr,
+        fn_cost: sympy.Expr,
+    ) -> Self:
+        """Build the metric strategy."""
+        all_symbols = tp_benefit.free_symbols | tn_benefit.free_symbols | fp_cost.free_symbols | fn_cost.free_symbols
+        if any(sympy.stats.rv.is_random(symbol) for symbol in all_symbols):
+            raise NotImplementedError('Random variables are not supported for the cost metric.')
+
+        self._score_function: MetricFn = CostLoss(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+        self._optimal_threshold: ThresholdFn = CostOptimalThreshold(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        self._optimal_rate: RateFn = CostOptimalRate(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        self._prepare_logit_objective: LogitConsts = CostLogitConsts(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+        self._prepare_boost_objective: BoostGradientConst = CostBoostGradientConst(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        return self
+
+    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the metric expected cost loss.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        score: float
+            The expected cost loss.
+        """
+        return self._score_function(y_true, y_score, **parameters)
+
+    def optimal_threshold(
+        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> float | FloatNDArray:
+        """
+        Compute the classification threshold(s) to optimize the metric value.
+
+        i.e., the score threshold at which an observation should be classified as positive to optimize the metric.
+        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.
+        For class-dependent costs and benefits, this will return a single threshold value.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_threshold: float | FloatNDArray
+            The optimal classification threshold(s).
+        """
+        return self._optimal_threshold(y_true, y_score, **parameters)
+
+    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the predicted positive rate to optimize the metric value.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate: float
+            The optimal predicted positive rate.
+        """
+        return self._optimal_rate(y_true, y_score, **parameters)
+
+    def prepare_logit_objective(
+        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+        """
+        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        loss_const1 : NDArray of shape (n_features,)
+            The first constant term of the loss function.
+        loss_const2 : NDArray of shape (n_features,)
+            The second constant term of the loss function.
+        """
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+
+        return self._prepare_logit_objective.prepare(features, y_true, **parameters)
+
+    def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the gradient's constant term of the metric wrt gradient boost.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        """
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        return self._prepare_boost_objective(y_true, **parameters)
+
+    def to_latex(
+        self,
+        tp_benefit: sympy.Expr,
+        tn_benefit: sympy.Expr,
+        fp_cost: sympy.Expr,
+        fn_cost: sympy.Expr,
+    ) -> str:
+        """Return the LaTeX representation of the metric."""
+        return _cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
+
+
+class CostLoss(SympyFnPickleMixin):
+    """Class to compute the metric for binary classification."""
+
+    _sympy_functions: ClassVar[dict[str, str]] = {'cost_function': 'cost_equation'}
+
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        self.cost_equation = _build_cost_equation(
+            tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+        self.cost_function = _safe_lambdify(self.cost_equation)
+
+    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the cost loss."""
+        _check_parameters(self.cost_equation.free_symbols - set(sympy.symbols('y s')), kwargs)
+        return float(np.mean(_safe_run_lambda(self.cost_function, self.cost_equation, y=y_true, s=y_score, **kwargs)))
 
 
 def _build_cost_equation(
@@ -41,143 +252,134 @@ def _build_cost_equation(
     return cost_function
 
 
-def _build_cost_logit_objective(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> LogitObjective:
-    y, s, x = sympy.symbols('y s x')
-    gradient = x * s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
-    gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
+class CostLogitConsts(SympyFnPickleMixin):
+    """Class to compute the constants of the cost metric for logistic regression."""
 
-    def cost_gradient_logit(
-        x: FloatNDArray, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
-    ) -> FloatNDArray:
-        gradient: FloatNDArray = np.mean(gradient_fn(y=y_true, s=y_score, x=x, **kwargs), axis=0)
-        return gradient
+    _sympy_functions: ClassVar[dict[str, str]] = {
+        'gradient_fn': 'gradient_const',
+        'loss_const1_fn': 'loss_const1',
+        'loss_const2_fn': 'loss_const2',
+    }
 
-    return cost_gradient_logit
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        y, x = sympy.symbols('y x')
+        self.gradient_const = x * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
+        self.gradient_fn = _safe_lambdify(self.gradient_const)
+        self.loss_const1 = y * -tp_benefit + (1 - y) * fp_cost
+        self.loss_const1_fn = _safe_lambdify(self.loss_const1)
+        self.loss_const2 = y * fn_cost - (1 - y) * tn_benefit
+        self.loss_const2_fn = _safe_lambdify(self.loss_const2)
 
-
-def _build_cost_prepare_logit_objective(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> LogitObjective:
-    y, x = sympy.symbols('y x')
-    gradient_const = x * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
-    gradient_fn = sympy.lambdify(list(gradient_const.free_symbols), gradient_const)
-    loss_const1 = y * -tp_benefit - fp_cost + fp_cost * y
-    if isinstance(loss_const1, sympy.core.numbers.Zero):
-        loss_const1_fn = lambda y, **kwargs: np.zeros(y.shape, dtype=np.float64)
-    else:
-        loss_const1_fn = sympy.lambdify(list(loss_const1.free_symbols), loss_const1)
-    loss_const2 = y * fn_cost - tn_benefit + tn_benefit * y
-    if isinstance(loss_const2, sympy.core.numbers.Zero):
-        loss_const2_fn = lambda y, **kwargs: np.zeros(y.shape, dtype=np.float64)
-    else:
-        loss_const2_fn = sympy.lambdify(list(loss_const2.free_symbols), loss_const2)
-
-    def cost_gradient_logit_consts(
-        x: FloatNDArray, y_true: FloatNDArray, **kwargs: FloatNDArray | float
+    def prepare(
+        self, x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
     ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-        gradient_const_params = _filter_parameters(gradient_const, kwargs)
-        loss_const1_params = _filter_parameters(loss_const1, kwargs)
-        loss_const2_params = _filter_parameters(loss_const2, kwargs)
-        gradient_const_value: FloatNDArray = gradient_fn(y=y_true, x=x, **gradient_const_params)
-        loss_const1_value: FloatNDArray = loss_const1_fn(y=y_true, **loss_const1_params)
-        loss_const2_value: FloatNDArray = loss_const2_fn(y=y_true, **loss_const2_params)
+        """Prepare the constant terms for the logistic regression objective."""
+        gradient_const_value = _safe_run_lambda_array(
+            self.gradient_fn, self.gradient_const, shape=x.shape, y=y_true, x=x, **kwargs
+        )
+        loss_const1_value = _safe_run_lambda_array(
+            self.loss_const1_fn, self.loss_const1, shape=y_true.shape[0], y=y_true, **kwargs
+        )
+        loss_const2_value = _safe_run_lambda_array(
+            self.loss_const2_fn, self.loss_const2, shape=y_true.shape[0], y=y_true, **kwargs
+        )
+
         return gradient_const_value, loss_const1_value, loss_const2_value
 
-    return cost_gradient_logit_consts
+
+class CostBoostGradientConst(SympyFnPickleMixin):
+    """Class to compute the gradient constants of the cost metric for gradient boosting."""
+
+    _sympy_functions: ClassVar[dict[str, str]] = {'gradient_const_fn': 'gradient_const_eq'}
+
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        y = sympy.symbols('y')
+        self.gradient_const_eq = y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
+        self.gradient_const_fn = _safe_lambdify(self.gradient_const_eq)
+
+    def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray:
+        """Compute the gradient constants."""
+        _check_parameters(self.gradient_const_eq.free_symbols - {sympy.symbols('y')}, kwargs)
+        gradient_const_value = _safe_run_lambda_array(
+            self.gradient_const_fn, self.gradient_const_eq, shape=y_true.shape[0], y=y_true, **kwargs
+        )
+        return gradient_const_value
 
 
-def _build_cost_gradient_boost_objective(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> BoostObjective:
-    y, s, nabla = sympy.symbols('y s nabla')
-    gradient = s * (1 - s) * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
-    gradient_fn = sympy.lambdify(list(gradient.free_symbols), gradient)
-    hessian = (1 - 2 * s) * nabla
-    hessian_fn = sympy.lambdify(list(hessian.free_symbols), hessian)
+class CostOptimalThreshold(SympyFnPickleMixin):
+    """Class to compute the optimal threshold for the cost metric."""
 
-    def cost_gradient_hessian_gboost(
-        y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
-    ) -> tuple[FloatNDArray, FloatNDArray]:
-        gradient = gradient_fn(y=y_true, s=y_score, **kwargs)
-        hessian = np.abs(hessian_fn(s=y_score, nabla=gradient))
-        return gradient, hessian
+    _sympy_functions: ClassVar[dict[str, str]] = {
+        'calculate_denominator': 'denominator_expression',
+        'calculate_numerator': 'numerator_expression',
+    }
 
-    return cost_gradient_hessian_gboost
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        self.denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
+        self.numerator_expression = fp_cost + tn_benefit
+        self.calculate_denominator = _safe_lambdify(self.denominator_expression)
+        self.calculate_numerator = _safe_lambdify(self.numerator_expression)
 
+    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
+        """Compute the optimal threshold(s). `y_true` and `y_score` are unused and kept for API compatibility."""
+        _check_parameters(self.denominator_expression.free_symbols, parameters)
+        denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
+        numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
 
-def _build_cost_prepare_gradient_boost_objective(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> BoostObjective:
-    y = sympy.symbols('y')
-    gradient_const = y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
-    gradient_const_fn = sympy.lambdify(list(gradient_const.free_symbols), gradient_const)
-
-    def cost_gradient_const(y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray:
-        return gradient_const_fn(y=y_true, **kwargs)
-
-    return cost_gradient_const
-
-
-def _build_cost_optimal_threshold(
-    tp_benefit: sympy.Expr,
-    tn_benefit: sympy.Expr,
-    fp_cost: sympy.Expr,
-    fn_cost: sympy.Expr,
-) -> ThresholdFn:
-    denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
-    numerator_expression = fp_cost + tn_benefit
-    calculate_denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)
-    calculate_numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)
-
-    @_check_parameters(*denominator_expression.free_symbols)
-    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
-        denominator_parameters = _filter_parameters(denominator_expression, parameters)
-        numerator_parameters = _filter_parameters(numerator_expression, parameters)
-        denominator = calculate_denominator(**denominator_parameters)
-        numerator = calculate_numerator(**numerator_parameters)
-        # Avoid division by zero
-        if isinstance(denominator, float | int):
+        eps = float(np.finfo(np.float64).eps)
+        if np.isscalar(denominator):
             if denominator == 0:
-                denominator += float(np.finfo(float).eps)
+                denominator = eps
         else:
             denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
-        optimal_thresholds: FloatNDArray | float = numerator / denominator
-        return optimal_thresholds
 
-    return threshold_function
+        optimal = numerator / denominator
+        return float(optimal) if np.isscalar(optimal) else optimal  # type: ignore[arg-type]
 
 
-def _build_cost_optimal_rate(
-    tp_benefit: sympy.Expr,
-    tn_benefit: sympy.Expr,
-    fp_cost: sympy.Expr,
-    fn_cost: sympy.Expr,
-) -> RateFn:
-    denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
-    numerator_expression = fp_cost + tn_benefit
-    calculate_denominator = sympy.lambdify(list(denominator_expression.free_symbols), denominator_expression)
-    calculate_numerator = sympy.lambdify(list(numerator_expression.free_symbols), numerator_expression)
+class CostOptimalRate(SympyFnPickleMixin):
+    """Class to compute the optimal predicted positive rate for the cost metric."""
 
-    @_check_parameters(*denominator_expression.free_symbols)
-    def rate_function(y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
-        parameters = {
-            key: float(np.mean(parameter)) if isinstance(parameter, np.ndarray) else parameter
-            for key, parameter in parameters.items()
-        }
-        denominator_parameters = _filter_parameters(denominator_expression, parameters)
-        numerator_parameters = _filter_parameters(numerator_expression, parameters)
-        denominator = calculate_denominator(**denominator_parameters)
-        numerator = calculate_numerator(**numerator_parameters)
-        # Avoid division by zero
-        if denominator == 0.0:
-            denominator += float(np.finfo(float).eps)
-        optimal_threshold: FloatNDArray | float = numerator / denominator
-        optimal_rate = float(np.mean(y_score > optimal_threshold))
-        return optimal_rate
+    _sympy_functions: ClassVar[dict[str, str]] = {
+        'calculate_denominator': 'denominator_expression',
+        'calculate_numerator': 'numerator_expression',
+    }
 
-    return rate_function
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        self.denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
+        self.numerator_expression = fp_cost + tn_benefit
+        self.calculate_denominator = _safe_lambdify(self.denominator_expression)
+        self.calculate_numerator = _safe_lambdify(self.numerator_expression)
+
+    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+        """Compute the optimal predicted positive rate."""
+        _check_parameters(self.denominator_expression.free_symbols, parameters)
+        denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
+        numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
+
+        # Robust division to avoid divide-by-zero
+        eps = float(np.finfo(np.float64).eps)
+        if np.isscalar(denominator):
+            denom_safe: FloatNDArray | float = denominator if denominator != 0 else eps  # type: ignore[assignment]
+        else:
+            denom_arr = np.asarray(denominator, dtype=np.float64)
+            denom_safe = np.where(denom_arr == 0, eps, denom_arr)  # type: ignore[assignment]
+
+        t_star = numerator / denom_safe
+
+        # Normalize y\_score shape to 1D
+        scores = np.asarray(y_score)
+        if scores.ndim > 1:
+            scores = scores.reshape(-1)
+
+        # If t\* is scalar, compare against scalar; otherwise compare elementwise
+        if np.isscalar(t_star):
+            rate = float(np.mean(scores >= float(t_star)))  # type: ignore[arg-type]
+        else:
+            t_arr = np.asarray(t_star, dtype=np.float64).reshape(-1)
+            rate = float(np.mean(scores >= t_arr))
+
+        return rate
 
 
 def _cost_loss_to_latex(

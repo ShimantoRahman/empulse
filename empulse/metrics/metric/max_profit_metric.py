@@ -15,7 +15,7 @@ from sympy.utilities import lambdify
 from ..._types import FloatNDArray
 from .._convex_hull import _compute_convex_hull
 from ..common import classification_threshold
-from .common import MetricFn, RateFn, ThresholdFn, _check_parameters
+from .common import MetricFn, RateFn, ThresholdFn, _check_parameters_decorator
 
 _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
@@ -280,7 +280,7 @@ def _build_max_profit_deterministic(
     """Compute the maximum profit for all deterministic variables."""
     calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-    @_check_parameters(*deterministic_symbols)
+    @_check_parameters_decorator(*deterministic_symbols)
     def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         profits, *_ = _calculate_profits_deterministic(y_true, y_score, calculate_profit, **kwargs)
         return float(profits.max())
@@ -302,7 +302,7 @@ def _build_max_profit_rate_deterministic(
     """Calculate the optimal predicted positive rate."""
     calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-    @_check_parameters(*deterministic_symbols)
+    @_check_parameters_decorator(*deterministic_symbols)
     def rate_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         return _calculate_optimal_rate_deterministic(y_true, y_score, calculate_profit, **kwargs)
 
@@ -420,7 +420,7 @@ def _build_max_profit_rate_stochastic_piecewise(
     else:
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    @_check_parameters(*deterministic_symbols, *dist_params)
+    @_check_parameters_decorator(*deterministic_symbols, *dist_params)
     def calculate_rate_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
@@ -519,7 +519,7 @@ def _build_max_profit_stochastic_piecewise(
     else:
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    @_check_parameters(*deterministic_symbols, *dist_params)
+    @_check_parameters_decorator(*deterministic_symbols, *dist_params)
     def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
@@ -583,7 +583,7 @@ def _build_max_profit_stochastic_quad(
     else:
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    @_check_parameters(*deterministic_symbols, *dist_params)
+    @_check_parameters_decorator(*deterministic_symbols, *dist_params)
     def calculate_integral(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
@@ -652,7 +652,7 @@ def _build_max_profit_stochastic_mc(
         param_grid = None
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    @_check_parameters(*deterministic_symbols, *dist_params)
+    @_check_parameters_decorator(*deterministic_symbols, *dist_params)
     def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
@@ -760,7 +760,7 @@ def _build_max_profit_stochastic_qmc(
         param_grid = []
         dist_params = [arg for arg in distribution_args if not isinstance(arg, sympy.core.numbers.Integer)]
 
-    @_check_parameters(*deterministic_symbols, *dist_params)
+    @_check_parameters_decorator(*deterministic_symbols, *dist_params)
     def score_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
