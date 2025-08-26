@@ -321,6 +321,28 @@ def test_data_format_metric_loss(estimator, dataset):
 
 
 @pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_data_types_metric_loss(estimator, dataset):
+    """Test that the estimators accept different data types when using metric loss."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.arange(y.size, dtype=np.float32)
+    fn_cost = np.ones(y.size, dtype=np.int32)
+    fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
+
+    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
+    with Metric(Cost()) as cost_loss:
+        cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+
+    if isinstance(estimator, CSThresholdClassifier):
+        estimator.fit(X, y)
+        estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+    else:
+        estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
 def test_metric_loss_all_default_params(estimator, dataset):
     """Test that the metric loss works with all default parameters."""
     X, y, _, _ = dataset
