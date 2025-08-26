@@ -4,6 +4,10 @@ cimport numpy as cnp
 from libc.math cimport exp, fabs
 
 
+ScoreType = cython.fused_type(cython.float[:], cython.double[:])
+GradientType = cython.fused_type(cython.float[:], cython.double[:])
+
+
 cdef inline double expit(double x) noexcept nogil:
     return 1.0 / (1.0 + exp(-x))
 
@@ -104,7 +108,7 @@ def cy_logit_loss_gradient(
 @cython.nonecheck(False)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def cy_boost_grad_hess(y_true, y_score: cython.float[:], grad_const: cython.double[:]):
+def cy_boost_grad_hess(y_true, y_score: ScoreType, grad_const: GradientType):
     i: cython.int
     j: cython.int
     n_rows: cython.int = <int>grad_const.shape[0]
