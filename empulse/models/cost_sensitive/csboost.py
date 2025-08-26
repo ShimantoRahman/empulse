@@ -36,6 +36,7 @@ except ImportError:
 
 from ..._common import Parameter
 from ...metrics import Metric, make_objective_aec
+from ...metrics._loss import cy_boost_grad_hess
 from .._base import BaseBoostClassifier
 from ._cs_mixin import CostSensitiveMixin
 
@@ -43,6 +44,37 @@ from ._cs_mixin import CostSensitiveMixin
 # which means that at initialization the model optimization doesn't do anything
 # therefore we add a small nudge which kickstarts the optimization algorithm (so hessian is not 0)
 _BASE_SCORE = 0.5 + 1e-2
+
+
+class LGBMObjective:
+    """AEC objective for lightgbm."""
+
+    def __init__(self, gradient_const: FloatNDArray):
+        self.gradient_const = gradient_const
+
+    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+        """
+        Create an objective function for the AEC measure.
+
+        Parameters
+        ----------
+        y_true : np.ndarray
+            Ground truth labels
+        y_score : np.ndarray
+            Predicted labels
+
+        Returns
+        -------
+        gradient  : np.ndarray
+            Gradient of the objective function.
+
+        hessian : np.ndarray
+            Hessian of the objective function.
+        """
+        gradient: FloatNDArray
+        hessian: FloatNDArray
+        gradient, hessian = cy_boost_grad_hess(y_true, y_score, self.gradient_const)
+        return gradient, hessian
 
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
@@ -397,7 +429,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     @overload
     def _get_objective(
         self,
-        framework: Literal['xgboost', 'lightgbm'],
+        framework: Literal['xgboost'],
         y: FloatNDArray,
         tp_cost: FloatNDArray | FloatArrayLike | float,
         tn_cost: FloatNDArray | FloatArrayLike | float,
@@ -405,6 +437,18 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
     ) -> Callable[..., Any]: ...
+
+    @overload
+    def _get_objective(
+        self,
+        framework: Literal['lightgbm'],
+        y: FloatNDArray,
+        tp_cost: FloatNDArray | FloatArrayLike | float,
+        tn_cost: FloatNDArray | FloatArrayLike | float,
+        fn_cost: FloatNDArray | FloatArrayLike | float,
+        fp_cost: FloatNDArray | FloatArrayLike | float,
+        **loss_params: Any,
+    ) -> LGBMObjective: ...
 
     @overload
     def _get_objective(
@@ -427,41 +471,29 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fn_cost: FloatNDArray | FloatArrayLike | float,
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
-    ) -> Callable[..., Any] | tuple['AECObjective', 'AECMetric'] | tuple['CatboostObjective', 'CatboostMetric']:
+    ) -> (
+        Callable[..., Any]
+        | LGBMObjective
+        | tuple['AECObjective', 'AECMetric']
+        | tuple['CatboostObjective', 'CatboostMetric']
+    ):
         if self.loss is None:
             return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[arg-type, misc]
         if framework == 'xgboost':
-            return partial(self.loss._gradient_boost_objective, **loss_params)
-            # grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
-            # return partial(cy_boost_grad_hess, grad_const=grad_const)
+            # return partial(self.loss._gradient_boost_objective, **loss_params)
+            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            return partial(cy_boost_grad_hess, grad_const=grad_const)
         elif framework == 'lightgbm':
-
-            def objective(y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
-                """
-                Create an objective function for the AEC measure.
-
-                Parameters
-                ----------
-                y_true : np.ndarray
-                    Ground truth labels
-                y_score : np.ndarray
-                    Predicted labels
-
-                Returns
-                -------
-                gradient  : np.ndarray
-                    Gradient of the objective function.
-
-                hessian : np.ndarray
-                    Hessian of the objective function.
-                """
-                return self.loss._gradient_boost_objective(y_true, y_score, **loss_params)  # type: ignore[union-attr]
-
-            return objective
+            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            return LGBMObjective(grad_const)
         else:
-            return CatboostObjective(self.loss._gradient_boost_objective, **loss_params), CatboostMetric(
-                self.loss, **loss_params
-            )
+            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            # normalize the shape of all loss params to be (n_samples,)
+            loss_params = {
+                name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
+                for name, param in loss_params.items()
+            }
+            return CatboostObjective(grad_const), CatboostMetric(self.loss, **loss_params)
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
@@ -471,11 +503,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 class CatboostObjective:
     """AEC objective for catboost."""
 
-    def __init__(
-        self, objective: Callable[..., tuple[FloatNDArray, FloatNDArray]], **loss_params: FloatNDArray | float
-    ):
-        self.objective = objective
-        self.loss_params = loss_params
+    def __init__(self, gradient_const: FloatNDArray):
+        self.gradient_const = gradient_const
 
     def calc_ders_range(
         self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
@@ -492,7 +521,7 @@ class CatboostObjective:
             Target values you provided with the dataset.
 
         weights : float, optional (default=None)
-            Instance weight.
+            Instance weight. Here instance weights are used to pass the indices of the instances, not actual weights.
 
         Returns
         -------
@@ -502,12 +531,10 @@ class CatboostObjective:
         """
         weights = weights.astype(int)
         # Use weights as a proxy to index the costs
-        loss_params = {
-            name: value[weights] if isinstance(value, np.ndarray) else value
-            for (name, value) in self.loss_params.items()
-        }
+        gradient_const = self.gradient_const[weights]
+        predictions = np.array(predictions, dtype=np.float64)
 
-        gradient, hessian = self.objective(targets, predictions, **loss_params)
+        gradient, hessian = cy_boost_grad_hess(targets, predictions, gradient_const)
         # convert from two arrays to one list of tuples
         return list(zip(-gradient, -hessian, strict=False))
 
@@ -539,6 +566,7 @@ class CatboostMetric:
 
         weights : one dimensional indexed container of float, optional (default=None)
             Weight for each instance.
+            Here instance weights are used to pass the indices of the instances, not actual weights.
 
         Returns
         -------
