@@ -3,6 +3,8 @@ import inspect
 import numpy as np
 import pytest
 import sympy
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
@@ -52,6 +54,8 @@ ESTIMATORS = (
 METRIC_ESTIMATORS = (
     CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
     CSBoostClassifier(),
+    CSBoostClassifier(LGBMClassifier(n_estimators=10, max_depth=1)),
+    CSBoostClassifier(CatBoostClassifier(iterations=10, depth=1)),
     CSLogitClassifier(optimizer_params={'max_iter': 10}),
     CSTreeClassifier(max_depth=2),
     CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
@@ -71,8 +75,6 @@ def expected_failed_checks(estimator):
         }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
-    if isinstance(estimator, B2BoostClassifier):
-        return {'check_estimators_pickle': 'Currently B2Boost is not pickleable since metric class uses closures.'}
     if isinstance(estimator, CSTreeClassifier | CSForestClassifier):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
