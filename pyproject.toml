@@ -64,6 +64,7 @@ test = [
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
     "tox>=4.13.0",
+    "cython>=3.1.2",
 ]
 
 docs = [
@@ -88,7 +89,6 @@ dev = [
     { include-group = "lint" },
     "twine>=4.0.2",
     "jupyter>=1.1.1",
-    "Cython>=3.1.2",
 ]
 
 [tool.uv]
