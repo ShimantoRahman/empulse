@@ -357,11 +357,21 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
         elif isinstance(self.loss, Metric):
             grad_const, loss_const1, loss_const2 = self.loss._prepare_logit_objective(X, y, **loss_params)
+            loss_const1 = (
+                loss_const1.reshape(-1)
+                if isinstance(loss_const1, np.ndarray)
+                else np.full(len(y), loss_const1, dtype=np.float64)
+            )
+            loss_const2 = (
+                loss_const2.reshape(-1)
+                if isinstance(loss_const2, np.ndarray)
+                else np.full(len(y), loss_const2, dtype=np.float64)
+            )
             loss = partial(
                 cy_logit_loss_gradient,
                 grad_const=grad_const,
-                loss_const1=loss_const1.reshape(-1),
-                loss_const2=loss_const2.reshape(-1),
+                loss_const1=loss_const1,
+                loss_const2=loss_const2,
                 features=X,
                 C=self.C,
                 l1_ratio=self.l1_ratio,
@@ -373,9 +383,6 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             if self.fit_intercept:
                 self.intercept_ = self.result_.x[0]
             return self
-            # loss = partial(self.loss._logit_objective, **loss_params)
-            # objective = _objective_jacobian
-            # optimize_fn = _optimize_jacobian
         elif self.loss is not None and not isinstance(self.loss, str):
             loss: Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]] = partial(  # type: ignore[no-redef]
                 self.loss, **loss_params
