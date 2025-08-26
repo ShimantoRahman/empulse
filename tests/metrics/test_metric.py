@@ -19,6 +19,7 @@ from empulse.metrics import (
     max_profit_score,
     mpc,
 )
+from empulse.metrics._loss import cy_boost_grad_hess, cy_logit_loss_gradient
 
 METRIC_STRATEGIES = [
     Cost(),
@@ -709,14 +710,15 @@ def test_objective_aec_gradient_boost(y_true_and_prediction):
         .add_fp_cost(delta * clv + f)
         .build()
     )
-    gradient, hessian = profit_func._gradient_boost_objective(
+    grad_const = profit_func._prepare_boost_objective(
         y,
-        y_proba,
         clv=customer_lifetime_value,
         delta=incentive_fraction,
         f=contact_cost,
         gamma=accept_rate,
-    )
+    ).reshape(-1)
+    gradient, hessian = cy_boost_grad_hess(y, y_proba, grad_const)
+
     objective = make_objective_churn(
         model='xgboost',
         clv=customer_lifetime_value,
@@ -742,14 +744,24 @@ def test_objective_aec_logit():
         .add_fp_cost(delta * clv + f)
         .build()
     )
-    metric, gradient = profit_func._logit_objective(
+    grad_const, loss_const1, loss_const2 = profit_func._prepare_logit_objective(
         X,
-        weights,
         y,
         clv=customer_lifetime_value,
         delta=incentive_fraction,
         f=contact_cost,
         gamma=accept_rate,
+    )
+    metric, gradient = cy_logit_loss_gradient(
+        weights=weights,
+        features=X,
+        grad_const=grad_const,
+        loss_const1=loss_const1.reshape(-1),
+        loss_const2=np.full(y.shape, loss_const2).reshape(-1),
+        C=1.0,
+        l1_ratio=0.0,
+        soft_threshold=False,
+        fit_intercept=True,
     )
     tp_benefit = accept_rate * (customer_lifetime_value - incentive_fraction * customer_lifetime_value - contact_cost)
     tp_benefit += (1 - accept_rate) * -contact_cost
