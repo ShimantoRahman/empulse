@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython", "numpy"]
+requires = ["setuptools", "wheel", "Cython", "numpy", "scikit-learn"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -98,7 +98,13 @@ default-groups = ["dev"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-empulse = ["datasets/data/*.csv.gz", "datasets/descriptions/*.rst", "metrics/_loss/*.pyx", "py.typed"]
+empulse = [
+    "datasets/data/*.csv.gz",
+    "datasets/descriptions/*.rst",
+    "metrics/_loss/*.pyx",
+    "models/cost_sensitive/_impurity/*.pyx",
+    "py.typed"
+]
 
 [tool.setuptools.dynamic]
 version = { attr = "empulse.__version__" }
