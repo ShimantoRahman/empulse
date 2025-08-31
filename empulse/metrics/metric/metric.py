@@ -802,6 +802,42 @@ class Metric:
                 parameters[key] = np.expand_dims(value, axis=1)
         return self.strategy.prepare_boost_objective(y_true, **parameters)
 
+    def _evaluate_costs(
+        self, **parameters: FloatNDArray | float
+    ) -> tuple[
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+    ]:
+        """
+        Evaluate the costs expressions.
+
+        Parameters
+        ----------
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+        Returns
+        -------
+        fp_cost : float or NDArray of shape (n_samples,)
+            The false positive cost(s).
+        fn_cost : float or NDArray of shape (n_samples,)
+            The false negative cost(s).
+        tp_cost : float or NDArray of shape (n_samples,)
+            The true positive cost(s).
+        tn_cost : float or NDArray of shape (n_samples,)
+            The true negative cost(s).
+        """
+        parameters = self._prepare_parameters(**parameters)
+        fp_cost = _evaluate_expression(self.fp_cost, **parameters)
+        fn_cost = _evaluate_expression(self.fn_cost, **parameters)
+        tp_cost = _evaluate_expression(self.tp_cost, **parameters)
+        tn_cost = _evaluate_expression(self.tn_cost, **parameters)
+        return fp_cost, fn_cost, tp_cost, tn_cost
+
     def _get_cost_matrix(self, n_samples: int, **parameters: FloatNDArray | float) -> FloatNDArray:
         """
         Compute the cost matrix based on the metric's costs and benefits.
