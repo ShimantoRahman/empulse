@@ -8,7 +8,8 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.metrics import Cost, MaxProfit, Metric, Savings
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings
+from empulse.metrics.metric.common import Direction
 from empulse.models import ProfLogitClassifier
 
 
@@ -252,81 +253,32 @@ def test_one_variable(y):
     assert clf.result_.message == 'Maximum number of iterations reached.'
 
 
-def test_proflogit_metric_cost_loss(X, y):
+@pytest.fixture()
+def cost_matrix():
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(Cost())
+    return (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
         .alias('accept_rate', gamma)
         .alias('incentive_cost', d)
         .alias('contact_cost', f)
-        .build()
     )
-    rng = np.random.RandomState(42)
-    accept_rate = rng.random(len(y))
-    clv = rng.random(len(y)) * 200
-
-    model = ProfLogitClassifier(
-        loss=cost_loss, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
-    )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score < inverse_score
 
 
-def test_proflogit_metric_savings_score(X, y):
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(Savings())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost('d + f')
-        .alias('accept_rate', gamma)
-        .alias('incentive_cost', d)
-        .alias('contact_cost', f)
-        .build()
-    )
-    rng = np.random.RandomState(42)
-    accept_rate = rng.random(len(y))
-    clv = rng.random(len(y)) * 200
+@pytest.mark.parametrize('strategy', [Cost(), Savings(), MaxProfit()])
+def test_proflogit_metric_loss(X, y, cost_matrix, strategy):
+    cost_loss = Metric(cost_matrix, strategy)
 
     model = ProfLogitClassifier(
         loss=cost_loss, optimizer_params={'max_iter': 3, 'population_size': 10, 'random_state': 42}
     )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
+    model.fit(X, y, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
     y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score > inverse_score
-
-
-def test_proflogit_metric_max_profit_score(X, y):
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(MaxProfit())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost('d + f')
-        .alias('accept_rate', gamma)
-        .alias('incentive_cost', d)
-        .alias('contact_cost', f)
-        .build()
-    )
-    accept_rate = 0.3
-    clv = 200
-
-    model = ProfLogitClassifier(
-        loss=cost_loss, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
-    )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score > inverse_score
+    score = cost_loss(y, y_proba, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
+    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
+    if strategy.direction == Direction.MAXIMIZE:
+        assert score > inverse_score
+    else:
+        assert score < inverse_score

@@ -35,8 +35,8 @@ In the case of customer churn, the costs and benefits are defined as follows:
 
 
 To define out cost-benefits matrix, we can use Sympy to define the variables and equations.
-Sympy is a Python library for symbolic mathematics and the :class:`empulse.metrics.Metric` class
-uses Sympy under the hood to compute the metric.
+Sympy is a Python library for symbolic mathematics and the :class:`empulse.metrics.CostMatrix` class
+uses Sympy under the hood to build the cost-benefit matrix.
 
 .. code-block:: python
 
@@ -44,16 +44,13 @@ uses Sympy under the hood to compute the metric.
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
 
-:class:`empulse.metrics.Metric` class uses a builder design pattern to step-by-step define the metric.
-First, you need to define which type of metric you want to implement.
-In this case, we want to implement a maximum profit metric, so we use the :class:`empulse.metrics.MaxProfit` strategy.
-
+:class:`empulse.metrics.CostMatrix` class uses a builder design pattern to step-by-step define the metric.
 
 .. code-block:: python
 
-    from empulse.metrics import Metric, MaxProfit
+    from empulse.metrics import CostMatrix
 
-    mpc_score = Metric(MaxProfit())
+    cost_matrix = CostMatrix()
 
 Afterwards we can start assembling all parts of the cost-benefit matrix.
 
@@ -63,15 +60,18 @@ Afterwards we can start assembling all parts of the cost-benefit matrix.
 
 .. code-block:: python
 
-    mpc_score.add_tp_benefit(gamma * (clv - d - f))
-    mpc_score.add_tp_benefit((1 - gamma) * -f)
-    mpc_score.add_fp_cost(d + f)
+    cost_matrix.add_tp_benefit(gamma * (clv - d - f))
+    cost_matrix.add_tp_benefit((1 - gamma) * -f)
+    cost_matrix.add_fp_cost(d + f)
 
 Now that we have established the cost-benefit matrix, we just need to build the metric before we can use it!
+In this case, we want to implement a maximum profit metric, so we use the :class:`empulse.metrics.MaxProfit` strategy.
 
 .. code-block:: python
 
-    mpc_score.build()
+    from empulse.metrics import Metric, MaxProfit
+
+    mpc_score = Metric(cost_matrix=cost_matrix, strategy=MaxProfit())
 
 Now that the metric is built, you can use it like any other metric in scikit-learn.
 
@@ -87,15 +87,8 @@ We can easily change this by using the ``alias`` method before building the metr
 
 .. code-block:: python
 
-    mpc_score = (
-        Metric(MaxProfit())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost(d + f)
-        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
-        .build()
-    )
-
+    cost_matrix.alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
+    mpc_score = Metric(cost_matrix=cost_matrix, strategy=MaxProfit())
     mpc_score(y_true, y_proba, clv=100, incentive_cost=10, contact_cost=1, accept_rate=0.3)
 
 One final improvement we can make is set the default values for the cost-benefit matrix,
@@ -103,16 +96,8 @@ through the ``set_default`` method.
 
 .. code-block:: python
 
-    mpc_score = (
-        Metric(MaxProfit())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost(d + f)
-        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
-        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
-        .build()
-    )
-
+    cost_matrix.set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
+    mpc_score = Metric(cost_matrix=cost_matrix, strategy=MaxProfit())
     mpc_score(y_true, y_proba, clv=100)
 
 Implementing the EMPC measure
@@ -132,15 +117,15 @@ The only thing that you need to change from the MPC example above, is to define 
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = sympy.stats.Beta('gamma', alpha, beta)
 
-    empc_score = (
-        Metric(MaxProfit())
+    gamma_cost_matrix = (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
         .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
         .set_default(incentive_cost=10, contact_cost=1, alpha=6, beta=14)
-        .build()
     )
+    empc_score = Metric(cost_matrix=gamma_cost_matrix, strategy=MaxProfit())
 
     empc_score(y_true, y_proba, clv=100)
 
@@ -151,15 +136,15 @@ You can also define :math:`\gamma` to follow a Uniform distribution with from 0 
     clv, d, f = sympy.symbols('clv d f')
     gamma = sympy.stats.Uniform('gamma', 0, 1)
 
-    empc_score = (
-        Metric(MaxProfit())
+    uniform_cost_matrix = (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
         .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
         .set_default(incentive_cost=10, contact_cost=1)
-        .build()
     )
+    empc_score = Metric(cost_matrix=uniform_cost_matrix, strategy=MaxProfit())
 
     empc_score(y_true, y_proba, clv=100)
 
@@ -171,15 +156,15 @@ We'll define :math:`clv` to follow a Gamma distribution with parameters :math:`\
     d, f, gamma, alpha, beta = sympy.symbols('d f gamma alpha beta')
     clv = sympy.stats.Gamma('clv', alpha, beta)
 
-    empc_score = (
-        Metric(MaxProfit())
+    clv_cost_matrix = (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost(d + f)
         .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
         .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
-        .build()
     )
+    empc_score = Metric(cost_matrix=clv_cost_matrix, strategy=MaxProfit())
 
     empc_score(y_true, y_proba, alpha=6, beta=10)
 
@@ -196,18 +181,7 @@ Expected Cost
 
     from empulse.metrics import Cost
 
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    expected_cost_loss = (
-        Metric(Cost())  # change the kind to cost
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost(d + f)
-        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
-        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
-        .build()
-    )
-
+    expected_cost_loss = Metric(cost_matrix=cost_matrix, strategy=Cost())
     expected_cost_loss(y_true, y_proba, clv=100)
 
 Expected Savings
@@ -217,16 +191,5 @@ Expected Savings
 
     from empulse.metrics import Savings
 
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    expected_savings_score = (
-        Metric(Savings())  # change the strategy to savings
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost(d + f)
-        .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
-        .set_default(incentive_cost=10, contact_cost=1, accept_rate=0.3)
-        .build()
-    )
-
+    expected_savings_score = Metric(cost_matrix=cost_matrix, strategy=Savings())
     expected_savings_score(y_true, y_proba, clv=100)

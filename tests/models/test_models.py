@@ -14,7 +14,7 @@ from sklearn.utils._param_validation import InvalidParameterError
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
-from empulse.metrics import Cost, Metric, Savings, cost_loss
+from empulse.metrics import Cost, CostMatrix, Metric, Savings, cost_loss
 from empulse.models import (
     B2BoostClassifier,
     BiasRelabelingClassifier,
@@ -250,9 +250,7 @@ def test_metric_api_consistency(estimator, dataset, kind):
     X, y, _, _ = dataset
     a, b = sympy.symbols('a b')
 
-    with Metric(kind) as cost_loss:
-        cost_loss.add_fn_cost(a).add_fp_cost(b)
-
+    cost_loss = Metric(CostMatrix().add_fn_cost(a).add_fp_cost(b), kind)
     model_metric = set_metric_loss(clone(estimator), cost_loss)
     model = clone(estimator)
 
@@ -309,8 +307,8 @@ def test_data_format_metric_loss(estimator, dataset):
     fp_cost = np.expand_dims(np.ones(y.size), axis=0)
 
     tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    with Metric(Cost()) as cost_loss:
-        cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 
@@ -331,8 +329,8 @@ def test_data_types_metric_loss(estimator, dataset):
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
 
     tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    with Metric(Cost()) as cost_loss:
-        cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 
@@ -349,8 +347,8 @@ def test_metric_loss_all_default_params(estimator, dataset):
     X, y, _, _ = dataset
 
     fn, fp = sympy.symbols('fn fp')
-    with Metric(Cost()) as cost_loss:
-        cost_loss.add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
+    cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 

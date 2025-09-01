@@ -149,13 +149,15 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
         import numpy as np
         import sympy as sp
-        from empulse.metrics import Metric, Cost
+        from empulse.metrics import Metric, Cost, CostMatrix
         from empulse.models import CSLogitClassifier, RobustCSClassifier
         from sklearn.datasets import make_classification
 
         X, y = make_classification()
         a, b = sp.symbols('a b')
-        cost_loss = Metric(Cost()).add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a).build()
+        cost_loss = Metric(
+            CostMatrix().add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a), Cost()
+        )
         fn_cost = np.random.rand(y.size)
 
         model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
@@ -324,13 +326,13 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             and (metric_loss := self.estimator._get_metric_loss()) is not None
         ):
             self.costs_: dict[str, int | float | FloatNDArray] = {}
-            outlier_symbols = metric_loss._outlier_sensitive_symbols
+            outlier_symbols = metric_loss.cost_matrix._outlier_sensitive_symbols
 
             self.outlier_estimators_ = {}
             for symbol in outlier_symbols:
                 target = fit_params.get(str(symbol))
                 if target is None:
-                    alias = _invert_dict(metric_loss._aliases)[str(symbol)]
+                    alias = _invert_dict(metric_loss.cost_matrix._aliases)[str(symbol)]
                     target = fit_params.get(alias)
                     if target is None:
                         raise ValueError(f"Cost '{symbol}' is not provided in fit_params.")
