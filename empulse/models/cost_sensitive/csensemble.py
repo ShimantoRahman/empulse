@@ -741,20 +741,28 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
+    loss : Metric, default=None
+        The loss function to use in order to evaluate the costs.
+        If ``None``, then the costs provided to the constructor or to the ``fit``
+        method are used directly.
+        If a :class:``~empulse.metrics.Metric`` is provided, then the costs are computed using the
+        metric, and any costs provided to the
+        constructor or to the ``fit`` method are ignored.
+
     max_samples : int or float, default=1.0
         The number of samples to draw from X to train each base estimator (with
-        replacement by default, see `bootstrap` for more details).
+        replacement by default, see ``bootstrap`` for more details).
 
         - If int, then draw `max_samples` samples.
         - If float, then draw `max_samples * X.shape[0]` samples.
 
     max_features : int or float, default=1.0
         The number of features to draw from X to train each base estimator (
-        without replacement by default, see `bootstrap_features` for more
+        without replacement by default, see ``bootstrap_features`` for more
         details).
 
-        - If int, then draw `max_features` features.
-        - If float, then draw `max(1, int(max_features * n_features_in_))` features.
+        - If int, then draw ``max_features`` features.
+        - If float, then draw ``max(1, int(max_features * n_features_in_))`` features.
 
     bootstrap : bool, default=True
         Whether samples are drawn with replacement. If False, sampling
