@@ -8,7 +8,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree._tree import Tree
 from sklearn.utils import Bunch
-from sklearn.utils._param_validation import StrOptions
+from sklearn.utils._param_validation import Hidden, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
@@ -16,7 +16,7 @@ from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, Pa
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
-from ._impurity import CostImpurity
+from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -70,12 +70,18 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    criterion : {"direct_cost", "pi_cost", "gini_cost" or "entropy_cost"} or Metric, default="direct_cost"
+    loss : Metric or None, default=None
+        The metric to measure the quality of a split.
+        If None, the cost impurity is used.
+
+    criterion : {"cost",, "gini", "log_loss" or "entropy"}, default="cost"
         The function to measure the quality of a split.
 
-        - If ``str``: Supported criteria are "direct_cost" for the Direct Cost impurity measure,
-          "pi_cost", "gini_cost", and "entropy_cost".
-        - If :class:`empulse.metrics.Metric`: metric determines how to calculate the quality of a split.
+        How the measure to estimate quality of a split is weighted.
+
+        - If ``"cost"``: The metric is used normally, without extra weighting.
+        - If ``"gini"``: The Gini impurity is used to weight the metric.
+        - If ``"log_loss"`` or ``"entropy"``: The Shannon information gain is used to weight the metric.
 
     splitter : {"best", "random"}, default="best"
         The strategy used to choose the split at each node.
@@ -269,8 +275,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
         'criterion': [
-            StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'}),
-            Metric,
+            StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
+            Hidden(CostImpurity),
         ],
     }
 
@@ -281,7 +287,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] | Metric = 'direct_cost',
+        loss: Metric | None = None,
+        criterion: Literal['cost', 'gini', 'entropy', 'log_loss'] = 'cost',
         splitter: Literal['best', 'random'] = 'best',
         max_depth: int | None = None,
         min_samples_split: int | float = 2,
@@ -299,6 +306,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+        self.loss = loss
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
@@ -327,8 +335,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
-        if isinstance(self.criterion, Metric):
-            return self.criterion
+        if isinstance(self.loss, Metric):
+            return self.loss
         return None
 
     @property
@@ -435,8 +443,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             raise ValueError("Classifier can't train when only one class is present.")
         y = np.where(y == self.classes_[1], 1, 0)
 
-        if isinstance(self.criterion, Metric):
-            fp_cost, fn_cost, tp_cost, tn_cost = self.criterion._evaluate_costs(**loss_params)
+        if isinstance(self.loss, Metric):
+            fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost,
@@ -452,10 +460,26 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             if isinstance(cost, np.ndarray) and cost.shape[0] != n_samples:
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
 
-        self.criterion_ = CostImpurity(
-            n_outputs=1,
-            n_classes=np.array([2], dtype=np.intp),
-        )
+        if self.criterion == 'cost':
+            self.criterion_ = CostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        elif self.criterion == 'gini':
+            self.criterion_ = GiniCostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        elif self.criterion in ('entropy', 'log_loss'):
+            self.criterion_ = EntropyCostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        elif isinstance(self.criterion, CostImpurity):
+            self.criterion_ = self.criterion
+        else:
+            raise ValueError(f'Unknown criterion: {self.criterion}')
+
         self.criterion_.set_costs(
             tp_cost=tp_cost if not isinstance(tp_cost, np.ndarray) else 0.0,
             tn_cost=tn_cost if not isinstance(tn_cost, np.ndarray) else 0.0,

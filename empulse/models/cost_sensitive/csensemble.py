@@ -1,24 +1,28 @@
 import sys
+import threading
 from collections.abc import Callable
-from numbers import Real
+from numbers import Integral, Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from joblib import Parallel, delayed
+from scipy.sparse import csr_matrix, issparse
 from sklearn import config_context
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
 from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
+from sklearn.ensemble._base import _partition_estimators
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils._available_if import available_if
+from sklearn.utils._mask import indices_to_mask
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.validation import _estimator_has, check_is_fitted
+from sklearn.utils.validation import _estimator_has, check_is_fitted, check_random_state
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
-from ...metrics import Metric
+from ...metrics import Metric, expected_cost_loss
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
-from ._impurity import CostImpurity
+from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 from .cstree import CSTreeClassifier
 
 if sys.version_info >= (3, 11):
@@ -82,11 +86,24 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
            The default value of ``n_estimators`` changed from 10 to 100
            in 0.22.
 
-    criterion : {"gini", "entropy", "log_loss"}, default="gini"
-        The function to measure the quality of a split. Supported criteria are
-        "gini" for the Gini impurity and "log_loss" and "entropy" both for the
-        Shannon information gain, see :ref:`tree_mathematical_formulation`.
-        Note: This parameter is tree-specific.
+    loss : Metric or None, default=None
+        The metric to measure the quality of a split.
+        If None, the cost impurity is used.
+
+    criterion : {"cost",, "gini", "log_loss" or "entropy"}, default="cost"
+        The function to measure the quality of a split.
+
+        How the measure to estimate quality of a split is weighted.
+
+        - If ``"cost"``: The metric is used normally, without extra weighting.
+        - If ``"gini"``: The Gini impurity is used to weight the metric.
+        - If ``"log_loss"`` or ``"entropy"``: The Shannon information gain is used to weight the metric.
+
+    combination : {"majority_voting', 'weighted_voting'}, default="majority_voting"
+        How to combine the predictions of the individual models.
+
+        - "majority_voting": the majority vote of the models.
+        - "weighted_voting": the models are weighted by their oob score calculates with the ....
 
     max_depth : int, default=None
         The maximum depth of the tree. If None, then nodes are expanded until
@@ -321,7 +338,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
         'criterion': [
-            StrOptions({'direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'}),
+            StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
             Metric,
         ],
         **RF_PARAM_CONSTRAINTS,
@@ -335,7 +352,9 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        criterion: Literal['direct_cost', 'pi_cost', 'gini_cost', 'entropy_cost'] | Metric = 'direct_cost',
+        loss: Metric | None = None,
+        criterion: Literal['cost', 'gini', 'entropy', 'log_loss'] = 'cost',
+        combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_depth: int | None = None,
         min_samples_split: int | float = 2,
         min_samples_leaf: int | float = 1,
@@ -359,7 +378,9 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+        self.loss = loss
         self.criterion = criterion
+        self.combination = combination
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
@@ -392,8 +413,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
-        if isinstance(self.criterion, Metric):
-            return self.criterion
+        if isinstance(self.loss, Metric):
+            return self.loss
         return None
 
     @property
@@ -404,10 +425,11 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return estimators
 
     @property
-    def n_classes_(self) -> int:
+    def n_classes_(self) -> int | list[int]:
         """The number of classes seen during :term:`fit`."""
         check_is_fitted(self)
-        return len(self.classes_)
+        n_classes: int | list[int] = self.estimator_.n_classes_
+        return n_classes
 
     @property
     def feature_importances_(self) -> FloatNDArray:
@@ -495,8 +517,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             raise ValueError("Classifier can't train when only one class is present.")
         y = np.where(y == self.classes_[1], 1, 0)
 
-        if isinstance(self.criterion, Metric):
-            fp_cost, fn_cost, tp_cost, tn_cost = self.criterion._evaluate_costs(**loss_params)
+        if isinstance(self.loss, Metric):
+            fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost,
@@ -512,10 +534,24 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             if isinstance(cost, np.ndarray) and cost.shape[0] != n_samples:
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
 
-        self.criterion_ = CostImpurity(
-            n_outputs=1,
-            n_classes=np.array([2], dtype=np.intp),
-        )
+        if self.criterion == 'cost':
+            self.criterion_ = CostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        elif self.criterion == 'gini':
+            self.criterion_ = GiniCostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        elif self.criterion in ('entropy', 'log_loss'):
+            self.criterion_ = EntropyCostImpurity(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
+        else:
+            raise ValueError(f'Unknown criterion: {self.criterion}')
+
         self.criterion_.set_costs(
             tp_cost=tp_cost if not isinstance(tp_cost, np.ndarray) else 0.0,
             tn_cost=tn_cost if not isinstance(tn_cost, np.ndarray) else 0.0,
@@ -561,6 +597,21 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         )
         self.estimator_.fit(X, y)
 
+        if self.combination == 'weighted_voting':
+            if not self.bootstrap:
+                raise ValueError('Weighted voting is only available when bootstrap=True.')
+            if self.loss is None:
+                self.estimator_weights_ = self._get_oob_weights(
+                    X,
+                    y,
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    fn_cost=fn_cost,
+                    fp_cost=fp_cost,
+                    check_input=False,
+                )
+            else:
+                self.estimator_weights_ = self._get_oob_weights(X, y, **loss_params)
         return self
 
     def predict(self, X: FloatArrayLike) -> IntNDArray:
@@ -580,8 +631,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             The predicted classes,
         """
         check_is_fitted(self)
-        y_pred: IntNDArray = self.estimator_.predict(X)
-        return y_pred
+        y_proba = self.predict_proba(X)
+        return self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
@@ -598,7 +649,12 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             The class probabilities of the input samples.
         """
         check_is_fitted(self)
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+
+        if self.combination == 'weighted_voting':
+            y_proba: FloatNDArray = self._predict_weighted_proba(X)
+        else:
+            y_proba = self.estimator_.predict_proba(X)
+
         return y_proba
 
     def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
@@ -622,8 +678,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             classes corresponds to that in the attribute :term:`classes_`.
         """
         check_is_fitted(self)
-        y_log_proba: FloatNDArray = self.estimator_.predict_log_proba(X)
-        return y_log_proba
+        y_proba = self.predict_proba(X)
+        return np.log(y_proba)
 
     def apply(self, X: FloatArrayLike) -> IntNDArray:
         """
@@ -673,6 +729,85 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_nodes_ptr: IntNDArray
         indicator, n_nodes_ptr = self.estimator_.decision_path(X)
         return indicator, n_nodes_ptr
+
+    def _get_oob_weights(self, X, y, **kwargs):
+        # Prediction requires X to be in CSR format
+        if issparse(X):
+            X = X.tocsr()
+        X = X.astype(np.float32)
+
+        n_samples = y.shape[0]
+        estimator_weights = np.zeros(self.n_estimators, dtype=np.float64)
+
+        if self.max_samples is None:
+            n_samples_bootstrap = n_samples
+
+        if isinstance(self.max_samples, Integral):
+            if self.max_samples > n_samples:
+                msg = '`max_samples` must be <= n_samples={} but got value {}'
+                raise ValueError(msg.format(n_samples, self.max_samples))
+            n_samples_bootstrap = self.max_samples
+
+        if isinstance(self.max_samples, Real):
+            n_samples_bootstrap = max(round(n_samples * self.max_samples), 1)
+
+        weight_fn = self.loss if isinstance(self.loss, Metric) else expected_cost_loss
+
+        for i, estimator in enumerate(self.estimators_):
+            unsampled_indices = _generate_unsampled_indices(
+                estimator.random_state,
+                n_samples,
+                n_samples_bootstrap,
+            )
+
+            y_pred = self.estimator_._get_oob_predictions(estimator, X[unsampled_indices, :])
+            estimator_weights[i] += weight_fn(y[unsampled_indices], y_pred[:, 1, 0], **kwargs)
+
+        estimator_weights /= estimator_weights.sum()
+
+        return estimator_weights
+
+    def _predict_weighted_proba(self, X):
+        X = self.estimator_._validate_X_predict(X)
+
+        # Assign chunk of trees to jobs
+        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
+
+        # avoid storing the output of every estimator by summing them here
+        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)
+        lock = threading.Lock()
+        Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
+            delayed(_accumulate_weighted_prediction)(e.predict_proba, X, all_proba, weight, lock)
+            for e, weight in zip(self.estimators_, self.estimator_weights_, strict=True)
+        )
+
+        return all_proba
+
+
+def _generate_unsampled_indices(random_state, n_samples, n_samples_bootstrap):
+    """Private function used to forest._set_oob_score function."""
+    sample_indices = _generate_sample_indices(random_state, n_samples, n_samples_bootstrap)
+    sample_counts = np.bincount(sample_indices, minlength=n_samples)
+    unsampled_mask = sample_counts == 0
+    indices_range = np.arange(n_samples)
+    unsampled_indices = indices_range[unsampled_mask]
+
+    return unsampled_indices
+
+
+def _generate_sample_indices(random_state, n_samples, n_samples_bootstrap):
+    """Private function used to _parallel_build_trees function."""
+    random_instance = check_random_state(random_state)
+    sample_indices = random_instance.randint(0, n_samples, n_samples_bootstrap, dtype=np.int32)
+
+    return sample_indices
+
+
+def _accumulate_weighted_prediction(predict, X, out, weight, lock):
+    """Calculate the weighted prediction."""
+    prediction = predict(X, check_input=False)
+    with lock:
+        out += prediction * weight
 
 
 class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
@@ -850,10 +985,12 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return estimators
 
     @property
-    def n_classes_(self) -> int:
+    def n_classes_(self) -> IntNDArray:
         """The number of classes seen during :term:`fit`."""
         check_is_fitted(self)
-        return len(self.classes_)
+        n_classes: int | list[int] = self.estimator_.n_classes_
+        n_classes_ = np.array(n_classes)
+        return n_classes_
 
     @property
     def oob_score_(self) -> float:
@@ -893,6 +1030,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
         loss: Metric | None = None,
+        combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_samples: float | int = 1.0,
         max_features: int | float = 1.0,
         bootstrap: bool = True,
@@ -910,6 +1048,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
         self.loss = loss
+        self.combination = combination
         self.max_samples = max_samples
         self.max_features = max_features
         self.bootstrap = bootstrap
@@ -934,8 +1073,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
-        if isinstance(self.criterion, Metric):
-            return self.criterion
+        if isinstance(self.loss, Metric):
+            return self.loss
         return None
 
     @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
@@ -1015,17 +1154,17 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
 
         if self.estimator is None:
-            self.criterion_ = CostImpurity(
+            criterion = CostImpurity(
                 n_outputs=1,
                 n_classes=np.array([2], dtype=np.intp),
             )
-            self.criterion_.set_costs(
+            criterion.set_costs(
                 tp_cost=tp_cost if not isinstance(tp_cost, np.ndarray) else 0.0,
                 tn_cost=tn_cost if not isinstance(tn_cost, np.ndarray) else 0.0,
                 fp_cost=fp_cost if not isinstance(fp_cost, np.ndarray) else 0.0,
                 fn_cost=fn_cost if not isinstance(fn_cost, np.ndarray) else 0.0,
             )
-            self.criterion_.set_array_costs(
+            criterion.set_array_costs(
                 tp_cost=tp_cost.reshape(-1).astype(np.float64)
                 if isinstance(tp_cost, np.ndarray)
                 else np.array([], dtype=np.float64),
@@ -1040,7 +1179,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 else np.array([], dtype=np.float64),
                 n_samples=n_samples,
             )
-            self.base_estimator_ = CSTreeClassifier(criterion=self.criterion_)
+            self.base_estimator_ = CSTreeClassifier(criterion=criterion)
         else:
             self.base_estimator_ = clone(self.estimator)
 
@@ -1060,6 +1199,21 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             )
             self.estimator_.fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
 
+        if self.combination == 'weighted_voting':
+            if not self.bootstrap:
+                raise ValueError('Weighted voting is only available when bootstrap=True.')
+            if self.loss is None:
+                self.estimator_weights_ = self._get_oob_weights(
+                    X,
+                    y,
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    fn_cost=fn_cost,
+                    fp_cost=fp_cost,
+                    check_input=False,
+                )
+            else:
+                self.estimator_weights_ = self._get_oob_weights(X, y, **loss_params)
         return self
 
     def predict(self, X: FloatArrayLike) -> IntNDArray:
@@ -1081,8 +1235,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             The predicted classes.
         """
         check_is_fitted(self)
-        y_pred: IntNDArray = self.estimator_.predict(X)
-        return y_pred
+        y_proba = self.predict_proba(X)
+        return self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities for X.
@@ -1107,7 +1261,12 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             classes corresponds to that in the attribute :term:`classes_`.
         """
         check_is_fitted(self)
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+
+        if self.combination == 'weighted_voting':
+            y_proba: FloatNDArray = self._predict_weighted_proba(X)
+        else:
+            y_proba = self.estimator_.predict_proba(X)
+
         return y_proba
 
     def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
@@ -1131,8 +1290,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             classes corresponds to that in the attribute :term:`classes_`.
         """
         check_is_fitted(self)
-        y_log_proba: FloatNDArray = self.estimator_.predict_log_proba(X)
-        return y_log_proba
+        y_proba = self.predict_proba(X)
+        return np.log(y_proba)
 
     @available_if(_estimator_has('decision_function', delegates=('base_estimator_', 'estimator')))
     def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
@@ -1155,3 +1314,48 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         check_is_fitted(self)
         decisions: FloatNDArray = self.estimator_.decision_function(X)
         return decisions
+
+    def _get_oob_weights(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> FloatNDArray:
+        n_samples = y.shape[0]
+
+        estimator_weights = np.zeros(self.n_estimators, dtype=np.float64)
+        weight_fn = self.loss if self.loss is not None else expected_cost_loss
+
+        for i, estimator, samples, features in zip(
+            range(self.n_estimators), self.estimators_, self.estimators_samples_, self.estimators_features_, strict=True
+        ):
+            # Create mask for OOB samples
+            mask = ~indices_to_mask(samples, n_samples)
+
+            if hasattr(estimator, 'predict_proba'):
+                y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
+            else:
+                y_pred = estimator.predict((X[mask, :])[:, features])
+            estimator_weights[i] = weight_fn(y[mask], y_pred, **loss_params)
+
+        estimator_weights /= estimator_weights.sum()
+
+        return estimator_weights
+
+    def _predict_weighted_proba(self, X):
+        X = validate_data(self, X, reset=False)
+
+        # Assign chunk of trees to jobs
+        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
+
+        # avoid storing the output of every estimator by summing them here
+        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)
+        lock = threading.Lock()
+        Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
+            delayed(_accumulate_weighted_prediction_non_tree)(e.predict_proba, X, all_proba, weight, lock)
+            for e, weight in zip(self.estimators_, self.estimator_weights_, strict=True)
+        )
+
+        return all_proba
+
+
+def _accumulate_weighted_prediction_non_tree(predict, X, out, weight, lock):
+    """Calculate the weighted prediction."""
+    prediction = predict(X)
+    with lock:
+        out += prediction * weight
