@@ -11,4 +11,16 @@ if __name__ == '__main__':
             include_dirs=[np.get_include(), 'sklearn.utils._typedefs', 'sklearn.tree._criterion'],
         ),
     ]
-    setup(ext_modules=cythonize(extensions))
+    setup(
+        ext_modules=cythonize(
+            extensions,
+            compiler_directives={
+                'language_level': 3,
+                'boundscheck': False,
+                'wraparound': False,
+                'initializedcheck': False,
+                'nonecheck': False,
+                'cdivision': True,
+            },
+        )
+    )
