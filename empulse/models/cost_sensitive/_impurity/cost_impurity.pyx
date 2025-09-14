@@ -2,9 +2,15 @@ cimport numpy as cnp
 import numpy as np
 from sklearn.utils._typedefs cimport float64_t, intp_t
 from sklearn.tree._criterion cimport ClassificationCriterion
-from cython.cimports.libc.math import fmin
+from libc.math cimport fmin
+from libc.math cimport log as ln
 from libc.string cimport memcpy
 from libc.string cimport memset
+
+
+cdef inline float64_t log(float64_t x) noexcept nogil:
+    return ln(x) / ln(2.0)
+
 
 cdef class CostImpurity(ClassificationCriterion):
     cdef float64_t tp_cost, tn_cost, fp_cost, fn_cost
@@ -231,3 +237,165 @@ cdef class CostImpurity(ClassificationCriterion):
                 neg_cost_right += self.neg_cost_sum_right[k, c]
         impurity_left[0] = fmin(pos_cost_left, neg_cost_left) / self.weighted_n_left
         impurity_right[0] = fmin(pos_cost_right, neg_cost_right) / self.weighted_n_right
+
+
+cdef class GiniCostImpurity(CostImpurity):
+
+    def __deepcopy__(self, memo):
+        # Convert memoryview to numpy array
+        n_classes_array = np.asarray(self.n_classes)
+        new_instance = GiniCostImpurity(self.n_outputs, n_classes_array)
+
+        # Copy all attributes (otherwise not included)
+        new_instance.tp_cost = self.tp_cost
+        new_instance.tn_cost = self.tn_cost
+        new_instance.fp_cost = self.fp_cost
+        new_instance.fn_cost = self.fn_cost
+        new_instance.tp_cost_array = np.array(self.tp_cost_array)
+        new_instance.tn_cost_array = np.array(self.tn_cost_array)
+        new_instance.fp_cost_array = np.array(self.fp_cost_array)
+        new_instance.fn_cost_array = np.array(self.fn_cost_array)
+        new_instance.all_class_dependent = self.all_class_dependent
+        new_instance.pos_cost_sum_total = np.array(self.pos_cost_sum_total)
+        new_instance.neg_cost_sum_total = np.array(self.neg_cost_sum_total)
+        new_instance.pos_cost_sum_left = np.array(self.pos_cost_sum_left)
+        new_instance.neg_cost_sum_left = np.array(self.neg_cost_sum_left)
+        new_instance.pos_cost_sum_right = np.array(self.pos_cost_sum_right)
+        new_instance.neg_cost_sum_right = np.array(self.neg_cost_sum_right)
+
+        # Copy other attributes if necessary
+        memo[id(self)] = new_instance
+        return new_instance
+
+    cdef float64_t node_impurity(self) noexcept nogil:
+        cdef float64_t pos_sq_prior, neg_sq_prior
+        cdef float64_t pos_count, neg_count
+        cdef float64_t pos_cost = 0.0
+        cdef float64_t neg_cost = 0.0
+        cdef intp_t k, c
+        for k in range(self.n_outputs):
+            for c in range(self.n_classes[k]):
+                pos_cost += self.pos_cost_sum_total[k, c]
+                neg_cost += self.neg_cost_sum_total[k, c]
+        pos_count = self.sum_total[0, 1]
+        pos_sq_prior = pos_count * pos_count / self.weighted_n_node_samples
+        neg_count = self.sum_total[0, 0]
+        neg_sq_prior = neg_count * neg_count / self.weighted_n_node_samples
+        return fmin(pos_cost * pos_sq_prior, neg_cost * neg_sq_prior) / self.weighted_n_node_samples
+
+    cdef void children_impurity(self, float64_t* impurity_left, float64_t* impurity_right) noexcept nogil:
+        cdef float64_t pos_sq_prior_left, neg_sq_prior_left, pos_sq_prior_right, neg_sq_prior_right
+        cdef float64_t pos_count_left, neg_count_left, pos_count_right, neg_count_right
+        cdef float64_t pos_cost_left = 0.0
+        cdef float64_t neg_cost_left = 0.0
+        cdef float64_t pos_cost_right = 0.0
+        cdef float64_t neg_cost_right = 0.0
+        cdef intp_t k, c
+        for k in range(self.n_outputs):
+            for c in range(self.n_classes[k]):
+                pos_cost_left += self.pos_cost_sum_left[k, c]
+                neg_cost_left += self.neg_cost_sum_left[k, c]
+                pos_cost_right += self.pos_cost_sum_right[k, c]
+                neg_cost_right += self.neg_cost_sum_right[k, c]
+
+        pos_count_left = self.sum_left[0, 1]
+        pos_sq_prior_left = pos_count_left * pos_count_left / self.weighted_n_left
+        neg_count_left = self.sum_left[0, 0]
+        neg_sq_prior_left = neg_count_left * neg_count_left / self.weighted_n_left
+
+        pos_count_right = self.sum_right[0, 1]
+        pos_sq_prior_right = pos_count_right * pos_count_right / self.weighted_n_right
+        neg_count_right = self.sum_right[0, 0]
+        neg_sq_prior_right = neg_count_right * neg_count_right / self.weighted_n_right
+
+        impurity_left[0] = fmin(pos_cost_left * pos_sq_prior_left, neg_cost_left * neg_sq_prior_left) / self.weighted_n_left
+        impurity_right[0] = fmin(pos_cost_right * pos_sq_prior_right, neg_cost_right * neg_sq_prior_right) / self.weighted_n_right
+
+
+cdef class EntropyCostImpurity(CostImpurity):
+
+    def __deepcopy__(self, memo):
+        # Convert memoryview to numpy array
+        n_classes_array = np.asarray(self.n_classes)
+        new_instance = EntropyCostImpurity(self.n_outputs, n_classes_array)
+
+        # Copy all attributes (otherwise not included)
+        new_instance.tp_cost = self.tp_cost
+        new_instance.tn_cost = self.tn_cost
+        new_instance.fp_cost = self.fp_cost
+        new_instance.fn_cost = self.fn_cost
+        new_instance.tp_cost_array = np.array(self.tp_cost_array)
+        new_instance.tn_cost_array = np.array(self.tn_cost_array)
+        new_instance.fp_cost_array = np.array(self.fp_cost_array)
+        new_instance.fn_cost_array = np.array(self.fn_cost_array)
+        new_instance.all_class_dependent = self.all_class_dependent
+        new_instance.pos_cost_sum_total = np.array(self.pos_cost_sum_total)
+        new_instance.neg_cost_sum_total = np.array(self.neg_cost_sum_total)
+        new_instance.pos_cost_sum_left = np.array(self.pos_cost_sum_left)
+        new_instance.neg_cost_sum_left = np.array(self.neg_cost_sum_left)
+        new_instance.pos_cost_sum_right = np.array(self.pos_cost_sum_right)
+        new_instance.neg_cost_sum_right = np.array(self.neg_cost_sum_right)
+
+        # Copy other attributes if necessary
+        memo[id(self)] = new_instance
+        return new_instance
+
+    cdef float64_t node_impurity(self) noexcept nogil:
+        cdef float64_t pos_entropy = 0.0
+        cdef float64_t neg_entropy = 0.0
+        cdef float64_t pos_count, neg_count
+        cdef float64_t pos_cost = 0.0
+        cdef float64_t neg_cost = 0.0
+        cdef intp_t k, c
+        for k in range(self.n_outputs):
+            for c in range(self.n_classes[k]):
+                pos_cost += self.pos_cost_sum_total[k, c]
+                neg_cost += self.neg_cost_sum_total[k, c]
+        pos_cost /= self.weighted_n_node_samples
+        neg_cost /= self.weighted_n_node_samples
+
+        pos_count = self.sum_total[0, 1]
+        if pos_count > 0.0:
+            pos_entropy = log(pos_count / self.weighted_n_node_samples)
+        neg_count = self.sum_total[0, 0]
+        if neg_count > 0.0:
+            neg_entropy = log(neg_count / self.weighted_n_node_samples)
+        return fmin(pos_cost * -pos_entropy, neg_cost * -neg_entropy)
+
+    cdef void children_impurity(self, float64_t* impurity_left, float64_t* impurity_right) noexcept nogil:
+        cdef float64_t pos_entropy_left = 0.0
+        cdef float64_t neg_entropy_left = 0.0
+        cdef float64_t pos_entropy_right = 0.0
+        cdef float64_t neg_entropy_right = 0.0
+        cdef float64_t pos_count_left, neg_count_left, pos_count_right, neg_count_right
+        cdef float64_t pos_cost_left = 0.0
+        cdef float64_t neg_cost_left = 0.0
+        cdef float64_t pos_cost_right = 0.0
+        cdef float64_t neg_cost_right = 0.0
+        cdef intp_t k, c
+        for k in range(self.n_outputs):
+            for c in range(self.n_classes[k]):
+                pos_cost_left += self.pos_cost_sum_left[k, c]
+                neg_cost_left += self.neg_cost_sum_left[k, c]
+                pos_cost_right += self.pos_cost_sum_right[k, c]
+                neg_cost_right += self.neg_cost_sum_right[k, c]
+        pos_cost_left /= self.weighted_n_left
+        pos_cost_right /= self.weighted_n_right
+        neg_cost_left /= self.weighted_n_left
+        neg_cost_right /= self.weighted_n_right
+
+        pos_count_left = self.sum_left[0, 1]
+        if pos_count_left > 0.0:
+            pos_entropy_left = log(pos_count_left / self.weighted_n_left)
+        neg_count_left = self.sum_left[0, 0]
+        if neg_count_left > 0.0:
+            neg_entropy_left = log(neg_count_left / self.weighted_n_left)
+        pos_count_right = self.sum_right[0, 1]
+        if pos_count_right > 0.0:
+            pos_entropy_right = log(pos_count_right / self.weighted_n_right)
+        neg_count_right = self.sum_right[0, 0]
+        if neg_count_right > 0.0:
+            neg_entropy_right = log(neg_count_right / self.weighted_n_right)
+
+        impurity_left[0] = fmin(pos_cost_left * pos_entropy_left, neg_cost_left * neg_entropy_left)
+        impurity_right[0] = fmin(pos_cost_right * pos_entropy_right, neg_cost_right * neg_entropy_right)
