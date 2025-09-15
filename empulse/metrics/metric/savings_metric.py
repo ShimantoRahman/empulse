@@ -1,5 +1,5 @@
 import sys
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import sympy
@@ -86,7 +86,13 @@ class Savings(MetricStrategy):
         )
         return self
 
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def score(
+        self,
+        y_true: FloatNDArray,
+        y_score: FloatNDArray,
+        baseline: Literal['zero_one', 'zero', 'one', 'prior'] | FloatNDArray = 'zero_one',
+        **parameters: FloatNDArray | float,
+    ) -> float:
         """
         Compute the metric expected savings score.
 
@@ -111,7 +117,7 @@ class Savings(MetricStrategy):
         score: float
             The expected savings score.
         """
-        return self._score_function(y_true, y_score, **parameters)
+        return self._score_function(y_true, y_score, baseline=baseline, **parameters)
 
     def optimal_threshold(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
@@ -259,19 +265,53 @@ class SavingsScore(SympyFnPickleMixin):
         self.all_zero_function = _safe_lambdify(self.all_zero_equation)
         self.all_one_function = _safe_lambdify(self.all_one_equation)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(
+        self,
+        y_true: FloatNDArray,
+        y_score: FloatNDArray,
+        baseline: FloatNDArray | Literal['zero_one', 'zero', 'one', 'prior'],
+        **kwargs: Any,
+    ) -> float:
         """Compute the savings score."""
         all_symbols = (
             self.cost_equation.free_symbols | self.all_zero_equation.free_symbols | self.all_one_equation.free_symbols
         )
         _check_parameters(all_symbols - {*sympy.symbols('y s')}, kwargs)
-        all_zero_score = float(
-            np.mean(_safe_run_lambda(self.all_zero_function, self.all_zero_equation, y=y_true, **kwargs))
-        )
-        all_one_score = float(
-            np.mean(_safe_run_lambda(self.all_one_function, self.all_one_equation, y=y_true, **kwargs))
-        )
-        cost_base = min(all_zero_score, all_one_score)
+
+        if isinstance(baseline, np.ndarray):
+            cost_base = float(
+                np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=baseline, **kwargs))
+            )
+        elif baseline == 'zero_one':
+            all_zero_score = float(
+                np.mean(_safe_run_lambda(self.all_zero_function, self.all_zero_equation, y=y_true, **kwargs))
+            )
+            all_one_score = float(
+                np.mean(_safe_run_lambda(self.all_one_function, self.all_one_equation, y=y_true, **kwargs))
+            )
+            cost_base = min(all_zero_score, all_one_score)
+        elif baseline == 'zero':
+            cost_base = float(
+                np.mean(_safe_run_lambda(self.all_zero_function, self.all_zero_equation, y=y_true, **kwargs))
+            )
+        elif baseline == 'one':
+            cost_base = float(
+                np.mean(_safe_run_lambda(self.all_one_function, self.all_one_equation, y=y_true, **kwargs))
+            )
+        elif baseline == 'prior':
+            prior = np.mean(y_true)
+            cost_base = float(
+                np.mean(
+                    _safe_run_lambda(
+                        self.cost_func, self.cost_equation, y=y_true, s=np.full_like(y_true, prior), **kwargs
+                    )
+                )
+            )
+        else:
+            raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
+
+        if cost_base == 0.0:
+            cost_base = float(np.finfo(float).eps)
         cost = _safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=y_score, **kwargs)
         return float(1 - np.mean(cost) / cost_base)
 

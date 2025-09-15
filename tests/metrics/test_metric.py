@@ -218,28 +218,32 @@ def test_metric_vs_expected_loss(
     assert pytest.approx(metric_result) == cost_result
 
 
+@pytest.mark.parametrize('baseline', ['zero_one', 'one', 'zero', 'prior', np.ones(100) * 0.3])
 @pytest.mark.parametrize(
     'customer_lifetime_value, incentive_cost, contact_cost, accept_rate',
     [(100, 5, 1, 0.3), (200, 10, 2, 0.2), (150, 15, 1.5, 0.4)],
 )
 def test_metric_vs_savings(
-    customer_lifetime_value, incentive_cost, contact_cost, accept_rate, y_true_and_prediction, churn_cost_matrix
+    customer_lifetime_value,
+    incentive_cost,
+    contact_cost,
+    accept_rate,
+    y_true_and_prediction,
+    churn_cost_matrix,
+    baseline,
 ):
     y, y_proba = y_true_and_prediction
-    profit_func = Metric(churn_cost_matrix, Savings())
+    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fp_cost('fp').add_fn_cost('fn')
+    profit_func = Metric(cost_matrix, Savings())
 
-    metric_result = profit_func(
-        y, y_proba, clv=customer_lifetime_value, d=incentive_cost, f=contact_cost, gamma=accept_rate
-    )
     tp_cost = (
         -accept_rate * (customer_lifetime_value - incentive_cost - contact_cost) + (1 - accept_rate) * contact_cost
     )
     fp_cost = incentive_cost + contact_cost
+    metric_result = profit_func(y, y_proba, tp=tp_cost, fp=fp_cost, fn=contact_cost, tn=contact_cost, baseline=baseline)
+
     cost_result = expected_savings_score(
-        y,
-        y_proba,
-        tp_cost=tp_cost,
-        fp_cost=fp_cost,
+        y, y_proba, tp_cost=tp_cost, fp_cost=fp_cost, fn_cost=contact_cost, tn_cost=contact_cost, baseline=baseline
     )
     assert pytest.approx(metric_result) == cost_result
 

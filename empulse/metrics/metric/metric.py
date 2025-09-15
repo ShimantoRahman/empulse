@@ -202,7 +202,7 @@ class Metric:
             kwargs.setdefault(key, value)
 
         for key, value in kwargs.items():
-            if not isinstance(value, Real):
+            if not isinstance(value, Real | str):
                 kwargs[key] = np.asarray(value).reshape(-1)
 
         # convert any ints to floats
