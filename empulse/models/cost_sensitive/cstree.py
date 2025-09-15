@@ -278,6 +278,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
             Hidden(CostImpurity),
         ],
+        'loss': [Metric, None],
     }
 
     def __init__(
@@ -320,6 +321,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
         self.monotonic_cst = monotonic_cst
+        super().__init__()
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -470,7 +472,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
                 n_outputs=1,
                 n_classes=np.array([2], dtype=np.intp),
             )
-        elif self.criterion in ('entropy', 'log_loss'):
+        elif self.criterion in {'entropy', 'log_loss'}:
             self.criterion_ = EntropyCostImpurity(
                 n_outputs=1,
                 n_classes=np.array([2], dtype=np.intp),

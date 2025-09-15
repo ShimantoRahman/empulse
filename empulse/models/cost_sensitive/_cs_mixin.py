@@ -1,9 +1,10 @@
 import warnings
 from numbers import Real
-from typing import Literal, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 from numpy.typing import ArrayLike
+from sklearn.utils._metadata_requests import RequestMethod
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray
@@ -11,6 +12,18 @@ from ...metrics import Metric
 
 
 class CostSensitiveMixin:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.__post_init__()
+        super().__init__(*args, **kwargs)
+
+    def __post_init__(self) -> None:
+        # Allow passing costs accepted by the metric loss through metadata routing
+        if isinstance(self._get_metric_loss(), Metric):
+            self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
+                'fit',
+                sorted(self.__class__._get_default_requests().fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined]
+            )
+
     @overload
     def _check_costs(
         self,

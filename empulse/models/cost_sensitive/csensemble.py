@@ -337,9 +337,10 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
-        'criterion': [
-            StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
-            Metric,
+        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), Metric],
+        'loss': [Metric, None],
+        'combination': [
+            StrOptions({'majority_voting', 'weighted_voting'}),
         ],
         **RF_PARAM_CONSTRAINTS,
     }
@@ -398,6 +399,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.ccp_alpha = ccp_alpha
         self.max_samples = max_samples
         self.monotonic_cst = monotonic_cst
+        super().__init__()
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -544,7 +546,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 n_outputs=1,
                 n_classes=np.array([2], dtype=np.intp),
             )
-        elif self.criterion in ('entropy', 'log_loss'):
+        elif self.criterion in {'entropy', 'log_loss'}:
             self.criterion_ = EntropyCostImpurity(
                 n_outputs=1,
                 n_classes=np.array([2], dtype=np.intp),
@@ -632,7 +634,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self)
         y_proba = self.predict_proba(X)
-        return self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+        y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+        return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
@@ -649,6 +652,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             The class probabilities of the input samples.
         """
         check_is_fitted(self)
+        X: FloatNDArray = validate_data(self, X, reset=False)
 
         if self.combination == 'weighted_voting':
             y_proba: FloatNDArray = self._predict_weighted_proba(X)
@@ -730,10 +734,10 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         indicator, n_nodes_ptr = self.estimator_.decision_path(X)
         return indicator, n_nodes_ptr
 
-    def _get_oob_weights(self, X, y, **kwargs):
+    def _get_oob_weights(self, X: FloatNDArray, y: IntNDArray, **kwargs: Any) -> FloatNDArray:
         # Prediction requires X to be in CSR format
         if issparse(X):
-            X = X.tocsr()
+            X = X.tocsr()  # type: ignore[attr-defined]
         X = X.astype(np.float32)
 
         n_samples = y.shape[0]
@@ -767,14 +771,14 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return estimator_weights
 
-    def _predict_weighted_proba(self, X):
-        X = self.estimator_._validate_X_predict(X)
+    def _predict_weighted_proba(self, X: FloatArrayLike) -> FloatNDArray:
+        X: FloatNDArray = self.estimator_._validate_X_predict(X)
 
         # Assign chunk of trees to jobs
         n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
 
         # avoid storing the output of every estimator by summing them here
-        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)
+        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)  # type: ignore[arg-type]
         lock = threading.Lock()
         Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
             delayed(_accumulate_weighted_prediction)(e.predict_proba, X, all_proba, weight, lock)
@@ -784,30 +788,36 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return all_proba
 
 
-def _generate_unsampled_indices(random_state, n_samples, n_samples_bootstrap):
+def _generate_unsampled_indices(random_state: int, n_samples: int, n_samples_bootstrap: int) -> IntNDArray:
     """Private function used to forest._set_oob_score function."""
     sample_indices = _generate_sample_indices(random_state, n_samples, n_samples_bootstrap)
     sample_counts = np.bincount(sample_indices, minlength=n_samples)
     unsampled_mask = sample_counts == 0
     indices_range = np.arange(n_samples)
-    unsampled_indices = indices_range[unsampled_mask]
+    unsampled_indices: IntNDArray = indices_range[unsampled_mask]
 
     return unsampled_indices
 
 
-def _generate_sample_indices(random_state, n_samples, n_samples_bootstrap):
+def _generate_sample_indices(random_state: int, n_samples: int, n_samples_bootstrap: int) -> IntNDArray:
     """Private function used to _parallel_build_trees function."""
     random_instance = check_random_state(random_state)
-    sample_indices = random_instance.randint(0, n_samples, n_samples_bootstrap, dtype=np.int32)
+    sample_indices: IntNDArray = random_instance.randint(0, n_samples, n_samples_bootstrap, dtype=np.int32)
 
     return sample_indices
 
 
-def _accumulate_weighted_prediction(predict, X, out, weight, lock):
+def _accumulate_weighted_prediction(
+    predict: Callable[..., FloatNDArray],
+    X: FloatArrayLike,
+    out: FloatNDArray,
+    weight: float,
+    lock: threading.Lock,
+) -> None:
     """Calculate the weighted prediction."""
     prediction = predict(X, check_input=False)
     with lock:
-        out += prediction * weight
+        out += prediction * weight  # type: ignore[misc]
 
 
 class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
@@ -974,6 +984,9 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
         'loss': [Metric, None],
+        'combination': [
+            StrOptions({'majority_voting', 'weighted_voting'}),
+        ],
         **BaggingClassifier._parameter_constraints,
     }
 
@@ -1236,7 +1249,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self)
         y_proba = self.predict_proba(X)
-        return self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+        y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+        return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities for X.
@@ -1261,6 +1275,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             classes corresponds to that in the attribute :term:`classes_`.
         """
         check_is_fitted(self)
+        X: FloatNDArray = validate_data(self, X, reset=False)
 
         if self.combination == 'weighted_voting':
             y_proba: FloatNDArray = self._predict_weighted_proba(X)
@@ -1337,7 +1352,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         return estimator_weights
 
-    def _predict_weighted_proba(self, X):
+    def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:
         X = validate_data(self, X, reset=False)
 
         # Assign chunk of trees to jobs
@@ -1354,8 +1369,14 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         return all_proba
 
 
-def _accumulate_weighted_prediction_non_tree(predict, X, out, weight, lock):
+def _accumulate_weighted_prediction_non_tree(
+    predict: Callable[[FloatNDArray], FloatNDArray],
+    X: FloatNDArray,
+    out: FloatNDArray,
+    weight: float,
+    lock: threading.Lock,
+) -> None:
     """Calculate the weighted prediction."""
     prediction = predict(X)
     with lock:
-        out += prediction * weight
+        out += prediction * weight  # type: ignore[misc]

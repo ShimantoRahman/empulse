@@ -257,12 +257,12 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatArrayLike | float = 0.0,
         loss: Metric | None = None,
     ) -> None:
-        super().__init__(estimator=estimator)
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
         self.loss = loss
+        super().__init__(estimator=estimator)
 
     def fit(
         self,
@@ -497,7 +497,9 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
-        return self.loss
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None
 
 
 class CatboostObjective:

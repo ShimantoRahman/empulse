@@ -73,6 +73,7 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[
         self.loss = loss
         self.optimizer_params = optimizer_params
         self.optimize_fn = optimize_fn
+        super().__init__()
 
     def _more_tags(self) -> dict[str, bool]:
         return {

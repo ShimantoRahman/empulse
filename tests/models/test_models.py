@@ -5,9 +5,11 @@ import pytest
 import sympy
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
+from sklearn import config_context
 from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
@@ -60,7 +62,7 @@ METRIC_ESTIMATORS = (
     CSTreeClassifier(max_depth=2),
     CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
     CSBaggingClassifier(n_estimators=3, random_state=10),
-    # RobustCSClassifier(estimator=CSBoostClassifier()),
+    RobustCSClassifier(estimator=CSBoostClassifier()),
 )
 
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
@@ -237,8 +239,8 @@ def set_metric_loss(estimator, loss):
         return estimator.set_params(loss=loss)
     elif hasattr(estimator, 'criterion'):
         return estimator.set_params(criterion=loss)
-    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'criterion'):
-        return estimator.set_params(estimator__criterion=loss)
+    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'loss'):
+        return estimator.set_params(estimator__loss=loss)
     else:
         raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
 
@@ -357,3 +359,24 @@ def test_metric_loss_all_default_params(estimator, dataset):
         estimator.predict(X)
     else:
         estimator.fit(X, y)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_metric_loss_metadata_routing(estimator, dataset):
+    """Test that the metric loss metadata routing works."""
+    X, y, fn_cost, fp_cost = dataset
+
+    fn, fp = sympy.symbols('fn fp')
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).mark_outlier_sensitive(fn)
+    cost_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+    estimator.__post_init__()
+
+    with config_context(enable_metadata_routing=True):
+        if isinstance(estimator, CSThresholdClassifier):
+            estimator.set_predict_request(fp=True, fn=True)
+        else:
+            estimator.set_fit_request(fp=True, fn=True)
+
+        cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})

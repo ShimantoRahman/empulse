@@ -178,6 +178,18 @@ class Metric:
     def direction(self) -> Direction:  # noqa: D102
         return self.strategy.direction
 
+    @property
+    def _all_symbols(self) -> set[str]:
+        """Return a set of all symbols used in the cost matrix."""
+        all_symbols = (
+            self.tp_cost.free_symbols
+            | self.tn_cost.free_symbols
+            | self.fp_cost.free_symbols
+            | self.fn_cost.free_symbols
+            | self.cost_matrix._aliases.keys()
+        )
+        return {str(symbol) for symbol in all_symbols}
+
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
         # Map aliases to the appropriate symbols
