@@ -30,7 +30,7 @@ ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, Fl
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
-    Logistic classifier to optimize instance-dependent cost loss.
+    Cost-sensitive logistic regression classifier.
 
     Read more in the :ref:`User Guide <cslogit>`.
 

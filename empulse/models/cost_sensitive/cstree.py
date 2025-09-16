@@ -30,7 +30,7 @@ TREE_PARAM_CONSTRAINTS.pop('criterion')
 
 class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """
-    Decision tree classifier to optimize instance-dependent cost loss.
+    Cost-sensitive decision tree classifier.
 
     Parameters
     ----------

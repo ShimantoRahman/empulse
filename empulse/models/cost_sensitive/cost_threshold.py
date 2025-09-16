@@ -29,7 +29,9 @@ else:
 
 class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # type: ignore[misc]
     r"""
-    Classifier that sets the decision threshold to optimize the instance-dependent cost loss.
+    Binary Classifier that sets the decision threshold to optimize cost-sensitive metric.
+
+    By default, the expected cost loss is optimized.
 
     Parameters
     ----------

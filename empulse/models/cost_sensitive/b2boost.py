@@ -34,7 +34,7 @@ from .csboost import CSBoostClassifier
 
 class B2BoostClassifier(CSBoostClassifier):
     """
-    Gradient boosting model to optimize instance-dependent cost loss for customer churn.
+    Cost-sensitive gradient boosting classifier for B2B customer churn.
 
     B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
     and :class:`catboost.CatBoostClassifier`.

@@ -25,11 +25,10 @@ else:
 
 class ProfLogitClassifier(BaseLogitClassifier):
     """
-    Logistic classifier to optimize profit-driven score.
+    Profit-driven logistic regression classifier.
 
-    Maximizing empirical EMP for churn by optimizing
-    the regression coefficients of the logistic model through
-    a Real-coded Genetic Algorithm (RGA).
+    Maximizing empirical (Expected) maximum profit score
+    by optimizing the regression coefficients of the logistic model through a Real-coded Genetic Algorithm (RGA).
 
     Read more in the :ref:`User Guide <proflogit>`.
 

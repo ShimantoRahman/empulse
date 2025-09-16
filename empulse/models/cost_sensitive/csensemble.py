@@ -36,7 +36,7 @@ RF_PARAM_CONSTRAINTS.pop('criterion')
 
 class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     """
-    Random Forest classifier to optimize instance-dependent cost loss.
+    Cost-sensitive random forest classifier.
 
     Parameters
     ----------
@@ -822,7 +822,7 @@ def _accumulate_weighted_prediction(
 
 class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     """
-    Bagging classifier to optimize instance-dependent cost loss.
+    Cost-sensitive Bagging classifier.
 
     A Bagging classifier is an ensemble meta-estimator that fits base
     classifiers each on random subsets of the original dataset and then

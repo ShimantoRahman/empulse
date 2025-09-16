@@ -29,7 +29,7 @@ V = TypeVar('V')
 
 class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):  # type: ignore[misc]
     """
-    Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
+    Cost-sensitive classifier that is robust to outliers in the instance-dependent costs.
 
     The costs are adjusted by fitting an outlier estimator to the costs and imputing the costs for the outliers.
     Outliers are detected by the standardized residuals of the cost and the predicted cost.
