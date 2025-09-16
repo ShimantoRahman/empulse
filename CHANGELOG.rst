@@ -19,6 +19,8 @@
 - |API| Extracted the construction of the cost matrix into a separate class
   :func:`~empulse.metrics.CostMatrix` away from :class:`~empulse.metrics.Metric`
   to allow reusing the cost matrix in custom metrics.
+- |API| :class:`~empulse.models.ProfLogitClassifier` no longer uses the EMPC metric by default.
+  Users now need to explicitely pass a loss to the model.
 - |Feature| :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`
   now accept two more baseline options `'one'` and `'zero'`
   to always predict the positive and negative class, respectively.

@@ -16,7 +16,7 @@ from sklearn.utils._param_validation import InvalidParameterError
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
-from empulse.metrics import Cost, CostMatrix, Metric, Savings, cost_loss
+from empulse.metrics import Cost, CostMatrix, Metric, Savings, cost_loss, mpc_score
 from empulse.models import (
     B2BoostClassifier,
     BiasRelabelingClassifier,
@@ -35,7 +35,7 @@ from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
-    ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10}),
+    ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10}),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -108,7 +108,8 @@ def test_proflogit_classifier_data_not_an_array():
     from sklearn.utils.estimator_checks import check_classifier_data_not_an_array
 
     check_classifier_data_not_an_array(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -130,7 +131,8 @@ def test_proflogit_fit_idempotent():
     from sklearn.utils.estimator_checks import check_fit_idempotent
 
     check_fit_idempotent(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -152,7 +154,8 @@ def test_proflogit_supervised_y_2d():
     from sklearn.utils.estimator_checks import check_supervised_y_2d
 
     check_supervised_y_2d(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -211,13 +214,14 @@ class InvalidParameter:
 def generate_invalid_params(estimator_class):
     parameters = inspect.signature(estimator_class.__init__).parameters
     takes_estimator = 'estimator' in parameters
-    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator
+    takes_loss = 'loss' in parameters
+    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator, takes_loss
 
 
 @pytest.mark.parametrize('estimator_class', ESTIMATOR_CLASSES)
 def test_invalid_params(estimator_class, dataset):
     X, y, _, _ = dataset
-    invalid_params_list, takes_estimator = generate_invalid_params(estimator_class)
+    invalid_params_list, takes_estimator, takes_loss = generate_invalid_params(estimator_class)
     for invalid_params in invalid_params_list:
         if (
             takes_estimator
@@ -227,6 +231,15 @@ def test_invalid_params(estimator_class, dataset):
             model = estimator_class(**invalid_params)
         elif takes_estimator:
             model = estimator_class(estimator=LogisticRegression(), **invalid_params)
+        elif (
+            takes_loss
+            and 'loss' in invalid_params
+            and isinstance(invalid_params['loss'], InvalidParameter)
+            and estimator_class is ProfLogitClassifier
+        ):
+            model = estimator_class(**invalid_params)
+        elif takes_loss and estimator_class is ProfLogitClassifier:
+            model = estimator_class(loss=mpc_score, **invalid_params)
         else:
             model = estimator_class(**invalid_params)
         with pytest.raises(InvalidParameterError):
