@@ -79,7 +79,7 @@ class LGBMObjective:
 
 class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
-    Gradient boosting model to optimize instance-dependent cost loss.
+    Cost-sensitive gradient boosting classifier.
 
     CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
     and :class:`catboost.CatBoostClassifier` as base estimators.
