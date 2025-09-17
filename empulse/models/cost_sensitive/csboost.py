@@ -3,7 +3,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
 from numbers import Real
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, overload
+from typing import Any, ClassVar, Literal, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,9 +12,7 @@ from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
 
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
-
-if TYPE_CHECKING:
-    from ...metrics.savings import AECMetric, AECObjective
+from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -35,7 +33,7 @@ except ImportError:
     CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
-from ...metrics import Metric, make_objective_aec
+from ...metrics import Metric
 from ...metrics._loss import cy_boost_grad_hess
 from .._base import BaseBoostClassifier
 from ._cs_mixin import CostSensitiveMixin
@@ -460,7 +458,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fn_cost: FloatNDArray | FloatArrayLike | float,
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
-    ) -> tuple['AECObjective', 'AECMetric'] | tuple['CatboostObjective', 'CatboostMetric']: ...
+    ) -> tuple['CatboostObjective', 'CatboostMetric']: ...
 
     def _get_objective(
         self,
@@ -471,29 +469,33 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fn_cost: FloatNDArray | FloatArrayLike | float,
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
-    ) -> (
-        Callable[..., Any]
-        | LGBMObjective
-        | tuple['AECObjective', 'AECMetric']
-        | tuple['CatboostObjective', 'CatboostMetric']
-    ):
+    ) -> Callable[..., Any] | LGBMObjective | tuple['CatboostObjective', 'CatboostMetric']:
         if self.loss is None:
-            return make_objective_aec(framework, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)  # type: ignore[arg-type, misc]
+            loss = make_generic_cost_metric()
+            loss_params = {
+                'tp_cost': tp_cost,
+                'tn_cost': tn_cost,
+                'fn_cost': fn_cost,
+                'fp_cost': fp_cost,
+            }
+        else:
+            loss = self.loss
+
         if framework == 'xgboost':
             # return partial(self.loss._gradient_boost_objective, **loss_params)
-            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
             return partial(cy_boost_grad_hess, grad_const=grad_const)
         elif framework == 'lightgbm':
-            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
             return LGBMObjective(grad_const)
         else:
-            grad_const = self.loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
             # normalize the shape of all loss params to be (n_samples,)
             loss_params = {
                 name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
                 for name, param in loss_params.items()
             }
-            return CatboostObjective(grad_const), CatboostMetric(self.loss, **loss_params)
+            return CatboostObjective(grad_const), CatboostMetric(loss, **loss_params)
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
