@@ -21,6 +21,8 @@
   to allow reusing the cost matrix in custom metrics.
 - |API| :class:`~empulse.models.ProfLogitClassifier` no longer uses the EMPC metric by default.
   Users now need to explicitely pass a loss to the model.
+- |API| :class:`~empulse.models.CSLogitClassifier` no longer accepts any callable as loss function.
+  Users now need to pass a :class:`~empulse.metrics.Metric` instance for a custom loss function.
 - |Feature| :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`
   now accept two more baseline options `'one'` and `'zero'`
   to always predict the positive and negative class, respectively.
@@ -32,6 +34,7 @@
   The :class:`~empulse.metrics.MaxProfit` strategy will be updated to be pickleable in a future release.
 - |Enhancement| Models which use a :class:`~empulse.metrics.Metric` instance as their loss function
   can now request arguments necessary for the metric to be passed during the fit method through Metadata Routing.
+- |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly calculating gradient penalty.
 - |Fix| Fix default values not being properly when using aliases in :class:`~empulse.metrics.CostMatrix`.
 - |Fix| Fix :class:`~empulse.metrics.Metric` throwing errors when certain terms cancelled out.
 
