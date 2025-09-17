@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from empulse.metrics import CostMatrix, Metric, Savings
 from empulse.models import CSLogitClassifier
 
 
@@ -83,10 +84,8 @@ def test_works_with_different_optimizers_bfgs(X, y):
 def test_works_with_different_loss(X, y):
     from scipy.optimize import OptimizeResult
 
-    from empulse.metrics import expected_savings_score
-
-    clf = CSLogitClassifier(loss=expected_savings_score, optimizer_params={'max_iter': 2})
-    clf.fit(X, y, fp_cost=1, fn_cost=1)
+    clf = CSLogitClassifier(loss=Metric(CostMatrix().add_fp_cost('fp').add_fn_cost('fn'), Savings()))
+    clf.fit(X, y, fp=10, fn=1)
     assert clf.result_.x.shape == (3,)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.success is True

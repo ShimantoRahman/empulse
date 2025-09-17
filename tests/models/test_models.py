@@ -86,7 +86,9 @@ def expected_failed_checks(estimator):
         }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
-    if isinstance(estimator, CSTreeClassifier | CSForestClassifier | CSBaggingClassifier):
+    if isinstance(
+        estimator, CSTreeClassifier | CSForestClassifier | CSBaggingClassifier | CSLogitClassifier | RobustCSClassifier
+    ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
         }
