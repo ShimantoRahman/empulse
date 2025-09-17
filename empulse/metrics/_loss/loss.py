@@ -23,8 +23,9 @@ def expit(x: cython.double) -> cython.double:
 @cython.nogil
 @cython.exceptval(check=False)
 def sign(x: cython.double) -> cython.double:
-    is_positive: cython.bint = x > 0
-    if is_positive:
+    if x == 0.0:
+        return 0.0
+    elif x > 0.0:
         return 1.0
     else:
         return -1.0
@@ -81,15 +82,15 @@ def cy_logit_loss_gradient(
     if l1_ratio == 0.0:  # L2 regularization penalty
         for j in range(start_coef, n_cols):
             gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += weights[j]
+            gradient_view[j] += weights[j] / C
     elif l1_ratio == 1.0:  # L1 regularization penalty
         for j in range(start_coef, n_cols):
             gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += fabs(weights[j])
+            gradient_view[j] += sign(weights[j]) / C
     else:
         for j in range(start_coef, n_cols):  # elastic net regularization penalty
             gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += (1 - l1_ratio) * weights[j] + l1_ratio * fabs(weights[j])
+            gradient_view[j] += ((1 - l1_ratio) * weights[j] + l1_ratio * sign(weights[j])) / C
     if fit_intercept:
         gradient_view[0] = gradient_view[0] / n_rows  # intercept term is not regularized
 
