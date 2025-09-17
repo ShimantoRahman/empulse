@@ -391,5 +391,4 @@ def test_metric_loss_metadata_routing(estimator, dataset):
             estimator.set_predict_request(fp=True, fn=True)
         else:
             estimator.set_fit_request(fp=True, fn=True)
-
-        cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})
+            cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})

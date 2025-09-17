@@ -173,9 +173,9 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
 
     def __post_init__(self) -> None:
         if isinstance(self._get_metric_loss(), Metric):
-            self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
-                'fit',
-                sorted(self.__class__._get_default_requests().fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
+            self.__class__.set_predict_request = RequestMethod(  # type: ignore[attr-defined]
+                'predict',
+                sorted(self.__class__._get_default_requests().predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
             )
 
     def _more_tags(self) -> dict[str, bool]:
