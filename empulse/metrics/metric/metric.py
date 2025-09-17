@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from numbers import Real
 
 import numpy as np
@@ -331,8 +332,15 @@ class Metric:
         return self.strategy.optimal_rate(y_true, y_score, **parameters)
 
     def _logit_objective(
-        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[float, FloatNDArray]:
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
         """
         Compute the metric loss and its gradient with respect to the logistic regression weights.
 
@@ -367,7 +375,15 @@ class Metric:
             if isinstance(value, np.ndarray) and value.ndim == 1:
                 parameters[key] = np.expand_dims(value, axis=1)
 
-        return self.strategy.logit_objective(features, weights, y_true, **parameters)
+        return self.strategy.logit_objective(
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+            **parameters,
+        )
 
     def _prepare_logit_objective(
         self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float

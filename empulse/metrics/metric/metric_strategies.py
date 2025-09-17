@@ -1,5 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import ClassVar, Literal
 
 if sys.version_info >= (3, 11):
@@ -130,19 +131,33 @@ class MetricStrategy(ABC):
         raise NotImplementedError(f'Optimal rate is not defined for the {self.name} strategy')
 
     def logit_objective(
-        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[float, FloatNDArray]:
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
         """
-        Compute the metric value and the gradient of the metric with respect to logistic regression coefficients.
+        Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
 
         Parameters
         ----------
         features : NDArray of shape (n_samples, n_features)
             The features of the samples.
-        weights : NDArray of shape (n_features,)
-            The weights of the logistic regression model.
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
         parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
@@ -153,10 +168,10 @@ class MetricStrategy(ABC):
 
         Returns
         -------
-        value : float
-            The metric loss to be minimized.
-        gradient : NDArray of shape (n_features,)
-            The gradient of the metric loss with respect to the logistic regression weights.
+        logistic_objective : Callable[[NDArray], tuple[float, NDArray]]
+            A function that takes logistic regression weights as input and returns the metric value and its gradient.
+            The function signature is:
+            ``logistic_objective(weights) -> (value, gradient)``
         """
         raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
 
@@ -188,6 +203,49 @@ class MetricStrategy(ABC):
             The first constant term of the loss function.
         loss_const2 : NDArray of shape (n_features,)
             The second constant term of the loss function.
+        """
+        raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
+
+    def build_logit_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **loss_params: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+        """
+        Build a logit objective function for optimization.
+
+        This function constructs a callable that calculates logistic loss and its gradient
+        for a given dataset. The function takes into account various regularization
+        parameters and thresholds to customize the loss function. Optimization parameters
+        passed to this function are critical for model fitting and performance.
+
+        Parameters
+        ----------
+        features : FloatNDArray
+            Feature matrix with shape (n_samples, n_features).
+        y_true : FloatNDArray
+            Target values corresponding to the input samples, of shape (n_samples,).
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        **loss_params : FloatNDArray or float
+            Additional parameters for customizing the loss function calculation, if needed.
+
+        Returns
+        -------
+        logit_objective
+            The callable logistic loss function with its gradient pre-configured for optimization.
         """
         raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
 

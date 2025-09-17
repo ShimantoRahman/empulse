@@ -1,4 +1,6 @@
 import sys
+from collections.abc import Callable
+from functools import partial
 from typing import Any, ClassVar
 
 import numpy as np
@@ -10,6 +12,7 @@ else:
     from typing_extensions import Self
 
 from ..._types import FloatNDArray
+from .._loss import cy_logit_loss_gradient
 from .common import (
     BoostGradientConst,
     Direction,
@@ -190,6 +193,72 @@ class Cost(MetricStrategy):
             y_true = np.expand_dims(y_true, axis=1)
 
         return self._prepare_logit_objective.prepare(features, y_true, **parameters)
+
+    def logit_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+        """
+        Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        logistic_objective : Callable[[NDArray], tuple[float, NDArray]]
+            A function that takes logistic regression weights as input and returns the metric value and its gradient.
+            The function signature is:
+            ``logistic_objective(weights) -> (value, gradient)``
+        """
+        grad_const, loss_const1, loss_const2 = self.prepare_logit_objective(features, y_true, **parameters)
+        loss_const1 = (
+            loss_const1.reshape(-1)
+            if isinstance(loss_const1, np.ndarray)
+            else np.full(len(y_true), loss_const1, dtype=np.float64)
+        )
+        loss_const2 = (
+            loss_const2.reshape(-1)
+            if isinstance(loss_const2, np.ndarray)
+            else np.full(len(y_true), loss_const2, dtype=np.float64)
+        )
+        return partial(
+            cy_logit_loss_gradient,
+            grad_const=grad_const,
+            loss_const1=loss_const1,
+            loss_const2=loss_const2,
+            features=features,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+        )
 
     def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
         """

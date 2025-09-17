@@ -694,7 +694,9 @@ def test_objective_logit_unsupported(kind):
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), kind)
     with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for'):
-        metric._logit_objective(np.array([1]), np.array([1]), np.array([1]))
+        metric._logit_objective(
+            np.array([1]), np.array([1]), C=1.0, l1_ratio=1.0, soft_threshold=False, fit_intercept=True
+        )
 
 
 @pytest.mark.parametrize('kind', [MaxProfit()])
