@@ -59,39 +59,18 @@ Custom Loss Functions
 ---------------------
 
 CSLogit allows the use of any cost-sensitive metric as the loss function.
-The metric must take ``tp_cost``, ``fp_cost``, ``tn_cost``, ``fn_cost``, as keyword arguments.
-To use a different metric,
-simply pass the metric to the :class:`~empulse.models.CSLogitClassifier` initializer.
+To use a different metric, simply pass the metric to the :class:`~empulse.models.CSLogitClassifier` initializer.
 
 .. code-block:: python
 
-    from empulse.metrics import expected_savings_score
+    from empulse.metrics import Metric, Savings, CostMatrix
 
-    cslogit = CSLogitClassifier(loss=expected_savings_score)
+    savings_score = Metric(
+        cost_matrix=CostMatrix().add_fp_cost('fp').add_fn_cost('fn'),
+        strategy=Savings()
+    )
 
-Note that the this will not have the desired effect since by default CSLogit minimizes the loss function.
-Instead, you can pass the inverse of the metric to the ``loss`` argument.
-
-.. code-block:: python
-
-    def inverse_expected_savings_score(
-        y_true,
-        y_pred,
-        tp_cost=0.0,
-        fp_cost=0.0,
-        tn_cost=0.0,
-        fn_cost=0.0
-    ):
-        return -expected_savings_score(
-            y_true,
-            y_pred,
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost
-        )
-
-    cslogit = CSLogitClassifier(loss=inverse_expected_savings_score)
+    cslogit = CSLogitClassifier(loss=savings_score)
 
 Custom Optimization Algorithms
 ------------------------------
