@@ -56,7 +56,15 @@ ESTIMATORS = (
 METRIC_ESTIMATORS = (
     CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
     CSBoostClassifier(),
-    CSBoostClassifier(LGBMClassifier(n_estimators=10, max_depth=1)),
+    CSBoostClassifier(
+        LGBMClassifier(
+            n_estimators=10,
+            max_depth=1,
+            # Need this parameter since we are testing with small datasets, otherwise can throw error
+            min_data_in_leaf=0,
+            verbose=-1,
+        )
+    ),
     CSBoostClassifier(CatBoostClassifier(iterations=10, depth=1)),
     CSLogitClassifier(optimizer_params={'max_iter': 10}),
     CSTreeClassifier(max_depth=2),
