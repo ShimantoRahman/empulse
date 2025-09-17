@@ -28,6 +28,7 @@ tox:
 	uvx --with tox-uv tox -f tests
 
 lint:
+	uvx ruff format --preview
 	uvx ruff check --fix --preview
 	uvx ruff format --preview
 
