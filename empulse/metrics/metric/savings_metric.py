@@ -51,7 +51,7 @@ class Savings(MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
-        self._score_function: MetricFn = SavingsScore(
+        self._score_function: MetricFn = SavingsScore(  # type: ignore[assignment]
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
@@ -89,7 +89,7 @@ class Savings(MetricStrategy):
         )
         return self
 
-    def score(
+    def score(  # type: ignore[override]
         self,
         y_true: FloatNDArray,
         y_score: FloatNDArray,
