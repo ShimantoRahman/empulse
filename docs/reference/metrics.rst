@@ -18,6 +18,7 @@ Build your own cost-sensitive metric
    Metric
    MetricStrategy
    MaxProfit
+   CostMatrix
    Cost
    Savings
 
