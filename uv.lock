@@ -743,6 +743,7 @@ dev = [
     { name = "scikit-learn" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "sphinx", version = "8.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sphinx-codeautolink" },
     { name = "sphinx-copybutton" },
     { name = "sphinxcontrib-sass" },
     { name = "tox" },
@@ -755,6 +756,7 @@ docs = [
     { name = "pydata-sphinx-theme" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "sphinx", version = "8.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sphinx-codeautolink" },
     { name = "sphinx-copybutton" },
     { name = "sphinxcontrib-sass" },
 ]
@@ -806,6 +808,7 @@ dev = [
     { name = "ruff", specifier = ">=0.9.4" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "sphinx", specifier = ">=7.2.6" },
+    { name = "sphinx-codeautolink", specifier = ">=0.17.5" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinxcontrib-sass", specifier = ">=0.3.4" },
     { name = "tox", specifier = ">=4.13.0" },
@@ -817,6 +820,7 @@ docs = [
     { name = "numpydoc", specifier = ">=1.6.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
     { name = "sphinx", specifier = ">=7.2.6" },
+    { name = "sphinx-codeautolink", specifier = ">=0.17.5" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinxcontrib-sass", specifier = ">=0.3.4" },
 ]
@@ -3105,6 +3109,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/4b/95bdb36eaee30698f2d244d52e1b9e58642af56525d4b02fcd0f7312c27c/sphinx-8.2.1.tar.gz", hash = "sha256:e4b932951b9c18b039f73b72e4e63afe967d90408700ec222b981ac24647c01e", size = 8321376, upload-time = "2025-02-21T23:28:46.274Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/aa/282768cff0039b227a923cb65686539bb606e448c594d4fdee4d2c7765a1/sphinx-8.2.1-py3-none-any.whl", hash = "sha256:b5d2bb3cdf6207fcacde9f92085d2b97667b05b9c346eaec426ca4be8af505e9", size = 3589415, upload-time = "2025-02-21T23:28:43.165Z" },
+]
+
+[[package]]
+name = "sphinx-codeautolink"
+version = "0.17.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "sphinx", version = "8.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/cf/96065111f706555ca3e0b5a7f57f47bae48983d48223d09f8800ba4b9b00/sphinx_codeautolink-0.17.5.tar.gz", hash = "sha256:75098c20aa32de01481fa62409e6d2fbfdde760e6696ae9beb233a77bcb49283", size = 59686, upload-time = "2025-07-09T15:22:35.452Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/e2/a7232766639b8a447e5e1884f6f33bd704d213bc5d4eb376f81cd5a0cb1d/sphinx_codeautolink-0.17.5-py3-none-any.whl", hash = "sha256:a84595ad3a12da93f82796e638f27e239d07b388037f3d3f69d65fc7ea6e05bf", size = 35399, upload-time = "2025-07-09T15:22:33.85Z" },
 ]
 
 [[package]]
