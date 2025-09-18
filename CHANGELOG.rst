@@ -1,8 +1,8 @@
 `Unreleased`_
 =============
 
-`0.10.0`_ (16-09-2025)
-=====================
+`0.10.0`_ (19-09-2025)
+======================
 
 - |Efficiency| Changed to Cython implementation for the loss functions and impurity measures of
   :class:`~empulse.models.CSLogitClassifier`, :class:`~empulse.models.CSBoostClassifier`,
@@ -173,7 +173,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.9.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.10.0...main
+.. _0.10.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.0
 .. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
 .. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0
 .. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0
