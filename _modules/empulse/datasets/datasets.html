@@ -1,0 +1,1646 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.datasets.datasets &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/datasets/datasets';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.datasets.datasets</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.datasets.datasets</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">os.path</span><span class="w"> </span><span class="kn">import</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">overload</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatNDArray</span>
+
+<span class="n">Frame</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;Frame&#39;</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">)</span>
+<span class="n">Series</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;Series&#39;</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Dataset">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.Dataset.html#empulse.datasets.Dataset">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Dataset</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">Frame</span><span class="p">,</span> <span class="n">Series</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Container object for datasets returned by the load functions.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : :class:`pandas:pandas.DataFrame` or :class:`numpy:numpy.ndarray`</span>
+<span class="sd">        Features of the dataset.</span>
+<span class="sd">    target : :class:`pandas:pandas.Series` or :class:`numpy:numpy.ndarray`</span>
+<span class="sd">        The classification labels.</span>
+<span class="sd">    tp_cost : :class:`pandas:pandas.Series`, :class:`numpy:numpy.ndarray` or float</span>
+<span class="sd">        The cost of true positives.</span>
+<span class="sd">    tn_cost : :class:`pandas:pandas.Series`, :class:`numpy:numpy.ndarray` or float</span>
+<span class="sd">        The cost of true negatives.</span>
+<span class="sd">    fp_cost : :class:`pandas:pandas.Series`, :class:`numpy:numpy.ndarray` or float</span>
+<span class="sd">        The cost of false positives.</span>
+<span class="sd">    fn_cost : :class:`pandas:pandas.Series`, :class:`numpy:numpy.ndarray` or float</span>
+<span class="sd">        The cost of false negatives.</span>
+<span class="sd">    feature_names : :class:`pandas:pandas.Series` or :class:`numpy:numpy.ndarray`</span>
+<span class="sd">        The meaning of the features.</span>
+<span class="sd">    target_names : :class:`pandas:pandas.Series` or :class:`numpy:numpy.ndarray`</span>
+<span class="sd">        The meaning of the labels.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The name of the dataset.</span>
+<span class="sd">    DESCR : str</span>
+<span class="sd">        The full description of the dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data</span><span class="p">:</span> <span class="n">Frame</span>
+    <span class="n">target</span><span class="p">:</span> <span class="n">Series</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">Series</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">Series</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">Series</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">Series</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="n">feature_names</span><span class="p">:</span> <span class="n">Series</span>
+    <span class="n">target_names</span><span class="p">:</span> <span class="n">Series</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">DESCR</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<div class="viewcode-block" id="load_churn_tv_subscriptions">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_churn_tv_subscriptions.html#empulse.datasets.load_churn_tv_subscriptions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span> <span class="n">as_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+    <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the TV Subscription Churn dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will churn or not.</span>
+<span class="sd">    The target variable is whether the customer churned, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    This dataset is from a TV cable provider containing all 9410 customers active during the first semester of 2014.</span>
+<span class="sd">    Features names are anonymized to protect the privacy of the customers.</span>
+
+<span class="sd">    For additional information about the dataset, consult the :ref:`User Guide &lt;churn_tv_subscriptions&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                       455</span>
+<span class="sd">    Non-churners                  8955</span>
+<span class="sd">    Samples                       9410</span>
+<span class="sd">    Features                        45</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    as_frame : bool, default=False</span>
+<span class="sd">        If True, the output will be a pandas DataFrames or Series instead of numpy arrays.</span>
+<span class="sd">    return_X_y_costs : bool, default=False</span>
+<span class="sd">        If True, return (data, target, tp_cost, fp_cost, tn_cost, fn_cost) instead of a Dataset object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset` or tuple of (data, target, tp_cost, fp_cost, tn_cost, fn_cost)</span>
+<span class="sd">        Returns a Dataset object if `return_X_y_costs=False` (default), otherwise a tuple.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= \\gamma_i d_i + (1 - \\gamma_i) (CLV_i + c_i)`</span>
+<span class="sd">          - ``fp_cost`` :math:`= d_i + c_i`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= CLV_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    with</span>
+<span class="sd">        - :math:`\\gamma_i` : probability of the customer accepting the retention offer</span>
+<span class="sd">        - :math:`CLV_i` : customer lifetime value of the retained customer</span>
+<span class="sd">        - :math:`d_i` : cost of incentive offered to the customer</span>
+<span class="sd">        - :math:`c_i` : cost of contacting the customer</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           `&quot;A novel cost-sensitive framework for customer churn predictive modeling&quot;</span>
+<span class="sd">           &lt;http://www.decisionanalyticsjournal.com/content/pdf/s40165-015-0014-6.pdf&gt;`__,</span>
+<span class="sd">           Decision Analytics, 2:5, 2015.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from empulse.datasets import load_churn_tv_subscriptions</span>
+<span class="sd">        from sklearn.model_selection import train_test_split</span>
+
+<span class="sd">        dataset = load_churn_tv_subscriptions()</span>
+<span class="sd">        X_train, X_test, y_train, y_test = train_test_split(</span>
+<span class="sd">            dataset.data, dataset.target, random_state=42</span>
+<span class="sd">        )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">module_path</span> <span class="o">=</span> <span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;churn_tv_subscriptions.csv.gz&#39;</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;descriptions&#39;</span><span class="p">,</span> <span class="s1">&#39;churn_tv_subscriptions.rst&#39;</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">5</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_X_y_costs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">as_frame</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TP&#39;</span><span class="p">],</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FP&#39;</span><span class="p">],</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TN&#39;</span><span class="p">],</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FN&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="n">raw_data</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">),</span>
+                <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TP&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FP&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TN&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FN&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">raw_data</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">],</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">raw_data</span><span class="o">.</span><span class="n">C_TP</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TP&#39;</span><span class="p">],</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">raw_data</span><span class="o">.</span><span class="n">C_FP</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FP&#39;</span><span class="p">],</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">raw_data</span><span class="o">.</span><span class="n">C_TN</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_TN&#39;</span><span class="p">],</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">raw_data</span><span class="o">.</span><span class="n">C_FN</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;C_FN&#39;</span><span class="p">],</span>
+            <span class="n">feature_names</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">target_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">]),</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Churn TV subscriptions&#39;</span><span class="p">,</span>
+            <span class="n">DESCR</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.02463333</span><span class="p">,</span>
+    <span class="n">term_deposit_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.02463333</span><span class="p">,</span>
+    <span class="n">term_deposit_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.02463333</span><span class="p">,</span>
+    <span class="n">term_deposit_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.02463333</span><span class="p">,</span>
+    <span class="n">term_deposit_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<div class="viewcode-block" id="load_upsell_bank_telemarketing">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_upsell_bank_telemarketing.html#empulse.datasets.load_upsell_bank_telemarketing">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.02463333</span><span class="p">,</span>
+    <span class="n">term_deposit_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+    <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the bank telemarketing dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a client will subscribe to a term deposit after being called by the bank.</span>
+<span class="sd">    The target variable is whether the client subscribed to the term deposit, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    The dataset is related to a direct marketing campaigns (phone calls) of a Portuguese banking institution.</span>
+<span class="sd">    The marketing campaigns were based on phone calls.</span>
+<span class="sd">    Often, more than one contact to the same client was required,</span>
+<span class="sd">    in order to access if the product (bank term deposit) would be or not subscribed.</span>
+
+<span class="sd">    Features recorded before the contact event are removed from the original dataset [1]_ to avoid data leakage.</span>
+<span class="sd">    Only clients with a positive balance are considered, since clients in debt are not eligible for term deposits.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;upsell_bank_telemarketing&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Subscribers                   4787</span>
+<span class="sd">    Non-subscribers              33144</span>
+<span class="sd">    Samples                      37931</span>
+<span class="sd">    Features                        10</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    as_frame : bool, default=False</span>
+<span class="sd">        If True, the output will be a pandas DataFrames or Series instead of numpy arrays.</span>
+<span class="sd">    return_X_y_costs : bool, default=False</span>
+<span class="sd">        If True, return (data, target, tp_cost, fp_cost, tn_cost, fn_cost) instead of a Dataset object.</span>
+<span class="sd">    interest_rate : float, default=0.02463333</span>
+<span class="sd">        Interest rate of the term deposit.</span>
+<span class="sd">    term_deposit_fraction : float, default=0.25</span>
+<span class="sd">        Fraction of the client&#39;s balance that is deposited in the term deposit.</span>
+<span class="sd">    contact_cost : float, default=1</span>
+<span class="sd">        Cost of contacting the client.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset` or tuple of (data, target, tp_cost, fp_cost, tn_cost, fn_cost)</span>
+<span class="sd">        Returns a Dataset object if `return_X_y_costs=False` (default), otherwise a tuple.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= c`</span>
+<span class="sd">          - ``fp_cost`` :math:`= c`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= r \\, d_i \\, b_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    with</span>
+<span class="sd">        - :math:`c` : cost of contacting the client</span>
+<span class="sd">        - :math:`r` : interest rate of the term deposit</span>
+<span class="sd">        - :math:`d_i` : fraction of the client&#39;s balance that is deposited in the term deposit</span>
+<span class="sd">        - :math:`b_i` : client&#39;s balance</span>
+
+<span class="sd">    Using default parameters, it is assumed that :math:`c = 1`, :math:`r = 0.02463333`, :math:`d_i = 0.25`</span>
+<span class="sd">    for all clients.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Moro, S., Rita, P., &amp; Cortez, P. (2014).</span>
+<span class="sd">           Bank Marketing [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5K306.</span>
+
+<span class="sd">    .. [2] S. Moro, R. Laureano and P. Cortez.</span>
+<span class="sd">           Using Data Mining for Bank Direct Marketing: An Application of the CRISP-DM Methodology.</span>
+<span class="sd">           In P. Novais et al. (Eds.),</span>
+<span class="sd">           Proceedings of the European Simulation and Modelling Conference</span>
+<span class="sd">           - ESM&#39;2011, pp. 117-121, Guimaraes, Portugal, October, 2011. EUROSIS. [bank.zip]</span>
+
+<span class="sd">    .. [3] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,</span>
+<span class="sd">           `&quot;Improving Credit Card Fraud Detection with Calibrated Probabilities&quot;</span>
+<span class="sd">           &lt;http://albahnsen.com/files/%20Improving%20Credit%20Card%20Fraud%20Detection%20by%20using%20Calibrated%20Probabilities%20-%20Publish.pdf&gt;`__,</span>
+<span class="sd">           in Proceedings of the fourteenth SIAM International Conference on Data Mining,</span>
+<span class="sd">           677-685, 2014.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from empulse.datasets import load_upsell_bank_telemarketing</span>
+<span class="sd">        from sklearn.model_selection import train_test_split</span>
+
+<span class="sd">        dataset = load_upsell_bank_telemarketing()</span>
+<span class="sd">        X_train, X_test, y_train, y_test = train_test_split(</span>
+<span class="sd">            dataset.data, dataset.target, random_state=42</span>
+<span class="sd">        )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">module_path</span> <span class="o">=</span> <span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;bankmarketing.csv.gz&#39;</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;descriptions&#39;</span><span class="p">,</span> <span class="s1">&#39;bankmarketing.rst&#39;</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="c1"># only use features pre-contact:</span>
+    <span class="c1"># 1 - age (numeric)</span>
+    <span class="c1"># 2 - job : type of job (categorical: &quot;admin.&quot;,&quot;unknown&quot;,&quot;unemployed&quot;,&quot;management&quot;,&quot;housemaid&quot;,&quot;entrepreneur&quot;,</span>
+    <span class="c1">#                        &quot;student&quot;,&quot;blue-collar&quot;,&quot;self-employed&quot;,&quot;retired&quot;,&quot;technician&quot;,&quot;services&quot;)</span>
+    <span class="c1"># 3 - marital : marital status (categorical: &quot;married&quot;,&quot;divorced&quot;,&quot;single&quot;;</span>
+    <span class="c1">#                               note: &quot;divorced&quot; means divorced or widowed)</span>
+    <span class="c1"># 4 - education (categorical: &quot;unknown&quot;,&quot;secondary&quot;,&quot;primary&quot;,&quot;tertiary&quot;)</span>
+    <span class="c1"># 5 - default: has credit in default? (binary: &quot;yes&quot;,&quot;no&quot;)</span>
+    <span class="c1"># 6 - balance: average yearly balance, in euros (numeric)</span>
+    <span class="c1"># 7 - housing: has housing loan? (binary: &quot;yes&quot;,&quot;no&quot;)</span>
+    <span class="c1"># 8 - loan: has personal loan? (binary: &quot;yes&quot;,&quot;no&quot;)</span>
+    <span class="c1"># 15 - previous: number of contacts performed before this campaign and for this client (numeric)</span>
+    <span class="c1"># 16 - poutcome: outcome of the previous marketing campaign (categorical: &quot;unknown&quot;,&quot;other&quot;,&quot;failure&quot;,&quot;success&quot;)</span>
+
+    <span class="c1"># Following features exclude because are collected after the contact event</span>
+    <span class="c1"># # related with the last contact of the current campaign:</span>
+    <span class="c1"># 9 - contact: contact communication type (categorical: &quot;unknown&quot;,&quot;telephone&quot;,&quot;cellular&quot;)</span>
+    <span class="c1"># 10 - day: last contact day of the month (numeric)</span>
+    <span class="c1"># 11 - month: last contact month of year (categorical: &quot;jan&quot;, &quot;feb&quot;, &quot;mar&quot;, ..., &quot;nov&quot;, &quot;dec&quot;)</span>
+    <span class="c1"># 12 - duration: last contact duration, in seconds (numeric)</span>
+    <span class="c1"># # other attributes:</span>
+    <span class="c1"># 13 - campaign: number of contacts performed during this campaign and for this client</span>
+    <span class="c1"># 14 - pdays: number of days that passed by after the client was last contacted from a</span>
+    <span class="c1">#       previous campaign (numeric, -1 means client was not previously contacted)</span>
+
+    <span class="c1"># Filter if balance&gt;0</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;balance&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="p">(</span><span class="n">raw_data</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[</span>
+        <span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;balance&#39;</span><span class="p">,</span> <span class="s1">&#39;previous&#39;</span><span class="p">,</span> <span class="s1">&#39;job&#39;</span><span class="p">,</span> <span class="s1">&#39;marital&#39;</span><span class="p">,</span> <span class="s1">&#39;education&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">,</span> <span class="s1">&#39;housing&#39;</span><span class="p">,</span> <span class="s1">&#39;loan&#39;</span><span class="p">,</span> <span class="s1">&#39;poutcome&#39;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">contact_cost</span>
+    <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;balance&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="n">interest_rate</span> <span class="o">*</span> <span class="n">term_deposit_fraction</span><span class="p">,</span> <span class="n">contact_cost</span><span class="p">)</span>
+    <span class="n">tp_cost</span> <span class="o">=</span> <span class="n">contact_cost</span>
+    <span class="n">tn_cost</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s1">&#39;yes&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;housing&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;housing&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s1">&#39;yes&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;loan&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;loan&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s1">&#39;yes&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;balance&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+        <span class="s1">&#39;previous&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;job&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;marital&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;education&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;housing&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;loan&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;poutcome&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+    <span class="p">})</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;poutcome&#39;</span><span class="p">:</span> <span class="s1">&#39;previous_outcome&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;loan&#39;</span><span class="p">:</span> <span class="s1">&#39;has_personal_loan&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;housing&#39;</span><span class="p">:</span> <span class="s1">&#39;has_housing_loan&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;has_credit_in_default&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_X_y_costs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">as_frame</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;subscription&#39;</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">target</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">target_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;no subscription&#39;</span><span class="p">,</span> <span class="s1">&#39;subscription&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;subscription&#39;</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="n">feature_names</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">target_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">target_names</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target_names</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;target&#39;</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Bank Telemarketing&#39;</span><span class="p">,</span>
+            <span class="n">DESCR</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<div class="viewcode-block" id="load_give_me_some_credit">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_give_me_some_credit.html#empulse.datasets.load_give_me_some_credit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+    <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the &quot;Give Me Some Credit&quot; Kaggle credit scoring competition dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will default on a loan in the next two years.</span>
+<span class="sd">    The target variable is whether the customer defaulted, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    Only customers with a positive monthly income and a debt ratio less than 1 are considered.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;give_me_some_credit&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaulters                    7616</span>
+<span class="sd">    Non-defaulters              105299</span>
+<span class="sd">    Samples                     112915</span>
+<span class="sd">    Features                        10</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    as_frame : bool, default=False</span>
+<span class="sd">        If True, the output will be a pandas DataFrames or Series instead of numpy arrays.</span>
+<span class="sd">    return_X_y_costs : bool, default=False</span>
+<span class="sd">        If True, return (data, target, tp_cost, fp_cost, tn_cost, fn_cost) instead of a Dataset object.</span>
+<span class="sd">    interest_rate : float, default=0.02463333</span>
+<span class="sd">        Annual interest rate of the term deposit.</span>
+<span class="sd">    fund_cost : float, default=0.0294</span>
+<span class="sd">        Annual cost of funds.</span>
+<span class="sd">    max_credit_line : float, default=25000</span>
+<span class="sd">        The maximum amount a client can borrow.</span>
+<span class="sd">    loss_given_default : float, default=0.75</span>
+<span class="sd">        The fraction of the loan amount which is lost if the client defaults.</span>
+<span class="sd">    term_length_months : int, default=24</span>
+<span class="sd">        The length of the loan term in months.</span>
+<span class="sd">    loan_to_income_ratio : float, default=3</span>
+<span class="sd">        The ratio of the loan amount to the client&#39;s income.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset` or tuple of (data, target, tp_cost, fp_cost, tn_cost, fn_cost)</span>
+<span class="sd">        Returns a Dataset object if `return_X_y_costs=False` (default), otherwise a tuple.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` :math:`= r_i + -\\bar{r} \\cdot \\pi_0 + \\bar{Cl} \\cdot L_{gd} \\cdot \\pi_1`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    with</span>
+<span class="sd">        - :math:`r_i` : loss in profit by rejecting what would have been a good loan</span>
+<span class="sd">        - :math:`\\bar{r}` : average loss in profit by rejecting what would have been a good loan</span>
+<span class="sd">        - :math:`\\pi_0` : percentage of defaulters</span>
+<span class="sd">        - :math:`\\pi_1` : percentage of non-defaulters</span>
+<span class="sd">        - :math:`Cl_i` : credit line of the client</span>
+<span class="sd">        - :math:`\\bar{Cl}` : average credit line</span>
+<span class="sd">        - :math:`L_{gd}` : the fraction of the loan amount which is lost if the client defaults</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="sd">           in Proceedings of the International Conference on Machine Learning and Applications, 2014.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from empulse.datasets import load_give_me_some_credit</span>
+<span class="sd">        from sklearn.model_selection import train_test_split</span>
+
+<span class="sd">        dataset = load_give_me_some_credit()</span>
+<span class="sd">        X_train, X_test, y_train, y_test = train_test_split(</span>
+<span class="sd">            dataset.data, dataset.target, random_state=42</span>
+<span class="sd">        )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">module_path</span> <span class="o">=</span> <span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;creditscoring1.csv.gz&#39;</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;descriptions&#39;</span><span class="p">,</span> <span class="s1">&#39;creditscoring1.rst&#39;</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="c1"># Exclude MonthlyIncome = nan or =0 or DebtRatio &gt;1</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;MonthlyIncome&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)]</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;DebtRatio&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;SeriousDlqin2yrs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;SeriousDlqin2yrs&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Calculate cost_mat (see[1])</span>
+    <span class="n">cost_mat_parameters</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;int_r&#39;</span><span class="p">:</span> <span class="n">interest_rate</span> <span class="o">/</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="s1">&#39;int_cf&#39;</span><span class="p">:</span> <span class="n">fund_cost</span> <span class="o">/</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="s1">&#39;cl_max&#39;</span><span class="p">:</span> <span class="n">max_credit_line</span><span class="p">,</span>
+        <span class="s1">&#39;n_term&#39;</span><span class="p">:</span> <span class="n">term_length_months</span><span class="p">,</span>
+        <span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="n">loan_to_income_ratio</span><span class="p">,</span>
+        <span class="s1">&#39;lgd&#39;</span><span class="p">:</span> <span class="n">loss_given_default</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">pi_1</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="c1"># cost_mat[FP,FN,TP,TN]</span>
+    <span class="n">cost_mat</span> <span class="o">=</span> <span class="n">_creditscoring_costmat</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;MonthlyIncome&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;DebtRatio&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">pi_1</span><span class="p">,</span> <span class="n">cost_mat_parameters</span>
+    <span class="p">)</span>
+
+    <span class="c1"># unroll into separate costs</span>
+    <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># normalize feature names</span>
+    <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;RevolvingUtilizationOfUnsecuredLines&#39;</span><span class="p">:</span> <span class="s1">&#39;revolving_utilization&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="s1">&#39;age&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberOfTime30-59DaysPastDueNotWorse&#39;</span><span class="p">:</span> <span class="s1">&#39;n_times_late_30_59_days&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;DebtRatio&#39;</span><span class="p">:</span> <span class="s1">&#39;debt_ratio&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;MonthlyIncome&#39;</span><span class="p">:</span> <span class="s1">&#39;monthly_income&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberOfOpenCreditLinesAndLoans&#39;</span><span class="p">:</span> <span class="s1">&#39;n_open_credit_lines&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberOfTimes90DaysLate&#39;</span><span class="p">:</span> <span class="s1">&#39;n_times_late_over_90_days&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberRealEstateLoansOrLines&#39;</span><span class="p">:</span> <span class="s1">&#39;n_real_estate_loans&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberOfTime60-89DaysPastDueNotWorse&#39;</span><span class="p">:</span> <span class="s1">&#39;n_times_late_60_89_days&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NumberOfDependents&#39;</span><span class="p">:</span> <span class="s1">&#39;n_dependents&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
+
+    <span class="n">new_order</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;monthly_income&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;debt_ratio&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;revolving_utilization&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_dependents&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_open_credit_lines&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_real_estate_loans&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_30_59_days&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_60_89_days&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_over_90_days&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Reorder columns</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">new_order</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span>
+        <span class="s1">&#39;monthly_income&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="s1">&#39;debt_ratio&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="s1">&#39;revolving_utilization&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_dependents&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_open_credit_lines&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_real_estate_loans&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_30_59_days&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_60_89_days&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_times_late_over_90_days&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+    <span class="p">})</span>
+
+    <span class="k">if</span> <span class="n">return_X_y_costs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">as_frame</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">),</span>
+                <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">),</span>
+                <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">target</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">target_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">),</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="n">feature_names</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">target_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">target_names</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target_names</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;target&#39;</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Give Me Some Credit&#39;</span><span class="p">,</span>
+            <span class="n">DESCR</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0479</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0294</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<div class="viewcode-block" id="load_credit_scoring_pakdd">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_credit_scoring_pakdd.html#empulse.datasets.load_credit_scoring_pakdd">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">as_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_X_y_costs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">interest_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.63</span><span class="p">,</span>
+    <span class="n">fund_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.165</span><span class="p">,</span>
+    <span class="n">max_credit_line</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+    <span class="n">loss_given_default</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span><span class="p">,</span>
+    <span class="n">term_length_months</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
+    <span class="n">loan_to_income_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+    <span class="n">Dataset</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the credit scoring PAKDD 2009 competition dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will default on a loan in the next two years.</span>
+<span class="sd">    The target variable is whether the customer defaulted, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    Only clients with a personal income between 100 and 10000 are considered.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;credit_scoring_pakdd&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaulters                    7743</span>
+<span class="sd">    Non-defaulters               31195</span>
+<span class="sd">    Samples                      38938</span>
+<span class="sd">    Features                        25</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    as_frame : bool, default=False</span>
+<span class="sd">        If True, the output will be a pandas DataFrames or Series instead of numpy arrays.</span>
+<span class="sd">    return_X_y_costs : bool, default=False</span>
+<span class="sd">        If True, return (data, target, tp_cost, fp_cost, tn_cost, fn_cost) instead of a Dataset object.</span>
+<span class="sd">    interest_rate : float, default=0.63</span>
+<span class="sd">        Annual interest rate of the term deposit.</span>
+<span class="sd">    fund_cost : float, default=0.165</span>
+<span class="sd">        Annual cost of funds.</span>
+<span class="sd">    max_credit_line : float, default=25000</span>
+<span class="sd">        The maximum amount a client can borrow.</span>
+<span class="sd">    loss_given_default : float, default=0.75</span>
+<span class="sd">        The amount of the loan amount which is lost if the client defaults.</span>
+<span class="sd">    term_length_months : int, default=24</span>
+<span class="sd">        The length of the loan term in months.</span>
+<span class="sd">    loan_to_income_ratio : float, default=3</span>
+<span class="sd">        The ratio of the loan amount to the client&#39;s income.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset` or tuple of (data, target, tp_cost, fp_cost, tn_cost, fn_cost)</span>
+<span class="sd">        Returns a Dataset object if `return_X_y_costs=False` (default), otherwise a tuple.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` :math:`= r_i + -\\bar{r} \\cdot \\pi_0 + \\bar{Cl} \\cdot L_{gd} \\cdot \\pi_1`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    with</span>
+<span class="sd">        - :math:`r_i` : loss in profit by rejecting what would have been a good loan</span>
+<span class="sd">        - :math:`\\bar{r}` : average loss in profit by rejecting what would have been a good loan</span>
+<span class="sd">        - :math:`\\pi_0` : percentage of defaulters</span>
+<span class="sd">        - :math:`\\pi_1` : percentage of non-defaulters</span>
+<span class="sd">        - :math:`Cl_i` : credit line of the client</span>
+<span class="sd">        - :math:`\\bar{Cl}` : average credit line</span>
+<span class="sd">        - :math:`L_{gd}` : the fraction of the loan amount which is lost if the client defaults</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="sd">           in Proceedings of the International Conference on Machine Learning and Applications,</span>
+<span class="sd">           , 2014.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from empulse.datasets import load_credit_scoring_pakdd</span>
+<span class="sd">        from sklearn.model_selection import train_test_split</span>
+
+<span class="sd">        dataset = load_credit_scoring_pakdd()</span>
+<span class="sd">        X_train, X_test, y_train, y_test = train_test_split(</span>
+<span class="sd">            dataset.data, dataset.target, random_state=42</span>
+<span class="sd">        )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">module_path</span> <span class="o">=</span> <span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;creditscoring2.csv.gz&#39;</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">module_path</span><span class="p">,</span> <span class="s1">&#39;descriptions&#39;</span><span class="p">,</span> <span class="s1">&#39;creditscoring2.rst&#39;</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="c1"># Exclude TARGET_LABEL_BAD=1 == &#39;N&#39;</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;TARGET_LABEL_BAD=1&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;N&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Exclude 100&lt;PERSONAL_NET_INCOME&lt;10000</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;PERSONAL_NET_INCOME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)]</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;PERSONAL_NET_INCOME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10000</span><span class="p">)]</span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[</span><span class="s1">&#39;TARGET_LABEL_BAD=1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;TARGET_LABEL_BAD=1&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># drop the last column</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">continuous_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;MATE_INCOME&#39;</span><span class="p">,</span> <span class="s1">&#39;PERSONAL_NET_INCOME&#39;</span><span class="p">]</span>
+    <span class="n">integer_columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;ID_SHOP&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;AGE&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;AREA_CODE_RESIDENCIAL_PHONE&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PAYMENT_DAY&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;SHOP_RANK&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;MONTHS_IN_RESIDENCE&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;MONTHS_IN_THE_JOB&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PROFESSION_CODE&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;QUANT_ADDITIONAL_CARDS_IN_THE_APPLICATION&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">data</span><span class="p">[</span><span class="n">continuous_columns</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">continuous_columns</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">[</span><span class="n">integer_columns</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">integer_columns</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Calculate cost_mat (see[1])</span>
+    <span class="n">cost_mat_parameters</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;int_r&#39;</span><span class="p">:</span> <span class="n">interest_rate</span> <span class="o">/</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="s1">&#39;int_cf&#39;</span><span class="p">:</span> <span class="n">fund_cost</span> <span class="o">/</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="s1">&#39;cl_max&#39;</span><span class="p">:</span> <span class="n">max_credit_line</span> <span class="o">*</span> <span class="mf">0.33</span><span class="p">,</span>
+        <span class="s1">&#39;n_term&#39;</span><span class="p">:</span> <span class="n">term_length_months</span><span class="p">,</span>
+        <span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="n">loan_to_income_ratio</span><span class="p">,</span>
+        <span class="s1">&#39;lgd&#39;</span><span class="p">:</span> <span class="n">loss_given_default</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">pi_1</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">monthly_income</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;PERSONAL_NET_INCOME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.33</span>
+    <span class="n">cost_mat</span> <span class="o">=</span> <span class="n">_creditscoring_costmat</span><span class="p">(</span><span class="n">monthly_income</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">pi_1</span><span class="p">,</span> <span class="n">cost_mat_parameters</span><span class="p">)</span>
+
+    <span class="c1"># unroll into separate costs</span>
+    <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># convert all columns which start with flag to integers</span>
+    <span class="n">flag_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;FLAG&#39;</span><span class="p">)]</span>
+    <span class="n">data</span><span class="p">[</span><span class="n">flag_columns</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">flag_columns</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Y&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+
+    <span class="c1"># normalize feature names</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;quant&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_in_the_application&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;residencial&#39;</span><span class="p">,</span> <span class="s1">&#39;residential&#39;</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;sex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sex&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+    <span class="c1"># fill in single  missing value as male</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;sex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sex</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">)</span>
+
+    <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;flag_residence_town_eq_working_town&#39;</span><span class="p">:</span> <span class="s1">&#39;lives_in_work_town&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_residence_state_eq_working_state&#39;</span><span class="p">:</span> <span class="s1">&#39;lives_in_work_state&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_residential_address_eq_postal_address&#39;</span><span class="p">:</span> <span class="s1">&#39;has_same_postal_address&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_residential_phone&#39;</span><span class="p">:</span> <span class="s1">&#39;has_residential_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;sex&#39;</span><span class="p">:</span> <span class="s1">&#39;is_male&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_mothers_name&#39;</span><span class="p">:</span> <span class="s1">&#39;filled_in_mothers_name&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_fathers_name&#39;</span><span class="p">:</span> <span class="s1">&#39;filled_in_fathers_name&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mate_income&#39;</span><span class="p">:</span> <span class="s1">&#39;partner_income&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_other_card&#39;</span><span class="p">:</span> <span class="s1">&#39;has_other_card&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_mobile_phone&#39;</span><span class="p">:</span> <span class="s1">&#39;has_mobile_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_contact_phone&#39;</span><span class="p">:</span> <span class="s1">&#39;has_contact_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;cod_application_booth&#39;</span><span class="p">:</span> <span class="s1">&#39;application_booth_code&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;flag_card_insurance_option&#39;</span><span class="p">:</span> <span class="s1">&#39;has_card_insurance&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;id_shop&#39;</span><span class="p">:</span> <span class="s1">&#39;shop_code&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
+
+    <span class="c1"># remap values of matiral_status to more readable values</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;marital_status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;marital_status&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span>
+        <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="s1">&#39;single&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="s1">&#39;married&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="s1">&#39;divorced&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;W&#39;</span><span class="p">:</span> <span class="s1">&#39;widowed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;O&#39;</span><span class="p">:</span> <span class="s1">&#39;other&#39;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="c1"># remap values of residence_type to more readable values</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;residence_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;residence_type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span>
+        <span class="s1">&#39;P&#39;</span><span class="p">:</span> <span class="s1">&#39;owned&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="s1">&#39;rented&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="s1">&#39;parents&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;O&#39;</span><span class="p">:</span> <span class="s1">&#39;other&#39;</span><span class="p">,</span>
+    <span class="p">})</span>
+
+    <span class="c1"># Desired column order</span>
+    <span class="n">new_order</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;personal_net_income&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;partner_income&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;months_in_residence&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;months_in_the_job&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;payment_day&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_banking_accounts&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;n_additional_cards&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_male&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_residential_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_mobile_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_contact_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_same_postal_address&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_other_card&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;has_card_insurance&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;lives_in_work_town&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;lives_in_work_state&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;filled_in_mothers_name&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;filled_in_fathers_name&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;shop_rank&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;marital_status&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;residence_type&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;area_code_residential_phone&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;shop_code&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;application_booth_code&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;profession_code&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Reorder columns</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">new_order</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span>
+        <span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;personal_net_income&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+        <span class="s1">&#39;partner_income&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+        <span class="s1">&#39;months_in_residence&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;months_in_the_job&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;payment_day&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_banking_accounts&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;n_additional_cards&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;is_male&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_residential_phone&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_mobile_phone&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_contact_phone&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_same_postal_address&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_other_card&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;has_card_insurance&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;lives_in_work_town&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;lives_in_work_state&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;filled_in_mothers_name&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;filled_in_fathers_name&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="s1">&#39;shop_rank&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;marital_status&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;residence_type&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;area_code_residential_phone&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;shop_code&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;application_booth_code&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;profession_code&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+    <span class="p">})</span>
+
+    <span class="c1"># remove flag_card_insurance_option</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;has_card_insurance&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_X_y_costs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">as_frame</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">),</span>
+                <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">),</span>
+                <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">target</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">target_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">),</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">),</span>
+            <span class="n">feature_names</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">target_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">target_names</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">as_frame</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">target_names</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;target&#39;</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Credit Scoring PAKDD 2009&#39;</span><span class="p">,</span>
+            <span class="n">DESCR</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_creditscoring_costmat</span><span class="p">(</span>
+    <span class="n">income</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">debt</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">pi_1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">cost_mat_parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Private function to calculate the cost matrix of credit scoring models.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    income : array of shape = [n_samples]</span>
+<span class="sd">        Monthly income of each example</span>
+
+<span class="sd">    debt : array of shape = [n_samples]</span>
+<span class="sd">        Debt ratio each example</span>
+
+<span class="sd">    pi_1 : float</span>
+<span class="sd">        Percentage of positives in the training set</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="sd">           in Proceedings of the International Conference on Machine Learning and Applications,</span>
+<span class="sd">           , 2014.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cost_mat : array-like of shape = [n_samples, 4]</span>
+<span class="sd">        Cost matrix of the classification problem</span>
+<span class="sd">        Where the columns represent the costs of: false positives, false negatives,</span>
+<span class="sd">        true positives and true negatives, for each example.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_a</span><span class="p">(</span><span class="n">cl_i</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">int_</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_term</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">cl_i</span> <span class="o">*</span> <span class="p">((</span><span class="n">int_</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">int_</span><span class="p">)</span> <span class="o">**</span> <span class="n">n_term</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">int_</span><span class="p">)</span> <span class="o">**</span> <span class="n">n_term</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_pv</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">int_</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_term</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">int_</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">int_</span><span class="p">)</span> <span class="o">**</span> <span class="n">n_term</span><span class="p">))</span>
+
+    <span class="c1"># Calculate credit line Cl</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_cl</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">inc_i</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">cl_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">debt_i</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">int_r</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_term</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="n">cl_k</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">inc_i</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">calculate_a</span><span class="p">(</span><span class="n">cl_k</span><span class="p">,</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span>
+        <span class="n">cl_debt</span> <span class="o">=</span> <span class="n">calculate_pv</span><span class="p">(</span><span class="n">inc_i</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">inc_i</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">debt_i</span><span class="p">),</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">cl_k</span><span class="p">,</span> <span class="n">cl_max</span><span class="p">,</span> <span class="n">cl_debt</span><span class="p">)</span>
+
+    <span class="c1"># calculate costs</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost_fn</span><span class="p">(</span><span class="n">cl_i</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lgd</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cl_i</span> <span class="o">*</span> <span class="n">lgd</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_cost_fp</span><span class="p">(</span>
+        <span class="n">cl_i</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">int_r</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_term</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">int_cf</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">pi_1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lgd</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">cl_avg</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">calculate_a</span><span class="p">(</span><span class="n">cl_i</span><span class="p">,</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span>
+        <span class="n">pv</span> <span class="o">=</span> <span class="n">calculate_pv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">int_cf</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">pv</span> <span class="o">-</span> <span class="n">cl_i</span>
+        <span class="n">r_avg</span> <span class="o">=</span> <span class="n">calculate_pv</span><span class="p">(</span><span class="n">calculate_a</span><span class="p">(</span><span class="n">cl_avg</span><span class="p">,</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">),</span> <span class="n">int_cf</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span> <span class="o">-</span> <span class="n">cl_avg</span>
+        <span class="n">cost_fp</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pi_1</span><span class="p">)</span> <span class="o">*</span> <span class="n">r_avg</span> <span class="o">+</span> <span class="n">pi_1</span> <span class="o">*</span> <span class="n">calculate_cost_fn</span><span class="p">(</span><span class="n">cl_avg</span><span class="p">,</span> <span class="n">lgd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">cost_fp</span><span class="p">)</span>
+
+    <span class="n">v_calculate_cost_fp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">calculate_cost_fp</span><span class="p">)</span>
+    <span class="n">v_calculate_cost_fn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">calculate_cost_fn</span><span class="p">)</span>
+
+    <span class="n">v_calculate_cl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">calculate_cl</span><span class="p">)</span>
+
+    <span class="c1"># Parameters</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;k&#39;</span><span class="p">]</span>
+    <span class="n">int_r</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;int_r&#39;</span><span class="p">]</span>
+    <span class="n">n_term</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;n_term&#39;</span><span class="p">]</span>
+    <span class="n">int_cf</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;int_cf&#39;</span><span class="p">]</span>
+    <span class="n">lgd</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;lgd&#39;</span><span class="p">]</span>
+    <span class="n">cl_max</span> <span class="o">=</span> <span class="n">cost_mat_parameters</span><span class="p">[</span><span class="s1">&#39;cl_max&#39;</span><span class="p">]</span>
+
+    <span class="n">cl</span> <span class="o">=</span> <span class="n">v_calculate_cl</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">income</span><span class="p">,</span> <span class="n">cl_max</span><span class="p">,</span> <span class="n">debt</span><span class="p">,</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">)</span>
+    <span class="n">cl_avg</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">income</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">cost_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>  <span class="c1"># cost_mat[FP,FN,TP,TN]</span>
+    <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_calculate_cost_fp</span><span class="p">(</span><span class="n">cl</span><span class="p">,</span> <span class="n">int_r</span><span class="p">,</span> <span class="n">n_term</span><span class="p">,</span> <span class="n">int_cf</span><span class="p">,</span> <span class="n">pi_1</span><span class="p">,</span> <span class="n">lgd</span><span class="p">,</span> <span class="n">cl_avg</span><span class="p">)</span>
+    <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_calculate_cost_fn</span><span class="p">(</span><span class="n">cl</span><span class="p">,</span> <span class="n">lgd</span><span class="p">)</span>
+    <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">cost_mat</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">return</span> <span class="n">cost_mat</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

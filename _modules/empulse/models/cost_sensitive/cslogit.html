@@ -1,0 +1,905 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.models.cost_sensitive.cslogit &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/models/cost_sensitive/cslogit';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.models.cost_sensitive.cslogit</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.models.cost_sensitive.cslogit</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numbers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Real</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptimizeResult</span><span class="p">,</span> <span class="n">minimize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConvergenceWarning</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils._param_validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">StrOptions</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..._common</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">IntNDArray</span><span class="p">,</span> <span class="n">ParameterConstraint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Metric</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...metrics.metric.prebuilt_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_generic_cost_metric</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLogitClassifier</span><span class="p">,</span> <span class="n">OptimizeFn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._cs_mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostSensitiveMixin</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
+<span class="n">LossStr</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;average expected cost&#39;</span><span class="p">]</span>
+<span class="n">GradientLossFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]</span>
+<span class="n">ObjectiveFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]</span>
+
+
+<div class="viewcode-block" id="CSLogitClassifier">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CSLogitClassifier</span><span class="p">(</span><span class="n">BaseLogitClassifier</span><span class="p">,</span> <span class="n">CostSensitiveMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cost-sensitive logistic regression classifier.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;cslogit&gt;`.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-dependent cost function.</span>
+
+<span class="sd">        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive XGBoost classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    C : float, default=1.0</span>
+<span class="sd">        Inverse of regularization strength; must be a positive ``float``.</span>
+<span class="sd">        Like in support vector machines, smaller values specify stronger regularization.</span>
+
+<span class="sd">    fit_intercept : bool, default=True</span>
+<span class="sd">        Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.</span>
+
+<span class="sd">    soft_threshold : bool, default=False</span>
+<span class="sd">        If ``True``, apply soft-thresholding to the regression coefficients.</span>
+
+<span class="sd">    l1_ratio : float, default=1.0</span>
+<span class="sd">        The ElasticNet mixing parameter, with ``0 &lt;= l1_ratio &lt;= 1``.</span>
+
+<span class="sd">            - For ``l1_ratio = 0`` the penalty is a L2 penalty.</span>
+<span class="sd">            - For ``l1_ratio = 1`` it is a L1 penalty.</span>
+<span class="sd">            - For ``0 &lt; l1_ratio &lt; 1``, the penalty is a combination of L1 and L2.</span>
+
+<span class="sd">    loss : {&#39;average expected cost&#39;}, Callable or :class:`empulse.metrics.Metric`, default=&#39;average expected cost&#39;</span>
+<span class="sd">        Loss function which should be minimized.</span>
+
+<span class="sd">        - If ``str``, then it should be one of the following:</span>
+
+<span class="sd">            - &#39;average expected cost&#39; : Average Expected Cost loss function,</span>
+<span class="sd">              see :func:`~empulse.metrics.expected_cost_loss`.</span>
+
+<span class="sd">        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.</span>
+
+<span class="sd">        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``</span>
+<span class="sd">          to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.</span>
+
+<span class="sd">        By default, loss function is minimized, customize behaviour in `optimize_fn`.</span>
+
+<span class="sd">    optimize_fn : Callable, optional</span>
+<span class="sd">        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.</span>
+<span class="sd">        See :ref:`proflogit` for more information.</span>
+
+<span class="sd">    optimizer_params : dict[str, Any], optional</span>
+<span class="sd">        Additional keyword arguments passed to `optimize_fn`.</span>
+
+<span class="sd">        tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+<span class="sd">        Is overwritten if another `tp_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+<span class="sd">        Is overwritten if another `tp_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+<span class="sd">        Is overwritten if another `fp_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+<span class="sd">        Is overwritten if another `tn_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false negative classification.</span>
+<span class="sd">        Is overwritten if another `fn_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    classes_ : numpy.ndarray</span>
+<span class="sd">        Unique classes in the target found during fit.</span>
+
+<span class="sd">    result_ : :class:`scipy:scipy.optimize.OptimizeResult`</span>
+<span class="sd">        Optimization result.</span>
+
+<span class="sd">    coef_ : numpy.ndarray, shape=(n_features,)</span>
+<span class="sd">        Coefficients of the logit model.</span>
+
+<span class="sd">    intercept_ : float</span>
+<span class="sd">        Intercept of the logit model.</span>
+<span class="sd">        Only available when ``fit_intercept=True``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)  # instance-dependent cost</span>
+<span class="sd">        fp_cost = 5  # constant cost</span>
+
+<span class="sd">        model = CSLogitClassifier(C=0.1)</span>
+<span class="sd">        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+<span class="sd">        y_proba = model.predict_proba(X)</span>
+
+<span class="sd">    Example with passing instance-dependent costs through cross-validation:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import cross_val_score</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification()</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, CSLogitClassifier(C=0.1).set_fit_request(fn_cost=True, fp_cost=True)),</span>
+<span class="sd">        ])</span>
+
+<span class="sd">        cross_val_score(pipeline, X, y, params={&#39;fn_cost&#39;: fn_cost, &#39;fp_cost&#39;: fp_cost})</span>
+
+<span class="sd">    Example with passing instance-dependent costs through a grid search:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import expected_cost_loss</span>
+<span class="sd">        from empulse.models import CSLogitClassifier</span>
+<span class="sd">        from sklearn import set_config</span>
+<span class="sd">        from sklearn.datasets import make_classification</span>
+<span class="sd">        from sklearn.model_selection import GridSearchCV</span>
+<span class="sd">        from sklearn.metrics import make_scorer</span>
+<span class="sd">        from sklearn.pipeline import Pipeline</span>
+<span class="sd">        from sklearn.preprocessing import StandardScaler</span>
+
+<span class="sd">        set_config(enable_metadata_routing=True)</span>
+
+<span class="sd">        X, y = make_classification(n_samples=50)</span>
+<span class="sd">        fn_cost = np.random.rand(y.size)</span>
+<span class="sd">        fp_cost = 5</span>
+
+<span class="sd">        pipeline = Pipeline([</span>
+<span class="sd">            (&#39;scaler&#39;, StandardScaler()),</span>
+<span class="sd">            (&#39;model&#39;, CSLogitClassifier().set_fit_request(fn_cost=True, fp_cost=True)),</span>
+<span class="sd">        ])</span>
+<span class="sd">        param_grid = {&#39;model__C&#39;: np.logspace(-5, 2, 5)}</span>
+<span class="sd">        scorer = make_scorer(</span>
+<span class="sd">            expected_cost_loss,</span>
+<span class="sd">            response_method=&#39;predict_proba&#39;,</span>
+<span class="sd">            greater_is_better=False,</span>
+<span class="sd">            normalize=True,</span>
+<span class="sd">        )</span>
+<span class="sd">        scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)</span>
+
+<span class="sd">        grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)</span>
+<span class="sd">        grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_parameter_constraints</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">ParameterConstraint</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="o">**</span><span class="n">BaseLogitClassifier</span><span class="o">.</span><span class="n">_parameter_constraints</span><span class="p">,</span>
+        <span class="s1">&#39;loss&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">StrOptions</span><span class="p">({</span><span class="s1">&#39;average expected cost&#39;</span><span class="p">}),</span> <span class="n">Metric</span><span class="p">],</span>
+        <span class="s1">&#39;tp_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;tn_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;fn_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;fp_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">C</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">fit_intercept</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">soft_threshold</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">loss</span><span class="p">:</span> <span class="n">LossStr</span> <span class="o">|</span> <span class="n">Metric</span> <span class="o">=</span> <span class="s1">&#39;average expected cost&#39;</span><span class="p">,</span>
+        <span class="n">optimize_fn</span><span class="p">:</span> <span class="n">OptimizeFn</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">optimizer_params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="n">soft_threshold</span><span class="o">=</span><span class="n">soft_threshold</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="o">=</span><span class="n">l1_ratio</span><span class="p">,</span>
+            <span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span>
+            <span class="n">optimize_fn</span><span class="o">=</span><span class="n">optimize_fn</span><span class="p">,</span>
+            <span class="n">optimizer_params</span><span class="o">=</span><span class="n">optimizer_params</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span> <span class="o">=</span> <span class="n">tp_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span> <span class="o">=</span> <span class="n">tn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span> <span class="o">=</span> <span class="n">fn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span> <span class="o">=</span> <span class="n">fp_cost</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_metric_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Metric</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the metric loss function if available.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Metric</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="CSLogitClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier.fit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+        <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">loss_params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape (n_samples, n_features)</span>
+
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+
+<span class="sd">        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">        loss_params : dict[str, Any]</span>
+<span class="sd">            Additional parameters passed to the loss function.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : CSLogitClassifier</span>
+<span class="sd">            Fitted model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="o">**</span><span class="n">loss_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+        <span class="n">y</span><span class="p">:</span> <span class="n">IntNDArray</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">loss_params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+        <span class="n">optimizer_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_params</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Metric</span><span class="p">):</span>
+            <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_costs</span><span class="p">(</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tp_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">tp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tn_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">tn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fn_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">:=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">))</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Assume that the loss function takes the following parameters:</span>
+            <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;tp_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tp_cost</span>
+            <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;tn_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tn_cost</span>
+            <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;fn_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn_cost</span>
+            <span class="n">loss_params</span><span class="p">[</span><span class="s1">&#39;fp_cost&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fp_cost</span>
+
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Metric</span><span class="p">)</span> <span class="k">else</span> <span class="n">make_generic_cost_metric</span><span class="p">()</span>
+        <span class="n">objective</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="n">_logit_objective</span><span class="p">(</span>
+            <span class="n">features</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+            <span class="n">y_true</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span><span class="p">,</span>
+            <span class="n">soft_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">soft_threshold</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">loss_params</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">optimize_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">OptimizeResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">_optimize_jacobian</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimize_fn</span>
+        <span class="p">)</span>  <span class="c1"># type: ignore[no-redef]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_</span> <span class="o">=</span> <span class="n">optimize_fn</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="o">**</span><span class="n">optimizer_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coef_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_intercept</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intercept_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_optimize_jacobian</span><span class="p">(</span>
+    <span class="n">objective</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]],</span>
+    <span class="n">X</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">max_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="n">tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OptimizeResult</span><span class="p">:</span>
+    <span class="n">initial_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+        <span class="n">objective</span><span class="p">,</span>
+        <span class="n">initial_weights</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s1">&#39;L-BFGS-B&#39;</span><span class="p">,</span>
+        <span class="n">jac</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;maxiter&#39;</span><span class="p">:</span> <span class="n">max_iter</span><span class="p">,</span>
+            <span class="s1">&#39;maxls&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+            <span class="s1">&#39;gtol&#39;</span><span class="p">:</span> <span class="n">tolerance</span><span class="p">,</span>
+            <span class="s1">&#39;ftol&#39;</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_check_optimize_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_optimize_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">OptimizeResult</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check the OptimizeResult for successful convergence.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    result : OptimizeResult</span>
+<span class="sd">       Result of the scipy.optimize.minimize function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># handle both scipy and scikit-learn solver names</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># The message is already decoded in scipy&gt;=1.6.0</span>
+            <span class="n">result_message</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;latin1&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">result_message</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">message</span>
+        <span class="n">warning_msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;L-BFGS failed to converge (status=</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s1">):</span><span class="se">\n</span><span class="si">{</span><span class="n">result_message</span><span class="si">}</span><span class="s1">.</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;Increase the number of iterations (max_iter) &#39;</span>
+            <span class="s1">&#39;or scale the data as shown in:</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    https://scikit-learn.org/stable/modules/&#39;</span>
+            <span class="s1">&#39;preprocessing.html&#39;</span>
+        <span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">warning_msg</span><span class="p">,</span> <span class="n">ConvergenceWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

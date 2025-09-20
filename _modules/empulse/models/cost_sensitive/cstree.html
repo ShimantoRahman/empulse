@@ -1,0 +1,1192 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.models.cost_sensitive.cstree &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/models/cost_sensitive/cstree';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.models.cost_sensitive.cstree</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.models.cost_sensitive.cstree</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numbers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Real</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">csr_matrix</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">_fit_context</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.tree._tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bunch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils._param_validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Hidden</span><span class="p">,</span> <span class="n">StrOptions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_is_fitted</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..._common</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">IntArrayLike</span><span class="p">,</span> <span class="n">IntNDArray</span><span class="p">,</span> <span class="n">ParameterConstraint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Metric</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...utils._sklearn_compat</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tags</span><span class="p">,</span> <span class="n">type_of_target</span><span class="p">,</span> <span class="n">validate_data</span>  <span class="c1"># type: ignore[attr-defined]</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._cs_mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostSensitiveMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._impurity</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostImpurity</span><span class="p">,</span> <span class="n">EntropyCostImpurity</span><span class="p">,</span> <span class="n">GiniCostImpurity</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
+
+
+<span class="n">TREE_PARAM_CONSTRAINTS</span> <span class="o">=</span> <span class="n">DecisionTreeClassifier</span><span class="o">.</span><span class="n">_parameter_constraints</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">TREE_PARAM_CONSTRAINTS</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;criterion&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CSTreeClassifier">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CSTreeClassifier</span><span class="p">(</span><span class="n">CostSensitiveMixin</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">BaseEstimator</span><span class="p">):</span>  <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cost-sensitive decision tree classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+<span class="sd">        Is overwritten if another `tp_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+<span class="sd">        Is overwritten if another `fp_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+<span class="sd">        Is overwritten if another `tn_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false negative classification.</span>
+<span class="sd">        Is overwritten if another `fn_cost` is passed to the ``fit`` method.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            It is not recommended to pass instance-dependent costs to the ``__init__`` method.</span>
+<span class="sd">            Instead, pass them to the ``fit`` method.</span>
+
+<span class="sd">    loss : Metric or None, default=None</span>
+<span class="sd">        The metric to measure the quality of a split.</span>
+<span class="sd">        If None, the cost impurity is used.</span>
+
+<span class="sd">    criterion : {&quot;cost&quot;,, &quot;gini&quot;, &quot;log_loss&quot; or &quot;entropy&quot;}, default=&quot;cost&quot;</span>
+<span class="sd">        The function to measure the quality of a split.</span>
+
+<span class="sd">        How the measure to estimate quality of a split is weighted.</span>
+
+<span class="sd">        - If ``&quot;cost&quot;``: The metric is used normally, without extra weighting.</span>
+<span class="sd">        - If ``&quot;gini&quot;``: The Gini impurity is used to weight the metric.</span>
+<span class="sd">        - If ``&quot;log_loss&quot;`` or ``&quot;entropy&quot;``: The Shannon information gain is used to weight the metric.</span>
+
+<span class="sd">    splitter : {&quot;best&quot;, &quot;random&quot;}, default=&quot;best&quot;</span>
+<span class="sd">        The strategy used to choose the split at each node.</span>
+<span class="sd">        Supported strategies are &quot;best&quot; to choose the best split and &quot;random&quot; to choose the best random split.</span>
+
+<span class="sd">    max_depth : int or None, default=None</span>
+<span class="sd">        The maximum depth of the tree. If None, then nodes are expanded until</span>
+<span class="sd">        all leaves are pure or until all leaves contain less than min_samples_split samples.</span>
+
+<span class="sd">    min_samples_split : int or float, default=2</span>
+<span class="sd">        The minimum number of samples required to split an internal node:</span>
+
+<span class="sd">        - If int, then consider `min_samples_split` as the minimum number.</span>
+<span class="sd">        - If float, then `min_samples_split` is a fraction and</span>
+<span class="sd">          `ceil(min_samples_split * n_samples)` are the minimum</span>
+<span class="sd">          number of samples for each split.</span>
+
+<span class="sd">    min_samples_leaf : int or float, default=1</span>
+<span class="sd">        The minimum number of samples required to be at a leaf node.</span>
+<span class="sd">        A split point at any depth will only be considered if it leaves at</span>
+<span class="sd">        least ``min_samples_leaf`` training samples in each of the left and</span>
+<span class="sd">        right branches.  This may have the effect of smoothing the model,</span>
+<span class="sd">        especially in regression.</span>
+
+<span class="sd">        - If int, then consider `min_samples_leaf` as the minimum number.</span>
+<span class="sd">        - If float, then `min_samples_leaf` is a fraction and</span>
+<span class="sd">          `ceil(min_samples_leaf * n_samples)` are the minimum</span>
+<span class="sd">          number of samples for each node.</span>
+
+<span class="sd">        .. versionchanged:: 0.18</span>
+<span class="sd">           Added float values for fractions.</span>
+
+<span class="sd">    min_weight_fraction_leaf : float, default=0.0</span>
+<span class="sd">        The minimum weighted fraction of the sum total of weights (of all</span>
+<span class="sd">        the input samples) required to be at a leaf node. Samples have</span>
+<span class="sd">        equal weight when sample_weight is not provided.</span>
+
+<span class="sd">    max_features : int, float or {&quot;sqrt&quot;, &quot;log2&quot;}, default=None</span>
+<span class="sd">        The number of features to consider when looking for the best split:</span>
+
+<span class="sd">        - If int, then consider `max_features` features at each split.</span>
+<span class="sd">        - If float, then `max_features` is a fraction and</span>
+<span class="sd">          `max(1, int(max_features * n_features_in_))` features are considered at</span>
+<span class="sd">          each split.</span>
+<span class="sd">        - If &quot;sqrt&quot;, then `max_features=sqrt(n_features)`.</span>
+<span class="sd">        - If &quot;log2&quot;, then `max_features=log2(n_features)`.</span>
+<span class="sd">        - If None, then `max_features=n_features`.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">            The search for a split does not stop until at least one</span>
+<span class="sd">            valid partition of the node samples is found, even if it requires to</span>
+<span class="sd">            effectively inspect more than ``max_features`` features.</span>
+
+<span class="sd">    random_state : int, RandomState instance or None, default=None</span>
+<span class="sd">        Controls the randomness of the estimator. The features are always</span>
+<span class="sd">        randomly permuted at each split, even if ``splitter`` is set to</span>
+<span class="sd">        ``&quot;best&quot;``. When ``max_features &lt; n_features``, the algorithm will</span>
+<span class="sd">        select ``max_features`` at random at each split before finding the best</span>
+<span class="sd">        split among them. But the best found split may vary across different</span>
+<span class="sd">        runs, even if ``max_features=n_features``. That is the case, if the</span>
+<span class="sd">        improvement of the criterion is identical for several splits and one</span>
+<span class="sd">        split has to be selected at random. To obtain a deterministic behaviour</span>
+<span class="sd">        during fitting, ``random_state`` has to be fixed to an integer.</span>
+<span class="sd">        See :term:`Sklearn Glossary &lt;random_state&gt;` for details.</span>
+
+<span class="sd">    max_leaf_nodes : int, default=None</span>
+<span class="sd">        Grow a tree with ``max_leaf_nodes`` in best-first fashion.</span>
+<span class="sd">        Best nodes are defined as relative reduction in impurity.</span>
+<span class="sd">        If None then unlimited number of leaf nodes.</span>
+
+<span class="sd">    min_impurity_decrease : float, default=0.0</span>
+<span class="sd">        A node will be split if this split induces a decrease of the impurity</span>
+<span class="sd">        greater than or equal to this value.</span>
+
+<span class="sd">        The weighted impurity decrease equation is the following::</span>
+
+<span class="sd">            N_t / N * (impurity - N_t_R / N_t * right_impurity - N_t_L / N_t * left_impurity)</span>
+
+<span class="sd">        where ``N`` is the total number of samples, ``N_t`` is the number of</span>
+<span class="sd">        samples at the current node, ``N_t_L`` is the number of samples in the</span>
+<span class="sd">        left child, and ``N_t_R`` is the number of samples in the right child.</span>
+
+<span class="sd">        ``N``, ``N_t``, ``N_t_R`` and ``N_t_L`` all refer to the weighted sum,</span>
+<span class="sd">        if ``sample_weight`` is passed.</span>
+
+
+<span class="sd">    class_weight : dict, list of dict or &quot;balanced&quot;, default=None</span>
+<span class="sd">        Weights associated with classes in the form ``{class_label: weight}``.</span>
+<span class="sd">        If None, all classes are supposed to have weight one. For</span>
+<span class="sd">        multi-output problems, a list of dicts can be provided in the same</span>
+<span class="sd">        order as the columns of y.</span>
+
+<span class="sd">        Note that for multioutput (including multilabel) weights should be</span>
+<span class="sd">        defined for each class of every column in its own dict. For example,</span>
+<span class="sd">        for four-class multilabel classification weights should be</span>
+<span class="sd">        [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}] instead of</span>
+<span class="sd">        [{1:1}, {2:5}, {3:1}, {4:1}].</span>
+
+<span class="sd">        The &quot;balanced&quot; mode uses the values of y to automatically adjust</span>
+<span class="sd">        weights inversely proportional to class frequencies in the input data</span>
+<span class="sd">        as ``n_samples / (n_classes * np.bincount(y))``</span>
+
+<span class="sd">        For multi-output, the weights of each column of y will be multiplied.</span>
+
+<span class="sd">        Note that these weights will be multiplied with sample_weight (passed</span>
+<span class="sd">        through the fit method) if sample_weight is specified.</span>
+
+<span class="sd">    ccp_alpha : non-negative float, default=0.0</span>
+<span class="sd">        Complexity parameter used for Minimal Cost-Complexity Pruning. The</span>
+<span class="sd">        subtree with the largest cost complexity that is smaller than</span>
+<span class="sd">        ``ccp_alpha`` will be chosen. By default, no pruning is performed. See</span>
+<span class="sd">        :ref:`minimal_cost_complexity_pruning` for details. See</span>
+<span class="sd">        :ref:`sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`</span>
+<span class="sd">        for an example of such pruning.</span>
+
+<span class="sd">    monotonic_cst : array-like of int of shape (n_features), default=None</span>
+<span class="sd">        Indicates the monotonicity constraint to enforce on each feature.</span>
+<span class="sd">          - 1: monotonic increase</span>
+<span class="sd">          - 0: no constraint</span>
+<span class="sd">          - -1: monotonic decrease</span>
+
+<span class="sd">        If monotonic_cst is None, no constraints are applied.</span>
+
+<span class="sd">        Monotonicity constraints are not supported for:</span>
+<span class="sd">          - multiclass classifications (i.e. when `n_classes &gt; 2`),</span>
+<span class="sd">          - multioutput classifications (i.e. when `n_outputs_ &gt; 1`),</span>
+<span class="sd">          - classifications trained on data with missing values.</span>
+
+<span class="sd">        The constraints hold over the probability of the positive class.</span>
+
+<span class="sd">        Read more in the :ref:`Sklearn User Guide &lt;monotonic_cst_gbdt&gt;`.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    estimator_ : :class:`~sklearn.tree.DecisionTreeClassifier`</span>
+<span class="sd">        The underlying DecisionTreeClassifier estimator.</span>
+
+<span class="sd">    classes_ : ndarray of shape (n_classes,) or list of ndarray</span>
+<span class="sd">        The classes labels (single output problem),</span>
+<span class="sd">        or a list of arrays of class labels (multi-output problem).</span>
+
+<span class="sd">    feature_importances_ : ndarray of shape (n_features,)</span>
+<span class="sd">        The impurity-based feature importances.</span>
+<span class="sd">        The higher, the more important the feature.</span>
+<span class="sd">        The importance of a feature is computed as the (normalized)</span>
+<span class="sd">        total reduction of the criterion brought by that feature.  It is also</span>
+<span class="sd">        known as the Gini importance [4]_.</span>
+
+<span class="sd">        Warning: impurity-based feature importances can be misleading for</span>
+<span class="sd">        high cardinality features (many unique values). See</span>
+<span class="sd">        :func:`sklearn.inspection.permutation_importance` as an alternative.</span>
+
+<span class="sd">    max_features_ : int</span>
+<span class="sd">        The inferred value of max_features.</span>
+
+<span class="sd">    n_classes_ : int or list of int</span>
+<span class="sd">        The number of classes (for single output problems),</span>
+<span class="sd">        or a list containing the number of classes for each</span>
+<span class="sd">        output (for multi-output problems).</span>
+
+<span class="sd">    n_features_in_ : int</span>
+<span class="sd">        Number of features seen during :term:`fit`.</span>
+
+<span class="sd">    feature_names_in_ : ndarray of shape (`n_features_in_`,)</span>
+<span class="sd">        Names of features seen during :term:`fit`. Defined only when `X`</span>
+<span class="sd">        has feature names that are all strings.</span>
+
+<span class="sd">    n_outputs_ : int</span>
+<span class="sd">        The number of outputs when ``fit`` is performed.</span>
+
+<span class="sd">    tree_ : Tree instance</span>
+<span class="sd">        The underlying Tree object. Please refer to</span>
+<span class="sd">        ``help(sklearn.tree._tree.Tree)`` for attributes of Tree object and</span>
+<span class="sd">        :ref:`sphx_glr_auto_examples_tree_plot_unveil_tree_structure.py`</span>
+<span class="sd">        for basic usage of these attributes.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    .. [1] Correa Bahnsen, A., Aouada, D., &amp; Ottersten, B.</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Decision Trees. Expert Systems with Applications&quot;,</span>
+<span class="sd">           Expert Systems with Applications, 42(19), 6609–6619, 2015,</span>
+<span class="sd">           http://doi.org/10.1016/j.eswa.2015.04.042</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_parameter_constraints</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">ParameterConstraint</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="o">**</span><span class="n">TREE_PARAM_CONSTRAINTS</span><span class="p">,</span>
+        <span class="s1">&#39;tp_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;tn_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;fn_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;fp_cost&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;array-like&#39;</span><span class="p">,</span> <span class="n">Real</span><span class="p">],</span>
+        <span class="s1">&#39;criterion&#39;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="n">StrOptions</span><span class="p">({</span><span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;log_loss&#39;</span><span class="p">,</span> <span class="s1">&#39;gini&#39;</span><span class="p">,</span> <span class="s1">&#39;entropy&#39;</span><span class="p">}),</span>
+            <span class="n">Hidden</span><span class="p">(</span><span class="n">CostImpurity</span><span class="p">),</span>
+        <span class="p">],</span>
+        <span class="s1">&#39;loss&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">Metric</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">loss</span><span class="p">:</span> <span class="n">Metric</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">criterion</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;cost&#39;</span><span class="p">,</span> <span class="s1">&#39;gini&#39;</span><span class="p">,</span> <span class="s1">&#39;entropy&#39;</span><span class="p">,</span> <span class="s1">&#39;log_loss&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;cost&#39;</span><span class="p">,</span>
+        <span class="n">splitter</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;best&#39;</span><span class="p">,</span> <span class="s1">&#39;random&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;best&#39;</span><span class="p">,</span>
+        <span class="n">max_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">min_samples_split</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">min_samples_leaf</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">min_weight_fraction_leaf</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_features</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;sqrt&#39;</span><span class="p">,</span> <span class="s1">&#39;log2&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_leaf_nodes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">min_impurity_decrease</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">class_weight</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;balanced&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ccp_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">monotonic_cst</span><span class="p">:</span> <span class="n">IntArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span> <span class="o">=</span> <span class="n">tp_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span> <span class="o">=</span> <span class="n">tn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span> <span class="o">=</span> <span class="n">fn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span> <span class="o">=</span> <span class="n">fp_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">=</span> <span class="n">criterion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">splitter</span> <span class="o">=</span> <span class="n">splitter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_depth</span> <span class="o">=</span> <span class="n">max_depth</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_samples_split</span> <span class="o">=</span> <span class="n">min_samples_split</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_samples_leaf</span> <span class="o">=</span> <span class="n">min_samples_leaf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_weight_fraction_leaf</span> <span class="o">=</span> <span class="n">min_weight_fraction_leaf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_features</span> <span class="o">=</span> <span class="n">max_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_leaf_nodes</span> <span class="o">=</span> <span class="n">max_leaf_nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_impurity_decrease</span> <span class="o">=</span> <span class="n">min_impurity_decrease</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span> <span class="o">=</span> <span class="n">class_weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ccp_alpha</span> <span class="o">=</span> <span class="n">ccp_alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">monotonic_cst</span> <span class="o">=</span> <span class="n">monotonic_cst</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_more_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;binary_only&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;poor_score&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__sklearn_tags__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tags</span><span class="p">:</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__sklearn_tags__</span><span class="p">()</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">multi_class</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">tags</span><span class="o">.</span><span class="n">classifier_tags</span><span class="o">.</span><span class="n">poor_score</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">tags</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_metric_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Metric</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the metric loss function if available.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Metric</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">feature_importances_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the feature importances.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">importances</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">feature_importances_</span>
+        <span class="k">return</span> <span class="n">importances</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">max_features_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the inferred value of max_features.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">max_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">max_features_</span>
+        <span class="k">return</span> <span class="n">max_features</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_classes_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of classes.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">n_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">n_classes_</span>
+        <span class="k">return</span> <span class="n">n_classes</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_outputs_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The number of outputs when ``fit`` is performed.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">n_outputs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">n_outputs_</span>
+        <span class="k">return</span> <span class="n">n_outputs</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tree_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tree</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The underlying Tree object.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">tree_</span>
+
+<div class="viewcode-block" id="CSTreeClassifier.get_depth">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.get_depth">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_depth</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the depth of the decision tree.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">get_depth</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">depth</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.get_n_leaves">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.get_n_leaves">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_leaves</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of leaves of the decision tree.&quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">n_leaves</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">get_n_leaves</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">n_leaves</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.fit">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.fit">[docs]</a>
+    <span class="nd">@_fit_context</span><span class="p">(</span><span class="n">prefer_skip_nested_validation</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># type: ignore[misc]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+        <span class="n">y</span><span class="p">:</span> <span class="n">IntArrayLike</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">UNCHANGED</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">loss_params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build an example-dependent cost-sensitive decision tree from the training set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples.</span>
+
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+<span class="sd">            Ground truth (correct) labels.</span>
+
+<span class="sd">        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$</span>
+<span class="sd">            Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">            If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">        loss_params : dict</span>
+<span class="sd">            Additional keyword arguments to pass to the loss function if using a custom loss function.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self : object</span>
+<span class="sd">            Returns self.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">validate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">y_type</span> <span class="o">=</span> <span class="n">type_of_target</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">input_name</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">raise_unknown</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_type</span> <span class="o">!=</span> <span class="s1">&#39;binary&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Unknown label type: Only binary classification is supported. The type of the target is </span><span class="si">{</span><span class="n">y_type</span><span class="si">}</span><span class="s1">.&#39;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Classifier can&#39;t train when only one class is present.&quot;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">Metric</span><span class="p">):</span>
+            <span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="o">.</span><span class="n">_evaluate_costs</span><span class="p">(</span><span class="o">**</span><span class="n">loss_params</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_costs</span><span class="p">(</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">cost</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="p">[</span><span class="s1">&#39;tp_cost&#39;</span><span class="p">,</span> <span class="s1">&#39;tn_cost&#39;</span><span class="p">,</span> <span class="s1">&#39;fn_cost&#39;</span><span class="p">,</span> <span class="s1">&#39;fp_cost&#39;</span><span class="p">],</span> <span class="p">[</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cost</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_samples</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> has shape </span><span class="si">{</span><span class="n">cost</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">, but should have shape (</span><span class="si">{</span><span class="n">n_samples</span><span class="si">}</span><span class="s1">,)&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s1">&#39;cost&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span> <span class="o">=</span> <span class="n">CostImpurity</span><span class="p">(</span>
+                <span class="n">n_outputs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">n_classes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s1">&#39;gini&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span> <span class="o">=</span> <span class="n">GiniCostImpurity</span><span class="p">(</span>
+                <span class="n">n_outputs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">n_classes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;entropy&#39;</span><span class="p">,</span> <span class="s1">&#39;log_loss&#39;</span><span class="p">}:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span> <span class="o">=</span> <span class="n">EntropyCostImpurity</span><span class="p">(</span>
+                <span class="n">n_outputs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">n_classes</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">,</span> <span class="n">CostImpurity</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown criterion: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span><span class="o">.</span><span class="n">set_costs</span><span class="p">(</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span><span class="o">.</span><span class="n">set_array_costs</span><span class="p">(</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+            <span class="n">n_samples</span><span class="o">=</span><span class="n">n_samples</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span> <span class="o">=</span> <span class="n">DecisionTreeClassifier</span><span class="p">(</span>
+            <span class="n">criterion</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">criterion_</span><span class="p">,</span>
+            <span class="n">splitter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">splitter</span><span class="p">,</span>
+            <span class="n">max_depth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_depth</span><span class="p">,</span>
+            <span class="n">min_samples_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_samples_split</span><span class="p">,</span>
+            <span class="n">min_samples_leaf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_samples_leaf</span><span class="p">,</span>
+            <span class="n">min_weight_fraction_leaf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_weight_fraction_leaf</span><span class="p">,</span>
+            <span class="n">max_features</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_features</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">max_leaf_nodes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_leaf_nodes</span><span class="p">,</span>
+            <span class="n">min_impurity_decrease</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_impurity_decrease</span><span class="p">,</span>
+            <span class="n">class_weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">,</span>
+            <span class="n">ccp_alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ccp_alpha</span><span class="p">,</span>
+            <span class="n">monotonic_cst</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">monotonic_cst</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.predict">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.predict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IntNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict class value for X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csr_matrix``.</span>
+
+<span class="sd">        check_input : bool, default=True</span>
+<span class="sd">            Allow to bypass several input checking.</span>
+<span class="sd">            Don&#39;t use this parameter unless you know what you&#39;re doing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted classes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">y_pred</span><span class="p">:</span> <span class="n">IntNDArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="n">check_input</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y_pred</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.predict_proba">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.predict_proba">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict class probabilities of the input samples X.</span>
+
+<span class="sd">        The predicted class probability is the fraction of samples of the same class in a leaf.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csr_matrix``.</span>
+
+<span class="sd">        check_input : bool, default=True</span>
+<span class="sd">            Allow to bypass several input checking.</span>
+<span class="sd">            Don&#39;t use this parameter unless you know what you&#39;re doing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        proba : ndarray of shape (n_samples, n_classes)</span>
+<span class="sd">            The class probabilities of the input samples. The order of the</span>
+<span class="sd">            classes corresponds to that in the attribute :term:`classes_`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">y_proba</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="n">check_input</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y_proba</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.predict_log_proba">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.predict_log_proba">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict_log_proba</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict class log-probabilities of the input samples X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csr_matrix``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        proba : ndarray of shape (n_samples, n_classes)</span>
+<span class="sd">            The class log-probabilities of the input samples. The order of the</span>
+<span class="sd">            classes corresponds to that in the attribute :term:`classes_`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">y_log_proba</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">predict_log_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y_log_proba</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.apply">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.apply">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IntNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the index of the leaf that each sample is predicted as.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csr_matrix``.</span>
+
+<span class="sd">        check_input : bool, default=True</span>
+<span class="sd">            Allow to bypass several input checking.</span>
+<span class="sd">            Don&#39;t use this parameter unless you know what you&#39;re doing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        X_leaves : ndarray of shape (n_samples,)</span>
+<span class="sd">            For each datapoint x in X, return the index of the leaf x</span>
+<span class="sd">            ends up in. Leaves are numbered within</span>
+<span class="sd">            ``[0; self.tree_.node_count)``, possibly with gaps in the</span>
+<span class="sd">            numbering.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">X_leaves</span><span class="p">:</span> <span class="n">IntNDArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="n">check_input</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X_leaves</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.cost_complexity_pruning_path">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.cost_complexity_pruning_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cost_complexity_pruning_path</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">IntArrayLike</span><span class="p">,</span> <span class="n">sample_weight</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Bunch</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the pruning path during Minimal Cost-Complexity Pruning.</span>
+
+<span class="sd">        See :ref:`minimal_cost_complexity_pruning` for details on the pruning process.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The training input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csc_matrix``.</span>
+
+<span class="sd">        y : array-like of shape (n_samples,) or (n_samples, n_outputs)</span>
+<span class="sd">            The target values (class labels) as integers or strings.</span>
+
+<span class="sd">        sample_weight : array-like of shape (n_samples,), default=None</span>
+<span class="sd">            Sample weights. If None, then samples are equally weighted. Splits</span>
+<span class="sd">            that would create child nodes with net zero or negative weight are</span>
+<span class="sd">            ignored while searching for a split in each node. Splits are also</span>
+<span class="sd">            ignored if they would result in any single class carrying a</span>
+<span class="sd">            negative weight in either child node.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ccp_path : :class:`~sklearn.utils.Bunch`</span>
+<span class="sd">            Dictionary-like object, with the following attributes.</span>
+
+<span class="sd">            ccp_alphas : ndarray</span>
+<span class="sd">                Effective alphas of subtree during pruning.</span>
+
+<span class="sd">            impurities : ndarray</span>
+<span class="sd">                Sum of the impurities of the subtree leaves for the</span>
+<span class="sd">                corresponding alpha value in ``ccp_alphas``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">cost_complexity_pruning_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CSTreeClassifier.decision_path">
+<a class="viewcode-back" href="../../../../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier.decision_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">decision_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">csr_matrix</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the decision path in the tree.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : {array-like, sparse matrix} of shape (n_samples, n_features)</span>
+<span class="sd">            The input samples. Internally, it will be converted to</span>
+<span class="sd">            ``dtype=np.float32`` and if a sparse matrix is provided</span>
+<span class="sd">            to a sparse ``csr_matrix``.</span>
+
+<span class="sd">        check_input : bool, default=True</span>
+<span class="sd">            Allow to bypass several input checking.</span>
+<span class="sd">            Don&#39;t use this parameter unless you know what you&#39;re doing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        indicator : sparse matrix of shape (n_samples, n_nodes)</span>
+<span class="sd">            Return a node indicator CSR matrix where non zero elements</span>
+<span class="sd">            indicates that the samples goes through the nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator_</span><span class="o">.</span><span class="n">decision_path</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="n">check_input</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

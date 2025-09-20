@@ -1,0 +1,9 @@
+﻿CostMatrix
+==========
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: CostMatrix
+   :members:
+   :inherited-members:
+   :special-members: __call__

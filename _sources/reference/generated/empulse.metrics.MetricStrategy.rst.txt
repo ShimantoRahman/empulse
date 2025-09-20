@@ -1,0 +1,9 @@
+﻿MetricStrategy
+==============
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: MetricStrategy
+   :members:
+   :inherited-members:
+   :special-members: __call__

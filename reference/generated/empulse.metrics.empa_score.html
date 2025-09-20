@@ -1,0 +1,704 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>empa_score &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/generated/empulse.metrics.empa_score';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="mpa" href="empulse.metrics.mpa.html" />
+    <link rel="prev" title="empa" href="empulse.metrics.empa.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets.html">empulse.datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.Dataset.html">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_churn_tv_subscriptions.html">load_churn_tv_subscriptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_upsell_bank_telemarketing.html">load_upsell_bank_telemarketing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_give_me_some_credit.html">load_give_me_some_credit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_credit_scoring_pakdd.html">load_credit_scoring_pakdd</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../metrics.html">empulse.metrics</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Metric.html">Metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.MetricStrategy.html">MetricStrategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.MaxProfit.html">MaxProfit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.CostMatrix.html">CostMatrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Cost.html">Cost</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Savings.html">Savings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.max_profit.html">max_profit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.max_profit_score.html">max_profit_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.lift_score.html">lift_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.cost_loss.html">cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss.html">expected_cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_log_cost_loss.html">expected_log_cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_aec.html">make_objective_aec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.savings_score.html">savings_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_savings_score.html">expected_savings_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empa.html">empa</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">empa_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpa.html">mpa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpa_score.html">mpa_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss_acquisition.html">expected_cost_loss_acquisition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_acquisition.html">make_objective_acquisition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empc.html">empc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empc_score.html">empc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpc.html">mpc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpc_score.html">mpc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empb.html">empb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empb_score.html">empb_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.auepc_score.html">auepc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss_churn.html">expected_cost_loss_churn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_churn.html">make_objective_churn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empcs.html">empcs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empcs_score.html">empcs_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpcs.html">mpcs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpcs_score.html">mpcs_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.classification_threshold.html">classification_threshold</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../models.html">empulse.models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.B2BoostClassifier.html">B2BoostClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSBaggingClassifier.html">CSBaggingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSBoostClassifier.html">CSBoostClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSForestClassifier.html">CSForestClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSLogitClassifier.html">CSLogitClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSThresholdClassifier.html">CSThresholdClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSTreeClassifier.html">CSTreeClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.RobustCSClassifier.html">RobustCSClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.ProfLogitClassifier.html">ProfLogitClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasRelabelingClassifier.html">BiasRelabelingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasResamplingClassifier.html">BiasResamplingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasReweighingClassifier.html">BiasReweighingClassifier</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimizers.html">empulse.optimizers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.optimizers.Generation.html">Generation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../samplers.html">empulse.samplers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.BiasRelabler.html">BiasRelabler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.BiasResampler.html">BiasResampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.CostSensitiveSampler.html">CostSensitiveSampler</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../api.html" class="nav-link">API Reference</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../metrics.html" class="nav-link">empulse.metrics</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empa_score</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="empa-score">
+<h1>empa_score<a class="headerlink" href="#empa-score" title="Link to this heading">#</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="empulse.metrics.empa_score">
+<span class="sig-prename descclassname"><span class="pre">empulse.metrics.</span></span><span class="sig-name descname"><span class="pre">empa_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_score</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0015</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sales_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_selling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/metrics/acquisition/stochastic.html#empa_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.metrics.empa_score" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference internal" href="empulse.metrics.empa.html#empulse.metrics.empa" title="empulse.metrics.empa"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa</span></code></a> but only returning the EMPA score.</p>
+<p>EMPA presumes a situation where leads are targeted either directly or indirectly.
+Directly targeted leads are contacted and handled by the internal sales team.
+Indirectly targeted leads are contacted and then referred to intermediaries,
+which receive a commission.
+The contribution of a successful acquisition is modeled as a <span class="math notranslate nohighlight">\(Gamma(\alpha, \beta)\)</span> distribution.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="empulse.metrics.empa.html#empulse.metrics.empa" title="empulse.metrics.empa"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa</span></code></a> : to also return the fraction of the leads
+that should be targeted to maximize profit.</p>
+<p><a class="reference internal" href="empulse.metrics.mpa_score.html#empulse.metrics.mpa_score" title="empulse.metrics.mpa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpa_score</span></code></a> : for a deterministic version of this metric.</p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>y_true</strong><span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Binary target values (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+</dd>
+<dt><strong>y_score</strong><span class="classifier">1D array-like, shape=(n_samples,)</span></dt><dd><p>Target scores, can either be probability estimates or non-thresholded decision values.</p>
+</dd>
+<dt><strong>alpha</strong><span class="classifier">float, default=10</span></dt><dd><p>Shape parameter of the gamma distribution of the average contribution of a new customer. (<code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>)</p>
+</dd>
+<dt><strong>beta</strong><span class="classifier">float, default=10</span></dt><dd><p>Rate parameter of the gamma distribution of the average contribution of a new customer. (<code class="docutils literal notranslate"><span class="pre">beta</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>)</p>
+</dd>
+<dt><strong>sales_cost</strong><span class="classifier">float, default=500</span></dt><dd><p>Average sale conversion cost of targeted leads handled by the company (<code class="docutils literal notranslate"><span class="pre">sales_cost</span> <span class="pre">≥</span> <span class="pre">0</span></code>).</p>
+</dd>
+<dt><strong>contact_cost</strong><span class="classifier">float, default=50</span></dt><dd><p>Average contact cost of targeted leads (<code class="docutils literal notranslate"><span class="pre">contact_cost</span> <span class="pre">≥</span> <span class="pre">0</span></code>).</p>
+</dd>
+<dt><strong>direct_selling</strong><span class="classifier">float, default=1</span></dt><dd><p>Fraction of leads sold to directly (<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">≤</span> <span class="pre">direct_selling</span> <span class="pre">≤</span> <span class="pre">1</span></code>).
+<cite>direct_selling</cite> = 0 for indirect channel.
+<cite>direct_selling</cite> = 1 for direct channel.</p>
+</dd>
+<dt><strong>commission</strong><span class="classifier">float, default=0.1</span></dt><dd><p>Fraction of contribution paid to the intermedaries (<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">≤</span> <span class="pre">commission</span> <span class="pre">≤</span> <span class="pre">1</span></code>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The commission is only relevant when there is an indirect channel (<code class="docutils literal notranslate"><span class="pre">direct_selling</span> <span class="pre">&lt;</span> <span class="pre">1</span></code>).</p>
+</div>
+</dd>
+<dt><strong>check_input</strong><span class="classifier">bool, default=True</span></dt><dd><p>Perform input validation.
+Turning off improves performance, useful when using this metric as a loss function.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>empa</strong><span class="classifier">tuple[float]</span></dt><dd><p>Expected Maximum Profit measure for customer Acquisition.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The EMPA is defined as:</p>
+<div class="math notranslate nohighlight">
+\[\int_{R} [[ \rho(R-c-S)+(1-\rho)(\gamma R - c)] \pi_0 F_0(t) - c \pi_1 F_1(t)] \cdot g(CLV) \, dCLV\]</div>
+<p>The EMPA requires that the acquisition class is encoded as 0, and it is NOT interchangeable.
+However, this implementation assumes the standard notation (‘acquisition’: 1, ‘no acquisition’: 0).</p>
+<p class="rubric">Examples</p>
+<p>Direct channel (rho = 1):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">empa_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y_score</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empa_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">direct_selling</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">3706.2500000052773</span>
+</pre></div>
+</div>
+<p>Indirect channel using scorer (rho = 0):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_classification</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">cross_val_score</span><span class="p">,</span> <span class="n">StratifiedKFold</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_scorer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">empa_score</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">make_classification</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">StratifiedKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">empa_score</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">response_method</span><span class="o">=</span><span class="s1">&#39;predict_proba&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">alpha</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">beta</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">sales_cost</span><span class="o">=</span><span class="mi">2_000</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">contact_cost</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">direct_selling</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cross_val_score</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">))</span>
+<span class="go">4449.0</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="empulse.metrics.empa.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">empa</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="empulse.metrics.mpa.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">mpa</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.metrics.empa_score"><code class="docutils literal notranslate"><span class="pre">empa_score</span></code></a></li>
+</ul>
+
+
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

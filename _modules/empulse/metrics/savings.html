@@ -1,0 +1,1708 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.metrics.savings &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/metrics/savings';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.metrics.savings</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.metrics.savings</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">update_wrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">overload</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">expit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatArrayLike</span><span class="p">,</span> <span class="n">FloatNDArray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_check_consistent_length</span><span class="p">,</span> <span class="n">_check_y_pred</span><span class="p">,</span> <span class="n">_check_y_true</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_input</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_proba</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span>
+    <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+<span class="p">]:</span>
+    <span class="k">if</span> <span class="n">check_input</span><span class="p">:</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">_check_y_true</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">y_proba</span> <span class="o">=</span> <span class="n">_check_y_pred</span><span class="p">(</span><span class="n">y_proba</span><span class="p">)</span>
+        <span class="n">arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">tp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">)</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">)</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">tn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">)</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">)</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">)</span>
+        <span class="n">_check_consistent_length</span><span class="p">(</span><span class="o">*</span><span class="n">arrays</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">arrays</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">cost</span> <span class="o">==</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">cost</span> <span class="ow">in</span> <span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;All costs are zero. At least one cost must be non-zero.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">y_proba</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_proba</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">tp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">fp_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">tn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn_cost</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Number</span><span class="p">):</span>
+            <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_compute_expected_cost</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">y_pred</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">y_true</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_pred</span> <span class="o">*</span> <span class="n">tp_cost</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="n">fn_cost</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">y_pred</span> <span class="o">*</span> <span class="n">fp_cost</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="n">tn_cost</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_compute_log_expected_cost</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">y_pred</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+    <span class="n">epsilon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">y_pred</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>  <span class="c1"># type: ignore[arg-type]</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">epsilon</span><span class="p">)</span>
+    <span class="n">inverse_y_pred</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">y_pred</span>
+    <span class="n">log_y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span>
+    <span class="n">log_inv_y_pred</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">inverse_y_pred</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">y_true</span> <span class="o">*</span> <span class="p">(</span><span class="n">log_y_pred</span> <span class="o">*</span> <span class="n">tp_cost</span> <span class="o">+</span> <span class="n">log_inv_y_pred</span> <span class="o">*</span> <span class="n">fn_cost</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">log_y_pred</span> <span class="o">*</span> <span class="n">fp_cost</span> <span class="o">+</span> <span class="n">log_inv_y_pred</span> <span class="o">*</span> <span class="n">tn_cost</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="cost_loss">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cost_loss</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_pred</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cost of a classifier.</span>
+
+<span class="sd">    The cost of a classifier is the sum of the costs of each instance.</span>
+<span class="sd">    This allows you to give attribute specific costs (or benefits in case of negative costs)</span>
+<span class="sd">    to each type of classification.</span>
+<span class="sd">    For example, in a credit card fraud detection problem,</span>
+<span class="sd">    the cost of a false negative (not detecting a fraudulent transaction) is higher than</span>
+<span class="sd">    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.</span>
+
+<span class="sd">        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to using a baseline.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Binary target values (&#39;positive&#39;: 1, &#39;negative&#39;: 0).</span>
+
+<span class="sd">    y_pred : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Predicted labels or calibrated probabilities.</span>
+<span class="sd">        If the predictions are calibrated probabilities,</span>
+<span class="sd">        the optimal decision threshold is calculated for each instance as [3]_:</span>
+
+<span class="sd">        .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}</span>
+
+<span class="sd">        .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.</span>
+<span class="sd">                  See `scikit-learn&#39;s user guide &lt;https://scikit-learn.org/stable/modules/calibration.html&gt;`_</span>
+<span class="sd">                  for more information.</span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+
+<span class="sd">    normalize : bool, default=False</span>
+<span class="sd">        Normalize the cost by the number of samples.</span>
+<span class="sd">        If ``True``, return the average cost.</span>
+
+<span class="sd">    check_input : bool, default=True</span>
+<span class="sd">        Perform input validation.</span>
+<span class="sd">        Turning off improves performance, useful when using this metric as a loss function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cost_loss : float</span>
+<span class="sd">        Cost of a classifier.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The cost of each instance :math:`C_i` is calculated as [3]_:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \</span>
+<span class="sd">        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">        - :math:`y_i` is the true label,</span>
+<span class="sd">        - :math:`\\hat y_i` is the predicted label,</span>
+<span class="sd">        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,</span>
+<span class="sd">        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,</span>
+<span class="sd">        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and</span>
+<span class="sd">        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.</span>
+
+<span class="sd">    Code modified from `costcla.metrics.cost_loss`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] C. Elkan, &quot;The foundations of Cost-Sensitive Learning&quot;,</span>
+<span class="sd">           in Seventeenth International Joint Conference on Artificial Intelligence,</span>
+<span class="sd">           973-978, 2001.</span>
+
+<span class="sd">    .. [2] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Improving Credit Card Fraud Detection with Calibrated Probabilities&quot;,</span>
+<span class="sd">           in Proceedings of the fourteenth SIAM International Conference on Data Mining,</span>
+<span class="sd">           677-685, 2014.</span>
+
+<span class="sd">    .. [3] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from empulse.metrics import cost_loss</span>
+<span class="sd">    &gt;&gt;&gt; y_pred = [0, 1, 0, 0]</span>
+<span class="sd">    &gt;&gt;&gt; y_true = [0, 1, 1, 0]</span>
+<span class="sd">    &gt;&gt;&gt; fp_cost = np.array([4, 1, 2, 2])</span>
+<span class="sd">    &gt;&gt;&gt; fn_cost = np.array([1, 3, 3, 1])</span>
+<span class="sd">    &gt;&gt;&gt; cost_loss(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+<span class="sd">    3.0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">_validate_input</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span>
+    <span class="p">)</span>
+
+    <span class="c1"># If the prediction is not binary, we need to find the optimal threshold</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">((</span><span class="n">y_pred</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">y_pred</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">fp_cost</span> <span class="o">-</span> <span class="n">tn_cost</span> <span class="o">+</span> <span class="n">fn_cost</span> <span class="o">-</span> <span class="n">tp_cost</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="n">denominator</span><span class="p">)</span>  <span class="c1"># Avoid division by zero</span>
+        <span class="n">optimal_thresholds</span> <span class="o">=</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">-</span> <span class="n">tn_cost</span><span class="p">)</span> <span class="o">/</span> <span class="n">denominator</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_pred</span> <span class="o">&gt;</span> <span class="n">optimal_thresholds</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">_compute_expected_cost</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="expected_cost_loss">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expected_cost_loss</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_proba</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Expected cost of a classifier.</span>
+
+<span class="sd">    The expected cost of a classifier is the sum of the expected costs of each instance.</span>
+<span class="sd">    This allows you to give attribute specific costs (or benefits in case of negative costs)</span>
+<span class="sd">    to each type of classification.</span>
+<span class="sd">    For example, in a credit card fraud detection problem,</span>
+<span class="sd">    the cost of a false negative (not detecting a fraudulent transaction) is higher than</span>
+<span class="sd">    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.cost_loss` : Cost of a classifier.</span>
+
+<span class="sd">        :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier</span>
+<span class="sd">        compared to using a baseline.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Binary target values (&#39;positive&#39;: 1, &#39;negative&#39;: 0).</span>
+
+<span class="sd">    y_proba : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Target probabilities, should lie between 0 and 1.</span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+
+<span class="sd">    normalize : bool, default=False</span>
+<span class="sd">        Normalize the cost by the number of samples.</span>
+<span class="sd">        If ``True``, return the average expected cost [3]_.</span>
+
+<span class="sd">    check_input : bool, default=True</span>
+<span class="sd">        Perform input validation.</span>
+<span class="sd">        Turning off improves performance, useful when using this metric as a loss function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cost_loss : float</span>
+<span class="sd">        Cost of a classifier.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [3]_:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\mathbb{E}[C_i] = y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + \</span>
+<span class="sd">        (1 - y_i) \\cdot (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">    - :math:`y_i` is the true label,</span>
+<span class="sd">    - :math:`s_i` is the predicted probability,</span>
+<span class="sd">    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,</span>
+<span class="sd">    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,</span>
+<span class="sd">    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and</span>
+<span class="sd">    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.</span>
+
+<span class="sd">    Code modified from `costcla.metrics.cost_loss`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] C. Elkan, &quot;The foundations of Cost-Sensitive Learning&quot;,</span>
+<span class="sd">           in Seventeenth International Joint Conference on Artificial Intelligence,</span>
+<span class="sd">           973-978, 2001.</span>
+
+<span class="sd">    .. [2] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Improving Credit Card Fraud Detection with Calibrated Probabilities&quot;,</span>
+<span class="sd">           in Proceedings of the fourteenth SIAM International Conference on Data Mining,</span>
+<span class="sd">           677-685, 2014.</span>
+
+<span class="sd">    .. [3] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from empulse.metrics import expected_cost_loss</span>
+<span class="sd">    &gt;&gt;&gt; y_proba = [0.2, 0.9, 0.1, 0.2]</span>
+<span class="sd">    &gt;&gt;&gt; y_true = [0, 1, 1, 0]</span>
+<span class="sd">    &gt;&gt;&gt; fp_cost = np.array([4, 1, 2, 2])</span>
+<span class="sd">    &gt;&gt;&gt; fn_cost = np.array([1, 3, 3, 1])</span>
+<span class="sd">    &gt;&gt;&gt; expected_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+<span class="sd">    4.2</span>
+<span class="sd">    &quot;&quot;&quot;</span>  <span class="c1"># noqa: D401</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">_validate_input</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span>
+    <span class="p">)</span>
+
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">_compute_expected_cost</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="expected_log_cost_loss">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expected_log_cost_loss</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_proba</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Expected log cost of a classifier.</span>
+
+<span class="sd">    The expected log cost of a classifier is the sum of the expected log costs of each instance.</span>
+<span class="sd">    This allows you to give attribute specific costs (or benefits in case of negative costs)</span>
+<span class="sd">    to each type of classification.</span>
+<span class="sd">    For example, in a credit card fraud detection problem,</span>
+<span class="sd">    the cost of a false negative (not detecting a fraudulent transaction) is higher than</span>
+<span class="sd">    the cost of a false positive (flagging a non-fraudulent transaction as fraudulent).</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Binary target values (&#39;positive&#39;: 1, &#39;negative&#39;: 0).</span>
+
+<span class="sd">    y_proba : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Target probabilities, should lie between 0 and 1.</span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+
+<span class="sd">    normalize : bool, default=False</span>
+<span class="sd">        Normalize the cost by the number of samples.</span>
+<span class="sd">        If ``True``, return the log average expected cost.</span>
+
+<span class="sd">    check_input : bool, default=True</span>
+<span class="sd">        Perform input validation.</span>
+<span class="sd">        Turning off improves performance, useful when using this metric as a loss function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    log_expected_cost : float</span>
+<span class="sd">        Log expected cost.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The expected log cost of each instance :math:`\\mathbb{E}[C^l_i]` is calculated as:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\mathbb{E}[C^l_i] = y_i \\cdot (\\log(s_i) \\cdot C_i(1|1) + \\log(1 - s_i) \\cdot C_i(0|1)) + \</span>
+<span class="sd">        (1 - y_i) \\cdot (\\log(s_i) \\cdot C_i(1|0) + \\log(1 - s_i) \\cdot C_i(0|0))</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">    - :math:`y_i` is the true label,</span>
+<span class="sd">    - :math:`s_i` is the predicted probability,</span>
+<span class="sd">    - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,</span>
+<span class="sd">    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,</span>
+<span class="sd">    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and</span>
+<span class="sd">    - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.</span>
+
+<span class="sd">    When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,</span>
+<span class="sd">    the expected log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import expected_log_cost_loss</span>
+<span class="sd">        y_proba = [0.1, 0.9, 0.8, 0.2]</span>
+<span class="sd">        y_true = [0, 1, 1, 0]</span>
+<span class="sd">        fp_cost = np.array([4, 1, 2, 2])</span>
+<span class="sd">        fn_cost = np.array([1, 3, 3, 1])</span>
+<span class="sd">        expected_log_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>  <span class="c1"># noqa: D401</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">_validate_input</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span>
+    <span class="p">)</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">_compute_log_expected_cost</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cost</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="savings_score">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">savings_score</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_pred</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">baseline</span><span class="p">:</span> <span class="n">FloatArrayLike</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;zero_one&#39;</span><span class="p">,</span> <span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;zero&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;zero_one&#39;</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cost savings of a classifier compared to using a baseline.</span>
+
+<span class="sd">    The cost savings of a classifiers is the cost the classifier saved over a baseline classification model.</span>
+<span class="sd">    By default, a naive algorithm is used (predicting all ones or zeros whichever is better).</span>
+<span class="sd">    With 1 being the perfect model, 0 being as good as the baseline model,</span>
+<span class="sd">    and values smaller than 0 being worse than the baseline model.</span>
+
+<span class="sd">    Modified from `costcla.metrics.savings_score`.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier</span>
+<span class="sd">        compared to using a naive algorithm.</span>
+
+<span class="sd">        :func:`~empulse.metrics.cost_loss` : Cost of a classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Binary target values (&#39;positive&#39;: 1, &#39;negative&#39;: 0).</span>
+
+<span class="sd">    y_pred : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Predicted labels or calibrated probabilities.</span>
+<span class="sd">        If the predictions are calibrated probabilities,</span>
+<span class="sd">        the optimal decision threshold is calculated for each instance as [2]_:</span>
+
+<span class="sd">        .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}</span>
+
+<span class="sd">        .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.</span>
+<span class="sd">                  See `scikit-learn&#39;s user guide &lt;https://scikit-learn.org/stable/modules/calibration.html&gt;`_</span>
+<span class="sd">                  for more information.</span>
+
+<span class="sd">    baseline : &#39;zero_one&#39; or 1D array-like, shape=(n_samples,), default=&#39;zero_one&#39;</span>
+<span class="sd">        Predicted labels or calibrated probabilities of the baseline model.</span>
+
+<span class="sd">        - If ``&#39;zero_one&#39;``, the baseline model is a naive model that predicts all zeros or all ones</span>
+<span class="sd">          depending on which is better.</span>
+<span class="sd">        - If ``&#39;one&#39;``, the baseline model is a model that predicts all ones.</span>
+<span class="sd">        - If ``&#39;zero&#39;``, the baseline model is a model that predicts all zeros.</span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+
+<span class="sd">    check_input : bool, default=True</span>
+<span class="sd">        Perform input validation.</span>
+<span class="sd">        Turning off improves performance, useful when using this metric as a loss function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    score : float</span>
+<span class="sd">        Cost savings of a classifier compared to using a baseline.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The cost of each instance :math:`C_i` is calculated as [1]_:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        C_i(s_i) = \</span>
+<span class="sd">        y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \</span>
+<span class="sd">        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))</span>
+
+<span class="sd">    The savings over a naive model is calculated as:</span>
+
+<span class="sd">    .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}</span>
+
+<span class="sd">    The savings over a baseline model is calculated as:</span>
+
+<span class="sd">    .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\sum_{i=1}^N C_i(s_i^*)}</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">        - :math:`y_i` is the true label,</span>
+<span class="sd">        - :math:`\\hat y_i` is the predicted label,</span>
+<span class="sd">        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,</span>
+<span class="sd">        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,</span>
+<span class="sd">        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and</span>
+<span class="sd">        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.</span>
+<span class="sd">        - :math:`N` is the number of samples.</span>
+
+<span class="sd">    Code modified from `costcla.metrics.cost_loss`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import savings_score</span>
+<span class="sd">        y_pred = [0, 1, 0, 0]</span>
+<span class="sd">        y_true = [0, 1, 1, 0]</span>
+<span class="sd">        fp_cost = np.array([4, 1, 2, 2])</span>
+<span class="sd">        fn_cost = np.array([1, 3, 3, 1])</span>
+<span class="sd">        savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Improving Credit Card Fraud Detection with Calibrated Probabilities&quot;,</span>
+<span class="sd">           in Proceedings of the fourteenth SIAM International Conference on Data Mining,</span>
+<span class="sd">           677-685, 2014.</span>
+
+<span class="sd">    .. [2] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">_validate_input</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">baseline</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;zero_one&#39;</span><span class="p">:</span>
+        <span class="c1"># Calculate the cost of naive prediction</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;one&#39;</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;zero&#39;</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid baseline. Must be &#39;zero_one&#39;, &#39;zero&#39;, &#39;one&#39;, &#39;prior&#39;, or an array-like.&quot;</span><span class="p">)</span>
+
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">cost_base</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">cost</span> <span class="o">/</span> <span class="n">cost_base</span></div>
+
+
+
+<div class="viewcode-block" id="expected_savings_score">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expected_savings_score</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="n">y_proba</span><span class="p">:</span> <span class="n">FloatArrayLike</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">baseline</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;zero_one&#39;</span><span class="p">,</span> <span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;zero&#39;</span><span class="p">,</span> <span class="s1">&#39;prior&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="s1">&#39;zero_one&#39;</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatArrayLike</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">check_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Expected savings of a classifier compared to a baseline.</span>
+
+<span class="sd">    The expected cost savings of a classifiers is the expected cost the classifier saved</span>
+<span class="sd">    over a baseline classification model.</span>
+<span class="sd">    By default, a naive model is used (predicting all ones or zeros whichever is better).</span>
+<span class="sd">    With 1 being the perfect model, 0 being as good as the baseline model,</span>
+<span class="sd">    and values smaller than 0 being worse than the baseline model.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to a baseline.</span>
+
+<span class="sd">        :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Binary target values (&#39;positive&#39;: 1, &#39;negative&#39;: 0).</span>
+
+<span class="sd">    y_proba : 1D array-like, shape=(n_samples,)</span>
+<span class="sd">        Target probabilities, should lie between 0 and 1.</span>
+
+<span class="sd">    baseline : {&#39;zero_one&#39;, &#39;prior&#39;} or 1D array-like, shape=(n_samples,), default=&#39;zero_one&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        - If ``&#39;zero_one&#39;``, the baseline model is a naive model that predicts all zeros or all ones</span>
+<span class="sd">          depending on which is better.</span>
+<span class="sd">        - If ``&#39;one&#39;``, the baseline model is a model that predicts all ones.</span>
+<span class="sd">        - If ``&#39;zero&#39;``, the baseline model is a model that predicts all zeros.</span>
+<span class="sd">        - If ``&#39;prior&#39;``, the baseline model is a model that predicts the prior probability of </span>
+<span class="sd">          the majority or minority class depending on which is better.</span>
+<span class="sd">        - If array-like, target probabilities of the baseline model.</span>
+<span class="sd">        </span>
+
+<span class="sd">    tp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or array-like, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+
+<span class="sd">    check_input : bool, default=True</span>
+<span class="sd">        Perform input validation.</span>
+<span class="sd">        Turning off improves performance, useful when using this metric as a loss function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    score : float</span>
+<span class="sd">        Expected savings of a classifier compared to a baseline.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The expected cost of each instance :math:`\\mathbb{E}[C_i]` is calculated as [1]_:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\mathbb{E}[C_i(s_i)] = \</span>
+<span class="sd">        y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot \</span>
+<span class="sd">        (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))</span>
+
+<span class="sd">    The expected savings over a naive model is calculated as:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\text{Expected Savings} = \</span>
+<span class="sd">        1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\min(\\sum_{i=1}^N C_i(0), \\sum_{i=1}^N C_i(1))}</span>
+
+<span class="sd">    The expected savings over a baseline model is calculated as:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\text{Expected Savings} = \</span>
+<span class="sd">        1 - \\frac{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i)]}{\\sum_{i=1}^N \\mathbb{E}[C_i(s_i^*)]}</span>
+
+<span class="sd">    where</span>
+
+<span class="sd">        - :math:`y_i` is the true label,</span>
+<span class="sd">        - :math:`\\hat y_i` is the predicted label,</span>
+<span class="sd">        - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,</span>
+<span class="sd">        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,</span>
+<span class="sd">        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and</span>
+<span class="sd">        - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.</span>
+<span class="sd">        - :math:`N` is the number of samples.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        from empulse.metrics import expected_savings_score</span>
+<span class="sd">        y_pred = [0.4, 0.8, 0.75, 0.1]</span>
+<span class="sd">        y_true = [0, 1, 1, 0]</span>
+<span class="sd">        fp_cost = np.array([4, 1, 2, 2])</span>
+<span class="sd">        fn_cost = np.array([1, 3, 3, 1])</span>
+<span class="sd">        expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+<span class="sd">    &quot;&quot;&quot;</span>  <span class="c1"># noqa: D401</span>
+    <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span> <span class="o">=</span> <span class="n">_validate_input</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">expected_cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">baseline</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;zero_one&#39;</span><span class="p">:</span>
+        <span class="c1"># Calculate the cost of naive prediction</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;one&#39;</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;zero&#39;</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="n">cost_loss</span><span class="p">(</span>
+            <span class="n">y_true</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">),</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">baseline</span> <span class="o">==</span> <span class="s1">&#39;prior&#39;</span><span class="p">:</span>
+        <span class="n">prior_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">prior_neg</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">prior_pos</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">prior_pos</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">cost_loss</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">prior_neg</span><span class="p">),</span>
+                <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+                <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+                <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+                <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+                <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid baseline. Must be &#39;zero_one&#39;, &#39;zero&#39;, &#39;one&#39;, &#39;prior&#39;, or an array-like.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># avoid division by zero</span>
+    <span class="k">if</span> <span class="n">cost_base</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">cost_base</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">expected_cost_loss</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">cost</span> <span class="o">/</span> <span class="n">cost_base</span></div>
+
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_objective_aec</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;catboost&#39;</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s1">&#39;AECObjective&#39;</span><span class="p">,</span> <span class="s1">&#39;AECMetric&#39;</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_objective_aec</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;xgboost&#39;</span><span class="p">,</span> <span class="s1">&#39;lightgbm&#39;</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_objective_aec</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;cslogit&#39;</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]:</span> <span class="o">...</span>
+
+
+<div class="viewcode-block" id="make_objective_aec">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.make_objective_aec.html#empulse.metrics.make_objective_aec">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_objective_aec</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;xgboost&#39;</span><span class="p">,</span> <span class="s1">&#39;lightgbm&#39;</span><span class="p">,</span> <span class="s1">&#39;catboost&#39;</span><span class="p">,</span> <span class="s1">&#39;cslogit&#39;</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+    <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="s1">&#39;AECObjective&#39;</span><span class="p">,</span> <span class="s1">&#39;AECMetric&#39;</span><span class="p">]</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create an objective function for the Average Expected Cost (AEC) measure.</span>
+
+<span class="sd">    The objective function presumes a situation where leads are targeted either directly or indirectly.</span>
+<span class="sd">    Directly targeted leads are contacted and handled by the internal sales team.</span>
+<span class="sd">    Indirectly targeted leads are contacted and then referred to intermediaries,</span>
+<span class="sd">    which receive a commission.</span>
+<span class="sd">    The company gains a contribution from a successful acquisition.</span>
+
+<span class="sd">    Read more in the :ref:`User Guide &lt;cost_functions&gt;`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : {&#39;xgboost&#39;, &#39;lightgbm&#39;, &#39;catboost&#39;, &#39;cslogit&#39;}</span>
+<span class="sd">        The model for which the objective function is created.</span>
+
+<span class="sd">        - &#39;xgboost&#39; : :class:`xgboost:xgboost.XGBClassifier`</span>
+<span class="sd">        - &#39;lightgbm&#39; : :class:`lightgbm:lightgbm.LGBMClassifier`</span>
+<span class="sd">        - &#39;catboost&#39; : :class:`catboost.CatBoostClassifier`</span>
+<span class="sd">        - &#39;cslogit&#39; : :class:`~empulse.models.CSLogitClassifier`</span>
+
+<span class="sd">    tp_cost : float or np.array, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true positives. If ``float``, then all true positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true positive classification.</span>
+
+<span class="sd">    fp_cost : float or np.array, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false positives. If ``float``, then all false positives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false positive classification.</span>
+
+<span class="sd">    tn_cost : float or np.array, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of true negatives. If ``float``, then all true negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each true negative classification.</span>
+
+<span class="sd">    fn_cost : float or np.array, shape=(n_samples,), default=0.0</span>
+<span class="sd">        Cost of false negatives. If ``float``, then all false negatives have the same cost.</span>
+<span class="sd">        If array-like, then it is the cost of each false negative classification.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    objective : Callable</span>
+<span class="sd">        A custom objective function for the specified model.</span>
+
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block::  python</span>
+
+<span class="sd">        from xgboost import XGBClassifier</span>
+<span class="sd">        from empulse.metrics import make_objective_aec</span>
+
+<span class="sd">        objective = make_objective_aec(&#39;xgboost&#39;, fp_cost=1, fn_cost=1)</span>
+<span class="sd">        clf = XGBClassifier(objective=objective, n_estimators=100, max_depth=3)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291-300.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;xgboost&#39;</span><span class="p">:</span>
+        <span class="n">objective</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]]</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span>
+            <span class="n">_objective_boost</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span>
+        <span class="p">)</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">_objective_boost</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;lightgbm&#39;</span><span class="p">:</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span><span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Create an objective function for the AEC measure.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            y_true : np.ndarray</span>
+<span class="sd">                Ground truth labels</span>
+<span class="sd">            y_score : np.ndarray</span>
+<span class="sd">                Predicted labels</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            gradient  : np.ndarray</span>
+<span class="sd">                Gradient of the objective function.</span>
+
+<span class="sd">            hessian : np.ndarray</span>
+<span class="sd">                Hessian of the objective function.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="n">_objective_boost</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;catboost&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">AECObjective</span><span class="p">(</span><span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">),</span>
+            <span class="n">AECMetric</span><span class="p">(</span><span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;cslogit&#39;</span><span class="p">:</span>
+        <span class="n">objective</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">_objective_cslogit</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">)</span>  <span class="c1"># type: ignore[assignment]</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">_objective_cslogit</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Expected model to be one of &#39;xgboost&#39;, &#39;lightgbm&#39;, &#39;catboost&#39; or &#39;cslogit&#39;, got </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> instead.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">objective</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_objective_cslogit</span><span class="p">(</span>
+    <span class="n">features</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">features</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">y_true</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">average_expected_cost</span> <span class="o">=</span> <span class="n">expected_cost_loss</span><span class="p">(</span>
+        <span class="n">y_true</span><span class="p">,</span>
+        <span class="n">y_pred</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+        <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+        <span class="n">features</span> <span class="o">*</span> <span class="n">y_pred</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_true</span> <span class="o">*</span> <span class="p">(</span><span class="n">tp_cost</span> <span class="o">-</span> <span class="n">fn_cost</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">-</span> <span class="n">tn_cost</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">average_expected_cost</span><span class="p">,</span> <span class="n">gradient</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_objective_boost</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create an objective function for the AEC measure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : np.ndarray</span>
+<span class="sd">        Ground truth labels (0 or 1).</span>
+<span class="sd">    y_score : np.ndarray</span>
+<span class="sd">        Predicted scores.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    gradient  : np.ndarray</span>
+<span class="sd">        Gradient of the objective function.</span>
+
+<span class="sd">    hessian : np.ndarray</span>
+<span class="sd">        Hessian of the objective function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y_proba</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">y_score</span><span class="p">)</span>
+    <span class="n">cost</span> <span class="o">=</span> <span class="n">y_true</span> <span class="o">*</span> <span class="p">(</span><span class="n">tp_cost</span> <span class="o">-</span> <span class="n">fn_cost</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">-</span> <span class="n">tn_cost</span><span class="p">)</span>
+    <span class="n">gradient</span> <span class="o">=</span> <span class="n">y_proba</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_proba</span><span class="p">)</span> <span class="o">*</span> <span class="n">cost</span>
+    <span class="n">hessian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">y_proba</span><span class="p">)</span> <span class="o">*</span> <span class="n">gradient</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gradient</span><span class="p">,</span> <span class="n">hessian</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AECObjective</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;AEC objective for catboost.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span> <span class="o">=</span> <span class="n">tp_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span> <span class="o">=</span> <span class="n">tn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span> <span class="o">=</span> <span class="n">fn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span> <span class="o">=</span> <span class="n">fp_cost</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_ders_range</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">predictions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">targets</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute first and second derivative of the loss function with respect to the predicted value for each object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        predictions : indexed container of floats</span>
+<span class="sd">            Current predictions for each object.</span>
+
+<span class="sd">        targets : indexed container of floats</span>
+<span class="sd">            Target values you provided with the dataset.</span>
+
+<span class="sd">        weights : float, optional (default=None)</span>
+<span class="sd">            Instance weight.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            der1 : list-like object of float</span>
+<span class="sd">            der2 : list-like object of float</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="c1"># Use weights as a proxy to index the costs</span>
+        <span class="n">tp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span>
+        <span class="n">tn_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span>
+        <span class="n">fn_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span>
+        <span class="n">fp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span>
+
+        <span class="n">y_proba</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="n">targets</span> <span class="o">*</span> <span class="p">(</span><span class="n">tp_cost</span> <span class="o">-</span> <span class="n">fn_cost</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">targets</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">fp_cost</span> <span class="o">-</span> <span class="n">tn_cost</span><span class="p">)</span>
+        <span class="n">gradient</span> <span class="o">=</span> <span class="n">y_proba</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y_proba</span><span class="p">)</span> <span class="o">*</span> <span class="n">cost</span>
+        <span class="n">hessian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">y_proba</span><span class="p">)</span> <span class="o">*</span> <span class="n">gradient</span><span class="p">)</span>
+        <span class="c1"># convert from two arrays to one list of tuples</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">-</span><span class="n">gradient</span><span class="p">,</span> <span class="o">-</span><span class="n">hessian</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AECMetric</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;AEC metric for catboost.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span> <span class="o">=</span> <span class="n">tp_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span> <span class="o">=</span> <span class="n">tn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span> <span class="o">=</span> <span class="n">fn_cost</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span> <span class="o">=</span> <span class="n">fp_cost</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_max_optimal</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return whether great values of metric are better.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">predictions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">targets</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate metric value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        approxes : list of indexed containers (containers with only __len__ and __getitem__ defined) of float</span>
+<span class="sd">            Vectors of approx labels.</span>
+
+<span class="sd">        targets : one dimensional indexed container of float</span>
+<span class="sd">            Vectors of true labels.</span>
+
+<span class="sd">        weights : one dimensional indexed container of float, optional (default=None)</span>
+<span class="sd">            Weight for each instance.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            weighted error : float</span>
+<span class="sd">            total weight : float</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="c1"># Use weights as a proxy to index the costs</span>
+        <span class="n">tp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_cost</span>
+        <span class="n">tn_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tn_cost</span>
+        <span class="n">fn_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_cost</span>
+        <span class="n">fp_cost</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">[</span><span class="n">weights</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">fp_cost</span>
+
+        <span class="n">y_proba</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">expected_cost_loss</span><span class="p">(</span>
+            <span class="n">targets</span><span class="p">,</span>
+            <span class="n">y_proba</span><span class="p">,</span>
+            <span class="n">tp_cost</span><span class="o">=</span><span class="n">tp_cost</span><span class="p">,</span>
+            <span class="n">tn_cost</span><span class="o">=</span><span class="n">tn_cost</span><span class="p">,</span>
+            <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">,</span>
+            <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span>
+            <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">check_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span> <span class="mi">1</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_final_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return final value of metric based on error and weight.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        error : float</span>
+<span class="sd">            Sum of errors in all instances.</span>
+
+<span class="sd">        weight : float</span>
+<span class="sd">            Sum of weights of all instances.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        metric value : float</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">error</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

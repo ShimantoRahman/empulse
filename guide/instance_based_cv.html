@@ -1,0 +1,456 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>4. Cross-Validation with Instance-dependent Costs — Empulse 0.10.4 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../_static/documentation_options.js?v=7e173fe4"></script>
+<script src="../_static/doctools.js?v=9bcbadda"></script>
+<script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../_static/copybutton.js?v=f281be69"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/instance_based_cv';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../_static/favicon.ico" rel="icon"/>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="datasets_guide.html" rel="next" title="5. Datasets"/>
+<link href="preprocessing/cost_sampling.html" rel="prev" title="3.2. Cost-Proportionate Sampling"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="metrics_guide.html">1. Metrics</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="metrics/choosing_metric.html">1.1. Choosing the right metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics/user_defined_value_metric.html">1.2. Define your own cost-sensitive or value metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics/metric_class_in_model.html">1.3. Use your custom metric inside a model</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="models_guide.html">2. Cost-sensitive and Value-driven models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="models/cslogit.html">2.1. Cost-Sensitive Logistic Regression (CSLogit)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/csboost.html">2.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/cost_functions.html">2.3. Boosting Algorithms Custom Cost Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/robustcs.html">2.4. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models/proflogit.html">2.5. Profit-Driven Logistic Regression (ProfLogit)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="preprocessing_guide.html">3. Model-Independent Preprocessing</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="preprocessing/bias_mitigation.html">3.1. Bias Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preprocessing/cost_sampling.html">3.2. Cost-Proportionate Sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">4. Cross-Validation with Instance-dependent Costs</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="datasets_guide.html">5. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="datasets/bank_telemarketing.html">5.1. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets/churn_tv_subscriptions.html">5.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets/credit_scoring_pakdd.html">5.3. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets/give_me_some_credit.html">5.4. 2011 Kaggle competition Give Me Some Credit</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../guide.html">User Guide</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">4. </span>Cross-Validation with Instance-dependent Costs</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="cross-validation-with-instance-dependent-costs">
+<span id="instance-based-cv"></span><h1><span class="section-number">4. </span>Cross-Validation with Instance-dependent Costs<a class="headerlink" href="#cross-validation-with-instance-dependent-costs" title="Link to this heading">#</a></h1>
+<p>Cost-sensitive, models, samplers and metrics depend on instance-dependent costs.
+In a simple train-validation-test split scenario,
+using instance-dependent costs is straightforward,
+since they can just be passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code> or <code class="docutils literal notranslate"><span class="pre">score</span></code> methods.
+However, when performing cross-validation, the costs for each fold change,
+which requires special handling and can be done through metadata routing.</p>
+<p>As of scikit-learn 1.4.0,
+some cross-validation methods support
+<a class="reference external" href="https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_metadata_routing.html">metadata routing</a>.
+This feature allows instance-dependent costs to be passed to estimators, samplers, and scorers,
+and these costs are split accordingly for each fold.
+For a list of cross-validation methods that support metadata routing,
+refer to <a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models">this link</a>.
+Please note that metadata routing is an experimental feature and needs to be enabled manually.</p>
+<section id="enabling-metadata-routing">
+<h2><span class="section-number">4.1. </span>Enabling Metadata Routing<a class="headerlink" href="#enabling-metadata-routing" title="Link to this heading">#</a></h2>
+<p>To enable metadata routing in scikit-learn, use the following code snippet:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively, you can also use the context manager to not enable metadata routing globally:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a>
+
+<span class="k">with</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="c1"># code that uses metadata routing</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</section>
+<section id="what-is-metadata-routing">
+<h2><span class="section-number">4.2. </span>What is Metadata Routing<a class="headerlink" href="#what-is-metadata-routing" title="Link to this heading">#</a></h2>
+<p>A full explanation of how metadata routing works can be found in sklearn’s
+<a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html">User Guide</a>.</p>
+<p>But for a brief summary to be able to use the tools in Empulse,
+all methods on an estimator like <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code>, <code class="docutils literal notranslate"><span class="pre">score</span></code> can request metadata.
+Metadata routers like <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="(in scikit-learn v1.7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">cross_val_score</span></code></a> or
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GridSearchCV</span></code></a> can pass metadata to the metadata requesters.
+A metadata requester can request metadata through calling <code class="docutils literal notranslate"><span class="pre">set_***_request</span></code> methods.</p>
+<p>So for a cost-sensitive model can request the <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> metadata to its <code class="docutils literal notranslate"><span class="pre">fit</span></code> method like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.cost_sensitive.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a>
+
+<span class="n">cslogit</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.cost_sensitive.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a><span class="p">()</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A sampler can request the <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> metadata to its <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code> method like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/samplers.html#module-empulse.samplers" title="empulse.samplers"><span class="nn">empulse.samplers</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.cost_sampler.CostSensitiveSampler"><span class="n">CostSensitiveSampler</span></a>
+
+<span class="n">sampler</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.cost_sampler.CostSensitiveSampler"><span class="n">CostSensitiveSampler</span></a><span class="p">()</span><span class="o">.</span><span class="n">set_fit_resample_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When using a sampler inside a pipeline, it should be an imbalanced-learn
+<a class="reference external" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="(in imbalanced-learn v0.14.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>.
+Otherwise the parameters will not be passed to the sampler.</p>
+</div>
+<p>A scorer can request the <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> metadata to its <code class="docutils literal notranslate"><span class="pre">score</span></code> method like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><span class="n">expected_savings_score</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><span class="n">expected_savings_score</span></a><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then, when using <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="(in scikit-learn v1.7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">cross_val_score</span></code></a> or
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GridSearchCV</span></code></a>, you can pass the metadata to the method like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">()</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html#numpy.random.rand" title="numpy.random.rand"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span></a><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># instance-dependent costs</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a><span class="p">(</span><span class="n">cslogit</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"fp_cost"</span><span class="p">:</span> <span class="n">fp_cost</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Now the <cite>fp_cost</cite> metadata will be passed to the <cite>fit</cite> method of the <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>
+and the <cite>score</cite> method of the <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a> scorer.</p>
+</section>
+<section id="gridsearch-example">
+<h2><span class="section-number">4.3. </span>Gridsearch Example<a class="headerlink" href="#gridsearch-example" title="Link to this heading">#</a></h2>
+<p>In this example we want to train a cost-sensitive logistic regression model.
+We will find the best hyperparameters using a grid search optimizing the expected cost loss.
+The model and scorer are set up to request the instance-dependent costs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">StratifiedKFold</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.preprocessing.html#module-sklearn.preprocessing" title="sklearn.preprocessing"><span class="nn">sklearn.preprocessing</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.pipeline.html#module-sklearn.pipeline" title="sklearn.pipeline"><span class="nn">sklearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.cost_sensitive.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">()</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html#numpy.random.rand" title="numpy.random.rand"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span></a><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html#numpy.random.rand" title="numpy.random.rand"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span></a><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipe</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([</span>
+    <span class="p">(</span><span class="s1">'scaler'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a><span class="p">()),</span>
+    <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.cost_sensitive.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a><span class="p">()</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="p">])</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">cv</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">StratifiedKFold</span></a><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'model__C'</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]}</span>
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">grid_search</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipe</span></a><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">cv</span></a><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">)</span>
+<span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="n">fn_cost</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="preprocessing/cost_sampling.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">3.2. </span>Cost-Proportionate Sampling</p>
+</div>
+</a>
+<a class="right-next" href="datasets_guide.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">5. </span>Datasets</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#enabling-metadata-routing">4.1. Enabling Metadata Routing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-metadata-routing">4.2. What is Metadata Routing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gridsearch-example">4.3. Gridsearch Example</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

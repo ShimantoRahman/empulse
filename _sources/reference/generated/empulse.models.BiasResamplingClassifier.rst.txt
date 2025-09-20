@@ -1,0 +1,9 @@
+﻿BiasResamplingClassifier
+========================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: BiasResamplingClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

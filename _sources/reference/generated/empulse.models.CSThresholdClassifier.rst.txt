@@ -1,0 +1,9 @@
+﻿CSThresholdClassifier
+=====================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSThresholdClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

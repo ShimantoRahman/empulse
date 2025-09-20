@@ -1,0 +1,606 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>1.1. Choosing the right metric — Empulse 0.10.4 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=7e173fe4"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/metrics/choosing_metric';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="user_defined_value_metric.html" rel="next" title="1.2. Define your own cost-sensitive or value metric"/>
+<link href="../metrics_guide.html" rel="prev" title="1. Metrics"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../metrics_guide.html">1. Metrics</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">1.1. Choosing the right metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_defined_value_metric.html">1.2. Define your own cost-sensitive or value metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metric_class_in_model.html">1.3. Use your custom metric inside a model</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../models_guide.html">2. Cost-sensitive and Value-driven models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/cslogit.html">2.1. Cost-Sensitive Logistic Regression (CSLogit)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/csboost.html">2.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/cost_functions.html">2.3. Boosting Algorithms Custom Cost Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/robustcs.html">2.4. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/proflogit.html">2.5. Profit-Driven Logistic Regression (ProfLogit)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../preprocessing_guide.html">3. Model-Independent Preprocessing</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/bias_mitigation.html">3.1. Bias Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/cost_sampling.html">3.2. Cost-Proportionate Sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../instance_based_cv.html">4. Cross-Validation with Instance-dependent Costs</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets_guide.html">5. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">5.1. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">5.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">5.3. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">5.4. 2011 Kaggle competition Give Me Some Credit</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../metrics_guide.html"><span class="section-number">1. </span>Metrics</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">1.1. </span>Choosing the right metric</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="choosing-the-right-metric">
+<h1><span class="section-number">1.1. </span>Choosing the right metric<a class="headerlink" href="#choosing-the-right-metric" title="Link to this heading">#</a></h1>
+<p>Empulse provides a variety of metrics to evaluate the performance of a model.
+Choosing the right metric is crucial to gauge the performance of your model in the real world.
+Before choosing a metric, it is important to understand the problem you are trying to solve and the business context.
+Value and cost-sensitive metrics are particularly useful
+when the costs and benefits of different outcomes are not equal.
+To quantify the consequences of different outcomes,
+both streams of literature use a cost matrix (or cost-benefit matrix).</p>
+<section id="cost-matrix">
+<h2><span class="section-number">1.1.1. </span>Cost Matrix<a class="headerlink" href="#cost-matrix" title="Link to this heading">#</a></h2>
+<p>The cost matrix is a square matrix where the rows represent the predicted class and the columns represent the true class.
+Each element of the matrix represents the cost associated with the corresponding pair of predicted and true classes.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(1|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(1|0)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(0|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(0|0)\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>All value-driven and cost-sensitive metrics are derived from the cost matrix.
+Empulse represents these costs as <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code>, and <code class="docutils literal notranslate"><span class="pre">tn_cost</span></code>,
+for true positive, false positive, false negative, and true negative costs, respectively.</p>
+<p>So if you want to indicate that making a false positive prediction is 5 times more costly than
+making a false negative prediction, you can set the costs as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tp_cost</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">tn_cost</span> <span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>An important side note is that in value-driven metrics, the cost of correctly classifying is seen as a benefit.
+Therefore, the cost matrix is often referred to as a cost-benefit matrix in this context.
+Concretely, this just mean that a value-driven cost-benefit matrix
+just takes the negative of the true positive and true negative costs.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(b_0 = -C(1|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(c_0 = C(1|0)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(c_1 = -C(0|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(b_1 = C(0|0)\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>For value-driven metrics,
+Empulse represents the cost and benefits as <code class="docutils literal notranslate"><span class="pre">tp_benefit</span></code>, <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code>, and <code class="docutils literal notranslate"><span class="pre">tn_benefit</span></code>,
+for true positive, false positive, false negative, and true negative benefits, respectively.</p>
+<p>So if you want to indicate that making a true positive prediction is 5 times more beneficial than
+making a true negative prediction, you can set the costs as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tp_benefit</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">tn_benefit</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="example-cost-benefit-matrix">
+<h2><span class="section-number">1.1.2. </span>Example Cost-Benefit Matrix<a class="headerlink" href="#example-cost-benefit-matrix" title="Link to this heading">#</a></h2>
+<p>The best way to understand the cost matrix is through an example.
+Consider a binary classification problem
+where the goal is to predict whether a customer is going to churn in the next year.</p>
+<p>We presumes a situation where predicted churners are contacted and offered an incentive to remain customers.
+Only a fraction of churners accepts the incentive offer (the accept rate).
+If a churner accepts the incentive, the company wins back the customer and receives the customer’s lifetime value.
+If a loyal customer is offered an incentive, they will happily accept it, since they were going to stay anyway.
+In both situations, the company incurs a cost for contacting the customer and the cost of the incentive.
+If a churner declines the incentive, the company still incurs the cost of contacting the customer.</p>
+<a class="reference internal image-reference" href="../../_images/churn_cost_benefit.png"><img alt="Cost-Benefit Matrix for Customer Churn" class="align-center" src="../../_images/churn_cost_benefit.png" style="width: 720px;"/>
+</a>
+<p><span class="raw-html"><br/></span></p>
+<p>The cost-benefit matrix for this example is shown in the figure above.</p>
+<ul class="simple">
+<li><p>accepts rate: <span class="math notranslate nohighlight">\(\gamma\)</span></p></li>
+<li><p>customer lifetime value: <span class="math notranslate nohighlight">\(CLV\)</span></p></li>
+<li><p>cost of contacting the customer: <span class="math notranslate nohighlight">\(c\)</span></p></li>
+<li><p>cost of the incentive: <span class="math notranslate nohighlight">\(d\)</span></p></li>
+</ul>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-C(1|1) = b_0 = \gamma \cdot (CLV - d - c) - (1 - \gamma) \cdot c\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(1|0) = c_0 = -(d + c)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(0|1) = c_1 = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-C(0|0) = b_1 = 0\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Empulse already has metrics implemented that can handle this cost-benefit matrix.
+But you can easily implement your own cost-benefit matrix by passing the costs and benefits to the metrics and models.</p>
+</section>
+<section id="instance-dependent-costs">
+<h2><span class="section-number">1.1.3. </span>Instance-dependent Costs<a class="headerlink" href="#instance-dependent-costs" title="Link to this heading">#</a></h2>
+<p>So far all costs have been constant.
+However, in many real-world applications, the cost of classification can vary between instances.
+For instance, in the context of customer churn,
+the cost of misclassifying a highly valuable churner is higher than the cost of misclassifying a less valuable churner.
+To account for this, we can introduce instance-dependent costs.
+We can say that we take the individual customer’s lifetime value into account.
+The instance-dependent cost matrix is shown below.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-C_i(1|1) = b_{0,i} = \gamma \cdot (CLV_i - d - c) - (1 - \gamma) \cdot c\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C_i(1|0) = c_{0,i} = -(d + c)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C_i(0|1) = c_{1,i} = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(-C_i(0|0) = b_{1,i} = 0\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>In Empulse instance-dependent costs are represented as arrays.
+These arrays are passed to the metrics and models as <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code>, and <code class="docutils literal notranslate"><span class="pre">tn_cost</span></code>.
+So note that if you pass a single value to these parameters, Empulse will interpret it as a class-dependent cost.</p>
+<p><strong>class-dependent cost</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tp_cost</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">tn_cost</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p><strong>instance-dependent cost</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tp_cost</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+<span class="n">tn_cost</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="converting-the-cost-matrix-to-metrics">
+<h2><span class="section-number">1.1.4. </span>Converting the cost-matrix to metrics<a class="headerlink" href="#converting-the-cost-matrix-to-metrics" title="Link to this heading">#</a></h2>
+<p>As mentioned earlier, Empulse provides a variety of metrics to evaluate the performance of a model using the cost matrix.
+The section below dive into the details of the metrics and how they can be used to evaluate the performance of a model.</p>
+<p>For a brief summary of what each metric does and why it is useful, see the table below.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Metric</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss" title="empulse.metrics.cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">cost_loss</span></code></a></p></td>
+<td><p>Measures how much a classifier would cost if it were to be used in the real world.
+It takes the instance-dependent costs into account.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a></p></td>
+<td><p>Similar to the cost loss, but takes the predicted class probabilities into account.
+So it will punish classifiers if they are not confident in their predictions.
+It takes the instance-dependent costs into account.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a></p></td>
+<td><p>Similar to the expected cost loss, but uses the logarithm of the predicted class probabilities.
+This will punish classifiers if they are not confident in their predictions and
+will punish them more if they are very confident in the wrong class.
+This can be seen as a generalization of the weighted cross-entropy loss.
+It takes the instance-dependent costs into account.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a></p></td>
+<td><p>Measures how much a classifier saved over a baseline model (in terms of the cost loss).
+1 is the perfect model, 0 is as good as the baseline model, and negative values are worse than the baseline model.
+It takes the instance-dependent costs into account.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a></p></td>
+<td><p>Similar to the savings score, but takes the predicted class probabilities into account.
+So it will punish classifiers if they are not confident in their predictions.
+It takes the instance-dependent costs into account.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.max_profit_score.html#empulse.metrics.max_profit_score" title="empulse.metrics.max_profit_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">max_profit_score</span></code></a></p></td>
+<td><p>Measures how much profit a classifier would make if it were to be used at the optimal decision threshold.
+The optimal decision threshold maximizes the profit and is calculated by the metric.
+It does <strong>NOT</strong> take the instance-dependent costs into account, rather it evaluates global classifier performance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p></td>
+<td><p>Allows you to define your own cost-benefit or cost matrix and use it as a metric.
+You can define a maximum profit, expected cost and savings metric.
+Read more in <a class="reference internal" href="user_defined_value_metric.html#user-defined-value-metric"><span class="std std-ref">Define your own cost-sensitive or value metric</span></a>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="expected-cost-loss">
+<h3><span class="section-number">1.1.4.1. </span>(Expected) Cost Loss<a class="headerlink" href="#expected-cost-loss" title="Link to this heading">#</a></h3>
+<p>The cost loss measures what the cost of a classifier would be if it were to be used in the real world.
+Therefore, you want to pick a classifier that minimizes the cost loss.</p>
+<p>The cost loss of a classifier with parameters <span class="math notranslate nohighlight">\(\theta\)</span>
+is the sum of the costs associated with the predicted classes.
+It is calculated as follows:</p>
+<div class="math notranslate nohighlight">
+\[\text{Cost}(X, \theta) = \sum_{i=1}^{n} \text{C}_i(\hat{y}_i(X_i, \theta)|y_i)\]</div>
+<p>where <span class="math notranslate nohighlight">\(\hat{y}_i\)</span>, <span class="math notranslate nohighlight">\(y_i\)</span>, <span class="math notranslate nohighlight">\(X_i\)</span> are the predicted class, true class,
+and feature vector of the <span class="math notranslate nohighlight">\(i\)</span>-th instance, respectively.</p>
+<p>The expected cost loss is the sum of the costs weighted with the predicted class probabilities.</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}(\text{Cost}(X, \theta)) = \sum_{i=1}^n \big[ \text{P}(y_i = 1 | X_i, \theta) \cdot \text{C}_i(1|y_i) + \text{P}(y_i = 0 | X_i, \theta) \cdot \text{C}_i(0|y_i) \big]\]</div>
+<p>where <span class="math notranslate nohighlight">\(\text{P}(y_i| X_i, \theta)\)</span> is the predicted class probability of the <span class="math notranslate nohighlight">\(i\)</span>-th instance.</p>
+</section>
+<section id="expected-savings-score">
+<h3><span class="section-number">1.1.4.2. </span>(Expected) Savings Score<a class="headerlink" href="#expected-savings-score" title="Link to this heading">#</a></h3>
+<p>The cost savings of a classifiers is the cost the classifier saved over a baseline classification model.
+By default, the baseline model is the naive model (predicting all ones or zeros whichever is better).
+With 1 being the perfect model, 0 being not better than the baseline model.</p>
+<div class="math notranslate nohighlight">
+\[\text{Savings}(X, \theta) = 1 - \frac{\text{Cost}(X, \theta)}{\text{Cost}(X,\theta^\prime)}\]</div>
+<p>with <span class="math notranslate nohighlight">\(\theta^\prime\)</span> being the parameters of the baseline model.
+If the baseline model is the naive model, the cost savings can be calculated as follows:</p>
+<div class="math notranslate nohighlight">
+\[\text{Cost}_{\text{naive}}(X) = \min\left(\sum_{i=1}^n \text{C}_i(0 | y_i), \sum_{i=1}^n \text{C}_i(1 | y_i)\right).\]</div>
+<p>The expected savings of a classifier is the expected cost the classifier saved over a baseline classification model.</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}(\text{Savings}(X, \theta)) = 1 - \frac{\mathbb{E}(\text{Cost}(X, \theta))}{\mathbb{E}(\text{Cost}(X, \theta^\prime))}\]</div>
+<p>Since the naive model only predicts 1s or 0s, the expected cost of the naive model is the same as the cost of the naive model.</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}(\text{Cost}_{\text{naive}}(X)) = \text{Cost}_{\text{naive}}(X)\]</div>
+</section>
+<section id="expected-maximum-profit-score">
+<h3><span class="section-number">1.1.4.3. </span>(Expected) Maximum Profit Score<a class="headerlink" href="#expected-maximum-profit-score" title="Link to this heading">#</a></h3>
+<p>The maximum profit score of a classifier measures how much profit a classifier would make
+if it were to be used at the optimal decision threshold.
+To maximize the profit, let’s define the profit as follows:</p>
+<div class="math notranslate nohighlight">
+\[\text{Profit}(t) = b_0 \pi_0 F_0(t) + b_1 \pi_1 (1 - F_1(t)) - c_0 \pi_0 (1 - F_0(t)) - c_1 F_1(t)\]</div>
+<p>where <span class="math notranslate nohighlight">\(F_0(t)\)</span> and <span class="math notranslate nohighlight">\(F_1(t)\)</span> are the false positive and false negative rates at threshold <span class="math notranslate nohighlight">\(t\)</span>,
+and <span class="math notranslate nohighlight">\(\pi_0\)</span> and <span class="math notranslate nohighlight">\(\pi_1\)</span> are the prior probabilities of the classes.
+Note that in value-driven literature, the positive class is denoted as 0 and the negative class as 1
+(hence <span class="math notranslate nohighlight">\(\pi_0\)</span> is the prior probability of the positive class).</p>
+<p>The optimal decision threshold <span class="math notranslate nohighlight">\(T\)</span> is the threshold that maximizes the profit.
+The maximum profit score is the profit at the optimal decision threshold.</p>
+<div class="math notranslate nohighlight">
+\[\text{MP} = \max_{\forall t} \text{Profit}(t) = \text{Profit}(T)\]</div>
+<p>In the the maximum profit score, it is assumed that the costs and benefits are deterministic.
+If you assume that the costs and benefits are stochastic, you can use the expected maximum profit score.</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}(\text{MP}) = \int_{b_0} \int_{c_0} \int_{b_1} \int_{c_1} \text{Profit}(T;b_0, c_0, b_1, c_1) \cdot w(b_0, c_0, b_1, c_1) \, db_0 dc_0 db_1 dc_1\]</div>
+<p>where <span class="math notranslate nohighlight">\(w(b_0, c_0, b_1, c_1)\)</span> is the join probability density function of the cost-benefit distribution.
+In practice usually only one variable is presumed to be stochastic.</p>
+</section>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="../metrics_guide.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">1. </span>Metrics</p>
+</div>
+</a>
+<a class="right-next" href="user_defined_value_metric.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">1.2. </span>Define your own cost-sensitive or value metric</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-matrix">1.1.1. Cost Matrix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#example-cost-benefit-matrix">1.1.2. Example Cost-Benefit Matrix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instance-dependent-costs">1.1.3. Instance-dependent Costs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#converting-the-cost-matrix-to-metrics">1.1.4. Converting the cost-matrix to metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-cost-loss">1.1.4.1. (Expected) Cost Loss</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-savings-score">1.1.4.2. (Expected) Savings Score</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-maximum-profit-score">1.1.4.3. (Expected) Maximum Profit Score</a></li>
+</ul>
+</li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

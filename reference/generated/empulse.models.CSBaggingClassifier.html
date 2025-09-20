@@ -1,0 +1,1141 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CSBaggingClassifier &#8212; Empulse 0.10.4 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=7e173fe4"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/generated/empulse.models.CSBaggingClassifier';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="CSBoostClassifier" href="empulse.models.CSBoostClassifier.html" />
+    <link rel="prev" title="B2BoostClassifier" href="empulse.models.B2BoostClassifier.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets.html">empulse.datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.Dataset.html">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_churn_tv_subscriptions.html">load_churn_tv_subscriptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_upsell_bank_telemarketing.html">load_upsell_bank_telemarketing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_give_me_some_credit.html">load_give_me_some_credit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.datasets.load_credit_scoring_pakdd.html">load_credit_scoring_pakdd</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../metrics.html">empulse.metrics</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Metric.html">Metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.MetricStrategy.html">MetricStrategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.MaxProfit.html">MaxProfit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.CostMatrix.html">CostMatrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Cost.html">Cost</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.Savings.html">Savings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.max_profit.html">max_profit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.max_profit_score.html">max_profit_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.lift_score.html">lift_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.cost_loss.html">cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss.html">expected_cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_log_cost_loss.html">expected_log_cost_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_aec.html">make_objective_aec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.savings_score.html">savings_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_savings_score.html">expected_savings_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empa.html">empa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empa_score.html">empa_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpa.html">mpa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpa_score.html">mpa_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss_acquisition.html">expected_cost_loss_acquisition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_acquisition.html">make_objective_acquisition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empc.html">empc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empc_score.html">empc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpc.html">mpc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpc_score.html">mpc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empb.html">empb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empb_score.html">empb_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.auepc_score.html">auepc_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.expected_cost_loss_churn.html">expected_cost_loss_churn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.make_objective_churn.html">make_objective_churn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empcs.html">empcs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.empcs_score.html">empcs_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpcs.html">mpcs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.mpcs_score.html">mpcs_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.metrics.classification_threshold.html">classification_threshold</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../models.html">empulse.models</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.B2BoostClassifier.html">B2BoostClassifier</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">CSBaggingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSBoostClassifier.html">CSBoostClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSForestClassifier.html">CSForestClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSLogitClassifier.html">CSLogitClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSThresholdClassifier.html">CSThresholdClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.CSTreeClassifier.html">CSTreeClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.RobustCSClassifier.html">RobustCSClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.ProfLogitClassifier.html">ProfLogitClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasRelabelingClassifier.html">BiasRelabelingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasResamplingClassifier.html">BiasResamplingClassifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.models.BiasReweighingClassifier.html">BiasReweighingClassifier</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../optimizers.html">empulse.optimizers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.optimizers.Generation.html">Generation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../samplers.html">empulse.samplers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.BiasRelabler.html">BiasRelabler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.BiasResampler.html">BiasResampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="empulse.samplers.CostSensitiveSampler.html">CostSensitiveSampler</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../api.html" class="nav-link">API Reference</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../models.html" class="nav-link">empulse.models</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">CSBaggingClassifier</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="csbaggingclassifier">
+<h1>CSBaggingClassifier<a class="headerlink" href="#csbaggingclassifier" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">empulse.models.</span></span><span class="sig-name descname"><span class="pre">CSBaggingClassifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_estimators</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combination</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'majority_voting'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oob_score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warm_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier" title="Link to this definition">#</a></dt>
+<dd><p>Cost-sensitive Bagging classifier.</p>
+<p>A Bagging classifier is an ensemble meta-estimator that fits base
+classifiers each on random subsets of the original dataset and then
+aggregates their individual predictions (either by voting or by averaging)
+to form a final prediction. Such a meta-estimator can typically be used as
+a way to reduce the variance of a black-box estimator (e.g., a decision
+tree), by introducing randomization into its construction procedure and
+then making an ensemble out of it.</p>
+<p>This algorithm encompasses several works from the literature. When random
+subsets of the dataset are drawn as random subsets of the samples, then
+this algorithm is known as Pasting <a class="reference internal" href="#rcde6ba4f08c9-1" id="id1">[1]</a>. If samples are drawn with
+replacement, then the method is known as Bagging <a class="reference internal" href="#rcde6ba4f08c9-2" id="id2">[2]</a>. When random subsets
+of the dataset are drawn as random subsets of the features, then the method
+is known as Random Subspaces <a class="reference internal" href="#rcde6ba4f08c9-3" id="id3">[3]</a>. Finally, when base estimators are built
+on subsets of both samples and features, then the method is known as
+Random Patches <a class="reference internal" href="#rcde6ba4f08c9-4" id="id4">[4]</a>.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>estimator</strong><span class="classifier">object, default=None</span></dt><dd><p>The base estimator to fit on random subsets of the dataset.
+If None, then the base estimator is a <a class="reference internal" href="empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>.</p>
+</dd>
+<dt><strong>n_estimators</strong><span class="classifier">int, default=10</span></dt><dd><p>The number of base estimators in the ensemble.</p>
+</dd>
+<dt><strong>tp_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=0.0</span></dt><dd><p>Cost of true positives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all true positives have the same cost.
+If array-like, then it is the cost of each true positive classification.
+Is overwritten if another <cite>tp_cost</cite> is passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is not recommended to pass instance-dependent costs to the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method.
+Instead, pass them to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+</div>
+</dd>
+<dt><strong>fp_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=0.0</span></dt><dd><p>Cost of false positives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all false positives have the same cost.
+If array-like, then it is the cost of each false positive classification.
+Is overwritten if another <cite>fp_cost</cite> is passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is not recommended to pass instance-dependent costs to the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method.
+Instead, pass them to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+</div>
+</dd>
+<dt><strong>tn_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=0.0</span></dt><dd><p>Cost of true negatives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all true negatives have the same cost.
+If array-like, then it is the cost of each true negative classification.
+Is overwritten if another <cite>tn_cost</cite> is passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is not recommended to pass instance-dependent costs to the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method.
+Instead, pass them to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+</div>
+</dd>
+<dt><strong>fn_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=0.0</span></dt><dd><p>Cost of false negatives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all false negatives have the same cost.
+If array-like, then it is the cost of each false negative classification.
+Is overwritten if another <cite>fn_cost</cite> is passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is not recommended to pass instance-dependent costs to the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method.
+Instead, pass them to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+</div>
+</dd>
+<dt><strong>loss</strong><span class="classifier">Metric, default=None</span></dt><dd><p>The loss function to use in order to evaluate the costs.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then the costs provided to the constructor or to the <code class="docutils literal notranslate"><span class="pre">fit</span></code>
+method are used directly.
+If a :class:<code class="docutils literal notranslate"><span class="pre">~empulse.metrics.Metric</span></code> is provided, then the costs are computed using the
+metric, and any costs provided to the
+constructor or to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method are ignored.</p>
+</dd>
+<dt><strong>max_samples</strong><span class="classifier">int or float, default=1.0</span></dt><dd><p>The number of samples to draw from X to train each base estimator (with
+replacement by default, see <code class="docutils literal notranslate"><span class="pre">bootstrap</span></code> for more details).</p>
+<ul class="simple">
+<li><p>If int, then draw <cite>max_samples</cite> samples.</p></li>
+<li><p>If float, then draw <cite>max_samples * X.shape[0]</cite> samples.</p></li>
+</ul>
+</dd>
+<dt><strong>max_features</strong><span class="classifier">int or float, default=1.0</span></dt><dd><p>The number of features to draw from X to train each base estimator (
+without replacement by default, see <code class="docutils literal notranslate"><span class="pre">bootstrap_features</span></code> for more
+details).</p>
+<ul class="simple">
+<li><p>If int, then draw <code class="docutils literal notranslate"><span class="pre">max_features</span></code> features.</p></li>
+<li><p>If float, then draw <code class="docutils literal notranslate"><span class="pre">max(1,</span> <span class="pre">int(max_features</span> <span class="pre">*</span> <span class="pre">n_features_in_))</span></code> features.</p></li>
+</ul>
+</dd>
+<dt><strong>bootstrap</strong><span class="classifier">bool, default=True</span></dt><dd><p>Whether samples are drawn with replacement. If False, sampling
+without replacement is performed.</p>
+</dd>
+<dt><strong>bootstrap_features</strong><span class="classifier">bool, default=False</span></dt><dd><p>Whether features are drawn with replacement.</p>
+</dd>
+<dt><strong>oob_score</strong><span class="classifier">bool, default=False</span></dt><dd><p>Whether to use out-of-bag samples to estimate
+the generalization error. Only available if bootstrap=True.</p>
+</dd>
+<dt><strong>warm_start</strong><span class="classifier">bool, default=False</span></dt><dd><p>When set to True, reuse the solution of the previous call to fit
+and add more estimators to the ensemble, otherwise, just fit
+a whole new ensemble. See <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-warm_start" title="(in scikit-learn v1.7)"><span class="xref std std-term">the Glossary</span></a>.</p>
+</dd>
+<dt><strong>n_jobs</strong><span class="classifier">int, default=None</span></dt><dd><p>The number of jobs to run in parallel for both <a class="reference internal" href="#empulse.models.CSBaggingClassifier.fit" title="empulse.models.CSBaggingClassifier.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit</span></code></a> and
+<a class="reference internal" href="#empulse.models.CSBaggingClassifier.predict" title="empulse.models.CSBaggingClassifier.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict</span></code></a>. <code class="docutils literal notranslate"><span class="pre">None</span></code> means 1 unless in a
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">joblib.parallel_backend</span></code> context. <code class="docutils literal notranslate"><span class="pre">-1</span></code> means using all
+processors. See <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-n_jobs" title="(in scikit-learn v1.7)"><span class="xref std std-term">Glossary</span></a> for more details.</p>
+</dd>
+<dt><strong>random_state</strong><span class="classifier">int, RandomState instance or None, default=None</span></dt><dd><p>Controls the random resampling of the original dataset
+(sample wise and feature wise).
+If the base estimator accepts a <cite>random_state</cite> attribute, a different
+seed is generated for each instance in the ensemble.
+Pass an int for reproducible output across multiple function calls.
+See <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-random_state" title="(in scikit-learn v1.7)"><span class="xref std std-term">Glossary</span></a>.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">int, default=0</span></dt><dd><p>Controls the verbosity when fitting and predicting.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Attributes<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>estimator_: estimator</strong></dt><dd><p>The base estimator from which the ensemble is grown.</p>
+</dd>
+<dt><strong>estimators_: list of estimators</strong></dt><dd><p>The collection of fitted base estimators.</p>
+</dd>
+<dt><strong>estimators_samples_: list of arrays</strong></dt><dd><p>The subset of drawn samples (i.e., the in-bag samples) for each base
+estimator.</p>
+</dd>
+<dt><strong>estimators_features_: list of arrays</strong></dt><dd><p>The subset of drawn features for each base estimator.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<div role="list" class="citation-list">
+<div class="citation" id="rcde6ba4f08c9-1" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>L. Breiman, “Pasting small votes for classification in large
+databases and on-line”, Machine Learning, 36(1), 85-103, 1999.</p>
+</div>
+<div class="citation" id="rcde6ba4f08c9-2" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>L. Breiman, “Bagging predictors”, Machine Learning, 24(2), 123-140,
+1996.</p>
+</div>
+<div class="citation" id="rcde6ba4f08c9-3" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>T. Ho, “The random subspace method for constructing decision
+forests”, Pattern Analysis and Machine Intelligence, 20(8), 832-844,
+1998.</p>
+</div>
+<div class="citation" id="rcde6ba4f08c9-4" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">4</a><span class="fn-bracket">]</span></span>
+<p>G. Louppe and P. Geurts, “Ensembles on Random Patches”, Machine
+Learning and Knowledge Discovery in Databases, 346-361, 2012.</p>
+</div>
+<div class="citation" id="rcde6ba4f08c9-5" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></span>
+<p>Correa Bahnsen, A., Aouada, D., &amp; Ottersten, B.
+<a class="reference external" href="http://arxiv.org/abs/1505.04637">“Ensemble of Example-Dependent Cost-Sensitive Decision Trees”</a>,
+2015, <a class="reference external" href="http://arxiv.org/abs/1505.04637">http://arxiv.org/abs/1505.04637</a>.</p>
+</div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.decision_function">
+<span class="sig-name descname"><span class="pre">decision_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier.decision_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier.decision_function" title="Link to this definition">#</a></dt>
+<dd><p>Average of the decision functions of the base classifiers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">{array-like, sparse matrix} of shape (n_samples, n_features)</span></dt><dd><p>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>score</strong><span class="classifier">ndarray of shape (n_samples, 1)</span></dt><dd><p>The decision function of the input samples. The columns correspond
+to the classes in sorted order, as they appear in the attribute
+<code class="docutils literal notranslate"><span class="pre">classes_</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.estimators_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">estimators_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.estimators_" title="Link to this definition">#</a></dt>
+<dd><p>The collection of fitted sub-estimators.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.estimators_features_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">estimators_features_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.estimators_features_" title="Link to this definition">#</a></dt>
+<dd><p>The subset of drawn features (i.e., the in-bag samples) for each base estimator.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.estimators_samples_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">estimators_samples_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.estimators_samples_" title="Link to this definition">#</a></dt>
+<dd><p>The subset of drawn samples (i.e., the in-bag samples) for each base estimator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Parameter.UNCHANGED</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Parameter.UNCHANGED</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Parameter.UNCHANGED</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Parameter.UNCHANGED</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">loss_params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier.fit" title="Link to this definition">#</a></dt>
+<dd><p>Build a cost-sensitive bagging classifier from the training set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">{array-like, sparse matrix} of shape (n_samples, n_features)</span></dt><dd><p>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</p>
+</dd>
+<dt><strong>y</strong><span class="classifier">array-like of shape (n_samples,)</span></dt><dd><p>Ground truth (correct) labels.</p>
+</dd>
+<dt><strong>tp_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=$UNCHANGED$</span></dt><dd><p>Cost of true positives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all true positives have the same cost.
+If array-like, then it is the cost of each true positive classification.</p>
+</dd>
+<dt><strong>fp_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=$UNCHANGED$</span></dt><dd><p>Cost of false positives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all false positives have the same cost.
+If array-like, then it is the cost of each false positive classification.</p>
+</dd>
+<dt><strong>tn_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=$UNCHANGED$</span></dt><dd><p>Cost of true negatives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all true negatives have the same cost.
+If array-like, then it is the cost of each true negative classification.</p>
+</dd>
+<dt><strong>fn_cost</strong><span class="classifier">float or array-like, shape=(n_samples,), default=$UNCHANGED$</span></dt><dd><p>Cost of false negatives. If <code class="docutils literal notranslate"><span class="pre">float</span></code>, then all false negatives have the same cost.
+If array-like, then it is the cost of each false negative classification.</p>
+</dd>
+<dt><strong>loss_params</strong><span class="classifier">dict</span></dt><dd><p>Additional keyword arguments to pass to the loss function if using a custom loss function.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>self</strong><span class="classifier">CSBaggingClassifier</span></dt><dd><p>Returns self.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.get_metadata_routing">
+<span class="sig-name descname"><span class="pre">get_metadata_routing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.get_metadata_routing" title="Link to this definition">#</a></dt>
+<dd><p>Get metadata routing of this object.</p>
+<p>Please check <a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing" title="(in scikit-learn v1.7)"><span class="xref std std-ref">User Guide</span></a> on how the routing
+mechanism works.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>routing</strong><span class="classifier">MetadataRequest</span></dt><dd><p>A <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.utils.metadata_routing.MetadataRequest.html#sklearn.utils.metadata_routing.MetadataRequest" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetadataRequest</span></code></a> encapsulating
+routing information.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.get_params">
+<span class="sig-name descname"><span class="pre">get_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.get_params" title="Link to this definition">#</a></dt>
+<dd><p>Get parameters for this estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>deep</strong><span class="classifier">bool, default=True</span></dt><dd><p>If True, will return the parameters for this estimator and
+contained subobjects that are estimators.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>params</strong><span class="classifier">dict</span></dt><dd><p>Parameter names mapped to their values.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.n_classes_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_classes_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.n_classes_" title="Link to this definition">#</a></dt>
+<dd><p>The number of classes seen during <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-fit" title="(in scikit-learn v1.7)"><span class="xref std std-term">fit</span></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.oob_decision_function_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">oob_decision_function_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.oob_decision_function_" title="Link to this definition">#</a></dt>
+<dd><p>Decision function computed with out-of-bag estimate on the training set.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.oob_score_">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">oob_score_</span></span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.oob_score_" title="Link to this definition">#</a></dt>
+<dd><p>Score of the training dataset obtained using an out-of-bag estimate.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier.predict" title="Link to this definition">#</a></dt>
+<dd><p>Predict class for X.</p>
+<p>The predicted class of an input sample is computed as the class with
+the highest mean predicted probability. If base estimators do not
+implement a <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> method, then it resorts to voting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">{array-like, sparse matrix} of shape (n_samples, n_features)</span></dt><dd><p>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>y</strong><span class="classifier">ndarray of shape (n_samples,)</span></dt><dd><p>The predicted classes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.predict_log_proba">
+<span class="sig-name descname"><span class="pre">predict_log_proba</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier.predict_log_proba"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier.predict_log_proba" title="Link to this definition">#</a></dt>
+<dd><p>Predict class log-probabilities for X.</p>
+<p>The predicted class log-probabilities of an input sample is computed as
+the log of the mean predicted class probabilities of the base
+estimators in the ensemble.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">{array-like, sparse matrix} of shape (n_samples, n_features)</span></dt><dd><p>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>p</strong><span class="classifier">ndarray of shape (n_samples, n_classes)</span></dt><dd><p>The class log-probabilities of the input samples. The order of the
+classes corresponds to that in the attribute <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-classes_" title="(in scikit-learn v1.7)"><span class="xref std std-term">classes_</span></a>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.predict_proba">
+<span class="sig-name descname"><span class="pre">predict_proba</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/empulse/models/cost_sensitive/csensemble.html#CSBaggingClassifier.predict_proba"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#empulse.models.CSBaggingClassifier.predict_proba" title="Link to this definition">#</a></dt>
+<dd><p>Predict class probabilities for X.</p>
+<p>The predicted class probabilities of an input sample is computed as
+the mean predicted class probabilities of the base estimators in the
+ensemble. If base estimators do not implement a <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>
+method, then it resorts to voting and the predicted class probabilities
+of an input sample represents the proportion of estimators predicting
+each class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">{array-like, sparse matrix} of shape (n_samples, n_features)</span></dt><dd><p>The training input samples. Sparse matrices are accepted only if
+they are supported by the base estimator.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>p</strong><span class="classifier">ndarray of shape (n_samples, n_classes)</span></dt><dd><p>The class probabilities of the input samples. The order of the
+classes corresponds to that in the attribute <a class="reference external" href="https://scikit-learn.org/stable/glossary.html#term-classes_" title="(in scikit-learn v1.7)"><span class="xref std std-term">classes_</span></a>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.score">
+<span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.score" title="Link to this definition">#</a></dt>
+<dd><p>Return the mean accuracy on the given test data and labels.</p>
+<p>In multi-label classification, this is the subset accuracy
+which is a harsh metric since you require for each sample that
+each label set be correctly predicted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>X</strong><span class="classifier">array-like of shape (n_samples, n_features)</span></dt><dd><p>Test samples.</p>
+</dd>
+<dt><strong>y</strong><span class="classifier">array-like of shape (n_samples,) or (n_samples, n_outputs)</span></dt><dd><p>True labels for <cite>X</cite>.</p>
+</dd>
+<dt><strong>sample_weight</strong><span class="classifier">array-like of shape (n_samples,), default=None</span></dt><dd><p>Sample weights.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>score</strong><span class="classifier">float</span></dt><dd><p>Mean accuracy of <code class="docutils literal notranslate"><span class="pre">self.predict(X)</span></code> w.r.t. <cite>y</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.set_fit_request">
+<span class="sig-name descname"><span class="pre">set_fit_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tn_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.set_fit_request" title="Link to this definition">#</a></dt>
+<dd><p>Request metadata passed to the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method.</p>
+<p>Note that this method is only relevant if
+<code class="docutils literal notranslate"><span class="pre">enable_metadata_routing=True</span></code> (see <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="(in scikit-learn v1.7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">sklearn.set_config</span></code></a>).
+Please see <a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing" title="(in scikit-learn v1.7)"><span class="xref std std-ref">User Guide</span></a> on how the routing
+mechanism works.</p>
+<p>The options for each parameter are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">True</span></code>: metadata is requested, and passed to <code class="docutils literal notranslate"><span class="pre">fit</span></code> if provided. The request is ignored if metadata is not provided.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">False</span></code>: metadata is not requested and the meta-estimator will not pass it to <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code>: metadata is not requested, and the meta-estimator will raise an error if the user provides it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">str</span></code>: metadata should be passed to the meta-estimator with this given alias instead of the original name.</p></li>
+</ul>
+<p>The default (<code class="docutils literal notranslate"><span class="pre">sklearn.utils.metadata_routing.UNCHANGED</span></code>) retains the
+existing request. This allows you to change the request for some
+parameters and not others.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 1.3.</span></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method is only relevant if this estimator is used as a
+sub-estimator of a meta-estimator, e.g. used inside a
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>. Otherwise it has no effect.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>fn_cost</strong><span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+</dd>
+<dt><strong>fp_cost</strong><span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+</dd>
+<dt><strong>tn_cost</strong><span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">tn_cost</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+</dd>
+<dt><strong>tp_cost</strong><span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>self</strong><span class="classifier">object</span></dt><dd><p>The updated object.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.set_params">
+<span class="sig-name descname"><span class="pre">set_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.set_params" title="Link to this definition">#</a></dt>
+<dd><p>Set the parameters of this estimator.</p>
+<p>The method works on simple estimators as well as on nested objects
+(such as <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>). The latter have
+parameters of the form <code class="docutils literal notranslate"><span class="pre">&lt;component&gt;__&lt;parameter&gt;</span></code> so that it’s
+possible to update each component of a nested object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>**params</strong><span class="classifier">dict</span></dt><dd><p>Estimator parameters.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>self</strong><span class="classifier">estimator instance</span></dt><dd><p>Estimator instance.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="empulse.models.CSBaggingClassifier.set_score_request">
+<span class="sig-name descname"><span class="pre">set_score_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#empulse.models.CSBaggingClassifier.set_score_request" title="Link to this definition">#</a></dt>
+<dd><p>Request metadata passed to the <code class="docutils literal notranslate"><span class="pre">score</span></code> method.</p>
+<p>Note that this method is only relevant if
+<code class="docutils literal notranslate"><span class="pre">enable_metadata_routing=True</span></code> (see <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="(in scikit-learn v1.7)"><code class="xref py py-func docutils literal notranslate"><span class="pre">sklearn.set_config</span></code></a>).
+Please see <a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing" title="(in scikit-learn v1.7)"><span class="xref std std-ref">User Guide</span></a> on how the routing
+mechanism works.</p>
+<p>The options for each parameter are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">True</span></code>: metadata is requested, and passed to <code class="docutils literal notranslate"><span class="pre">score</span></code> if provided. The request is ignored if metadata is not provided.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">False</span></code>: metadata is not requested and the meta-estimator will not pass it to <code class="docutils literal notranslate"><span class="pre">score</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code>: metadata is not requested, and the meta-estimator will raise an error if the user provides it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">str</span></code>: metadata should be passed to the meta-estimator with this given alias instead of the original name.</p></li>
+</ul>
+<p>The default (<code class="docutils literal notranslate"><span class="pre">sklearn.utils.metadata_routing.UNCHANGED</span></code>) retains the
+existing request. This allows you to change the request for some
+parameters and not others.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 1.3.</span></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method is only relevant if this estimator is used as a
+sub-estimator of a meta-estimator, e.g. used inside a
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>. Otherwise it has no effect.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>sample_weight</strong><span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">sample_weight</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">score</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>self</strong><span class="classifier">object</span></dt><dd><p>The updated object.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="empulse.models.B2BoostClassifier.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">B2BoostClassifier</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="empulse.models.CSBoostClassifier.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">CSBoostClassifier</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier"><code class="docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a><ul class="nav section-nav flex-column visible">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.decision_function"><code class="docutils literal notranslate"><span class="pre">decision_function</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.estimators_"><code class="docutils literal notranslate"><span class="pre">estimators_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.estimators_features_"><code class="docutils literal notranslate"><span class="pre">estimators_features_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.estimators_samples_"><code class="docutils literal notranslate"><span class="pre">estimators_samples_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.fit"><code class="docutils literal notranslate"><span class="pre">fit</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.get_metadata_routing"><code class="docutils literal notranslate"><span class="pre">get_metadata_routing</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.get_params"><code class="docutils literal notranslate"><span class="pre">get_params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.n_classes_"><code class="docutils literal notranslate"><span class="pre">n_classes_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.oob_decision_function_"><code class="docutils literal notranslate"><span class="pre">oob_decision_function_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.oob_score_"><code class="docutils literal notranslate"><span class="pre">oob_score_</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.predict"><code class="docutils literal notranslate"><span class="pre">predict</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.predict_log_proba"><code class="docutils literal notranslate"><span class="pre">predict_log_proba</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.predict_proba"><code class="docutils literal notranslate"><span class="pre">predict_proba</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.score"><code class="docutils literal notranslate"><span class="pre">score</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.set_fit_request"><code class="docutils literal notranslate"><span class="pre">set_fit_request</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.set_params"><code class="docutils literal notranslate"><span class="pre">set_params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#empulse.models.CSBaggingClassifier.set_score_request"><code class="docutils literal notranslate"><span class="pre">set_score_request</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,577 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>3.1. Bias Mitigation — Empulse 0.10.4 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=7e173fe4"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/preprocessing/bias_mitigation';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10.4';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="cost_sampling.html" rel="next" title="3.2. Cost-Proportionate Sampling"/>
+<link href="../preprocessing_guide.html" rel="prev" title="3. Model-Independent Preprocessing"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../metrics_guide.html">1. Metrics</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/choosing_metric.html">1.1. Choosing the right metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/user_defined_value_metric.html">1.2. Define your own cost-sensitive or value metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/metric_class_in_model.html">1.3. Use your custom metric inside a model</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../models_guide.html">2. Cost-sensitive and Value-driven models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/cslogit.html">2.1. Cost-Sensitive Logistic Regression (CSLogit)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/csboost.html">2.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/cost_functions.html">2.3. Boosting Algorithms Custom Cost Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/robustcs.html">2.4. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/proflogit.html">2.5. Profit-Driven Logistic Regression (ProfLogit)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../preprocessing_guide.html">3. Model-Independent Preprocessing</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">3.1. Bias Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cost_sampling.html">3.2. Cost-Proportionate Sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../instance_based_cv.html">4. Cross-Validation with Instance-dependent Costs</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets_guide.html">5. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">5.1. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">5.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">5.3. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">5.4. 2011 Kaggle competition Give Me Some Credit</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../preprocessing_guide.html"><span class="section-number">3. </span>Model-Independent Preprocessing</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">3.1. </span>Bias Mitigation</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="bias-mitigation">
+<span id="id1"></span><h1><span class="section-number">3.1. </span>Bias Mitigation<a class="headerlink" href="#bias-mitigation" title="Link to this heading">#</a></h1>
+<p>In many business problems,
+there is often an inverse relationship between the likelihood of an event and the value of a subgroup.
+For example, in customer churn scenarios,
+high-value customers might be less likely to churn compared to low-value customers <a class="footnote-reference brackets" href="#id3" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.
+As a result, models designed to predict this event may focus more on the majority subgroup,
+which is often less valuable from a business perspective.
+This leads to suboptimal targeting, as the models neglect the minority subgroup that holds higher value.</p>
+<p>We can say that the models are biased towards the majority subgroup.
+To address this issue, we can use bias mitigation techniques from fairness literature.
+The goal is to improve the representation of the high-value minority subgroup within the targeted group
+by treating this subgroup as the ‘discriminated’ sensitive group.</p>
+<p>Three techniques are available for bias mitigation:</p>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="#relabeling">Relabeling</a>: This technique relabels the training data to remove the bias.</p></li>
+<li><p><a class="reference internal" href="#resampling">Resampling</a>: This technique resamples the training data to remove the bias.</p></li>
+<li><p><a class="reference internal" href="#reweighing">Reweighing</a>: This technique assigns weights to the training data to remove the bias.</p></li>
+</ol>
+<section id="relabeling">
+<h2><span class="section-number">3.1.1. </span>Relabeling<a class="headerlink" href="#relabeling" title="Link to this heading">#</a></h2>
+<p>To reduce bias,
+a subset of training labels from the high-value subgroup—called promotion candidates—
+is switched from negative (non-event) to positive (event).
+At the same time, an equal number of training labels from the low-value subgroup—called demotion candidates
+—are switched from positive (event) to negative (non-event).
+This will make the prediction model predict more high-value instances as events,
+while reducing the number of low-value instances classified as events.</p>
+<p>The key is selecting which subset to flip the labels to minimize the impact on predictive accuracy.
+For this purpose, a first iteration of the prediction model is used to rank all high-value non-events
+from the highest likelihood to the lowest.</p>
+<p>The top <span class="math notranslate nohighlight">\(N\)</span> non-events are then selected for promotion.
+Conversely, low-value events are ranked from the lowest to the highest likelihood,
+and the bottom <span class="math notranslate nohighlight">\(N\)</span> events are chosen as demotion candidates.
+The parameter <span class="math notranslate nohighlight">\(N\)</span> is carefully chosen to create a discrimination-free classifier.</p>
+<p>A second discrimination-free prediction model is then trained on the massaged dataset.
+Note that only the training data is altered to retain objective model evaluation on holdout data.</p>
+<p>To use the relabeling technique, you can use the <a class="reference internal" href="../../reference/generated/empulse.samplers.BiasRelabler.html#empulse.samplers.BiasRelabler" title="empulse.samplers.BiasRelabler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasRelabler</span></code></a> sampler.
+You should pass the model which is used to rank the high-value non-events and low-value events.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/samplers.html#module-empulse.samplers" title="empulse.samplers"><span class="nn">empulse.samplers</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasRelabler.html#empulse.samplers.BiasRelabler" title="empulse.samplers.bias_relabler.BiasRelabler"><span class="n">BiasRelabler</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">high_clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.randint.html#numpy.random.randint" title="numpy.random.randint"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span></a><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasRelabler.html#empulse.samplers.BiasRelabler" title="empulse.samplers.bias_relabler.BiasRelabler"><span class="n">relabler</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasRelabler.html#empulse.samplers.BiasRelabler" title="empulse.samplers.bias_relabler.BiasRelabler"><span class="n">BiasRelabler</span></a><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">())</span>
+<span class="n">X_relabeled</span><span class="p">,</span> <span class="n">y_relabeled</span> <span class="o">=</span> <span class="n">relabler</span><span class="o">.</span><span class="n">fit_resample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This can easily used inside an imbalanced-learn <a class="reference external" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="(in imbalanced-learn v0.14.0)"><code class="docutils literal notranslate"><span class="pre">imblearn.pipeline.Pipeline</span></code></a>
+(note that the scikit-learn <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.7)"><code class="docutils literal notranslate"><span class="pre">sklearn.pipeline.Pipeline</span></code></a> does not support samplers):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/pipeline.html#module-imblearn.pipeline" title="imblearn.pipeline"><span class="nn">imblearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a>
+
+<span class="k">with</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">pipeline</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([</span>
+        <span class="p">(</span><span class="s1">'sampler'</span><span class="p">,</span> <span class="n">BiasRelabler</span><span class="p">(</span>
+            <span class="n">LogisticRegression</span><span class="p">()</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">set_fit_resample_request</span><span class="p">(</span><span class="n">sensitive_feature</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+        <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <span class="n">LogisticRegression</span><span class="p">())</span>
+    <span class="p">])</span>
+
+    <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline.fit" title="imblearn.pipeline.Pipeline.fit"><span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span></a><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively, the <code class="xref py py-class docutils literal notranslate"><span class="pre">BiasRelabelingClassifier</span></code> does this in one step and
+can be used with scikit learn pipelines.
+It will use the same model to rank the high-value non-events and low-value events as to train the final model.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasRelabelingClassifier.html#empulse.models.BiasRelabelingClassifier" title="empulse.models.bias_mitigation.bias_relabeling.BiasRelabelingClassifier"><span class="n">BiasRelabelingClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasRelabelingClassifier.html#empulse.models.BiasRelabelingClassifier" title="empulse.models.bias_mitigation.bias_relabeling.BiasRelabelingClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasRelabelingClassifier.html#empulse.models.BiasRelabelingClassifier" title="empulse.models.bias_mitigation.bias_relabeling.BiasRelabelingClassifier"><span class="n">BiasRelabelingClassifier</span></a><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">())</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
+you can pass a function to the <code class="docutils literal notranslate"><span class="pre">transform_feature</span></code> parameter.
+This works for both the <a class="reference internal" href="../../reference/generated/empulse.samplers.BiasRelabler.html#empulse.samplers.BiasRelabler" title="empulse.samplers.BiasRelabler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasRelabler</span></code></a> and <code class="xref py py-class docutils literal notranslate"><span class="pre">BiasRelabelingClassifier</span></code>.</p>
+<p>For example, here we convert the clv feature to a high clv indicator
+if the clv is in the top 20% of all clv values in the training data.
+This can be useful to avoid accidental data leakage.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mi">100</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BiasRelabelingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">transform_feature</span><span class="o">=</span><span class="k">lambda</span> <span class="n">clv</span><span class="p">:</span> <span class="p">(</span><span class="n">clv</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">clv</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#int" title="int"><span class="nb">int</span></a><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the relabeling technique will try to achieve statistical parity.
+However, if you wish to use a different strategy, you can pass a function to the <code class="docutils literal notranslate"><span class="pre">strategy</span></code> parameter.
+This function takes the true labels and the sensitive feature as input and should return how many labels to flip.</p>
+<p>For example, here we flip the labels of the top 10% of high clv customers and the bottom 10% of low clv customers:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">BiasRelabelingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">strategy</span><span class="o">=</span><span class="k">lambda</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="p">:</span> <span class="p">(</span><span class="n">sensitive_feature</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">//</span> <span class="mi">10</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="resampling">
+<h2><span class="section-number">3.1.2. </span>Resampling<a class="headerlink" href="#resampling" title="Link to this heading">#</a></h2>
+<p>The resampling method computes the weights for each group in the training data.
+The calculation of these weights involves comparing class labels and membership
+in both high-value and low-value segments.
+Each weight represents the ratio between the expected probability of a particular class label being identified and
+being a member of the high-value segment, and the observed probability of the same.
+The expected probability assumes no discrimination is present, or in other words,
+the probability when events are randomly distributed over the high- and low-value segments.</p>
+<p>These weights are then used to systematically under- or oversample each group in proportion to their weight.
+In this process, overrepresented groups are undersampled, while underrepresented groups are oversampled.
+This approach is particularly useful for algorithms where you cannot pass sample weights during training.</p>
+<p>To use the relabeling technique, you can use the <a class="reference internal" href="../../reference/generated/empulse.samplers.BiasResampler.html#empulse.samplers.BiasResampler" title="empulse.samplers.BiasResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasResampler</span></code></a> sampler.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/samplers.html#module-empulse.samplers" title="empulse.samplers"><span class="nn">empulse.samplers</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasResampler.html#empulse.samplers.BiasResampler" title="empulse.samplers.bias_resampler.BiasResampler"><span class="n">BiasResampler</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">high_clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.randint.html#numpy.random.randint" title="numpy.random.randint"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span></a><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasResampler.html#empulse.samplers.BiasResampler" title="empulse.samplers.bias_resampler.BiasResampler"><span class="n">resampler</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.BiasResampler.html#empulse.samplers.BiasResampler" title="empulse.samplers.bias_resampler.BiasResampler"><span class="n">BiasResampler</span></a><span class="p">()</span>
+<span class="n">X_resampled</span><span class="p">,</span> <span class="n">y_resampled</span> <span class="o">=</span> <span class="n">resampler</span><span class="o">.</span><span class="n">fit_resample</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This can easily used inside an imbalanced-learn <a class="reference external" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="(in imbalanced-learn v0.14.0)"><code class="docutils literal notranslate"><span class="pre">imblearn.pipeline.Pipeline</span></code></a>
+(note that the scikit-learn <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.7)"><code class="docutils literal notranslate"><span class="pre">sklearn.pipeline.Pipeline</span></code></a> does not support samplers):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/pipeline.html#module-imblearn.pipeline" title="imblearn.pipeline"><span class="nn">imblearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+
+<span class="k">with</span> <span class="n">config_context</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">pipeline</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="imblearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([</span>
+        <span class="p">(</span><span class="s1">'sampler'</span><span class="p">,</span> <span class="n">BiasResampler</span><span class="p">()</span><span class="o">.</span><span class="n">set_fit_resample_request</span><span class="p">(</span><span class="n">sensitive_feature</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+        <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">())</span>
+    <span class="p">])</span>
+
+    <a class="sphinx-codeautolink-a" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline.fit" title="imblearn.pipeline.Pipeline.fit"><span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span></a><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively, the <code class="xref py py-class docutils literal notranslate"><span class="pre">BiasResamplingClassifier</span></code> does this in one step and
+can be used with scikit learn pipelines.
+You should pass the model which is fitted with the resampled data.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier" title="empulse.models.bias_mitigation.bias_resampling.BiasResamplingClassifier"><span class="n">BiasResamplingClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier" title="empulse.models.bias_mitigation.bias_resampling.BiasResamplingClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier" title="empulse.models.bias_mitigation.bias_resampling.BiasResamplingClassifier"><span class="n">BiasResamplingClassifier</span></a><span class="p">(</span><span class="n">LogisticRegression</span><span class="p">())</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
+you can pass a function to the <code class="docutils literal notranslate"><span class="pre">transform_feature</span></code> parameter.
+This works for both the <a class="reference internal" href="../../reference/generated/empulse.samplers.BiasResampler.html#empulse.samplers.BiasResampler" title="empulse.samplers.BiasResampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasResampler</span></code></a> and <code class="xref py py-class docutils literal notranslate"><span class="pre">BiasResamplingClassifier</span></code>.</p>
+<p>For example, here we convert the clv feature to a high clv indicator
+if the clv is in the top 20% of all clv values in the training data.
+This can be useful to avoid accidental data leakage.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mi">100</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BiasResamplingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">transform_feature</span><span class="o">=</span><span class="k">lambda</span> <span class="n">clv</span><span class="p">:</span> <span class="p">(</span><span class="n">clv</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">clv</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#int" title="int"><span class="nb">int</span></a><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the resampling technique will try to achieve statistical parity.
+However, if you wish to use a different strategy, you can pass a function to the <code class="docutils literal notranslate"><span class="pre">strategy</span></code> parameter.
+This function takes the true labels and the sensitive feature as input and
+should return a 2X2 numpy array with the weights for each group,
+where the rows represent the true labels and the columns represent the sensitive feature.</p>
+<p>For example, here we assign a weight of 2 to high clv customers who are events and
+a weight of 0.5 to low clv customers who are non-events:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">BiasResamplingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">strategy</span><span class="o">=</span><span class="k">lambda</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="reweighing">
+<h2><span class="section-number">3.1.3. </span>Reweighing<a class="headerlink" href="#reweighing" title="Link to this heading">#</a></h2>
+<p>In the reweighing approach the same weights as the resampling method are used.
+However, instead of resampling the data, the weights are used to influence the training process.
+The weights are passed to the training algorithm to adjust the loss function.
+This way, the algorithm gives more weight to underrepresented groups and less weight to overrepresented groups.</p>
+<p>To use the relabeling technique, you can use the <code class="xref py py-class docutils literal notranslate"><span class="pre">BiasReweighingClassifier</span></code>.
+You should pass the model which is fitted with the computed sample weights.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasReweighingClassifier.html#empulse.models.BiasReweighingClassifier" title="empulse.models.bias_mitigation.bias_reweighing.BiasReweighingClassifier"><span class="n">BiasReweighingClassifier</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">high_clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generated/numpy.random.randint.html#numpy.random.randint" title="numpy.random.randint"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span></a><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasReweighingClassifier.html#empulse.models.BiasReweighingClassifier" title="empulse.models.bias_mitigation.bias_reweighing.BiasReweighingClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.BiasReweighingClassifier.html#empulse.models.BiasReweighingClassifier" title="empulse.models.bias_mitigation.bias_reweighing.BiasReweighingClassifier"><span class="n">BiasReweighingClassifier</span></a><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">())</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
+you can pass a function to the <code class="docutils literal notranslate"><span class="pre">transform_feature</span></code> parameter.</p>
+<p>For example, here we convert the clv feature to a high clv indicator
+if the clv is in the top 20% of all clv values in the training data.
+This can be useful to avoid accidental data leakage.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mi">100</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BiasReweighingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">transform_feature</span><span class="o">=</span><span class="k">lambda</span> <span class="n">clv</span><span class="p">:</span> <span class="p">(</span><span class="n">clv</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">clv</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#int" title="int"><span class="nb">int</span></a><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the reweighing technique will try to achieve statistical parity.
+However, if you wish to use a different strategy, you can pass a function to the <code class="docutils literal notranslate"><span class="pre">strategy</span></code> parameter.
+This function takes the true labels and the sensitive feature as input and
+should return a 1D numpy array containing the sample weights</p>
+<p>For example, here we assign a weight of 0.5 to low clv customers and a weight of 1 to high clv customers:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">strategy</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="p">):</span>
+    <span class="n">sample_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">sensitive_feature</span><span class="p">))</span>
+    <span class="n">sample_weights</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">sensitive_feature</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">sample_weights</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BiasReweighingClassifier</span><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><span class="n">LogisticRegression</span><span class="p">(),</span>
+    <span class="n">strategy</span><span class="o">=</span><span class="n">strategy</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sensitive_feature</span><span class="o">=</span><span class="n">high_clv</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="references">
+<h2><span class="section-number">3.1.4. </span>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a href="#id2" role="doc-backlink">1</a><span class="fn-bracket">]</span></span>
+<p>Rahman, S., Janssens, B., &amp; Bogaert, M. (2025).
+Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159</p>
+</aside>
+</aside>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="../preprocessing_guide.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">3. </span>Model-Independent Preprocessing</p>
+</div>
+</a>
+<a class="right-next" href="cost_sampling.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">3.2. </span>Cost-Proportionate Sampling</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relabeling">3.1.1. Relabeling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resampling">3.1.2. Resampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reweighing">3.1.3. Reweighing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">3.1.4. References</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2025, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>
