@@ -114,17 +114,6 @@ exclude = [
     "notebooks*",
 ]
 
-[tool.cibuildwheel.windows]
-archs = ["auto64"]
-test-command = '' # disable tests on windows because of cibuildwheel bug?
-
-[tool.cibuildwheel.macos]
-archs = ["auto"]
-
-# On an Linux Intel runner with qemu installed, build Intel and ARM wheels
-[tool.cibuildwheel.linux]
-archs = ["auto"]
-
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
