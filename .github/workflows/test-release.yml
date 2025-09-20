@@ -25,8 +25,8 @@ jobs:
 #            runs-on: ubuntu-24.04-arm
           - os: windows-intel
             runs-on: windows-latest
-          - os: windows-arm
-            runs-on: windows-11-arm
+#          - os: windows-arm
+#            runs-on: windows-11-arm
 #          - os: macos-intel
 #            runs-on: macos-13
 #          - os: macos-arm
@@ -35,16 +35,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: TheMrMilchmann/setup-msvc-dev@v3
-        if: ${{ (matrix.os == 'windows-latest') || (matrix.os == 'windows-11-arm') }}
-        with:
-          arch: x64
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
+          CIBW_ARCHS_WINDOWS: "auto64"
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
 
