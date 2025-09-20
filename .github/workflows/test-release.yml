@@ -19,18 +19,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: linux-intel
-            runs-on: ubuntu-latest
-          - os: linux-arm
-            runs-on: ubuntu-24.04-arm
+#          - os: linux-intel
+#            runs-on: ubuntu-latest
+#          - os: linux-arm
+#            runs-on: ubuntu-24.04-arm
           - os: windows-intel
             runs-on: windows-latest
           - os: windows-arm
             runs-on: windows-11-arm
-          - os: macos-intel
-            runs-on: macos-13
-          - os: macos-arm
-            runs-on: macos-latest
+#          - os: macos-intel
+#            runs-on: macos-13
+#          - os: macos-arm
+#            runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v5
@@ -42,6 +42,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
+          CIBW_BEFORE_BUILD: pip install "numpy>=2.0,<3.0" "scikit-learn"
 
       - uses: actions/upload-artifact@v4
         with:
