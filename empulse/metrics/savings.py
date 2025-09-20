@@ -456,7 +456,7 @@ def savings_score(
     y_true: FloatArrayLike,
     y_pred: FloatArrayLike,
     *,
-    baseline: FloatArrayLike | Literal['zero_one'] = 'zero_one',
+    baseline: FloatArrayLike | Literal['zero_one', 'one', 'zero'] = 'zero_one',
     tp_cost: float | FloatArrayLike = 0.0,
     fp_cost: float | FloatArrayLike = 0.0,
     tn_cost: float | FloatArrayLike = 0.0,
@@ -498,8 +498,11 @@ def savings_score(
 
     baseline : 'zero_one' or 1D array-like, shape=(n_samples,), default='zero_one'
         Predicted labels or calibrated probabilities of the baseline model.
-        If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
-        depending on which is better.
+
+        - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
+          depending on which is better.
+        - If ``'one'``, the baseline model is a model that predicts all ones.
+        - If ``'zero'``, the baseline model is a model that predicts all zeros.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -583,7 +586,18 @@ def savings_score(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if baseline == 'zero_one':
+    if not isinstance(baseline, str):
+        baseline = np.asarray(baseline)
+        cost_base = cost_loss(
+            y_true,
+            baseline,
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
+        )
+    elif baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -605,17 +619,28 @@ def savings_score(
                 check_input=False,
             ),
         )
-    else:
-        baseline = np.asarray(baseline)
+    elif baseline == 'one':
         cost_base = cost_loss(
             y_true,
-            baseline,
+            np.ones_like(y_true),
             tp_cost=tp_cost,
             fp_cost=fp_cost,
             tn_cost=tn_cost,
             fn_cost=fn_cost,
             check_input=False,
         )
+    elif baseline == 'zero':
+        cost_base = cost_loss(
+            y_true,
+            np.zeros_like(y_true),
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
+        )
+    else:
+        raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
 
     cost = cost_loss(
         y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
@@ -629,7 +654,7 @@ def expected_savings_score(
     y_true: FloatArrayLike,
     y_proba: FloatArrayLike,
     *,
-    baseline: Literal['zero_one', 'prior'] | FloatArrayLike = 'zero_one',
+    baseline: Literal['zero_one', 'one', 'zero', 'prior'] | FloatArrayLike = 'zero_one',
     tp_cost: float | FloatArrayLike = 0.0,
     fp_cost: float | FloatArrayLike = 0.0,
     tn_cost: float | FloatArrayLike = 0.0,
@@ -663,6 +688,8 @@ def expected_savings_score(
         
         - If ``'zero_one'``, the baseline model is a naive model that predicts all zeros or all ones
           depending on which is better.
+        - If ``'one'``, the baseline model is a model that predicts all ones.
+        - If ``'zero'``, the baseline model is a model that predicts all zeros.
         - If ``'prior'``, the baseline model is a model that predicts the prior probability of 
           the majority or minority class depending on which is better.
         - If array-like, target probabilities of the baseline model.
@@ -749,7 +776,18 @@ def expected_savings_score(
         y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    if baseline == 'zero_one':
+    if not isinstance(baseline, str):
+        baseline = np.asarray(baseline)
+        cost_base = expected_cost_loss(
+            y_true,
+            baseline,
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
+        )
+    elif baseline == 'zero_one':
         # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
@@ -770,6 +808,26 @@ def expected_savings_score(
                 fn_cost=fn_cost,
                 check_input=False,
             ),
+        )
+    elif baseline == 'one':
+        cost_base = cost_loss(
+            y_true,
+            np.ones_like(y_true),
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
+        )
+    elif baseline == 'zero':
+        cost_base = cost_loss(
+            y_true,
+            np.zeros_like(y_true),
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
         )
     elif baseline == 'prior':
         prior_pos = np.mean(y_true)
@@ -795,16 +853,7 @@ def expected_savings_score(
             ),
         )
     else:
-        baseline = np.asarray(baseline)
-        cost_base = expected_cost_loss(
-            y_true,
-            baseline,
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            check_input=False,
-        )
+        raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
 
     # avoid division by zero
     if cost_base == 0.0:

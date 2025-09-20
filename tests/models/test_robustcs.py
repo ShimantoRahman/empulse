@@ -3,7 +3,7 @@ import pytest
 import sympy
 from sklearn.linear_model import HuberRegressor
 
-from empulse.metrics import Cost, Metric
+from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import CSLogitClassifier, RobustCSClassifier
 
 
@@ -63,8 +63,8 @@ def test_robustcs_metric_loss(data):
     X, y = data
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
-    cost_loss = (
-        Metric(Cost())
+    cost_matrix = (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
@@ -73,8 +73,8 @@ def test_robustcs_metric_loss(data):
         .alias('contact_cost', f)
         .mark_outlier_sensitive(clv)
         .mark_outlier_sensitive(d)
-        .build()
     )
+    cost_loss = Metric(cost_matrix, Cost())
     rng = np.random.default_rng(42)
     clv_val = rng.uniform(100, 200, size=X.shape[0])
     d_val = rng.uniform(0, 100, size=X.shape[0])

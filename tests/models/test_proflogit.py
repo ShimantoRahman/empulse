@@ -8,7 +8,8 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.metrics import Cost, MaxProfit, Metric, Savings
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings, mpc_score
+from empulse.metrics.metric.common import Direction
 from empulse.models import ProfLogitClassifier
 
 
@@ -24,13 +25,13 @@ def y():
 
 @pytest.fixture(scope='module')
 def clf(X, y):
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     return clf
 
 
 def test_proflogit_init():
-    clf = ProfLogitClassifier()
+    clf = ProfLogitClassifier(mpc_score)
     assert clf.C == 1.0
     assert clf.fit_intercept is True
     assert clf.soft_threshold is False
@@ -40,6 +41,7 @@ def test_proflogit_init():
 
 def test_proflogit_with_different_parameters():
     clf = ProfLogitClassifier(
+        mpc_score,
         C=0.5,
         fit_intercept=False,
         soft_threshold=False,
@@ -58,7 +60,7 @@ def test_proflogit_fit(clf):
 
 
 def test_proflogit_fit_no_intercept(X, y):
-    clf = ProfLogitClassifier(fit_intercept=False, optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(mpc_score, fit_intercept=False, optimizer_params={'max_iter': 2})
     clf.fit(X, y)
     try:
         check_is_fitted(clf)
@@ -88,13 +90,13 @@ def test_proflogit_with_missing_values(X, y):
     X = np.array(X, dtype=float)
     # Introduce missing values
     X[0, 0] = np.nan
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     with pytest.raises(ValueError):
         clf.fit(X, y)
 
 
 def test_proflogit_with_different_bounds(clf, X, y):
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10, 'bounds': (-1, 1)})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10, 'bounds': (-1, 1)})
     clf.fit(X, y)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.message == 'Maximum number of iterations reached.'
@@ -103,7 +105,7 @@ def test_proflogit_with_different_bounds(clf, X, y):
 def test_cloneable_by_sklearn():
     from sklearn.base import clone
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2})
     clf_clone = clone(clf)
     assert isinstance(clf_clone, ProfLogitClassifier)
     assert clf.get_params() == clf_clone.get_params()
@@ -112,7 +114,7 @@ def test_cloneable_by_sklearn():
 def test_works_in_cross_validation(X, y):
     from sklearn.model_selection import cross_val_score
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     scores = cross_val_score(clf, X, y, cv=2)
     assert isinstance(scores, np.ndarray)
     assert scores.shape == (2,)
@@ -123,7 +125,7 @@ def test_works_in_pipeline(X, y):
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
     pipe.fit(X, y)
     assert isinstance(pipe.named_steps['scaler'], StandardScaler)
@@ -135,7 +137,7 @@ def test_works_in_pipeline(X, y):
 def test_works_in_ensemble(X, y):
     from sklearn.ensemble import BaggingClassifier
 
-    clf = ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10})
     bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
     bagging.fit(X, y)
     assert isinstance(bagging.estimators_[0], ProfLogitClassifier)
@@ -162,7 +164,7 @@ def test_works_with_time_stopping_condition(X, y):
                 break
         return rga.result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize)
+    proflogit = ProfLogitClassifier(mpc_score, optimize_fn=optimize)
 
     proflogit.fit(X, y)
 
@@ -187,7 +189,7 @@ def test_works_with_different_optimizers_bfgs(X, y):
         )
         return result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize, soft_threshold=True)
+    proflogit = ProfLogitClassifier(mpc_score, optimize_fn=optimize, soft_threshold=True)
 
     proflogit.fit(X, y)
 
@@ -215,7 +217,7 @@ def test_works_with_different_optimizers_lbfgsb(X, y):
         )
         return result
 
-    proflogit = ProfLogitClassifier(optimize_fn=optimize, optimizer_params={'max_iter': 2})
+    proflogit = ProfLogitClassifier(mpc_score, optimize_fn=optimize, optimizer_params={'max_iter': 2})
 
     proflogit.fit(X, y)
 
@@ -245,88 +247,39 @@ def test_works_with_different_loss_auc(X, y):
 
 def test_one_variable(y):
     X = np.arange(10).reshape(10, 1)
-    clf = ProfLogitClassifier(fit_intercept=False, optimizer_params={'max_iter': 2, 'population_size': 10})
+    clf = ProfLogitClassifier(mpc_score, fit_intercept=False, optimizer_params={'max_iter': 2, 'population_size': 10})
     clf.fit(X, y)
     assert clf.result_.x.shape == (1,)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.message == 'Maximum number of iterations reached.'
 
 
-def test_proflogit_metric_cost_loss(X, y):
+@pytest.fixture()
+def cost_matrix():
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(Cost())
+    return (
+        CostMatrix()
         .add_tp_benefit(gamma * (clv - d - f))
         .add_tp_benefit((1 - gamma) * -f)
         .add_fp_cost('d + f')
         .alias('accept_rate', gamma)
         .alias('incentive_cost', d)
         .alias('contact_cost', f)
-        .build()
     )
-    rng = np.random.RandomState(42)
-    accept_rate = rng.random(len(y))
-    clv = rng.random(len(y)) * 200
-
-    model = ProfLogitClassifier(
-        loss=cost_loss, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
-    )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score < inverse_score
 
 
-def test_proflogit_metric_savings_score(X, y):
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(Savings())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost('d + f')
-        .alias('accept_rate', gamma)
-        .alias('incentive_cost', d)
-        .alias('contact_cost', f)
-        .build()
-    )
-    rng = np.random.RandomState(42)
-    accept_rate = rng.random(len(y))
-    clv = rng.random(len(y)) * 200
+@pytest.mark.parametrize('strategy', [Cost(), Savings(), MaxProfit()])
+def test_proflogit_metric_loss(X, y, cost_matrix, strategy):
+    cost_loss = Metric(cost_matrix, strategy)
 
     model = ProfLogitClassifier(
         loss=cost_loss, optimizer_params={'max_iter': 3, 'population_size': 10, 'random_state': 42}
     )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
+    model.fit(X, y, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
     y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score > inverse_score
-
-
-def test_proflogit_metric_max_profit_score(X, y):
-    clv, d, f, gamma = sympy.symbols('clv d f gamma')
-
-    cost_loss = (
-        Metric(MaxProfit())
-        .add_tp_benefit(gamma * (clv - d - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost('d + f')
-        .alias('accept_rate', gamma)
-        .alias('incentive_cost', d)
-        .alias('contact_cost', f)
-        .build()
-    )
-    accept_rate = 0.3
-    clv = 200
-
-    model = ProfLogitClassifier(
-        loss=cost_loss, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
-    )
-    model.fit(X, y, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    y_proba = model.predict_proba(X)[:, 1]
-    score = cost_loss(y, y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=accept_rate, incentive_cost=10, clv=clv, contact_cost=1)
-    assert score > inverse_score
+    score = cost_loss(y, y_proba, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
+    inverse_score = cost_loss(y, 1 - y_proba, accept_rate=0.3, incentive_cost=10, clv=200, contact_cost=1)
+    if strategy.direction == Direction.MAXIMIZE:
+        assert score > inverse_score
+    else:
+        assert score < inverse_score

@@ -9,10 +9,12 @@ from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
+from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
+from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, _estimator_has, validate_data  # type: ignore[attr-defined]
 from ._cs_mixin import CostSensitiveMixin
 
@@ -27,7 +29,7 @@ V = TypeVar('V')
 
 class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin, BaseEstimator):  # type: ignore[misc]
     """
-    Classifier that fits a cost-sensitive classifier with costs adjusted for outliers.
+    Cost-sensitive classifier that is robust to outliers in the instance-dependent costs.
 
     The costs are adjusted by fitting an outlier estimator to the costs and imputing the costs for the outliers.
     Outliers are detected by the standardized residuals of the cost and the predicted cost.
@@ -149,13 +151,15 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
         import numpy as np
         import sympy as sp
-        from empulse.metrics import Metric, Cost
+        from empulse.metrics import Metric, Cost, CostMatrix
         from empulse.models import CSLogitClassifier, RobustCSClassifier
         from sklearn.datasets import make_classification
 
         X, y = make_classification()
         a, b = sp.symbols('a b')
-        cost_loss = Metric(Cost()).add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a).build()
+        cost_loss = Metric(
+            CostMatrix().add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a), Cost()
+        )
         fn_cost = np.random.rand(y.size)
 
         model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
@@ -250,6 +254,10 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         'fp_cost': ['array-like', Real],
     }
 
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        return self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveMixin) else None
+
     def __init__(
         self,
         estimator: Any,
@@ -262,7 +270,6 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
     ):
-        super().__init__()
         self.estimator = estimator
         self.outlier_estimator = outlier_estimator
         self.outlier_threshold = outlier_threshold
@@ -271,6 +278,17 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+        super().__init__()
+
+    def __post_init__(self) -> None:
+        # Allow passing costs accepted by the metric loss through metadata routing
+        if isinstance(self._get_metric_loss(), Metric):
+            self.__class__.set_fit_request = RequestMethod(
+                'fit',
+                sorted(
+                    self.__class__._get_default_requests().fit.requests.keys() | self._get_metric_loss()._all_symbols  # type: ignore[union-attr]
+                ),
+            )
 
     @_fit_context(prefer_skip_nested_validation=False)  # type: ignore[misc]
     def fit(
@@ -324,13 +342,14 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             and (metric_loss := self.estimator._get_metric_loss()) is not None
         ):
             self.costs_: dict[str, int | float | FloatNDArray] = {}
-            outlier_symbols = metric_loss._outlier_sensitive_symbols
+            outlier_symbols = metric_loss.cost_matrix._outlier_sensitive_symbols
+            imputed_costs = {}
 
             self.outlier_estimators_ = {}
             for symbol in outlier_symbols:
                 target = fit_params.get(str(symbol))
                 if target is None:
-                    alias = _invert_dict(metric_loss._aliases)[str(symbol)]
+                    alias = _invert_dict(metric_loss.cost_matrix._aliases)[str(symbol)]
                     target = fit_params.get(alias)
                     if target is None:
                         raise ValueError(f"Cost '{symbol}' is not provided in fit_params.")
@@ -356,7 +375,6 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     fit_params[str(symbol)] = np.where(outliers, cost_predictions, target)
                     self.costs_[str(symbol)] = fit_params[str(symbol)]
                     self.outlier_estimators_[str(symbol)] = outlier_estimator
-                imputed_costs = {}
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost

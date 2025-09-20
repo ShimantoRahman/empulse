@@ -1,8 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Literal
-
-import scipy
+from collections.abc import Callable
+from typing import ClassVar, Literal
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -13,22 +12,13 @@ import numpy as np
 import sympy
 
 from ..._types import FloatNDArray
-from .common import BoostObjective, Direction, LogitObjective, RateFn, ThresholdFn
-from .cost_metric import (
-    _build_cost_gradient_boost_objective,
-    _build_cost_logit_objective,
-    _build_cost_loss,
-    _build_cost_optimal_rate,
-    _build_cost_optimal_threshold,
-    _cost_loss_to_latex,
-)
+from .common import Direction, RateFn, ThresholdFn
 from .max_profit_metric import (
     _build_max_profit_optimal_rate,
     _build_max_profit_optimal_threshold,
     _build_max_profit_score,
     _max_profit_score_to_latex,
 )
-from .savings_metric import _build_savings_score, _savings_score_to_latex
 
 
 class MetricStrategy(ABC):
@@ -141,17 +131,60 @@ class MetricStrategy(ABC):
         raise NotImplementedError(f'Optimal rate is not defined for the {self.name} strategy')
 
     def logit_objective(
-        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[float, FloatNDArray]:
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
         """
-        Compute the metric value and the gradient of the metric with respect to logistic regression coefficients.
+        Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
 
         Parameters
         ----------
         features : NDArray of shape (n_samples, n_features)
             The features of the samples.
-        weights : NDArray of shape (n_features,)
-            The weights of the logistic regression model.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        logistic_objective : Callable[[NDArray], tuple[float, NDArray]]
+            A function that takes logistic regression weights as input and returns the metric value and its gradient.
+            The function signature is:
+            ``logistic_objective(weights) -> (value, gradient)``
+        """
+        raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
+
+    def prepare_logit_objective(
+        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+        """
+        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
         parameters : float or NDArray of shape (n_samples,)
@@ -164,10 +197,55 @@ class MetricStrategy(ABC):
 
         Returns
         -------
-        value : float
-            The metric loss to be minimized.
-        gradient : NDArray of shape (n_features,)
-            The gradient of the metric loss with respect to the logistic regression weights.
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
+        loss_const1 : NDArray of shape (n_features,)
+            The first constant term of the loss function.
+        loss_const2 : NDArray of shape (n_features,)
+            The second constant term of the loss function.
+        """
+        raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
+
+    def build_logit_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **loss_params: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+        """
+        Build a logit objective function for optimization.
+
+        This function constructs a callable that calculates logistic loss and its gradient
+        for a given dataset. The function takes into account various regularization
+        parameters and thresholds to customize the loss function. Optimization parameters
+        passed to this function are critical for model fitting and performance.
+
+        Parameters
+        ----------
+        features : FloatNDArray
+            Feature matrix with shape (n_samples, n_features).
+        y_true : FloatNDArray
+            Target values corresponding to the input samples, of shape (n_samples,).
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        **loss_params : FloatNDArray or float
+            Additional parameters for customizing the loss function calculation, if needed.
+
+        Returns
+        -------
+        logit_objective
+            The callable logistic loss function with its gradient pre-configured for optimization.
         """
         raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
 
@@ -199,6 +277,31 @@ class MetricStrategy(ABC):
             The gradient of the metric loss with respect to the gradient boosting weights.
         hessian : NDArray of shape (n_samples,)
             The hessian of the metric loss with respect to the gradient boosting weights.
+        """
+        raise NotImplementedError(
+            f'Gradient and Hessian of the gradient boosting function is not defined for the {self.name} strategy'
+        )
+
+    def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
+        """
+        Compute the gradient's constant term of the metric wrt gradient boost.
+
+        Parameters
+        ----------
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        gradient_const : NDArray of shape (n_samples, n_features)
+            The constant term of the gradient.
         """
         raise NotImplementedError(
             f'Gradient and Hessian of the gradient boosting function is not defined for the {self.name} strategy'
@@ -446,431 +549,3 @@ class MaxProfit(MetricStrategy):
             f', integration_method={self.integration_method!r}, n_mc_samples={self.n_mc_samples}'
             f', random_state={self._rng})'
         )
-
-
-class Cost(MetricStrategy):
-    """Strategy for the Expected Cost metric."""
-
-    def __init__(self) -> None:
-        super().__init__(name='cost', direction=Direction.MINIMIZE)
-
-    def build(
-        self,
-        tp_benefit: sympy.Expr,
-        tn_benefit: sympy.Expr,
-        fp_cost: sympy.Expr,
-        fn_cost: sympy.Expr,
-    ) -> Self:
-        """Build the metric strategy."""
-        self._score_function = _build_cost_loss(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._optimal_threshold: ThresholdFn = _build_cost_optimal_threshold(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._optimal_rate: RateFn = _build_cost_optimal_rate(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._gradient_logit_function: LogitObjective = _build_cost_logit_objective(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._gradient_hessian_gboost_function: BoostObjective = _build_cost_gradient_boost_objective(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        return self
-
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the metric expected cost loss.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        score: float
-            The expected cost loss.
-        """
-        return self._score_function(y_true, y_score, **parameters)
-
-    def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> float | FloatNDArray:
-        """
-        Compute the classification threshold(s) to optimize the metric value.
-
-        i.e., the score threshold at which an observation should be classified as positive to optimize the metric.
-        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.
-        For class-dependent costs and benefits, this will return a single threshold value.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_threshold: float | FloatNDArray
-            The optimal classification threshold(s).
-        """
-        return self._optimal_threshold(y_true, y_score, **parameters)
-
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the predicted positive rate to optimize the metric value.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_rate: float
-            The optimal predicted positive rate.
-        """
-        return self._optimal_rate(y_true, y_score, **parameters)
-
-    def logit_objective(
-        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[float, FloatNDArray]:
-        """
-        Compute the metric value and the gradient of the metric with respect to logistic regression coefficients.
-
-        Parameters
-        ----------
-        features : NDArray of shape (n_samples, n_features)
-            The features of the samples.
-        weights : NDArray of shape (n_features,)
-            The weights of the logistic regression model.
-        y_true : NDArray of shape (n_samples,)
-            The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        value : float
-            The metric loss to be minimized.
-        gradient : NDArray of shape (n_features,)
-            The gradient of the metric loss with respect to the logistic regression weights.
-        """
-        y_proba = scipy.special.expit(np.dot(weights, features.T))
-        if y_proba.ndim == 1:
-            y_proba = np.expand_dims(y_proba, axis=1)
-        value = self._score_function(y_true, y_proba, **parameters)
-        gradient = self._gradient_logit_function(features, y_true, y_proba, **parameters)
-        return value, gradient
-
-    def gradient_boost_objective(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
-    ) -> tuple[FloatNDArray, FloatNDArray]:
-        """
-        Compute the gradient of the metric with respect to gradient boosting instances.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        gradient : NDArray of shape (n_samples,)
-            The gradient of the metric loss with respect to the gradient boosting weights.
-        hessian : NDArray of shape (n_samples,)
-            The hessian of the metric loss with respect to the gradient boosting weights.
-        """
-        return self._gradient_hessian_gboost_function(y_true, y_score, **kwargs)
-
-    def to_latex(
-        self,
-        tp_benefit: sympy.Expr,
-        tn_benefit: sympy.Expr,
-        fp_cost: sympy.Expr,
-        fn_cost: sympy.Expr,
-    ) -> str:
-        """Return the LaTeX representation of the metric."""
-        return _cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
-
-
-class Savings(MetricStrategy):
-    """Strategy for the Expected Savings metric."""
-
-    def __init__(self) -> None:
-        super().__init__(name='savings', direction=Direction.MAXIMIZE)
-
-    def build(
-        self,
-        tp_benefit: sympy.Expr,
-        tn_benefit: sympy.Expr,
-        fp_cost: sympy.Expr,
-        fn_cost: sympy.Expr,
-    ) -> Self:
-        """Build the metric strategy."""
-        self._score_function = _build_savings_score(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._optimal_threshold: ThresholdFn = _build_cost_optimal_threshold(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._optimal_rate: RateFn = _build_cost_optimal_rate(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._score_logit_function = _build_cost_loss(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._gradient_logit_function: LogitObjective = _build_cost_logit_objective(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        self._gradient_hessian_gboost_function: BoostObjective = _build_cost_gradient_boost_objective(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
-        return self
-
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the metric expected savings score.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        score: float
-            The expected savings score.
-        """
-        return self._score_function(y_true, y_score, **parameters)
-
-    def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> float | FloatNDArray:
-        """
-        Compute the classification threshold(s) to optimize the metric value.
-
-        i.e., the score threshold at which an observation should be classified as positive to optimize the metric.
-        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.
-        For class-dependent costs and benefits, this will return a single threshold value.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_threshold: float | FloatNDArray
-            The optimal classification threshold(s).
-        """
-        return self._optimal_threshold(y_true, y_score, **parameters)
-
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the predicted positive rate to optimize the metric value.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_rate: float
-            The optimal predicted positive rate.
-        """
-        return self._optimal_rate(y_true, y_score, **parameters)
-
-    def logit_objective(
-        self, features: FloatNDArray, weights: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[float, FloatNDArray]:
-        """
-        Compute the metric value and the gradient of the metric with respect to logistic regression coefficients.
-
-        Parameters
-        ----------
-        features : NDArray of shape (n_samples, n_features)
-            The features of the samples.
-        weights : NDArray of shape (n_features,)
-            The weights of the logistic regression model.
-        y_true : NDArray of shape (n_samples,)
-            The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        value : float
-            The metric loss to be minimized.
-        gradient : NDArray of shape (n_features,)
-            The gradient of the metric loss with respect to the logistic regression weights.
-        """
-        y_proba = scipy.special.expit(np.dot(weights, features.T))
-        if y_proba.ndim == 1:
-            y_proba = np.expand_dims(y_proba, axis=1)
-        value = self._score_logit_function(y_true, y_proba, **parameters)
-        gradient = self._gradient_logit_function(features, y_true, y_proba, **parameters)
-        return value, gradient
-
-    def gradient_boost_objective(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[FloatNDArray, FloatNDArray]:
-        """
-        Compute the gradient of the metric with respect to gradient boosting instances.
-
-        Parameters
-        ----------
-        y_true: array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score: array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores (based on the chosen metric).
-
-        parameters: float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        gradient : NDArray of shape (n_samples,)
-            The gradient of the metric loss with respect to the gradient boosting weights.
-        hessian : NDArray of shape (n_samples,)
-            The hessian of the metric loss with respect to the gradient boosting weights.
-        """
-        return self._gradient_hessian_gboost_function(y_true, y_score, **parameters)
-
-    def to_latex(
-        self,
-        tp_benefit: sympy.Expr,
-        tn_benefit: sympy.Expr,
-        fp_cost: sympy.Expr,
-        fn_cost: sympy.Expr,
-    ) -> str:
-        """Return the LaTeX representation of the metric."""
-        return _savings_score_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)

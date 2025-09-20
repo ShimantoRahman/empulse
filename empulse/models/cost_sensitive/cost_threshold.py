@@ -10,6 +10,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
+from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.validation import check_is_fitted
@@ -26,9 +27,11 @@ else:
     from typing_extensions import Self
 
 
-class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # type: ignore[misc]
+class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # type: ignore[misc]
     r"""
-    Classifier that sets the decision threshold to optimize the instance-dependent cost loss.
+    Binary Classifier that sets the decision threshold to optimize cost-sensitive metric.
+
+    By default, the expected cost loss is optimized.
 
     Parameters
     ----------
@@ -158,7 +161,6 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
     ):
-        super().__init__(estimator, response_method='predict_proba')
         self.calibrator = calibrator
         self.pos_label = pos_label
         self.random_state = random_state
@@ -167,6 +169,14 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
+        super().__init__(estimator, response_method='predict_proba')
+
+    def __post_init__(self) -> None:
+        if isinstance(self._get_metric_loss(), Metric):
+            self.__class__.set_predict_request = RequestMethod(  # type: ignore[attr-defined]
+                'predict',
+                sorted(self.__class__._get_default_requests().predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
+            )
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -203,7 +213,9 @@ class CSThresholdClassifier(CostSensitiveMixin, BaseThresholdClassifier):  # typ
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
-        return self.loss
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None
 
     def _fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
         """Fit the classifier.

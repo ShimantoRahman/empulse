@@ -3,16 +3,20 @@ import inspect
 import numpy as np
 import pytest
 import sympy
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
+from sklearn import config_context
 from sklearn.base import clone
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
 from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
-from empulse.metrics import Cost, Metric, Savings, cost_loss
+from empulse.metrics import Cost, CostMatrix, Metric, Savings, cost_loss, mpc_score
 from empulse.models import (
     B2BoostClassifier,
     BiasRelabelingClassifier,
@@ -31,7 +35,7 @@ from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
-    ProfLogitClassifier(optimizer_params={'max_iter': 2, 'population_size': 10}),
+    ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10}),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -52,10 +56,21 @@ ESTIMATORS = (
 METRIC_ESTIMATORS = (
     CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
     CSBoostClassifier(),
+    CSBoostClassifier(
+        LGBMClassifier(
+            n_estimators=10,
+            max_depth=1,
+            # Need this parameter since we are testing with small datasets, otherwise can throw error
+            min_data_in_leaf=0,
+            verbose=-1,
+        )
+    ),
+    CSBoostClassifier(CatBoostClassifier(iterations=10, depth=1)),
     CSLogitClassifier(optimizer_params={'max_iter': 10}),
     CSTreeClassifier(max_depth=2),
     CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
-    # RobustCSClassifier(estimator=CSBoostClassifier()),
+    CSBaggingClassifier(n_estimators=3, random_state=10),
+    RobustCSClassifier(estimator=CSBoostClassifier()),
 )
 
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
@@ -71,9 +86,9 @@ def expected_failed_checks(estimator):
         }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
-    if isinstance(estimator, B2BoostClassifier):
-        return {'check_estimators_pickle': 'Currently B2Boost is not pickleable since metric class uses closures.'}
-    if isinstance(estimator, CSTreeClassifier | CSForestClassifier):
+    if isinstance(
+        estimator, CSTreeClassifier | CSForestClassifier | CSBaggingClassifier | CSLogitClassifier | RobustCSClassifier
+    ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
         }
@@ -103,7 +118,8 @@ def test_proflogit_classifier_data_not_an_array():
     from sklearn.utils.estimator_checks import check_classifier_data_not_an_array
 
     check_classifier_data_not_an_array(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -125,7 +141,8 @@ def test_proflogit_fit_idempotent():
     from sklearn.utils.estimator_checks import check_fit_idempotent
 
     check_fit_idempotent(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -147,7 +164,8 @@ def test_proflogit_supervised_y_2d():
     from sklearn.utils.estimator_checks import check_supervised_y_2d
 
     check_supervised_y_2d(
-        ProfLogitClassifier.__name__, ProfLogitClassifier(optimizer_params={'max_iter': 3, 'random_state': 42})
+        ProfLogitClassifier.__name__,
+        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -206,13 +224,14 @@ class InvalidParameter:
 def generate_invalid_params(estimator_class):
     parameters = inspect.signature(estimator_class.__init__).parameters
     takes_estimator = 'estimator' in parameters
-    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator
+    takes_loss = 'loss' in parameters
+    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator, takes_loss
 
 
 @pytest.mark.parametrize('estimator_class', ESTIMATOR_CLASSES)
 def test_invalid_params(estimator_class, dataset):
     X, y, _, _ = dataset
-    invalid_params_list, takes_estimator = generate_invalid_params(estimator_class)
+    invalid_params_list, takes_estimator, takes_loss = generate_invalid_params(estimator_class)
     for invalid_params in invalid_params_list:
         if (
             takes_estimator
@@ -222,6 +241,15 @@ def test_invalid_params(estimator_class, dataset):
             model = estimator_class(**invalid_params)
         elif takes_estimator:
             model = estimator_class(estimator=LogisticRegression(), **invalid_params)
+        elif (
+            takes_loss
+            and 'loss' in invalid_params
+            and isinstance(invalid_params['loss'], InvalidParameter)
+            and estimator_class is ProfLogitClassifier
+        ):
+            model = estimator_class(**invalid_params)
+        elif takes_loss and estimator_class is ProfLogitClassifier:
+            model = estimator_class(loss=mpc_score, **invalid_params)
         else:
             model = estimator_class(**invalid_params)
         with pytest.raises(InvalidParameterError):
@@ -234,8 +262,8 @@ def set_metric_loss(estimator, loss):
         return estimator.set_params(loss=loss)
     elif hasattr(estimator, 'criterion'):
         return estimator.set_params(criterion=loss)
-    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'criterion'):
-        return estimator.set_params(estimator__criterion=loss)
+    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'loss'):
+        return estimator.set_params(estimator__loss=loss)
     else:
         raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
 
@@ -247,9 +275,7 @@ def test_metric_api_consistency(estimator, dataset, kind):
     X, y, _, _ = dataset
     a, b = sympy.symbols('a b')
 
-    with Metric(kind) as cost_loss:
-        cost_loss.add_fn_cost(a).add_fp_cost(b)
-
+    cost_loss = Metric(CostMatrix().add_fn_cost(a).add_fp_cost(b), kind)
     model_metric = set_metric_loss(clone(estimator), cost_loss)
     model = clone(estimator)
 
@@ -260,19 +286,23 @@ def test_metric_api_consistency(estimator, dataset, kind):
         preds_metric = model_metric.predict(X, a=1, b=1)
         preds_metric_weighted = model_metric.predict(X, a=1, b=10)
         preds = model.predict(X, fp_cost=1, fn_cost=1)
-        assert np.allclose(preds_metric, preds)
-        assert not np.allclose(preds_metric_weighted, preds)
+        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
+        assert not np.allclose(preds_metric_weighted, preds), (
+            'Predictions of the metric API do not change with weights.'
+        )
     else:
         model_metric.fit(X, y, a=1, b=1)
         model.fit(X, y, fp_cost=1, fn_cost=1)
 
         preds_metric = model_metric.predict_proba(X)[:, 1]
         preds = model.predict_proba(X)[:, 1]
-        assert np.allclose(preds_metric, preds)
+        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
 
         model_metric.fit(X, y, a=1, b=10)
         preds_metric_weighted = model_metric.predict_proba(X)[:, 1]
-        assert not np.allclose(preds_metric_weighted, preds)
+        assert not np.allclose(preds_metric_weighted, preds), (
+            'Predictions of the metric API do not change with weights.'
+        )
 
 
 @pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
@@ -302,8 +332,30 @@ def test_data_format_metric_loss(estimator, dataset):
     fp_cost = np.expand_dims(np.ones(y.size), axis=0)
 
     tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    with Metric(Cost()) as cost_loss:
-        cost_loss.add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+
+    if isinstance(estimator, CSThresholdClassifier):
+        estimator.fit(X, y)
+        estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+    else:
+        estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_data_types_metric_loss(estimator, dataset):
+    """Test that the estimators accept different data types when using metric loss."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.arange(y.size, dtype=np.float32)
+    fn_cost = np.ones(y.size, dtype=np.int32)
+    fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
+
+    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
+    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 
@@ -320,8 +372,8 @@ def test_metric_loss_all_default_params(estimator, dataset):
     X, y, _, _ = dataset
 
     fn, fp = sympy.symbols('fn fp')
-    with Metric(Cost()) as cost_loss:
-        cost_loss.add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
+    cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
 
@@ -330,3 +382,23 @@ def test_metric_loss_all_default_params(estimator, dataset):
         estimator.predict(X)
     else:
         estimator.fit(X, y)
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+def test_metric_loss_metadata_routing(estimator, dataset):
+    """Test that the metric loss metadata routing works."""
+    X, y, fn_cost, fp_cost = dataset
+
+    fn, fp = sympy.symbols('fn fp')
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).mark_outlier_sensitive(fn)
+    cost_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+    estimator.__post_init__()
+
+    with config_context(enable_metadata_routing=True):
+        if isinstance(estimator, CSThresholdClassifier):
+            estimator.set_predict_request(fp=True, fn=True)
+        else:
+            estimator.set_fit_request(fp=True, fn=True)
+            cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})

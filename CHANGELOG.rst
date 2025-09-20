@@ -1,7 +1,42 @@
 `Unreleased`_
 =============
 
-...
+`0.10.0`_ (19-09-2025)
+======================
+
+- |Efficiency| Changed to Cython implementation for the loss functions and impurity measures of
+  :class:`~empulse.models.CSLogitClassifier`, :class:`~empulse.models.CSBoostClassifier`,
+  :class:`~empulse.models.CSTreeClassifier`, and :class:`~empulse.models.CSForestClassifier`.
+  This improves the training time and memory efficiency of these models significantly.
+  Training time speedups observed were
+  up to 300x for :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`,
+  30x for :class:`~empulse.models.CSLogitClassifier`, and 1.5x for :class:`~empulse.models.CSBoostClassifier`
+  depending on the dataset size and parameters.
+- |API| Changed arguments to :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`, and
+  :class:`~empulse.models.CSBaggingClassifier` to be in line with scikit-learn's decision tree and ensemble models.
+- |API| :class:`~empulse.models.CSForestClassifier`, and :class:`~empulse.models.CSBaggingClassifier`
+  no longer support stacking combination method. Use :class:`~sklearn.ensemble.StackingClassifier` instead for stacking.
+- |API| Extracted the construction of the cost matrix into a separate class
+  :func:`~empulse.metrics.CostMatrix` away from :class:`~empulse.metrics.Metric`
+  to allow reusing the cost matrix in custom metrics.
+- |API| :class:`~empulse.models.ProfLogitClassifier` no longer uses the EMPC metric by default.
+  Users now need to explicitely pass a loss to the model.
+- |API| :class:`~empulse.models.CSLogitClassifier` no longer accepts any callable as loss function.
+  Users now need to pass a :class:`~empulse.metrics.Metric` instance for a custom loss function.
+- |Feature| :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`
+  now accept two more baseline options `'one'` and `'zero'`
+  to always predict the positive and negative class, respectively.
+- |Feature| Metrics with with the :class:`~empulse.metrics.Savings` strategy now also accepts baseline options like
+  :func:`~empulse.metrics.savings_score` and :func:`~empulse.metrics.expected_savings_score`.
+- |Enhancement| Models which use a :class:`~empulse.metrics.Metric` instance as their loss function
+  with the :class:`~empulse.metrics.Cost` or :class:`~empulse.metrics.Savings`
+  strategy as their loss function now are pickleable.
+  The :class:`~empulse.metrics.MaxProfit` strategy will be updated to be pickleable in a future release.
+- |Enhancement| Models which use a :class:`~empulse.metrics.Metric` instance as their loss function
+  can now request arguments necessary for the metric to be passed during the fit method through Metadata Routing.
+- |Fix| Fix :class:`~empulse.models.CSLogitClassifier` not properly calculating gradient penalty.
+- |Fix| Fix default values not being properly when using aliases in :class:`~empulse.metrics.CostMatrix`.
+- |Fix| Fix :class:`~empulse.metrics.Metric` throwing errors when certain terms cancelled out.
 
 `0.9.0`_ (15-06-2025)
 =====================
@@ -138,7 +173,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.9.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.10.0...main
+.. _0.10.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.0
 .. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
 .. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0
 .. _0.7.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0

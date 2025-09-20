@@ -1,35 +1,34 @@
 import sys
 import warnings
 from collections.abc import Callable
-from functools import partial
 from numbers import Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult, minimize
-from scipy.special import expit
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.utils._param_validation import HasMethods, StrOptions
+from sklearn.utils._param_validation import StrOptions
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import Metric, make_objective_aec
-from .._base import BaseLogitClassifier, LossFn, OptimizeFn
+from ...metrics import Metric
+from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
+from .._base import BaseLogitClassifier, OptimizeFn
 from ._cs_mixin import CostSensitiveMixin
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
-Loss = Literal['average expected cost']
+LossStr = Literal['average expected cost']
 GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
 ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]
 
 
 class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     """
-    Logistic classifier to optimize instance-dependent cost loss.
+    Cost-sensitive logistic regression classifier.
 
     Read more in the :ref:`User Guide <cslogit>`.
 
@@ -227,7 +226,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseLogitClassifier._parameter_constraints,
-        'loss': [StrOptions({'average expected cost'}), HasMethods('_logit_objective'), callable, None],
+        'loss': [StrOptions({'average expected cost'}), Metric],
         'tp_cost': ['array-like', Real],
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
@@ -241,7 +240,7 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: Loss | LossFn | Metric = 'average expected cost',
+        loss: LossStr | Metric = 'average expected cost',
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
@@ -350,69 +349,24 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             loss_params['fn_cost'] = fn_cost
             loss_params['fp_cost'] = fp_cost
 
-        if self.loss == 'average expected cost':
-            loss = make_objective_aec(model='cslogit', **loss_params)
-            objective: ObjectiveFn = _objective_jacobian
-            optimize_fn: Callable[..., OptimizeResult] = _optimize_jacobian
-        elif isinstance(self.loss, Metric):
-            loss = partial(self.loss._logit_objective, **loss_params)
-            objective = _objective_jacobian
-            optimize_fn = _optimize_jacobian
-        elif self.loss is not None and not isinstance(self.loss, str):
-            loss: Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]] = partial(  # type: ignore[no-redef]
-                self.loss, **loss_params
-            )
-            objective = _objective_callable
-            optimize_fn = self._optimize
-        else:
-            raise ValueError(f'Invalid loss function: {self.loss}')
-
-        partial_objective: Callable[
-            [FloatNDArray],
-            float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray],
-        ] = partial(
-            objective,
-            X=X,
-            y=y,
-            loss_fn=loss,
+        loss = self.loss if isinstance(self.loss, Metric) else make_generic_cost_metric()
+        objective = loss._logit_objective(
+            features=X,
+            y_true=y,
             C=self.C,
             l1_ratio=self.l1_ratio,
             soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept,
+            **loss_params,
         )
-        optimize_fn: Callable[..., OptimizeResult] = optimize_fn if self.optimize_fn is None else self.optimize_fn  # type: ignore[no-redef]
-        self.result_ = optimize_fn(objective=partial_objective, X=X, **optimizer_params)
+        optimize_fn: Callable[..., OptimizeResult] = (
+            _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
+        )  # type: ignore[no-redef]
+        self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
         self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
         if self.fit_intercept:
             self.intercept_ = self.result_.x[0]
-
         return self
-
-    @staticmethod
-    def _optimize(
-        objective: Callable[[FloatNDArray], float],
-        X: FloatNDArray,
-        max_iter: int = 1000,
-        tolerance: float = 1e-4,
-        **kwargs: Any,
-    ) -> OptimizeResult:
-        initial_weights = np.zeros(X.shape[1], order='F', dtype=np.float64)
-
-        result = minimize(
-            objective,
-            initial_weights,
-            method='L-BFGS-B',
-            options={
-                'maxiter': max_iter,
-                'maxls': 50,
-                'gtol': tolerance,
-                'ftol': 64 * np.finfo(float).eps,
-            },
-            **kwargs,
-        )
-        _check_optimize_result(result)
-
-        return result
 
 
 def _optimize_jacobian(
@@ -440,90 +394,6 @@ def _optimize_jacobian(
     _check_optimize_result(result)
 
     return result
-
-
-def _objective_jacobian(
-    weights: FloatNDArray,
-    X: FloatNDArray,
-    y: IntNDArray,
-    loss_fn: GradientLossFn,
-    C: float,
-    l1_ratio: float,
-    soft_threshold: bool,
-    fit_intercept: bool,
-) -> tuple[float, FloatNDArray]:
-    """Compute the objective function and its gradient using elastic net regularization."""
-    if soft_threshold:
-        b = weights.copy()[1:] if fit_intercept else weights.copy()
-        bool_nonzero = (np.abs(b) - C) > 0
-        if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
-        if np.sum(~bool_nonzero) > 0:
-            b[~bool_nonzero] = 0
-    else:
-        b = weights[1:] if fit_intercept else weights
-
-    loss, gradient = loss_fn(X, weights, y)
-    if l1_ratio == 0.0:
-        regularization_term = 0.5 * np.sum(b**2)
-        gradient_penalty = b
-    elif l1_ratio == 1.0:
-        regularization_term = np.sum(np.abs(b))
-        gradient_penalty = np.sign(b)
-    else:
-        regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
-        gradient_penalty = (1 - l1_ratio) * b + l1_ratio * np.sign(b)
-    penalty = regularization_term / C
-    if fit_intercept:
-        gradient_penalty = np.hstack((np.array([0]), gradient_penalty))
-    return loss + penalty, gradient + gradient_penalty
-
-
-def _objective_callable(
-    weights: FloatNDArray,
-    X: FloatNDArray,
-    y: IntNDArray,
-    loss_fn: LossFn,
-    C: float,
-    l1_ratio: float,
-    soft_threshold: bool,
-    fit_intercept: bool,
-) -> float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]:
-    """Objective function (minimization problem)."""
-    # b is the vector holding the regression coefficients (no intercept)
-    b = weights.copy()[1:] if fit_intercept else weights
-
-    if soft_threshold:
-        bool_nonzero = (np.abs(b) - C) > 0
-        if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
-        if np.sum(~bool_nonzero) > 0:
-            b[~bool_nonzero] = 0
-
-    logits = np.dot(weights, X.T)
-    y_pred = expit(logits)
-    loss_output = loss_fn(y, y_pred)
-    if isinstance(loss_output, tuple):
-        if len(loss_output) == 2:
-            loss, gradient = loss_output
-            return loss + _compute_penalty(b, C, l1_ratio), gradient
-        elif len(loss_output) == 3:
-            loss, gradient, hessian = loss_output
-            return loss + _compute_penalty(b, C, l1_ratio), gradient, hessian
-        else:
-            raise ValueError(
-                f'Invalid loss function output length: {len(loss_output)}, expected 1, 2 or 3. '
-                f'(loss, gradient, hessian)'
-            )
-    else:
-        loss = loss_output
-        return loss + _compute_penalty(b, C, l1_ratio)
-
-
-def _compute_penalty(b: FloatNDArray, C: float, l1_ratio: float) -> float:
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
-    penalty = float(regularization_term / C)
-    return penalty
 
 
 def _check_optimize_result(result: OptimizeResult) -> None:

@@ -13,7 +13,7 @@ from scipy.special import expit
 from empulse.optimizers import Generation
 
 from .._types import FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import Metric, empc_score
+from ..metrics import Metric
 from ..metrics.metric.common import Direction
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
 
@@ -25,16 +25,27 @@ else:
 
 class ProfLogitClassifier(BaseLogitClassifier):
     """
-    Logistic classifier to optimize profit-driven score.
+    Profit-driven logistic regression classifier.
 
-    Maximizing empirical EMP for churn by optimizing
-    the regression coefficients of the logistic model through
-    a Real-coded Genetic Algorithm (RGA).
+    Maximizing empirical (Expected) maximum profit score
+    by optimizing the regression coefficients of the logistic model through a Real-coded Genetic Algorithm (RGA).
 
     Read more in the :ref:`User Guide <proflogit>`.
 
     Parameters
     ----------
+    loss : Callable or :class:`empulse.metrics.Metric`
+        Loss function to optimize.
+
+        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
+
+        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
+
+        By default, loss function is maximized, customize behaviour in `optimize_fn`.
+        If the loss function in an instance of :class:`~empulse.metrics.Metric` then the optimization direction is
+        automatically determined.
+
     C : float, default=1.0
         Inverse of regularization strength; must be a positive ``float``.
         Like in support vector machines, smaller values specify stronger regularization.
@@ -50,18 +61,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
         For ``l1_ratio = 0`` the penalty is a L2 penalty.
         For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
-
-    loss : Callable or :class:`empulse.metrics.Metric`, default= :func:`empulse.metrics.empc_score`
-        Loss function to optimize.
-
-        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
-
-        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
-          to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
-
-        By default, loss function is maximized, customize behaviour in `optimize_fn`.
-        If the loss function in an instance of :class:`~empulse.metrics.Metric` then the optimization direction is
-        automatically determined.
 
     optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
@@ -102,6 +101,20 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Intercept of the logit model.
         Only available when ``fit_intercept=True``.
 
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from empulse.metrics import mpc_score
+        from empulse.models import ProfLogitClassifier
+        from sklearn.datasets import make_classification
+
+        X, y = make_classification()
+
+        model = ProfLogitClassifier(loss=mpc_score, C=0.1, l1_ratio=0.5)
+        model.fit(X, y, clv=200, incentive_cost=10)
+
     References
     ----------
     .. [1] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
@@ -122,11 +135,11 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
     def __init__(
         self,
+        loss: LossFn | Metric,
         C: float = 1.0,
         fit_intercept: bool = True,
         soft_threshold: bool = False,
         l1_ratio: float = 1.0,
-        loss: LossFn | Metric = empc_score,
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
         n_jobs: int | None = None,

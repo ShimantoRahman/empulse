@@ -11,6 +11,9 @@ build: clean
 upload: build
 	uvx twine upload dist/*
 
+compile:
+	uv sync --reinstall-package empulse
+
 test:
 	uv run pytest --cov-report term --cov=empulse tests/
 	uv run coverage html
@@ -25,6 +28,7 @@ tox:
 	uvx --with tox-uv tox -f tests
 
 lint:
+	uvx ruff format --preview
 	uvx ruff check --fix --preview
 	uvx ruff format --preview
 

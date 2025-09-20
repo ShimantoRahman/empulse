@@ -54,6 +54,7 @@ class BaseBoostClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, AB
 
     def __init__(self, estimator: Any = None) -> None:
         self.estimator = estimator
+        super().__init__()
 
     def _more_tags(self) -> dict[str, bool]:
         return {

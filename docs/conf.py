@@ -85,6 +85,8 @@ extensions = [
     "numpydoc",
     "sphinx_copybutton",
     "sphinxcontrib.sass",
+    "sphinx_codeautolink",
+    # see sphinxext folder for custom extensions
     "override_pst_pagetoc",
 ]
 
