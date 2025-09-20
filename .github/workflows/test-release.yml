@@ -35,6 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: ${{ (matrix.os == 'windows-latest') || (matrix.os == 'windows-11-arm') }}
+        with:
+          arch: x64
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.1.4
         env:
@@ -42,7 +47,6 @@ jobs:
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_BEFORE_BUILD: pip install "numpy>=2.0,<3.0" "scikit-learn"
 
       - uses: actions/upload-artifact@v4
         with:
