@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython", "numpy", "scikit-learn"]
+requires = ["setuptools>=80.9.0", "wheel", "Cython", "numpy", "scikit-learn"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -66,6 +66,7 @@ test = [
     "tox>=4.13.0",
     "cython>=3.1.2",
     "tox-uv>=1.25.0",
+    "setuptools>=80.9.0",
 ]
 
 docs = [
