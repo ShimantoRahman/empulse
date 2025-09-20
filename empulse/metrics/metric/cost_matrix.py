@@ -55,6 +55,28 @@ class CostMatrix:
     fn_cost : sympy.Expr
         The cost of a false negative.
         See :meth:`~empulse.metrics.CostMatrix.add_fn_cost` for more details.
+
+    Examples
+    --------
+    Reimplementing the :func:`~empulse.metrics.empc_score` cost matrix.
+
+    .. code-block:: python
+
+        import sympy as sp
+        from empulse.metrics import CostMatrix
+
+        clv, d, f, alpha, beta = sp.symbols(
+            'clv d f alpha beta'
+        )  # define deterministic variables
+        gamma = sp.stats.Beta('gamma', alpha, beta)  # define gamma to follow a Beta distribution
+
+        cost_matrix = (
+            CostMatrix()
+            .add_tp_benefit(gamma * (clv - d - f))  # when churner accepts offer
+            .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept offer
+            .add_fp_cost(d + f)  # when you send an offer to a non-churner
+            .alias({'incentive_cost': 'd', 'contact_cost': 'f'})
+        )
     """
 
     def __init__(self) -> None:
