@@ -1,7 +1,7 @@
 `Unreleased`_
 =============
 
-`0.10.0`_ (19-09-2025)
+`0.10.0`_ (20-09-2025)
 ======================
 
 - |Efficiency| Changed to Cython implementation for the loss functions and impurity measures of
