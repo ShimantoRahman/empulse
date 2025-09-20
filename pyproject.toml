@@ -65,6 +65,7 @@ test = [
     "pytest-cov>=4.1.0",
     "tox>=4.13.0",
     "cython>=3.1.2",
+    "tox-uv>=1.25.0",
 ]
 
 docs = [
