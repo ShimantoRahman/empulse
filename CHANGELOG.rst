@@ -1,7 +1,7 @@
 `Unreleased`_
 =============
 
-`0.10.2`_ (20-09-2025)
+`0.10.3`_ (20-09-2025)
 ======================
 
 - |Fix| Fix build issue on Windows.
@@ -178,8 +178,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.10.2...main
-.. _0.10.2: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.2
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.10.3...main
+.. _0.10.3: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.3
 .. _0.10.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.0
 .. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
 .. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0

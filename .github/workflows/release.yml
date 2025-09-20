@@ -1,4 +1,4 @@
-name: Build and upload to PyPI
+name: release
 
 on:
   push:
@@ -140,7 +140,7 @@ jobs:
 
   github_release:
     name: Create GitHub Release
-    needs: [build_wheels, build_sdist]
+    needs: [details, build_wheels, build_sdist]
     runs-on: ubuntu-latest
     permissions:
       contents: write
