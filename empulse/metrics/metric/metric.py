@@ -7,7 +7,7 @@ import sympy
 from ..._types import FloatArrayLike, FloatNDArray
 from .common import Direction, _evaluate_expression
 from .cost_matrix import CostMatrix
-from .metric_strategies import MetricStrategy
+from .strategies import MetricStrategy
 
 
 class Metric:

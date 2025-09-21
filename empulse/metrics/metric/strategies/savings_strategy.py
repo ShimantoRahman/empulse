@@ -11,9 +11,9 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from ..._types import FloatNDArray
-from .._loss import cy_logit_loss_gradient
-from .common import (
+from ...._types import FloatNDArray
+from ..._loss import cy_logit_loss_gradient
+from ..common import (
     BoostGradientConst,
     Direction,
     LogitConsts,
@@ -25,7 +25,7 @@ from .common import (
     _safe_lambdify,
     _safe_run_lambda,
 )
-from .cost_metric import (
+from .cost_strategy import (
     CostBoostGradientConst,
     CostLogitConsts,
     CostLoss,
@@ -34,7 +34,7 @@ from .cost_metric import (
     _build_cost_equation,
     _format_cost_function,
 )
-from .metric_strategies import MetricStrategy
+from .metric_strategy import MetricStrategy
 
 
 class Savings(MetricStrategy):
