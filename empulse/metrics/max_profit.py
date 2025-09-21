@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._convex_hull import _compute_convex_hull
+from ._cy_convex_hull import convex_hull
 
 
 def max_profit_score(
@@ -182,7 +182,7 @@ def max_profit(
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
 
-    f0, f1 = _compute_convex_hull(y_true, y_score)
+    f0, f1 = convex_hull(y_true, y_score)
 
     profits = (tp_benefit + fn_cost) * pi0 * f0 - (tn_benefit + fp_cost) * pi1 * f1 + tn_benefit * pi1 - fn_cost * pi0
     best_index = np.argmax(profits)
