@@ -5,7 +5,7 @@ from packaging.version import Version
 from scipy import stats as st
 
 from ..._types import FloatArrayLike, FloatNDArray
-from .._convex_hull import _compute_convex_hull
+from .._cy_convex_hull import convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp, _validate_input_empb
 
@@ -267,6 +267,9 @@ def empc(
         y_score = np.asarray(y_score)
         clv = np.asarray(clv)
 
+    y_true = y_true.astype(np.int32)
+    y_score = y_score.astype(np.float64)
+
     if isinstance(clv, np.ndarray):
         clv = float(np.mean(clv))
 
@@ -274,7 +277,7 @@ def empc(
     phi = contact_cost / clv
     positive_class_prob, negative_class_prob = _compute_prior_class_probabilities(y_true)
 
-    true_positive_rates, false_positive_rates = _compute_convex_hull(y_true, y_score)
+    true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
     tpr_diff, fpr_diff = _compute_tpr_fpr_diffs(true_positive_rates, false_positive_rates)
 
     tpr_coef = phi * positive_class_prob
