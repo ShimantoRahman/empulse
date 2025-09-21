@@ -1,6 +1,5 @@
 from collections.abc import Callable, Iterable
 from enum import Enum, auto
-from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 
 import numpy as np
@@ -69,28 +68,6 @@ class SympyFnPickleMixin:
                 setattr(self, func_name, lambda *args, **kwargs: float(equation))  # noqa: B023
             else:
                 setattr(self, func_name, sympy.lambdify(list(equation.free_symbols), equation))
-
-
-def _check_parameters_decorator(*parameters: str | sympy.Expr) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    """
-    Check if all parameters are provided.
-
-    In particular:
-        - deterministic parameters
-        - distribution parameters of stochastic variables
-    """
-
-    def decorator(func: Callable[P, R]) -> Callable[P, R]:
-        @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            for value in parameters:
-                if str(value) not in kwargs:
-                    raise ValueError(f'Metric expected a value for {value}, did not receive it.')
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
 
 
 def _check_parameters(symbols: Iterable[str | sympy.Expr], kwargs: dict[str, Any]) -> None:
