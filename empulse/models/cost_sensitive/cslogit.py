@@ -59,20 +59,16 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    loss : {'average expected cost'}, Callable or :class:`empulse.metrics.Metric`, default='average expected cost'
-        Loss function which should be minimized.
+    loss : {'average expected cost'} or :class:`empulse.metrics.Metric`, default='average expected cost'
+        Loss function which should be optimized.
 
         - If ``str``, then it should be one of the following:
 
             - 'average expected cost' : Average Expected Cost loss function,
               see :func:`~empulse.metrics.expected_cost_loss`.
 
-        - If ``Callable`` it should have a signature ``loss(y_true, y_score)``.
-
         - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
           to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.
-
-        By default, loss function is minimized, customize behaviour in `optimize_fn`.
 
     optimize_fn : Callable, optional
         Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
