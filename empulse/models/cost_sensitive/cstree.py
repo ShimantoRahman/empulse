@@ -32,6 +32,16 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
     """
     Cost-sensitive decision tree classifier.
 
+    Trees are split based on a cost-sensitive impurity measure.
+
+    .. seealso::
+
+    :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression classifier.
+
+    :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive gradient boosting classifier.
+
+    :class:`~empulse.models.CSForestClassifier` : Cost-sensitive random forest classifier.
+
     Parameters
     ----------
     tp_cost : float or array-like, shape=(n_samples,), default=0.0

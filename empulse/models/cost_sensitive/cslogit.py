@@ -34,9 +34,11 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     .. seealso::
 
-        :func:`~empulse.metrics.make_objective_aec` : Creates the instance-dependent cost function.
+        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive gradient boosting classifier.
 
-        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive XGBoost classifier.
+        :class:`~empulse.models.CSTreeClassifier` : Cost-sensitive decision tree classifier.
+
+        :class:`~empulse.models.CSForestClassifier` : Cost-sensitive random forest classifier.
 
     Parameters
     ----------
