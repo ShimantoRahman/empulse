@@ -84,10 +84,6 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` method.
 
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
