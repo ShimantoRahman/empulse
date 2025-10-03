@@ -13,10 +13,10 @@ both streams of literature use a cost matrix (or cost-benefit matrix).
 Cost Matrix
 ===========
 
-The cost matrix is a square matrix where the rows represent the predicted class and the columns represent the true class.
+The **cost matrix** is a square matrix where the rows represent the predicted class and the columns represent the true class.
 Each element of the matrix represents the cost associated with the corresponding pair of predicted and true classes.
 
-.. list-table::
+.. list-table:: Example of a Cost Matrix
 
     * -
       - Actual positive :math:`y_i = 1`
@@ -43,11 +43,11 @@ making a false negative prediction, you can set the costs as follows:
     tn_cost = 0
 
 An important side note is that in value-driven metrics, the cost of correctly classifying is seen as a benefit.
-Therefore, the cost matrix is often referred to as a cost-benefit matrix in this context.
-Concretely, this just mean that a value-driven cost-benefit matrix
+Therefore, the cost matrix is often referred to as a **cost-benefit matrix** in this context.
+Concretely, this just means that a value-driven cost-benefit matrix
 just takes the negative of the true positive and true negative costs.
 
-.. list-table::
+.. list-table:: Example of a Cost-Benefit Matrix
 
     * -
       - Actual positive :math:`y_i = 1`
@@ -56,8 +56,8 @@ just takes the negative of the true positive and true negative costs.
       - :math:`b_0 = -C(1|1)`
       - :math:`c_0 = C(1|0)`
     * - Predicted negative :math:`\hat{y}_i = 0`
-      - :math:`c_1 = -C(0|1)`
-      - :math:`b_1 = C(0|0)`
+      - :math:`c_1 = C(0|1)`
+      - :math:`b_1 = -C(0|0)`
 
 For value-driven metrics,
 Empulse represents the cost and benefits as ``tp_benefit``, ``fp_cost``, ``fn_cost``, and ``tn_benefit``,
