@@ -124,41 +124,6 @@ cdef void grow_subtree(
             split_values=split_values,
         )
 
-cdef void split(
-    Node* node,
-    int n_features,
-    SplitValues* split_values,
-    int depth,
-    int max_depth,
-) noexcept nogil:
-    """Add a randomly generated split rule to a randomly selected leaf node."""
-    if max_depth == -1:
-        max_depth = depth
-
-    if depth < max_depth:
-        node.feature_index = rand_int(0, n_features)
-        split_value_index = rand_int(0, split_values.lengths[node.feature_index] - 1)
-        node.split_value = split_values.values[node.feature_index][split_value_index]
-        node.left = create_node()
-        node.left.parent = node
-        node.right = create_node()
-        node.right.parent = node
-
-cdef void prune(Node* node) noexcept nogil:
-    """Prune a randomly selected internal node into a leaf node."""
-
-    if node.left is not NULL:
-        prune(node.left)
-    if node.right is not NULL:
-        prune(node.right)
-    if is_leaf(node):  # TODO: this check is probably unnecessary
-        if node.parent.left == node:
-            node.parent.left = NULL
-            # node.parent.n_samples += node.n_samples  # TODO: add n_samples to every node during fit, then this is not necessary
-        else:
-            node.parent.right = NULL
-        free_node(node)
-
 cdef Node* random_subnode(Node* root) noexcept nogil:
 
     cdef Node* node = root
@@ -183,30 +148,6 @@ cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil:
     cdef int depth = 0
     while True:
         if is_leaf(node) or rand_int(0, 3) == 0:
-            if out_depth is not NULL:
-                out_depth[0] = depth
-            return node
-        if node.left is not NULL and node.right is not NULL:
-            if rand_bool():
-                node = node.left
-            else:
-                node = node.right
-        elif node.left is not NULL:
-            node = node.left
-        elif node.right is not NULL:
-            node = node.right
-        else:
-            if out_depth is not NULL:
-                out_depth[0] = depth
-            return node
-        depth += 1
-
-cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil:
-    """Select a random leaf node and return its depth."""
-    cdef Node* node = root
-    cdef int depth = 0
-    while True:
-        if is_leaf(node):
             if out_depth is not NULL:
                 out_depth[0] = depth
             return node

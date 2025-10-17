@@ -35,13 +35,3 @@ cdef void grow_subtree(
 
 cdef Node* random_subnode(Node* root) noexcept nogil
 cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil
-cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil
-
-cdef void prune(Node* node) noexcept nogil
-cdef void split(
-    Node* node,
-    int n_features,
-    SplitValues* split_values,
-    int depth,
-    int max_depth,
-) noexcept nogil
