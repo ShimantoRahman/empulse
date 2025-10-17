@@ -223,11 +223,8 @@ def _objective(
     b = weights.copy()[1:] if fit_intercept else weights
 
     if soft_threshold:
-        bool_nonzero = (np.abs(b) - C) > 0
-        if np.sum(bool_nonzero) > 0:
-            b[bool_nonzero] = np.sign(b[bool_nonzero]) * (np.abs(b[bool_nonzero]) - C)
-        if np.sum(~bool_nonzero) > 0:
-            b[~bool_nonzero] = 0
+        threshold = l1_ratio / C
+        b = np.sign(b) * np.maximum(np.abs(b) - threshold, 0)
 
     logits = np.dot(X, weights)
     y_pred = expit(logits)  # Invert logit transformation

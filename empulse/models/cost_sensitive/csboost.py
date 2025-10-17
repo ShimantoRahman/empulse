@@ -36,7 +36,7 @@ from ..._common import Parameter
 from ...metrics import Metric
 from ...metrics._loss import cy_boost_grad_hess
 from .._base import BaseBoostClassifier
-from ._cs_mixin import CostSensitiveMixin
+from .._cs_mixin import CostSensitiveMixin
 
 # Hessian is 0 at score 0.5
 # which means that at initialization the model optimization doesn't do anything

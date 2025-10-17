@@ -10,6 +10,7 @@ from .cost_sensitive import (
     RobustCSClassifier,
 )
 from .proflogit import ProfLogitClassifier
+from .proftree import ProfTreeClassifier
 
 __all__ = [
     'B2BoostClassifier',
@@ -23,5 +24,6 @@ __all__ = [
     'CSThresholdClassifier',
     'CSTreeClassifier',
     'ProfLogitClassifier',
+    'ProfTreeClassifier',
     'RobustCSClassifier',
 ]

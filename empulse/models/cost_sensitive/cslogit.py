@@ -15,7 +15,7 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base import BaseLogitClassifier, OptimizeFn
-from ._cs_mixin import CostSensitiveMixin
+from .._cs_mixin import CostSensitiveMixin
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -42,46 +42,6 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
 
     Parameters
     ----------
-    C : float, default=1.0
-        Inverse of regularization strength; must be a positive ``float``.
-        Like in support vector machines, smaller values specify stronger regularization.
-
-    fit_intercept : bool, default=True
-        Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
-
-    soft_threshold : bool, default=False
-        If ``True``, apply soft-thresholding to the regression coefficients.
-
-    l1_ratio : float, default=1.0
-        The ElasticNet mixing parameter, with ``0 <= l1_ratio <= 1``.
-
-            - For ``l1_ratio = 0`` the penalty is a L2 penalty.
-            - For ``l1_ratio = 1`` it is a L1 penalty.
-            - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
-
-    loss : {'average expected cost'} or :class:`empulse.metrics.Metric`, default='average expected cost'
-        Loss function which should be optimized.
-
-        - If ``str``, then it should be one of the following:
-
-            - 'average expected cost' : Average Expected Cost loss function,
-              see :func:`~empulse.metrics.expected_cost_loss`.
-
-        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
-          to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.
-
-    optimize_fn : Callable, optional
-        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
-        See :ref:`proflogit` for more information.
-
-    optimizer_params : dict[str, Any], optional
-        Additional keyword arguments passed to `optimize_fn`.
-
-        tp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of true positives. If ``float``, then all true positives have the same cost.
-        If array-like, then it is the cost of each true positive classification.
-        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
-
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
@@ -117,6 +77,41 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
+
+    loss : {'average expected cost'} or :class:`empulse.metrics.Metric`, default='average expected cost'
+        Loss function which should be optimized.
+
+        - If ``str``, then it should be one of the following:
+
+            - 'average expected cost' : Average Expected Cost loss function,
+              see :func:`~empulse.metrics.expected_cost_loss`.
+
+        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.
+
+    C : float, default=1.0
+        Inverse of regularization strength; must be a positive ``float``.
+        Like in support vector machines, smaller values specify stronger regularization.
+
+    fit_intercept : bool, default=True
+        Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
+
+    soft_threshold : bool, default=False
+        If ``True``, apply soft-thresholding to the regression coefficients.
+
+    l1_ratio : float, default=1.0
+        The ElasticNet mixing parameter, with ``0 <= l1_ratio <= 1``.
+
+            - For ``l1_ratio = 0`` the penalty is a L2 penalty.
+            - For ``l1_ratio = 1`` it is a L1 penalty.
+            - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
+
+    optimize_fn : Callable, optional
+        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
+        See :ref:`proflogit` for more information.
+
+    optimizer_params : dict[str, Any], optional
+        Additional keyword arguments passed to `optimize_fn`.
 
     Attributes
     ----------
@@ -230,17 +225,17 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
     def __init__(
         self,
         *,
-        C: float = 1.0,
-        fit_intercept: bool = True,
-        soft_threshold: bool = False,
-        l1_ratio: float = 1.0,
-        loss: LossStr | Metric = 'average expected cost',
-        optimize_fn: OptimizeFn | None = None,
-        optimizer_params: dict[str, Any] | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
+        loss: LossStr | Metric = 'average expected cost',
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        soft_threshold: bool = False,
+        l1_ratio: float = 1.0,
+        optimize_fn: OptimizeFn | None = None,
+        optimizer_params: dict[str, Any] | None = None,
     ):
         super().__init__(
             C=C,

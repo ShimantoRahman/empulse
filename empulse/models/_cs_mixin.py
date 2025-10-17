@@ -6,9 +6,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.utils._metadata_requests import RequestMethod
 
-from ..._common import Parameter
-from ..._types import FloatArrayLike, FloatNDArray
-from ...metrics import Metric
+from .._common import Parameter
+from .._types import FloatArrayLike, FloatNDArray
+from ..metrics import Metric
 
 
 class CostSensitiveMixin:
@@ -125,6 +125,72 @@ class CostSensitiveMixin:
         fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
 
         return tp_cost, tn_cost, fn_cost, fp_cost
+
+    def _check_cost_benefits(
+        self,
+        *,
+        tp_benefit: FloatArrayLike | float | Parameter,
+        tn_benefit: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        caller: str = 'fit',
+        force_array: bool = False,
+        n_samples: int | None = None,
+    ) -> tuple[
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+    ]:
+        """
+        Check if costs and benefits are set and return them.
+
+        Also convert them to numpy arrays if they are array-like.
+        Overwrite costs set in constructor if they are set in the fit/predict method.
+        """
+        if tp_benefit is Parameter.UNCHANGED:
+            tp_benefit = self.tp_benefit  # type: ignore[attr-defined]
+        if tn_benefit is Parameter.UNCHANGED:
+            tn_benefit = self.tn_benefit  # type: ignore[attr-defined]
+        if fn_cost is Parameter.UNCHANGED:
+            fn_cost = self.fn_cost  # type: ignore[attr-defined]
+        if fp_cost is Parameter.UNCHANGED:
+            fp_cost = self.fp_cost  # type: ignore[attr-defined]
+
+        if all_costs_zero(tp_benefit, tn_benefit, fn_cost, fp_cost):
+            warnings.warn(
+                'All costs and benefits are zero. Setting fp_cost=1 and fn_cost=1. '
+                f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
+                UserWarning,
+                stacklevel=2,
+            )
+            fp_cost = 1
+            fn_cost = 1
+
+        if force_array:
+            if n_samples is None:
+                raise ValueError('n_samples should be set when force_array is True.')
+            tp_benefit = np.asarray(tp_benefit) if not isinstance(tp_benefit, Real) else np.full(n_samples, tp_benefit)
+            tn_benefit = np.asarray(tn_benefit) if not isinstance(tn_benefit, Real) else np.full(n_samples, tn_benefit)
+            fn_cost = np.asarray(fn_cost) if not isinstance(fn_cost, Real) else np.full(n_samples, fn_cost)
+            fp_cost = np.asarray(fp_cost) if not isinstance(fp_cost, Real) else np.full(n_samples, fp_cost)
+        else:
+            if not isinstance(tp_benefit, Real):
+                tp_benefit = np.asarray(tp_benefit)
+            if not isinstance(tn_benefit, Real):
+                tn_benefit = np.asarray(tn_benefit)
+            if not isinstance(fn_cost, Real):
+                fn_cost = np.asarray(fn_cost)
+            if not isinstance(fp_cost, Real):
+                fp_cost = np.asarray(fp_cost)
+
+        # Normalize shapes to (1, N)
+        tp_benefit = tp_benefit.reshape(-1) if isinstance(tp_benefit, np.ndarray) else tp_benefit
+        tn_benefit = tn_benefit.reshape(-1) if isinstance(tn_benefit, np.ndarray) else tn_benefit
+        fn_cost = fn_cost.reshape(-1) if isinstance(fn_cost, np.ndarray) else fn_cost
+        fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
+
+        return tp_benefit, tn_benefit, fn_cost, fp_cost
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
