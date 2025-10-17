@@ -15,6 +15,42 @@ if __name__ == '__main__':
             ['empulse/models/cost_sensitive/_impurity/*.pyx'],
             include_dirs=[np.get_include(), 'sklearn.utils._typedefs', 'sklearn.tree._criterion'],
         ),
+        # ProfTree modules
+        Extension(
+            'empulse.models.proftree.random',
+            ['empulse/models/proftree/random.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.node',
+            ['empulse/models/proftree/node.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.tree',
+            ['empulse/models/proftree/tree.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.forest',
+            ['empulse/models/proftree/forest.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.operators',
+            ['empulse/models/proftree/operators.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.evolution',
+            ['empulse/models/proftree/evolution.pyx'],
+            include_dirs=[np.get_include()],
+        ),
+        Extension(
+            'empulse.models.proftree.evolutionary_tree',
+            ['empulse/models/proftree/evolutionary_tree.pyx'],
+            include_dirs=[np.get_include()],
+        ),
     ]
     setup(
         ext_modules=cythonize(

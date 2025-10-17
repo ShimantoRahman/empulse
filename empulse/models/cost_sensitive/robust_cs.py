@@ -16,7 +16,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, _estimator_has, validate_data  # type: ignore[attr-defined]
-from ._cs_mixin import CostSensitiveMixin
+from .._cs_mixin import CostSensitiveMixin
 
 if sys.version_info >= (3, 11):
     from typing import Self

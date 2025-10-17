@@ -29,6 +29,7 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
+    ProfTreeClassifier,
     RobustCSClassifier,
 )
 from empulse.utils._sklearn_compat import parametrize_with_checks
@@ -36,6 +37,7 @@ from empulse.utils._sklearn_compat import parametrize_with_checks
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
     ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10}),
+    ProfTreeClassifier(mpc_score, max_iter=2, population_size=10, random_state=42),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -245,10 +247,10 @@ def test_invalid_params(estimator_class, dataset):
             takes_loss
             and 'loss' in invalid_params
             and isinstance(invalid_params['loss'], InvalidParameter)
-            and estimator_class is ProfLogitClassifier
+            and estimator_class in (ProfLogitClassifier, ProfTreeClassifier)
         ):
             model = estimator_class(**invalid_params)
-        elif takes_loss and estimator_class is ProfLogitClassifier:
+        elif takes_loss and estimator_class in (ProfLogitClassifier, ProfTreeClassifier):
             model = estimator_class(loss=mpc_score, **invalid_params)
         else:
             model = estimator_class(**invalid_params)

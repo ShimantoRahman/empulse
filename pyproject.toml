@@ -95,6 +95,7 @@ dev = [
     { include-group = "lint" },
     "twine>=4.0.2",
     "jupyter>=1.1.1",
+    "line-profiler>=5.0.0",
 ]
 
 [tool.uv]

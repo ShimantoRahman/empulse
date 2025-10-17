@@ -15,7 +15,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-from ._cs_mixin import CostSensitiveMixin
+from .._cs_mixin import CostSensitiveMixin
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
 if sys.version_info >= (3, 11):
