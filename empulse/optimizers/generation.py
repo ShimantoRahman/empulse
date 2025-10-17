@@ -18,7 +18,7 @@ class Generation:
     ----------
     population_size : int or None, default=None
         Number of individuals in the population.
-        If ``None``, population size is set to ``10 * n_dim``.
+        If ``None``, population size is set to ``10 * n_features``.
 
     crossover_rate : float, default=0.8
         Probability of crossover. Must be in [0, 1].
@@ -27,7 +27,7 @@ class Generation:
         Probability of mutation. Must be in [0, 1].
 
     elitism : float, default=0.05
-        Fraction of the population that is considered elite.
+        Fraction of the population that transferred to the next generation without change.
         Must be in [0, 1].
 
     verbose : bool, default=False

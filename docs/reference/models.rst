@@ -23,6 +23,7 @@ Cost-Sensitive and Value-driven Models
     CSTreeClassifier
     RobustCSClassifier
     ProfLogitClassifier
+    ProfTreeClassifier
 
 Bias Mitigation Models
 ======================
