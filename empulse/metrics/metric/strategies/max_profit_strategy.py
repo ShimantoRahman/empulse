@@ -815,7 +815,7 @@ class MaxProfitScoreQuad(SympyFnPickleMixin):
         self,
         profit_function: sympy.Expr,
         rate_function: sympy.Expr | None,
-        random_symbols: Iterable[sympy.Symbol],
+        random_symbols: Sequence[sympy.Symbol],
         deterministic_symbols: Iterable[sympy.Symbol],
     ) -> None:
         self.profit_function = profit_function
