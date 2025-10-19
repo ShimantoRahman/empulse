@@ -123,7 +123,7 @@ def test_convex_hull_equivalence(y_true, y_score):
     tpr_cy, fpr_cy = cy_convex_hull(y_true_c, y_score_c)
 
     # Python implementation returns (tpr, fpr)
-    tpr_py, fpr_py = py_convex_hull(y_true_c, y_score_c, expand_dims=False)
+    tpr_py, fpr_py = py_convex_hull(y_true_c, y_score_c)
 
     # Basic sanity: shapes match
     assert tpr_cy.shape == tpr_py.shape
