@@ -15,10 +15,8 @@ cdef inline int _orientation(const Point& p1, const Point& p2, const Point& p3) 
     cdef double d = (p3.y - p2.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p3.x - p2.x)
     if d > 1.1920929e-07:
         return 1
-    elif d < -1.1920929e-07:
-        return -1
     else:
-        return 0
+        return -1
 
 cdef inline void _push_point(vector[Point]& hull, double x, double y) noexcept nogil:
     cdef Point p
@@ -26,28 +24,39 @@ cdef inline void _push_point(vector[Point]& hull, double x, double y) noexcept n
     p.y = y
     hull.push_back(p)
 
-cdef tuple _compute_roc_curve(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score):    # noqa: F401
+cdef tuple[np.ndarray[np.float64], np.ndarray[np.float64]] _compute_roc_curve(  # noqa: F401
+        cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score  # noqa: F401
+):
     """Compute ROC curve points from true and predicted scores."""
-    # Ensure correct dtype and contiguity
-    # y_true = np.ascontiguousarray(y_true, dtype=np.int32)
-    # y_score = np.ascontiguousarray(y_score, dtype=np.float64)
-
     # Sort by score descending while preserving stability on ties
-    desc_idx = np.argsort(y_score, kind="mergesort")[::-1]
-    y_score = y_score[desc_idx]
-    y_true = y_true[desc_idx]
+    cdef cnp.ndarray[cnp.int32_t, ndim=1] desc_idx = np.argsort(y_score, kind="mergesort")[::-1].astype(np.int32)  # noqa: F401
+
+    n_rows = cython.declare(cython.int, y_true.shape[0])
+    cdef int i
+    cdef double last_value = y_score[desc_idx[0]]
+    threshold_idxs_vector: vector[cython.int]
+    threshold_idxs_vector.reserve(n_rows)
 
     # Distinct thresholds (where score changes)
-    distinct_value_indices = np.where(np.diff(y_score))[0]
-    threshold_idxs = np.r_[distinct_value_indices, y_true.size - 1]
+    for i in range(1, desc_idx.size):
+        if y_score[desc_idx[i]] != last_value:
+            threshold_idxs_vector.push_back(i - 1)
+            last_value = y_score[desc_idx[i]]
+    threshold_idxs_vector.push_back(n_rows - 1)
+
+    cdef cnp.ndarray[cnp.int32_t, ndim=1] threshold_idxs = np.empty(threshold_idxs_vector.size(), dtype=np.int32)  # noqa: F401
+    for i in range(threshold_idxs_vector.size()):
+        threshold_idxs[i] = threshold_idxs_vector[i]
 
     # Accumulate TP/FP at thresholds
-    tps = np.cumsum(y_true, dtype=np.float64)[threshold_idxs]
-    fps = 1.0 + threshold_idxs.astype(np.float64) - tps
-
-    n_samples: cython.int =  fps.size
-    fpr = fps / fps[n_samples - 1]
-    tpr = tps / tps[n_samples - 1]
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr = np.cumsum(y_true[desc_idx], dtype=np.float64)[threshold_idxs]  # noqa: F401
+    n_samples: cython.int =  tpr.size
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] fpr = np.array(threshold_idxs, dtype=np.float64)  # noqa: F401
+    cdef double n_positives = tpr[n_samples - 1]
+    cdef double n_negatives = n_rows - n_positives
+    for i in range(n_samples):
+        fpr[i] = (1.0 + fpr[i] - tpr[i]) / n_negatives
+        tpr[i] = tpr[i] / n_positives
 
     # Anchor to (0,0) and (1,1) if not already present
     if fpr.size == 0 or fpr[0] != 0.0 or tpr[0] != 0.0:
@@ -57,7 +66,6 @@ cdef tuple _compute_roc_curve(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarr
         fpr = np.concatenate((fpr, [1.0]))
         tpr = np.concatenate((tpr, [1.0]))
 
-    # Make contiguous float64 outputs
     return (np.ascontiguousarray(fpr, dtype=np.float64),
             np.ascontiguousarray(tpr, dtype=np.float64))
 
@@ -83,24 +91,27 @@ def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64
     cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr  # noqa: F401
     fpr, tpr = _compute_roc_curve(y_true, y_score)
 
-    n_rows = cython.declare(cython.int, y_true.shape[0])
-    p0_idx = np.lexsort((fpr, tpr))[0]
-    p0x: cython.double = fpr[p0_idx]
-    p0y: cython.double = tpr[p0_idx]
+    n_rows = cython.declare(cython.int, fpr.shape[0])
+    cdef int i
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] angles = np.empty(n_rows, dtype=np.float64)  # noqa: F401
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] dist2 = np.empty(n_rows, dtype=np.float64)  # noqa: F401
 
     # Compute sort keys: primary - polar angle, secondary - distance^2
-    dy = tpr - p0y
-    dx = fpr - p0x
+    cdef double p0x = fpr[0]
+    cdef double p0y = tpr[0]
+    cdef double dy, dx
     # Matching behavior of earlier polar_angle: if p.y == p0.y, put first via angle = -pi
-    angles = np.where(dy == 0.0, -pi, np.arctan2(dy, dx))
-    dist2 = dy * dy + dx * dx
+    for i in range(n_rows):
+        dy = tpr[i] - p0y
+        dx = fpr[i] - p0x
+        angles[i] = atan2(dy, dx) if dy != 0.0 else -pi
+        dist2[i] = dy * dy + dx * dx
 
     cdef cnp.ndarray[cnp.int64_t, ndim=1] order = np.lexsort((dist2, angles))  # noqa: F401
 
     hull: vector[Point]
-    hull.reserve(fpr.shape[0])
+    hull.reserve(n_rows)
 
-    cdef Py_ssize_t i
     cdef Point p, p1, p2
     cdef double x, y
 
@@ -141,4 +152,4 @@ def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64
         xf = xf[idx]
         yf = yf[idx]
 
-    return np.array(yf), np.array(xf)
+    return yf, xf
