@@ -86,6 +86,18 @@ _sympy_dist_to_scipy_params: dict[
 }
 
 
+def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
+    """
+    Replace instance-dependent array-like parameter values with their mean (float).
+
+    Leaves scalar parameters unchanged.
+    """
+    for key, value in list(parameters.items()):
+        if isinstance(value, np.ndarray):
+            parameters[key] = float(np.mean(value))
+    return parameters
+
+
 class MaxProfit(MetricStrategy):
     """
     Strategy for the Expected Maximum Profit (EMP) metric.
@@ -227,6 +239,7 @@ class MaxProfit(MetricStrategy):
         score: float
             The maximum profit score.
         """
+        parameters = _aggregate_instance_parameters(parameters)
         return self._score_function(y_true, y_score, **parameters)
 
     def optimal_threshold(
@@ -288,6 +301,7 @@ class MaxProfit(MetricStrategy):
         optimal_rate: float
             The optimal predicted positive rate.
         """
+        parameters = _aggregate_instance_parameters(parameters)
         return self._optimal_rate(y_true, y_score, **parameters)
 
     def to_latex(
