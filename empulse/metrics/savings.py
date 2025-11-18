@@ -176,8 +176,8 @@ def cost_loss(
         - :math:`y_i` is the true label,
         - :math:`\\hat y_i` is the predicted label,
         - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(1|0)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``, and
         - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
 
     Code modified from `costcla.metrics.cost_loss`.
@@ -422,8 +422,8 @@ def expected_log_cost_loss(
     - :math:`y_i` is the true label,
     - :math:`s_i` is the predicted probability,
     - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(1|0)` is the cost of a false positive ``fp_cost``,
+    - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``, and
     - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
 
     When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,
@@ -551,8 +551,8 @@ def savings_score(
         - :math:`y_i` is the true label,
         - :math:`\\hat y_i` is the predicted label,
         - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(1|0)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``, and
         - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
         - :math:`N` is the number of samples.
 
@@ -748,8 +748,8 @@ def expected_savings_score(
         - :math:`y_i` is the true label,
         - :math:`\\hat y_i` is the predicted label,
         - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-        - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-        - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+        - :math:`C_i(1|0)` is the cost of a false positive ``fp_cost``,
+        - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``, and
         - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
         - :math:`N` is the number of samples.
 
