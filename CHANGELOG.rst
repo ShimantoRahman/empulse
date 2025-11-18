@@ -1,6 +1,9 @@
 `Unreleased`_
 =============
 
+- |Enhancement| Metrics built with the :class:`~empulse.metrics.MaxProfit`
+  strategy can now handle instance-dependent costs.
+
 `0.10.4`_ (20-09-2025)
 ======================
 
