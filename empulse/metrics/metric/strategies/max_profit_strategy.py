@@ -13,7 +13,7 @@ from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 from sympy.utilities import lambdify
 
-from ...._types import FloatNDArray
+from ...._types import FloatNDArray, IntNDArray
 from ..._cy_convex_hull import convex_hull
 from ...common import classification_threshold
 from ..common import MetricFn, RateFn, SympyFnPickleMixin, ThresholdFn, _check_parameters
@@ -84,6 +84,10 @@ _sympy_dist_to_scipy_params: dict[
         'K': 1 / (std * rate),
     },
 }
+
+
+def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+    return convex_hull(y_true.astype(np.int32), y_score.astype(np.float64))
 
 
 def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -509,7 +513,7 @@ def _calculate_profits_deterministic(
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, float, float]:
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
-    tprs, fprs = convex_hull(y_true, y_score)
+    tprs, fprs = _convex_hull(y_true, y_score)
 
     profits = np.zeros_like(tprs)
     for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
@@ -681,7 +685,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
@@ -786,7 +790,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
@@ -862,7 +866,7 @@ class MaxProfitScoreQuad(SympyFnPickleMixin):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         # certain distributions determine the bounds of the integral (e.g., uniform)
         # for those distributions we have to fill in the parameters of the distribution
@@ -947,7 +951,7 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
@@ -1069,7 +1073,7 @@ class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
