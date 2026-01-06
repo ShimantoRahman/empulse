@@ -176,8 +176,8 @@ def max_profit(
     >>> max_profit(y_true, y_score, tp_benefit=tp_benefit, fp_cost=fp_cost)
     (23.87..., 0.875)
     """
-    y_true = np.asarray(y_true)
-    y_score = np.asarray(y_score)
+    y_true = np.asarray(y_true, dtype=np.int32, order='C')
+    y_score = np.asarray(y_score, dtype=np.float64, order='C')
 
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
