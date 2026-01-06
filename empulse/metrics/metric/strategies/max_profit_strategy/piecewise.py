@@ -51,6 +51,8 @@ def compute_integral_quad(
     random_var: sympy.Symbol,
 ) -> float:
     """Compute the integral using scipy quadrature for one stochastic variable."""
+    if lower_bound == upper_bound:
+        return 0.0
     integrand = integrand.subs('F_0', true_positive_rate).subs('F_1', false_positive_rate).evalf()
     if not integrand.free_symbols:  # if the integrand is constant, no need to call quad
         if integrand == 0:  # need this separate path since sometimes upper or lower bound can be infinite
@@ -70,7 +72,6 @@ def compute_piecewise_bounds(
     negative_class_prior: float,
     random_var_bounds: tuple[float | sympy.Expr, ...],
     distribution_parameters: dict[str, Any],
-    bounds_offset: int = 1,
     **kwargs: Any,
 ) -> tuple[list[float], float, float]:
     """
@@ -80,7 +81,7 @@ def compute_piecewise_bounds(
     """
     bounds = []
     for (tpr0, fpr0), (tpr1, fpr1) in islice(
-        pairwise(zip(true_positive_rates, false_positive_rates, strict=False)), len(true_positive_rates) - bounds_offset
+        pairwise(zip(true_positive_rates, false_positive_rates, strict=False)), len(true_positive_rates) - 1
     ):
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=RuntimeWarning)
@@ -93,86 +94,32 @@ def compute_piecewise_bounds(
                 pi_1=negative_class_prior,
                 **kwargs,
             )
+            # TODO: temporary fix, make sure infinity signs are always correct
+            computed_bounds = np.inf if computed_bounds == -np.inf else computed_bounds
         bounds.append(computed_bounds)
 
-    # bounds of the random variable can be parameterized by the user
-    # if so substitute the parameters in the bounds with the user-provided values
+    # the compute_bounds function only computes the internal bounds,
+    # so we need to add the lower and upper bounds of the random variable
     if isinstance(upper_bound := random_var_bounds[1], sympy.Expr):
         upper_bound = upper_bound.subs(distribution_parameters)
-    if bounds[-1] < upper_bound:
-        bounds.append(upper_bound)
-    else:
-        bounds[-1] = upper_bound
+        if upper_bound == sympy.oo:
+            upper_bound = np.inf
+    bounds.append(upper_bound)
     if isinstance(lower_bound := random_var_bounds[0], sympy.Expr):
         lower_bound = lower_bound.subs(distribution_parameters)
-    if bounds[0] > lower_bound:
-        bounds.insert(0, lower_bound)
-    else:
-        bounds[0] = lower_bound
+        if lower_bound == -sympy.oo:
+            lower_bound = -np.inf
+    bounds.insert(0, lower_bound)
 
-    # check whether every element is larger than the previous, otherwise delete it
-    filtered_bounds = [bounds[0]]
-    for bound in bounds[1:]:
-        if bound > filtered_bounds[-1]:
-            filtered_bounds.append(bound)
-    bounds = filtered_bounds
+    # it is possible that some of the computed bounds are outside the accepted interval [lower_bound, upper_bound]
+    # replace values that are outside the interval with the respective bounds
+    # this will have the effect of essentially setting that part to zero
+    for i in range(len(bounds)):
+        if bounds[i] < lower_bound:
+            bounds[i] = lower_bound
+        elif bounds[i] > upper_bound:
+            bounds[i] = upper_bound
     return bounds, upper_bound, lower_bound
-
-
-def compute_piecewise_bounds_exact(
-    compute_bounds: Callable[..., float],
-    true_positive_rates: FloatNDArray,
-    false_positive_rates: FloatNDArray,
-    positive_class_prior: float,
-    negative_class_prior: float,
-    random_var_bounds: tuple[float | sympy.Expr, ...],
-    distribution_parameters: dict[str, Any],
-    **kwargs: Any,
-) -> tuple[list[float], float, float]:
-    """
-    Compute the consecutive bounds of the stochastic variable for which the expected profit is equal.
-
-    These bounds can then be used during piecewise integration.
-    """
-    return compute_piecewise_bounds(
-        compute_bounds=compute_bounds,
-        true_positive_rates=true_positive_rates,
-        false_positive_rates=false_positive_rates,
-        positive_class_prior=positive_class_prior,
-        negative_class_prior=negative_class_prior,
-        random_var_bounds=random_var_bounds,
-        distribution_parameters=distribution_parameters,
-        bounds_offset=1,
-        **kwargs,
-    )
-
-
-def compute_piecewise_bounds_quad(
-    compute_bounds: Callable[..., float],
-    true_positive_rates: FloatNDArray,
-    false_positive_rates: FloatNDArray,
-    positive_class_prior: float,
-    negative_class_prior: float,
-    random_var_bounds: tuple[float | sympy.Expr, ...],
-    distribution_parameters: dict[str, Any],
-    **kwargs: Any,
-) -> tuple[list[float], float, float]:
-    """
-    Compute the consecutive bounds of the stochastic variable for which the expected profit is equal.
-
-    These bounds can then be used during piecewise integration.
-    """
-    return compute_piecewise_bounds(
-        compute_bounds=compute_bounds,
-        true_positive_rates=true_positive_rates,
-        false_positive_rates=false_positive_rates,
-        positive_class_prior=positive_class_prior,
-        negative_class_prior=negative_class_prior,
-        random_var_bounds=random_var_bounds,
-        distribution_parameters=distribution_parameters,
-        bounds_offset=1,
-        **kwargs,
-    )
 
 
 class MaxProfitRatePiecewise(SympyFnPickleMixin):
@@ -221,7 +168,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds_quad(
+        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -287,7 +234,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds_quad(
+        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -358,7 +305,7 @@ class MaxProfitScorePiecewiseBeta(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, _, _ = compute_piecewise_bounds_exact(
+        bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -375,11 +322,6 @@ class MaxProfitScorePiecewiseBeta(SympyFnPickleMixin):
 
         cdf_diff = np.diff(st.beta.cdf(bounds, a=alpha, b=beta))
         cdf_1_diff = np.diff(st.beta.cdf(bounds, a=alpha + 1, b=beta))
-
-        cutoff = len(true_positive_rates) - len(cdf_diff)
-        if cutoff > 0:
-            true_positive_rates = true_positive_rates[:-cutoff]
-            false_positive_rates = false_positive_rates[:-cutoff]
 
         mean_gamma = st.beta.mean(a=alpha, b=beta)
         temp_1 = mean_gamma * _safe_run_lambda(
@@ -455,7 +397,7 @@ class MaxProfitScorePiecewiseUniform(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds_exact(
+        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -470,11 +412,6 @@ class MaxProfitScorePiecewiseUniform(SympyFnPickleMixin):
         upper_bounds = np.asarray(bounds[1:])
         max_val = float(upper_bound)
         min_val = float(lower_bound)
-
-        cutoff = len(true_positive_rates) - len(lower_bounds)
-        if cutoff > 0:
-            true_positive_rates = true_positive_rates[:-cutoff]
-            false_positive_rates = false_positive_rates[:-cutoff]
 
         coefficient = _safe_run_lambda(
             self.coefficient_fn,
@@ -549,7 +486,7 @@ class MaxProfitScorePiecewiseNormal(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, _, _ = compute_piecewise_bounds_exact(
+        bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -572,11 +509,6 @@ class MaxProfitScorePiecewiseNormal(SympyFnPickleMixin):
 
         Phi_diffs = np.diff(Phi)  # Φ(b) - Φ(a)
         phi_diffs = np.diff(phi)  # φ(b) - φ(a)
-
-        cutoff = len(true_positive_rates) - len(phi_diffs)
-        if cutoff > 0:
-            true_positive_rates = true_positive_rates[:-cutoff]
-            false_positive_rates = false_positive_rates[:-cutoff]
 
         coefficient = _safe_run_lambda(
             self.coefficient_fn,
