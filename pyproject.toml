@@ -213,7 +213,7 @@ ignore-fully-untyped = true  # gradually type-check the codebase
 mypy-init-return = true
 
 [tool.ruff.lint.pep8-naming]
-extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "return_X_y_costs"]
+extend-ignore-names = ["X", "X*_*", "*_X*", "C", "assertAlmostEqualMetric", "return_X_y_costs", "Phi*"]
 
 [tool.ruff.lint.pylint]
 allow-dunder-method-names = ["__sklearn_tags__", "_repr_latex_"]
