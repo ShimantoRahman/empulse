@@ -247,10 +247,10 @@ def test_invalid_params(estimator_class, dataset):
             takes_loss
             and 'loss' in invalid_params
             and isinstance(invalid_params['loss'], InvalidParameter)
-            and estimator_class in (ProfLogitClassifier, ProfTreeClassifier)
+            and estimator_class in {ProfLogitClassifier, ProfTreeClassifier}
         ):
             model = estimator_class(**invalid_params)
-        elif takes_loss and estimator_class in (ProfLogitClassifier, ProfTreeClassifier):
+        elif takes_loss and estimator_class in {ProfLogitClassifier, ProfTreeClassifier}:
             model = estimator_class(loss=mpc_score, **invalid_params)
         else:
             model = estimator_class(**invalid_params)

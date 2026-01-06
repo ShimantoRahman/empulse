@@ -7,8 +7,8 @@ from libc.math cimport isnan
 from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     compute_split_values, free_split_values, grow_subtree,
                     fit_tree, predict_labels_tree)
-from .forest cimport Forest, create_forest, free_forest, tournament_selection, sort_population
-from .operators cimport Children, crossover, mutate
+from .forest cimport Forest, create_forest, free_forest, sort_population
+from .operators cimport tournament_selection, crossover, evolve
 from .random cimport rand_fraction
 
 cdef Forest* initialize_population(
@@ -86,7 +86,6 @@ cdef Tree* find_best_tree(
     cdef Tree* tree
     cdef int offspring_needed = pop_size - n_elites
     cdef Forest* offspring = create_forest(offspring_needed)
-    cdef Children* children
     cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
     cdef float[:] predictions_view = predictions
     cdef float accuracy
@@ -97,33 +96,39 @@ cdef Tree* find_best_tree(
             mother = tournament_selection(population, tournament_size)
             father = tournament_selection(population, tournament_size)
 
-            if rand_fraction() < crossover_rate:
-                children = crossover(mother, father, max_depth)
-            else:
-                children = <Children*>malloc(sizeof(Children))
-                children.son = copy_tree(mother)
-                children.daughter = copy_tree(father)
-
+            # Create two offspring through crossover
+            tree = crossover(mother, father, max_depth)
+            
+            # Apply mutation if probability allows
             if rand_fraction() < mutation_rate:
-                mutate(
-                    tree=children.son,
-                    n_features=n_features,
-                    split_values=split_values,
-                    max_depth=max_depth,
-                )
-            if rand_fraction() < mutation_rate:
-                mutate(
-                    tree=children.daughter,
-                    n_features=n_features,
-                    split_values=split_values,
-                    max_depth=max_depth,
+                tree = evolve(
+                    tree,
+                    population,
+                    split_values,
+                    n_features,
+                    max_depth,
+                    tournament_size,
                 )
 
-            offspring.trees[j] = children.son
-            if j + 1 < offspring_needed:
-                offspring.trees[j + 1] = children.daughter
-            j += 2
-            free(children)
+            offspring.trees[j] = tree
+            j += 1
+            
+            # Create second offspring if needed
+            if j < offspring_needed:
+                tree = crossover(father, mother, max_depth)
+                
+                if rand_fraction() < mutation_rate:
+                    tree = evolve(
+                        tree,
+                        population,
+                        split_values,
+                        n_features,
+                        max_depth,
+                        tournament_size,
+                    )
+                
+                offspring.trees[j] = tree
+                j += 1
 
         for i in range(offspring_needed):
             free_tree(population.trees[i + n_elites])
