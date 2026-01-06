@@ -87,6 +87,7 @@ lint = [
     "ruff>=0.9.4",
     "pre-commit>=4.0.1",
     "mypy>=1.15.0",
+    "scipy-stubs>=1.15.3.0",
 ]
 
 dev = [
