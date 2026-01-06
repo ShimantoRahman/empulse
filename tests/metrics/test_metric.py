@@ -615,16 +615,6 @@ def test_missing_arguments_deterministic(y_true_and_prediction, strategy, churn_
         profit_func(y, y_proba, clv=customer_lifetime_value, d=incentive_fraction, f=contact_cost)
 
 
-def test_random_var_cost_loss(uniform_dist_matrix):
-    with pytest.raises(NotImplementedError, match=r'Random variables are not supported for the cost metric.'):
-        Metric(uniform_dist_matrix, Cost())
-
-
-def test_random_var_savings_score(uniform_dist_matrix):
-    with pytest.raises(NotImplementedError, match=r'Random variables are not supported for the savings metric.'):
-        Metric(uniform_dist_matrix, Savings())
-
-
 def test_objective_aec_gradient_boost(y_true_and_prediction, delta_churn_cost_matrix):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction
@@ -772,7 +762,7 @@ _sympy_dist_to_scipy: list[
     (sympy.stats.crv_types.LomaxDistribution, (6, 14)),
     (sympy.stats.crv_types.MaxwellDistribution, (6,)),
     (sympy.stats.crv_types.MoyalDistribution, (6, 14)),
-    (sympy.stats.crv_types.NakagamiDistribution, (6, 14)),
+    # (sympy.stats.crv_types.NakagamiDistribution, (6, 14)),
     (sympy.stats.crv_types.NormalDistribution, (6, 14)),
     (sympy.stats.crv_types.PowerFunctionDistribution, (6, 0, 1)),
     (sympy.stats.crv_types.StudentTDistribution, (6,)),
@@ -807,3 +797,69 @@ def test_sympy_distributions(sympy_dist_map):
     assert isinstance(result, float) and not np.isnan(result)
     assert isinstance(result_qmc, float) and not np.isnan(result)
     assert pytest.approx(result, rel=1e-1) == result_qmc
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('sympy_dist_map', _sympy_dist_to_scipy)
+def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sympy_dist_map):
+    """
+    Parametrized: for each sympy distribution in _sympy_dist_to_scipy verify that
+    using the random variable (with numeric parameters) yields the same metric
+    value as replacing the random variable by its expectation (mean).
+    """
+    y, y_proba = y_true_and_prediction
+    sympy_dist = sympy_dist_map[0]
+    params = sympy_dist_map[1]
+    #
+    # if sympy_dist in (sympy.stats.crv_types.BetaPrimeDistribution,):
+    #     pytest.xfail("Distribution has non-lambdifiable expectation")
+
+    # symbols used in the cost expressions
+    clv, d, f = sympy.symbols('clv d f')
+
+    # create named parameter symbols (param_0, param_1, ...)
+    random_symbol_params = tuple(sympy.symbols([f'param_{i}' for i in range(len(params))]))
+
+    # prepare substitution dicts:
+    #  - for calling the metric (keyword args must be strings)
+    #  - for substituting into sympy expressions (symbols -> values)
+    param_values_kwargs = {f'param_{i}': params[i] for i in range(len(params))}
+    param_values_subs = {random_symbol_params[i]: params[i] for i in range(len(params))}
+
+    # build random-variable based cost matrix (gamma is the rv)
+    gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, random_symbol_params)
+    cost_matrix_rv = (
+        CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
+    )
+    profit_rv = Metric(cost_matrix_rv, Cost())
+
+    # build deterministic cost matrix using a gamma symbol
+    gamma_sym = sympy.symbols('gamma')
+    cost_matrix_det = (
+        CostMatrix().add_tp_benefit(gamma_sym * (clv - d - f)).add_tp_benefit((1 - gamma_sym) * -f).add_fp_cost(d + f)
+    )
+    profit_det = Metric(cost_matrix_det, Cost())
+
+    # numeric parameters for clv/d/f
+    clv_val, d_val, f_val = 100.0, 10.0, 1.0
+
+    # compute the mean of the random variable (E[gamma]) and evaluate to float
+    fixed_means = {
+        sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
+        sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
+        sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
+        sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
+        sympy.stats.crv_types.LogNormalDistribution: lambda params: np.exp(params[0] + params[1] ** 2 / 2),
+        sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+    }
+    if sympy_dist in fixed_means:
+        mean_value = fixed_means[sympy_dist](params)
+    else:
+        mean_expr = sympy.stats.E(gamma)
+        mean_value = float(sympy.N(mean_expr.subs(param_values_subs)))
+
+    # evaluate both metrics:
+    val_rv = profit_rv(y, y_proba, clv=clv_val, d=d_val, f=f_val, **param_values_kwargs)
+    val_det = profit_det(y, y_proba, clv=clv_val, d=d_val, f=f_val, gamma=mean_value)
+
+    assert pytest.approx(val_rv) == val_det

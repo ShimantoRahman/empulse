@@ -44,8 +44,48 @@ class Cost(MetricStrategy):
     ) -> Self:
         """Build the metric strategy."""
         all_symbols = tp_benefit.free_symbols | tn_benefit.free_symbols | fp_cost.free_symbols | fn_cost.free_symbols
-        if any(sympy.stats.rv.is_random(symbol) for symbol in all_symbols):
-            raise NotImplementedError('Random variables are not supported for the cost metric.')
+        # if any(sympy.stats.rv.is_random(symbol) for symbol in all_symbols):
+        #     raise NotImplementedError('Random variables are not supported for the cost metric.')
+
+        # Mapping of distributions to their fixed mean expressions
+        fixed_means = {
+            sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
+            sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
+            sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
+            sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
+            sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
+            sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+        }
+
+        # Identify random symbols and replace each by its expectation
+        random_symbols = [symbol for symbol in all_symbols if sympy.stats.rv.is_random(symbol)]
+        if random_symbols:
+            subs_map = {}
+            for symbol in random_symbols:
+                dist_type = type(symbol.pspace.distribution)
+
+                # Check if we have a fixed substitution for this distribution
+                if dist_type in fixed_means:
+                    # Extract parameters from the distribution
+                    params = symbol.pspace.distribution.args
+                    subs_map[symbol] = fixed_means[dist_type](params)
+                else:
+                    try:
+                        mean_expr = sympy.stats.E(symbol)
+                        # Try to lambdify to verify it's computable
+                        _ = sympy.lambdify([], mean_expr, modules=['scipy', 'numpy'])
+                        subs_map[symbol] = mean_expr
+                    except (NotImplementedError, TypeError) as e:
+                        raise NotImplementedError(
+                            f"Cannot compute or evaluate expectation for random variable '{symbol}'. "
+                            f"The distribution '{dist_type.__name__}' may not support "
+                            f'mean computation or lambdification in SymPy.'
+                        ) from e
+
+            tp_benefit = tp_benefit.subs(subs_map)
+            tn_benefit = tn_benefit.subs(subs_map)
+            fp_cost = fp_cost.subs(subs_map)
+            fn_cost = fn_cost.subs(subs_map)
 
         self._score_function: MetricFn = CostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
