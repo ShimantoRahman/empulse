@@ -40,7 +40,7 @@ cdef void free_node(Node* node) noexcept nogil:
     free_node(node.right)
     free(node)
 
-cdef bint is_leaf(Node* node) noexcept nogil:
+cdef inline bint is_leaf(Node* node) noexcept nogil:
     return node.left is NULL and node.right is NULL
 
 cdef float node_probability(Node* node) noexcept nogil:
@@ -48,6 +48,6 @@ cdef float node_probability(Node* node) noexcept nogil:
         return 0.5
     return <float>node.n_positive_samples / <float>node.n_samples
 
-cdef void update_node_stats(Node* node, int y) noexcept nogil:
+cdef inline void update_node_stats(Node* node, int y) noexcept nogil:
     node.n_samples += 1
     node.n_positive_samples += y

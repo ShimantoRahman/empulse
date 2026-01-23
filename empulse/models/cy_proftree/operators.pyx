@@ -4,7 +4,7 @@ from libc.math cimport NAN
 
 from .forest cimport Forest
 from .node cimport Node, free_node, is_leaf
-from .tree cimport Tree, SplitValues, copy_tree, random_subnode_with_depth, prune, split, random_leaf_node
+from .tree cimport Tree, SplitValues, copy_tree, random_subnode_with_depth, prune, split, random_leaf_node, random_subnode_with_leaf_children
 from .random cimport rand_int, rand_fraction
 
 cdef void prune_subtree_at_depth(Node* node, int max_depth) noexcept nogil:
@@ -52,49 +52,31 @@ cdef Tree* crossover(Tree* mother, Tree* father, int max_depth) noexcept nogil:
     child.fitness = NAN
     return child
 
+cdef inline void grow(Tree* tree, SplitValues* split_values, int n_features, int max_depth):
+    """Add a random split rule to a random leaf node."""
+    cdef int depth = 0
+    cdef Node* leaf = random_leaf_node(tree.root, &depth)
+    split(leaf, n_features, split_values, depth, max_depth)
 
-cdef Tree* evolve(
-    Tree* old_tree,
-    Forest* population,
-    SplitValues* split_values,
-    int n_features,
-    int max_depth,
-    int tournament_size,
-):
-    """Apply genetic operators to the tree."""
-    cdef Tree* tree = copy_tree(old_tree)
-
-    cdef int choice, idx, depth
-    cdef Node* node
-    cdef Tree* partner
-    choice = rand_int(1, 5)
-    if choice == 1:
-        node = random_subnode_with_depth(tree.root, &depth)
-        mutate_split_feature(node, n_features, split_values)
-    elif choice == 2:
-        node = random_subnode_with_depth(tree.root, &depth)
-        mutate_split_value(node, split_values)
-    elif choice == 3:
-        node = random_subnode_with_depth(tree.root, &depth)
+cdef inline void prune_internal(Tree* tree):
+    """Prune a random internal node which has two leaf nodes as successors."""
+    cdef Node* node = random_subnode_with_leaf_children(tree.root)
+    if node is not NULL:
         prune(node)
-    elif choice == 4:
-        node = random_leaf_node(tree.root, &depth)
-        if depth < max_depth:
-            split(node, n_features, split_values, depth, max_depth)
-    else:
-        partner = tournament_selection(population, tournament_size)
-        tree = crossover(tree, partner, max_depth)
-    return tree
 
 cdef inline void mutate_split_feature(
-    Node* node,
+    Tree* tree,
     int n_features,
     SplitValues* split_values,
 ) noexcept nogil:
+    cdef int depth = 0
+    cdef Node* node = random_subnode_with_depth(tree.root, &depth)
     node.feature_index = rand_int(0, n_features)
-    idx = rand_int(0, split_values.lengths[node.feature_index])
+    cdef int idx = rand_int(0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]
 
-cdef inline void mutate_split_value(Node* node, SplitValues* split_values) noexcept nogil:
-    idx = rand_int(0, split_values.lengths[node.feature_index])
+cdef inline void mutate_split_value(Tree* tree, SplitValues* split_values) noexcept nogil:
+    cdef int depth = 0
+    cdef Node* node = random_subnode_with_depth(tree.root, &depth)
+    cdef int idx = rand_int(0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]
