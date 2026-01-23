@@ -38,6 +38,20 @@ cdef Node* get_leaf(Node* start_node, float[:] x) noexcept nogil:
             node = node.right
     return node
 
+cdef Node* visit_leaf(Node* start_node, float[:] x, int y) noexcept nogil:
+    """Traverse until the relevant leaf node and update stats."""
+    cdef Node* node = start_node
+    while not is_leaf(node):
+        node.n_samples += 1
+        node.n_positive_samples += y
+        if x[node.feature_index] <= node.split_value:
+            node = node.left
+        else:
+            node = node.right
+    node.n_samples += 1
+    node.n_positive_samples += y
+    return node
+
 cdef void fit_tree(Tree* tree, float[:, :] X, int[:] y, int n_samples) noexcept nogil:
     cdef float[:] x_i
     cdef int y_i
@@ -45,8 +59,7 @@ cdef void fit_tree(Tree* tree, float[:, :] X, int[:] y, int n_samples) noexcept 
     for i in range(n_samples):
         x_i = X[i]
         y_i = y[i]
-        leaf = get_leaf(tree.root, x_i)
-        update_node_stats(leaf, y_i)
+        leaf = visit_leaf(tree.root, x_i, y)
 
 cdef void predict_proba_tree(Tree* tree, float[:, :] X, float[:] probabilities, int n_samples) noexcept nogil:
     for i in range(n_samples):
@@ -110,7 +123,7 @@ cdef void split(
         node.right.parent = node
 
 cdef void prune(Node* node) noexcept nogil:
-    """Prune a randomly selected internal node into a leaf node."""
+    """Prune an internal node into a leaf node."""
 
     if node.left is not NULL:
         prune(node.left)
@@ -122,6 +135,40 @@ cdef void prune(Node* node) noexcept nogil:
         else:
             node.parent.right = NULL
         free_node(node)
+
+cdef void prune_illegal_nodes(Node* node, int min_samples_split, int min_samples_leaf) noexcept nogil:
+    """Prune nodes that violate min_samples_split or min_samples_leaf constraints."""
+    if node is NULL or is_leaf(node):
+        return
+
+    # Recursively check children first
+    if node.left is not NULL:
+        prune_illegal_nodes(node.left, min_samples_split, min_samples_leaf)
+    if node.right is not NULL:
+        prune_illegal_nodes(node.right, min_samples_split, min_samples_leaf)
+
+    # Check if this node violates min_samples_split
+    if node.n_samples < min_samples_split:
+        free_node(node.left)
+        free_node(node.right)
+        node.left = NULL
+        node.right = NULL
+        return
+
+    # Check if children violate min_samples_leaf
+    if node.left is not NULL and node.left.n_samples < min_samples_leaf:
+        free_node(node.left)
+        free_node(node.right)
+        node.left = NULL
+        node.right = NULL
+        return
+
+    if node.right is not NULL and node.right.n_samples < min_samples_leaf:
+        free_node(node.left)
+        free_node(node.right)
+        node.left = NULL
+        node.right = NULL
+        return
 
 cdef Node* random_subnode(Node* root) noexcept nogil:
 
@@ -188,3 +235,34 @@ cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil:
                 out_depth[0] = depth
             return node
         depth += 1
+
+cdef struct CandidateSearch:
+    Node* candidate
+    int count
+
+cdef void _find_candidate_helper(Node* n, CandidateSearch* search) noexcept nogil:
+    if n is NULL or is_leaf(n):
+        return
+
+    # Check if this node has two leaf children
+    if (n.left is not NULL and is_leaf(n.left) and
+            n.right is not NULL and is_leaf(n.right)):
+        search.count += 1
+        # Reservoir sampling: select with probability 1/count
+        if rand_int(0, search.count) == 0:
+            search.candidate = n
+
+    # Recurse to children
+    if n.left is not NULL:
+        _find_candidate_helper(n.left, search)
+    if n.right is not NULL:
+        _find_candidate_helper(n.right, search)
+
+cdef Node* random_subnode_with_leaf_children(Node* root) noexcept nogil:
+    """Select a random internal node that has two leaf children."""
+    cdef CandidateSearch search
+    search.candidate = NULL
+    search.count = 0
+
+    _find_candidate_helper(root, &search)
+    return search.candidate
