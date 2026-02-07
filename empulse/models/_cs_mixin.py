@@ -21,7 +21,7 @@ class CostSensitiveMixin:
         if isinstance(self._get_metric_loss(), Metric):
             self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
                 'fit',
-                sorted(self.__class__._get_default_requests().fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined]
+                sorted(self.get_metadata_routing().fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined]
             )
 
     @overload
