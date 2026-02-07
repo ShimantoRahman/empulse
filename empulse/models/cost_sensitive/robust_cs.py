@@ -286,7 +286,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             self.__class__.set_fit_request = RequestMethod(
                 'fit',
                 sorted(
-                    self.__class__._get_default_requests().fit.requests.keys() | self._get_metric_loss()._all_symbols  # type: ignore[union-attr]
+                    self.get_metadata_routing().fit.requests.keys() | self._get_metric_loss()._all_symbols  # type: ignore[union-attr]
                 ),
             )
 

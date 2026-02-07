@@ -3,6 +3,7 @@ from numbers import Real
 from typing import Any, ClassVar, Literal
 
 import numpy as np
+import sklearn
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
 from sklearn.base import BaseEstimator
@@ -12,6 +13,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, StrOptions
+from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.validation import check_is_fitted
 
@@ -25,6 +27,8 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 
 
 class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # type: ignore[misc]
@@ -175,7 +179,7 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
         if isinstance(self._get_metric_loss(), Metric):
             self.__class__.set_predict_request = RequestMethod(  # type: ignore[attr-defined]
                 'predict',
-                sorted(self.__class__._get_default_requests().predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
+                sorted(self.get_metadata_routing()._self_request.predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
             )
 
     def _more_tags(self) -> dict[str, bool]:
