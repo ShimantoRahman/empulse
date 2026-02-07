@@ -1,5 +1,5 @@
 from .b2boost import B2BoostClassifier
-from .cost_threshold import CSThresholdClassifier
+from .cost_threshold import CSRateClassifier, CSThresholdClassifier
 from .csbagging import CSBaggingClassifier
 from .csboost import CSBoostClassifier
 from .csforest import CSForestClassifier
@@ -13,6 +13,7 @@ __all__ = [
     'CSBoostClassifier',
     'CSForestClassifier',
     'CSLogitClassifier',
+    'CSRateClassifier',
     'CSThresholdClassifier',
     'CSTreeClassifier',
     'RobustCSClassifier',

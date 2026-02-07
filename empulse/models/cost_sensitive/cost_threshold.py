@@ -6,7 +6,7 @@ import numpy as np
 import sklearn
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
@@ -33,7 +33,7 @@ sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 
 class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # type: ignore[misc]
     r"""
-    Binary Classifier that sets the decision threshold to optimize cost-sensitive metric.
+    Binary Classifier that sets the decision threshold to optimize the cost-sensitive metric.
 
     By default, the expected cost loss is optimized.
 
@@ -337,8 +337,194 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             A :class:`sklearn:sklearn.utils.metadata_routing.MetadataRouter` encapsulating
             routing information.
         """
-        router = MetadataRouter(owner=self.__class__.__name__).add(
+        if sklearn_version < parse_version('1.8'):
+            router = MetadataRouter(owner=self.__class__.__name__)  # type: ignore[arg-type]
+        else:
+            router = MetadataRouter(owner=self)  # type: ignore[arg-type]
+        router.add(
             estimator=self.estimator,
             method_mapping=MethodMapping().add(callee='fit', caller='fit'),
-        )
+        ).add_self_request(self)
         return router
+
+
+class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostSensitiveMixin):  # type: ignore[misc]
+    r"""
+    Binary Classifier that sets the positive rate to optimize the cost-sensitive metric.
+
+    This classifier classifies the top fraction of samples (by predicted probability)
+    as positive, where the fraction is determined by the optimal rate computed during fitting.
+
+    Parameters
+    ----------
+    estimator : object
+        A binary classifier that implements `fit` and `predict_proba`.
+
+    pos_label : int, str, 'boolean' or None, default=None
+        The label of the positive class.
+
+    loss : Metric
+        The cost-sensitive metric to optimize. Must implement `optimal_rate`.
+
+    Attributes
+    ----------
+    classes_ : numpy.ndarray of shape (n_classes,)
+        The class labels.
+
+    estimator_ : Estimator
+        The fitted classifier.
+
+    rate_ : float
+        The optimal positive rate determined during fitting.
+    """
+
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
+        'estimator': [HasMethods(['fit', 'predict_proba'])],
+        'pos_label': [Real, str, 'boolean', None],
+        'loss': [HasMethods('optimal_rate')],
+    }
+
+    def __init__(
+        self,
+        estimator: BaseEstimator,
+        *,
+        pos_label: int | str | bool | None = None,
+        loss: Metric,
+    ):
+        self.estimator = estimator
+        self.pos_label = pos_label
+        self.loss = loss
+        super().__init__()
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.input_tags.sparse = False
+        return tags
+
+    @property
+    def classes_(self) -> NDArray[Any]:  # noqa: D102
+        if estimator := getattr(self, 'estimator_', None):
+            return estimator.classes_
+        try:
+            check_is_fitted(self.estimator)
+            return self.estimator.classes_
+        except NotFittedError:
+            raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
+
+    def fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
+        """
+        Fit the model and compute the optimal positive fraction rate.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples,n_features)
+            Training data.
+        y : array-like of shape (n_samples,)
+            Target values.
+        **params : Any
+            Additional parameters to customize the fitting process or to route to the
+            underlying estimator or loss function. These can include hyperparameters or
+            specific settings for estimator or loss adjustments.
+        """
+        X, y = validate_data(self, X, y)
+
+        # Extract loss parameters before routing
+        loss_params = {}
+        loss_param_names = getattr(self.loss, '_all_symbols', set())
+        for param_name in list(params.keys()):
+            if param_name in loss_param_names:
+                loss_params[param_name] = params[param_name]
+
+        # Remove loss-only params from routing (keep those needed by estimator)
+        routing = self.estimator.get_metadata_routing()
+        routing_params = {k: v for k, v in params.items() if k in routing.fit.requests}
+        routed_params = process_routing(self, 'fit', **routing_params)
+        self.estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
+
+        # Compute optimal rate using training predictions
+        y_score = self.estimator_.predict_proba(X)[:, 1]
+        self.rate_ = self.loss.optimal_rate(y, y_score, **loss_params)
+
+        return self
+
+    def predict(self, X: FloatNDArray) -> NDArray[Any]:
+        """
+        Predict the target of new samples.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The samples, as accepted by `estimator.predict`.
+
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
+        Returns
+        -------
+        class_labels : ndarray of shape (n_samples,)
+            The predicted class.
+        """
+        check_is_fitted(self, ['estimator_', 'rate_'])
+
+        y_score = self.estimator_.predict_proba(X)[:, 1]
+        n_samples = len(y_score)
+        n_positive = int(np.ceil(self.rate_ * n_samples))
+
+        if n_positive == 0:
+            return np.full(n_samples, self.classes_[0])
+        if n_positive >= n_samples:
+            return np.full(n_samples, self.classes_[1])
+
+        threshold_idx = np.argsort(y_score)[-n_positive]
+        threshold = y_score[threshold_idx]
+
+        return np.where(y_score >= threshold, self.classes_[1], self.classes_[0])
+
+    def predict_proba(self, X: FloatNDArray) -> NDArray[Any]:
+        """
+        Predict the predicted probabilities of the target of new samples.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The samples, as accepted by `estimator.predict_proba`.
+
+        loss_params : dict
+            Additional keyword arguments to pass to the loss function if using a custom loss function.
+
+        Returns
+        -------
+        class_probabilties : ndarray of shape (n_samples,)
+            The predicted class probabilities.
+        """
+        check_is_fitted(self, ['estimator_', 'rate_'])
+        return self.estimator_.predict_proba(X)
+
+    def get_metadata_routing(self) -> MetadataRouter:
+        """Get metadata routing of this object.
+
+        Please check :ref:`User Guide <sklearn:metadata_routing>` on how the routing
+        mechanism works.
+
+        Returns
+        -------
+        routing : MetadataRouter
+            A :class:`sklearn:sklearn.utils.metadata_routing.MetadataRouter` encapsulating
+            routing information.
+        """
+        if sklearn_version < parse_version('1.8'):
+            router = MetadataRouter(owner=self.__class__.__name__)  # type: ignore[arg-type]
+        else:
+            router = MetadataRouter(owner=self)  # type: ignore[arg-type]
+        router.add(
+            estimator=self.estimator,
+            method_mapping=MethodMapping().add(callee='fit', caller='fit'),
+        ).add_self_request(self)
+        return router
+
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None
