@@ -121,9 +121,6 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
           `ceil(min_samples_leaf * n_samples)` are the minimum
           number of samples for each node.
 
-        .. versionchanged:: 0.18
-           Added float values for fractions.
-
     min_weight_fraction_leaf : float, default=0.0
         The minimum weighted fraction of the sum total of weights (of all
         the input samples) required to be at a leaf node. Samples have
@@ -471,6 +468,21 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         ):
             if isinstance(cost, np.ndarray) and cost.shape[0] != n_samples:
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
+
+        min_cost = float('inf')
+        for cost in [tp_cost, tn_cost, fn_cost, fp_cost]:
+            if isinstance(cost, np.ndarray):
+                min_cost = min(min_cost, float(np.min(cost)))
+            else:
+                min_cost = min(min_cost, float(cost))
+
+        # Apply offset if minimum is negative (copy arrays to avoid mutation)
+        cost_offset = -min_cost if min_cost < 0 else 0.0
+        if cost_offset > 0:
+            tp_cost = tp_cost.copy() + cost_offset if isinstance(tp_cost, np.ndarray) else tp_cost + cost_offset
+            tn_cost = tn_cost.copy() + cost_offset if isinstance(tn_cost, np.ndarray) else tn_cost + cost_offset
+            fn_cost = fn_cost.copy() + cost_offset if isinstance(fn_cost, np.ndarray) else fn_cost + cost_offset
+            fp_cost = fp_cost.copy() + cost_offset if isinstance(fp_cost, np.ndarray) else fp_cost + cost_offset
 
         if self.criterion == 'cost':
             self.criterion_ = CostImpurity(
