@@ -8,28 +8,28 @@ from cython.cimports.libcpp.vector import vector  # noqa: F401
 from libcpp.algorithm cimport sort as cpp_sort
 from libcpp.pair cimport pair
 
-cdef void argsort_float64(cnp.float64_t* arr, cnp.int64_t* indices, Py_ssize_t n) noexcept:
+cdef void argsort_float32(cnp.float32_t* arr, cnp.int64_t* indices, Py_ssize_t n) noexcept:
     """In-place argsort using C++ std::sort"""
     cdef Py_ssize_t i
-    cdef vector[pair[double, Py_ssize_t]] pairs
+    cdef vector[pair[float, Py_ssize_t]] pairs
     pairs.reserve(n)
 
     for i in range(n):
-        pairs.push_back(pair[double, Py_ssize_t](arr[i], i))
+        pairs.push_back(pair[float, Py_ssize_t](arr[i], i))
 
     cpp_sort(pairs.begin(), pairs.end())
 
     for i in range(n):
         indices[i] = pairs[i].second
 
-cdef void argsort_float64_desc(cnp.float64_t* arr, cnp.int32_t* indices, Py_ssize_t n) noexcept:
+cdef void argsort_float32_desc(cnp.float32_t* arr, cnp.int32_t* indices, Py_ssize_t n) noexcept:
     """Descending argsort using C++ std::sort"""
     cdef Py_ssize_t i
-    cdef vector[pair[double, int]] pairs
+    cdef vector[pair[float, int]] pairs
     pairs.reserve(n)
 
     for i in range(n):
-        pairs.push_back(pair[double, int](-arr[i], i))  # Negate for descending
+        pairs.push_back(pair[float, int](-arr[i], i))  # Negate for descending
 
     cpp_sort(pairs.begin(), pairs.end())
 
@@ -37,41 +37,41 @@ cdef void argsort_float64_desc(cnp.float64_t* arr, cnp.int32_t* indices, Py_ssiz
         indices[i] = pairs[i].second
 
 cdef struct Point:
-    double x
-    double y
+    float x
+    float y
 
 cdef inline int _orientation(const Point& p1, const Point& p2, const Point& p3) noexcept:
     """Cross product sign on vectors (p1->p2) and (p2->p3)"""
-    cdef double d = (p3.y - p2.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p3.x - p2.x)
+    cdef float d = (p3.y - p2.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p3.x - p2.x)
     if d > 1.1920929e-07:
         return 1
     else:
         return -1
 
-cdef inline void _push_point(vector[Point]& hull, double x, double y) noexcept:
+cdef inline void _push_point(vector[Point]& hull, float x, float y) noexcept:
     cdef Point p
     p.x = x
     p.y = y
     hull.push_back(p)
 
-cdef cnp.float64_t[:, ::1] _compute_roc_curve(
+cdef cnp.float32_t[:, ::1] _compute_roc_curve(
     cnp.ndarray[cnp.int32_t, ndim=1] y_true,
-    cnp.ndarray[cnp.float64_t, ndim=1] y_score
+    cnp.ndarray[cnp.float32_t, ndim=1] y_score
 ):
     cdef int n_rows = y_true.shape[0]
 
     # Custom descending argsort
     cdef cnp.ndarray[cnp.int32_t, ndim=1] desc_idx = np.empty(n_rows, dtype=np.int32)
-    argsort_float64_desc(&y_score[0], &desc_idx[0], n_rows)
+    argsort_float32_desc(&y_score[0], &desc_idx[0], n_rows)
 
     # Find thresholds and compute cumsum in one pass
     cdef vector[int] threshold_idxs
-    cdef vector[double] tpr_vec
+    cdef vector[float] tpr_vec
     threshold_idxs.reserve(n_rows)
     tpr_vec.reserve(n_rows)
 
-    cdef double last_value = y_score[desc_idx[0]]
-    cdef double cumsum = 0.0
+    cdef float last_value = y_score[desc_idx[0]]
+    cdef float cumsum = 0.0
     cdef int i
 
     for i in range(n_rows):
@@ -84,11 +84,11 @@ cdef cnp.float64_t[:, ::1] _compute_roc_curve(
 
     # Normalize
     cdef int n_samples = threshold_idxs.size()
-    cdef double n_positives = tpr_vec[n_samples - 1]
-    cdef double n_negatives = n_rows - n_positives
+    cdef float n_positives = tpr_vec[n_samples - 1]
+    cdef float n_negatives = n_rows - n_positives
 
     # Pre-allocate with room for anchors
-    cdef cnp.ndarray[cnp.float64_t, ndim=2] result = np.empty((n_samples + 2, 2), dtype=np.float64)
+    cdef cnp.ndarray[cnp.float32_t, ndim=2] result = np.empty((n_samples + 2, 2), dtype=np.float32)
 
     # Anchor (0, 0)
     result[0, 0] = 0.0
@@ -110,8 +110,8 @@ cdef cnp.float64_t[:, ::1] _compute_roc_curve(
     return result[:final_size, :]
 
 cdef struct SortKey:
-    double angle
-    double dist2
+    float angle
+    float dist2
     Py_ssize_t index
 
 cdef inline bint compare_keys(const SortKey& a, const SortKey& b) noexcept:
@@ -122,7 +122,7 @@ cdef inline bint compare_keys(const SortKey& a, const SortKey& b) noexcept:
         return False
     return a.dist2 < b.dist2
 
-cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score):
+cdef cnp.float32_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float32_t, ndim=1] y_score):
     """
     Compute the convex hull points of the ROC curve.
 
@@ -136,10 +136,10 @@ cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_tru
 
     Returns
     -------
-    cnp.float64_t[:, ::1]
+    cnp.float32_t[:, ::1]
         2D array with shape (n_points, 2) where column 0 is FPR and column 1 is TPR
     """
-    cdef cnp.float64_t[:, ::1] roc_points = _compute_roc_curve(y_true, y_score)
+    cdef cnp.float32_t[:, ::1] roc_points = _compute_roc_curve(y_true, y_score)
     cdef int n_rows = roc_points.shape[0]
     cdef int i
 
@@ -148,9 +148,9 @@ cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_tru
     sort_keys.reserve(n_rows)
 
     # Compute sort keys: primary - polar angle, secondary - distance^2
-    cdef double p0x = roc_points[0, 0]
-    cdef double p0y = roc_points[0, 1]
-    cdef double dy, dx
+    cdef float p0x = roc_points[0, 0]
+    cdef float p0y = roc_points[0, 1]
+    cdef float dy, dx
     cdef SortKey key
 
     for i in range(n_rows):
@@ -168,7 +168,7 @@ cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_tru
     hull.reserve(n_rows)
 
     cdef Point p, p1, p2
-    cdef double x, y
+    cdef float x, y
 
     # Graham scan using C++ vector as the stack
     for i in range(n_rows):
@@ -185,8 +185,8 @@ cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_tru
     # Filter points under the 45-degree line (x <= y)
     cdef Py_ssize_t m = hull.size()
     cdef Py_ssize_t k, cnt = 0
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] xf = np.empty(m, dtype=np.float64)
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] yf = np.empty(m, dtype=np.float64)
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] xf = np.empty(m, dtype=np.float32)
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] yf = np.empty(m, dtype=np.float32)
 
     for k in range(m):
         p = hull[k]
@@ -202,21 +202,21 @@ cdef cnp.float64_t[:, ::1] cy_convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_tru
     cdef cnp.ndarray[cnp.int64_t, ndim=1] idx
     if cnt > 1:
         idx = np.empty(cnt, dtype=np.int64)
-        argsort_float64(&xf[0], &idx[0], cnt)
+        argsort_float32(&xf[0], &idx[0], cnt)
         xf = xf[idx]
         yf = yf[idx]
 
     # Create 2D result array
-    cdef cnp.ndarray[cnp.float64_t, ndim=2] result = np.empty((cnt, 2), dtype=np.float64)
+    cdef cnp.ndarray[cnp.float32_t, ndim=2] result = np.empty((cnt, 2), dtype=np.float32)
     for i in range(cnt):
         result[i, 0] = xf[i]
         result[i, 1] = yf[i]
 
     return result
 
-cpdef float max_profit_score(
+cdef float max_profit_score(
     cnp.ndarray[cnp.int32_t, ndim=1] y_true,
-    cnp.ndarray[cnp.float64_t, ndim=1] y_score,
+    cnp.ndarray[cnp.float32_t, ndim=1] y_score,
     float tp_benefit,
     float tn_benefit,
     float fp_cost,
@@ -231,7 +231,7 @@ cpdef float max_profit_score(
     cdef float pi1 = 1.0 - pi0
 
     # Change from ndarray to memory view
-    cdef cnp.float64_t[:, ::1] ch = cy_convex_hull(y_true, y_score)
+    cdef cnp.float32_t[:, ::1] ch = cy_convex_hull(y_true, y_score)
     cdef int hull_size = ch.shape[0]
 
     cdef float maximum_profit = -1e10

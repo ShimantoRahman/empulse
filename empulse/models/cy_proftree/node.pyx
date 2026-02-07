@@ -1,3 +1,5 @@
+# distutils: language = c++
+
 from libc.stdlib cimport malloc, free
 
 cdef struct Node:
@@ -40,6 +42,17 @@ cdef void free_node(Node* node) noexcept nogil:
     free_node(node.right)
     free(node)
 
+cdef void reset_node(Node* node) noexcept nogil:
+    """Recursively reset n_samples and n_positive_samples for a node and its children."""
+    if node is NULL:
+        return
+
+    node.n_samples = 0
+    node.n_positive_samples = 0
+
+    reset_node(node.left)
+    reset_node(node.right)
+
 cdef inline bint is_leaf(Node* node) noexcept nogil:
     return node.left is NULL and node.right is NULL
 
@@ -47,7 +60,3 @@ cdef float node_probability(Node* node) noexcept nogil:
     if node.n_samples == 0:
         return 0.5
     return <float>node.n_positive_samples / <float>node.n_samples
-
-cdef inline void update_node_stats(Node* node, int y) noexcept nogil:
-    node.n_samples += 1
-    node.n_positive_samples += y

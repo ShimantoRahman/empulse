@@ -5,12 +5,13 @@ from .cost_sensitive import (
     CSBoostClassifier,
     CSForestClassifier,
     CSLogitClassifier,
+    CSRateClassifier,
     CSThresholdClassifier,
     CSTreeClassifier,
     RobustCSClassifier,
 )
+from .cy_proftree import ProfTreeClassifier
 from .proflogit import ProfLogitClassifier
-from .proftree import ProfTreeClassifier
 
 __all__ = [
     'B2BoostClassifier',
@@ -21,6 +22,7 @@ __all__ = [
     'CSBoostClassifier',
     'CSForestClassifier',
     'CSLogitClassifier',
+    'CSRateClassifier',
     'CSThresholdClassifier',
     'CSTreeClassifier',
     'ProfLogitClassifier',

@@ -5,6 +5,7 @@ from .node cimport Node
 cdef struct Tree:
     Node* root
     float fitness
+    int n_nodes
 
 cdef struct SplitValues:
     float **values
@@ -14,6 +15,9 @@ cdef struct SplitValues:
 cdef Tree* create_tree(bint with_root = *) noexcept nogil
 cdef Tree* copy_tree(Tree* tree) noexcept nogil
 cdef void free_tree(Tree* tree) noexcept nogil
+cdef void reset_tree(Tree* tree) noexcept nogil
+cdef object serialize_tree(Tree* tree)
+cdef Tree* deserialize_tree(object tree_data) noexcept
 
 cdef Node* get_leaf(Node* start_node, float[:] x) noexcept nogil
 
@@ -28,8 +32,10 @@ cdef void free_split_values(SplitValues* sv) noexcept nogil
 cdef Node* random_subnode(Node* root) noexcept nogil
 cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil
 cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil
+cdef Node* random_subnode_with_leaf_children(Node* root) noexcept nogil
 
 cdef void prune(Node* node) noexcept nogil
+cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int min_samples_leaf) noexcept nogil
 cdef void split(
     Node* node,
     int n_features,

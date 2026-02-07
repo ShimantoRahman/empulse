@@ -7,4 +7,4 @@ cdef struct Forest:
 cdef Forest* create_forest(int n_trees) noexcept nogil
 cdef void free_forest(Forest* forest) noexcept nogil
 
-cdef Forest* sort_population(Forest* population, Forest* sorted_population, float[:] fitness_scores) noexcept
+cdef Tree* choose_different_tree(Forest* population, int current_index) noexcept nogil
