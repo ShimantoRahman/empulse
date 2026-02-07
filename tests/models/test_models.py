@@ -37,7 +37,7 @@ from empulse.utils._sklearn_compat import parametrize_with_checks
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
     ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10}),
-    ProfTreeClassifier(mpc_score, max_iter=2, population_size=10, random_state=42),
+    ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -89,7 +89,13 @@ def expected_failed_checks(estimator):
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
     if isinstance(
-        estimator, CSTreeClassifier | CSForestClassifier | CSBaggingClassifier | CSLogitClassifier | RobustCSClassifier
+        estimator,
+        CSTreeClassifier
+        | CSForestClassifier
+        | CSBaggingClassifier
+        | CSLogitClassifier
+        | RobustCSClassifier
+        | ProfTreeClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
