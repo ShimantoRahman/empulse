@@ -1,19 +1,24 @@
+# distutils: language = c++
+
 import numpy as np
 cimport numpy as cnp
 from libc.stdlib cimport malloc, free
-from libc.math cimport NAN
 
-from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, update_node_stats
+from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, reset_node
 from .random cimport rand_int, rand_bool
 
 cdef struct Tree:
     Node* root
     float fitness
+    int n_nodes
 
 cdef Tree* create_tree(bint with_root = True) noexcept nogil:
     cdef Tree* tree = <Tree*>malloc(sizeof(Tree))
     if with_root:
         tree.root = create_node()
+        tree.n_nodes = 1
+    else:
+        tree.n_nodes = 0
     tree.fitness = -1.0
     return tree
 
@@ -21,6 +26,7 @@ cdef Tree* copy_tree(Tree* tree) noexcept nogil:
     cdef Tree* new_tree = <Tree*>malloc(sizeof(Tree))
     new_tree.root = copy_node(tree.root, NULL)
     new_tree.fitness = tree.fitness
+    new_tree.n_nodes = tree.n_nodes
     return new_tree
 
 cdef void free_tree(Tree* tree) noexcept nogil:
@@ -28,6 +34,64 @@ cdef void free_tree(Tree* tree) noexcept nogil:
         return
     free_node(tree.root)
     free(tree)
+
+cdef void reset_tree(Tree* tree) noexcept nogil:
+    """Recursively reset node statistics in the tree."""
+    reset_node(tree.root)
+
+cdef object serialize_node(Node* node):
+    """Serialize a node and its children recursively."""
+    if node is NULL:
+        return None
+
+    return {
+        'split_value': node.split_value,
+        'feature_index': node.feature_index,
+        'n_samples': node.n_samples,
+        'n_positive_samples': node.n_positive_samples,
+        'left': serialize_node(node.left),
+        'right': serialize_node(node.right)
+    }
+
+cdef object serialize_tree(Tree* tree):
+    """Convert tree structure to a serializable dictionary."""
+    if tree is NULL:
+        return None
+
+    return {
+        'root': serialize_node(tree.root),
+        'fitness': tree.fitness,
+        'n_nodes': tree.n_nodes
+    }
+
+cdef Node* deserialize_node(object node_data, Node* parent = NULL) noexcept:
+    """Deserialize a node and its children recursively."""
+    if node_data is None:
+        return NULL
+
+    cdef Node* node = create_node()
+    node.split_value = node_data['split_value']
+    node.feature_index = node_data['feature_index']
+    node.n_samples = node_data['n_samples']
+    node.n_positive_samples = node_data['n_positive_samples']
+
+    node.parent = parent
+    node.left = deserialize_node(node_data['left'], node)
+    node.right = deserialize_node(node_data['right'], node)
+
+    return node
+
+cdef Tree* deserialize_tree(object tree_data) noexcept:
+    """Reconstruct tree from serialized dictionary."""
+    if tree_data is None:
+        return NULL
+
+    cdef Tree* tree = <Tree*> malloc(sizeof(Tree))
+    tree.root = deserialize_node(tree_data['root'], NULL)
+    tree.fitness = tree_data['fitness']
+    tree.n_nodes = tree_data['n_nodes']
+
+    return tree
 
 cdef Node* get_leaf(Node* start_node, float[:] x) noexcept nogil:
     cdef Node* node = start_node
@@ -59,7 +123,7 @@ cdef void fit_tree(Tree* tree, float[:, :] X, int[:] y, int n_samples) noexcept 
     for i in range(n_samples):
         x_i = X[i]
         y_i = y[i]
-        leaf = visit_leaf(tree.root, x_i, y)
+        leaf = visit_leaf(tree.root, x_i, y_i)
 
 cdef void predict_proba_tree(Tree* tree, float[:, :] X, float[:] probabilities, int n_samples) noexcept nogil:
     for i in range(n_samples):
@@ -123,29 +187,29 @@ cdef void split(
         node.right.parent = node
 
 cdef void prune(Node* node) noexcept nogil:
-    """Prune an internal node into a leaf node."""
+    """Prune an internal node into a leaf node by freeing both children."""
+    if node is NULL:
+        return
 
-    if node.left is not NULL:
-        prune(node.left)
-    if node.right is not NULL:
-        prune(node.right)
-    if is_leaf(node):  # TODO: this check is probably unnecessary
-        if node.parent.left == node:
-            node.parent.left = NULL
-        else:
-            node.parent.right = NULL
-        free_node(node)
+    # Simply free both children - don't recurse
+    free_node(node.left)
+    free_node(node.right)
+    node.left = NULL
+    node.right = NULL
 
-cdef void prune_illegal_nodes(Node* node, int min_samples_split, int min_samples_leaf) noexcept nogil:
+cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int min_samples_leaf) noexcept nogil:
     """Prune nodes that violate min_samples_split or min_samples_leaf constraints."""
     if node is NULL or is_leaf(node):
         return
 
     # Recursively check children first
     if node.left is not NULL:
-        prune_illegal_nodes(node.left, min_samples_split, min_samples_leaf)
+        prune_illegal_nodes(tree, node.left, min_samples_split, min_samples_leaf)
     if node.right is not NULL:
-        prune_illegal_nodes(node.right, min_samples_split, min_samples_leaf)
+        prune_illegal_nodes(tree, node.right, min_samples_split, min_samples_leaf)
+
+    if node is tree.root:
+        return
 
     # Check if this node violates min_samples_split
     if node.n_samples < min_samples_split:
@@ -174,7 +238,9 @@ cdef Node* random_subnode(Node* root) noexcept nogil:
 
     cdef Node* node = root
     while True:
-        if is_leaf(node) or rand_int(0, 3) == 0:
+        if is_leaf(node):
+            return node.parent
+        if rand_int(0, 3) == 0:
             return node
         if node.left is not NULL and node.right is not NULL:
             if rand_bool():

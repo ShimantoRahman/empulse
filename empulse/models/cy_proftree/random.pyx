@@ -1,3 +1,5 @@
+# distutils: language = c++
+
 from libc.stdlib cimport rand, srand, RAND_MAX
 from libc.time cimport time
 
