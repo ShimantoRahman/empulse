@@ -189,7 +189,37 @@ class Metric:
             | self.fn_cost.free_symbols
             | self.cost_matrix._aliases.keys()
         )
-        return {str(symbol) for symbol in all_symbols}
+
+        # Extract parameters from stochastic variables
+        stochastic_params = set()
+        for expr in [
+            self.cost_matrix.tp_cost,
+            self.cost_matrix.tn_cost,
+            self.cost_matrix.fp_cost,
+            self.cost_matrix.fn_cost,
+        ]:
+            for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
+                pspace = atom.pspace
+                if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
+                    for arg in pspace.distribution.args:
+                        stochastic_params.update(arg.free_symbols)
+
+        return {str(symbol) for symbol in all_symbols | stochastic_params}
+
+    @property
+    def _is_stochastic(self) -> bool:
+        all_symbols = (
+            self.tp_cost.free_symbols
+            | self.tn_cost.free_symbols
+            | self.fp_cost.free_symbols
+            | self.fn_cost.free_symbols
+            | self.cost_matrix._aliases.keys()
+        )
+        return any(sympy.stats.rv.is_random(symbol) for symbol in set(all_symbols))
+
+    @property
+    def _is_deterministic(self):
+        return not self._is_stochastic
 
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
