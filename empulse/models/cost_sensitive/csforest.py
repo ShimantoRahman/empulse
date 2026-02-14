@@ -32,11 +32,11 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     .. seealso::
 
-    :class:`~empulse.models.CSTreeClassifier` : Cost-sensitive decision tree classifier.
+        :class:`~empulse.models.CSTreeClassifier` : Cost-sensitive decision tree classifier.
 
-    :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression classifier.
+        :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression classifier.
 
-    :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive gradient boosting classifier.
+        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive gradient boosting classifier.
 
     Parameters
     ----------
