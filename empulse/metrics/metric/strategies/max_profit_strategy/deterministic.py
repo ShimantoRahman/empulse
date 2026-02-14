@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Callable, Iterable
 from typing import Any, ClassVar
 
@@ -6,16 +5,13 @@ import numpy as np
 import sympy
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ...common import SympyFnPickleMixin, _check_parameters
 from .common import _convex_hull
 
-if sys.version_info >= (3, 11):
-    pass
-
 
 def _calculate_profits_deterministic(
-    y_true: FloatNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
+    y_true: IntNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, float, float]:
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
@@ -38,7 +34,7 @@ class MaxProfitScoreDeterministic(SympyFnPickleMixin):
         self.deterministic_symbols = deterministic_symbols
         self.calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
         _check_parameters((*self.deterministic_symbols,), kwargs)
         profits, *_ = _calculate_profits_deterministic(y_true, y_score, self.calculate_profit, **kwargs)
@@ -46,7 +42,7 @@ class MaxProfitScoreDeterministic(SympyFnPickleMixin):
 
 
 def _calculate_optimal_rate_deterministic(
-    y_true: FloatNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
+    y_true: IntNDArray, y_score: FloatNDArray, calculate_profit: Callable[..., float], **kwargs: Any
 ) -> float:
     profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(y_true, y_score, calculate_profit, **kwargs)
     best_index = np.argmax(profits)
@@ -63,7 +59,7 @@ class MaxProfitRateDeterministic(SympyFnPickleMixin):
         self.deterministic_symbols = deterministic_symbols
         self.calculate_profit = lambdify(list(profit_function.free_symbols), profit_function)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
         _check_parameters((*self.deterministic_symbols,), kwargs)
         return _calculate_optimal_rate_deterministic(y_true, y_score, self.calculate_profit, **kwargs)

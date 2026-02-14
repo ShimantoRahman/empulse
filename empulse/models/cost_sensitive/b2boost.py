@@ -1,17 +1,11 @@
-import sys
 from numbers import Real
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar, Self, TypeVar
 
 import numpy as np
 import sympy
 from numpy.typing import ArrayLike
 
 from ..._types import FloatArrayLike, ParameterConstraint
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 try:
     from xgboost import XGBClassifier

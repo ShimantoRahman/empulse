@@ -1,15 +1,10 @@
-import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Self
 
 import sympy
 
-from ...._types import FloatNDArray
+from ...._types import FloatNDArray, IntNDArray
 from ..common import Direction
 
 
@@ -36,7 +31,7 @@ class MetricStrategy(ABC):
         """Build the metric strategy."""
 
     @abstractmethod
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the metric score or loss.
 
@@ -63,7 +58,7 @@ class MetricStrategy(ABC):
         """
 
     def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
         """
         Compute the classification threshold(s) to optimize the metric value.
@@ -95,7 +90,7 @@ class MetricStrategy(ABC):
         """
         raise NotImplementedError(f'Optimal threshold is not defined for the {self.name} strategy')
 
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the predicted positive rate to optimize the metric value.
 

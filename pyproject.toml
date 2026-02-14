@@ -32,7 +32,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 dependencies = [
     "numpy>=1.24.4; python_version < '3.13'",
     "numpy>=2.0.0; python_version >= '3.13'",
@@ -42,7 +42,6 @@ dependencies = [
     "joblib>=1.3.2",
     "pandas>=2.2.0",
     "sympy>=1.12.1",
-    "typing-extensions>=4.0.0",
 ]
 
 [project.urls]
@@ -84,9 +83,9 @@ docs = [
 ]
 
 lint = [
-    "ruff>=0.9.4",
+    "ruff>=0.15.1",
     "pre-commit>=4.0.1",
-    "mypy>=1.15.0",
+    "mypy>=1.19.1",
     "scipy-stubs>=1.15.3.0",
 ]
 
@@ -191,6 +190,7 @@ ignore = [
     "PLW2901", # `for` loop variable overwritten by assignment target
     "PLC2701", # Private name import {name} from external module {module}
     "PLC0415", # `import` should be at the top-level of a file
+    "RUF069",
 ]
 allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
 

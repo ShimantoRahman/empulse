@@ -31,7 +31,7 @@ def _independent_weights(y_true: FloatNDArray, protected_attr: IntNDArray) -> Fl
     prior_y = np.array([1 - prob_y, prob_y]).reshape((2, 1))
     if protected_attr.ndim == 2:
         protected_attr = protected_attr.reshape(-1)
-    joint_prob = np.histogram2d(y_true, protected_attr, bins=(2, 2))[0] / len(y_true)
+    joint_prob = np.histogram2d(y_true, protected_attr, bins=(2, 2))[0] / len(y_true)  # type: ignore[type-var]
     epsilon: np.floating[Any] = np.finfo(float).eps  # to avoid division by zero
     weights: FloatNDArray = (1 / (joint_prob + epsilon)) * prior_protected_attr * prior_y
     return weights

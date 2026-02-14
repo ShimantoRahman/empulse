@@ -1,16 +1,12 @@
 import warnings
 
 import numpy as np
-from packaging.version import Version
 from scipy import stats as st
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .._cy_convex_hull import convex_hull
 from ..common import _compute_prior_class_probabilities, _compute_tpr_fpr_diffs
 from ._validation import _validate_input_emp, _validate_input_empb
-
-if Version(np.version.version) < Version('2.0.0'):
-    np.trapezoid = np.trapz  # type: ignore[attr-defined] # noqa: NPY201
 
 
 def empc_score(

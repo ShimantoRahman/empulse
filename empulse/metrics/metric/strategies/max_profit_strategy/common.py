@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Iterable
 from typing import Any
 
@@ -8,12 +7,9 @@ import sympy
 from ....._types import FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull
 
-if sys.version_info >= (3, 11):
-    pass
-
 
 def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[IntNDArray, FloatNDArray]:
-    return convex_hull(y_true.astype(np.int32), y_score.astype(np.float64))
+    return convex_hull(y_true.astype(np.int32), y_score.astype(np.float64))  # type: ignore[no-any-return]
 
 
 def extract_distribution_parameters(

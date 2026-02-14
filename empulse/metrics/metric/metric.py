@@ -218,7 +218,7 @@ class Metric:
         return any(sympy.stats.rv.is_random(symbol) for symbol in set(all_symbols))
 
     @property
-    def _is_deterministic(self):
+    def _is_deterministic(self) -> bool:
         return not self._is_stochastic
 
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:

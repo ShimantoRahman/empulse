@@ -1,6 +1,5 @@
-import sys
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -10,11 +9,6 @@ from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted
 
 from ..._types import FloatNDArray, ParameterConstraint
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 try:
     from lightgbm import LGBMClassifier

@@ -1,6 +1,5 @@
-import sys
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -17,12 +16,6 @@ from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
 TREE_PARAM_CONSTRAINTS.pop('criterion')
@@ -704,4 +697,4 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             Return a node indicator CSR matrix where non zero elements
             indicates that the samples goes through the nodes.
         """
-        return self.estimator_.decision_path(X, check_input=check_input)
+        return self.estimator_.decision_path(X, check_input=check_input)  # type: ignore[no-any-return]

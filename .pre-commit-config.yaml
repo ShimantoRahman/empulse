@@ -1,13 +1,13 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.2
+    rev: v0.15.1
     hooks:
       # Run the linter.
       - id: ruff
-        args: [ --fix, empulse, tests ]
+        args: [ --fix, --preview, empulse, tests ]
       # Run the formatter.
       - id: ruff-format
-        args: [ empulse, tests ]
+        args: [ --preview, empulse, tests ]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

@@ -1,6 +1,5 @@
-import sys
 import warnings
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -11,11 +10,6 @@ from sklearn.utils._param_validation import Interval, Real, StrOptions
 from .._common import Parameter
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
 from ..utils._sklearn_compat import ClassifierTags, Tags  # type: ignore
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]

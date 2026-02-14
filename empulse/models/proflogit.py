@@ -1,9 +1,8 @@
-import sys
 from collections.abc import Callable
 from functools import partial
 from itertools import islice
 from numbers import Integral
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -16,11 +15,6 @@ from .._types import FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import Metric
 from ..metrics.metric.common import Direction
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class ProfLogitClassifier(BaseLogitClassifier):
@@ -254,12 +248,12 @@ def _optimize(
         previous_score = score
         if relative_improvement < tolerance:
             if (iter_stagnant := iter_stagnant + 1) >= patience:
-                rga.result.message = 'Converged.'
-                rga.result.success = True
+                rga.result.message = 'Converged.'  # type: ignore[attr-defined]
+                rga.result.success = True  # type: ignore[attr-defined]
                 break
         else:
             iter_stagnant = 0
     else:
-        rga.result.message = 'Maximum number of iterations reached.'
-        rga.result.success = False
+        rga.result.message = 'Maximum number of iterations reached.'  # type: ignore[attr-defined]
+        rga.result.success = False  # type: ignore[attr-defined]
     return rga.result

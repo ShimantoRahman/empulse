@@ -1,8 +1,7 @@
-import sys
 import threading
 from collections.abc import Callable
 from numbers import Integral, Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -20,11 +19,6 @@ from ...metrics import Metric, expected_cost_loss
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()
 RF_PARAM_CONSTRAINTS.pop('criterion')
@@ -784,7 +778,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
 
         # avoid storing the output of every estimator by summing them here
-        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)  # type: ignore[arg-type]
+        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)  # type: ignore[arg-type, type-var]
         lock = threading.Lock()
         Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
             delayed(_accumulate_weighted_prediction)(e.predict_proba, X, all_proba, weight, lock)

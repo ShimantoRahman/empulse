@@ -246,7 +246,7 @@ def _compute_lambda_cdf(
     # ignore division by zero warning
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=RuntimeWarning)
-        lambda_bounds = negative_class_prob * roi / positive_class_prob * (fpr_diff / tpr_diff)
+        lambda_bounds = negative_class_prob * roi / positive_class_prob * (fpr_diff / tpr_diff)  # type: ignore[operator]
     lambda_bounds = np.append(0, lambda_bounds)
     lambda_bounds = np.append(lambda_bounds[lambda_bounds < 1], 1)
     return np.diff(lambda_bounds), lambda_bounds[1:] + lambda_bounds[:-1]

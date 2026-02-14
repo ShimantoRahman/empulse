@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, ClassVar
 
@@ -9,13 +8,13 @@ from scipy.stats._qmc import Sobol
 from sympy.stats import pspace
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ...common import SympyFnPickleMixin, _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
 
-if sys.version_info >= (3, 11):
-    pass
-
+FrozenScipyDist = (
+    scipy.stats._distn_infrastructure.rv_continuous_frozen | scipy.stats._distn_infrastructure.rv_discrete_frozen
+)
 
 _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
@@ -113,7 +112,7 @@ class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
             # If all distribution parameters are fixed, then the param grid can be pre-computed.
             self.param_grid_needs_recompute = False
             # convert to scipy distributions
-            self.scipy_distributions = []
+            self.scipy_distributions: list[FrozenScipyDist] | None = []
             for random_var in random_symbols:
                 sympy_distribution = pspace(random_var).distribution.__class__
                 scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
@@ -136,7 +135,7 @@ class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -165,14 +164,16 @@ class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
                 self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
 
             profit_integrand = (
-                self.profit_function.subs(kwargs)
+                self.profit_function
+                .subs(kwargs)
                 .subs(self.cached_dist_params)
                 .subs('pi_0', positive_class_prior)
                 .subs('pi_1', negative_class_prior)
             )
             if self.rate_function is not None:
                 rate_integrand = (
-                    self.rate_function.subs(self.cached_dist_params)
+                    self.rate_function
+                    .subs(self.cached_dist_params)
                     .subs('pi_0', positive_class_prior)
                     .subs('pi_1', negative_class_prior)
                 )

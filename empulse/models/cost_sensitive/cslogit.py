@@ -1,8 +1,7 @@
-import sys
 import warnings
 from collections.abc import Callable
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -17,10 +16,6 @@ from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base import BaseLogitClassifier, OptimizeFn
 from .._cs_mixin import CostSensitiveMixin
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 LossStr = Literal['average expected cost']
 GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
 ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]

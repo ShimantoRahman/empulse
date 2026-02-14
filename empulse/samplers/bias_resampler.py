@@ -1,8 +1,7 @@
-import sys
 import warnings
 from collections.abc import Callable
 from itertools import product
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
@@ -14,11 +13,6 @@ from sklearn.utils._param_validation import StrOptions
 from .._types import IntNDArray, ParameterConstraint
 from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
