@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Iterable
 from typing import Any, ClassVar
 
@@ -7,12 +6,9 @@ import sympy
 from sympy.stats import pspace
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ...common import SympyFnPickleMixin, _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
-
-if sys.version_info >= (3, 11):
-    pass
 
 
 class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
@@ -46,7 +42,7 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
         self.distribution_args = [arg for args in distributions_args for arg in args]
         if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
             self.param_grid_needs_recompute = False
-            self.param_grid = [
+            self.param_grid: list[Any] | None = [
                 sympy.stats.sample(random_var, size=(n_mc_samples,), seed=rng) for random_var in random_symbols
             ]
             self.dist_params = []
@@ -58,7 +54,7 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -79,14 +75,16 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
                 ]
 
             profit_integrand = (
-                self.profit_function.subs(kwargs)
+                self.profit_function
+                .subs(kwargs)
                 .subs(self.cached_dist_params)
                 .subs('pi_0', positive_class_prior)
                 .subs('pi_1', negative_class_prior)
             )
             if self.rate_function is not None:
                 rate_integrand = (
-                    self.rate_function.subs(self.cached_dist_params)
+                    self.rate_function
+                    .subs(self.cached_dist_params)
                     .subs('pi_0', positive_class_prior)
                     .subs('pi_1', negative_class_prior)
                 )

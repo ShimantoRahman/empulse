@@ -5,7 +5,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar
 import numpy as np
 import sympy
 
-from ..._types import FloatNDArray
+from ..._types import FloatNDArray, IntNDArray
 
 T = TypeVar('T')
 P = ParamSpec('P')
@@ -20,7 +20,7 @@ class Direction(Enum):
 
 
 class MetricFn(Protocol):  # noqa: D101
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...  # noqa: D102
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...  # noqa: D102
 
 
 class LogitConsts(Protocol):  # noqa: D101
@@ -35,13 +35,13 @@ class BoostGradientConst(Protocol):  # noqa: D101
 
 class ThresholdFn(Protocol):  # noqa: D101
     def __call__(  # noqa: D102
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+        self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any
     ) -> FloatNDArray | float: ...
 
 
 class RateFn(Protocol):  # noqa: D101
     def __call__(  # noqa: D102
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any
+        self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any
     ) -> float: ...
 
 

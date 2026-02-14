@@ -1,11 +1,5 @@
-import sys
 from collections.abc import MutableMapping
-from typing import Any
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Any, Self
 
 import sympy
 

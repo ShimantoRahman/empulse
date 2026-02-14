@@ -1,6 +1,5 @@
-import sys
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,11 +11,6 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...samplers import BiasResampler
 from ...samplers._strategies import Strategy, StrategyFn
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]

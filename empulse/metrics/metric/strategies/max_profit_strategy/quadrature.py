@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar
 
@@ -8,12 +7,9 @@ from scipy.integrate import dblquad, nquad, quad, tplquad
 from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ...common import SympyFnPickleMixin, _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
-
-if sys.version_info >= (3, 11):
-    pass
 
 
 def compute_integral_multiple_quad(
@@ -47,13 +43,13 @@ def compute_integral_multiple_quad(
             return float(rate_integrands[best_index](*reversed(random_vars)))
 
     if n_random == 1:
-        result, _ = quad(integrand_fn, *bounds)
+        result, _ = quad(integrand_fn, *bounds)  # type: ignore[call-overload]
     elif n_random == 2:
-        result, _ = dblquad(integrand_fn, *bounds)
+        result, _ = dblquad(integrand_fn, *bounds)  # type: ignore[call-overload]
     elif n_random == 3:
-        result, _ = tplquad(integrand_fn, *bounds)
+        result, _ = tplquad(integrand_fn, *bounds)  # type: ignore[call-overload]
     else:
-        result, _ = nquad(integrand_fn, *bounds)
+        result, _ = nquad(integrand_fn, *bounds)  # type: ignore[call-overload]
     return float(result)
 
 
@@ -98,7 +94,7 @@ class MaxProfitScoreQuad(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -115,14 +111,16 @@ class MaxProfitScoreQuad(SympyFnPickleMixin):
         ]
 
         profit_integrand_ = (
-            self.profit_function.subs(kwargs)
+            self.profit_function
+            .subs(kwargs)
             .subs(distribution_parameters)
             .subs('pi_0', positive_class_prior)
             .subs('pi_1', negative_class_prior)
         )
         if self.rate_function is not None:
             rate_integrand_ = (
-                self.rate_function.subs(kwargs)
+                self.rate_function
+                .subs(kwargs)
                 .subs(distribution_parameters)
                 .subs('pi_0', positive_class_prior)
                 .subs('pi_1', negative_class_prior)

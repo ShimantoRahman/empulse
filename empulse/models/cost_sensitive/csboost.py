@@ -1,9 +1,8 @@
-import sys
 import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
 from numbers import Real
-from typing import Any, ClassVar, Literal, TypeVar, overload
+from typing import Any, ClassVar, Literal, Self, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -13,11 +12,6 @@ from sklearn.utils._param_validation import HasMethods
 
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 try:
     from xgboost import XGBClassifier

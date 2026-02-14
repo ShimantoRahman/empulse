@@ -1,7 +1,6 @@
-import sys
 from collections.abc import Callable
 from itertools import product
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,11 +11,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 def _to_sample_weights(

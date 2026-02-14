@@ -1,26 +1,22 @@
-import sys
 from functools import partial
 from numbers import Integral, Real
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
-from sklearn.metrics import accuracy_score
 from sklearn.utils._param_validation import Interval, RealNotInt
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
-from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
+from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, ParameterConstraint
 from ...metrics import MaxProfit, Metric
 from ...metrics.metric.common import Direction
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data
+from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
 from .evolutionary_tree import EvolutionaryTree
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+MAX_INT = 2147483647
 
 
 class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
@@ -247,17 +243,6 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         tags.classifier_tags.poor_score = True
         return tags
 
-    def _get_loss(self):
-        if self.loss is not None:
-            if self.loss.direction is Direction.MAXIMIZE:
-                loss = self.loss
-            else:
-                loss = lambda *args, **kwargs: -self.loss(*args, **kwargs)
-        else:
-            # loss = max_profit_score
-            loss = accuracy_score
-        return loss
-
     @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
     def fit(
         self,
@@ -364,7 +349,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                 prune_rate=float(prune_rate),
                 mutate_split_rate=float(mutate_split_rate),
                 mutate_value_rate=float(mutate_value_rate),
-                max_depth=int(self.max_depth),
+                max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
                 min_samples_split=int(min_samples_split),
                 min_samples_leaf=int(min_samples_leaf),
                 alpha=float(self.alpha),
@@ -393,7 +378,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                     prune_rate=float(prune_rate),
                     mutate_split_rate=float(mutate_split_rate),
                     mutate_value_rate=float(mutate_value_rate),
-                    max_depth=int(self.max_depth),
+                    max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
                     min_samples_split=int(min_samples_split),
                     min_samples_leaf=int(min_samples_leaf),
                     alpha=float(self.alpha),
@@ -426,7 +411,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                     prune_rate=float(prune_rate),
                     mutate_split_rate=float(mutate_split_rate),
                     mutate_value_rate=float(mutate_value_rate),
-                    max_depth=int(self.max_depth),
+                    max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
                     min_samples_split=int(min_samples_split),
                     min_samples_leaf=int(min_samples_leaf),
                     alpha=float(self.alpha),
@@ -466,7 +451,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_proba = np.vstack((1 - y_proba, y_proba)).T
         return y_proba
 
-    def predict(self, X: FloatArrayLike) -> IntNDArray:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
         Predict class for X.
 
@@ -481,5 +466,5 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             The predicted classes.
         """
         y_proba = self.predict_proba(X)
-        y_pred: FloatNDArray = self.classes_[np.argmax(y_proba, axis=1)]
+        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
         return y_pred

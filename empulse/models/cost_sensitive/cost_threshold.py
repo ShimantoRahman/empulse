@@ -1,6 +1,5 @@
-import sys
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 import sklearn
@@ -22,11 +21,6 @@ from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 

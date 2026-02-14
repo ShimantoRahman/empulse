@@ -1,8 +1,7 @@
-import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from numbers import Real
-from typing import Any, ClassVar, Protocol
+from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -15,11 +14,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class OptimizeFnKwargs(Protocol):

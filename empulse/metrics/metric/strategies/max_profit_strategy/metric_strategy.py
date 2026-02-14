@@ -1,26 +1,20 @@
-import sys
 from collections.abc import Iterable, Sequence
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 import sympy
 from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ...common import MetricFn, RateFn, ThresholdFn
-from ..metric_strategy import Direction, MetricStrategy
+from ...common import Direction, MetricFn, RateFn, ThresholdFn
+from ..metric_strategy import MetricStrategy
 from .deterministic import MaxProfitRateDeterministic, MaxProfitScoreDeterministic
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import MaxProfitRatePiecewise, _build_max_profit_score_piecewise
 from .quadrature import MaxProfitScoreQuad
 from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -151,7 +145,7 @@ class MaxProfit(MetricStrategy):
         )
         return self
 
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the maximum profit score.
 
@@ -180,7 +174,7 @@ class MaxProfit(MetricStrategy):
         return self._score_function(y_true, y_score, **parameters)
 
     def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
         """
         Compute the classification threshold(s) to optimize the metric value.
@@ -213,7 +207,7 @@ class MaxProfit(MetricStrategy):
         rate = self.optimal_rate(y_true, y_score, **parameters)
         return classification_threshold(y_true, y_score, rate)
 
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the predicted positive rate to optimize the metric value.
 
@@ -275,7 +269,7 @@ def _build_max_profit_score(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )
     if n_random == 0:
-        max_profit_score = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
+        max_profit_score: MetricFn = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
     # TODO: if n_random == 1 & random_symbols[0] in exact_solution_dists & expr is linear,
     # TODO: use exact solution | has_exact_solution(profit_function, random_symbols[0])
     else:
@@ -291,7 +285,7 @@ def _build_max_profit_score(
 
 
 def _to_threshold_function(rate_function: RateFn) -> ThresholdFn:
-    def threshold_function(y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def threshold_function(y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         rate = rate_function(y_true, y_score, **kwargs)
         return classification_threshold(y_true, y_score, rate)
 
@@ -336,7 +330,7 @@ def _build_max_profit_optimal_rate(
     )
     rate_function = _build_rate_function()
     if n_random == 0:
-        optimal_rate = MaxProfitRateDeterministic(profit_function, deterministic_symbols)
+        optimal_rate: MetricFn = MaxProfitRateDeterministic(profit_function, deterministic_symbols)
     else:
         optimal_rate = _build_max_profit_rate_stochastic(
             profit_function, rate_function, random_symbols, deterministic_symbols, integration_method, n_mc_samples, rng
@@ -421,7 +415,7 @@ def is_linear_in(expr: sympy.Expr, x: sympy.Symbol) -> bool:
         poly = sympy.Poly(expr, x)
     except sympy.polys.polyerrors.PolynomialError:
         return False
-    return poly.degree() <= 1
+    return poly.degree() <= 1  # type: ignore[no-any-return]
 
 
 def _build_max_profit_stochastic(

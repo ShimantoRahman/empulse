@@ -1,17 +1,11 @@
-import sys
 from collections.abc import Callable
 from functools import partial
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 import sympy
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-from ...._types import FloatNDArray
+from ...._types import FloatNDArray, IntNDArray
 from ..._loss import cy_logit_loss_gradient
 from ..common import (
     BoostGradientConst,
@@ -91,7 +85,7 @@ class Savings(MetricStrategy):
 
     def score(  # type: ignore[override]
         self,
-        y_true: FloatNDArray,
+        y_true: IntNDArray,
         y_score: FloatNDArray,
         baseline: Literal['zero_one', 'zero', 'one', 'prior'] | FloatNDArray = 'zero_one',
         **parameters: FloatNDArray | float,
@@ -123,7 +117,7 @@ class Savings(MetricStrategy):
         return self._score_function(y_true, y_score, baseline=baseline, **parameters)
 
     def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
         """
         Compute the classification threshold(s) to optimize the metric value.
@@ -155,7 +149,7 @@ class Savings(MetricStrategy):
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
 
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the predicted positive rate to optimize the metric value.
 
@@ -336,7 +330,7 @@ class SavingsScore(SympyFnPickleMixin):
 
     def __call__(
         self,
-        y_true: FloatNDArray,
+        y_true: IntNDArray,
         y_score: FloatNDArray,
         baseline: FloatNDArray | Literal['zero_one', 'zero', 'one', 'prior'],
         **kwargs: Any,

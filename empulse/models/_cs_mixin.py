@@ -124,7 +124,7 @@ class CostSensitiveMixin:
         fn_cost = fn_cost.reshape(-1) if isinstance(fn_cost, np.ndarray) else fn_cost
         fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
 
-        return tp_cost, tn_cost, fn_cost, fp_cost
+        return tp_cost, tn_cost, fn_cost, fp_cost  # type: ignore[return-value]
 
     def _check_cost_benefits(
         self,
@@ -191,6 +191,7 @@ class CostSensitiveMixin:
         fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
 
         return tp_benefit, tn_benefit, fn_cost, fp_cost
+        return tp_benefit, tn_benefit, fn_cost, fp_cost  # type: ignore[return-value]
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""

@@ -156,7 +156,7 @@ class Generation:
         self.elite_pool: list[tuple[NDArray[np.float64], np.float64]] = []  # individual, fitness
         self.fx_best: list[np.float64] = []
         self.fitness: NDArray[np.float64] = np.empty(0)
-        self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)
+        self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)  # type: ignore[call-arg]
         self.lower_bounds: NDArray[np.float64] = np.asarray(0.0)
         self.upper_bounds: NDArray[np.float64] = np.asarray(0.0)
         self.delta_bounds: NDArray[np.float64] = np.asarray(0.0)
@@ -242,7 +242,7 @@ class Generation:
     def _update_fitness(self, objective: Callable[[NDArray[np.float64]], float], index: int) -> float:
         fitness_value = float(self.fitness[index])
         if np.isnan(fitness_value):
-            self.result.nfev += 1
+            self.result.nfev += 1  # type: ignore[attr-defined]
             return objective(self.population[index])
         else:
             return fitness_value
@@ -348,9 +348,9 @@ class Generation:
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])
-        self.result.x = self.population[elite_ix[-1]]
-        self.result.fun = self.fx_best[-1]
-        self.result.nit = len(self.fx_best)
+        self.result.x = self.population[elite_ix[-1]]  # type: ignore[attr-defined]
+        self.result.fun = self.fx_best[-1]  # type: ignore[attr-defined]
+        self.result.nit = len(self.fx_best)  # type: ignore[attr-defined]
 
     def _log_start(self) -> None:
         self.logging_fn(
@@ -365,5 +365,5 @@ class Generation:
         self.logging_fn(status_msg)
 
     def _log_end(self, stop_time: float) -> None:
-        self.logging_fn(self.result)
+        self.logging_fn(self.result)  # type: ignore[arg-type]
         self.logging_fn(f'# ---  {self.name} ({stop_time})  --- #')

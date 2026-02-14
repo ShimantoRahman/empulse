@@ -1,17 +1,11 @@
-import sys
 from collections.abc import Callable
 from functools import partial
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-from ...._types import FloatNDArray
+from ...._types import FloatNDArray, IntNDArray
 from ..._loss import cy_logit_loss_gradient
 from ..common import (
     BoostGradientConst,
@@ -39,7 +33,9 @@ def replace_random_var_with_mean(
     all_symbols = tp_benefit.free_symbols | tn_benefit.free_symbols | fp_cost.free_symbols | fn_cost.free_symbols
 
     # Mapping of distributions to their fixed mean expressions
-    fixed_means = {
+    fixed_means: dict[
+        sympy.stats.crv_types.SingleContinuousDistribution, Callable[[tuple[sympy.Expr, ...]], sympy.Expr]
+    ] = {
         sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
         sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
         sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
@@ -127,7 +123,7 @@ class Cost(MetricStrategy):
         )
         return self
 
-    def score(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the metric expected cost loss.
 
@@ -155,7 +151,7 @@ class Cost(MetricStrategy):
         return self._score_function(y_true, y_score, **parameters)
 
     def optimal_threshold(
-        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
         """
         Compute the classification threshold(s) to optimize the metric value.
@@ -187,7 +183,7 @@ class Cost(MetricStrategy):
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
 
-    def optimal_rate(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
         Compute the predicted positive rate to optimize the metric value.
 
@@ -361,7 +357,7 @@ class CostLoss(SympyFnPickleMixin):
         )
         self.cost_function = _safe_lambdify(self.cost_equation)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
         _check_parameters(self.cost_equation.free_symbols - set(sympy.symbols('y s')), kwargs)
         return float(np.mean(_safe_run_lambda(self.cost_function, self.cost_equation, y=y_true, s=y_score, **kwargs)))
@@ -443,7 +439,7 @@ class CostOptimalThreshold(SympyFnPickleMixin):
         self.calculate_denominator = _safe_lambdify(self.denominator_expression)
         self.calculate_numerator = _safe_lambdify(self.numerator_expression)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
         """Compute the optimal threshold(s). `y_true` and `y_score` are unused and kept for API compatibility."""
         _check_parameters(self.denominator_expression.free_symbols, parameters)
         denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
@@ -456,7 +452,7 @@ class CostOptimalThreshold(SympyFnPickleMixin):
         else:
             denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
 
-        optimal = numerator / denominator
+        optimal: FloatNDArray | float = numerator / denominator  # type: ignore[operator, assignment]
         return float(optimal) if np.isscalar(optimal) else optimal  # type: ignore[arg-type]
 
 
@@ -474,7 +470,7 @@ class CostOptimalRate(SympyFnPickleMixin):
         self.calculate_denominator = _safe_lambdify(self.denominator_expression)
         self.calculate_numerator = _safe_lambdify(self.numerator_expression)
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
         """Compute the optimal predicted positive rate."""
         _check_parameters(self.denominator_expression.free_symbols, parameters)
         denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
@@ -488,7 +484,7 @@ class CostOptimalRate(SympyFnPickleMixin):
             denom_arr = np.asarray(denominator, dtype=np.float64)
             denom_safe = np.where(denom_arr == 0, eps, denom_arr)  # type: ignore[assignment]
 
-        t_star = numerator / denom_safe
+        t_star: FloatNDArray | float = numerator / denom_safe  # type: ignore[operator, assignment]
 
         # Normalize y\_score shape to 1D
         scores = np.asarray(y_score)

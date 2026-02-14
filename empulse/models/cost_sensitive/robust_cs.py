@@ -1,7 +1,6 @@
-import sys
 from collections.abc import MutableMapping
 from numbers import Real
-from typing import Any, ClassVar, Literal, TypeVar
+from typing import Any, ClassVar, Literal, Self, TypeVar
 
 import numpy as np
 import scipy.stats as st
@@ -18,10 +17,6 @@ from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, _estimator_has, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 K = TypeVar('K')
 V = TypeVar('V')

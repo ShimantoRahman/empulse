@@ -1,8 +1,7 @@
-import sys
 import threading
 from collections.abc import Callable
 from numbers import Real
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -23,11 +22,6 @@ from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type
 from .._cs_mixin import CostSensitiveMixin
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):

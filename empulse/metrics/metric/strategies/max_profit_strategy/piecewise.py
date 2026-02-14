@@ -1,4 +1,3 @@
-import sys
 import warnings
 from collections.abc import Callable, Iterable
 from itertools import islice, pairwise
@@ -12,7 +11,7 @@ from sympy import solve
 from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray
+from ....._types import FloatNDArray, IntNDArray
 from ...common import (
     MetricFn,
     SympyFnPickleMixin,
@@ -22,14 +21,11 @@ from ...common import (
 )
 from .common import _convex_hull, extract_distribution_parameters
 
-if sys.version_info >= (3, 11):
-    pass
-
 
 def _build_max_profit_score_piecewise(
     profit_function: sympy.Expr,
     random_symbol: sympy.Symbol,
-    deterministic_symbols: list[sympy.Symbol],
+    deterministic_symbols: Iterable[sympy.Symbol],
 ) -> MetricFn:
     distribution = pspace(random_symbol).distribution
     if isinstance(distribution, sympy.stats.crv_types.UniformDistribution):
@@ -158,7 +154,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the optimal rate."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -180,7 +176,8 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
         )
 
         integrand_ = (
-            self.integrand.subs(distribution_parameters)
+            self.integrand
+            .subs(distribution_parameters)
             .subs('pi_0', positive_class_prior)
             .subs('pi_1', negative_class_prior)
         )
@@ -224,7 +221,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -246,7 +243,8 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
         )
 
         integrand_ = (
-            self.integrand.subs(kwargs)
+            self.integrand
+            .subs(kwargs)
             .subs(distribution_parameters)
             .subs('pi_0', positive_class_prior)
             .subs('pi_1', negative_class_prior)
@@ -295,7 +293,7 @@ class MaxProfitScorePiecewiseBeta(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -387,7 +385,7 @@ class MaxProfitScorePiecewiseUniform(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
@@ -476,7 +474,7 @@ class MaxProfitScorePiecewiseNormal(SympyFnPickleMixin):
                 arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
             ]
 
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
 
