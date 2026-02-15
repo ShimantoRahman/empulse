@@ -244,8 +244,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     def estimators_features_(self) -> list[IntNDArray]:
         """The subset of drawn features (i.e., the in-bag samples) for each base estimator."""
         check_is_fitted(self)
-        estimators_samples: list[IntNDArray] = self.estimator_.estimators_features_
-        return estimators_samples
+        estimators_features: list[IntNDArray] = self.estimator_.estimators_features_
+        return estimators_features
 
     def __init__(
         self,
@@ -573,7 +573,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
 
         # avoid storing the output of every estimator by summing them here
-        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)
+        n_classes = int(self.n_classes_) if np.ndim(self.n_classes_) == 0 else int(self.n_classes_[0])
+        all_proba = np.zeros((X.shape[0], n_classes), dtype=np.float64)
         lock = threading.Lock()
         Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
             delayed(_accumulate_weighted_prediction_non_tree)(e.predict_proba, X, all_proba, weight, lock)
