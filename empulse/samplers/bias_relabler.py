@@ -28,9 +28,9 @@ StrategyFn = Callable[[NDArray[Any], NDArray[Any]], int]
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> int:
     """Determine promotion and demotion pairs so that y is statistically independent of sensitive feature."""
     sensitive_indices = np.where(sensitive_feature == 0)[0]
-    not_sensititive_indices = np.where(sensitive_feature == 1)[0]
+    not_sensitive_indices = np.where(sensitive_feature == 1)[0]
     n_sensitive = len(sensitive_indices)
-    n_not_sensitive = len(not_sensititive_indices)
+    n_not_sensitive = len(not_sensitive_indices)
     n = n_sensitive + n_not_sensitive
 
     # no swapping needed if one of the groups is empty
@@ -43,7 +43,7 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> in
         return 0
 
     pos_ratio_sensitive = np.sum(_safe_indexing(y_true, sensitive_indices)) / n_sensitive
-    pos_ratio_not_sensitive = np.sum(_safe_indexing(y_true, not_sensititive_indices)) / n_not_sensitive
+    pos_ratio_not_sensitive = np.sum(_safe_indexing(y_true, not_sensitive_indices)) / n_not_sensitive
 
     discrimination = pos_ratio_not_sensitive - pos_ratio_sensitive
 
@@ -285,20 +285,20 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
 
         # relabel the data
         if hasattr(y, 'copy'):
-            relabled_y = y.copy()
+            relabeled_y = y.copy()
         elif hasattr(y, 'clone'):
-            relabled_y = y.clone()
+            relabeled_y = y.clone()
         else:
-            relabled_y = np.copy(y)
+            relabeled_y = np.copy(y)
 
-        if hasattr(relabled_y, 'loc'):
-            relabled_y.loc[demotion_candidates] = 0
-            relabled_y.loc[promotion_candidates] = 1
+        if hasattr(relabeled_y, 'loc'):
+            relabeled_y.loc[demotion_candidates] = 0
+            relabeled_y.loc[promotion_candidates] = 1
         else:
-            relabled_y[demotion_candidates] = 0
-            relabled_y[promotion_candidates] = 1
+            relabeled_y[demotion_candidates] = 0
+            relabeled_y[promotion_candidates] = 1
 
-        return X, relabled_y
+        return X, relabeled_y
 
 
 def _get_demotion_candidates(y_pred: FloatNDArray, y_true: FloatNDArray, n_pairs: int) -> FloatNDArray:
