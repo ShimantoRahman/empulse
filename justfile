@@ -125,7 +125,4 @@ verify-version:
 # Run all preflight checks before deployment
 [windows]
 [group('deploy')]
-preflight:
-    just verify-version
-    just linkcheck
-    just tox
+preflight: verify-version linkcheck tox
