@@ -144,6 +144,10 @@ class Metric:
         )
 
     @property
+    def __name__(self) -> str:  # noqa: PLW3201
+        return self.strategy.name
+
+    @property
     def tp_benefit(self) -> sympy.Expr:  # noqa: D102
         return self.cost_matrix.tp_benefit
 
