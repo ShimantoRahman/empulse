@@ -30,7 +30,7 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[
         should have twice as many instances with y_true == 1 and sensitive_feature == 0
         compared to the original dataset.
 
-        - ``'statistical_parity'`` or ``'demographic parity'``: \
+        - ``'statistical parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.
 
         - ``Callable``: function which computes the group weights based on the target and sensitive feature. \
@@ -110,31 +110,6 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[
         model.fit(X, y, sensitive_feature=high_clv)
 
     4. Passing the sensitive feature in a cross-validation grid search:
-
-    .. code-block:: python
-
-        import numpy as np
-        from sklearn import config_context
-        from sklearn.datasets import make_classification
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.model_selection import GridSearchCV
-        from sklearn.pipeline import Pipeline
-        from sklearn.preprocessing import StandardScaler
-        from empulse.models import BiasResamplingClassifier
-
-        with config_context(enable_metadata_routing=True):
-            X, y = make_classification()
-            high_clv = np.random.randint(0, 2, size=X.shape[0])
-
-            param_grid = {'model__estimator__C': [0.1, 1, 10]}
-            pipeline = Pipeline([
-                ('scaler', StandardScaler()),
-                ('model', BiasResamplingClassifier(LogisticRegression()).set_fit_request(sensitive_feature=True))
-            ])
-            search = GridSearchCV(pipeline, param_grid)
-            search.fit(X, y, sensitive_feature=high_clv)
-
-    5. Passing the sensitive feature through metadata routing in a cross-validation grid search:
 
     .. code-block:: python
 
