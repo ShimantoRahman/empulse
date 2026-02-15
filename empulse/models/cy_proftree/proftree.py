@@ -76,7 +76,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         When ``alpha`` is 0.0, the fitness function is not penalized for the amount of nodes in the tree.
         When ``alpha`` is greater than 0.0, the fitness function is penalized for the amount of nodes in the tree.
 
-    patience : int, default=10
+    patience : int, default=100
         Number of iterations to wait for improvement before stopping early.
 
     tolerance : float, default=1e-4
@@ -85,11 +85,11 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     max_iter : int, default=1000
         Maximum number of iterations / number of generations the GA is run.
 
-    max_depth : int, default=10
+    max_depth : int or None, default=10
         Maximum depth of the tree.
         Computation time scales exponentially with depth, be careful with higher values.
 
-    min_samples_split : int or float, default=2
+    min_samples_split : int or float, default=20
         The minimum number of samples required to split an internal node:
 
         - If int, then consider `min_samples_split` as the minimum number.
@@ -97,7 +97,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
           `ceil(min_samples_split * n_samples)` are the minimum
           number of samples for each split.
 
-    min_samples_leaf : int or float, default=1
+    min_samples_leaf : int or float, default=7
         The minimum number of samples required to be at a leaf node.
         A split point at any depth will only be considered if it leaves at
         least ``min_samples_leaf`` training samples in each of the left and
@@ -112,6 +112,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     population_size : int or None, default=None
         Number of decision trees in the population.
         If ``None``, population_size is set to ``10 * n_features``.
+        Will be at least 2 trees.
 
     crossover_rate : float, default=0.2
         Probability of crossover. Must be in [0, 1].
@@ -144,7 +145,6 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     mutate_value_rate : float, default=0.2
         Probability to change only the feature value of a random split in the tree. Must be in [0, 1].
-        Will be at least 2 trees.
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
@@ -303,7 +303,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_samples = X.shape[0]
         population_size = 10 * X.shape[1] if self.population_size is None else self.population_size
         if self.min_samples_split < 1:
-            min_samples_split = np.ceil(self.min_samples_leaf * n_samples)
+            min_samples_split = np.ceil(self.min_samples_split * n_samples)
         else:
             min_samples_split = self.min_samples_split
         min_samples_split = max(min_samples_split, 2)
