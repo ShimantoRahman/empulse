@@ -62,7 +62,7 @@ class B2BoostClassifier(CSBoostClassifier):
         (``0 < incentive_fraction < 1``).
         Is overwritten if another `incentive_fraction` is passed to the ``fit`` method.
 
-    contact_cost : float, default=1
+    contact_cost : float, default=15
         Constant cost of contact (``contact_cost > 0``).
         Is overwritten if another `contact_cost` is passed to the ``fit`` method.
 
@@ -234,11 +234,11 @@ class B2BoostClassifier(CSBoostClassifier):
             If ``array``: individualized customer lifetime value of each customer when retained
             (``mean(clv) > incentive_cost``).
 
-        incentive_fraction : float, default=10
+        incentive_fraction : float, default=0.05
             Cost of incentive offered to a customer, as a fraction of customer lifetime value
             (``0 < incentive_fraction < 1``).
 
-        contact_cost : float, default=1
+        contact_cost : float, default=15
             Constant cost of contact (``contact_cost > 0``).
 
         fit_params : dict, optional
