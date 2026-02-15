@@ -164,7 +164,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
+        bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -182,10 +182,8 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
             .subs('pi_1', negative_class_prior)
         )
         score = 0.0
-        for (lower_bound, upper_bound), tpr, fpr in zip(
-            pairwise(bounds), true_positive_rates, false_positive_rates, strict=False
-        ):
-            score += compute_integral_quad(integrand_, lower_bound, upper_bound, tpr, fpr, self.random_symbol)
+        for (lb, ub), tpr, fpr in zip(pairwise(bounds), true_positive_rates, false_positive_rates, strict=False):
+            score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
         return score
 
 
@@ -231,7 +229,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
+        bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
             false_positive_rates,
@@ -250,10 +248,8 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
             .subs('pi_1', negative_class_prior)
         )
         score = 0.0
-        for (lower_bound, upper_bound), tpr, fpr in zip(
-            pairwise(bounds), true_positive_rates, false_positive_rates, strict=False
-        ):
-            score += compute_integral_quad(integrand_, lower_bound, upper_bound, tpr, fpr, self.random_symbol)
+        for (lb, ub), tpr, fpr in zip(pairwise(bounds), true_positive_rates, false_positive_rates, strict=False):
+            score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
         return score
 
 
