@@ -304,8 +304,8 @@ def expected_cost_loss(
     - :math:`y_i` is the true label,
     - :math:`s_i` is the predicted probability,
     - :math:`C_i(1|1)` is the cost of a true positive ``tp_cost``,
-    - :math:`C_i(0|1)` is the cost of a false positive ``fp_cost``,
-    - :math:`C_i(1|0)` is the cost of a false negative ``fn_cost``, and
+    - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``,
+    - :math:`C_i(1|0)` is the cost of a false positive ``fp_cost``, and
     - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
 
     Code modified from `costcla.metrics.cost_loss`.
@@ -426,7 +426,7 @@ def expected_log_cost_loss(
     - :math:`C_i(0|1)` is the cost of a false negative ``fn_cost``, and
     - :math:`C_i(0|0)` is the cost of a true negative ``tn_cost``.
 
-    When ``tp_cost`` and ``tn_cost`` equal -1, and `fp_cost`` and ``tn_cost`` equal 0,
+    When ``tp_cost`` and ``tn_cost`` equal -1, and ``fp_cost`` and ``fn_cost`` equal 0,,
     the expected log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
 
     Examples
@@ -640,7 +640,7 @@ def savings_score(
             check_input=False,
         )
     else:
-        raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
+        raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', or an array-like.")
 
     cost = cost_loss(
         y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
@@ -726,7 +726,7 @@ def expected_savings_score(
     .. math::
 
         \\mathbb{E}[C_i(s_i)] = \
-        y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - s_i) \\cdot \
+        y_i \\cdot (s_i \\cdot C_i(1|1) + (1 - s_i) \\cdot C_i(0|1)) + (1 - y_i) \\cdot \
         (s_i \\cdot C_i(1|0) + (1 - s_i) \\cdot C_i(0|0))
 
     The expected savings over a naive model is calculated as:
