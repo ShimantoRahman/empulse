@@ -19,6 +19,7 @@ Cost-Sensitive and Value-driven Models
     CSBoostClassifier
     CSForestClassifier
     CSLogitClassifier
+    CSRateClassifier
     CSThresholdClassifier
     CSTreeClassifier
     RobustCSClassifier
