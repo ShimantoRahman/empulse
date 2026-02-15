@@ -39,7 +39,7 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
         should have twice as many instances with y_true == 1 and sensitive_feature == 0
         compared to the original dataset.
 
-        - ``'statistical_parity'`` or ``'demographic parity'``: \
+        - ``'statistical parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.
 
         - ``Callable``: function which computes the group weights based on the target and sensitive feature. \
