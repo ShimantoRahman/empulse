@@ -50,7 +50,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
     fn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
         If array-like, then it is the cost of each false negative classification.
-        Is overwritten if another `fn_cost` is passed to the ``fit`` method.
+        Is overwritten if another `fn_cost` is passed to the ``fit_resample`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -201,7 +201,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
             fp_cost = 1
             fn_cost = 1
 
-        fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.asarray(fp_cost)
+        fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.array(fp_cost)
         fn_cost = np.full_like(y, fn_cost) if isinstance(fn_cost, Real) else np.asarray(fn_cost)
         rng = check_random_state(self.random_state)
 
@@ -222,7 +222,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
             sample_repeats = np.ceil(normalized_costs / self.oversampling_norm).astype(np.int64)
             self.sample_indices_ = np.repeat(np.arange(n_samples), sample_repeats)
         else:
-            raise ValueError(f'Method not valid. Expected RejectionSampling or OverSampling, got {self.method}.')
+            raise ValueError(f"Method not valid. Expected 'rejection sampling' or 'oversampling', got {self.method!r}.")
 
         X_re = X[self.sample_indices_]
         y_re = y[self.sample_indices_]
