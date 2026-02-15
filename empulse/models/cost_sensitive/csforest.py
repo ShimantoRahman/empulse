@@ -79,31 +79,24 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    n_estimators : int, default=100
-        The number of trees in the forest.
-
-        .. versionchanged:: 0.22
-           The default value of ``n_estimators`` changed from 10 to 100
-           in 0.22.
-
     loss : Metric or None, default=None
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
-    criterion : {"cost",, "gini", "log_loss" or "entropy"}, default="cost"
+    criterion : {"cost", "gini", "log_loss" or "entropy"}, default="cost"
         The function to measure the quality of a split.
 
-        How the measure to estimate quality of a split is weighted.
+        How the measure to estimate the quality of a split is weighted.
 
         - If ``"cost"``: The metric is used normally, without extra weighting.
         - If ``"gini"``: The Gini impurity is used to weight the metric.
         - If ``"log_loss"`` or ``"entropy"``: The Shannon information gain is used to weight the metric.
 
-    combination : {"majority_voting', 'weighted_voting'}, default="majority_voting"
+    combination : {"majority_voting", "weighted_voting"}, default="majority_voting"
         How to combine the predictions of the individual models.
 
         - "majority_voting": the majority vote of the models.
-        - "weighted_voting": the models are weighted by their oob score calculates with the ....
+        - "weighted_voting": the models are weighted by their oob score
 
     max_depth : int, default=None
         The maximum depth of the tree. If None, then nodes are expanded until
@@ -754,6 +747,8 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         if isinstance(self.max_samples, Real):
             n_samples_bootstrap = max(round(n_samples * self.max_samples), 1)
+        else:
+            raise ValueError(f'Invalid value for max_samples: {self.max_samples}')
 
         weight_fn = self.loss if isinstance(self.loss, Metric) else expected_cost_loss
 
