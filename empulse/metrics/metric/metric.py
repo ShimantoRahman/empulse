@@ -255,8 +255,6 @@ class Metric:
         """
         Compute the metric score or loss.
 
-        The :meth:`empulse.metrics.Metric.build` method should be called before calling this method.
-
         Parameters
         ----------
         y_true: array-like of shape (n_samples,)
