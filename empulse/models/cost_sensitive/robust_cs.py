@@ -28,7 +28,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
     The costs are adjusted by fitting an outlier estimator to the costs and imputing the costs for the outliers.
     Outliers are detected by the standardized residuals of the cost and the predicted cost.
-    The costs passed to the cost-sensitive classifier are a combination of the original costs (not non-outliers) and
+    The costs passed to the cost-sensitive classifier are a combination of the original costs (for non-outliers) and
     the imputed predicted costs (for outliers).
 
     Read more in the :ref:`User Guide <robustcs>`.
@@ -54,21 +54,13 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
         By default, all instance-dependent costs are used for outlier detection.
         If a single cost is passed, only that cost is used for outlier detection.
         If a list of costs is passed, only those costs are used for outlier detection.
-        tp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of true positives. If ``float``, then all true positives have the same cost.
-        If array-like, then it is the cost of each true positive classification.
-        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
 
         .. note::
             This parameter is ignored if the underlying estimator
             uses :class:`~empulse.metrics.Metric` as its loss/criterion.
             Then all costs that are marked as outlier-sensitive in the metric loss
             are used for outlier detection.
-            This can be done through the :meth: `~empulse.metrics.Metric.mark_outlier_sensitive` method.
+            This can be done through the :meth:`~empulse.metrics.Metric.mark_outlier_sensitive` method.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -114,7 +106,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
     outlier_estimators_ : dict{str, Estimator or None}
         The fitted outlier estimators.
         If no outliers are detected for this cost, the value is None.
-        The keys of the directory are 'tp_cost', 'tn_cost', 'fn_cost', and 'fp_cost'.
+        The keys of the dictionary are 'tp_cost', 'tn_cost', 'fn_cost', and 'fp_cost'.
     costs_ : dict
         The imputed costs for the cost-sensitive classifier.
 
@@ -327,8 +319,8 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
 
         Returns
         -------
-        self : RobustCSLogitClassifier
-            Fitted RobustCSLogitClassifier model.
+        self : RobustCSClassifier
+            Fitted RobustCSClassifier model.
         """
         X, y = validate_data(self, X, y)
 
