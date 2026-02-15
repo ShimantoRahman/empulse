@@ -84,7 +84,7 @@ class MaxProfit(MetricStrategy):
         Increasing the number of samples improves the accuracy of the metric estimation but slows down the speed.
         This argument is ignored when the ``integration_technique='quad'``.
 
-    random_state: int | np.random.RandomState | None, default=None
+    random_state: int | np.random.Generator | None, default=None
         The random state to use when ``integration_technique='monte-carlo'`` or
         ``integration_technique='quasi-monte-carlo'``.
         Determines the points sampled from the distribution of the stochastic variables.
@@ -112,10 +112,10 @@ class MaxProfit(MetricStrategy):
             )
         self.integration_method = integration_method
         self.n_mc_samples: int = 2**n_mc_samples_exp
-        if isinstance(random_state, np.random.RandomState):
+        if isinstance(random_state, np.random.Generator):
             self._rng = random_state
         else:
-            self._rng = np.random.RandomState(random_state)
+            self._rng = np.random.default_rng(random_state)
 
     def build(
         self,
@@ -260,7 +260,7 @@ def _build_max_profit_score(
     fn_cost: sympy.Expr,
     integration_method: str,
     n_mc_samples: int,
-    rng: np.random.RandomState,
+    rng: np.random.Generator,
 ) -> MetricFn:
     random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
@@ -299,7 +299,7 @@ def _build_max_profit_optimal_threshold(
     fn_cost: sympy.Expr,
     integration_method: str,
     n_mc_samples: int,
-    rng: np.random.RandomState,
+    rng: np.random.Generator,
 ) -> ThresholdFn:
     rate_fn = _build_max_profit_optimal_rate(
         tp_benefit=tp_benefit,
@@ -320,7 +320,7 @@ def _build_max_profit_optimal_rate(
     fn_cost: sympy.Expr,
     integration_method: str,
     n_mc_samples: int,
-    rng: np.random.RandomState,
+    rng: np.random.Generator,
 ) -> RateFn:
     random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
@@ -373,7 +373,7 @@ def _build_max_profit_rate_stochastic(
     deterministic_symbols: Iterable[sympy.Symbol],
     integration_method: str,
     n_mc_samples: int,
-    rng: np.random.RandomState,
+    rng: np.random.Generator,
 ) -> RateFn:
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)
@@ -424,7 +424,7 @@ def _build_max_profit_stochastic(
     deterministic_symbols: Iterable[sympy.Symbol],
     integration_method: str,
     n_mc_samples: int,
-    rng: np.random.RandomState,
+    rng: np.random.Generator,
 ) -> MetricFn:
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)

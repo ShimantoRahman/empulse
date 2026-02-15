@@ -707,7 +707,7 @@ def test_repr_metric(uniform_dist_matrix):
         'Metric(cost_matrix=CostMatrix(tp_cost=f*(1 - gamma) - (clv - d - f)*gamma, '
         'tn_cost=0, fp_cost=d + f, fn_cost=0), '
         "strategy=MaxProfit(direction=Direction.MAXIMIZE, integration_method='auto', "
-        'n_mc_samples=65536, random_state=RandomState(MT19937)))'
+        'n_mc_samples=65536, random_state=Generator(PCG64)))'
     )
 
 
