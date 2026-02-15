@@ -71,10 +71,10 @@ def replace_random_var_with_mean(
                     f'mean computation or lambdification in SymPy.'
                 ) from e
 
-        tp_benefit = tp_benefit.subs(subs_map)
-        tn_benefit = tn_benefit.subs(subs_map)
-        fp_cost = fp_cost.subs(subs_map)
-        fn_cost = fn_cost.subs(subs_map)
+    tp_benefit = tp_benefit.subs(subs_map)
+    tn_benefit = tn_benefit.subs(subs_map)
+    fp_cost = fp_cost.subs(subs_map)
+    fn_cost = fn_cost.subs(subs_map)
 
     return tp_benefit, tn_benefit, fp_cost, fn_cost
 
@@ -486,12 +486,10 @@ class CostOptimalRate(SympyFnPickleMixin):
 
         t_star: FloatNDArray | float = numerator / denom_safe  # type: ignore[operator, assignment]
 
-        # Normalize y\_score shape to 1D
         scores = np.asarray(y_score)
         if scores.ndim > 1:
             scores = scores.reshape(-1)
 
-        # If t\* is scalar, compare against scalar; otherwise compare elementwise
         if np.isscalar(t_star):
             rate = float(np.mean(scores >= float(t_star)))  # type: ignore[arg-type]
         else:
