@@ -77,7 +77,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
-    criterion : {"cost",, "gini", "log_loss" or "entropy"}, default="cost"
+    criterion : {"cost", "gini", "log_loss" or "entropy"}, default="cost"
         The function to measure the quality of a split.
 
         How the measure to estimate quality of a split is weighted.
