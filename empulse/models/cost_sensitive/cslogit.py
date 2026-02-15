@@ -81,8 +81,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
             - 'average expected cost' : Average Expected Cost loss function,
               see :func:`~empulse.metrics.expected_cost_loss`.
 
-        - If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
-          to the :Meth:`~empulse.models.CSLogitClassifier.fit` method.
+        - - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :meth:`~empulse.models.CSLogitClassifier.fit` method.
 
     C : float, default=1.0
         Inverse of regularization strength; must be a positive ``float``.
