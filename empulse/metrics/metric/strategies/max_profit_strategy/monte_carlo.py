@@ -29,7 +29,7 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
         random_symbols: Iterable[sympy.Symbol],
         deterministic_symbols: Iterable[sympy.Symbol],
         n_mc_samples: int,
-        rng: np.random.RandomState,
+        rng: np.random.Generator,
     ) -> None:
         self.profit_function = profit_function
         self.rate_function = rate_function
@@ -84,6 +84,7 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
             if self.rate_function is not None:
                 rate_integrand = (
                     self.rate_function
+                    .subs(kwargs)
                     .subs(self.cached_dist_params)
                     .subs('pi_0', positive_class_prior)
                     .subs('pi_1', negative_class_prior)
@@ -93,8 +94,11 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
                 self.profit_function.subs(kwargs).subs('pi_0', positive_class_prior).subs('pi_1', negative_class_prior)
             )
             if self.rate_function is not None:
-                rate_integrand = self.rate_function.subs('pi_0', positive_class_prior).subs(
-                    'pi_1', negative_class_prior
+                rate_integrand = (
+                    self.rate_function
+                    .subs(kwargs)
+                    .subs('pi_0', positive_class_prior)
+                    .subs('pi_1', negative_class_prior)
                 )
         profit_integrands = [
             lambdify(self.random_symbols, profit_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
