@@ -65,7 +65,7 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         Determines how the group weights are computed.
         Group weights determine how many instances to relabel for each combination of target and sensitive_feature.
 
-        - ``'statistical_parity'`` or ``'demographic parity'``: \
+        - ``'statistical parity'`` or ``'demographic parity'``: \
         probability of positive predictions are equal between subgroups of sensitive feature.
 
         - ``Callable``: function which computes the number of labels swaps based on the target and sensitive feature. \
