@@ -106,7 +106,7 @@ class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
         # Generate a Sobol sequence for QMC sampling
-        sobol = Sobol(d=len(random_symbols), scramble=True, seed=rng)
+        sobol = Sobol(d=len(random_symbols), scramble=True, rng=rng)
         self.sobol_samples = sobol.random(n_mc_samples)
         if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
             # If all distribution parameters are fixed, then the param grid can be pre-computed.
