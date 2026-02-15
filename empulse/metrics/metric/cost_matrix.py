@@ -265,7 +265,7 @@ class CostMatrix:
         Parameters
         ----------
         alias: str | MutableMapping[str, sympy.Symbol | str]
-            The alias to add. If a MutableMapping (.e.g, dictionary) is passed,
+            The alias to add. If a MutableMapping (e.g., dictionary) is passed,
             the keys are the aliases and the values are the symbols.
         symbol: sympy.Symbol, optional
             The symbol to alias to.
