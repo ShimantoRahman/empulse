@@ -14,7 +14,7 @@ from .common import _convex_hull, extract_distribution_parameters
 
 def compute_integral_multiple_quad(
     profit_integrand: sympy.Expr,
-    rate_integrand: sympy.Expr,
+    rate_integrand: sympy.Expr | None,
     bounds: Iterable[float],
     true_positive_rates: Iterable[float],
     false_positive_rates: Iterable[float],
