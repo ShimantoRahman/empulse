@@ -368,7 +368,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                     category=UserWarning,
                 )
                 if 'sample_weight' in fit_params:
-                    raise ValueError('Sample weights are not allowed when training CatboostClassifier.')
+                    raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
                 self.estimator_.fit(X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE), **fit_params)
         else:
             raise ValueError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
@@ -383,7 +383,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
     ) -> None:
-        if XGBClassifier is None:
+        if type(XGBClassifier) is TypeVar:
             raise ImportError(
                 f'XGBoost package is required to use {type(self).__name__}. '
                 'Install optional dependencies through `pip install empulse[optional]` or '
@@ -456,7 +456,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fn_cost: FloatNDArray | FloatArrayLike | float,
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
-    ) -> tuple['CatboostObjective', 'CatboostMetric']: ...
+    ) -> tuple['CatBoostObjective', 'CatBoostMetric']: ...
 
     def _get_objective(
         self,
@@ -467,7 +467,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fn_cost: FloatNDArray | FloatArrayLike | float,
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
-    ) -> Callable[..., Any] | LGBMObjective | tuple['CatboostObjective', 'CatboostMetric']:
+    ) -> Callable[..., Any] | LGBMObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
         if self.loss is None:
             loss = make_generic_cost_metric()
             loss_params = {
@@ -493,7 +493,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
                 for name, param in loss_params.items()
             }
-            return CatboostObjective(grad_const), CatboostMetric(loss, **loss_params)
+            return CatBoostObjective(grad_const), CatBoostMetric(loss, **loss_params)
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
@@ -502,7 +502,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         return None
 
 
-class CatboostObjective:
+class CatBoostObjective:
     """AEC objective for catboost."""
 
     def __init__(self, gradient_const: FloatNDArray):
@@ -541,7 +541,7 @@ class CatboostObjective:
         return list(zip(-gradient, -hessian, strict=False))
 
 
-class CatboostMetric:
+class CatBoostMetric:
     """AEC metric for catboost."""
 
     def __init__(self, metric: Callable[..., float], **loss_params: FloatNDArray | float):
