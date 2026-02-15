@@ -548,7 +548,7 @@ def load_give_me_some_credit(
         If True, the output will be a pandas DataFrames or Series instead of numpy arrays.
     return_X_y_costs : bool, default=False
         If True, return (data, target, tp_cost, fp_cost, tn_cost, fn_cost) instead of a Dataset object.
-    interest_rate : float, default=0.02463333
+    interest_rate : float, default=0.0479
         Annual interest rate of the term deposit.
     fund_cost : float, default=0.0294
         Annual cost of funds.
@@ -822,7 +822,7 @@ def load_credit_scoring_pakdd(
     max_credit_line : float, default=25000
         The maximum amount a client can borrow.
     loss_given_default : float, default=0.75
-        The amount of the loan amount which is lost if the client defaults.
+        The fraction of the loan amount which is lost if the client defaults.
     term_length_months : int, default=24
         The length of the loan term in months.
     loan_to_income_ratio : float, default=3
@@ -862,8 +862,7 @@ def load_credit_scoring_pakdd(
     ----------
     .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,
            "Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring",
-           in Proceedings of the International Conference on Machine Learning and Applications,
-           , 2014.
+           in Proceedings of the International Conference on Machine Learning and Applications, 2014.
 
     Examples
     --------
