@@ -80,7 +80,7 @@ def max_profit_score(
     >>> d = 10
     >>> f = 1
     >>> gamma = 0.3
-    >>> tp_benefit = clv * (gamma * (1 - (d / clv) - (f / clv)))
+    >>> tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
     >>> fp_cost = d + f
     >>>
     >>> max_profit_score(y_true, y_score, tp_benefit=tp_benefit, fp_cost=fp_cost)
