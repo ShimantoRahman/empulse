@@ -358,7 +358,7 @@ class Generation:
         self.logging_fn(
             '# ---  {} ({})  --- #'.format(
                 self.name,
-                datetime.now().strftime('%a %b %d %H:%M:%S'),
+                datetime.now().strftime('%a %b %d %H:%M:%S'),  # noqa: DTZ005
             )
         )
 

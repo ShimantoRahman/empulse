@@ -401,13 +401,13 @@ def check_samplers_one_label(name, fit_params, sampler_orig):
         if 'class' not in repr(e):
             print(error_string_fit, sampler.__class__.__name__, e)  # noqa: T201
             traceback.print_exc(file=sys.stdout)
-            raise e
+            raise
         else:
             return
     except Exception as exc:
         print(error_string_fit, traceback, exc)  # noqa: T201
         traceback.print_exc(file=sys.stdout)
-        raise exc
+        raise
     raise AssertionError(error_string_fit)
 
 

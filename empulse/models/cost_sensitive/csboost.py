@@ -371,7 +371,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                     raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
                 self.estimator_.fit(X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE), **fit_params)
         else:
-            raise ValueError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
+            raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
         return self
 
     def _initialize_default_estimator(
@@ -384,7 +384,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         **loss_params: Any,
     ) -> None:
         if isinstance(XGBClassifier, TypeVar):
-            raise ImportError(
+            raise ImportError(  # noqa: TRY004
                 f'XGBoost package is required to use {type(self).__name__}. '
                 'Install optional dependencies through `pip install empulse[optional]` or '
                 '`pip install xgboost`'
@@ -420,7 +420,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             )
             self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
         else:
-            raise ValueError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
+            raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
 
     @overload
     def _get_objective(

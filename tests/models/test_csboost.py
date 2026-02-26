@@ -56,7 +56,7 @@ def test_csboost_when_lightgbm_is_missing_with_lgbm_estimator(dataset):
         model = CSBoostClassifier(estimator=mock_estimator)
 
         with pytest.raises(
-            ValueError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
+            TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
         ):
             model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
@@ -72,7 +72,7 @@ def test_csboost_when_catboost_is_missing_with_catboost_estimator(dataset):
         model = CSBoostClassifier(estimator=mock_estimator)
 
         with pytest.raises(
-            ValueError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
+            TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
         ):
             model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
@@ -86,7 +86,7 @@ def test_csboost_with_invalid_estimator_type(dataset):
     model = CSBoostClassifier(estimator=RandomForestClassifier())
 
     with pytest.raises(
-        ValueError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
+        TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
     ):
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 

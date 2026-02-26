@@ -350,10 +350,10 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         criterion: Literal['cost', 'gini', 'entropy', 'log_loss'] = 'cost',
         combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_depth: int | None = None,
-        min_samples_split: int | float = 2,
-        min_samples_leaf: int | float = 1,
+        min_samples_split: float = 2,
+        min_samples_leaf: float = 1,
         min_weight_fraction_leaf: float = 0.0,
-        max_features: Literal['sqrt', 'log2'] | int | float = 'sqrt',
+        max_features: Literal['sqrt', 'log2'] | float = 'sqrt',
         max_leaf_nodes: int | None = None,
         min_impurity_decrease: float = 0.0,
         bootstrap: bool = True,
@@ -364,7 +364,7 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         warm_start: bool = False,
         class_weight: dict[int, float] | Literal['balanced'] | None = None,
         ccp_alpha: float = 0.0,
-        max_samples: int | float | None = None,
+        max_samples: float | None = None,
         monotonic_cst: IntArrayLike | None = None,
     ):
         self.n_estimators = n_estimators

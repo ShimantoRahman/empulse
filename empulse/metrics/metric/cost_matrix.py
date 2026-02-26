@@ -397,7 +397,7 @@ class CostMatrix:
         if isinstance(symbol, str):
             symbol = sympy.sympify(symbol)
         if not isinstance(symbol, sympy.Symbol):
-            raise ValueError('The symbol must be a sympy.Symbol or a string that can be converted to a sympy.Symbol')
+            raise TypeError('The symbol must be a sympy.Symbol or a string that can be converted to a sympy.Symbol')
         self._outlier_sensitive_symbols.add(symbol)
         return self
 

@@ -341,7 +341,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
                     if target is None:
                         raise ValueError(f"Cost '{symbol}' is not provided in fit_params.")
                 if not isinstance(target, np.ndarray):
-                    raise ValueError(f"Cost '{symbol}' is not an array. Cannot detect outliers for this cost.")
+                    raise TypeError(f"Cost '{symbol}' is not an array. Cannot detect outliers for this cost.")
                 pos_symbols = metric_loss.tp_cost.free_symbols | metric_loss.fn_cost.free_symbols
                 neg_symbols = metric_loss.tn_cost.free_symbols | metric_loss.fp_cost.free_symbols
                 if symbol in pos_symbols and symbol not in neg_symbols:
@@ -431,7 +431,7 @@ class RobustCSClassifier(ClassifierMixin, MetaEstimatorMixin, CostSensitiveMixin
             if cost_name in should_fit:
                 target = self.costs_[cost_name]
                 if not isinstance(target, np.ndarray):
-                    raise ValueError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
+                    raise TypeError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
                 if cost_name in {'tp_cost', 'fn_cost'}:
                     X_relevant, target_relevant = X[y > 0], target[y > 0]
                 else:
