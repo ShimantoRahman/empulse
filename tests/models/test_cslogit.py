@@ -26,7 +26,7 @@ def test_works_with_time_stopping_condition(X, y):
 
     from empulse.optimizers import Generation
 
-    def optimize(objective: Callable, X: NDArray, max_time: int | float = 1, **kwargs: Any) -> OptimizeResult:
+    def optimize(objective: Callable, X: NDArray, max_time: float = 1, **kwargs: Any) -> OptimizeResult:
         rga = Generation(**kwargs)
         assert max_time == 0.1
         bounds = [(-10, 10)] * X.shape[1]

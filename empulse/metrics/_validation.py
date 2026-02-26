@@ -82,12 +82,12 @@ def _check_variance(array: NDArray[Any]) -> None:
         )
 
 
-def _check_positive(var: float | int | Real, var_name: str) -> None:
+def _check_positive(var: float | Real, var_name: str) -> None:
     if var < 0:
         raise ValueError(f'{var_name} should be positive, got a value of {var} instead.')
 
 
-def _check_gt_one(var: float | int, var_name: str) -> None:
+def _check_gt_one(var: float, var_name: str) -> None:
     if var < 0:
         raise ValueError(f'{var_name} should be greater than 1, got a value of {var} instead.')
 

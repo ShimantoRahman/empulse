@@ -56,7 +56,8 @@ optional = [
     "xgboost>=1.7.4",
     "lightgbm>=4.5.0",
     "catboost>=1.2.7; python_version < '3.13'",
-    "catboost>=1.2.8; python_version >= '3.13'",
+    "catboost>=1.2.8; python_version >= '3.13' and python_version < '3.14'",
+    "catboost>=1.2.9; python_version >= '3.14'",
 ]
 
 [dependency-groups]
@@ -83,7 +84,7 @@ docs = [
 ]
 
 lint = [
-    "ruff>=0.15.1",
+    "ruff>=0.15.3",
     "pre-commit>=4.0.1",
     "mypy>=1.19.1",
     "scipy-stubs>=1.15.3.0",
@@ -191,6 +192,10 @@ ignore = [
     "PLC2701", # Private name import {name} from external module {module}
     "PLC0415", # `import` should be at the top-level of a file
     "RUF069",
+    "RET504", # Sometimes variable names can improve code quality
+    "TRY300", # else blocks can make code less readable
+    "S102", # exec is used to test docstrings
+    "D420", # Incorrectly suggests that Attributes section must come last.
 ]
 allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
 
