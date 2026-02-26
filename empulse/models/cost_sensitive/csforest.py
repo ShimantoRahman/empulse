@@ -747,8 +747,6 @@ class CSForestClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         if isinstance(self.max_samples, Real):
             n_samples_bootstrap = max(round(n_samples * self.max_samples), 1)
-        else:
-            raise ValueError(f'Invalid value for max_samples: {self.max_samples}')
 
         weight_fn = self.loss if isinstance(self.loss, Metric) else expected_cost_loss
 
