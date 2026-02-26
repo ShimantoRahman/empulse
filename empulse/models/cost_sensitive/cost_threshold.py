@@ -5,31 +5,52 @@ import numpy as np
 import sklearn
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection._classification_threshold import BaseThresholdClassifier
 from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.metaestimators import available_if
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
-from ...metrics import Metric
+from ...metrics import MaxProfit, Metric
+from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 
 
-class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # type: ignore[misc]
+def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
+    return float(np.mean(cost)) if isinstance(cost, np.ndarray) else cost
+
+
+def _extract_loss_params(params: dict[str, Any], loss: Metric) -> dict[str, Any]:
+    loss_params = {}
+    loss_param_names = loss._all_symbols
+    for param_name in list(params.keys()):
+        if param_name in loss_param_names:
+            loss_params[param_name] = params[param_name]
+    return loss_params
+
+
+class CSThresholdClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostSensitiveMixin):  # type: ignore[misc]
     r"""
     Binary Classifier that sets the decision threshold to optimize the cost-sensitive metric.
 
-    By default, the expected cost loss is optimized.
+    Users can learn the optimal decision threshold during fitting the model
+    and apply that threshold during inference. This is done by passing the costs/benefits to the fit method.
+
+    Alternatively, users can determine the optimal decision threshold during inference
+    by passing the costs to the predict method.
+
+    By default, the expected cost loss is optimized, but a custom loss function can be passed to the init method.
 
     Parameters
     ----------
@@ -118,20 +139,11 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
 
     Notes
     -----
-    The optimal threshold is computed as [1]_:
-
-    .. math:: t^*_i = \frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
 
     .. note:: The optimal decision threshold is only accurate when the probabilities are well-calibrated.
               Therefore, it is recommended to use a calibrator when the probabilities are not well-calibrated.
               See `scikit-learn's user guide <https://scikit-learn.org/stable/modules/calibration.html>`_
               for more information.
-
-    References
-    ----------
-    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
-           Instance-dependent cost-sensitive learning for detecting transfer fraud.
-           European Journal of Operational Research, 297(1), 291-300.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -167,7 +179,8 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
-        super().__init__(estimator, response_method='predict_proba')
+        self.estimator = estimator
+        super().__init__()
 
     def __post_init__(self) -> None:
         if isinstance(self._get_metric_loss(), Metric):
@@ -182,8 +195,89 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             'poor_score': True,
         }
 
+    def _should_skip_cost_sensitive_fit(
+        self,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        params: dict[str, Any],
+    ) -> bool:
+        """
+        Check if cost-sensitive fitting should be skipped.
+
+        Returns True if:
+        1. All init costs are zero/default AND all fit costs are unchanged AND no loss function
+        2. Loss function exists but no loss-specific parameters were provided
+        """
+        # Check if all init costs are zero or default
+        all_init_costs_zero = all((
+            not (isinstance(self.tp_cost, np.ndarray) or self.tp_cost != 0.0),
+            not (isinstance(self.tn_cost, np.ndarray) or self.tn_cost != 0.0),
+            not (isinstance(self.fn_cost, np.ndarray) or self.fn_cost != 0.0),
+            not (isinstance(self.fp_cost, np.ndarray) or self.fp_cost != 0.0),
+        ))
+
+        # Check if all fit costs are unchanged
+        all_fit_costs_unchanged = all((
+            tp_cost is Parameter.UNCHANGED,
+            tn_cost is Parameter.UNCHANGED,
+            fn_cost is Parameter.UNCHANGED,
+            fp_cost is Parameter.UNCHANGED,
+        ))
+
+        # First condition: no costs provided and no loss function
+        no_costs_no_loss = all_init_costs_zero and all_fit_costs_unchanged and self.loss is None
+
+        # Second condition: loss exists but no loss-specific params provided
+        loss_without_params = (
+            self.loss is not None
+            and not any(self.loss._all_symbols.intersection(params.keys()))
+            and not self.loss.cost_matrix._defaults
+        )
+
+        return no_costs_no_loss or loss_without_params
+
+    def _should_use_fitted_threshold(
+        self,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        loss_params: dict[str, Any],
+    ) -> bool:
+        """
+        Check if the threshold fitted during training should be used.
+
+        Returns True if all of the following are true:
+        1. All init costs are zero/default
+        2. All predict costs are unchanged
+        3. No loss parameters provided
+        """
+        all_init_costs_zero = all((
+            not (isinstance(self.tp_cost, np.ndarray) or self.tp_cost != 0.0),
+            not (isinstance(self.tn_cost, np.ndarray) or self.tn_cost != 0.0),
+            not (isinstance(self.fn_cost, np.ndarray) or self.fn_cost != 0.0),
+            not (isinstance(self.fp_cost, np.ndarray) or self.fp_cost != 0.0),
+        ))
+
+        all_predict_costs_unchanged = all((
+            tp_cost is Parameter.UNCHANGED,
+            tn_cost is Parameter.UNCHANGED,
+            fn_cost is Parameter.UNCHANGED,
+            fp_cost is Parameter.UNCHANGED,
+        ))
+
+        return (
+            all_init_costs_zero
+            and all_predict_costs_unchanged
+            and not loss_params
+            and not self.loss.cost_matrix._defaults
+        )
+
     def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
         tags.input_tags.sparse = False
         return tags
 
@@ -215,6 +309,62 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             return self.loss
         return None
 
+    @_fit_context(
+        # *ThresholdClassifier*.estimator is not validated yet
+        prefer_skip_nested_validation=False
+    )
+    def fit(
+        self,
+        X: FloatArrayLike,
+        y: ArrayLike,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **params: Any,
+    ) -> Self:
+        """Fit the classifier.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            Training data.
+
+        y : array-like of shape (n_samples,)
+            Target values.
+
+        **params : dict
+            Parameters to pass to the `fit` method of the underlying classifier.
+
+        Returns
+        -------
+        self : object
+            Returns an instance of self.
+        """
+        # _raise_for_params(params, self, None)
+
+        X, y = indexable(X, y)
+
+        y_type = type_of_target(y, input_name='y')
+        if y_type != 'binary':
+            raise ValueError(f'Only binary classification is supported. Unknown label type: {y_type}')
+
+        if self._should_skip_cost_sensitive_fit(tp_cost, tn_cost, fn_cost, fp_cost, params):
+            X, y = validate_data(self, X, y)
+            self.estimator_ = clone(self.estimator).fit(X, y, **params)
+        else:
+            params = self._add_standard_costs_to_params(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=params
+            )
+            self._fit(X, y, **params)
+
+        if hasattr(self.estimator_, 'n_features_in_'):
+            self.n_features_in_ = self.estimator_.n_features_in_
+        if hasattr(self.estimator_, 'feature_names_in_'):
+            self.feature_names_in_ = self.estimator_.feature_names_in_
+
+        return self
+
     def _fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
         """Fit the classifier.
 
@@ -235,11 +385,25 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             Returns an instance of self.
         """
         X, y = validate_data(self, X, y)
-        routed_params = process_routing(self, 'fit', **params)
+
+        loss = self.loss if self.loss is not None else make_generic_cost_metric()
+
+        loss_params = _extract_loss_params(params, loss)
+        routing = self.estimator.get_metadata_routing()
+        routing_params = {k: v for k, v in params.items() if k in routing.fit.requests}
+        routed_params = process_routing(self, 'fit', **routing_params)
         if self.calibrator is not None:
-            self.estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.estimator.fit)
+            self.estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.calibrator.fit)
         else:
             self.estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
+
+        # convert instance-dependent costs to class-dependent so we only get a single threshold
+        for key, value in list(loss_params.items()):
+            loss_params[key] = _to_class_dependent_cost(value)
+
+        y_score = self.estimator_.predict_proba(X)[:, 1]
+        self.threshold_ = loss.optimal_threshold(y, y_score, **loss_params)
+
         return self
 
     def predict(
@@ -287,23 +451,28 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
         -----
         If all costs are zero, then ``fp_cost=1`` and ``fn_cost=1`` are used to avoid division by zero.
         """
-        check_is_fitted(self)
-
-        if self.loss is None:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict'
-            )
-
-            denominator = fp_cost - tn_cost + fn_cost - tp_cost
-            # Avoid division by zero
-            if isinstance(denominator, float | int):
-                if denominator == 0:
-                    denominator += float(np.finfo(float).eps)
-            else:
-                denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
-            optimal_thresholds = (fp_cost - tn_cost) / denominator
+        if self._should_use_fitted_threshold(tp_cost, tn_cost, fn_cost, fp_cost, loss_params):
+            check_is_fitted(self)
+            optimal_thresholds = getattr(self, 'threshold_', None)
+            if optimal_thresholds is None:
+                raise ValueError(
+                    'Optimal threshold has not been set during fit. Either provide costs/benefits to fit first '
+                    'or provide costs to predict.'
+                )
         else:
-            optimal_thresholds = self.loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
+            if getattr(self, 'estimator_', None) is None:
+                raise NotFittedError
+            check_is_fitted(self.estimator_)
+
+            loss = self.loss if self.loss is not None else make_generic_cost_metric()
+
+            if isinstance(loss.strategy, MaxProfit):
+                raise ValueError(f'Cannot use {loss.strategy.__class__.__name__} at predict time.')
+
+            loss_params = self._add_standard_costs_to_params(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params
+            )
+            optimal_thresholds = loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
 
         if self.pos_label is None:
             map_thresholded_score_to_label = np.array([0, 1])
@@ -318,6 +487,66 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             map_thresholded_score_to_label[(y_score >= optimal_thresholds).astype(int)]
         ]
         return y_pred
+
+    @available_if(_estimator_has('predict_proba'))
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
+        """Predict class probabilities for `X` using the fitted estimator.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            Training vectors, where `n_samples` is the number of samples and
+            `n_features` is the number of features.
+
+        Returns
+        -------
+        probabilities : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples.
+        """
+        check_is_fitted(self)
+        estimator = getattr(self, 'estimator_', self.estimator)
+        y_proba: FloatNDArray = estimator.predict_proba(X)
+        return y_proba
+
+    @available_if(_estimator_has('predict_log_proba'))
+    def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
+        """Predict logarithm class probabilities for `X` using the fitted estimator.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            Training vectors, where `n_samples` is the number of samples and
+            `n_features` is the number of features.
+
+        Returns
+        -------
+        log_probabilities : ndarray of shape (n_samples, n_classes)
+            The logarithm class probabilities of the input samples.
+        """
+        check_is_fitted(self)
+        estimator = getattr(self, 'estimator_', self.estimator)
+        y_log_proba: FloatNDArray = estimator.predict_log_proba(X)
+        return y_log_proba
+
+    @available_if(_estimator_has('decision_function'))
+    def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
+        """Decision function for samples in `X` using the fitted estimator.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            Training vectors, where `n_samples` is the number of samples and
+            `n_features` is the number of features.
+
+        Returns
+        -------
+        decisions : ndarray of shape (n_samples,)
+            The decision function computed the fitted estimator.
+        """
+        check_is_fitted(self)
+        estimator = getattr(self, 'estimator_', self.estimator)
+        y_score: FloatNDArray = estimator.decision_function(X)
+        return y_score
 
     def get_metadata_routing(self) -> MetadataRouter:
         """Get metadata routing of this object.
@@ -335,10 +564,20 @@ class CSThresholdClassifier(BaseThresholdClassifier, CostSensitiveMixin):  # typ
             router = MetadataRouter(owner=self.__class__.__name__)  # type: ignore[arg-type]
         else:
             router = MetadataRouter(owner=self)  # type: ignore[arg-type]
-        router.add(
-            estimator=self.estimator,
-            method_mapping=MethodMapping().add(callee='fit', caller='fit'),
-        ).add_self_request(self)
+
+        router.add_self_request(self)
+
+        if self.calibrator is not None:
+            router.add(
+                calibrator=self._get_calibrator(self.estimator),
+                method_mapping=MethodMapping().add(callee='fit', caller='fit'),
+            )
+        else:
+            router.add(
+                estimator=self.estimator,
+                method_mapping=MethodMapping().add(callee='fit', caller='fit'),
+            )
+
         return router
 
 
@@ -399,10 +638,10 @@ class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostS
     @property
     def classes_(self) -> NDArray[Any]:  # noqa: D102
         if estimator := getattr(self, 'estimator_', None):
-            return estimator.classes_
+            return estimator.classes_  # type: ignore[no-any-return]
         try:
             check_is_fitted(self.estimator)
-            return self.estimator.classes_
+            return self.estimator.classes_  # type: ignore[no-any-return]
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
@@ -425,7 +664,7 @@ class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostS
 
         # Extract loss parameters before routing
         loss_params = {}
-        loss_param_names = getattr(self.loss, '_all_symbols', set())
+        loss_param_names = self.loss._all_symbols
         for param_name in list(params.keys()):
             if param_name in loss_param_names:
                 loss_params[param_name] = params[param_name]
@@ -442,7 +681,7 @@ class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostS
 
         return self
 
-    def predict(self, X: FloatNDArray) -> NDArray[Any]:
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
         Predict the target of new samples.
 
@@ -475,7 +714,7 @@ class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostS
 
         return np.where(y_score >= threshold, self.classes_[1], self.classes_[0])
 
-    def predict_proba(self, X: FloatNDArray) -> NDArray[Any]:
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
         Predict the predicted probabilities of the target of new samples.
 
@@ -493,7 +732,8 @@ class CSRateClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostS
             The predicted class probabilities.
         """
         check_is_fitted(self, ['estimator_', 'rate_'])
-        return self.estimator_.predict_proba(X)
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
+        return y_proba
 
     def get_metadata_routing(self) -> MetadataRouter:
         """Get metadata routing of this object.
