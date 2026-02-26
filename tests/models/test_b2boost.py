@@ -1,3 +1,4 @@
+from typing import TypeVar
 from unittest import mock
 
 import numpy as np
@@ -153,7 +154,7 @@ def test_b2boost_different_classifiers(library, classifier_name, dataset):
 
 def test_b2boost_when_xgboost_is_missing(dataset):
     X, y = dataset
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', None):
+    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
         model = B2BoostClassifier()
         with pytest.raises(ImportError, match=r'XGBoost package is required to use B2BoostClassifier.'):
             model.fit(X, y)
