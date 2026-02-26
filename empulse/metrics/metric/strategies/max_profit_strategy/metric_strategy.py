@@ -113,7 +113,7 @@ class MaxProfit(MetricStrategy):
         self.integration_method = integration_method
         self.n_mc_samples: int = 2**n_mc_samples_exp
         if isinstance(random_state, np.random.Generator):
-            self._rng = random_state
+            self._rng: np.random.Generator = random_state
         else:
             self._rng = np.random.default_rng(random_state)
 
