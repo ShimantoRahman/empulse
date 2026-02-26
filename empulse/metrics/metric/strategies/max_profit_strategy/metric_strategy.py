@@ -102,7 +102,7 @@ class MaxProfit(MetricStrategy):
         self,
         integration_method: Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo'] = 'auto',
         n_mc_samples_exp: int = 16,
-        random_state: np.random.RandomState | int | None = None,
+        random_state: np.random.Generator | int | None = None,
     ):
         super().__init__(name='max profit', direction=Direction.MAXIMIZE)
         if integration_method not in self.INTEGRATION_METHODS:
