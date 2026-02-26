@@ -350,11 +350,11 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
 
-        if type(XGBClassifier) is not TypeVar and isinstance(self.estimator_, XGBClassifier):
+        if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator_, XGBClassifier):
             self.estimator_.fit(X, y, **fit_params)
-        elif type(LGBMClassifier) is not TypeVar and isinstance(self.estimator_, LGBMClassifier):
+        elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
             self.estimator_.fit(X, y, init_score=np.full(y.shape, _BASE_SCORE), **fit_params)
-        elif type(CatBoostClassifier) is not TypeVar and isinstance(self.estimator_, CatBoostClassifier):
+        elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
             indices = np.arange(X.shape[0])
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -383,7 +383,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
     ) -> None:
-        if type(XGBClassifier) is TypeVar:
+        if isinstance(XGBClassifier, TypeVar):
             raise ImportError(
                 f'XGBoost package is required to use {type(self).__name__}. '
                 'Install optional dependencies through `pip install empulse[optional]` or '
@@ -403,17 +403,17 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatNDArray | FloatArrayLike | float,
         **loss_params: Any,
     ) -> None:
-        if type(XGBClassifier) is not TypeVar and isinstance(self.estimator, XGBClassifier):
+        if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator, XGBClassifier):
             objective = self._get_objective(
                 'xgboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE)
-        elif type(LGBMClassifier) is not TypeVar and isinstance(self.estimator, LGBMClassifier):
+        elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator, LGBMClassifier):
             objective = self._get_objective(
                 'lightgbm', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
             )
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif type(CatBoostClassifier) is not TypeVar and isinstance(self.estimator, CatBoostClassifier):
+        elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator, CatBoostClassifier):
             # self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
             loss_function, eval_metric = self._get_objective(
                 'catboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
