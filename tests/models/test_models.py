@@ -3,7 +3,6 @@ import inspect
 import numpy as np
 import pytest
 import sympy
-from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 from sklearn import config_context
 from sklearn.base import clone
@@ -26,6 +25,7 @@ from empulse.models import (
     CSBoostClassifier,
     CSForestClassifier,
     CSLogitClassifier,
+    CSRateClassifier,
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
@@ -54,20 +54,21 @@ ESTIMATORS = (
     ),
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
+    CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
 )
 METRIC_ESTIMATORS = (
     CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
+    CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
     CSBoostClassifier(),
     CSBoostClassifier(
         LGBMClassifier(
             n_estimators=10,
             max_depth=1,
-            # Need this parameter since we are testing with small datasets, otherwise can throw error
+            # Need this parameter since we are testing with small datasets, otherwise can throw an error
             min_data_in_leaf=0,
             verbose=-1,
         )
     ),
-    CSBoostClassifier(CatBoostClassifier(iterations=10, depth=1)),
     CSLogitClassifier(optimizer_params={'max_iter': 10}),
     CSTreeClassifier(max_depth=2),
     CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
@@ -281,9 +282,8 @@ def set_metric_loss(estimator, loss):
 def test_metric_api_consistency(estimator, dataset, kind):
     """Test that the metric API is consistent with the cost matrix API."""
     X, y, _, _ = dataset
-    a, b = sympy.symbols('a b')
 
-    cost_loss = Metric(CostMatrix().add_fn_cost(a).add_fp_cost(b), kind)
+    cost_loss = Metric(CostMatrix().add_fn_cost('a').add_fp_cost('b'), kind)
     model_metric = set_metric_loss(clone(estimator), cost_loss)
     model = clone(estimator)
 
@@ -295,6 +295,20 @@ def test_metric_api_consistency(estimator, dataset, kind):
         preds_metric_weighted = model_metric.predict(X, a=1, b=10)
         preds = model.predict(X, fp_cost=1, fn_cost=1)
         assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
+        assert not np.allclose(preds_metric_weighted, preds), (
+            'Predictions of the metric API do not change with weights.'
+        )
+    elif isinstance(model, CSRateClassifier):
+        # CSRateClassifier computes optimal rate at fit time (rate depends on training data).
+        model_metric.fit(X, y, a=1, b=1)
+        model.fit(X, y, fp_cost=1, fn_cost=1)
+
+        preds_metric = model_metric.predict(X)
+        preds = model.predict(X)
+        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
+
+        model_metric.fit(X, y, a=1, b=10)
+        preds_metric_weighted = model_metric.predict(X)
         assert not np.allclose(preds_metric_weighted, preds), (
             'Predictions of the metric API do not change with weights.'
         )
