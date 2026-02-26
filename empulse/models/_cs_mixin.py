@@ -190,8 +190,27 @@ class CostSensitiveMixin:
         fn_cost = fn_cost.reshape(-1) if isinstance(fn_cost, np.ndarray) else fn_cost
         fp_cost = fp_cost.reshape(-1) if isinstance(fp_cost, np.ndarray) else fp_cost
 
-        return tp_benefit, tn_benefit, fn_cost, fp_cost
         return tp_benefit, tn_benefit, fn_cost, fp_cost  # type: ignore[return-value]
+
+    def _add_standard_costs_to_params(
+        self,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        loss = getattr(self, 'loss', None)
+        if not isinstance(loss, Metric):
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
+
+            params['tp_cost'] = tp_cost
+            params['tn_cost'] = tn_cost
+            params['fn_cost'] = fn_cost
+            params['fp_cost'] = fp_cost
+        return params
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""

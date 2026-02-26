@@ -1,7 +1,7 @@
 from .b2boost import B2BoostClassifier
-from .cost_threshold import CSRateClassifier, CSThresholdClassifier
 from .csbagging import CSBaggingClassifier
 from .csboost import CSBoostClassifier
+from .csdecision_rule import CSRateClassifier, CSThresholdClassifier
 from .csforest import CSForestClassifier
 from .cslogit import CSLogitClassifier
 from .cstree import CSTreeClassifier
