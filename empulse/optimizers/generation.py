@@ -7,6 +7,9 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
+MIN_POP_SIZE: int = 10
+FEATURE_TO_POP_SIZE_RATIO: int = 10
+
 
 class Generation:
     """
@@ -61,8 +64,8 @@ class Generation:
     mutation_rate : float
         Probability of mutation.
 
-    elitism : float
-        Fraction of the population that is considered elite.
+    elitism : int
+        The number of individuals of the population that are transferred to the next generation without change.
 
     verbose : bool
         If ``True``, print status messages.
@@ -124,8 +127,8 @@ class Generation:
         if population_size is not None:
             if not isinstance(population_size, int):
                 raise TypeError('`pop_size` must be an int.')
-            if population_size < 10:
-                raise ValueError('`pop_size` must be >= 10.')
+            if population_size < MIN_POP_SIZE:
+                raise ValueError(f'`pop_size` must be >= {MIN_POP_SIZE}, got {population_size}.')
         if population_size is None:
             population_size = -1
         self.population_size = population_size
@@ -198,7 +201,7 @@ class Generation:
 
         # Check population size
         if self.population_size <= 0:
-            self.population_size = self.n_dim * 10
+            self.population_size = self.n_dim * FEATURE_TO_POP_SIZE_RATIO
 
         self.elitism = int(max(1, round(self.population_size * self.elitism_fraction)))
         self._n_mating_pairs = int(self.population_size / 2)  # Constant for crossover
@@ -230,14 +233,13 @@ class Generation:
         population = self.rng.rand(self.population_size, self.n_dim)
         return self.lower_bounds + population * self.delta_bounds  # type: ignore
 
-    def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> bool:
+    def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> None:
         if self.population_size is None:
             raise ValueError('`population_size` must be set.')
         fitness_values = Parallel(n_jobs=self.n_jobs)(
             delayed(self._update_fitness)(objective, ix) for ix in range(self.population_size)
         )
         self.fitness = np.asarray(fitness_values)
-        return False
 
     def _update_fitness(self, objective: Callable[[NDArray[np.float64]], float], index: int) -> float:
         fitness_value = float(self.fitness[index])
