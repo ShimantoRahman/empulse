@@ -1,9 +1,33 @@
 `Unreleased`_
 =============
 
+- |Feature| Added :class:`~empulse.models.ProfTreeClassifier` to optimize a cost-sensitive metric
+  using evolutionary trees (similar to :class:`~empulse.models.ProfLogitClassifier`).
+- |Feature| Added :class:`~empulse.models.CSRateClassifier` to optimize for a specific predicted positive rate.
+- |Feature| Allow :class:`~empulse.models.CSThresholdClassifier` to optimize the decision threshold at training time.
+  Users can now either specify the decision threshold to use at prediction time or
+  let the model choose the optimal threshold during training.
+- |Feature| When using the :class:`~empulse.metrics.MaxProfit` strategy, only one stochastic variable is present,
+  and the cost/profit function is linear in the stochastic variable:
+  the metric will now be computed exactly instead of using numerical integration.
+  This is currently supported for stochastic variables following
+  the Normal, Uniform, Gamma, and Exponential distributions.
+- |API| Updated the :class:`~empulse.models.ProfLogitClassifier` interface to be more consistent
+  with other models in the package. By default optimizes the maximum profit metric.
+- |API| :class:`~empulse.metrics.MaxProfit` now takes a numpy Generator instead of a RandomState instance.
 - |Enhancement| Metrics built with the :class:`~empulse.metrics.MaxProfit`
-  strategy can now handle instance-dependent costs.
-- |Fix| Fix :class:`~empulse.models.CSTreeClassifier` not properly training when costs were negative.
+  strategy can now handle instance-dependent costs. They will automatically be averaged over the instances.
+  Mathematically this is equivalent to recomputing the EMP score for each instance and then averaging the scores.
+- |Enhancement| Metrics built with the :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`
+  strategies can now handle stochastic cost parameters. If the distribution allows it, the mean cost will be computed.
+- |Fix| Fix :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
+  not properly training when costs were negative.
+- |Fix| Fix integration bounds inconsistently being calculated
+  when the :class:`~empulse.metrics.MaxProfit` strategy was chosen.
+- |Fix| Fix :class:`~empulse.models.CSBoostClassifier` throwing errors
+  when one or two of the Boosting libraries were not installed (XGBoost, LGBM & Catboost).
+- |Fix| Add __name__ attribute to :class:`~empulse.metrics.Metric` class to fix issues with scikit-learn compatibility.
+- |Fix| Fix metadata routing not working for scikit-learn>=1.8.0
 
 `0.10.4`_ (20-09-2025)
 ======================
