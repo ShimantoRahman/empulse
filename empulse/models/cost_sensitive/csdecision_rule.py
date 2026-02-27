@@ -42,11 +42,11 @@ def _extract_loss_params(params: dict[str, Any], loss: Metric) -> dict[str, Any]
 
 
 class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostSensitiveMixin):  # type: ignore[misc]
-    """Base class for cost-sensitive binary classifiers.
+    """
+    Base class for cost-sensitive binary classifiers.
 
     Provides the common fit/predict skeleton for classifiers that optimize a
-    cost-sensitive metric by learning a decision rule (threshold, rate, etc.)
-    during fitting.
+    cost-sensitive metric by learning a decision rule (threshold, rate, etc.) during fitting.
 
     Subclasses must implement:
 
@@ -213,7 +213,8 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
     def _fit_estimator(
         self, X: FloatArrayLike, y: ArrayLike, **params: Any
     ) -> tuple[Any, FloatNDArray, dict[str, Any]]:
-        """Fit the underlying estimator and return scores and loss parameters.
+        """
+        Fit the underlying estimator and return scores and loss parameters.
 
         Parameters
         ----------
