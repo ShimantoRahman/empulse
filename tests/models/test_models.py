@@ -36,7 +36,7 @@ from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
-    ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 2, 'population_size': 10}),
+    ProfLogitClassifier(tp_benefit=1, fp_cost=1, optimizer_params={'max_iter': 2, 'population_size': 10}),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
     BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -57,6 +57,8 @@ ESTIMATORS = (
     CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
 )
 METRIC_ESTIMATORS = (
+    ProfLogitClassifier(tp_benefit=1, fp_cost=1, optimizer_params={'max_iter': 2, 'population_size': 10}),
+    ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
     CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
     CSBoostClassifier(),
@@ -128,7 +130,7 @@ def test_proflogit_classifier_data_not_an_array():
 
     check_classifier_data_not_an_array(
         ProfLogitClassifier.__name__,
-        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
+        ProfLogitClassifier(tp_benefit=1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -151,7 +153,7 @@ def test_proflogit_fit_idempotent():
 
     check_fit_idempotent(
         ProfLogitClassifier.__name__,
-        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
+        ProfLogitClassifier(tp_benefit=1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 
@@ -174,7 +176,7 @@ def test_proflogit_supervised_y_2d():
 
     check_supervised_y_2d(
         ProfLogitClassifier.__name__,
-        ProfLogitClassifier(mpc_score, optimizer_params={'max_iter': 3, 'random_state': 42}),
+        ProfLogitClassifier(tp_benefit=1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
     )
     sklearn.utils.set_random_state = sklearn_set_random_state
 

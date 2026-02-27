@@ -11,9 +11,11 @@ from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
 
+from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
+from .._cs_mixin import CostSensitiveMixin
 
 
 class OptimizeFnKwargs(Protocol):
@@ -40,7 +42,7 @@ class LossFnNoKwargs(Protocol):
 LossFn = LossFnKwargs | LossFnNoKwargs | Callable[..., float]
 
 
-class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BaseLogitClassifier(ABC, CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
@@ -82,7 +84,16 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[
         return tags
 
     @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(self, X: FloatArrayLike, y: ArrayLike, **fit_params: Any) -> Self:
+    def fit(
+        self,
+        X: FloatArrayLike,
+        y: ArrayLike,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        **loss_params: Any,
+    ) -> Self:
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
@@ -97,10 +108,24 @@ class BaseLogitClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
-        return self._fit(X, y, **fit_params)
+        loss_params = self._validate_costs(
+            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
+        )
+
+        return self._fit(X, y, **loss_params)
 
     @abstractmethod
-    def _fit(self, X: FloatNDArray, y: NDArray[Any], **fit_params: Any) -> Self: ...
+    def _fit(self, X: FloatNDArray, y: NDArray[Any], **loss_params: Any) -> Self: ...
+
+    @abstractmethod
+    def _validate_costs(
+        self,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        **loss_params: Any,
+    ) -> dict[str, Any]: ...
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
