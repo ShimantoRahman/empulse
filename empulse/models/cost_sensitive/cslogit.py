@@ -14,14 +14,13 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base import BaseLogitClassifier, OptimizeFn
-from .._cs_mixin import CostSensitiveMixin
 
 LossStr = Literal['average expected cost']
 GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
 ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]
 
 
-class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
+class CSLogitClassifier(BaseLogitClassifier):
     """
     Cost-sensitive logistic regression classifier.
 
@@ -300,38 +299,8 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
         return self
 
-    def _fit(
-        self,
-        X: FloatNDArray,
-        y: IntNDArray,
-        *,
-        tp_cost: FloatArrayLike | float = 0.0,
-        tn_cost: FloatArrayLike | float = 0.0,
-        fn_cost: FloatArrayLike | float = 0.0,
-        fp_cost: FloatArrayLike | float = 0.0,
-        **loss_params: Any,
-    ) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> Self:
         optimizer_params = self.optimizer_params or {}
-
-        if not isinstance(self.loss, Metric):
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
-
-            if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
-                tp_cost = np.expand_dims(tp_cost, axis=1)
-            if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
-                tn_cost = np.expand_dims(tn_cost, axis=1)
-            if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
-                fn_cost = np.expand_dims(fn_cost, axis=1)
-            if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
-                fp_cost = np.expand_dims(fp_cost, axis=1)
-
-            # Assume that the loss function takes the following parameters:
-            loss_params['tp_cost'] = tp_cost
-            loss_params['tn_cost'] = tn_cost
-            loss_params['fn_cost'] = fn_cost
-            loss_params['fp_cost'] = fp_cost
 
         loss = self.loss if isinstance(self.loss, Metric) else make_generic_cost_metric()
         objective = loss._logit_objective(
@@ -351,6 +320,35 @@ class CSLogitClassifier(BaseLogitClassifier, CostSensitiveMixin):
         if self.fit_intercept:
             self.intercept_ = self.result_.x[0]
         return self
+
+    def _validate_costs(
+        self,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        **loss_params: Any,
+    ) -> dict[str, Any]:
+        if not isinstance(self.loss, Metric):
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
+
+            if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
+                tp_cost = np.expand_dims(tp_cost, axis=1)
+            if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
+                tn_cost = np.expand_dims(tn_cost, axis=1)
+            if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
+                fn_cost = np.expand_dims(fn_cost, axis=1)
+            if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
+                fp_cost = np.expand_dims(fp_cost, axis=1)
+
+            # Assume that the loss function takes the following parameters:
+            loss_params['tp_cost'] = tp_cost
+            loss_params['tn_cost'] = tn_cost
+            loss_params['fn_cost'] = fn_cost
+            loss_params['fp_cost'] = fp_cost
+        return loss_params
 
 
 def _optimize_jacobian(
