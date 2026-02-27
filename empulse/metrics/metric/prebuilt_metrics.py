@@ -1,5 +1,5 @@
 from .cost_matrix import CostMatrix
-from .metric import Metric
+from .metric import Metric, MetricStrategy
 from .strategies import Cost, MaxProfit, Savings
 
 
@@ -10,14 +10,19 @@ def make_generic_cost_matrix() -> CostMatrix:
 
 def make_generic_cost_metric() -> Metric:
     """Create a generic cost metric."""
-    return Metric(cost_matrix=make_generic_cost_matrix(), strategy=Cost())
+    return make_generic_metric(Cost())
 
 
 def make_generic_savings_metric() -> Metric:
     """Create a generic savings metric."""
-    return Metric(cost_matrix=make_generic_cost_matrix(), strategy=Savings())
+    return make_generic_metric(Savings())
 
 
 def make_generic_max_profit_metric() -> Metric:
     """Create a generic maximum profit metric."""
-    return Metric(cost_matrix=make_generic_cost_matrix(), strategy=MaxProfit())
+    return make_generic_metric(MaxProfit())
+
+
+def make_generic_metric(strategy: MetricStrategy) -> Metric:
+    """Create a generic metric with the given strategy."""
+    return Metric(cost_matrix=make_generic_cost_matrix(), strategy=strategy)

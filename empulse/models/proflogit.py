@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from functools import partial
 from itertools import islice
-from numbers import Integral, Real
+from numbers import Integral
 from typing import Any, ClassVar, Self
 
 import numpy as np
@@ -13,9 +13,8 @@ from empulse.optimizers import Generation
 
 from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import Metric
+from ..metrics import MaxProfit, Metric, MetricStrategy
 from ..metrics.metric.common import Direction
-from ..metrics.metric.prebuilt_metrics import make_generic_max_profit_metric
 from ._base import BaseLogitClassifier, LossFn, OptimizeFn
 
 
@@ -30,22 +29,22 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
     Parameters
     ----------
-    tp_benefit : float or array-like, shape=(n_samples,), default=0.0
-        Benefit of true positives. If ``float``, then all true positives have the same benefit.
-        If array-like, then it is the benefit of each true positive classification.
-        Is overwritten if another `tp_benefit` is passed to the ``fit`` method.
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
 
         .. note::
-            It is not recommended to pass instance-dependent benefits to the ``__init__`` method.
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    tn_benefit : float or array-like, shape=(n_samples,), default=0.0
-        Benefit of true negatives. If ``float``, then all true negatives have the same benefit.
-        If array-like, then it is the benefit of each true negative classification.
-        Is overwritten if another `tn_benefit` is passed to the ``fit`` method.
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
         .. note::
-            It is not recommended to pass instance-dependent benefits to the ``__init__`` method.
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
     fp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -140,7 +139,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         X, y = make_classification()
 
         model = ProfLogitClassifier(C=0.1, l1_ratio=0.5)
-        model.fit(X, y, tp_benefit=200, incentive_cost=10)
+        model.fit(X, y, tp_cost=-200, fp_cost=10)
 
     References
     ----------
@@ -160,11 +159,13 @@ class ProfLogitClassifier(BaseLogitClassifier):
         'n_jobs': [None, Integral],
     }
 
+    _default_metric_strategy: ClassVar[type[MetricStrategy]] = MaxProfit
+
     def __init__(
         self,
         *,
-        tp_benefit: FloatArrayLike | float = 0.0,
-        tn_benefit: FloatArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
         loss: Metric | None = None,
@@ -177,6 +178,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
         n_jobs: int | None = None,
     ):
         super().__init__(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
             C=C,
             fit_intercept=fit_intercept,
             soft_threshold=soft_threshold,
@@ -185,18 +190,14 @@ class ProfLogitClassifier(BaseLogitClassifier):
             optimize_fn=optimize_fn,
             optimizer_params=optimizer_params,
         )
-        self.tp_benefit = tp_benefit
-        self.tn_benefit = tn_benefit
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
         self.n_jobs = n_jobs
 
     def fit(
         self,
         X: FloatArrayLike,
         y: ArrayLike,
-        tp_benefit: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_benefit: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **loss_params: Any,
@@ -212,13 +213,13 @@ class ProfLogitClassifier(BaseLogitClassifier):
         y : 1D array-like, shape=(n_samples,)
             Target values.
 
-        tp_benefit : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Benefit of true positives. If ``float``, then all true positives have the same benefit.
-            If array-like, then it is the benefit of each true positive classification.
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of true positives. If ``float``, then all true positives have the same cost.
+            If array-like, then it is the cost of each true positive classification.
 
-        tn_benefit : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Benefit of true negatives. If ``float``, then all true negatives have the same benefit.
-            If array-like, then it is the benefit of each true negative classification.
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
 
         fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
@@ -236,7 +237,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         self : ProfLogitClassifier
             Fitted ProfLogit model.
         """
-        super().fit(X, y, tp_cost=tp_benefit, tn_cost=tn_benefit, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
+        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
         return self
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> Self:
@@ -244,9 +245,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
         optimize_fn: OptimizeFn = _optimize if self.optimize_fn is None else self.optimize_fn
         optimize_fn = partial(optimize_fn, **optimizer_params)
 
-        loss = self.loss if isinstance(self.loss, Metric) else make_generic_max_profit_metric()
-        if isinstance(loss, Metric) and loss.direction == Direction.MINIMIZE:
-            loss = lambda *args, **kwargs: -loss(*args, **kwargs)
+        loss = self.loss if isinstance(self.loss, Metric) else self._get_default_loss()
+        if loss.direction == Direction.MINIMIZE:
+            _loss = loss  # noqa: RUF052
+            loss = lambda *args, **kwargs: -_loss(*args, **kwargs)
 
         objective = partial(
             _objective,
@@ -268,34 +270,11 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
         return self
 
-    def _validate_costs(
-        self,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        **loss_params: Any,
-    ) -> dict[str, Any]:
-        if not isinstance(self.loss, Metric):
-            tp_benefit, tn_benefit, fn_cost, fp_cost = self._check_cost_benefits(
-                tp_benefit=tp_cost, tn_benefit=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
-
-            if not isinstance(tp_benefit, Real) and (tp_benefit := np.asarray(tp_benefit)).ndim == 1:
-                tp_benefit = np.expand_dims(tp_benefit, axis=1)
-            if not isinstance(tn_benefit, Real) and (tn_cost := np.asarray(tn_benefit)).ndim == 1:
-                tn_benefit = np.expand_dims(tn_cost, axis=1)
-            if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
-                fn_cost = np.expand_dims(fn_cost, axis=1)
-            if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
-                fp_cost = np.expand_dims(fp_cost, axis=1)
-
-            # Assume that the loss function takes the following parameters:
-            loss_params['tp_cost'] = -tp_benefit
-            loss_params['tn_cost'] = -tn_benefit
-            loss_params['fn_cost'] = fn_cost
-            loss_params['fp_cost'] = fp_cost
-        return loss_params
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None
 
 
 def _objective(
