@@ -10,7 +10,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, ParameterConstraint
-from ...metrics import MaxProfit, Metric
+from ...metrics import MaxProfit, Metric, MetricStrategy
 from ...metrics.metric.common import Direction
 from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 from .._cs_mixin import CostSensitiveMixin
@@ -30,22 +30,22 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
     Parameters
     ----------
-    tp_benefit : float or array-like, shape=(n_samples,), default=0.0
-        Benefit of true positives. If ``float``, then all true positives have the same benefit.
-        If array-like, then it is the benefit of each true positive classification.
-        Is overwritten if another `tp_benefit` is passed to the ``fit`` method.
+    tp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true positives. If ``float``, then all true positives have the same cost.
+        If array-like, then it is the cost of each true positive classification.
+        Is overwritten if another `tp_cost` is passed to the ``fit`` method.
 
         .. note::
-            It is not recommended to pass instance-dependent benefits to the ``__init__`` method.
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    tn_benefit : float or array-like, shape=(n_samples,), default=0.0
-        Benefit of true negatives. If ``float``, then all true negatives have the same benefit.
-        If array-like, then it is the benefit of each true negative classification.
-        Is overwritten if another `tn_benefit` is passed to the ``fit`` method.
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
         .. note::
-            It is not recommended to pass instance-dependent benefits to the ``__init__`` method.
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
     fp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -184,12 +184,13 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         'n_jobs': [Interval(Integral, 1, None, closed='left')],
         'random_state': ['random_state'],
     }
+    _default_metric_strategy: ClassVar[type[MetricStrategy]] = MaxProfit
 
     def __init__(
         self,
         *,
-        tp_benefit: FloatArrayLike | float = 0.0,
-        tn_benefit: FloatArrayLike | float = 0.0,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
         loss: Metric | None = None,
@@ -209,9 +210,8 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_jobs: int = 1,
         random_state: np.random.RandomState | int | None = None,
     ):
-        super().__init__()
-        self.tp_benefit = tp_benefit
-        self.tn_benefit = tn_benefit
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
         self.loss = loss
@@ -230,6 +230,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.mutate_value_rate = mutate_value_rate
         self.random_state = random_state
         self.n_jobs = n_jobs
+        super().__init__()
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -249,8 +250,8 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         X: FloatArrayLike,
         y: IntArrayLike,
         *,
-        tp_benefit: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_benefit: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **loss_params: Any,
@@ -266,13 +267,13 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y : array-like of shape (n_samples,)
             Target values.
 
-        tp_benefit : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Benefit of true positives. If ``float``, then all true positives have the same benefit.
-            If array-like, then it is the benefit of each true positive classification.
+        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of true positives. If ``float``, then all true positives have the same cost.
+            If array-like, then it is the cost of each true positive classification.
 
-        tn_benefit : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Benefit of true negatives. If ``float``, then all true negatives have the same benefit.
-            If array-like, then it is the benefit of each true negative classification.
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
 
         fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
@@ -330,17 +331,17 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         self.tree_ = EvolutionaryTree()
         if self.loss is None:
-            tp_benefit, tn_benefit, fn_cost, fp_cost = self._check_cost_benefits(
-                tp_benefit=tp_benefit,
-                tn_benefit=tn_benefit,
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
                 fn_cost=fn_cost,
                 fp_cost=fp_cost,
             )
             self.tree_.fit_max_profit(
                 X=X.astype(np.float32),
                 y=y.astype(np.int32),
-                tp_benefit=float(np.mean(tp_benefit)),
-                tn_benefit=float(np.mean(tn_benefit)),
+                tp_benefit=-float(np.mean(tp_cost)),
+                tn_benefit=-float(np.mean(tn_cost)),
                 fp_cost=float(np.mean(fp_cost)),
                 fn_cost=float(np.mean(fn_cost)),
                 pop_size=int(population_size),
@@ -388,16 +389,16 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                     random_state=random_state,
                 )
             else:
+                # TODO: add standard costs to loss_params
                 if self.loss.direction is Direction.MAXIMIZE:
                     loss = lambda *args, **kwargs: -self.loss(*args, **kwargs)
                 else:
                     loss = self.loss
                 loss = partial(loss, **loss_params)
 
-                y_proba = np.array([0.1, 0.2, 0.5, 0.7, 0.6], dtype=np.float32)
-                y_true = np.array([0, 0, 1, 1, 1], dtype=np.int32)
+                y_proba = np.random.default_rng().random(y.size, dtype=np.float32)
                 try:  # catch issue with the loss function before it goes into C world
-                    loss(y_true, y_proba)
+                    loss(y.astype(np.int32), y_proba)
                 except (TypeError, ValueError) as e:
                     raise ValueError(
                         f'The loss function {self.loss} threw an error when evaluating the function.'
@@ -468,3 +469,9 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_proba = self.predict_proba(X)
         y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
         return y_pred
+
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        if isinstance(self.loss, Metric):
+            return self.loss
+        return None

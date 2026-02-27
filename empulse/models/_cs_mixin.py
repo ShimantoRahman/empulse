@@ -1,6 +1,6 @@
 import warnings
 from numbers import Real
-from typing import Any, Literal, overload
+from typing import Any, ClassVar, Literal, overload
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -8,10 +8,13 @@ from sklearn.utils._metadata_requests import RequestMethod
 
 from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray
-from ..metrics import Metric
+from ..metrics import Cost, Metric, MetricStrategy
+from ..metrics.metric.prebuilt_metrics import make_generic_metric
 
 
 class CostSensitiveMixin:
+    _default_metric_strategy: ClassVar[type[MetricStrategy]] = Cost
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.__post_init__()
         super().__init__(*args, **kwargs)
@@ -215,6 +218,9 @@ class CostSensitiveMixin:
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
         return None
+
+    def _get_default_loss(self) -> Metric:
+        return make_generic_metric(self._default_metric_strategy())
 
 
 def all_float(*arrays: ArrayLike | float | Parameter) -> bool:
