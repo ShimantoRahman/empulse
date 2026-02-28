@@ -104,10 +104,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
-    # @classes_.setter
-    # def classes_(self, value) -> None:
-    #     pass
-
     def _get_loss_or_default(self) -> Metric:
         """Return the configured loss or a generic cost metric."""
         return self.loss if self.loss is not None else make_generic_cost_metric()
