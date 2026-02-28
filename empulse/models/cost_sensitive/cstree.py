@@ -1,9 +1,8 @@
-from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree._tree import Tree
 from sklearn.utils import Bunch
@@ -13,15 +12,14 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import Metric
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-from .._cs_mixin import CostSensitiveMixin
+from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
 TREE_PARAM_CONSTRAINTS.pop('criterion')
 
 
-class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     """
     Cost-sensitive decision tree classifier.
 
@@ -270,15 +268,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **TREE_PARAM_CONSTRAINTS,
-        'tp_cost': ['array-like', Real],
-        'tn_cost': ['array-like', Real],
-        'fn_cost': ['array-like', Real],
-        'fp_cost': ['array-like', Real],
+        **CostSensitiveClassifier._parameter_constraints,
         'criterion': [
             StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
             Hidden(CostImpurity),
         ],
-        'loss': [Metric, None],
     }
 
     def __init__(
@@ -303,11 +297,6 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         ccp_alpha: float = 0.0,
         monotonic_cst: IntArrayLike | None = None,
     ):
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
-        self.loss = loss
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
@@ -321,25 +310,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
         self.monotonic_cst = monotonic_cst
-        super().__init__()
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
-
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     @property
     def feature_importances_(self) -> FloatNDArray:
@@ -387,16 +358,11 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         n_leaves: int = self.estimator_.get_n_leaves()
         return n_leaves
 
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(
+    def _fit(
         self,
         X: FloatArrayLike,
         y: IntArrayLike,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        loss: Metric,
         **loss_params: Any,
     ) -> Self:
         """
@@ -410,21 +376,8 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true negatives. If ``float``, then all true negatives have the same cost.
-            If array-like, then it is the cost of each true negative classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
+        loss: Metric
+            Loss to be optimized.
 
         loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
@@ -434,25 +387,14 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
         self : object
             Returns self.
         """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
-
         if isinstance(self.loss, Metric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
+                tp_cost=loss_params.get('tp_cost', Parameter.UNCHANGED),
+                tn_cost=loss_params.get('tn_cost', Parameter.UNCHANGED),
+                fn_cost=loss_params.get('fn_cost', Parameter.UNCHANGED),
+                fp_cost=loss_params.get('fp_cost', Parameter.UNCHANGED),
             )
 
         n_samples = X.shape[0]
@@ -538,7 +480,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
 
         return self
 
-    def predict(self, X: FloatArrayLike, check_input: bool = True) -> IntNDArray:
+    def predict(self, X: FloatArrayLike, check_input: bool = True) -> NDArray[Any]:
         """
         Predict class value for X.
 
@@ -559,7 +501,7 @@ class CSTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # t
             The predicted classes.
         """
         check_is_fitted(self)
-        y_pred: IntNDArray = self.estimator_.predict(X, check_input=check_input)
+        y_pred: NDArray[Any] = self.estimator_.predict(X, check_input=check_input)
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike, check_input: bool = True) -> FloatNDArray:

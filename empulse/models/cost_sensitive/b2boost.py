@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Self, TypeVar
 import numpy as np
 import sympy
 from numpy.typing import ArrayLike
+from sklearn.utils._param_validation import HasMethods
 
 from ..._types import FloatArrayLike, ParameterConstraint
 
@@ -22,7 +23,6 @@ except ImportError:
 
 from ..._common import Parameter
 from ...metrics import Cost, CostMatrix, Metric
-from .._base import BaseBoostClassifier
 from .csboost import CSBoostClassifier
 
 
@@ -171,7 +171,7 @@ class B2BoostClassifier(CSBoostClassifier):
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
-        **BaseBoostClassifier._parameter_constraints,
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
         'accept_rate': [Real],
         'clv': ['array-like', Real],
         'incentive_fraction': [Real],

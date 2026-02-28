@@ -1,12 +1,11 @@
 import threading
 from collections.abc import Callable
-from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import Parallel, delayed
 from sklearn import config_context
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
+from sklearn.base import clone
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble._base import _partition_estimators
 from sklearn.tree import DecisionTreeClassifier
@@ -18,13 +17,13 @@ from sklearn.utils.validation import _estimator_has, check_is_fitted
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import Metric, expected_cost_loss
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-from .._cs_mixin import CostSensitiveMixin
+from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
+from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
 
 
-class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
+class CSBaggingClassifier(CostSensitiveClassifier):
     """
     Cost-sensitive Bagging classifier.
 
@@ -193,11 +192,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
-        'tp_cost': ['array-like', Real],
-        'tn_cost': ['array-like', Real],
-        'fn_cost': ['array-like', Real],
-        'fp_cost': ['array-like', Real],
-        'loss': [Metric, None],
+        **CostSensitiveClassifier._parameter_constraints,
         'combination': [
             StrOptions({'majority_voting', 'weighted_voting'}),
         ],
@@ -285,18 +280,7 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def _get_metric_loss(self) -> Metric | None:
         """Get the metric loss function if available."""
@@ -304,16 +288,11 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
             return self.loss
         return None
 
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(
+    def _fit(
         self,
         X: FloatArrayLike,
         y: IntArrayLike,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        loss: Metric,
         **loss_params: Any,
     ) -> Self:
         """
@@ -328,21 +307,8 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true negatives. If ``float``, then all true negatives have the same cost.
-            If array-like, then it is the cost of each true negative classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
+        loss : Metric
+            Loss to be optimized.
 
         loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
@@ -352,25 +318,14 @@ class CSBaggingClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self : CSBaggingClassifier
             Returns self.
         """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
-
         if isinstance(self.loss, Metric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
+                tp_cost=loss_params.get('tp_cost', Parameter.UNCHANGED),
+                tn_cost=loss_params.get('tn_cost', Parameter.UNCHANGED),
+                fn_cost=loss_params.get('fn_cost', Parameter.UNCHANGED),
+                fp_cost=loss_params.get('fp_cost', Parameter.UNCHANGED),
             )
 
         n_samples = X.shape[0]

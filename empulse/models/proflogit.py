@@ -5,13 +5,11 @@ from numbers import Integral
 from typing import Any, ClassVar, Self
 
 import numpy as np
-from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 
 from empulse.optimizers import Generation
 
-from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import MaxProfit, Metric, MetricStrategy
 from ..metrics.metric.common import Direction
@@ -192,60 +190,11 @@ class ProfLogitClassifier(BaseLogitClassifier):
         )
         self.n_jobs = n_jobs
 
-    def fit(
-        self,
-        X: FloatArrayLike,
-        y: ArrayLike,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **loss_params: Any,
-    ) -> Self:
-        """
-        Fit ProfLogit model.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_features)
-            Training data.
-
-        y : 1D array-like, shape=(n_samples,)
-            Target values.
-
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
-
-        loss_params : dict
-            Additional parameters passed to the loss function.
-
-        Returns
-        -------
-        self : ProfLogitClassifier
-            Fitted ProfLogit model.
-        """
-        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
-        return self
-
-    def _fit(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> Self:
+    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
         optimize_fn: OptimizeFn = _optimize if self.optimize_fn is None else self.optimize_fn
         optimize_fn = partial(optimize_fn, **optimizer_params)
 
-        loss = self.loss if isinstance(self.loss, Metric) else self._get_default_loss()
         if loss.direction == Direction.MINIMIZE:
             _loss = loss  # noqa: RUF052
             loss = lambda *args, **kwargs: -_loss(*args, **kwargs)

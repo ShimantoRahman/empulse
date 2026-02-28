@@ -3,23 +3,20 @@ from numbers import Integral, Real
 from typing import Any, ClassVar, Self
 
 import numpy as np
-from numpy.typing import NDArray
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval, RealNotInt
 from sklearn.utils.validation import check_is_fitted
 
-from ..._common import Parameter
-from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, ParameterConstraint
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import MaxProfit, Metric, MetricStrategy
 from ...metrics.metric.common import Direction
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-from .._cs_mixin import CostSensitiveMixin
+from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
+from ..csclassifier import CostSensitiveClassifier
 from .evolutionary_tree import EvolutionaryTree
 
 MAX_INT = 2147483647
 
 
-class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
+class ProfTreeClassifier(CostSensitiveClassifier):
     """
     Profit-driven evolutionary decision tree classifier.
 
@@ -161,7 +158,7 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
-        'loss': [Metric, None],
+        **CostSensitiveClassifier._parameter_constraints,
         'alpha': [Interval(Real, 0, None, closed='both')],
         'patience': [Interval(Integral, 1, None, closed='left')],
         'tolerance': [Interval(Real, 0, None, closed='right')],
@@ -210,11 +207,6 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         n_jobs: int = 1,
         random_state: np.random.RandomState | int | None = None,
     ):
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
-        self.loss = loss
         self.alpha = alpha
         self.patience = patience
         self.tolerance = tolerance
@@ -230,32 +222,9 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         self.mutate_value_rate = mutate_value_rate
         self.random_state = random_state
         self.n_jobs = n_jobs
-        super().__init__()
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
-
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(
-        self,
-        X: FloatArrayLike,
-        y: IntArrayLike,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **loss_params: Any,
-    ) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         """
         Fit a tree to a training set.
 
@@ -267,21 +236,8 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y : array-like of shape (n_samples,)
             Target values.
 
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
+        loss : Metric
+            Loss to be optimized.
 
         loss_params : Any
             Additional parameter to be passed to the loss function.
@@ -290,17 +246,6 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         -------
             Node: The fitted tree.
         """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
-
         n_samples = X.shape[0]
         population_size = 10 * X.shape[1] if self.population_size is None else self.population_size
         if self.min_samples_split < 1:
@@ -331,12 +276,10 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
 
         self.tree_ = EvolutionaryTree()
         if self.loss is None:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-            )
+            tp_cost = loss_params.get('tp_cost', 0)
+            tn_cost = loss_params.get('tn_cost', 0)
+            fn_cost = loss_params.get('fn_cost', 0)
+            fp_cost = loss_params.get('fp_cost', 0)
             self.tree_.fit_max_profit(
                 X=X.astype(np.float32),
                 y=y.astype(np.int32),
@@ -389,7 +332,6 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
                     random_state=random_state,
                 )
             else:
-                # TODO: add standard costs to loss_params
                 if self.loss.direction is Direction.MAXIMIZE:
                     loss = lambda *args, **kwargs: -self.loss(*args, **kwargs)
                 else:
@@ -451,27 +393,3 @@ class ProfTreeClassifier(CostSensitiveMixin, ClassifierMixin, BaseEstimator):
         y_proba = self.tree_.predict_proba(X)
         y_proba = np.vstack((1 - y_proba, y_proba)).T
         return y_proba
-
-    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
-        """
-        Predict class for X.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to ``dtype=np.float32``.
-
-        Returns
-        -------
-        y : array-like of shape (n_samples,)
-            The predicted classes.
-        """
-        y_proba = self.predict_proba(X)
-        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
-        return y_pred
-
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None

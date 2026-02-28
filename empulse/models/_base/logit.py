@@ -1,21 +1,20 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from numbers import Real
+from numbers import Integral, Real
 from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
-from .._cs_mixin import CostSensitiveMixin
+from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
+from ..csclassifier import CostSensitiveClassifier
 
 
 class OptimizeFnKwargs(Protocol):
@@ -42,8 +41,10 @@ class LossFnNoKwargs(Protocol):
 LossFn = LossFnKwargs | LossFnNoKwargs | Callable[..., float]
 
 
-class BaseLogitClassifier(ABC, CostSensitiveMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
     _parameter_constraints: ClassVar[ParameterConstraint] = {
+        **CostSensitiveClassifier._parameter_constraints,
+        'n_jobs': [None, Integral],
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
         'soft_threshold': ['boolean'],
@@ -77,53 +78,19 @@ class BaseLogitClassifier(ABC, CostSensitiveMixin, ClassifierMixin, BaseEstimato
         self.loss = loss
         self.optimizer_params = optimizer_params
         self.optimize_fn = optimize_fn
-        super().__init__()
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
-
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(
-        self,
-        X: FloatArrayLike,
-        y: ArrayLike,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **loss_params: Any,
-    ) -> Self:
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        y = np.where(y == self.classes_[1], 1, 0)
-
+    def _fit(self, X: FloatArrayLike, y: ArrayLike, loss: Metric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
-        loss_params = self._validate_costs(
-            tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-        )
+        if self.loss is None:
+            loss_params = self._validate_costs(**loss_params)
 
-        return self._fit(X, y, **loss_params)
+        return self._fit_estimator(X, y, loss=loss, **loss_params)
 
     @abstractmethod
-    def _fit(self, X: FloatNDArray, y: NDArray[Any], **loss_params: Any) -> Self: ...
+    def _fit_estimator(self, X: FloatNDArray, y: NDArray[Any], loss: Metric, **loss_params: Any) -> Self: ...
 
     def _validate_costs(
         self,
@@ -178,22 +145,4 @@ class BaseLogitClassifier(ABC, CostSensitiveMixin, ClassifierMixin, BaseEstimato
         y_pred = expit(logits)
         # create 2D array with complementary probabilities
         y_pred = np.vstack((1 - y_pred, y_pred)).T
-        return y_pred
-
-    def predict(self, X: FloatArrayLike) -> FloatNDArray:
-        """
-        Compute predicted labels.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Features.
-
-        Returns
-        -------
-        y_pred : 1D numpy.ndarray, shape=(n_samples,)
-            Predicted labels.
-        """
-        y_proba = self.predict_proba(X)
-        y_pred: FloatNDArray = self.classes_[np.argmax(y_proba, axis=1)]
         return y_pred

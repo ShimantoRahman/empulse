@@ -4,15 +4,12 @@ from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
-from numpy.typing import ArrayLike
 from scipy.optimize import OptimizeResult, minimize
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils._param_validation import StrOptions
 
-from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
-from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base import BaseLogitClassifier, OptimizeFn
 
 LossStr = Literal['average expected cost']
@@ -251,58 +248,9 @@ class CSLogitClassifier(BaseLogitClassifier):
             return self.loss
         return None
 
-    def fit(
-        self,
-        X: FloatArrayLike,
-        y: ArrayLike,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        **loss_params: Any,
-    ) -> Self:
-        """
-        Fit the model.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-
-        y : array-like of shape (n_samples,)
-
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true negatives. If ``float``, then all true negatives have the same cost.
-            If array-like, then it is the cost of each true negative classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
-
-        loss_params : dict[str, Any]
-            Additional parameters passed to the loss function.
-
-        Returns
-        -------
-        self : CSLogitClassifier
-            Fitted model.
-
-        """
-        super().fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params)
-        return self
-
-    def _fit(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> Self:
+    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         optimizer_params = self.optimizer_params or {}
 
-        loss = self.loss if isinstance(self.loss, Metric) else make_generic_cost_metric()
         objective = loss._logit_objective(
             features=X,
             y_true=y,

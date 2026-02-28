@@ -413,7 +413,7 @@ def test_metric_loss_metadata_routing(estimator, dataset):
     cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
-    estimator.__post_init__()
+    estimator._append_params_to_metadata_routing()
 
     with config_context(enable_metadata_routing=True):
         if isinstance(estimator, CSThresholdClassifier):
