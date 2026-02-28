@@ -136,6 +136,19 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             fp_cost is Parameter.UNCHANGED,
         ))
 
+    @staticmethod
+    def _all_costs_zero(
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+    ) -> bool:
+        """Check if all provided costs are scalar zeros."""
+        return all(
+            isinstance(c, (int, float)) and not isinstance(c, Parameter) and c == 0.0
+            for c in (tp_cost, tn_cost, fn_cost, fp_cost)
+        )
+
     def _should_skip_cost_sensitive_fit(
         self,
         tp_cost: FloatArrayLike | float | Parameter,
@@ -148,15 +161,14 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         Check if cost-sensitive fitting should be skipped.
 
         Returns True if:
-        1. All init costs are zero/default AND all fit costs are unchanged AND no loss function
+        1. All init costs are zero/default AND all fit costs are unchanged/zero AND no loss function
         2. Loss function exists but no loss-specific parameters were provided
         """
         # First condition: no costs provided and no loss function
-        no_costs_no_loss = (
-            self._all_init_costs_zero()
-            and self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost)
-            and self.loss is None
+        costs_not_provided = self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost) or self._all_costs_zero(
+            tp_cost, tn_cost, fn_cost, fp_cost
         )
+        no_costs_no_loss = self._all_init_costs_zero() and costs_not_provided and self.loss is None
 
         # Second condition: loss exists but no loss-specific params provided
         loss_without_params = (
@@ -324,7 +336,10 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             params.get('fp_cost', Parameter.UNCHANGED),
             params,
         ):
-            self.estimator_ = clone(self.estimator).fit(X, y, **params)
+            estimator_params = {
+                k: v for k, v in params.items() if k not in {'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}
+            }
+            self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
         else:
             self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)
             self.decision_ = self._compute_decision(loss, y, y_score, loss_params)
@@ -386,7 +401,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             decision = getattr(self, 'decision_', None)
             if decision is None:
                 raise ValueError(
-                    f'{self.decision_[:-1]} has not been set during fit. '
+                    'decision has not been set during fit. '
                     'Either provide costs/benefits to fit first or provide costs to predict.'
                 )
             if isinstance(decision, float) and np.isnan(decision):
