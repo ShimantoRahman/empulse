@@ -1,7 +1,6 @@
 import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
-from numbers import Real
 from typing import Any, ClassVar, Literal, Self, TypeVar, overload
 
 import numpy as np
@@ -9,9 +8,10 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.special import expit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
+from sklearn.utils.validation import check_is_fitted
 
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
-from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
+from ...utils._sklearn_compat import validate_data
 
 try:
     from xgboost import XGBClassifier
@@ -29,8 +29,7 @@ except ImportError:
 from ..._common import Parameter
 from ...metrics import Metric
 from ...metrics._loss import cy_boost_grad_hess
-from .._base import BaseBoostClassifier
-from .._cs_mixin import CostSensitiveMixin
+from ..csclassifier import CostSensitiveClassifier
 
 # Hessian is 0 at score 0.5
 # which means that at initialization the model optimization doesn't do anything
@@ -69,7 +68,7 @@ class LGBMObjective:
         return gradient, hessian
 
 
-class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
+class CSBoostClassifier(CostSensitiveClassifier):
     """
     Cost-sensitive gradient boosting classifier.
 
@@ -233,12 +232,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
-        **BaseBoostClassifier._parameter_constraints,
-        'tp_cost': ['array-like', Real],
-        'tn_cost': ['array-like', Real],
-        'fn_cost': ['array-like', Real],
-        'fp_cost': ['array-like', Real],
-        'loss': [HasMethods('_gradient_boost_objective'), None],
+        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        **CostSensitiveClassifier._parameter_constraints,
     }
 
     def __init__(
@@ -251,12 +246,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         fp_cost: FloatArrayLike | float = 0.0,
         loss: Metric | None = None,
     ) -> None:
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
-        self.loss = loss
-        super().__init__(estimator=estimator)
+        self.estimator = estimator
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def fit(
         self,
@@ -322,11 +313,8 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         X: NDArray[Any],
         y: NDArray[Any],
+        loss: Metric | None,
         *,
-        tp_cost: FloatArrayLike | float = 0.0,
-        tn_cost: FloatArrayLike | float = 0.0,
-        fn_cost: FloatArrayLike | float = 0.0,
-        fp_cost: FloatArrayLike | float = 0.0,
         fit_params: dict[str, Any] | None = None,
         **loss_params: Any,
     ) -> Self:
@@ -336,19 +324,10 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
-        if self.loss is None:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
-
         if self.estimator is None:
-            self._initialize_default_estimator(
-                y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-            )
+            self._initialize_default_estimator(y=y, loss=loss, **loss_params)
         else:
-            self._initialize_custom_estimator(
-                y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-            )
+            self._initialize_custom_estimator(y=y, loss=loss, **loss_params)
 
         if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator_, XGBClassifier):
             self.estimator_.fit(X, y, **fit_params)
@@ -377,10 +356,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
     def _initialize_default_estimator(
         self,
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> None:
         if isinstance(XGBClassifier, TypeVar):
@@ -389,35 +365,24 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
                 'Install optional dependencies through `pip install empulse[optional]` or '
                 '`pip install xgboost`'
             )
-        objective = self._get_objective(
-            'xgboost', y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-        )
+        objective = self._get_objective('xgboost', y, loss=loss, **loss_params)
         self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE)
 
     def _initialize_custom_estimator(
         self,
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> None:
         if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator, XGBClassifier):
-            objective = self._get_objective(
-                'xgboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-            )
+            objective = self._get_objective('xgboost', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE)
         elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator, LGBMClassifier):
-            objective = self._get_objective(
-                'lightgbm', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-            )
+            objective = self._get_objective('lightgbm', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator, CatBoostClassifier):
             # self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
-            loss_function, eval_metric = self._get_objective(
-                'catboost', y=y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, **loss_params
-            )
+            loss_function, eval_metric = self._get_objective('catboost', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
         else:
             raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
@@ -427,10 +392,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         framework: Literal['xgboost'],
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> Callable[..., Any]: ...
 
@@ -439,10 +401,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         framework: Literal['lightgbm'],
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> LGBMObjective: ...
 
@@ -451,10 +410,7 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         framework: Literal['catboost'],
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> tuple['CatBoostObjective', 'CatBoostMetric']: ...
 
@@ -462,23 +418,9 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
         self,
         framework: Literal['xgboost', 'lightgbm', 'catboost'],
         y: FloatNDArray,
-        tp_cost: FloatNDArray | FloatArrayLike | float,
-        tn_cost: FloatNDArray | FloatArrayLike | float,
-        fn_cost: FloatNDArray | FloatArrayLike | float,
-        fp_cost: FloatNDArray | FloatArrayLike | float,
+        loss: Metric,
         **loss_params: Any,
     ) -> Callable[..., Any] | LGBMObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
-        if self.loss is None:
-            loss = make_generic_cost_metric()
-            loss_params = {
-                'tp_cost': tp_cost,
-                'tn_cost': tn_cost,
-                'fn_cost': fn_cost,
-                'fp_cost': fp_cost,
-            }
-        else:
-            loss = self.loss
-
         if framework == 'xgboost':
             # return partial(self.loss._gradient_boost_objective, **loss_params)
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
@@ -495,11 +437,29 @@ class CSBoostClassifier(BaseBoostClassifier, CostSensitiveMixin):
             }
             return CatBoostObjective(grad_const), CatBoostMetric(loss, **loss_params)
 
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
+    def predict_proba(self, X: ArrayLike) -> FloatNDArray:
+        """
+        Predict class probabilities for X.
+
+        Parameters
+        ----------
+        X : 2D numpy.ndarray, shape=(n_samples, n_features)
+
+        Returns
+        -------
+        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
+            Predicted class probabilities.
+        """
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
+        if LGBMClassifier is not None and isinstance(self.estimator_, LGBMClassifier):
+            y_proba: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
+            y_proba: FloatNDArray = expit(y_proba)
+            return np.column_stack([1 - y_proba, y_proba])
+
+        y_proba: FloatNDArray = self.estimator_.predict_proba(X)  # type: ignore[no-redef]
+        return y_proba
 
 
 class CatBoostObjective:

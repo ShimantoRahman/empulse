@@ -88,7 +88,7 @@ class TestCSThresholdCalibration:
         X, y = data
         clf = CSThresholdClassifier(LogisticRegression(max_iter=2), calibrator=calibrator)
         clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
-        assert hasattr(clf, 'threshold_')
+        assert hasattr(clf, 'decision_')
 
 
 # ===================================================================
@@ -104,7 +104,7 @@ class TestCSRateSpecific:
         X, y = data
         clf = CSRateClassifier(LogisticRegression(max_iter=200))
         clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
-        assert 0.0 <= clf.rate_ <= 1.0
+        assert 0.0 <= clf.decision_ <= 1.0
 
     def test_nan_rate_falls_back_to_estimator(self, data):
         """When rate_ is NaN, predict falls back to the estimator's default predict."""
@@ -112,7 +112,7 @@ class TestCSRateSpecific:
         clf = CSRateClassifier(LogisticRegression(max_iter=200))
         clf.fit(X, y, fp_cost=1.0, fn_cost=1.0)
         # Manually set rate_ to NaN to exercise the guard.
-        clf.rate_ = float('nan')
+        clf.decision_ = float('nan')
         y_pred = clf.predict(X)
         expected = clf.estimator_.predict(X)
         np.testing.assert_array_equal(y_pred, expected)
@@ -126,7 +126,7 @@ class TestCSRateSpecific:
         clf_b = CSRateClassifier(LogisticRegression(max_iter=200))
         clf_b.fit(X, y, fn_cost=1.0, fp_cost=10.0)
 
-        assert clf_a.rate_ != clf_b.rate_
+        assert clf_a.decision_ != clf_b.decision_
 
 
 # ===================================================================
@@ -143,10 +143,6 @@ def _make_model(classifier_type, kind='logreg', loss=None):
         return _make_rate_model(kind, loss=loss)
 
 
-def _decision_attr(classifier_type):
-    return 'threshold_' if classifier_type == 'threshold' else 'rate_'
-
-
 class TestFitWithCosts:
     """Both classifiers learn a decision attribute when costs are provided at fit time."""
 
@@ -158,7 +154,7 @@ class TestFitWithCosts:
             clf = _make_model(classifier_type, kind)
             clf.set_fit_request(fp_cost=True, fn_cost=True, tn_cost=True, tp_cost=True)
             clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
-        assert hasattr(clf, _decision_attr(classifier_type))
+        assert hasattr(clf, 'decision_')
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
     def test_fit_costs_via_init(self, classifier_type, data):
@@ -167,7 +163,7 @@ class TestFitWithCosts:
         clf = _make_model(classifier_type)
         clf.set_params(fp_cost=1.0, fn_cost=2.0)
         clf.fit(X, y)
-        assert hasattr(clf, _decision_attr(classifier_type))
+        assert hasattr(clf, 'decision_')
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
     @pytest.mark.parametrize('kind', ['logreg', 'cslogit'])
@@ -176,7 +172,7 @@ class TestFitWithCosts:
         loss = _DummyMetric(_DummyCostStrategy())
         clf = _make_model(classifier_type, kind, loss=loss)
         clf.fit(X, y, alpha=0.1)
-        assert hasattr(clf, _decision_attr(classifier_type))
+        assert hasattr(clf, 'decision_')
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
     @pytest.mark.parametrize('kind', ['logreg', 'cslogit'])
@@ -186,7 +182,7 @@ class TestFitWithCosts:
         loss = _DummyMetric(MaxProfit())
         clf = _make_model(classifier_type, kind, loss=loss)
         clf.fit(X, y, alpha=0.1)
-        assert hasattr(clf, _decision_attr(classifier_type))
+        assert hasattr(clf, 'decision_')
 
 
 class TestSkipCostSensitiveFit:
@@ -199,7 +195,7 @@ class TestSkipCostSensitiveFit:
         clf = _make_model(classifier_type)
         clf.fit(X, y)
         assert hasattr(clf, 'estimator_')
-        assert not hasattr(clf, _decision_attr(classifier_type))
+        assert not hasattr(clf, 'decision_')
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
     def test_predict_without_decision_raises(self, classifier_type, data):
@@ -218,7 +214,7 @@ class TestSkipCostSensitiveFit:
         clf = _make_model(classifier_type, loss=loss)
         clf.fit(X, y)
         assert hasattr(clf, 'estimator_')
-        assert not hasattr(clf, _decision_attr(classifier_type))
+        assert not hasattr(clf, 'decision_')
 
 
 class TestPredictTimeCosts:
@@ -338,4 +334,4 @@ class TestMetadataRouting:
                 clf = CSRateClassifier(inner)
             clf.set_fit_request(fp_cost=True, fn_cost=True, tn_cost=True, tp_cost=True)
             clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
-        assert hasattr(clf, _decision_attr(classifier_type))
+        assert hasattr(clf, 'decision_')

@@ -6,7 +6,7 @@ import numpy as np
 import sklearn
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
+from sklearn.base import BaseEstimator, MetaEstimatorMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
@@ -15,15 +15,13 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.metaestimators import available_if
-from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import MaxProfit, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
-from ...utils._sklearn_compat import Tags, validate_data  # type: ignore[attr-defined]
-from .._cs_mixin import CostSensitiveMixin
+from ..csclassifier import CostSensitiveClassifier
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 
@@ -41,7 +39,7 @@ def _extract_loss_params(params: dict[str, Any], loss: Metric) -> dict[str, Any]
     return loss_params
 
 
-class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator, CostSensitiveMixin):  # type: ignore[misc]
+class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: ignore[misc]
     """
     Base class for cost-sensitive binary classifiers.
 
@@ -59,42 +57,31 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
+        **CostSensitiveClassifier._parameter_constraints,
         'estimator': [HasMethods(['fit', 'predict_proba'])],
         'pos_label': [Real, str, 'boolean', None],
-        'loss': [Metric, None],
-        'tp_cost': ['array-like', Real],
-        'tn_cost': ['array-like', Real],
-        'fn_cost': ['array-like', Real],
-        'fp_cost': ['array-like', Real],
     }
 
     #: Name of the fitted decision attribute (e.g. ``'threshold_'``, ``'rate_'``).
     _decision_attr_name: ClassVar[str]
+    _set_default_costs: ClassVar[bool] = False
 
     def __init__(
         self,
         estimator: Any,
         *,
-        pos_label: int | bool | str | None = None,
-        loss: Metric | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
+        loss: Metric | None = None,
+        pos_label: int | bool | str | None = None,
     ):
         self.estimator = estimator
         self.pos_label = pos_label
-        self.loss = loss
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
-        super().__init__()
+        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def __post_init__(self) -> None:
-        # Override to handle both fit and predict request routing.
-        # Cannot call super().__post_init__() because the mixin uses
-        # router.fit.requests which is incompatible with add_self_request routers.
+    def _append_params_to_metadata_routing(self) -> None:
         if isinstance(self._get_metric_loss(), Metric):
             self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
                 'fit',
@@ -104,18 +91,6 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
                 'predict',
                 sorted(self.get_metadata_routing()._self_request.predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
             )
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.input_tags.sparse = False
-        return tags
 
     @property
     def classes_(self) -> NDArray[Any]:  # noqa: D102
@@ -129,11 +104,9 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
+    # @classes_.setter
+    # def classes_(self, value) -> None:
+    #     pass
 
     def _get_loss_or_default(self) -> Metric:
         """Return the configured loss or a generic cost metric."""
@@ -317,15 +290,11 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
             Predicted class labels.
         """
 
-    @_fit_context(prefer_skip_nested_validation=False)
-    def fit(
+    def _fit(
         self,
         X: FloatArrayLike,
         y: ArrayLike,
-        tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        loss: Metric,
         **params: Any,
     ) -> Self:
         """Fit the classifier.
@@ -338,22 +307,6 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
         y : array-like of shape (n_samples,)
             Target values.
 
-        tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true positives. If ``float``, then all true positives have the same cost.
-            If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
-        tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of true negatives. If ``float``, then all true negatives have the same cost.
-            If array-like, then it is the cost of each true negative classification.
-
-        fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false negatives. If ``float``, then all false negatives have the same cost.
-            If array-like, then it is the cost of each false negative classification.
-
         **params : dict
             Parameters to pass to the `fit` method of the underlying classifier.
 
@@ -364,53 +317,22 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
         """
         X, y = indexable(X, y)
 
-        y_type = type_of_target(y, input_name='y')
-        if y_type != 'binary':
-            raise ValueError(f'Only binary classification is supported. Unknown label type: {y_type}')
-
-        if self._should_skip_cost_sensitive_fit(tp_cost, tn_cost, fn_cost, fp_cost, params):
-            X, y = validate_data(self, X, y)
+        if self._should_skip_cost_sensitive_fit(
+            params.get('tp_cost', Parameter.UNCHANGED),
+            params.get('tn_cost', Parameter.UNCHANGED),
+            params.get('fn_cost', Parameter.UNCHANGED),
+            params.get('fp_cost', Parameter.UNCHANGED),
+            params,
+        ):
             self.estimator_ = clone(self.estimator).fit(X, y, **params)
         else:
-            params = self._add_standard_costs_to_params(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=params
-            )
-            self._fit(X, y, **params)
+            self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)
+            self.decision_ = self._compute_decision(loss, y, y_score, loss_params)
 
         if hasattr(self.estimator_, 'n_features_in_'):
             self.n_features_in_ = self.estimator_.n_features_in_
         if hasattr(self.estimator_, 'feature_names_in_'):
             self.feature_names_in_ = self.estimator_.feature_names_in_
-
-        return self
-
-    def _fit(self, X: FloatArrayLike, y: ArrayLike, **params: Any) -> Self:
-        """Fit the classifier with cost-sensitive optimization.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            Training data.
-
-        y : array-like of shape (n_samples,)
-            Target values.
-
-        **params : dict
-            Parameters to pass to the `fit` method of the underlying classifier.
-
-        Returns
-        -------
-        self : object
-            Returns an instance of self.
-        """
-        X, y = validate_data(self, X, y)
-
-        loss = self._get_loss_or_default()
-
-        self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)
-
-        decision = self._compute_decision(loss, y, y_score, loss_params)
-        setattr(self, self._decision_attr_name, decision)
 
         return self
 
@@ -461,10 +383,10 @@ class CSDecisionRuleClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimato
         """
         if self._should_use_fitted_decision(tp_cost, tn_cost, fn_cost, fp_cost, loss_params):
             check_is_fitted(self)
-            decision = getattr(self, self._decision_attr_name, None)
+            decision = getattr(self, 'decision_', None)
             if decision is None:
                 raise ValueError(
-                    f'{self._decision_attr_name[:-1]} has not been set during fit. '
+                    f'{self.decision_[:-1]} has not been set during fit. '
                     'Either provide costs/benefits to fit first or provide costs to predict.'
                 )
             if isinstance(decision, float) and np.isnan(decision):
