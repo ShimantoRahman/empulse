@@ -23,11 +23,6 @@ class _DummyCostStrategy:
     pass
 
 
-class _DummyCostMatrix(CostMatrix):
-    def __init__(self):
-        self._defaults = {}
-
-
 class _DummyMetric(Metric):
     """Metric stub whose ``_all_symbols`` contains ``'alpha'``."""
 
@@ -35,7 +30,7 @@ class _DummyMetric(Metric):
 
     def __init__(self, strategy):
         self.strategy = strategy
-        self.cost_matrix = _DummyCostMatrix()
+        self.cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
 
     def optimal_threshold(self, y_true, y_score, **kwargs):
         return 0.5
