@@ -11,10 +11,15 @@ from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
+from xgboost import XGBClassifier
 
 from empulse.datasets import load_give_me_some_credit
 from empulse.metrics import Cost, CostMatrix, Metric, cost_loss, mpc_score
 from empulse.models import (
+    B2BoostClassifier,
+    BiasRelabelingClassifier,
+    BiasResamplingClassifier,
+    BiasReweighingClassifier,
     CSBaggingClassifier,
     CSBoostClassifier,
     CSForestClassifier,
@@ -29,52 +34,57 @@ from empulse.models import (
 from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
-    # B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
-    # ProfLogitClassifier(
-    #     tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
-    # ),
+    BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
+    BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
+    BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
+    B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
+    ProfLogitClassifier(
+        tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
+    ),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
-    # BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
-    # BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
-    # BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
-    # CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
-    # CSLogitClassifier(fp_cost=1, fn_cost=1),
-    # CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
-    # CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
-    # CSBaggingClassifier(
-    #     estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}),
-    #     n_estimators=2,
-    #     fp_cost=1,
-    #     fn_cost=1,
-    #     random_state=42,
-    # ),
-    # RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
-    # CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
-    # CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
+    CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
+    CSLogitClassifier(fp_cost=1, fn_cost=1),
+    CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
+    CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
+    CSBaggingClassifier(
+        estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}),
+        n_estimators=2,
+        fp_cost=1,
+        fn_cost=1,
+        random_state=42,
+    ),
+    RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
+    CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
+    CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
 )
 METRIC_ESTIMATORS = (
-    # ProfLogitClassifier(optimizer_params={'max_iter': 50, 'population_size': 10, 'random_state': 42}),
+    ProfLogitClassifier(optimizer_params={'max_iter': 50, 'population_size': 10, 'random_state': 42}),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
-    # CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
-    # CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
-    # CSBoostClassifier(),
-    # CSBoostClassifier(
-    #     LGBMClassifier(
-    #         n_estimators=10,
-    #         max_depth=1,
-    #         # Need this parameter since we are testing with small datasets, otherwise can throw an error
-    #         min_data_in_leaf=0,
-    #         verbose=-1,
-    #     )
-    # ),
-    # CSLogitClassifier(optimizer_params={'max_iter': 10}),
-    # CSTreeClassifier(max_depth=2),
-    # CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
-    # CSBaggingClassifier(n_estimators=3, random_state=10),
-    # RobustCSClassifier(estimator=CSBoostClassifier()),
+    CSBoostClassifier(),
+    CSLogitClassifier(optimizer_params={'max_iter': 10}),
+    CSTreeClassifier(max_depth=2),
+    CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
+    CSBaggingClassifier(n_estimators=3, random_state=10),
+    RobustCSClassifier(estimator=CSBoostClassifier()),
+    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
+    CSRateClassifier(estimator=LogisticRegression(max_iter=2)),
 )
 
+PREDICT_TIME_ESTIMATORS = (
+    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
+    CSRateClassifier(estimator=LogisticRegression(max_iter=2)),
+)
+
+
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
+
+
+def estimator_id(estimator):
+    params = estimator.get_params(deep=False)
+    inner = params.get('estimator')
+    if inner is not None:
+        return f'{type(estimator).__name__}({type(inner).__name__})'
+    return type(estimator).__name__
 
 
 def expected_failed_checks(estimator):
@@ -187,12 +197,13 @@ def data():
     'classifier',
     [
         CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
-        CSBoostClassifier(),
+        CSBoostClassifier(XGBClassifier(n_estimators=30)),
         CSLogitClassifier(optimizer_params={'max_iter': 10}),
         CSTreeClassifier(max_depth=2),
         CSForestClassifier(n_estimators=3, max_depth=1),
-        RobustCSClassifier(estimator=CSBoostClassifier()),
+        RobustCSClassifier(estimator=CSBoostClassifier(XGBClassifier(n_estimators=30))),
     ],
+    ids=estimator_id,
 )
 def test_cost_loss_performance(classifier, data):
     X, y, tp_cost, fp_cost, tn_cost, fn_cost = data
@@ -265,7 +276,10 @@ def test_invalid_params(estimator_class, dataset):
 
 def set_metric_loss(estimator, loss):
     """Set the metric loss for the estimator."""
-    if hasattr(estimator, 'loss'):
+    if isinstance(estimator, RobustCSClassifier):
+        estimator.estimator.loss = loss
+        return estimator
+    elif hasattr(estimator, 'loss'):
         return estimator.set_params(loss=loss)
     elif hasattr(estimator, 'criterion'):
         return estimator.set_params(criterion=loss)
@@ -275,7 +289,7 @@ def set_metric_loss(estimator, loss):
         raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_metric_api_consistency(estimator, dataset):
     """Test that the metric API is consistent with the cost matrix API."""
     X, y, _, _ = dataset
@@ -325,7 +339,7 @@ def test_metric_api_consistency(estimator, dataset):
         )
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_data_format(estimator, dataset):
     """Test that the estimators accept data in different formats."""
     X, y, _, _ = dataset
@@ -342,7 +356,7 @@ def test_data_format(estimator, dataset):
         estimator.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, tp_cost=tp_cost, tn_cost=tn_cost)
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_data_format_metric_loss(estimator, dataset):
     """Test that the estimators accept data in different formats when using metric loss."""
     X, y, _, _ = dataset
@@ -363,7 +377,7 @@ def test_data_format_metric_loss(estimator, dataset):
         estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_data_types_metric_loss(estimator, dataset):
     """Test that the estimators accept different data types when using metric loss."""
     X, y, _, _ = dataset
@@ -385,7 +399,7 @@ def test_data_types_metric_loss(estimator, dataset):
         estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_metric_loss_all_default_params(estimator, dataset):
     """Test that the metric loss works with all default parameters."""
     X, y, _, _ = dataset
@@ -403,7 +417,74 @@ def test_metric_loss_all_default_params(estimator, dataset):
         estimator.fit(X, y)
 
 
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS)
+@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
+def test_data_format_metric_loss_predict_time(estimator, dataset):
+    """Test that predict-time estimators accept data in different formats through the Metric loss API."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
+    fn_cost = np.ones(y.size)
+    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
+
+    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fn_cost('fn').add_fp_cost('fp')
+    metric_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), metric_loss)
+    estimator.fit(X, y)
+    y_pred = estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+    assert y_pred.shape == y.shape
+
+
+@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
+def test_data_types_metric_loss_predict_time(estimator, dataset):
+    """Test that predict-time estimators accept different data types through the Metric loss API."""
+    X, y, _, _ = dataset
+    tp_cost = 0
+    tn_cost = np.arange(y.size, dtype=np.float32)
+    fn_cost = np.ones(y.size, dtype=np.int32)
+    fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
+
+    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
+    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    metric_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), metric_loss)
+    estimator.fit(X, y)
+    y_pred = estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
+    assert y_pred.shape == y.shape
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
+def test_metric_loss_partial_defaults(estimator, dataset):
+    """Test that the metric loss works when only some parameters have defaults."""
+    X, y, _, _ = dataset
+
+    fn, fp = sympy.symbols('fn fp')
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1)
+    cost_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), cost_loss)
+    estimator.fit(X, y, fn=1)
+    y_pred = estimator.predict(X)
+    assert y_pred.shape == y.shape
+
+
+@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
+def test_metric_loss_partial_defaults_predict_time(estimator, dataset):
+    """Test that the metric loss works when only some parameters have defaults."""
+    X, y, _, _ = dataset
+
+    fn, fp = sympy.symbols('fn fp')
+    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1)
+    metric_loss = Metric(cost_matrix, Cost())
+
+    estimator = set_metric_loss(clone(estimator), metric_loss)
+    estimator.fit(X, y)
+    y_pred = estimator.predict(X, fn=1)
+    assert y_pred.shape == y.shape
+
+
+@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
 def test_metric_loss_metadata_routing(estimator, dataset):
     """Test that the metric loss metadata routing works."""
     X, y, fn_cost, fp_cost = dataset
@@ -416,8 +497,10 @@ def test_metric_loss_metadata_routing(estimator, dataset):
     estimator._append_params_to_metadata_routing()
 
     with config_context(enable_metadata_routing=True):
-        if isinstance(estimator, CSThresholdClassifier):
+        if isinstance(estimator, CSThresholdClassifier | CSRateClassifier):
+            estimator.set_fit_request(fp=True, fn=True)
             estimator.set_predict_request(fp=True, fn=True)
+            cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})
         else:
             estimator.set_fit_request(fp=True, fn=True)
             cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})
