@@ -444,8 +444,7 @@ def test_data_types_metric_loss_predict_time(estimator, dataset):
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
 
-    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
+    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fn_cost('fn').add_fp_cost('fp')
     metric_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), metric_loss)
@@ -459,8 +458,7 @@ def test_metric_loss_partial_defaults(estimator, dataset):
     """Test that the metric loss works when only some parameters have defaults."""
     X, y, _, _ = dataset
 
-    fn, fp = sympy.symbols('fn fp')
-    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1)
+    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').set_default(fp=1)
     cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)
@@ -474,8 +472,7 @@ def test_metric_loss_partial_defaults_predict_time(estimator, dataset):
     """Test that the metric loss works when only some parameters have defaults."""
     X, y, _, _ = dataset
 
-    fn, fp = sympy.symbols('fn fp')
-    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1)
+    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').set_default(fp=1)
     metric_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), metric_loss)
@@ -489,8 +486,7 @@ def test_metric_loss_metadata_routing(estimator, dataset):
     """Test that the metric loss metadata routing works."""
     X, y, fn_cost, fp_cost = dataset
 
-    fn, fp = sympy.symbols('fn fp')
-    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).mark_outlier_sensitive(fn)
+    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').mark_outlier_sensitive('fn')
     cost_loss = Metric(cost_matrix, Cost())
 
     estimator = set_metric_loss(clone(estimator), cost_loss)

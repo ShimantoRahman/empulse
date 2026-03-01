@@ -174,10 +174,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         no_costs_no_loss = self._all_init_costs_zero() and costs_not_provided and self.loss is None
 
         # Second condition: loss exists but no loss-specific params provided
-        loss_without_params = (
-            self.loss is not None
-            and not any(self.loss._all_symbols.intersection(params.keys()))
-            and not self.loss.cost_matrix._defaults
+        loss_without_params = self.loss is not None and self.loss._all_parameters != (
+            params.keys() | self.loss.cost_matrix._defaults.keys()
         )
 
         return no_costs_no_loss or loss_without_params
