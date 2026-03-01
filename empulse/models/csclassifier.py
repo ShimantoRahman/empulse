@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from numbers import Real
-from typing import Any, ClassVar, Literal, Self, overload
+from typing import Any, ClassVar, Literal, Protocol, Self, overload
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,7 +12,14 @@ from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import Cost, Metric, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
-from ..utils._sklearn_compat import Tags, type_of_target, validate_data
+from ..utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
+
+
+class MetricStrategyFactory(Protocol):
+    """A factory for creating MetricStrategy instances."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> MetricStrategy:
+        """Instantiate a MetricStrategy object."""
 
 
 class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
@@ -25,7 +32,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         'fp_cost': ['array-like', Real],
         'loss': [Metric, None],
     }
-    _default_metric_strategy: ClassVar[type[MetricStrategy]] = Cost
+    _default_metric_strategy: ClassVar[MetricStrategyFactory] = Cost
     _cost_ndim: ClassVar[int] = 0
     _array_cost_ndim: ClassVar[int] = 1
     _set_default_costs: ClassVar[bool] = True
@@ -129,19 +136,26 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
 
         loss_ = self._get_metric_loss()
         if loss_ is None:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
-                caller='fit',
-                force_array=self._cost_ndim > 0,
-                n_samples=int(X.shape[0]),
-            )
+            if self._cost_ndim > 0:
+                tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    fn_cost=fn_cost,
+                    fp_cost=fp_cost,
+                    force_array=True,
+                    n_samples=int(X.shape[0]),
+                )
+            else:
+                tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    fn_cost=fn_cost,
+                    fp_cost=fp_cost,
+                )
             loss_params = self._add_standard_costs_to_params(
                 tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, params=loss_params
             )
-        loss_params = self._normalize_cost_shapes(loss_params)
+        loss_params = self._normalize_cost_shapes(loss_params, size=y.size)
 
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
@@ -168,11 +182,13 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
         return y_pred
 
-    def _normalize_cost_shapes(self, loss_params: dict[str, Any]) -> dict[str, Any]:
+    def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int) -> dict[str, Any]:
         shape = -1 if self._array_cost_ndim == 1 else (1, -1)
 
         for key, value in loss_params.items():
             if isinstance(value, np.ndarray):
+                if value.size != size:
+                    raise ValueError(f'The size of the cost parameter {key} must be {size}, but got {value.size}.')
                 loss_params[key] = value.reshape(shape)
         return loss_params
 

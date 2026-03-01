@@ -11,9 +11,10 @@ from scipy.special import expit
 from empulse.optimizers import Generation
 
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import MaxProfit, Metric, MetricStrategy
+from ..metrics import MaxProfit, Metric
 from ..metrics.metric.common import Direction
-from ._base import BaseLogitClassifier, LossFn, OptimizeFn
+from ._base import BaseLogitClassifier, OptimizeFn
+from .csclassifier import MetricStrategyFactory
 
 
 class ProfLogitClassifier(BaseLogitClassifier):
@@ -157,7 +158,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         'n_jobs': [None, Integral],
     }
 
-    _default_metric_strategy: ClassVar[type[MetricStrategy]] = MaxProfit
+    _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
     def __init__(
         self,
@@ -197,7 +198,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
         if loss.direction == Direction.MINIMIZE:
             _loss = loss  # noqa: RUF052
-            loss = lambda *args, **kwargs: -_loss(*args, **kwargs)
+            loss = lambda *args, **kwargs: -_loss(*args, **kwargs)  # type: ignore[assignment]
 
         objective = partial(
             _objective,
@@ -230,7 +231,7 @@ def _objective(
     weights: FloatNDArray,
     X: FloatNDArray,
     y: IntNDArray,
-    loss_fn: LossFn,
+    loss_fn: Callable[[FloatNDArray, FloatNDArray], float],
     C: float,
     l1_ratio: float,
     soft_threshold: bool,

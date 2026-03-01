@@ -428,8 +428,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     def _fit(
         self,
-        X: FloatArrayLike,
-        y: IntArrayLike,
+        X: FloatNDArray,
+        y: IntNDArray,
         loss: Metric,
         **loss_params: Any,
     ) -> Self:

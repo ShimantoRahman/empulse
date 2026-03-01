@@ -4,7 +4,6 @@ from numbers import Integral, Real
 from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
@@ -30,17 +29,6 @@ class OptimizeFnNoKwargs(Protocol):
 OptimizeFn = OptimizeFnKwargs | OptimizeFnNoKwargs | Callable[..., OptimizeResult]
 
 
-class LossFnKwargs(Protocol):
-    def __call__(self, y_true: IntNDArray, y_proba: FloatNDArray, **kwargs: Any) -> float: ...
-
-
-class LossFnNoKwargs(Protocol):
-    def __call__(self, y_true: IntNDArray, y_proba: FloatNDArray) -> float: ...
-
-
-LossFn = LossFnKwargs | LossFnNoKwargs | Callable[..., float]
-
-
 class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
@@ -63,7 +51,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         fit_intercept: bool = True,
         soft_threshold: bool = True,
         l1_ratio: float = 1.0,
-        loss: str | LossFn | Metric | None = None,
+        loss: Metric | None = None,
         optimize_fn: OptimizeFn | None = None,
         optimizer_params: dict[str, Any] | None = None,
     ):
@@ -80,7 +68,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         self.optimize_fn = optimize_fn
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _fit(self, X: FloatArrayLike, y: ArrayLike, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
@@ -90,7 +78,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
     @abstractmethod
-    def _fit_estimator(self, X: FloatNDArray, y: NDArray[Any], loss: Metric, **loss_params: Any) -> Self: ...
+    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self: ...
 
     def _validate_costs(
         self,

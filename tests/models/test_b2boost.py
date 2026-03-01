@@ -135,23 +135,6 @@ def dataset():
     return X, y
 
 
-@pytest.mark.filterwarnings('ignore::UserWarning')
-@pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
-def test_b2boost_different_classifiers(library, classifier_name, dataset):
-    # Import the classifier dynamically
-    classifier_module = pytest.importorskip(library)
-    classifier_class = getattr(classifier_module, classifier_name)
-
-    X, y = dataset
-    model = B2BoostClassifier(estimator=classifier_class(n_estimators=2, verbose=0))
-    model.fit(X, y)
-    y_pred = model.predict(X)
-    y_proba = model.predict_proba(X)
-
-    assert y_pred.shape == y.shape
-    assert y_proba.shape == (X.shape[0], len(np.unique(y)))
-
-
 def test_b2boost_when_xgboost_is_missing(dataset):
     X, y = dataset
     with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):

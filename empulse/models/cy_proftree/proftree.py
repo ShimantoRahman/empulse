@@ -7,10 +7,10 @@ from sklearn.utils._param_validation import Interval, RealNotInt
 from sklearn.utils.validation import check_is_fitted
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import MaxProfit, Metric, MetricStrategy
+from ...metrics import MaxProfit, Metric
 from ...metrics.metric.common import Direction
 from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
-from ..csclassifier import CostSensitiveClassifier
+from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 from .evolutionary_tree import EvolutionaryTree
 
 MAX_INT = 2147483647
@@ -181,7 +181,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         'n_jobs': [Interval(Integral, 1, None, closed='left')],
         'random_state': ['random_state'],
     }
-    _default_metric_strategy: ClassVar[type[MetricStrategy]] = MaxProfit
+    _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
     def __init__(
         self,
@@ -333,14 +333,14 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 )
             else:
                 if self.loss.direction is Direction.MAXIMIZE:
-                    loss = lambda *args, **kwargs: -self.loss(*args, **kwargs)
+                    fitness_fn = lambda *args, **kwargs: -self.loss(*args, **kwargs)
                 else:
-                    loss = self.loss
-                loss = partial(loss, **loss_params)
+                    fitness_fn = self.loss
+                fitness_fn = partial(fitness_fn, **loss_params)
 
                 y_proba = np.random.default_rng().random(y.size, dtype=np.float32)
                 try:  # catch issue with the loss function before it goes into C world
-                    loss(y.astype(np.int32), y_proba)
+                    fitness_fn(y.astype(np.int32), y_proba)
                 except (TypeError, ValueError) as e:
                     raise ValueError(
                         f'The loss function {self.loss} threw an error when evaluating the function.'
@@ -361,7 +361,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                     max_generations=int(self.max_iter),
                     patience=int(self.patience),
                     tol=float(self.tolerance),
-                    fitness_function=loss,
+                    fitness_function=fitness_fn,
                     random_state=random_state,
                 )
         else:

@@ -447,7 +447,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             else:
                 self.outlier_estimators_[cost_name] = None
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:  # type: ignore[empty-body]
         pass
 
     @available_if(_estimator_has('predict'))  # type: ignore[misc]
@@ -472,6 +472,13 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
     def classes_(self) -> NDArray[Any]:  # noqa: D102
         classes: NDArray[Any] = self.estimator_.classes_
         return classes
+
+    @classes_.setter
+    def classes_(self, value: NDArray[Any]) -> None:
+        if estimator := getattr(self, 'estimator_', None):
+            estimator.classes_ = value
+        else:
+            raise AttributeError('The underlying estimator is not fitted yet.')
 
 
 def _invert_dict(d: MutableMapping[K, V]) -> dict[V, K]:

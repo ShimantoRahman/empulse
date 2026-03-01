@@ -1,18 +1,15 @@
 import warnings
 from collections.abc import Callable
-from numbers import Real
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from scipy.optimize import OptimizeResult, minimize
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.utils._param_validation import StrOptions
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
 from .._base import BaseLogitClassifier, OptimizeFn
 
-LossStr = Literal['average expected cost']
 GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
 ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]
 
@@ -69,15 +66,10 @@ class CSLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : {'average expected cost'} or :class:`empulse.metrics.Metric`, default='average expected cost'
+    loss : :class:`empulse.metrics.Metric`, default=None
         Loss function which should be optimized.
 
-        - If ``str``, then it should be one of the following:
-
-            - 'average expected cost' : Average Expected Cost loss function,
-              see :func:`~empulse.metrics.expected_cost_loss`.
-
-        - - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+        - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
           to the :meth:`~empulse.models.CSLogitClassifier.fit` method.
 
     C : float, default=1.0
@@ -206,11 +198,6 @@ class CSLogitClassifier(BaseLogitClassifier):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **BaseLogitClassifier._parameter_constraints,
-        'loss': [StrOptions({'average expected cost'}), Metric],
-        'tp_cost': ['array-like', Real],
-        'tn_cost': ['array-like', Real],
-        'fn_cost': ['array-like', Real],
-        'fp_cost': ['array-like', Real],
     }
 
     def __init__(
@@ -220,7 +207,7 @@ class CSLogitClassifier(BaseLogitClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: LossStr | Metric = 'average expected cost',
+        loss: Metric | None = None,
         C: float = 1.0,
         fit_intercept: bool = True,
         soft_threshold: bool = False,

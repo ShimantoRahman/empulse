@@ -4,14 +4,14 @@ from functools import partial
 from typing import Any, ClassVar, Literal, Self, TypeVar, overload
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 from scipy.special import expit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted
 
-from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
-from ...utils._sklearn_compat import validate_data
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 
 try:
     from xgboost import XGBClassifier
@@ -311,9 +311,9 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
     def _fit(
         self,
-        X: NDArray[Any],
-        y: NDArray[Any],
-        loss: Metric | None,
+        X: FloatNDArray,
+        y: IntNDArray,
+        loss: Metric,
         *,
         fit_params: dict[str, Any] | None = None,
         **loss_params: Any,
