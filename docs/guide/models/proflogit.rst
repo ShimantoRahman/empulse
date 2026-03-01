@@ -18,13 +18,8 @@ and a sparse solution if found for the coefficients.
 .. code-block:: python
 
     from empulse.models import ProfLogitClassifier
-    from empulse.metrics import empc_score
 
-    proflogit = ProfLogitClassifier(loss=empc_score, C=100, l1_ratio=0.2)
-
-
-Here, ProfLogit, utilizes the EMPC metric (:func:`~empulse.metrics.empc_score`)
-as its loss function, but any EMP metric can be used.
+    proflogit = ProfLogitClassifier(C=100, l1_ratio=0.2)
 
 The model is optimized by a real-coded genetic algorithm (RGA).
 The RGA runs for 1000 iterations, but it can stop early if the loss converges.
@@ -45,7 +40,7 @@ You just need to pass the desired values to the :class:`~empulse.models.ProfLogi
     from empulse.models import ProfLogitClassifier
 
     proflogit = ProfLogitClassifier(
-        empc_score, optimizer_params={'max_iter': 10000, 'tolerance': 1e-3, 'patience': 100}
+        optimizer_params={'max_iter': 10000, 'tolerance': 1e-3, 'patience': 100}
     )
 
 For more advanced customization of the stopping conditions,
@@ -70,7 +65,7 @@ For example, if you want to use the RGA for a set amount of time, you can do the
                 break
         return generation.result
 
-    proflogit = ProfLogitClassifier(empc_score, optimize_fn=optimize, optimizer_params={'max_time': 10})
+    proflogit = ProfLogitClassifier(optimize_fn=optimize, optimizer_params={'max_time': 10})
 
 Or you can stop the RGA after a set number of fitness evaluations:
 
@@ -87,7 +82,7 @@ Or you can stop the RGA after a set number of fitness evaluations:
                 break
         return generation.result
 
-    proflogit = ProfLogitClassifier(empc_score, optimize_fn=optimize, optimizer_params={'max_evals': 10_000})
+    proflogit = ProfLogitClassifier(optimize_fn=optimize, optimizer_params={'max_evals': 10_000})
 
 Custom Loss Functions
 ---------------------
@@ -98,9 +93,11 @@ simply pass the metric function to the :class:`~empulse.models.ProfLogitClassifi
 
 .. code-block:: python
 
-    from empulse.metrics import empa_score
+    from empulse.metrics import Cost, CostMatrix, Metric
 
-    proflogit = ProfLogitClassifier(loss=empa_score)
+    cost_matrix = CostMatrix().add_fp_cost('d').add_tp_benefit('clv - d')
+    custom_loss = Metric(cost_matrix, Cost())
+    proflogit = ProfLogitClassifier(loss=custom_loss)
 
 Custom Optimization Algorithms
 ------------------------------
@@ -129,7 +126,7 @@ For instance, if you want to use the L-BFGS-B algorithm from scipy.optimize, you
         )
         return result
 
-    proflogit = ProfLogitClassifier(empc_score, optimize_fn=optimize)
+    proflogit = ProfLogitClassifier(optimize_fn=optimize)
 
 Note that EMPC is a maximization problem, so we need to pass the inverse objective function to the optimizer.
 
@@ -147,7 +144,7 @@ You can also use unbounded optimization algorithms like BFGS:
         )
         return result
 
-    proflogit = ProfLogitClassifier(empc_score, optimize_fn=optimize)
+    proflogit = ProfLogitClassifier(optimize_fn=optimize)
 
 References
 ==========
