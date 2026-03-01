@@ -360,7 +360,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
     def _fit(
         self,
-        X: FloatArrayLike,
+        X: FloatNDArray,
         y: IntArrayLike,
         loss: Metric,
         **loss_params: Any,

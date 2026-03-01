@@ -1,3 +1,3 @@
-from .logit import BaseLogitClassifier, LossFn, OptimizeFn
+from .logit import BaseLogitClassifier, OptimizeFn
 
-__all__ = ['BaseLogitClassifier', 'LossFn', 'OptimizeFn']
+__all__ = ['BaseLogitClassifier', 'OptimizeFn']

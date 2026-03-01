@@ -104,6 +104,13 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         except NotFittedError:
             raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
 
+    @classes_.setter
+    def classes_(self, value: NDArray[Any]) -> None:
+        if estimator := getattr(self, 'estimator_', None):
+            estimator.classes_ = value
+        else:
+            raise AttributeError('The underlying estimator is not fitted yet.')
+
     def _get_loss_or_default(self) -> Metric:
         """Return the configured loss or a generic cost metric."""
         return self.loss if self.loss is not None else make_generic_cost_metric()
@@ -347,7 +354,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         return self
 
-    def predict(
+    def predict(  # type: ignore[override]
         self,
         X: FloatNDArray,
         tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
@@ -417,7 +424,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             loss_params = self._add_standard_costs_to_params(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params
             )
-            y_proba = self.predict_proba(X)
+            y_proba = self.predict_proba(X)[:, 1]
             decision = self._compute_decision_at_predict(y_proba, loss, loss_params)
 
         return self._apply_decision(X, decision)

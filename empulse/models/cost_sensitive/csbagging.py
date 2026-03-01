@@ -15,7 +15,7 @@ from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.validation import _estimator_has, check_is_fitted
 
 from ..._common import Parameter
-from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric, expected_cost_loss
 from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
@@ -290,8 +290,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     def _fit(
         self,
-        X: FloatArrayLike,
-        y: IntArrayLike,
+        X: FloatNDArray,
+        y: IntNDArray,
         loss: Metric,
         **loss_params: Any,
     ) -> Self:

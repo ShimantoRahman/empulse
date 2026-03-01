@@ -177,6 +177,20 @@ class B2BoostClassifier(CSBoostClassifier):
         'incentive_fraction': [Real],
         'contact_cost': [Real],
     }
+    _LOSS = Metric(
+        CostMatrix()
+        .add_tp_benefit(
+            sympy.Symbol('gamma')
+            * (sympy.Symbol('clv') - sympy.Symbol('clv') * sympy.Symbol('delta') - sympy.Symbol('f'))
+        )
+        .add_tp_benefit((1 - sympy.Symbol('gamma')) * -sympy.Symbol('f'))
+        .add_fp_cost(sympy.Symbol('clv') * sympy.Symbol('delta') + sympy.Symbol('f'))
+        .alias('accept_rate', sympy.Symbol('gamma'))
+        .alias('incentive_fraction', sympy.Symbol('delta'))
+        .alias('contact_cost', sympy.Symbol('f'))
+        .alias('clv', sympy.Symbol('clv')),
+        Cost(),
+    )
 
     def __init__(
         self,
@@ -187,19 +201,7 @@ class B2BoostClassifier(CSBoostClassifier):
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
     ) -> None:
-        lifetime, delta, f, gamma = sympy.symbols('clv delta f gamma')
-        cost_matrix = (
-            CostMatrix()
-            .add_tp_benefit(gamma * (lifetime - lifetime * delta - f))
-            .add_tp_benefit((1 - gamma) * -f)
-            .add_fp_cost(lifetime * delta + f)
-            .alias('accept_rate', gamma)
-            .alias('incentive_fraction', delta)
-            .alias('contact_cost', f)
-            .alias('clv', lifetime)
-        )
-        loss = Metric(cost_matrix, Cost())
-        super().__init__(estimator=estimator, loss=loss)
+        super().__init__(estimator=estimator, loss=self._LOSS)
         self.clv = clv
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost

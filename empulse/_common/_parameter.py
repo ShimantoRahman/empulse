@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Self
 
 
 class Parameter(Enum):
@@ -7,5 +8,5 @@ class Parameter(Enum):
     UNCHANGED = 'unchanged'
 
     # This is a bit of a hack to make sure that if someone tries to negate the parameter, it doesn't change it.
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return self
