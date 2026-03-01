@@ -211,6 +211,35 @@ class Metric:
         return {str(symbol) for symbol in all_symbols | stochastic_params}
 
     @property
+    def _all_parameters(self) -> set[str]:
+        """Return a set of cost matrix parameters which can be used."""
+        all_symbols = (
+            self.tp_cost.free_symbols
+            | self.tn_cost.free_symbols
+            | self.fp_cost.free_symbols
+            | self.fn_cost.free_symbols
+            | self.cost_matrix._aliases.keys()
+        )
+
+        # Extract parameters from stochastic variables
+        stochastic_symbols = set()
+        stochastic_params = set()
+        for expr in [
+            self.cost_matrix.tp_cost,
+            self.cost_matrix.tn_cost,
+            self.cost_matrix.fp_cost,
+            self.cost_matrix.fn_cost,
+        ]:
+            for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
+                stochastic_symbols.add(atom)
+                pspace = atom.pspace
+                if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
+                    for arg in pspace.distribution.args:
+                        stochastic_params.update(arg.free_symbols)
+
+        return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols}
+
+    @property
     def _is_stochastic(self) -> bool:
         all_symbols = (
             self.tp_cost.free_symbols
