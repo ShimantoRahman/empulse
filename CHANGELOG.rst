@@ -14,6 +14,8 @@
   the Normal, Uniform, Gamma, and Exponential distributions.
 - |API| Updated the :class:`~empulse.models.ProfLogitClassifier` interface to be more consistent
   with other models in the package. By default optimizes the maximum profit metric.
+- |API| :class:`~empulse.models.CSLogitClassifier` no longer takes a string argument for the loss function
+  to be more consistent with other models in the package. Default value for the loss is None.
 - |API| :class:`~empulse.metrics.MaxProfit` now takes a numpy Generator instead of a RandomState instance.
 - |Enhancement| Metrics built with the :class:`~empulse.metrics.MaxProfit`
   strategy can now handle instance-dependent costs. They will automatically be averaged over the instances.
