@@ -754,12 +754,13 @@ _sympy_dist_to_scipy: list[
     (sympy.stats.crv_types.ExGaussianDistribution, (0.3, 0.1, 1)),
     (sympy.stats.crv_types.ExponentialDistribution, (6,)),
     (sympy.stats.crv_types.FDistributionDistribution, (6, 14)),
-    (sympy.stats.crv_types.GammaDistribution, (6, 14)),
+    (sympy.stats.crv_types.GammaDistribution, (10, 2)),
     (sympy.stats.crv_types.GammaInverseDistribution, (6, 14)),
     (sympy.stats.crv_types.LaplaceDistribution, (6, 14)),
     (sympy.stats.crv_types.LogisticDistribution, (6, 14)),
     (sympy.stats.crv_types.LogNormalDistribution, (1e-3, 0.1)),
     (sympy.stats.crv_types.LomaxDistribution, (6, 14)),
+    (sympy.stats.crv_types.ParetoDistribution, (10, 2)),
     (sympy.stats.crv_types.MaxwellDistribution, (6,)),
     (sympy.stats.crv_types.MoyalDistribution, (6, 14)),
     # (sympy.stats.crv_types.NakagamiDistribution, (6, 14)),
@@ -773,8 +774,10 @@ _sympy_dist_to_scipy: list[
 ]
 
 
-@pytest.mark.parametrize('sympy_dist_map', _sympy_dist_to_scipy)
-def test_sympy_distributions(sympy_dist_map):
+@pytest.mark.parametrize(
+    'sympy_dist_map', _sympy_dist_to_scipy, ids=[dist[0].__name__ for dist in _sympy_dist_to_scipy]
+)
+def test_sympy_distributions_max_profit_score(sympy_dist_map):
     sympy_dist = sympy_dist_map[0]
     params = sympy_dist_map[1]
     clv, d, f = sympy.symbols('clv d f')
@@ -800,7 +803,9 @@ def test_sympy_distributions(sympy_dist_map):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('sympy_dist_map', _sympy_dist_to_scipy)
+@pytest.mark.parametrize(
+    'sympy_dist_map', _sympy_dist_to_scipy, ids=[dist[0].__name__ for dist in _sympy_dist_to_scipy]
+)
 def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sympy_dist_map):
     """
     Parametrized: for each sympy distribution in _sympy_dist_to_scipy verify that
@@ -851,6 +856,7 @@ def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sy
         sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
         sympy.stats.crv_types.LogNormalDistribution: lambda params: np.exp(params[0] + params[1] ** 2 / 2),
         sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+        sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
     }
     if sympy_dist in fixed_means:
         mean_value = fixed_means[sympy_dist](params)
