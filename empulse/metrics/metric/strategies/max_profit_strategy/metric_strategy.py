@@ -12,7 +12,7 @@ from ...common import Direction, MetricFn, RateFn, ThresholdFn
 from ..metric_strategy import MetricStrategy
 from .deterministic import MaxProfitRateDeterministic, MaxProfitScoreDeterministic
 from .monte_carlo import MaxProfitScoreMonteCarlo
-from .piecewise import MaxProfitRatePiecewise, _build_max_profit_score_piecewise
+from .piecewise import _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
 from .quadrature import MaxProfitScoreQuad
 from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
 
@@ -270,8 +270,6 @@ def _build_max_profit_score(
     )
     if n_random == 0:
         max_profit_score: MetricFn = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
-    # TODO: if n_random == 1 & random_symbols[0] in exact_solution_dists & expr is linear,
-    # TODO: use exact solution | has_exact_solution(profit_function, random_symbols[0])
     else:
         max_profit_score = _build_max_profit_stochastic(
             profit_function,
@@ -378,9 +376,11 @@ def _build_max_profit_rate_stochastic(
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)
     if integration_method == 'auto':
-        if n_random == 1:
-            return MaxProfitRatePiecewise(profit_function, rate_function, random_symbols[0], deterministic_symbols)
-        elif n_random == 2:
+        if n_random == 1 and is_linear_in(profit_function, random_symbols[0]):
+            return _build_max_profit_rate_piecewise(
+                profit_function, rate_function, random_symbols[0], deterministic_symbols
+            )
+        elif n_random <= 2:
             return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
         elif _support_all_distributions(random_symbols):
             return MaxProfitScoreQuasiMonteCarlo(

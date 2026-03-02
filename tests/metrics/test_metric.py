@@ -802,6 +802,34 @@ def test_sympy_distributions_max_profit_score(sympy_dist_map):
     assert pytest.approx(result, rel=1e-1) == result_qmc
 
 
+@pytest.mark.parametrize(
+    'sympy_dist_map', _sympy_dist_to_scipy, ids=[dist[0].__name__ for dist in _sympy_dist_to_scipy]
+)
+def test_sympy_distributions_max_profit_rate(sympy_dist_map):
+    sympy_dist = sympy_dist_map[0]
+    params = sympy_dist_map[1]
+    clv, d, f = sympy.symbols('clv d f')
+    random_symbol_params = tuple(sympy.symbols([f'param_{i}' for i in range(len(params))]))
+    param_values_dict = {f'param_{i}': params[i] for i in range(len(params))}
+    gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, random_symbol_params)
+
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
+    profit_func = Metric(cost_matrix, MaxProfit())
+    profit_func_qmc = Metric(
+        cost_matrix, MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=9, random_state=12)
+    )
+
+    y_true = [1, 0, 1, 0, 1]
+    y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
+
+    # Test with some default values
+    result = profit_func.optimal_rate(y_true, y_proba, clv=100, d=10, f=1, **param_values_dict)
+    result_qmc = profit_func_qmc.optimal_rate(y_true, y_proba, clv=100, d=10, f=1, **param_values_dict)
+    assert isinstance(result, float) and not np.isnan(result)
+    assert isinstance(result_qmc, float) and not np.isnan(result)
+    assert pytest.approx(result, rel=1e-1) == result_qmc
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'sympy_dist_map', _sympy_dist_to_scipy, ids=[dist[0].__name__ for dist in _sympy_dist_to_scipy]
