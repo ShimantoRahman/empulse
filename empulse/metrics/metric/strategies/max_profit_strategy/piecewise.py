@@ -175,6 +175,7 @@ def compute_piecewise_bounds(
     negative_class_prior: float,
     random_var_bounds: tuple[float | sympy.Expr, ...],
     distribution_parameters: dict[str, Any],
+    fix_inf: bool = True,
     **kwargs: Any,
 ) -> tuple[list[float], float, float]:
     """
@@ -197,8 +198,8 @@ def compute_piecewise_bounds(
                 pi_1=negative_class_prior,
                 **kwargs,
             )
-            # TODO: temporary fix, make sure infinity signs are always correct
-            computed_bounds = np.inf if computed_bounds == -np.inf else computed_bounds
+            if fix_inf:
+                computed_bounds = np.inf if computed_bounds == -np.inf else computed_bounds
         bounds.append(computed_bounds)
 
     # the compute_bounds function only computes the internal bounds,
@@ -245,6 +246,9 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self.random_symbol = random_symbol
+        self.derivative = (
+            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
+        )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
         self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
@@ -271,6 +275,14 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+
+        if self.derivative.subs(kwargs).is_negative:
+            true_positive_rates = true_positive_rates[::-1]
+            false_positive_rates = false_positive_rates[::-1]
+            fix_inf = False
+        else:
+            fix_inf = True
+
         bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
@@ -279,6 +291,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
             negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
+            fix_inf=fix_inf,
             **kwargs,
         )
 
@@ -318,6 +331,9 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         self.sympy_to_scipy_params_fn = sympy_to_scipy_params_fn
         self.deterministic_symbols = deterministic_symbols
         self.random_symbol = random_symbol
+        self.derivative = (
+            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
+        )
 
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
@@ -347,6 +363,13 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
+        if self.derivative.subs(kwargs).is_negative:
+            true_positive_rates = true_positive_rates[::-1]
+            false_positive_rates = false_positive_rates[::-1]
+            fix_inf = False
+        else:
+            fix_inf = True
+
         # We capture upper and lower bounds as the Uniform distribution needs them
         bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
@@ -356,6 +379,7 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
             negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
+            fix_inf=fix_inf,
             **kwargs,
         )
         bounds = [float(bound) for bound in bounds]
@@ -406,6 +430,9 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self.random_symbol = random_symbol
+        self.derivative = (
+            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
+        )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
         self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
@@ -432,6 +459,14 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
 
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+
+        if self.derivative.subs(kwargs).is_negative:
+            true_positive_rates = true_positive_rates[::-1]
+            false_positive_rates = false_positive_rates[::-1]
+            fix_inf = False
+        else:
+            fix_inf = True
+
         bounds, _, _ = compute_piecewise_bounds(
             self.compute_bounds,
             true_positive_rates,
@@ -440,6 +475,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
             negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
+            fix_inf=fix_inf,
             **kwargs,
         )
 
@@ -472,6 +508,9 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self.random_symbol = random_symbol
+        self.derivative = (
+            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
+        )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
         self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
@@ -503,6 +542,13 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
+        if self.derivative.subs(kwargs).is_negative:
+            true_positive_rates = true_positive_rates[::-1]
+            false_positive_rates = false_positive_rates[::-1]
+            fix_inf = False
+        else:
+            fix_inf = True
+
         # We capture upper and lower bounds as the Uniform distribution needs them
         bounds, upper_bound, lower_bound = compute_piecewise_bounds(
             self.compute_bounds,
@@ -512,6 +558,7 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
             negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
+            fix_inf=fix_inf,
             **kwargs,
         )
         bounds = [float(bound) for bound in bounds]
