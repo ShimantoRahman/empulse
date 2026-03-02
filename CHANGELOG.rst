@@ -30,6 +30,8 @@
   when one or two of the Boosting libraries were not installed (XGBoost, LGBM & Catboost).
 - |Fix| Add __name__ attribute to :class:`~empulse.metrics.Metric` class to fix issues with scikit-learn compatibility.
 - |Fix| Fix metadata routing not working for scikit-learn>=1.8.0
+- |Fix| Fix :class:`~empulse.metrics.MaxProfit` strategy not calculating Log Normal distributed variables correctly
+  when using quasi monte carlo.
 
 `0.10.4`_ (20-09-2025)
 ======================
