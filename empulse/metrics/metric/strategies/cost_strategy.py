@@ -42,6 +42,7 @@ def replace_random_var_with_mean(
         sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
         sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
         sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+        sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
     }
 
     # Identify random symbols and replace each by its expectation

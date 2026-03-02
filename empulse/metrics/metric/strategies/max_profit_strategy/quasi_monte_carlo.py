@@ -40,6 +40,7 @@ _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.MoyalDistribution: scipy.stats.moyal,
     sympy.stats.crv_types.NakagamiDistribution: scipy.stats.nakagami,
     sympy.stats.crv_types.NormalDistribution: scipy.stats.norm,
+    sympy.stats.crv_types.ParetoDistribution: scipy.stats.pareto,
     sympy.stats.crv_types.PowerFunctionDistribution: scipy.stats.powerlaw,
     sympy.stats.crv_types.StudentTDistribution: scipy.stats.t,
     sympy.stats.crv_types.TrapezoidalDistribution: scipy.stats.trapezoid,
@@ -58,6 +59,7 @@ _sympy_dist_to_scipy_params: dict[
     sympy.stats.crv_types.FDistributionDistribution: lambda d1, d2: {'dfn': d1, 'dfd': d2},
     sympy.stats.crv_types.LomaxDistribution: lambda alpha, lamb: {'c': alpha, 'scale': lamb},
     sympy.stats.crv_types.LogNormalDistribution: lambda mu, sigma: {'s': sigma, 'scale': np.exp(mu)},
+    sympy.stats.crv_types.ParetoDistribution: lambda a, b: {'b': b, 'scale': a},
     sympy.stats.crv_types.MaxwellDistribution: lambda a: {'loc': 0, 'scale': a},
     sympy.stats.crv_types.NakagamiDistribution: lambda mu, omega: {'nu': mu, 'scale': np.sqrt(omega)},
     sympy.stats.crv_types.TrapezoidalDistribution: lambda a, b, c, d: {
