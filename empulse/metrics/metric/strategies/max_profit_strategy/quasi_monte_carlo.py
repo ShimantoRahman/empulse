@@ -57,7 +57,7 @@ _sympy_dist_to_scipy_params: dict[
     sympy.stats.crv_types.GammaInverseDistribution: lambda a, b: {'a': a, 'scale': b},
     sympy.stats.crv_types.FDistributionDistribution: lambda d1, d2: {'dfn': d1, 'dfd': d2},
     sympy.stats.crv_types.LomaxDistribution: lambda alpha, lamb: {'c': alpha, 'scale': lamb},
-    sympy.stats.crv_types.LogNormalDistribution: lambda mu, sigma: {'s': sigma, 'loc': mu},
+    sympy.stats.crv_types.LogNormalDistribution: lambda mu, sigma: {'s': sigma, 'scale': np.exp(mu)},
     sympy.stats.crv_types.MaxwellDistribution: lambda a: {'loc': 0, 'scale': a},
     sympy.stats.crv_types.NakagamiDistribution: lambda mu, omega: {'nu': mu, 'scale': np.sqrt(omega)},
     sympy.stats.crv_types.TrapezoidalDistribution: lambda a, b, c, d: {
