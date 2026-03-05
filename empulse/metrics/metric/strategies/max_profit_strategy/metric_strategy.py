@@ -418,6 +418,19 @@ def is_linear_in(expr: sympy.Expr, x: sympy.Symbol) -> bool:
     return poly.degree() <= 1  # type: ignore[no-any-return]
 
 
+def is_polynomial_in(expr: sympy.Expr, x: sympy.Symbol) -> bool:
+    """Test whether the expression is a valid polynomial in `x`."""
+    # Expanding is generally safer than factoring for polynomial construction
+    expr = sympy.collect(sympy.expand(expr), x)
+    try:
+        # If SymPy can construct a Poly, it contains only non-negative integer powers of x
+        sympy.Poly(expr, x)
+    except sympy.polys.polyerrors.PolynomialError:
+        return False
+
+    return True
+
+
 def _build_max_profit_stochastic(
     profit_function: sympy.Expr,
     random_symbols: Sequence[sympy.Symbol],
@@ -429,7 +442,7 @@ def _build_max_profit_stochastic(
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)
     if integration_method == 'auto':
-        if n_random == 1 and is_linear_in(profit_function, random_symbols[0]):
+        if n_random == 1 and is_polynomial_in(profit_function, random_symbols[0]):
             return _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols)
         elif n_random <= 2:
             return MaxProfitScoreQuad(profit_function, None, random_symbols, deterministic_symbols)
