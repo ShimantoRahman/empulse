@@ -168,7 +168,7 @@ def compute_integral_quad(
 
 
 def compute_piecewise_bounds(
-    compute_bounds: Callable[..., float],
+    compute_bounds_fns: list[Callable[..., float]],
     true_positive_rates: FloatNDArray,
     false_positive_rates: FloatNDArray,
     positive_class_prior: float,
@@ -177,30 +177,46 @@ def compute_piecewise_bounds(
     distribution_parameters: dict[str, Any],
     fix_inf: bool = True,
     **kwargs: Any,
-) -> tuple[list[float], float, float]:
+) -> tuple[list[float], float, float, list[float], list[float]]:
     """
     Compute the consecutive bounds of the stochastic variable for which the expected profit is equal.
 
     These bounds can then be used during piecewise integration.
     """
     bounds = []
+    tprs = []
+    fprs = []
     for (tpr0, fpr0), (tpr1, fpr1) in islice(
         pairwise(zip(true_positive_rates, false_positive_rates, strict=False)), len(true_positive_rates) - 1
     ):
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=RuntimeWarning)
-            computed_bounds = compute_bounds(
-                F_0=tpr0,
-                F_1=fpr0,
-                F_2=tpr1,
-                F_3=fpr1,
-                pi_0=positive_class_prior,
-                pi_1=negative_class_prior,
-                **kwargs,
-            )
+        for compute_bound in compute_bounds_fns:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=RuntimeWarning)
+                computed_bound = compute_bound(
+                    F_0=tpr0,
+                    F_1=fpr0,
+                    F_2=tpr1,
+                    F_3=fpr1,
+                    pi_0=positive_class_prior,
+                    pi_1=negative_class_prior,
+                    **kwargs,
+                )
+            if np.isnan(computed_bound):
+                continue
             if fix_inf:
-                computed_bounds = np.inf if computed_bounds == -np.inf else computed_bounds
-        bounds.append(computed_bounds)
+                computed_bound = np.inf if computed_bound == -np.inf else computed_bound
+            else:
+                computed_bound = -np.inf if computed_bound == np.inf else computed_bound
+            bounds.append(computed_bound)
+            tprs.append(tpr1)
+            fprs.append(fpr1)
+
+    # bounds and adjust true_positive_rates and false_positive_rates accordingly,
+    # so that the piecewise integration is correct
+    sorted_indices = np.argsort(bounds)
+    bounds = [bounds[i] for i in sorted_indices]
+    tprs = [tprs[i] for i in sorted_indices]
+    fprs = [fprs[i] for i in sorted_indices]
 
     # the compute_bounds function only computes the internal bounds,
     # so we need to add the lower and upper bounds of the random variable
@@ -215,6 +231,16 @@ def compute_piecewise_bounds(
             lower_bound = -np.inf
     bounds.insert(0, lower_bound)
 
+    # fprs.insert(0, true_positive_rates[-1])
+    # tprs.insert(0, false_positive_rates[-1])
+
+    if fprs[0] == 0.0:
+        fprs.insert(0, 0.0)
+        tprs.insert(0, 0.0)
+    else:
+        fprs.append(0.0)
+        tprs.append(0.0)
+
     # it is possible that some of the computed bounds are outside the accepted interval [lower_bound, upper_bound]
     # replace values that are outside the interval with the respective bounds
     # this will have the effect of essentially setting that part to zero
@@ -223,7 +249,7 @@ def compute_piecewise_bounds(
             bounds[i] = lower_bound
         elif bounds[i] > upper_bound:
             bounds[i] = upper_bound
-    return bounds, upper_bound, lower_bound
+    return bounds, upper_bound, lower_bound, tprs, fprs
 
 
 class MaxProfitRatePiecewise(SympyFnPickleMixin):
@@ -276,15 +302,16 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
-        if self.derivative.subs(kwargs).is_negative:
-            true_positive_rates = true_positive_rates[::-1]
-            false_positive_rates = false_positive_rates[::-1]
-            fix_inf = False
-        else:
-            fix_inf = True
+        fix_inf = not self.derivative.subs(kwargs).is_negative
+        # if self.derivative.subs(kwargs).is_negative:
+        # true_positive_rates = true_positive_rates[::-1]
+        # false_positive_rates = false_positive_rates[::-1]
+        # fix_inf = False
+        # else:
+        #     fix_inf = True
 
-        bounds, _, _ = compute_piecewise_bounds(
-            self.compute_bounds,
+        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
+            [self.compute_bounds],
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
@@ -302,7 +329,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
             .subs('pi_1', negative_class_prior)
         )
         score = 0.0
-        for (lb, ub), tpr, fpr in zip(pairwise(bounds), true_positive_rates, false_positive_rates, strict=False):
+        for (lb, ub), tpr, fpr in zip(pairwise(bounds), tprs, fprs, strict=True):
             score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
         return score
 
@@ -336,8 +363,14 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         )
 
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
-        self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
+        self.compute_bounds_eqs = []
+        self.compute_bounds_fns = []
+        for root in solve(profit_function - profit_prime, random_symbol):
+            # if not root.has(sympy.I):
+            self.compute_bounds_eqs.append(root)
+            self.compute_bounds_fns.append(lambdify(list(root.free_symbols), root))
+        if not self.compute_bounds_eqs:
+            raise ValueError('No real roots found for the equation. Please check the profit function.')
 
         self.random_var_bounds = pspace(random_symbol).domain.set.args
         self.distribution_args = pspace(random_symbol).distribution.args
@@ -363,16 +396,17 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
-        if self.derivative.subs(kwargs).is_negative:
-            true_positive_rates = true_positive_rates[::-1]
-            false_positive_rates = false_positive_rates[::-1]
-            fix_inf = False
-        else:
-            fix_inf = True
+        fix_inf = not self.derivative.subs(kwargs).is_negative
+        # if self.derivative.subs(kwargs).is_negative:
+        #     true_positive_rates = true_positive_rates[::-1]
+        #     false_positive_rates = false_positive_rates[::-1]
+        #     fix_inf = False
+        # else:
+        #     fix_inf = True
 
         # We capture upper and lower bounds as the Uniform distribution needs them
-        bounds, _, _ = compute_piecewise_bounds(
-            self.compute_bounds,
+        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
+            self.compute_bounds_fns,
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
@@ -389,8 +423,8 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
             self.rate_eq,
             pi_0=positive_class_prior,
             pi_1=negative_class_prior,
-            F_0=true_positive_rates,
-            F_1=false_positive_rates,
+            F_0=np.array(tprs),
+            F_1=np.array(fprs),
             **kwargs,
         )
 
@@ -460,15 +494,16 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
         # distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
-        if self.derivative.subs(kwargs).is_negative:
-            true_positive_rates = true_positive_rates[::-1]
-            false_positive_rates = false_positive_rates[::-1]
-            fix_inf = False
-        else:
-            fix_inf = True
+        fix_inf = not self.derivative.subs(kwargs).is_negative
+        # if self.derivative.subs(kwargs).is_negative:
+        #     true_positive_rates = true_positive_rates[::-1]
+        #     false_positive_rates = false_positive_rates[::-1]
+        #     fix_inf = False
+        # else:
+        #     fix_inf = True
 
-        bounds, _, _ = compute_piecewise_bounds(
-            self.compute_bounds,
+        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
+            [self.compute_bounds],
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
@@ -487,7 +522,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
             .subs('pi_1', negative_class_prior)
         )
         score = 0.0
-        for (lb, ub), tpr, fpr in zip(pairwise(bounds), true_positive_rates, false_positive_rates, strict=False):
+        for (lb, ub), tpr, fpr in zip(pairwise(bounds), tprs, fprs, strict=False):
             score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
         return score
 
@@ -508,21 +543,38 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self.random_symbol = random_symbol
+
         self.derivative = (
             sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
         )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
-        self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
+
+        self.compute_bounds_eqs = []
+        self.compute_bounds_fns = []
+        for root in solve(profit_function - profit_prime, random_symbol):
+            # if not root.has(sympy.I):
+            self.compute_bounds_eqs.append(root)
+            self.compute_bounds_fns.append(lambdify(list(root.free_symbols), root))
+        if not self.compute_bounds_eqs:
+            raise ValueError('No real roots found for the equation. Please check the profit function.')
 
         self.random_var_bounds = pspace(random_symbol).domain.set.args
         self.distribution_args = pspace(random_symbol).distribution.args
 
-        collected = sympy.collect(sympy.factor(profit_function, random_symbol), random_symbol, evaluate=False)
-        self.coefficient_eq = collected.get(random_symbol, 0)
-        self.coefficient_fn = _safe_lambdify(self.coefficient_eq)
-        self.intercept_eq = collected.get(1, 0)
-        self.intercept_fn = _safe_lambdify(self.intercept_eq)
+        # Dynamically extract polynomial coefficients [a_0, a_1, ..., a_n]
+        expanded_profit = sympy.expand(profit_function)
+        polynomial_degree = sympy.degree(expanded_profit, random_symbol)
+        collected = sympy.collect(expanded_profit, random_symbol, evaluate=False)
+
+        self.coefficient_eqs = []
+        self.coefficient_fns = []
+
+        for k in range(polynomial_degree + 1):
+            # Extract the term for random_symbol**k. (Note: random_symbol**0 is 1)
+            term_key = random_symbol**k if k > 0 else 1
+            eq = collected.get(term_key, sympy.S.Zero)
+            self.coefficient_eqs.append(eq)
+            self.coefficient_fns.append(_safe_lambdify(eq))
 
         if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
             self.dist_params = []
@@ -542,16 +594,19 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
-        if self.derivative.subs(kwargs).is_negative:
-            true_positive_rates = true_positive_rates[::-1]
-            false_positive_rates = false_positive_rates[::-1]
-            fix_inf = False
-        else:
-            fix_inf = True
+        fix_inf = not self.derivative.subs(kwargs).is_negative
+        # fix_inf = True
+        # if self.derivative.subs(kwargs).is_negative:
+        #     true_positive_rates = true_positive_rates[::-1]
+        #     false_positive_rates = false_positive_rates[::-1]
+        #     fix_inf = False
+        # else:
+        #     fix_inf = True
 
-        # We capture upper and lower bounds as the Uniform distribution needs them
-        bounds, upper_bound, lower_bound = compute_piecewise_bounds(
-            self.compute_bounds,
+        bounds, upper_bound, lower_bound, tprs, fprs = compute_piecewise_bounds(
+            # bounds, upper_bound, lower_bound = compute_piecewise_bounds(
+            self.compute_bounds_fns,
+            # self.compute_bounds_fns[0],
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
@@ -563,30 +618,25 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
         )
         bounds = [float(bound) for bound in bounds]
 
-        # Shared intercept and coefficient calculations
-        coefficient = _safe_run_lambda(
-            self.coefficient_fn,
-            self.coefficient_eq,
-            pi_0=positive_class_prior,
-            pi_1=negative_class_prior,
-            F_0=true_positive_rates,
-            F_1=false_positive_rates,
-            **kwargs,
-        )
-        intercept = _safe_run_lambda(
-            self.intercept_fn,
-            self.intercept_eq,
-            pi_0=positive_class_prior,
-            pi_1=negative_class_prior,
-            F_0=true_positive_rates,
-            F_1=false_positive_rates,
-            **kwargs,
-        )
+        # Evaluate all polynomial coefficients dynamically
+        evaluated_coefficients = [
+            _safe_run_lambda(
+                fn,
+                eq,
+                pi_0=positive_class_prior,
+                pi_1=negative_class_prior,
+                F_0=np.array(tprs),
+                F_1=np.array(fprs),
+                # F_0=true_positive_rates,
+                # F_1=false_positive_rates,
+                **kwargs,
+            )
+            for fn, eq in zip(self.coefficient_fns, self.coefficient_eqs, strict=True)
+        ]
 
         return self._integrate(
             bounds=bounds,
-            coefficient=coefficient,
-            intercept=intercept,
+            coefficients=evaluated_coefficients,
             distribution_parameters=distribution_parameters,
             upper_bound=upper_bound,
             lower_bound=lower_bound,
@@ -595,8 +645,7 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
     def _integrate(
         self,
         bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
+        coefficients: list[FloatNDArray],
         distribution_parameters: dict[str, Any],
         upper_bound: float,
         lower_bound: float,
@@ -606,162 +655,58 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
 
 
 class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single uniform distributed variable using piecewise integration."""
+    """Compute the maximum profit for a single uniform distributed variable using piecewise polynomial integration."""
 
     def _integrate(
         self,
         bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
+        coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
         upper_bound: float,
         lower_bound: float,
     ) -> float:
+
         lower_bounds = np.asarray(bounds[:-1])
         upper_bounds = np.asarray(bounds[1:])
+
+        # Max and min of the Uniform distribution support
         max_val = float(upper_bound)
         min_val = float(lower_bound)
 
-        score = (
-            1
-            / (max_val - min_val)
-            * (coefficient / 2 * (upper_bounds**2 - lower_bounds**2) + intercept * (upper_bounds - lower_bounds)).sum()
-        )
-        return float(score)
+        # The constant PDF of the Uniform distribution: 1 / (beta - alpha)
+        pdf_val = 1.0 / (max_val - min_val)
+
+        total_score = 0.0
+
+        # Iterate over each term in the polynomial: a_k * x^k
+        for k, a_k in enumerate(coefficients):
+            # Skip zero coefficients to save computation
+            if np.all(np.asarray(a_k) == 0.0):
+                continue
+
+            # Integral of a_k * x^k * h(x)
+            term_val = (a_k * pdf_val / (k + 1.0)) * (upper_bounds ** (k + 1) - lower_bounds ** (k + 1))
+
+            total_score += term_val.sum()
+
+        return float(total_score)
+
+
+def _safe_pow_phi(x: np.ndarray, exp: int, phi: float) -> np.ndarray:
+    """Compute x^exp * phi(x), treating inf^exp * 0 as 0."""
+    result = (x**exp) * phi
+    # Where phi is 0 (i.e., x is ±inf), the product should be 0, not NaN
+    result[phi == 0] = 0.0
+    return result
 
 
 class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single normal distributed variable using piecewise integration."""
+    """Compute the maximum profit for a single normal distributed variable using piecewise polynomial integration."""
 
     def _integrate(
         self,
         bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
-        dist_params_list = list(distribution_parameters.values())
-        mu = dist_params_list[0]
-        sigma = dist_params_list[1]
-
-        bounds = np.asarray(bounds)
-        z = (bounds - mu) / sigma
-        Phi_diffs = np.diff(st.norm.cdf(z))
-        phi_diffs = np.diff(st.norm.pdf(z))
-
-        score = ((coefficient * mu + intercept) * Phi_diffs - coefficient * sigma * phi_diffs).sum()
-        return float(score)
-
-
-class MaxProfitScorePiecewiseBeta(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single beta distributed variable using piecewise integration."""
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
-        dist_params_list = list(distribution_parameters.values())
-        alpha = dist_params_list[0]
-        beta = dist_params_list[1]
-
-        cdf_diff = np.diff(st.beta.cdf(bounds, a=alpha, b=beta))
-        cdf_1_diff = np.diff(st.beta.cdf(bounds, a=alpha + 1, b=beta))
-
-        mean_beta = st.beta.mean(a=alpha, b=beta)
-
-        score = (coefficient * mean_beta * cdf_1_diff + intercept * cdf_diff).sum()
-        return float(score)
-
-
-class MaxProfitScorePiecewiseGamma(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single gamma distributed variable using piecewise integration."""
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
-        dist_params_list = list(distribution_parameters.values())
-        alpha = dist_params_list[0]
-        lambda_rate = dist_params_list[1]
-
-        cdf_diff = np.diff(st.gamma.cdf(bounds, a=alpha, scale=lambda_rate))
-        cdf_1_diff = np.diff(st.gamma.cdf(bounds, a=alpha + 1, scale=lambda_rate))
-
-        mean_gamma = alpha * lambda_rate
-
-        score = (coefficient * mean_gamma * cdf_1_diff + intercept * cdf_diff).sum()
-        return float(score)
-
-
-class MaxProfitScorePiecewiseExponential(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single exponential distributed variable using piecewise integration."""
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
-        dist_params_list = list(distribution_parameters.values())
-        lambda_rate = dist_params_list[0]
-        scale = 1.0 / lambda_rate
-
-        cdf_diff = np.diff(st.expon.cdf(bounds, scale=scale))
-        cdf_1_diff = np.diff(st.gamma.cdf(bounds, a=2, scale=scale))
-
-        mean_expon = scale
-
-        score = (coefficient * mean_expon * cdf_1_diff + intercept * cdf_diff).sum()
-        return float(score)
-
-
-class MaxProfitScorePiecewiseChi2(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single chi-squared distributed variable using piecewise integration."""
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
-        dist_params_list = list(distribution_parameters.values())
-        df = dist_params_list[0]
-
-        cdf_diff = np.diff(st.chi2.cdf(bounds, df=df))
-        cdf_1_diff = np.diff(st.chi2.cdf(bounds, df=df + 2))
-
-        mean_chi2 = df
-
-        score = (coefficient * mean_chi2 * cdf_1_diff + intercept * cdf_diff).sum()
-        return float(score)
-
-
-class MaxProfitScorePiecewiseLogNormal(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single log normal distributed variable using piecewise integration."""
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
+        coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
         upper_bound: float,
         lower_bound: float,
@@ -770,49 +715,115 @@ class MaxProfitScorePiecewiseLogNormal(BaseMaxProfitScorePiecewise):
         mu = float(dist_params_list[0])
         sigma = float(dist_params_list[1])
 
-        cdf_diff = np.diff(st.lognorm.cdf(bounds, s=sigma, scale=np.exp(mu)))
-        shifted_scale = np.exp(mu + sigma**2)
-        cdf_1_diff = np.diff(st.lognorm.cdf(bounds, s=sigma, scale=shifted_scale))
+        lower_bounds = np.asarray(bounds[:-1])
+        upper_bounds = np.asarray(bounds[1:])
 
-        mean_lognorm = np.exp(mu + (sigma**2) / 2.0)
+        z_lower = (lower_bounds - mu) / sigma
+        z_upper = (upper_bounds - mu) / sigma
 
-        score = (coefficient * mean_lognorm * cdf_1_diff + intercept * cdf_diff).sum()
-        return float(score)
+        phi_lower = st.norm.pdf(z_lower)
+        phi_upper = st.norm.pdf(z_upper)
+
+        # R will store the integrated value of x^k for the segment
+        r = []
+
+        # R_0: The basic integral of the PDF (the CDF difference)
+        r0 = st.norm.cdf(z_upper) - st.norm.cdf(z_lower)
+        r.append(r0)
+
+        max_degree = len(coefficients) - 1
+
+        if max_degree >= 1:
+            # R_1: mu * R_0 - sigma * (phi(z_d) - phi(z_c))
+            e0 = phi_upper - phi_lower
+            r1 = mu * r0 - sigma * e0
+            r.append(r1)
+
+        # R_k: Recurrence relation for k >= 2
+        for k in range(2, max_degree + 1):
+            r_k_minus_1 = _safe_pow_phi(upper_bounds, k - 1, phi_upper) - _safe_pow_phi(lower_bounds, k - 1, phi_lower)
+            r_k = mu * r[-1] + (k - 1.0) * (sigma**2) * r[-2] - sigma * r_k_minus_1
+            r.append(r_k)
+
+        total_score = 0.0
+
+        # Multiply each raw integral R_k by its polynomial coefficient a_k
+        for k, a_k in enumerate(coefficients):
+            if np.all(np.asarray(a_k) == 0.0):
+                continue
+            total_score += (a_k * r[k]).sum()
+
+        return float(total_score)
 
 
-class MaxProfitScorePiecewisePareto(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single pareto distributed variable using piecewise integration."""
+class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
+    """
+    Intermediate base class for continuous, strictly positive distributions.
+
+    Leverages the k-th order size-biased distribution property for polynomials:
+    integral(x^k * h(x)) = E[x^k] * shifted_cdf_k_diff.
+    """
 
     def _integrate(
         self,
         bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
+        coefficients: list[float],
+        distribution_parameters: dict,
         upper_bound: float,
         lower_bound: float,
     ) -> float:
+        total_score = 0.0
+
+        # Iterate over each term in the polynomial: a_k * x^k
+        for k, a_k in enumerate(coefficients):
+            # Fetch the k-th moment and the CDF shifted by degree k
+            kth_moment, shifted_cdf_k_diff = self._get_kth_integration_components(bounds, k, distribution_parameters)
+
+            # Add the evaluated term to the total integral sum
+            total_score += (a_k * kth_moment * shifted_cdf_k_diff).sum()
+
+        return float(total_score)
+
+    def _get_kth_integration_components(self, bounds: list[float], k: int, distribution_parameters: dict) -> tuple:
+        """Return (kth_moment, shifted_cdf_k_diff) for a specific degree k."""
+        raise NotImplementedError('Subclasses must implement `_get_kth_integration_components`.')
+
+
+class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
+    """Compute the maximum profit for a single gamma distributed variable using piecewise integration."""
+
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
         dist_params_list = list(distribution_parameters.values())
+        alpha = float(dist_params_list[0])
+        lambda_rate = float(dist_params_list[1])
 
-        # SymPy's Pareto generally takes shape (alpha) and scale (x_m)
-        x_m = float(dist_params_list[0])
-        alpha = float(dist_params_list[1])
+        shifted_cdf_k_diff = np.diff(st.gamma.cdf(bounds, a=alpha + k, scale=lambda_rate))
+        kth_moment = 1.0 if k == 0 else (lambda_rate**k) * (sp.gamma(alpha + k) / sp.gamma(alpha))
 
-        if alpha <= 1:
-            raise ValueError('The shape parameter (alpha) must be greater than 1 for the mean to exist.')
+        return kth_moment, shifted_cdf_k_diff
 
-        # H(x; x_m, alpha) - Standard Pareto CDF
-        cdf_diff = np.diff(st.pareto.cdf(bounds, b=alpha, scale=x_m))
 
-        # H(x; x_m, alpha - 1) - Shifted Pareto CDF for the expected value integral
-        cdf_shifted_diff = np.diff(st.pareto.cdf(bounds, b=alpha - 1, scale=x_m))
+class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
+    """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
 
-        # The mean of a Pareto distribution is (alpha * x_m) / (alpha - 1)
-        mean_pareto = (alpha * x_m) / (alpha - 1.0)
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+        dist_params_list = list(distribution_parameters.values())
+        x_m = float(dist_params_list[0])  # Scale
+        alpha = float(dist_params_list[1])  # Shape
 
-        # Integrate: a * E(x) * [H(d; alpha-1) - H(c; alpha-1)] + b * [H(d; alpha) - H(c; alpha)]
-        score = (coefficient * mean_pareto * cdf_shifted_diff + intercept * cdf_diff).sum()
-        return float(score)
+        # Guardrail: The k-th moment only exists if alpha > k
+        if alpha <= k:
+            raise ValueError(
+                f'The Pareto shape parameter (alpha={alpha}) must be strictly greater than degree k={k} '
+                f'for the moment to exist.'
+            )
+
+        # H(x; x_m, alpha - k)
+        shifted_cdf_k_diff = np.diff(st.pareto.cdf(bounds, b=alpha - k, scale=x_m))
+        # E[x^k] = (alpha * x_m^k) / (alpha - k)
+        kth_moment = 1.0 if k == 0 else (alpha * (x_m**k)) / (alpha - float(k))
+
+        return kth_moment, shifted_cdf_k_diff
 
 
 class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
@@ -821,79 +832,170 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
     def _integrate(
         self,
         bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
+        coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
         upper_bound: float,
         lower_bound: float,
     ) -> float:
         dist_params_list = list(distribution_parameters.values())
 
-        # SymPy's Triangular distribution generally takes a (min), b (max), and c (mode/peak)
-        # Note: I am naming the mode 'm' here to match our math, saving 'c' for SciPy's shape parameter.
         a = float(dist_params_list[0])
         b = float(dist_params_list[1])
         m = float(dist_params_list[2])
 
-        # Mapping to SciPy's parameterization: loc = min, scale = max - min, c = (mode - min) / scale
         loc = a
         scale = b - a
         c_shape = (m - a) / scale
 
-        # H(x) - Standard Triangular CDF
-        cdf_diff = np.diff(st.triang.cdf(bounds, c=c_shape, loc=loc, scale=scale))
-
-        # Vectorized calculation for the cumulative partial expectation A(x) = \int_a^x t*h(t) dt
         bounds_arr = np.clip(np.asarray(bounds), a, b)
-        a_x = np.zeros_like(bounds_arr)
 
-        # 1. Evaluate bounds falling in the first segment: [a, m]
+        # Pre-calculate masks for the two segments of the triangle
         mask1 = bounds_arr <= m
-        if np.any(mask1) and m > a:
-            x1 = bounds_arr[mask1]
-            a_x[mask1] = (2.0 / ((b - a) * (m - a))) * (x1**3 / 3.0 - a * x1**2 / 2.0 + a**3 / 6.0)
-
-        # 2. Evaluate bounds falling in the second segment: (m, b]
         mask2 = bounds_arr > m
-        if np.any(mask2) and b > m:
-            x2 = bounds_arr[mask2]
-            a_m = (2.0 / ((b - a) * (m - a))) * (m**3 / 3.0 - a * m**2 / 2.0 + a**3 / 6.0) if m > a else 0.0
-            a_x[mask2] = a_m + (2.0 / ((b - a) * (b - m))) * (b * (x2**2 - m**2) / 2.0 - (x2**3 - m**3) / 3.0)
 
-        # The expected value integral between bounds d and c is simply A(d) - A(c)
-        expected_diff = np.diff(a_x)
+        total_score = 0.0
 
-        # Integrate: a * [A(d) - A(c)] + b * [H(d) - H(c)]
-        # Note: We don't need to multiply by the mean here because A(x) already intrinsically computes E[x]
-        score = (coefficient * expected_diff + intercept * cdf_diff).sum()
+        for k, a_k in enumerate(coefficients):
+            # Skip zero coefficients
+            if np.all(np.asarray(a_k) == 0.0):
+                continue
 
-        return float(score)
+            if k == 0:
+                # k = 0 is just the standard CDF difference
+                expected_diff = np.diff(st.triang.cdf(bounds_arr, c=c_shape, loc=loc, scale=scale))
+                total_score += (a_k * expected_diff).sum()
+                continue
+
+            # For k >= 1, use the exact polynomial integral A_k(x)
+            a_x = np.zeros_like(bounds_arr)
+
+            # 1. Evaluate bounds falling in the first segment: [a, m]
+            if np.any(mask1) and m > a:
+                x1 = bounds_arr[mask1]
+                a_x[mask1] = (2.0 / ((b - a) * (m - a))) * (
+                    (x1 ** (k + 2)) / (k + 2.0)
+                    - (a * x1 ** (k + 1)) / (k + 1.0)
+                    + (a ** (k + 2)) / ((k + 1.0) * (k + 2.0))
+                )
+
+            # 2. Evaluate bounds falling in the second segment: (m, b]
+            if np.any(mask2) and b > m:
+                x2 = bounds_arr[mask2]
+
+                # A_k(m) is the integral up to the mode
+                a_m = 0.0
+                if m > a:
+                    a_m = (2.0 / ((b - a) * (m - a))) * (
+                        (m ** (k + 2)) / (k + 2.0)
+                        - (a * m ** (k + 1)) / (k + 1.0)
+                        + (a ** (k + 2)) / ((k + 1.0) * (k + 2.0))
+                    )
+
+                a_x[mask2] = a_m + (2.0 / ((b - a) * (b - m))) * (
+                    b * (x2 ** (k + 1) - m ** (k + 1)) / (k + 1.0) - (x2 ** (k + 2) - m ** (k + 2)) / (k + 2.0)
+                )
+
+            # The expected value integral between bounds d and c is A_k(d) - A_k(c)
+            expected_diff = np.diff(a_x)
+            total_score += (a_k * expected_diff).sum()
+
+        return float(total_score)
 
 
-class MaxProfitScorePiecewiseWeibull(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single weibull distributed variable using piecewise integration."""
+class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
+    """Compute the maximum profit for a single exponential distributed variable using piecewise integration."""
 
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficient: FloatNDArray,
-        intercept: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
-    ) -> float:
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+        dist_params_list = list(distribution_parameters.values())
+        lambda_rate = float(dist_params_list[0])
+        scale = 1.0 / lambda_rate
+
+        if k == 0:
+            shifted_cdf_k_diff = np.diff(st.expon.cdf(bounds, scale=scale))
+            kth_moment = 1.0
+        else:
+            # Shifted CDF: H_k*(x) evaluates to a Gamma CDF with shape = 1 + k
+            shifted_cdf_k_diff = np.diff(st.gamma.cdf(bounds, a=1.0 + k, scale=scale))
+            # E[x^k] = k! / lambda^k
+            kth_moment = sp.gamma(1.0 + k) * (scale**k)
+
+        return kth_moment, shifted_cdf_k_diff
+
+
+class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
+    """Compute the maximum profit for a single chi-squared distributed variable using piecewise integration."""
+
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+        dist_params_list = list(distribution_parameters.values())
+        df = float(dist_params_list[0])
+
+        # Shifted CDF: adding 2*k to degrees of freedom
+        shifted_cdf_k_diff = np.diff(st.chi2.cdf(bounds, df=df + 2.0 * k))
+
+        kth_moment = 1.0 if k == 0 else (2.0**k) * sp.gamma(k + df / 2.0) / sp.gamma(df / 2.0)
+
+        return kth_moment, shifted_cdf_k_diff
+
+
+class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
+    """Compute the maximum profit for a single log normal distributed variable using piecewise integration."""
+
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+        dist_params_list = list(distribution_parameters.values())
+        mu = float(dist_params_list[0])
+        sigma = float(dist_params_list[1])
+
+        # Shifted CDF: scale shifts to exp(mu + k * sigma^2)
+        shifted_scale = np.exp(mu + k * sigma**2)
+        shifted_cdf_k_diff = np.diff(st.lognorm.cdf(bounds, s=sigma, scale=shifted_scale))
+
+        kth_moment = 1.0 if k == 0 else np.exp(k * mu + (k**2 * sigma**2) / 2.0)
+
+        return kth_moment, shifted_cdf_k_diff
+
+
+class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
+    """Compute the maximum profit for a single beta distributed variable using piecewise integration."""
+
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+        dist_params_list = list(distribution_parameters.values())
+        alpha = float(dist_params_list[0])
+        beta = float(dist_params_list[1])
+
+        # Shifted CDF: shape alpha becomes alpha + k
+        shifted_cdf_k_diff = np.diff(st.beta.cdf(bounds, a=alpha + k, b=beta))
+
+        if k == 0:
+            kth_moment = 1.0
+        else:
+            # E[x^k] = Beta(alpha + k, beta) / Beta(alpha, beta)
+            # Equivalently: (Gamma(alpha + k) * Gamma(alpha + beta)) / (Gamma(alpha) * Gamma(alpha + beta + k))
+            kth_moment = (sp.gamma(alpha + k) * sp.gamma(alpha + beta)) / (sp.gamma(alpha) * sp.gamma(alpha + beta + k))
+
+        return kth_moment, shifted_cdf_k_diff
+
+
+class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
+    """Compute the maximum profit for a single weibull distributed variable using piecewise polynomial integration."""
+
+    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
         dist_params_list = list(distribution_parameters.values())
         lambda_scale = float(dist_params_list[0])
         k_shape = float(dist_params_list[1])
         bounds_arr = np.asarray(bounds)
 
-        cdf_diff = np.diff(st.weibull_min.cdf(bounds_arr, c=k_shape, scale=lambda_scale))
-        u_bounds = (bounds_arr / lambda_scale) ** k_shape
-        gamma_shape = 1.0 + (1.0 / k_shape)
-        cdf_expected_diff = np.diff(st.gamma.cdf(u_bounds, a=gamma_shape))
+        if k == 0:
+            shifted_cdf_k_diff = np.diff(st.weibull_min.cdf(bounds_arr, c=k_shape, scale=lambda_scale))
+            kth_moment = 1.0
+        else:
+            # u = (x / lambda)^k_shape
+            u_bounds = (bounds_arr / lambda_scale) ** k_shape
+            gamma_shape = 1.0 + (float(k) / k_shape)
 
-        mean_weibull = lambda_scale * sp.gamma(gamma_shape)
+            # Shifted CDF uses regularized incomplete gamma trick
+            shifted_cdf_k_diff = np.diff(st.gamma.cdf(u_bounds, a=gamma_shape))
 
-        score = (coefficient * mean_weibull * cdf_expected_diff + intercept * cdf_diff).sum()
+            # E[x^k] = lambda^k * Gamma(1 + k / k_shape)
+            kth_moment = (lambda_scale**k) * sp.gamma(gamma_shape)
 
-        return float(score)
+        return kth_moment, shifted_cdf_k_diff
