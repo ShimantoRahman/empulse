@@ -234,12 +234,28 @@ def compute_piecewise_bounds(
     # fprs.insert(0, true_positive_rates[-1])
     # tprs.insert(0, false_positive_rates[-1])
 
-    if fprs[0] == 0.0:
-        fprs.insert(0, 0.0)
-        tprs.insert(0, 0.0)
+    # rico is pos, then insert
+    if fix_inf:
+        if len(fprs) >= 2:  # noqa: SIM108
+            start_value = 0.0 if fprs[0] < fprs[1] else 1.0
+        else:
+            start_value = 0.0 if fprs[0] == 1.0 else 1.0
+        fprs.insert(0, start_value)
+        tprs.insert(0, start_value)
     else:
-        fprs.append(0.0)
-        tprs.append(0.0)
+        if len(fprs) >= 2:  # noqa: SIM108
+            start_value = 0.0 if fprs[0] > fprs[1] else 1.0
+        else:
+            start_value = 0.0 if fprs[0] == 1.0 else 1.0
+        fprs.append(start_value)
+        tprs.append(start_value)
+
+    # if fprs[0] == 0.0:
+    #     fprs.insert(0, 0.0)
+    #     tprs.insert(0, 0.0)
+    # else:
+    #     fprs.append(0.0)
+    #     tprs.append(0.0)
 
     # it is possible that some of the computed bounds are outside the accepted interval [lower_bound, upper_bound]
     # replace values that are outside the interval with the respective bounds
