@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
@@ -8,9 +8,14 @@ from sympy.stats.rv import is_random
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ...common import Direction, MetricFn, RateFn, ThresholdFn
+from ...common import Direction, MetricFn, RateFn, ThresholdFn, _check_parameters, _safe_lambdify, _safe_run_lambda
 from ..metric_strategy import MetricStrategy
-from .deterministic import MaxProfitRateDeterministic, MaxProfitScoreDeterministic
+from .deterministic import (
+    MaxProfitBoostGradientDeterministic,
+    MaxProfitLogitGradientDeterministic,
+    MaxProfitRateDeterministic,
+    MaxProfitScoreDeterministic,
+)
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
 from .quadrature import MaxProfitScoreQuad
@@ -89,6 +94,16 @@ class MaxProfit(MetricStrategy):
         ``integration_technique='quasi-monte-carlo'``.
         Determines the points sampled from the distribution of the stochastic variables.
         This argument is ignored when ``integration_technique='quad'``.
+
+    alpha: float, default=1.0
+        Initial temperature used in the smooth sigmoid approximation for ``logit_objective``.
+
+    alpha_growth: float, default=1.1
+        Exponential growth factor :math:`\\gamma` of the annealing schedule.
+        Set to ``1.0`` to keep a constant temperature.
+
+    alpha_max: float, default=100.0
+        Maximum value reached by the annealed temperature.
     """
 
     INTEGRATION_METHODS: ClassVar[list[Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']]] = [
@@ -103,6 +118,9 @@ class MaxProfit(MetricStrategy):
         integration_method: Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo'] = 'auto',
         n_mc_samples_exp: int = 16,
         random_state: np.random.Generator | int | None = None,
+        alpha: float = 1.0,
+        alpha_growth: float = 1.1,
+        alpha_max: float = 100.0,
     ):
         super().__init__(name='max profit', direction=Direction.MAXIMIZE)
         if integration_method not in self.INTEGRATION_METHODS:
@@ -112,10 +130,32 @@ class MaxProfit(MetricStrategy):
             )
         self.integration_method = integration_method
         self.n_mc_samples: int = 2**n_mc_samples_exp
+        if alpha <= 0:
+            raise ValueError('alpha must be strictly positive.')
+        if alpha_growth < 1.0:
+            raise ValueError('alpha_growth must be >= 1.0.')
+        if alpha_max <= 0:
+            raise ValueError('alpha_max must be strictly positive.')
+        if alpha > alpha_max:
+            raise ValueError('alpha must be <= alpha_max.')
+        self.alpha = alpha
+        self.alpha_growth = alpha_growth
+        self.alpha_max = alpha_max
+        self._boost_epoch = 0
+        self._boost_objective: MaxProfitBoostGradientDeterministic | None = None
+        self._boost_signature: tuple[tuple[int, ...], tuple[tuple[str, float], ...]] | None = None
         if isinstance(random_state, np.random.Generator):
             self._rng: np.random.Generator = random_state
         else:
             self._rng = np.random.default_rng(random_state)
+
+    def _current_boost_alpha(self) -> float:
+        """Compute annealed temperature for the current boosting objective evaluation."""
+        try:
+            alpha = self.alpha * (self.alpha_growth**self._boost_epoch)
+        except OverflowError:
+            alpha = self.alpha_max
+        return float(min(self.alpha_max, alpha))
 
     def build(
         self,
@@ -143,7 +183,55 @@ class MaxProfit(MetricStrategy):
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
         )
+        # Store symbolic expressions for gradient computation in logit_objective
+        self._tp_benefit = tp_benefit
+        self._tn_benefit = tn_benefit
+        self._fp_cost = fp_cost
+        self._fn_cost = fn_cost
+        self._boost_epoch = 0
+        self._boost_objective = None
+        self._boost_signature = None
         return self
+
+    def _prepare_boost_deterministic_objective(
+        self, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> MaxProfitBoostGradientDeterministic:
+        if not isinstance(self._score_function, MaxProfitScoreDeterministic):
+            raise NotImplementedError(
+                'gradient_boost_objective is only supported for deterministic MaxProfit metrics. '
+                'The metric must not contain any stochastic variables.'
+            )
+
+        f0, f1 = sympy.symbols('F_0 F_1')
+        try:
+            profit_poly = sympy.Poly(sympy.expand(self._score_function.profit_function), f0, f1)
+        except sympy.polys.polyerrors.PolynomialError as exc:
+            raise NotImplementedError(
+                'gradient_boost_objective currently supports profit functions linear in F_0 and F_1 only.'
+            ) from exc
+        if profit_poly.total_degree() > 1:
+            raise NotImplementedError(
+                'gradient_boost_objective currently supports profit functions linear in F_0 and F_1 only.'
+            )
+
+        _check_parameters(self._score_function.deterministic_symbols, parameters)
+        agg_params = _aggregate_instance_parameters(dict(parameters))
+
+        tp_val = float(_safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **agg_params))
+        fn_val = float(_safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **agg_params))
+        tn_val = float(_safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **agg_params))
+        fp_val = float(_safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **agg_params))
+
+        return MaxProfitBoostGradientDeterministic(
+            profit_function=self._score_function.profit_function,
+            deterministic_symbols=self._score_function.deterministic_symbols,
+            y_true=np.asarray(y_true),
+            tp_benefit=tp_val,
+            tn_benefit=tn_val,
+            fp_cost=fp_val,
+            fn_cost=fn_val,
+            parameters=agg_params,
+        )
 
     def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
@@ -234,6 +322,118 @@ class MaxProfit(MetricStrategy):
         """
         parameters = _aggregate_instance_parameters(parameters)
         return self._optimal_rate(y_true, y_score, **parameters)
+
+    def logit_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+        """
+        Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
+
+        Uses the Envelope Theorem combined with a smooth sigmoid approximation of the ROC curve to derive
+        an analytically differentiable proxy for the Expected Maximum Profit.
+
+        Only supported for deterministic (non-stochastic) metrics.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
+        soft_threshold : bool
+            Indicator of whether soft thresholding is applied during optimization.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        logistic_objective : Callable[[NDArray], tuple[float, NDArray]]
+            A function that takes logistic regression weights as input and returns the negated metric value
+            and its gradient (negated for minimization).
+            The function signature is:
+            ``logistic_objective(weights) -> (value, gradient)``
+
+        Raises
+        ------
+        NotImplementedError
+            If the metric contains stochastic variables (only deterministic case is supported).
+        """
+        if not isinstance(self._score_function, MaxProfitScoreDeterministic):
+            raise NotImplementedError(
+                'logit_objective is only supported for deterministic MaxProfit metrics. '
+                'The metric must not contain any stochastic variables.'
+            )
+
+        _check_parameters(self._score_function.deterministic_symbols, parameters)
+
+        # Aggregate instance-dependent parameters to scalars; MaxProfit uses class-level costs
+        agg_params = _aggregate_instance_parameters(dict(parameters))
+
+        # Evaluate the symbolic cost/benefit expressions to scalar values
+        tp_val = float(_safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **agg_params))
+        fn_val = float(_safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **agg_params))
+        tn_val = float(_safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **agg_params))
+        fp_val = float(_safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **agg_params))
+
+        return MaxProfitLogitGradientDeterministic(
+            profit_function=self._score_function.profit_function,
+            deterministic_symbols=self._score_function.deterministic_symbols,
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+            alpha_0=self.alpha,
+            alpha_growth=self.alpha_growth,
+            alpha_max=self.alpha_max,
+            tp_benefit=tp_val,
+            tn_benefit=tn_val,
+            fp_cost=fp_val,
+            fn_cost=fn_val,
+            parameters=agg_params,
+        )
+
+    def gradient_boost_objective(
+        self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> tuple[FloatNDArray, FloatNDArray]:
+        """
+        Compute gradient and hessian for boosting with deterministic linear MaxProfit.
+
+        Currently supports deterministic metrics only and requires the profit expression
+        to be linear in ROC rates ``F_0`` and ``F_1``.
+        """
+        alpha = self._current_boost_alpha()
+        self._boost_epoch += 1
+
+        y_true_arr = np.asarray(y_true).reshape(-1)
+        agg_params = _aggregate_instance_parameters(dict(parameters))
+        param_signature = tuple(sorted((k, float(v)) for k, v in agg_params.items()))
+        signature = (y_true_arr.shape, param_signature)
+        if self._boost_objective is None or self._boost_signature != signature:
+            self._boost_objective = self._prepare_boost_deterministic_objective(y_true_arr, **parameters)
+            self._boost_signature = signature
+
+        return self._boost_objective(np.asarray(y_score), alpha)
 
     def to_latex(
         self,

@@ -3,9 +3,11 @@ from unittest import mock
 
 import numpy as np
 import pytest
+import sympy
 from sklearn.datasets import make_classification
 
 import empulse.models
+from empulse.metrics import CostMatrix, MaxProfit, Metric
 from empulse.models import CSBoostClassifier
 
 # Define the classifiers to test
@@ -89,6 +91,22 @@ def test_csboost_with_invalid_estimator_type(dataset):
         TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
     ):
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
+
+def test_csboost_with_deterministic_max_profit_metric(dataset):
+    xgboost = pytest.importorskip('xgboost')
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=1.0))
+
+    X, y, _, _ = dataset
+    model = CSBoostClassifier(
+        estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0),
+        loss=metric,
+    )
+    model.fit(X, y, clv=5.0)
+    y_proba = model.predict_proba(X)
+
+    assert y_proba.shape == (X.shape[0], len(np.unique(y)))
 
 
 def test_csboost_when_all_libraries_missing(dataset):

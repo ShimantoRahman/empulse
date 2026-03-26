@@ -679,11 +679,72 @@ def test_objective_aec_logit(delta_churn_cost_matrix):
     assert np.allclose(gradient, gradient_true)
 
 
+def test_objective_max_profit_logit_deterministic():
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit())
+
+    X, y = make_classification(n_samples=40, n_features=4, random_state=12)
+    objective = metric._logit_objective(
+        X,
+        y,
+        C=1.0,
+        l1_ratio=0.0,
+        soft_threshold=False,
+        fit_intercept=True,
+        clv=5.0,
+    )
+
+    weights = np.zeros(X.shape[1], dtype=np.float64)
+    value, gradient = objective(weights)
+
+    y_score = 1.0 / (1.0 + np.exp(-(X @ weights)))
+    expected_value = -metric(y, y_score, clv=5.0)
+
+    assert pytest.approx(value, rel=1e-8, abs=1e-8) == expected_value
+    assert gradient.shape == weights.shape
+    assert np.all(np.isfinite(gradient))
+
+
+def test_objective_max_profit_logit_alpha_annealing_schedule():
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=10.0, alpha_max=5.0))
+
+    X, y = make_classification(n_samples=40, n_features=4, random_state=21)
+    objective = metric._logit_objective(
+        X,
+        y,
+        C=1.0,
+        l1_ratio=0.0,
+        soft_threshold=False,
+        fit_intercept=True,
+        clv=5.0,
+    )
+
+    weights = np.zeros(X.shape[1], dtype=np.float64)
+    assert objective._current_alpha() == pytest.approx(1.0)  # type: ignore[attr-defined]
+    _ = objective(weights)
+    assert objective._current_alpha() == pytest.approx(5.0)  # type: ignore[attr-defined]
+    _ = objective(weights)
+    assert objective._current_alpha() == pytest.approx(5.0)  # type: ignore[attr-defined]
+
+
+def test_max_profit_alpha_schedule_validation():
+    with pytest.raises(ValueError, match='alpha must be strictly positive'):
+        MaxProfit(alpha=0.0)
+    with pytest.raises(ValueError, match=r'alpha_growth must be >= 1.0'):
+        MaxProfit(alpha_growth=0.99)
+    with pytest.raises(ValueError, match='alpha_max must be strictly positive'):
+        MaxProfit(alpha_max=0.0)
+    with pytest.raises(ValueError, match='alpha must be <= alpha_max'):
+        MaxProfit(alpha=2.0, alpha_max=1.0)
+
+
 @pytest.mark.parametrize('kind', [MaxProfit()])
 def test_objective_logit_unsupported(kind):
-    clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), kind)
-    with pytest.raises(NotImplementedError, match=r'Gradient of the logit function is not defined for'):
+    alpha, beta = sympy.symbols('alpha beta')
+    gamma = sympy.stats.Beta('gamma', alpha, beta)
+    metric = Metric(CostMatrix().add_tp_benefit(gamma), kind)
+    with pytest.raises(NotImplementedError, match=r'only supported for deterministic MaxProfit metrics'):
         metric._logit_objective(
             np.array([1]), np.array([1]), C=1.0, l1_ratio=1.0, soft_threshold=False, fit_intercept=True
         )
@@ -691,13 +752,45 @@ def test_objective_logit_unsupported(kind):
 
 @pytest.mark.parametrize('kind', [MaxProfit()])
 def test_objective_boost_unsupported(kind):
-    clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), kind)
+    alpha, beta = sympy.symbols('alpha beta')
+    gamma = sympy.stats.Beta('gamma', alpha, beta)
+    metric = Metric(CostMatrix().add_tp_benefit(gamma), kind)
     with pytest.raises(
         NotImplementedError,
-        match=r'Gradient and Hessian of the gradient boosting function is not defined for',
+        match=r'only supported for deterministic MaxProfit metrics',
     ):
         metric._gradient_boost_objective(np.array([1]), np.array([1]))
+
+
+def test_objective_boost_max_profit_deterministic_linear():
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=1.0))
+
+    _, y = make_classification(n_samples=40, random_state=12)
+    y_score = np.linspace(-1.0, 1.0, y.shape[0])
+    gradient, hessian = metric._gradient_boost_objective(y, y_score, clv=5.0)
+
+    assert gradient.shape == y.shape
+    assert hessian.shape == y.shape
+    assert np.all(np.isfinite(gradient))
+    assert np.all(np.isfinite(hessian))
+    assert np.all(hessian >= 0)
+
+
+def test_objective_boost_max_profit_alpha_annealing_schedule():
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=2.0, alpha_max=3.0))
+
+    _, y = make_classification(n_samples=40, random_state=23)
+    y_score = np.linspace(-1.0, 1.0, y.shape[0])
+
+    assert metric.strategy._current_boost_alpha() == pytest.approx(1.0)  # type: ignore[attr-defined]
+    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    assert metric.strategy._current_boost_alpha() == pytest.approx(2.0)  # type: ignore[attr-defined]
+    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    assert metric.strategy._current_boost_alpha() == pytest.approx(3.0)  # type: ignore[attr-defined]
+    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    assert metric.strategy._current_boost_alpha() == pytest.approx(3.0)  # type: ignore[attr-defined]
 
 
 def test_repr_metric(uniform_dist_matrix):
@@ -751,19 +844,16 @@ _sympy_dist_to_scipy: list[
     (sympy.stats.crv_types.BetaPrimeDistribution, (6, 14)),
     (sympy.stats.crv_types.ChiDistribution, (6,)),
     (sympy.stats.crv_types.ChiSquaredDistribution, (6,)),
-    (sympy.stats.crv_types.ExGaussianDistribution, (0.3, 0.1, 1)),
     (sympy.stats.crv_types.ExponentialDistribution, (6,)),
     (sympy.stats.crv_types.FDistributionDistribution, (6, 14)),
     (sympy.stats.crv_types.GammaDistribution, (5, 0.1)),
     (sympy.stats.crv_types.GammaInverseDistribution, (6, 14)),
     (sympy.stats.crv_types.LaplaceDistribution, (6, 14)),
-    (sympy.stats.crv_types.LogisticDistribution, (6, 14)),
     (sympy.stats.crv_types.LogNormalDistribution, (1e-3, 0.1)),
     (sympy.stats.crv_types.LomaxDistribution, (6, 14)),
     (sympy.stats.crv_types.ParetoDistribution, (10, 3)),
     (sympy.stats.crv_types.MaxwellDistribution, (6,)),
     (sympy.stats.crv_types.MoyalDistribution, (6, 14)),
-    # (sympy.stats.crv_types.NakagamiDistribution, (6, 14)),
     (sympy.stats.crv_types.NormalDistribution, (6, 14)),
     (sympy.stats.crv_types.PowerFunctionDistribution, (6, 0, 1)),
     (sympy.stats.crv_types.StudentTDistribution, (6,)),

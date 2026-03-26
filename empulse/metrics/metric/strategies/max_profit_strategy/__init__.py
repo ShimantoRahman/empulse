@@ -1,3 +1,3 @@
-from .metric_strategy import MaxProfit
+from .max_profit_strategy import MaxProfit
 
 __all__ = ['MaxProfit']
