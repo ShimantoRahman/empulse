@@ -68,6 +68,19 @@ class LGBMObjective:
         return gradient, hessian
 
 
+class LGBMMetricObjective:
+    """Metric objective wrapper for lightgbm using dynamic gradient/hessian evaluation."""
+
+    def __init__(self, metric: Metric, **loss_params: FloatNDArray | float):
+        self.metric = metric
+        self.loss_params = loss_params
+
+    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+        """Compute the gradient and hessian of the metric objective."""
+        gradient, hessian = self.metric._gradient_boost_objective(y_true, y_score, **self.loss_params)
+        return gradient, hessian
+
+
 class CSBoostClassifier(CostSensitiveClassifier):
     """
     Cost-sensitive gradient boosting classifier.
@@ -403,7 +416,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         y: FloatNDArray,
         loss: Metric,
         **loss_params: Any,
-    ) -> LGBMObjective: ...
+    ) -> LGBMObjective | LGBMMetricObjective: ...
 
     @overload
     def _get_objective(
@@ -420,7 +433,21 @@ class CSBoostClassifier(CostSensitiveClassifier):
         y: FloatNDArray,
         loss: Metric,
         **loss_params: Any,
-    ) -> Callable[..., Any] | LGBMObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
+    ) -> Callable[..., Any] | LGBMObjective | LGBMMetricObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
+        # MaxProfit for boosting requires dynamic thresholding from current round predictions,
+        # so we evaluate gradients/hessians directly from the metric each iteration.
+        if loss.strategy.name == 'max profit':
+            if framework == 'xgboost':
+                return partial(loss._gradient_boost_objective, **loss_params)
+            if framework == 'lightgbm':
+                return LGBMMetricObjective(loss, **loss_params)
+
+            loss_params = {
+                name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
+                for name, param in loss_params.items()
+            }
+            return CatBoostObjective(loss, **loss_params), CatBoostMetric(loss, **loss_params)
+
         if framework == 'xgboost':
             # return partial(self.loss._gradient_boost_objective, **loss_params)
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
@@ -465,8 +492,10 @@ class CSBoostClassifier(CostSensitiveClassifier):
 class CatBoostObjective:
     """AEC objective for catboost."""
 
-    def __init__(self, gradient_const: FloatNDArray):
-        self.gradient_const = gradient_const
+    def __init__(self, metric_or_gradient_const: Metric | FloatNDArray, **loss_params: FloatNDArray | float):
+        self.metric = metric_or_gradient_const if isinstance(metric_or_gradient_const, Metric) else None
+        self.gradient_const = metric_or_gradient_const if isinstance(metric_or_gradient_const, np.ndarray) else None
+        self.loss_params = loss_params
 
     def calc_ders_range(
         self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
@@ -492,11 +521,18 @@ class CatBoostObjective:
 
         """
         weights = weights.astype(int)
-        # Use weights as a proxy to index the costs
-        gradient_const = self.gradient_const[weights]
         predictions = np.array(predictions, dtype=np.float64)
 
-        gradient, hessian = cy_boost_grad_hess(targets, predictions, gradient_const)
+        if self.metric is not None:
+            # Use weights as a proxy to index instance-dependent parameters.
+            loss_params = {
+                name: value[weights] if isinstance(value, np.ndarray) else value
+                for (name, value) in self.loss_params.items()
+            }
+            gradient, hessian = self.metric._gradient_boost_objective(targets, predictions, **loss_params)
+        else:
+            gradient_const = self.gradient_const[weights]  # type: ignore[index]
+            gradient, hessian = cy_boost_grad_hess(targets, predictions, gradient_const)
         # convert from two arrays to one list of tuples
         return list(zip(-gradient, -hessian, strict=False))
 

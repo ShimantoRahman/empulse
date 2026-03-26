@@ -163,6 +163,14 @@ def compute_integral_quad(
         return float(integrand * (upper_bound - lower_bound))
     integrand_fn = lambdify(random_var, integrand)
     result, _ = quad(integrand_fn, lower_bound, upper_bound)
+    # try:
+    #     result, _ = quad(integrand_fn, lower_bound, upper_bound)
+    # except ZeroDivisionError:
+    #     if lower_bound == 0.0:
+    #         lower_bound = np.finfo(float).eps
+    #     elif upper_bound == 0.0:
+    #         upper_bound = np.finfo(float).eps
+    #     result, _ = quad(integrand_fn, lower_bound, upper_bound)
     result: float
     return result
 
@@ -249,13 +257,6 @@ def compute_piecewise_bounds(
             start_value = 0.0 if fprs[0] == 1.0 else 1.0
         fprs.append(start_value)
         tprs.append(start_value)
-
-    # if fprs[0] == 0.0:
-    #     fprs.insert(0, 0.0)
-    #     tprs.insert(0, 0.0)
-    # else:
-    #     fprs.append(0.0)
-    #     tprs.append(0.0)
 
     # it is possible that some of the computed bounds are outside the accepted interval [lower_bound, upper_bound]
     # replace values that are outside the interval with the respective bounds
