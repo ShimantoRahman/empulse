@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Callable, Iterable
-from itertools import islice, pairwise
+from itertools import pairwise
 from typing import Any, ClassVar
 
 import numpy as np
@@ -184,89 +184,102 @@ def compute_piecewise_bounds(
     random_var_bounds: tuple[float | sympy.Expr, ...],
     distribution_parameters: dict[str, Any],
     fix_inf: bool = True,
+    lower_bound: float | None = None,
+    upper_bound: float | None = None,
     **kwargs: Any,
 ) -> tuple[list[float], float, float, list[float], list[float]]:
-    """
-    Compute the consecutive bounds of the stochastic variable for which the expected profit is equal.
+    """Compute the consecutive bounds of the stochastic variable for which the expected profit is equal."""
+    # 1. Prepare fully vectorized inputs
+    # F_0, F_1 are the "current" vertices. F_2, F_3 are the "next" vertices.
+    F_0 = true_positive_rates[:-1]  # noqa: N806
+    F_1 = false_positive_rates[:-1]  # noqa: N806
+    F_2 = true_positive_rates[1:]  # noqa: N806
+    F_3 = false_positive_rates[1:]  # noqa: N806
 
-    These bounds can then be used during piecewise integration.
-    """
-    bounds = []
-    tprs = []
-    fprs = []
-    for (tpr0, fpr0), (tpr1, fpr1) in islice(
-        pairwise(zip(true_positive_rates, false_positive_rates, strict=False)), len(true_positive_rates) - 1
-    ):
+    all_bounds = []
+    all_tprs = []
+    all_fprs = []
+
+    # Bound Computation
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
         for compute_bound in compute_bounds_fns:
-            with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', category=RuntimeWarning)
-                computed_bound = compute_bound(
-                    F_0=tpr0,
-                    F_1=fpr0,
-                    F_2=tpr1,
-                    F_3=fpr1,
-                    pi_0=positive_class_prior,
-                    pi_1=negative_class_prior,
-                    **kwargs,
-                )
-            if np.isnan(computed_bound):
-                continue
-            if fix_inf:
-                computed_bound = np.inf if computed_bound == -np.inf else computed_bound
-            else:
-                computed_bound = -np.inf if computed_bound == np.inf else computed_bound
-            bounds.append(computed_bound)
-            tprs.append(tpr1)
-            fprs.append(fpr1)
+            # We pass the full arrays in. NumPy executes this instantly.
+            b_arr = compute_bound(
+                F_0=F_0, F_1=F_1, F_2=F_2, F_3=F_3, pi_0=positive_class_prior, pi_1=negative_class_prior, **kwargs
+            )
+            # Guarantee 1D array even if b_arr returns a scalar for some reason
+            b_arr = np.atleast_1d(b_arr)
+            all_bounds.append(b_arr)
+            all_tprs.append(F_2)
+            all_fprs.append(F_3)
 
-    # bounds and adjust true_positive_rates and false_positive_rates accordingly,
-    # so that the piecewise integration is correct
-    sorted_indices = np.argsort(bounds)
-    bounds = [bounds[i] for i in sorted_indices]
-    tprs = [tprs[i] for i in sorted_indices]
-    fprs = [fprs[i] for i in sorted_indices]
-
-    # the compute_bounds function only computes the internal bounds,
-    # so we need to add the lower and upper bounds of the random variable
-    if isinstance(upper_bound := random_var_bounds[1], sympy.Expr):
-        upper_bound = upper_bound.subs(distribution_parameters)
-        if upper_bound == sympy.oo:
-            upper_bound = np.inf
-    bounds.append(upper_bound)
-    if isinstance(lower_bound := random_var_bounds[0], sympy.Expr):
-        lower_bound = lower_bound.subs(distribution_parameters)
-        if lower_bound == -sympy.oo:
-            lower_bound = -np.inf
-    bounds.insert(0, lower_bound)
-
-    # fprs.insert(0, true_positive_rates[-1])
-    # tprs.insert(0, false_positive_rates[-1])
-
-    # rico is pos, then insert
-    if fix_inf:
-        if len(fprs) >= 2:  # noqa: SIM108
-            start_value = 0.0 if fprs[0] < fprs[1] else 1.0
-        else:
-            start_value = 0.0 if fprs[0] == 1.0 else 1.0
-        fprs.insert(0, start_value)
-        tprs.insert(0, start_value)
+    if all_bounds:
+        bounds_arr = np.concatenate(all_bounds)
+        tprs_arr = np.concatenate(all_tprs)
+        fprs_arr = np.concatenate(all_fprs)
     else:
-        if len(fprs) >= 2:  # noqa: SIM108
-            start_value = 0.0 if fprs[0] > fprs[1] else 1.0
-        else:
-            start_value = 0.0 if fprs[0] == 1.0 else 1.0
-        fprs.append(start_value)
-        tprs.append(start_value)
+        bounds_arr = np.array([], dtype=float)
+        tprs_arr = np.array([], dtype=float)
+        fprs_arr = np.array([], dtype=float)
 
-    # it is possible that some of the computed bounds are outside the accepted interval [lower_bound, upper_bound]
-    # replace values that are outside the interval with the respective bounds
-    # this will have the effect of essentially setting that part to zero
-    for i in range(len(bounds)):
-        if bounds[i] < lower_bound:
-            bounds[i] = lower_bound
-        elif bounds[i] > upper_bound:
-            bounds[i] = upper_bound
-    return bounds, upper_bound, lower_bound, tprs, fprs
+    valid_mask = ~np.isnan(bounds_arr)
+    bounds_arr = bounds_arr[valid_mask]
+    tprs_arr = tprs_arr[valid_mask]
+    fprs_arr = fprs_arr[valid_mask]
+
+    if fix_inf:
+        bounds_arr[bounds_arr == -np.inf] = np.inf
+    else:
+        bounds_arr[bounds_arr == np.inf] = -np.inf
+
+    sort_idx = np.argsort(bounds_arr)
+    bounds_arr = bounds_arr[sort_idx]
+    tprs_arr = tprs_arr[sort_idx]
+    fprs_arr = fprs_arr[sort_idx]
+
+    # Resolve Lower and Upper Bounds
+    if upper_bound is None:
+        upper_bound = random_var_bounds[1]
+        if isinstance(upper_bound, sympy.Expr):
+            upper_bound = upper_bound.subs(distribution_parameters)
+            upper_bound = np.inf if upper_bound == sympy.oo else float(upper_bound)
+        else:
+            upper_bound = float(upper_bound)
+
+    if lower_bound is None:
+        lower_bound = random_var_bounds[0]
+        if isinstance(lower_bound, sympy.Expr):
+            lower_bound = lower_bound.subs(distribution_parameters)
+            lower_bound = -np.inf if lower_bound == -sympy.oo else float(lower_bound)
+        else:
+            lower_bound = float(lower_bound)
+
+    bounds_arr = np.clip(bounds_arr, lower_bound, upper_bound)
+    bounds_list = bounds_arr.tolist()
+    tprs_list = tprs_arr.tolist()
+    fprs_list = fprs_arr.tolist()
+
+    bounds_list.append(upper_bound)
+    bounds_list.insert(0, lower_bound)
+
+    # Handle start values
+    if fix_inf:
+        if len(fprs_list) >= 2:
+            start_value = 0.0 if fprs_list[0] < fprs_list[1] else 1.0
+        else:
+            start_value = 0.0 if (len(fprs_list) > 0 and fprs_list[0] == 1.0) else 1.0
+        fprs_list.insert(0, start_value)
+        tprs_list.insert(0, start_value)
+    else:
+        if len(fprs_list) >= 2:
+            start_value = 0.0 if fprs_list[0] > fprs_list[1] else 1.0
+        else:
+            start_value = 0.0 if (len(fprs_list) > 0 and fprs_list[0] == 1.0) else 1.0
+        fprs_list.append(start_value)
+        tprs_list.append(start_value)
+
+    return bounds_list, upper_bound, lower_bound, tprs_list, fprs_list
 
 
 class MaxProfitRatePiecewise(SympyFnPickleMixin):
@@ -980,7 +993,7 @@ class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
         beta = float(dist_params_list[1])
 
         # Shifted CDF: shape alpha becomes alpha + k
-        shifted_cdf_k_diff = np.diff(st.beta.cdf(bounds, a=alpha + k, b=beta))
+        shifted_cdf_k_diff = np.diff(sp.betainc(alpha + k, beta, bounds))
 
         if k == 0:
             kth_moment = 1.0

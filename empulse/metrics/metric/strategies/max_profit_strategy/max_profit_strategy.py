@@ -16,8 +16,9 @@ from .deterministic import (
     MaxProfitRateDeterministic,
     MaxProfitScoreDeterministic,
 )
+from .gradient_piecewise import MaxProfitLogitGradientPiecewise
 from .monte_carlo import MaxProfitScoreMonteCarlo
-from .piecewise import _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
+from .piecewise import BasePositiveDistribution, _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
 from .quadrature import MaxProfitScoreQuad
 from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
 
@@ -377,41 +378,55 @@ class MaxProfit(MetricStrategy):
         NotImplementedError
             If the metric contains stochastic variables (only deterministic case is supported).
         """
-        if not isinstance(self._score_function, MaxProfitScoreDeterministic):
-            raise NotImplementedError(
-                'logit_objective is only supported for deterministic MaxProfit metrics. '
-                'The metric must not contain any stochastic variables.'
-            )
-
         _check_parameters(self._score_function.deterministic_symbols, parameters)
-
-        # Aggregate instance-dependent parameters to scalars; MaxProfit uses class-level costs
         agg_params = _aggregate_instance_parameters(dict(parameters))
 
-        # Evaluate the symbolic cost/benefit expressions to scalar values
-        tp_val = float(_safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **agg_params))
-        fn_val = float(_safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **agg_params))
-        tn_val = float(_safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **agg_params))
-        fp_val = float(_safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **agg_params))
+        # 1. Deterministic Route
+        if isinstance(self._score_function, MaxProfitScoreDeterministic):
+            tp_val = float(_safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **agg_params))
+            fn_val = float(_safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **agg_params))
+            tn_val = float(_safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **agg_params))
+            fp_val = float(_safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **agg_params))
 
-        return MaxProfitLogitGradientDeterministic(
-            profit_function=self._score_function.profit_function,
-            deterministic_symbols=self._score_function.deterministic_symbols,
-            features=features,
-            y_true=y_true,
-            C=C,
-            l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
-            fit_intercept=fit_intercept,
-            alpha_0=self.alpha,
-            alpha_growth=self.alpha_growth,
-            alpha_max=self.alpha_max,
-            tp_benefit=tp_val,
-            tn_benefit=tn_val,
-            fp_cost=fp_val,
-            fn_cost=fn_val,
-            parameters=agg_params,
-        )
+            return MaxProfitLogitGradientDeterministic(
+                profit_function=self._score_function.profit_function,
+                deterministic_symbols=self._score_function.deterministic_symbols,
+                features=features,
+                y_true=y_true,
+                C=C,
+                l1_ratio=l1_ratio,
+                soft_threshold=soft_threshold,
+                fit_intercept=fit_intercept,
+                alpha_0=self.alpha,
+                alpha_growth=self.alpha_growth,
+                alpha_max=self.alpha_max,
+                tp_benefit=tp_val,
+                tn_benefit=tn_val,
+                fp_cost=fp_val,
+                fn_cost=fn_val,
+                parameters=agg_params,
+            )
+
+        # 2. Stochastic Piecewise Route (e.g., Beta, Gamma, Pareto)
+        elif isinstance(self._score_function, BasePositiveDistribution):
+            return MaxProfitLogitGradientPiecewise(
+                score_function=self._score_function,
+                features=features,
+                y_true=y_true,
+                C=C,
+                l1_ratio=l1_ratio,
+                soft_threshold=soft_threshold,
+                fit_intercept=fit_intercept,
+                alpha_0=self.alpha,
+                alpha_growth=self.alpha_growth,
+                alpha_max=self.alpha_max,
+                parameters=agg_params,
+            )
+        else:
+            raise NotImplementedError(
+                'logit_objective is currently only supported for Deterministic and '
+                'BasePositiveDistribution stochastic metrics.'
+            )
 
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
