@@ -435,7 +435,8 @@ class CostOptimalThreshold:
             if denominator == 0:
                 denominator = eps
         else:
-            denominator = np.clip(denominator, float(np.finfo(float).eps), denominator)
+            denom_arr = np.asarray(denominator, dtype=np.float64)
+            denominator = np.where(denom_arr == 0, eps, denom_arr)
 
         optimal: FloatNDArray | float = numerator / denominator  # type: ignore[operator, assignment]
         return float(optimal) if np.isscalar(optimal) else optimal  # type: ignore[arg-type]
