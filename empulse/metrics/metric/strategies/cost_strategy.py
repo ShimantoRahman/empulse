@@ -35,6 +35,7 @@ def replace_random_var_with_mean(
     fixed_means: dict[
         sympy.stats.crv_types.SingleContinuousDistribution, Callable[[tuple[sympy.Expr, ...]], sympy.Expr]
     ] = {
+        sympy.stats.crv_types.ArcsinDistribution: lambda params: (params[0] + params[1]) / 2,
         sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
         sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
         sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
@@ -42,6 +43,9 @@ def replace_random_var_with_mean(
         sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
         sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
         sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
+        sympy.stats.crv_types.PowerFunctionDistribution: (
+            lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
+        ),
     }
 
     # Identify random symbols and replace each by its expectation
