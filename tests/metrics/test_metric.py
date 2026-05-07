@@ -21,6 +21,7 @@ from empulse.metrics import (
     mpc,
 )
 from empulse.metrics._loss import cy_boost_grad_hess, cy_logit_loss_gradient
+from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import ComplexRootsError
 
 METRIC_STRATEGIES = [
     Cost(),
@@ -739,28 +740,22 @@ def test_max_profit_alpha_schedule_validation():
         MaxProfit(alpha=2.0, alpha_max=1.0)
 
 
-# TODO: change this to only a single stochastic variable or deterministic
-@pytest.mark.parametrize('kind', [MaxProfit()])
-def test_objective_logit_unsupported(kind):
-    alpha, beta = sympy.symbols('alpha beta')
+def test_max_profit_complex_roots(y_true_and_prediction):
+    y_true, y_proba = y_true_and_prediction
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = sympy.stats.Beta('gamma', alpha, beta)
-    metric = Metric(CostMatrix().add_tp_benefit(gamma), kind)
-    with pytest.raises(NotImplementedError, match=r'only supported for deterministic MaxProfit metrics'):
-        metric._logit_objective(
-            np.array([1]), np.array([1]), C=1.0, l1_ratio=1.0, soft_threshold=False, fit_intercept=True
-        )
 
+    cost_matrix = (
+        CostMatrix()
+        .add_tp_benefit(gamma**3 + gamma**2 * (clv - d - f))
+        .add_fp_cost(d + f)
+        .set_default(clv=100, d=10, f=1)
+    )
 
-@pytest.mark.parametrize('kind', [MaxProfit()])
-def test_objective_boost_unsupported(kind):
-    alpha, beta = sympy.symbols('alpha beta')
-    gamma = sympy.stats.Beta('gamma', alpha, beta)
-    metric = Metric(CostMatrix().add_tp_benefit(gamma), kind)
-    with pytest.raises(
-        NotImplementedError,
-        match=r'only supported for deterministic MaxProfit metrics',
-    ):
-        metric._gradient_boost_objective(np.array([1]), np.array([1]))
+    loss_exact = Metric(cost_matrix, MaxProfit())
+
+    with pytest.raises(ComplexRootsError):
+        loss_exact(y_true, y_proba, alpha=6, beta=14)
 
 
 def test_objective_boost_max_profit_deterministic_linear():
