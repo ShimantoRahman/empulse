@@ -104,7 +104,8 @@ def expected_failed_checks(estimator):
         | CSBaggingClassifier
         | CSLogitClassifier
         | RobustCSClassifier
-        | ProfTreeClassifier,
+        | ProfTreeClassifier
+        | ProfLogitClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
