@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, ClassVar, Literal, Self
 
@@ -18,7 +19,12 @@ from .deterministic import (
 )
 from .gradient_piecewise import MaxProfitBoostGradientPiecewise, MaxProfitLogitGradientPiecewise
 from .monte_carlo import MaxProfitScoreMonteCarlo
-from .piecewise import BasePositiveDistribution, _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
+from .piecewise import (
+    BasePositiveDistribution,
+    ComplexRootsError,
+    _build_max_profit_rate_piecewise,
+    _build_max_profit_score_piecewise,
+)
 from .quadrature import MaxProfitScoreQuad
 from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
 
@@ -340,7 +346,8 @@ class MaxProfit(MetricStrategy):
         Uses the Envelope Theorem combined with a smooth sigmoid approximation of the ROC curve to derive
         an analytically differentiable proxy for the Expected Maximum Profit.
 
-        Only supported for deterministic (non-stochastic) metrics.
+        Only supported for deterministic metrics
+        or metrics with one stochastic variable following a distribution with positive support.
 
         Parameters
         ----------
@@ -686,8 +693,19 @@ def _build_max_profit_stochastic(
     n_random = len(random_symbols)
     if integration_method == 'auto':
         if n_random == 1 and is_polynomial_in(profit_function, random_symbols[0]):
-            return _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols)
-        elif n_random <= 2:
+            try:
+                return _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols)
+            except ComplexRootsError:
+                warnings.warn(
+                    'The profit function polynomial has complex roots for the stochastic variable, '
+                    'making piecewise integration inapplicable. '
+                    'Falling back to numerical quadrature. To suppress this warning, pass '
+                    "integration_method='quad' explicitly to MaxProfit().",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                return MaxProfitScoreQuad(profit_function, None, random_symbols, deterministic_symbols)
+        if n_random <= 2:
             return MaxProfitScoreQuad(profit_function, None, random_symbols, deterministic_symbols)
         elif _support_all_distributions(random_symbols):
             return MaxProfitScoreQuasiMonteCarlo(

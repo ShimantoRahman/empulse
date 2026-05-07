@@ -22,6 +22,17 @@ from ...common import (
 from .common import _convex_hull, extract_distribution_parameters
 
 
+class ComplexRootsError(ValueError):
+    """
+    Raised when the piecewise integration method encounters complex-valued roots.
+
+    This occurs when the bound equation derived from setting two adjacent profit
+    functions equal has no real solution, which means the piecewise integration
+    method cannot be applied.  Use ``integration_method='quad'`` for the
+    :class:`~empulse.metrics.MaxProfit` instance instead.
+    """
+
+
 def _build_max_profit_score_piecewise(
     profit_function: sympy.Expr,
     random_symbol: sympy.Symbol,
@@ -213,8 +224,40 @@ def compute_piecewise_bounds(
         tprs_arr = np.array([], dtype=float)
         fprs_arr = np.array([], dtype=float)
 
+    # --- Complex-root guards ---
+    # Guard 1: lambdified I → numpy complex (e.g. 1j * ...).
+    if np.iscomplexobj(bounds_arr) and np.any(np.iscomplex(bounds_arr)):
+        raise ComplexRootsError(
+            'The piecewise integration found complex-valued bounds for the current parameter values, '
+            'indicating that the profit function polynomial has complex roots. '
+            "Use integration_method='quad' for MaxProfit() to avoid this issue."
+        )
+    # Guard 2: sqrt(negative) → nan in numpy.
+    # NaN bounds on *non-degenerate* hull segments (where both TPR **and** FPR change between
+    # adjacent hull vertices) indicate that the bound equation has complex roots for those
+    # parameter values.  Degenerate segments (only TPR or only FPR changes) trivially reduce
+    # to 0 or ±∞ and are handled correctly.
+    # We flag the issue the first time ANY non-degenerate segment yields a NaN bound so the
+    # user gets a clear error rather than a silently-wrong result.
+    nondegenerate_mask = np.concatenate([((F_0 != F_2) & (F_1 != F_3)) for _ in compute_bounds_fns])
+    n_raw_bounds = len(bounds_arr)
     valid_mask = ~np.isnan(bounds_arr)
+    if n_raw_bounds > 0 and nondegenerate_mask.any():
+        nan_on_nondegenerate = ~valid_mask & nondegenerate_mask
+        if nan_on_nondegenerate.any():
+            raise ComplexRootsError(
+                'Some piecewise integration bounds evaluated to NaN on non-degenerate ROC-hull '
+                'segments, indicating the profit function polynomial has complex roots for these '
+                'parameter values. '
+                "Use integration_method='quad' for MaxProfit() to avoid this issue."
+            )
     bounds_arr = bounds_arr[valid_mask]
+    if n_raw_bounds > 0 and len(bounds_arr) == 0:
+        raise ComplexRootsError(
+            'All piecewise integration bounds evaluated to NaN for the current parameter values, '
+            'indicating the profit function polynomial has complex roots for this ROC hull. '
+            "Use integration_method='quad' for MaxProfit() to avoid this issue."
+        )
     tprs_arr = tprs_arr[valid_mask]
     fprs_arr = fprs_arr[valid_mask]
 
@@ -470,7 +513,14 @@ class MaxProfitScorePiecewise:
             sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
         )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
+        root = solve(profit_function - profit_prime, random_symbol)[0]
+        if root.has(sympy.I):
+            raise ComplexRootsError(
+                'The piecewise integration method requires real-valued roots, but the bound equation '
+                'for this profit function has complex roots. '
+                "Use integration_method='quad' for MaxProfit() to avoid this issue."
+            )
+        self.compute_bounds_eq = root
         self.compute_bounds = _safe_lambdify(self.compute_bounds_eq, list(self.compute_bounds_eq.free_symbols))
 
         self.random_var_bounds = pspace(random_symbol).domain.set.args
@@ -545,10 +595,19 @@ class BaseMaxProfitScorePiecewise:
 
         self.compute_bounds_eqs = []
         self.compute_bounds_fns = []
+        complex_roots = []
         for root in solve(profit_function - profit_prime, random_symbol):
-            # if not root.has(sympy.I):
-            self.compute_bounds_eqs.append(root)
-            self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
+            if root.has(sympy.I):
+                complex_roots.append(root)
+            else:
+                self.compute_bounds_eqs.append(root)
+                self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
+        if complex_roots and not self.compute_bounds_eqs:
+            raise ComplexRootsError(
+                'The piecewise integration method requires real-valued roots, but all roots of the '
+                'bound equation for this profit function are complex. '
+                "Use integration_method='quad' for MaxProfit() to avoid this issue."
+            )
         if not self.compute_bounds_eqs:
             raise ValueError('No real roots found for the equation. Please check the profit function.')
 
@@ -681,7 +740,9 @@ class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
 
 def _safe_pow_phi(x: np.ndarray, exp: int, phi: float) -> np.ndarray:
     """Compute x^exp * phi(x), treating inf^exp * 0 as 0."""
-    result = (x**exp) * phi
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', RuntimeWarning)
+        result = (x**exp) * phi
     # Where phi is 0 (i.e., x is ±inf), the product should be 0, not NaN
     result[phi == 0] = 0.0
     return result
