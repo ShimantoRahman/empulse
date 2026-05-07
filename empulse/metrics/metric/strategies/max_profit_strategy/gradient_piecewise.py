@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import sympy
 from scipy.special import expit
@@ -95,7 +97,7 @@ class MaxProfitLogitGradientPiecewise:
 
         for k in range(len(self.score_function.coefficient_eqs)):
             # Helper to parse required arguments once
-            def _get_reqs(eq):
+            def _get_reqs(eq: sympy.Expr) -> tuple[dict[str, Any], bool, bool, bool, bool]:
                 reqs = {str(s) for s in eq.free_symbols}
                 static_kws = {key: val for key, val in self.kwargs.items() if key in reqs}
                 return static_kws, 'pi_0' in reqs, 'pi_1' in reqs, 'F_0' in reqs, 'F_1' in reqs
@@ -112,7 +114,7 @@ class MaxProfitLogitGradientPiecewise:
             alpha = self.alpha_max
         return float(min(self.alpha_max, alpha))
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the objective evaluation."""
         self._epoch = 0
 
@@ -339,7 +341,7 @@ class MaxProfitBoostGradientPiecewise:
         self.da1_reqs = []
         for k in range(len(self.score_function.coefficient_eqs)):
 
-            def _get_reqs(eq):
+            def _get_reqs(eq: sympy.Expr) -> tuple[dict[str, Any], bool, bool, bool, bool]:
                 reqs = {str(s) for s in eq.free_symbols}
                 static_kws = {key: val for key, val in self.kwargs.items() if key in reqs}
                 return static_kws, 'pi_0' in reqs, 'pi_1' in reqs, 'F_0' in reqs, 'F_1' in reqs

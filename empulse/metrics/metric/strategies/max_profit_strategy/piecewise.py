@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from itertools import pairwise
 from typing import Any
 
@@ -177,7 +177,7 @@ def compute_integral_quad(
 
 
 def compute_piecewise_bounds(
-    compute_bounds_fns: list[Callable[..., float]],
+    compute_bounds_fns: Sequence[Callable[..., float]],
     true_positive_rates: FloatNDArray,
     false_positive_rates: FloatNDArray,
     positive_class_prior: float,
@@ -405,7 +405,7 @@ class ExactMaxProfitRatePiecewise:
         random_symbol: sympy.Symbol,
         deterministic_symbols: Iterable[sympy.Symbol],
         cdf_function: st.rv_continuous,
-        sympy_to_scipy_params_fn: Callable[[float, ...], dict[str, float]],
+        sympy_to_scipy_params_fn: Callable[..., dict[str, float]],
     ) -> None:
         self.cdf_function = cdf_function
         self.sympy_to_scipy_params_fn = sympy_to_scipy_params_fn
@@ -738,13 +738,13 @@ class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
         return float(total_score)
 
 
-def _safe_pow_phi(x: np.ndarray, exp: int, phi: float) -> np.ndarray:
+def _safe_pow_phi(x: np.ndarray, exp: int, phi: float | np.ndarray) -> np.ndarray:
     """Compute x^exp * phi(x), treating inf^exp * 0 as 0."""
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', RuntimeWarning)
         result = (x**exp) * phi
     # Where phi is 0 (i.e., x is ±inf), the product should be 0, not NaN
-    result[phi == 0] = 0.0
+    result[np.asarray(phi) == 0] = 0.0
     return result
 
 
@@ -815,8 +815,8 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
     def _integrate(
         self,
         bounds: list[float],
-        coefficients: list[float],
-        distribution_parameters: dict,
+        coefficients: list[FloatNDArray],
+        distribution_parameters: dict[str, Any],
         upper_bound: float,
         lower_bound: float,
     ) -> float:
@@ -832,7 +832,9 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
 
         return float(total_score)
 
-    def _get_kth_integration_components(self, bounds: list[float], k: int, distribution_parameters: dict) -> tuple:
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         """Return (kth_moment, shifted_cdf_k_diff) for a specific degree k."""
         raise NotImplementedError('Subclasses must implement `_get_kth_integration_components`.')
 
@@ -840,7 +842,9 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
 class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
     """Compute the maximum profit for a single gamma distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         alpha = float(dist_params_list[0])
         lambda_rate = float(dist_params_list[1])
@@ -854,7 +858,9 @@ class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
 class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
     """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         x_m = float(dist_params_list[0])  # Scale
         alpha = float(dist_params_list[1])  # Shape
@@ -953,7 +959,9 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
 class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
     """Compute the maximum profit for a single exponential distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         lambda_rate = float(dist_params_list[0])
         scale = 1.0 / lambda_rate
@@ -973,7 +981,9 @@ class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
 class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
     """Compute the maximum profit for a single chi-squared distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         df = float(dist_params_list[0])
 
@@ -988,7 +998,9 @@ class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
 class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
     """Compute the maximum profit for a single log normal distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         mu = float(dist_params_list[0])
         sigma = float(dist_params_list[1])
@@ -1005,7 +1017,9 @@ class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
 class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
     """Compute the maximum profit for a single beta distributed variable using piecewise integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         alpha = float(dist_params_list[0])
         beta = float(dist_params_list[1])
@@ -1026,7 +1040,9 @@ class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
 class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
     """Compute the maximum profit for a single weibull distributed variable using piecewise polynomial integration."""
 
-    def _get_kth_integration_components(self, bounds, k, distribution_parameters):
+    def _get_kth_integration_components(
+        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
+    ) -> tuple[Any, np.ndarray]:
         dist_params_list = list(distribution_parameters.values())
         lambda_scale = float(dist_params_list[0])
         k_shape = float(dist_params_list[1])

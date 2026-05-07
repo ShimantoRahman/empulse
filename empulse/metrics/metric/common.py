@@ -109,6 +109,8 @@ def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | fl
 class PicklableLambda:
     """A callable wrapper that securely pickles lambdified Sympy functions."""
 
+    func: Callable[..., Any]
+
     def __init__(self, expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None):
         self.expression = expression
         self.variables = variables
@@ -120,7 +122,7 @@ class PicklableLambda:
             self.func = lambda *args, **kwargs: val
         else:
             variables = list(self.expression.free_symbols) if self.variables is None else self.variables
-            self.func = sympy.lambdify(variables, self.expression)
+            self.func = sympy.lambdify(variables, self.expression)  # type: ignore[assignment]
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D102
         return self.func(*args, **kwargs)

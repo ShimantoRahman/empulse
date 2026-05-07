@@ -534,7 +534,9 @@ class CatBoostObjective:
             gradient_const = self.gradient_const[weights]  # type: ignore[index]
             gradient, hessian = cy_boost_grad_hess(targets, predictions, gradient_const)
         # convert from two arrays to one list of tuples
-        return list(zip(-gradient, -hessian, strict=False))
+        gradient_f = np.asarray(gradient, dtype=np.float32)
+        hessian_f = np.asarray(hessian, dtype=np.float32)
+        return list(zip(-gradient_f, -hessian_f, strict=False))
 
 
 class CatBoostMetric:
