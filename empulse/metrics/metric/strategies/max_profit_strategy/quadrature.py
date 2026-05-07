@@ -45,6 +45,7 @@ def compute_integral_multiple_quad(
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', IntegrationWarning)
+        warnings.simplefilter('ignore', RuntimeWarning)
         if n_random == 1:
             result, _ = quad(integrand_fn, *bounds)  # type: ignore[call-overload]
         elif n_random == 2:

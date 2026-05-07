@@ -7,7 +7,7 @@ import numpy as np
 import scipy.special as sp
 import scipy.stats as st
 import sympy
-from scipy.integrate import quad
+from scipy.integrate import IntegrationWarning, quad
 from sympy import solve
 from sympy.stats import density, pspace
 
@@ -171,7 +171,10 @@ def compute_integral_quad(
             return 0
         return float(integrand * (upper_bound - lower_bound))
     integrand_fn = _safe_lambdify(integrand, [random_var])
-    result, _ = quad(integrand_fn, lower_bound, upper_bound)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', IntegrationWarning)
+        warnings.simplefilter('ignore', RuntimeWarning)
+        result, _ = quad(integrand_fn, lower_bound, upper_bound)
     result: float
     return result
 
