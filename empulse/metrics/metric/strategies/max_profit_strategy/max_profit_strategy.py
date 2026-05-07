@@ -16,7 +16,7 @@ from .deterministic import (
     MaxProfitRateDeterministic,
     MaxProfitScoreDeterministic,
 )
-from .gradient_piecewise import MaxProfitLogitGradientPiecewise
+from .gradient_piecewise import MaxProfitBoostGradientPiecewise, MaxProfitLogitGradientPiecewise
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import BasePositiveDistribution, _build_max_profit_rate_piecewise, _build_max_profit_score_piecewise
 from .quadrature import MaxProfitScoreQuad
@@ -432,10 +432,9 @@ class MaxProfit(MetricStrategy):
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:
         """
-        Compute gradient and hessian for boosting with deterministic linear MaxProfit.
+        Compute gradient and hessian for boosting with MaxProfit.
 
-        Currently supports deterministic metrics only and requires the profit expression
-        to be linear in ROC rates ``F_0`` and ``F_1``.
+        Automatically handles deterministic and stochastic piecewise integrals.
         """
         alpha = self._current_boost_alpha()
         self._boost_epoch += 1
@@ -444,11 +443,40 @@ class MaxProfit(MetricStrategy):
         agg_params = _aggregate_instance_parameters(dict(parameters))
         param_signature = tuple(sorted((k, float(v)) for k, v in agg_params.items()))
         signature = (y_true_arr.shape, param_signature)
+
+        # Build the objective once and cache it based on the signature
         if self._boost_objective is None or self._boost_signature != signature:
-            self._boost_objective = self._prepare_boost_deterministic_objective(y_true_arr, **parameters)
+            # Route: Deterministic Linear EMP
+            if isinstance(self._score_function, MaxProfitScoreDeterministic):
+                self._boost_objective = self._prepare_boost_deterministic_objective(y_true_arr, **agg_params)
+
+            # Route: Stochastic Piecewise EMP
+            elif isinstance(self._score_function, BasePositiveDistribution):
+                self._boost_objective = self._prepare_boost_piecewise_objective(y_true_arr, **agg_params)
+
+            else:
+                raise NotImplementedError(
+                    'gradient_boost_objective is currently only supported for Deterministic '
+                    'and BasePositiveDistribution stochastic metrics.'
+                )
+
             self._boost_signature = signature
 
+        # Evaluate and return gradient and hessian for GBDT
         return self._boost_objective(np.asarray(y_score), alpha)
+
+    def _prepare_boost_piecewise_objective(
+        self, y_true: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> MaxProfitBoostGradientPiecewise:
+
+        _check_parameters(self._score_function.deterministic_symbols, parameters)
+        agg_params = _aggregate_instance_parameters(dict(parameters))
+
+        return MaxProfitBoostGradientPiecewise(
+            score_function=self._score_function,
+            y_true=y_true,
+            parameters=agg_params,
+        )
 
     def to_latex(
         self,
