@@ -1,9 +1,10 @@
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import Any
 
 import numpy as np
 import sympy
-from scipy.integrate import dblquad, nquad, quad, tplquad
+from scipy.integrate import IntegrationWarning, dblquad, nquad, quad, tplquad
 from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
@@ -42,14 +43,16 @@ def compute_integral_multiple_quad(
             best_index = np.argmax([integrand(*reversed(random_vars)) for integrand in profit_integrands])
             return float(rate_integrands[best_index](*reversed(random_vars)))
 
-    if n_random == 1:
-        result, _ = quad(integrand_fn, *bounds)  # type: ignore[call-overload]
-    elif n_random == 2:
-        result, _ = dblquad(integrand_fn, *bounds)  # type: ignore[call-overload]
-    elif n_random == 3:
-        result, _ = tplquad(integrand_fn, *bounds)  # type: ignore[call-overload]
-    else:
-        result, _ = nquad(integrand_fn, *bounds)  # type: ignore[call-overload]
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', IntegrationWarning)
+        if n_random == 1:
+            result, _ = quad(integrand_fn, *bounds)  # type: ignore[call-overload]
+        elif n_random == 2:
+            result, _ = dblquad(integrand_fn, *bounds)  # type: ignore[call-overload]
+        elif n_random == 3:
+            result, _ = tplquad(integrand_fn, *bounds)  # type: ignore[call-overload]
+        else:
+            result, _ = nquad(integrand_fn, *bounds)  # type: ignore[call-overload]
     return float(result)
 
 
