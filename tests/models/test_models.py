@@ -94,6 +94,7 @@ def expected_failed_checks(estimator):
             'Tested internally.',
             'check_fit_idempotent': 'Sklearn does not set random_state properly in the test. Tested internally.',
             'check_supervised_y_2d': 'Sklearn does not set random_state properly in the test. Tested internally.',
+            'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.',
         }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
@@ -104,8 +105,7 @@ def expected_failed_checks(estimator):
         | CSBaggingClassifier
         | CSLogitClassifier
         | RobustCSClassifier
-        | ProfTreeClassifier
-        | ProfLogitClassifier,
+        | ProfTreeClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
