@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import partial
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, Literal, Self
 
 import numpy as np
 import sympy
@@ -13,7 +13,6 @@ from ..common import (
     LogitConsts,
     MetricFn,
     RateFn,
-    SympyFnPickleMixin,
     ThresholdFn,
     _check_parameters,
     _safe_lambdify,
@@ -311,10 +310,8 @@ class Savings(MetricStrategy):
         return _savings_score_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
 
-class SavingsScore(SympyFnPickleMixin):
+class SavingsScore:
     """Class to compute the metric for binary classification."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'cost_function': 'cost_equation'}
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         self.cost_equation = _build_cost_equation(

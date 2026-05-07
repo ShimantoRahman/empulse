@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Callable, Iterable
 from itertools import pairwise
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 import scipy.special as sp
@@ -15,7 +15,6 @@ from ....._types import FloatNDArray, IntNDArray
 from ...common import (
     MetricFn,
     RateFn,
-    SympyFnPickleMixin,
     _check_parameters,
     _safe_lambdify,
     _safe_run_lambda,
@@ -273,7 +272,7 @@ def compute_piecewise_bounds(
     return bounds_list, upper_bound, lower_bound, tprs_list, fprs_list
 
 
-class MaxProfitRatePiecewise(SympyFnPickleMixin):
+class MaxProfitRatePiecewise:
     """
     Compute the maximum profit rate for a single stochastic variable using piecewise integration.
 
@@ -281,8 +280,6 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
     in which that decision threshold is optimal.
     For each segment, the profit is integrated over the bounds of the random variable.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'compute_bounds': 'compute_bounds_eq'}
 
     def __init__(
         self,
@@ -349,7 +346,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
         return score
 
 
-class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
+class ExactMaxProfitRatePiecewise:
     """
     Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -357,8 +354,6 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
     in which that decision threshold is optimal.
     For each segment, the profit is integrated over the bounds of the random variable.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'compute_bounds': 'compute_bounds_eq'}
 
     def __init__(
         self,
@@ -457,7 +452,7 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         return float(optimal_rate)
 
 
-class MaxProfitScorePiecewise(SympyFnPickleMixin):
+class MaxProfitScorePiecewise:
     """
     Compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -465,8 +460,6 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
     in which that decision threshold is optimal.
     For each segment, the profit is integrated over the bounds of the random variable.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'compute_bounds': 'compute_bounds_eq'}
 
     def __init__(
         self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
@@ -530,7 +523,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
         return score
 
 
-class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
+class BaseMaxProfitScorePiecewise:
     """
     Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -538,8 +531,6 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
     in which that decision threshold is optimal.
     For each segment, the profit is integrated over the bounds of the random variable.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'compute_bounds': 'compute_bounds_eq'}
 
     def __init__(
         self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]

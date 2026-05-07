@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 import scipy
@@ -9,7 +9,7 @@ from sympy.stats import pspace
 from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import SympyFnPickleMixin, _check_parameters
+from ...common import _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
 
 FrozenScipyDist = (
@@ -79,15 +79,13 @@ _sympy_dist_to_scipy_params: dict[
 }
 
 
-class MaxProfitScoreQuasiMonteCarlo(SympyFnPickleMixin):
+class MaxProfitScoreQuasiMonteCarlo:
     """
     Compute the maximum profit for one or more stochastic variables using Quasi Monte Carlo (QMC) integration.
 
     This method is less accurate than quad integration but faster for many stochastic variables.
     The QMC method is preferred over the MC due to better accuracy.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,

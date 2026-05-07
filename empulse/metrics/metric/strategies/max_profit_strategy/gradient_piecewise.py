@@ -3,15 +3,12 @@ import sympy
 from scipy.special import expit
 
 from ....._types import FloatNDArray
-from ...common import (
-    SympyFnPickleMixin,
-    _safe_lambdify,
-)
+from ...common import _safe_lambdify
 from .common import _convex_hull, extract_distribution_parameters
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
 
-class MaxProfitLogitGradientPiecewise(SympyFnPickleMixin):
+class MaxProfitLogitGradientPiecewise:
     """Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models."""
 
     def __init__(
@@ -279,7 +276,7 @@ class MaxProfitLogitGradientPiecewise(SympyFnPickleMixin):
         return value, gradient
 
 
-class MaxProfitBoostGradientPiecewise(SympyFnPickleMixin):
+class MaxProfitBoostGradientPiecewise:
     """Prepared piecewise objective for MaxProfit stochastic gradient boosting."""
 
     def __init__(

@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 import sympy
@@ -7,11 +7,11 @@ from sympy.stats import pspace
 from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import SympyFnPickleMixin, _check_parameters
+from ...common import _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
 
 
-class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
+class MaxProfitScoreMonteCarlo:
     """
     Compute the maximum profit for one or more stochastic variables using Monte Carlo (MC) integration.
 
@@ -19,8 +19,6 @@ class MaxProfitScoreMonteCarlo(SympyFnPickleMixin):
     The QMC method is preferred over the MC due to better accuracy.
     This method should only be used if there is no mapping of sympy distributions to scipy distributions.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,

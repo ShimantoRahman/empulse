@@ -45,31 +45,6 @@ class RateFn(Protocol):  # noqa: D101
     ) -> float: ...
 
 
-class SympyFnPickleMixin:
-    """
-    Class to allow pickling of classes which use lambdified functions.
-
-    Lambdified are deleted before pickling and restored after unpickling.
-    Define a class attribute in subclasses: _sympy_functions = {'func_name': 'equation_attr_name'}.
-    """
-
-    # def __getstate__(self) -> dict[str, Any]:
-    #     state = self.__dict__.copy()
-    #     for func_name in getattr(self, '_sympy_functions', {}):
-    #         if func_name in state:
-    #             del state[func_name]
-    #     return state
-    #
-    # def __setstate__(self, state: dict[str, Any]) -> None:
-    #     self.__dict__.update(state)
-    #     for func_name, eqn_attr in getattr(self, '_sympy_functions', {}).items():
-    #         equation = getattr(self, eqn_attr)
-    #         if sympy.simplify(equation).is_Number and not equation.free_symbols:
-    #             setattr(self, func_name, lambda *args, **kwargs: float(equation))
-    #         else:
-    #             setattr(self, func_name, sympy.lambdify(list(equation.free_symbols), equation))
-
-
 def _check_parameters(symbols: Iterable[str | sympy.Expr], kwargs: dict[str, Any]) -> None:
     """
     Check if all parameters are provided.

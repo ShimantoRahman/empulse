@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 import sympy
@@ -7,7 +7,7 @@ from scipy.special import expit
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ...common import SympyFnPickleMixin, _check_parameters, _safe_lambdify, _safe_run_lambda
+from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
 from .common import _convex_hull
 
 
@@ -30,10 +30,8 @@ def _calculate_profits_deterministic(
     return profits, tprs, fprs, pi0, pi1
 
 
-class MaxProfitScoreDeterministic(SympyFnPickleMixin):
+class MaxProfitScoreDeterministic:
     """Compute the maximum profit for all deterministic variables."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'calculate_profit': 'profit_function'}
 
     def __init__(self, profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]) -> None:
         self.profit_function = profit_function
@@ -63,10 +61,8 @@ def _calculate_optimal_rate_deterministic(
     return float(tprs[best_index] * pi0 + fprs[best_index] * pi1)
 
 
-class MaxProfitRateDeterministic(SympyFnPickleMixin):
+class MaxProfitRateDeterministic:
     """Compute the maximum profit for all deterministic variables."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'calculate_profit': 'profit_function'}
 
     def __init__(self, profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]) -> None:
         self.profit_function = profit_function
@@ -81,10 +77,8 @@ class MaxProfitRateDeterministic(SympyFnPickleMixin):
         )
 
 
-class MaxProfitBoostGradientDeterministic(SympyFnPickleMixin):
+class MaxProfitBoostGradientDeterministic:
     """Prepared deterministic objective for MaxProfit gradient boosting."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'calculate_profit': 'profit_function'}
 
     def __init__(
         self,
@@ -141,10 +135,8 @@ class MaxProfitBoostGradientDeterministic(SympyFnPickleMixin):
 
 
 # TODO: RESET NECESSARY FOR EPOCH
-class MaxProfitLogitGradientDeterministic(SympyFnPickleMixin):
+class MaxProfitLogitGradientDeterministic:
     """Picklable objective for deterministic MaxProfit optimized with logistic models."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'calculate_profit': 'profit_function'}
 
     def __init__(
         self,
