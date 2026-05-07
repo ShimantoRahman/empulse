@@ -53,21 +53,21 @@ class SympyFnPickleMixin:
     Define a class attribute in subclasses: _sympy_functions = {'func_name': 'equation_attr_name'}.
     """
 
-    def __getstate__(self) -> dict[str, Any]:
-        state = self.__dict__.copy()
-        for func_name in getattr(self, '_sympy_functions', {}):
-            if func_name in state:
-                del state[func_name]
-        return state
-
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        self.__dict__.update(state)
-        for func_name, eqn_attr in getattr(self, '_sympy_functions', {}).items():
-            equation = getattr(self, eqn_attr)
-            if sympy.simplify(equation).is_Number and not equation.free_symbols:
-                setattr(self, func_name, lambda *args, **kwargs: float(equation))  # noqa: B023
-            else:
-                setattr(self, func_name, sympy.lambdify(list(equation.free_symbols), equation))
+    # def __getstate__(self) -> dict[str, Any]:
+    #     state = self.__dict__.copy()
+    #     for func_name in getattr(self, '_sympy_functions', {}):
+    #         if func_name in state:
+    #             del state[func_name]
+    #     return state
+    #
+    # def __setstate__(self, state: dict[str, Any]) -> None:
+    #     self.__dict__.update(state)
+    #     for func_name, eqn_attr in getattr(self, '_sympy_functions', {}).items():
+    #         equation = getattr(self, eqn_attr)
+    #         if sympy.simplify(equation).is_Number and not equation.free_symbols:
+    #             setattr(self, func_name, lambda *args, **kwargs: float(equation))
+    #         else:
+    #             setattr(self, func_name, sympy.lambdify(list(equation.free_symbols), equation))
 
 
 def _check_parameters(symbols: Iterable[str | sympy.Expr], kwargs: dict[str, Any]) -> None:
@@ -131,33 +131,39 @@ def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | fl
     return result
 
 
-def _safe_lambdify(
-    expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None
-) -> Callable[..., FloatNDArray | float]:
-    """
-    Safely lambdify a sympy expression.
+class PicklableLambda:
+    """A callable wrapper that securely pickles lambdified Sympy functions."""
 
-    If the expression is a constant, return a function that returns the constant value.
+    def __init__(self, expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None):
+        self.expression = expression
+        self.variables = variables
+        self._compile()
 
-    Parameters
-    ----------
-    expression : sympy.Expr
-        The sympy expression to convert.
-    variables : Iterable[sympy.Symbol], optional
-        The variables to use in the lambdified function.
-        If None, all free symbols in the expression will be used.
+    def _compile(self) -> None:
+        if not self.expression.free_symbols:
+            val = float(self.expression.evalf())
+            self.func = lambda *args, **kwargs: val
+        else:
+            variables = list(self.expression.free_symbols) if self.variables is None else self.variables
+            self.func = sympy.lambdify(variables, self.expression)
 
-    Returns
-    -------
-    function : callable
-        A numpy function that computes the value of the expression.
-    """
-    if sympy.simplify(expression).is_Number and not expression.free_symbols:
-        return lambda *args, **kwargs: float(expression)
-    if variables is None:
-        variables = list(expression.free_symbols)
-    function: Callable[..., float | FloatNDArray] = sympy.lambdify(variables, expression)
-    return function
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D102
+        return self.func(*args, **kwargs)
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state.pop('func', None)
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self._compile()
+
+
+# 3. Your Factory Function (What your classes actually use)
+def _safe_lambdify(expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None) -> PicklableLambda:
+    """Safely lambdify a sympy expression and return a picklable callable."""
+    return PicklableLambda(expression, variables)
 
 
 def _safe_run_lambda(

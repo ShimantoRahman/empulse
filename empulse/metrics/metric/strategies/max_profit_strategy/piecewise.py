@@ -10,7 +10,6 @@ import sympy
 from scipy.integrate import quad
 from sympy import solve
 from sympy.stats import density, pspace
-from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
 from ...common import (
@@ -54,6 +53,46 @@ def _build_max_profit_score_piecewise(
         return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
 
 
+def _uniform_params(a: float, b: float) -> dict[str, float]:
+    return {'loc': a, 'scale': b - a}
+
+
+def _beta_params(a: float, b: float) -> dict[str, float]:
+    return {'a': a, 'b': b}
+
+
+def _normal_params(mu: float, sigma: float) -> dict[str, float]:
+    return {'loc': mu, 'scale': sigma}
+
+
+def _lognormal_params(mu: float, sigma: float) -> dict[str, float]:
+    return {'s': sigma, 'scale': float(np.exp(mu))}
+
+
+def _gamma_params(k: float, theta: float) -> dict[str, float]:
+    return {'a': k, 'scale': theta}
+
+
+def _expon_params(rate: float) -> dict[str, float]:
+    return {'loc': 0.0, 'scale': 1.0 / rate}
+
+
+def _chi2_params(df: float) -> dict[str, float]:
+    return {'df': df}
+
+
+def _weibull_params(a: float, b: float) -> dict[str, float]:
+    return {'c': b, 'scale': a}
+
+
+def _pareto_params(a: float, b: float) -> dict[str, float]:
+    return {'b': b, 'scale': a}
+
+
+def _triangular_params(a: float, b: float, c: float) -> dict[str, float]:
+    return {'loc': a, 'scale': b - a, 'c': (c - a) / (b - a)}
+
+
 def _build_max_profit_rate_piecewise(
     profit_function: sympy.Expr,
     rate_function: sympy.Expr,
@@ -63,83 +102,43 @@ def _build_max_profit_rate_piecewise(
     distribution = pspace(random_symbol).distribution
     if isinstance(distribution, sympy.stats.crv_types.UniformDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.uniform,
-            lambda a, b: {'loc': a, 'scale': b - a},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.uniform, _uniform_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.BetaDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.beta, lambda a, b: {'a': a, 'b': b}
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.beta, _beta_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.NormalDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.norm,
-            lambda a, b: {'loc': a, 'scale': b},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.norm, _normal_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.LogNormalDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.lognorm,
-            lambda mu, sigma: {'s': sigma, 'scale': np.exp(mu)},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.lognorm, _lognormal_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.GammaDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.gamma,
-            lambda k, theta: {'a': k, 'scale': theta},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.gamma, _gamma_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.ExponentialDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.expon,
-            lambda rate: {'loc': 0, 'scale': 1 / rate},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.expon, _expon_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.ChiSquaredDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.chi2, lambda a: {'df': a}
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.chi2, _chi2_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.WeibullDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.weibull_min,
-            lambda a, b: {'c': b, 'scale': a},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.weibull_min, _weibull_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.ParetoDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.pareto,
-            lambda a, b: {'b': b, 'scale': a},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.pareto, _pareto_params
         )
     elif isinstance(distribution, sympy.stats.crv_types.TriangularDistribution):
         return ExactMaxProfitRatePiecewise(
-            profit_function,
-            rate_function,
-            random_symbol,
-            deterministic_symbols,
-            st.triang,
-            lambda a, b, c: {'loc': a, 'scale': b - a, 'c': (c - a) / (b - a)},
+            profit_function, rate_function, random_symbol, deterministic_symbols, st.triang, _triangular_params
         )
     else:
         return MaxProfitRatePiecewise(profit_function, rate_function, random_symbol, deterministic_symbols)
@@ -161,16 +160,8 @@ def compute_integral_quad(
         if integrand == 0:  # need this separate path since sometimes upper or lower bound can be infinite
             return 0
         return float(integrand * (upper_bound - lower_bound))
-    integrand_fn = lambdify(random_var, integrand)
+    integrand_fn = _safe_lambdify(integrand, [random_var])
     result, _ = quad(integrand_fn, lower_bound, upper_bound)
-    # try:
-    #     result, _ = quad(integrand_fn, lower_bound, upper_bound)
-    # except ZeroDivisionError:
-    #     if lower_bound == 0.0:
-    #         lower_bound = np.finfo(float).eps
-    #     elif upper_bound == 0.0:
-    #         upper_bound = np.finfo(float).eps
-    #     result, _ = quad(integrand_fn, lower_bound, upper_bound)
     result: float
     return result
 
@@ -307,7 +298,7 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
         )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
-        self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
+        self.compute_bounds = _safe_lambdify(self.compute_bounds_eq, list(self.compute_bounds_eq.free_symbols))
 
         self.random_var_bounds = pspace(random_symbol).domain.set.args
         self.distribution_args = pspace(random_symbol).distribution.args
@@ -333,12 +324,6 @@ class MaxProfitRatePiecewise(SympyFnPickleMixin):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
         fix_inf = not self.derivative.subs(kwargs).is_negative
-        # if self.derivative.subs(kwargs).is_negative:
-        # true_positive_rates = true_positive_rates[::-1]
-        # false_positive_rates = false_positive_rates[::-1]
-        # fix_inf = False
-        # else:
-        #     fix_inf = True
 
         bounds, _, _, tprs, fprs = compute_piecewise_bounds(
             [self.compute_bounds],
@@ -398,7 +383,7 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         for root in solve(profit_function - profit_prime, random_symbol):
             # if not root.has(sympy.I):
             self.compute_bounds_eqs.append(root)
-            self.compute_bounds_fns.append(lambdify(list(root.free_symbols), root))
+            self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
         if not self.compute_bounds_eqs:
             raise ValueError('No real roots found for the equation. Please check the profit function.')
 
@@ -427,12 +412,6 @@ class ExactMaxProfitRatePiecewise(SympyFnPickleMixin):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
         fix_inf = not self.derivative.subs(kwargs).is_negative
-        # if self.derivative.subs(kwargs).is_negative:
-        #     true_positive_rates = true_positive_rates[::-1]
-        #     false_positive_rates = false_positive_rates[::-1]
-        #     fix_inf = False
-        # else:
-        #     fix_inf = True
 
         # We capture upper and lower bounds as the Uniform distribution needs them
         bounds, _, _, tprs, fprs = compute_piecewise_bounds(
@@ -499,7 +478,7 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
         )
         profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
         self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
-        self.compute_bounds = lambdify(list(self.compute_bounds_eq.free_symbols), self.compute_bounds_eq)
+        self.compute_bounds = _safe_lambdify(self.compute_bounds_eq, list(self.compute_bounds_eq.free_symbols))
 
         self.random_var_bounds = pspace(random_symbol).domain.set.args
         self.distribution_args = pspace(random_symbol).distribution.args
@@ -525,12 +504,6 @@ class MaxProfitScorePiecewise(SympyFnPickleMixin):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
         fix_inf = not self.derivative.subs(kwargs).is_negative
-        # if self.derivative.subs(kwargs).is_negative:
-        #     true_positive_rates = true_positive_rates[::-1]
-        #     false_positive_rates = false_positive_rates[::-1]
-        #     fix_inf = False
-        # else:
-        #     fix_inf = True
 
         bounds, _, _, tprs, fprs = compute_piecewise_bounds(
             [self.compute_bounds],
@@ -584,7 +557,7 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
         for root in solve(profit_function - profit_prime, random_symbol):
             # if not root.has(sympy.I):
             self.compute_bounds_eqs.append(root)
-            self.compute_bounds_fns.append(lambdify(list(root.free_symbols), root))
+            self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
         if not self.compute_bounds_eqs:
             raise ValueError('No real roots found for the equation. Please check the profit function.')
 
@@ -625,13 +598,6 @@ class BaseMaxProfitScorePiecewise(SympyFnPickleMixin):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
         fix_inf = not self.derivative.subs(kwargs).is_negative
-        # fix_inf = True
-        # if self.derivative.subs(kwargs).is_negative:
-        #     true_positive_rates = true_positive_rates[::-1]
-        #     false_positive_rates = false_positive_rates[::-1]
-        #     fix_inf = False
-        # else:
-        #     fix_inf = True
 
         bounds, upper_bound, lower_bound, tprs, fprs = compute_piecewise_bounds(
             # bounds, upper_bound, lower_bound = compute_piecewise_bounds(
