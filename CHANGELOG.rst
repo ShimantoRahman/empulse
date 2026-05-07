@@ -7,11 +7,16 @@
 - |Feature| Allow :class:`~empulse.models.CSThresholdClassifier` to optimize the decision threshold at training time.
   Users can now either specify the decision threshold to use at prediction time or
   let the model choose the optimal threshold during training.
-- |Feature| When using the :class:`~empulse.metrics.MaxProfit` strategy, only one stochastic variable is present,
-  and the cost/profit function is linear in the stochastic variable:
+- |Feature| (Experimental)
+  When using the :class:`~empulse.metrics.MaxProfit` strategy, only one stochastic variable is present,
+  and the cost/profit function is a polynomials of the stochastic variable:
   the metric will now be computed exactly instead of using numerical integration.
   This is currently supported for stochastic variables following
-  the Normal, Uniform, Gamma, and Exponential distributions.
+  the Normal, Log Normal, Uniform, Beta, Gamma, Chi Squared, Exponential, Weibull, Pareto, and Triangular distributions.
+- |Feature| (Experimental) Added support for the MaxProfit strategy metrics to be optimized
+  through gradient descent methods in
+  :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.CSBoostClassifier`.
+  This is currently an experimental feature and is not recommended for use in production.
 - |API| Updated the :class:`~empulse.models.ProfLogitClassifier` interface to be more consistent
   with other models in the package. By default optimizes the maximum profit metric.
 - |API| :class:`~empulse.models.CSLogitClassifier` no longer takes a string argument for the loss function
@@ -32,6 +37,9 @@
 - |Fix| Fix metadata routing not working for scikit-learn>=1.8.0
 - |Fix| Fix :class:`~empulse.metrics.MaxProfit` strategy not calculating Log Normal distributed variables correctly
   when using quasi monte carlo.
+- |Fix| Fix some models not properly being able to be pickled when using a custom metric as the loss function.
+- |Fix| Fix some distributions not correctly computing the expected maximum profit score when using the
+  :class:`~empulse.metrics.MaxProfit` strategy when using monte carlo or quasi monte carlo method.
 
 `0.10.4`_ (20-09-2025)
 ======================
