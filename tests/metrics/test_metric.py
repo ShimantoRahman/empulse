@@ -739,6 +739,7 @@ def test_max_profit_alpha_schedule_validation():
         MaxProfit(alpha=2.0, alpha_max=1.0)
 
 
+# TODO: change this to only a single stochastic variable or deterministic
 @pytest.mark.parametrize('kind', [MaxProfit()])
 def test_objective_logit_unsupported(kind):
     alpha, beta = sympy.symbols('alpha beta')
