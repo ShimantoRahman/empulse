@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import partial
-from typing import Any, ClassVar, Self
+from typing import Any, Self
 
 import numpy as np
 import sympy
@@ -13,7 +13,6 @@ from ..common import (
     LogitConsts,
     MetricFn,
     RateFn,
-    SympyFnPickleMixin,
     ThresholdFn,
     _check_parameters,
     _safe_lambdify,
@@ -347,10 +346,8 @@ class Cost(MetricStrategy):
         return _cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
 
-class CostLoss(SympyFnPickleMixin):
+class CostLoss:
     """Class to compute the metric for binary classification."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'cost_function': 'cost_equation'}
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         self.cost_equation = _build_cost_equation(
@@ -372,14 +369,8 @@ def _build_cost_equation(
     return cost_function
 
 
-class CostLogitConsts(SympyFnPickleMixin):
+class CostLogitConsts:
     """Class to compute the constants of the cost metric for logistic regression."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {
-        'gradient_fn': 'gradient_const',
-        'loss_const1_fn': 'loss_const1',
-        'loss_const2_fn': 'loss_const2',
-    }
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         y, x = sympy.symbols('y x')
@@ -407,10 +398,8 @@ class CostLogitConsts(SympyFnPickleMixin):
         return gradient_const_value, loss_const1_value, loss_const2_value
 
 
-class CostBoostGradientConst(SympyFnPickleMixin):
+class CostBoostGradientConst:
     """Class to compute the gradient constants of the cost metric for gradient boosting."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {'gradient_const_fn': 'gradient_const_eq'}
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         y = sympy.symbols('y')
@@ -426,13 +415,8 @@ class CostBoostGradientConst(SympyFnPickleMixin):
         return gradient_const_value
 
 
-class CostOptimalThreshold(SympyFnPickleMixin):
+class CostOptimalThreshold:
     """Class to compute the optimal threshold for the cost metric."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {
-        'calculate_denominator': 'denominator_expression',
-        'calculate_numerator': 'numerator_expression',
-    }
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         self.denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
@@ -457,13 +441,8 @@ class CostOptimalThreshold(SympyFnPickleMixin):
         return float(optimal) if np.isscalar(optimal) else optimal  # type: ignore[arg-type]
 
 
-class CostOptimalRate(SympyFnPickleMixin):
+class CostOptimalRate:
     """Class to compute the optimal predicted positive rate for the cost metric."""
-
-    _sympy_functions: ClassVar[dict[str, str]] = {
-        'calculate_denominator': 'denominator_expression',
-        'calculate_numerator': 'numerator_expression',
-    }
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         self.denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit

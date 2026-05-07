@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Sequence
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 import sympy
@@ -8,7 +8,7 @@ from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import SympyFnPickleMixin, _check_parameters
+from ...common import _check_parameters
 from .common import _convex_hull, extract_distribution_parameters
 
 
@@ -53,15 +53,13 @@ def compute_integral_multiple_quad(
     return float(result)
 
 
-class MaxProfitScoreQuad(SympyFnPickleMixin):
+class MaxProfitScoreQuad:
     """
     Compute the optimal predicted positive rate for one or more stochastic variables using quad integration.
 
     This method is very slow for more than 2 stochastic variables.
     It is recommended to use Quasi Monte Carlo integration for more than 2 stochastic variables.
     """
-
-    _sympy_functions: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self,
