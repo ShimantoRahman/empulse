@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Literal, Protocol, Self, cast
 
 import numpy as np
 import sympy
@@ -27,6 +27,14 @@ from .piecewise import (
 )
 from .quadrature import MaxProfitScoreQuad
 from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
+
+
+class _ScoreFunction(Protocol):
+    """Score function protocol that exposes deterministic_symbols."""
+
+    deterministic_symbols: Iterable[sympy.Symbol]
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...
 
 
 def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -149,7 +157,7 @@ class MaxProfit(MetricStrategy):
         self.alpha_growth = alpha_growth
         self.alpha_max = alpha_max
         self._boost_epoch = 0
-        self._boost_objective: MaxProfitBoostGradientDeterministic | None = None
+        self._boost_objective: MaxProfitBoostGradientDeterministic | MaxProfitBoostGradientPiecewise | None = None
         self._boost_signature: tuple[tuple[int, ...], tuple[tuple[str, float], ...]] | None = None
         if isinstance(random_state, np.random.Generator):
             self._rng: np.random.Generator = random_state
@@ -480,7 +488,7 @@ class MaxProfit(MetricStrategy):
         agg_params = _aggregate_instance_parameters(dict(parameters))
 
         return MaxProfitBoostGradientPiecewise(
-            score_function=self._score_function,
+            score_function=self._score_function,  # type: ignore[arg-type]
             y_true=y_true,
             parameters=agg_params,
         )
@@ -511,7 +519,7 @@ def _build_max_profit_score(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
-) -> MetricFn:
+) -> _ScoreFunction:
     random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 
@@ -519,7 +527,7 @@ def _build_max_profit_score(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )
     if n_random == 0:
-        max_profit_score: MetricFn = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
+        max_profit_score: _ScoreFunction = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
     else:
         max_profit_score = _build_max_profit_stochastic(
             profit_function,
@@ -688,13 +696,16 @@ def _build_max_profit_stochastic(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
-) -> MetricFn:
+) -> _ScoreFunction:
     """Compute the maximum profit for one or more stochastic variables."""
     n_random = len(random_symbols)
     if integration_method == 'auto':
         if n_random == 1 and is_polynomial_in(profit_function, random_symbols[0]):
             try:
-                return _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols)
+                return cast(
+                    '_ScoreFunction',
+                    _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols),
+                )
             except ComplexRootsError:
                 warnings.warn(
                     'The profit function polynomial has complex roots for the stochastic variable, '
