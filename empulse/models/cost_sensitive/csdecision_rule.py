@@ -15,12 +15,13 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.metaestimators import available_if
-from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
+from sklearn.utils.validation import check_is_fitted, indexable
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import MaxProfit, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
+from ...utils._sklearn_compat import _estimator_has
 from ..csclassifier import CostSensitiveClassifier
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)

@@ -12,12 +12,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils._available_if import available_if
 from sklearn.utils._mask import indices_to_mask
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.validation import _estimator_has, check_is_fitted
+from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric, expected_cost_loss
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
+from ...utils._sklearn_compat import _estimator_has, validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
