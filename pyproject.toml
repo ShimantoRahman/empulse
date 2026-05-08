@@ -212,6 +212,15 @@ convention = "numpy"
     "PLC2701", # Private name import {name} from external module {module}
     "PLC0415", # `import` should be at the top-level of a file
 ]
+"scripts/*" = [
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "E731", # do not assign a `lambda` expression, use a `def`
+    "D", # pydocstyle
+    "T",
+    "S",
+    "INP",
+    "PERF",
+]
 
 [tool.ruff.lint.flake8-annotations]
 ignore-fully-untyped = true  # gradually type-check the codebase

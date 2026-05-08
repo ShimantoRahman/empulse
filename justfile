@@ -76,6 +76,16 @@ tox:
     uvx --with tox-uv tox -e py312-docs
     uvx --with tox-uv tox -f tests
 
+# Update scikit-learn compat tox environments by querying PyPI for latest patch releases
+[group('test')]
+update-sklearn-compat:
+    uv run scripts/update_sklearn_compat.py
+
+# Run all scikit-learn compatibility tox environments (auto-generated, run update-sklearn-compat first)
+[group('test')]
+sklearn-compat:
+    uv run scripts/sklearn_compat_test_runner.py
+
 # Run linter and formatter
 [group('lint')]
 lint:
@@ -125,4 +135,4 @@ verify-version:
 # Run all preflight checks before deployment
 [windows]
 [group('deploy')]
-preflight: verify-version linkcheck tox
+preflight: verify-version linkcheck tox update-sklearn-compat sklearn-compat
