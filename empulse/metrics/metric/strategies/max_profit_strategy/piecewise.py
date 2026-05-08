@@ -175,7 +175,7 @@ def compute_integral_quad(
         warnings.simplefilter('ignore', IntegrationWarning)
         warnings.simplefilter('ignore', RuntimeWarning)
         result, _ = quad(integrand_fn, lower_bound, upper_bound)
-    result: float
+    result: float  # type: ignore[no-redef]
     return result
 
 
