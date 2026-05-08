@@ -1,0 +1,9 @@
+﻿CSForestClassifier
+==================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSForestClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

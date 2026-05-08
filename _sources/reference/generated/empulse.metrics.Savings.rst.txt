@@ -1,0 +1,9 @@
+﻿Savings
+=======
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: Savings
+   :members:
+   :inherited-members:
+   :special-members: __call__
