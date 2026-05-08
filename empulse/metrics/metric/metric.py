@@ -409,10 +409,16 @@ class Metric:
         ----------
         features : NDArray of shape (n_samples, n_features)
             The features of the samples.
-        weights : NDArray of shape (n_features,)
-            The weights of the logistic regression model.
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
+        C : float
+            The inverse of regularization strength for logistic regression.
+        l1_ratio : float
+            The mixing parameter for elastic net regularization in logistic regression.
+        soft_threshold : bool
+            If ``True``, apply soft-thresholding to the regression coefficients.
+        fit_intercept : bool
+            Whether the logistic regression model includes an intercept term.
         parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
