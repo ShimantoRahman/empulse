@@ -18,10 +18,10 @@ jobs:
       fail-fast: true
       matrix:
         env:
+          - "py314-tests"
           - "py313-tests"
           - "py312-tests"
           - "py311-tests"
-          - "py310-tests"
     steps:
       - uses: actions/checkout@v4
         with:
