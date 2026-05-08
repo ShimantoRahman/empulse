@@ -135,9 +135,9 @@ class ProfLogitClassifier(BaseLogitClassifier):
         from empulse.models import ProfLogitClassifier
         from sklearn.datasets import make_classification
 
-        X, y = make_classification()
+        X, y = make_classification(n_features=4)
 
-        model = ProfLogitClassifier(C=0.1, l1_ratio=0.5)
+        model = ProfLogitClassifier(C=0.1, l1_ratio=0.5, optimizer_params={'max_iter': 10})
         model.fit(X, y, tp_cost=-200, fp_cost=10)
 
     References
