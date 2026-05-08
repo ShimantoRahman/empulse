@@ -1,6 +1,11 @@
 `Unreleased`_
 =============
 
+`0.11.1`_ (08-05-2026)
+======================
+
+- |Fix| Fix empulse not running properly on scikit-learn versions lower than 1.6.
+
 `0.11.0`_ (08-05-2026)
 ======================
 
@@ -216,7 +221,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.11.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.11.1...main
+.. _0.11.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.11.1
 .. _0.11.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.11.0
 .. _0.10.4: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.4
 .. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
