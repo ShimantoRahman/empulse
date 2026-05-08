@@ -1097,3 +1097,47 @@ def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sy
     val_det = profit_det(y, y_proba, clv=clv_val, d=d_val, f=f_val, gamma=mean_value)
 
     assert pytest.approx(val_rv) == val_det
+
+
+@pytest.mark.parametrize('integration_method', MaxProfit.INTEGRATION_METHODS)
+def test_hardcoded_distribution_params_no_error(y_true_and_prediction, integration_method):
+    """Distributions with literal numeric parameters must not raise ValueError asking for them as kwargs."""
+    y, y_proba = y_true_and_prediction
+
+    # Distribution parameters are fixed numbers, not sympy symbols.
+    clv, d, f = sympy.symbols('clv d f')
+    gamma = Normal('gamma', 0.3, 0.1)  # mu=-0.3, sigma=0.1 are plain floats, not symbols
+
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_fp_cost(d + f).set_default(clv=100, d=10, f=1)
+
+    metric = Metric(cost_matrix, MaxProfit(integration_method=integration_method, random_state=0))
+    # Must not raise ValueError("Metric expected a value for -0.3…")
+    result = metric(y, y_proba)
+    assert isinstance(result, float)
+    assert np.isfinite(result)
+
+
+@pytest.mark.parametrize('integration_method', MaxProfit.INTEGRATION_METHODS)
+def test_hardcoded_distribution_params_multiple_rvs(y_true_and_prediction, integration_method):
+    """Multiple stochastic variables with hardcoded params must all work without user-supplied kwargs."""
+    y, y_proba = y_true_and_prediction
+
+    l_ps, l_ph = sympy.symbols('lambda_ps lambda_ph')
+    s_tp_ps = Normal('s_tp_ps', -0.2, 0.1)
+    s_fp_ps = Normal('s_fp_ps', -0.8, 0.1)
+    s_tp_ph = sympy.symbols('s_tp_ph')
+    s_fp_ph = sympy.symbols('s_fp_ph')
+
+    cost_matrix = (
+        CostMatrix()
+        .add_tp_benefit(l_ps * s_tp_ps)
+        .add_tp_benefit(l_ph * s_tp_ph)
+        .add_fp_benefit(l_ps * s_fp_ps)
+        .add_fp_benefit(l_ph * s_fp_ph)
+        .set_default(lambda_ps=0.5, lambda_ph=0.5, s_tp_ph=-0.3, s_fp_ph=-0.7)
+    )
+
+    metric = Metric(cost_matrix, MaxProfit(integration_method=integration_method, random_state=0))
+    result = metric(y, y_proba)
+    assert isinstance(result, float)
+    assert np.isfinite(result)
