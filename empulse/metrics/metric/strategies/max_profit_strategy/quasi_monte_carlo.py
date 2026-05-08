@@ -108,7 +108,7 @@ class MaxProfitScoreQuasiMonteCarlo:
         # Generate a Sobol sequence for QMC sampling
         sobol = Sobol(d=len(random_symbols), scramble=True, rng=rng)
         self.sobol_samples = sobol.random(n_mc_samples)
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             # If all distribution parameters are fixed, then the param grid can be pre-computed.
             self.param_grid_needs_recompute = False
             # convert to scipy distributions
@@ -131,9 +131,7 @@ class MaxProfitScoreQuasiMonteCarlo:
             self.scipy_distributions = None
             self.param_grid_needs_recompute = True
             self.param_grid = []
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""

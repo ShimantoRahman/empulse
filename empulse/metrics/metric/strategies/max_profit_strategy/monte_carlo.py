@@ -38,7 +38,7 @@ class MaxProfitScoreMonteCarlo:
 
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.param_grid_needs_recompute = False
             self.param_grid: list[Any] | None = [
                 sympy.stats.sample(random_var, size=(n_mc_samples,), seed=rng) for random_var in random_symbols
@@ -48,9 +48,7 @@ class MaxProfitScoreMonteCarlo:
             self.cached_dist_params = {str(arg): arg for arg in self.distribution_args}
             self.param_grid_needs_recompute = True
             self.param_grid = None
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""

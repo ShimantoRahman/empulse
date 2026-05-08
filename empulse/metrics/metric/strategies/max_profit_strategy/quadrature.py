@@ -53,7 +53,9 @@ def compute_integral_multiple_quad(
         elif n_random == 3:
             result, _ = tplquad(integrand_fn, *bounds)  # type: ignore[call-overload]
         else:
-            result, _ = nquad(integrand_fn, *bounds)  # type: ignore[call-overload]
+            # nquad expects ranges as a list of (lower, upper) pairs, not a flat unpacked list
+            ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
+            result, _ = nquad(integrand_fn, ranges)  # type: ignore[call-overload]
     return float(result)
 
 
@@ -89,12 +91,10 @@ class MaxProfitScoreQuad:
             for random_symbol in random_symbols:
                 self.rate_function *= density(random_symbol).pdf(random_symbol)
 
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.dist_params = []
         else:
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""

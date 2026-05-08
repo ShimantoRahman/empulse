@@ -348,12 +348,10 @@ class MaxProfitRatePiecewise:
 
         self.integrand = rate_function * density(random_symbol).pdf(random_symbol)
 
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.dist_params = []
         else:
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the optimal rate."""
@@ -434,12 +432,10 @@ class ExactMaxProfitRatePiecewise:
         self.rate_eq = rate_function
         self.rate_fn = _safe_lambdify(self.rate_eq)
 
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.dist_params = []
         else:
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit rate."""
@@ -531,12 +527,10 @@ class MaxProfitScorePiecewise:
 
         self.integrand = profit_function * density(random_symbol).pdf(random_symbol)
 
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.dist_params = []
         else:
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -632,12 +626,10 @@ class BaseMaxProfitScorePiecewise:
             self.coefficient_eqs.append(eq)
             self.coefficient_fns.append(_safe_lambdify(eq))
 
-        if all(isinstance(arg, sympy.core.numbers.Integer) for arg in self.distribution_args):
+        if not any(arg.free_symbols for arg in self.distribution_args):
             self.dist_params = []
         else:
-            self.dist_params = [
-                arg for arg in self.distribution_args if not isinstance(arg, sympy.core.numbers.Integer)
-            ]
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -649,6 +641,13 @@ class BaseMaxProfitScorePiecewise:
 
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+
+        # When all distribution parameters are hardcoded numeric literals (no free symbols),
+        # extract_distribution_parameters returns an empty dict because the args have no
+        # symbol names to look up in kwargs. Populate from the literal values so that
+        # _integrate (and compute_piecewise_bounds) can still access them.
+        if not distribution_parameters and not self.dist_params:
+            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args}
 
         fix_inf = not self.derivative.subs(kwargs).is_negative
 
