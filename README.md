@@ -63,8 +63,8 @@ from sklearn.preprocessing import StandardScaler
 
 X, y = make_classification()
 pipeline = Pipeline([
-    ("scaler", StandardScaler()),
-    ("model", CSLogitClassifier())
+    ('scaler', StandardScaler()),
+    ('model', CSLogitClassifier()),
 ])
 pipeline.fit(X, y, model__fp_cost=10, model__fn_cost=1)
 ```
@@ -74,11 +74,11 @@ pipeline.fit(X, y, model__fp_cost=10, model__fn_cost=1)
 from sklearn.model_selection import cross_val_score
 
 cross_val_score(
-    pipeline, 
-    X, 
-    y, 
-    scoring="roc_auc", 
-    params={"model__fp_cost": 10, "model__fn_cost": 1}
+    pipeline,
+    X,
+    y,
+    scoring='roc_auc',
+    params={'model__fp_cost': 10, 'model__fn_cost': 1},
 )
 ```
 
@@ -86,8 +86,8 @@ cross_val_score(
 ```python
 from sklearn.model_selection import GridSearchCV
 
-param_grid = {"model__C": [0.1, 1, 10]}
-grid_search = GridSearchCV(pipeline, param_grid, scoring="roc_auc")
+param_grid = {'model__C': [0.1, 1, 10]}
+grid_search = GridSearchCV(pipeline, param_grid, scoring='roc_auc')
 grid_search.fit(X, y, model__fp_cost=10, model__fn_cost=1)
 ```
 
@@ -99,19 +99,19 @@ from empulse.metrics import expected_cost_loss
 from sklearn.metrics import make_scorer
 
 scorer = make_scorer(
-    expected_cost_loss, 
-    response_method="predict_proba", 
+    expected_cost_loss,
+    response_method='predict_proba',
     greater_is_better=False,
     fp_cost=10,
-    fn_cost=1
+    fn_cost=1,
 )
 
 cross_val_score(
-    pipeline, 
-    X, 
-    y, 
-    scoring=scorer, 
-    params={"model__fp_cost": 10, "model__fn_cost": 1}
+    pipeline,
+    X,
+    y,
+    scoring=scorer,
+    params={'model__fp_cost': 10, 'model__fn_cost': 1},
 )
 ```
 
@@ -120,8 +120,7 @@ cross_val_score(
 Empulse offers a wide range of profit and cost metrics that are tailored to specific use cases such as:
 - [customer churn](https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-churn-metrics), 
 - [customer acquisition](https://empulse.readthedocs.io/en/stable/reference/metrics.html#customer-acquisition-metrics),
-- [credit scoring](https://empulse.readthedocs.io/en/stable/reference/metrics.html#credit-scoring-metrics),
-- and fraud detection (coming soon).
+- and [credit scoring](https://empulse.readthedocs.io/en/stable/reference/metrics.html#credit-scoring-metrics).
 
 For other use cases, the package provides generic implementations for:
 - the [cost loss](https://empulse.readthedocs.io/en/stable/reference/generated/empulse.metrics.cost_loss.html),
@@ -162,7 +161,7 @@ Now, you can define your own profit and cost metrics using different strategies.
 ```python
 from empulse.metrics import Metric, Cost, Savings, MaxProfit
 
-expected_cost_loss = Metric(cost_matrix=cost_matrix, strategy=Cost()) 
+expected_cost_loss = Metric(cost_matrix=cost_matrix, strategy=Cost())
 expected_savings_score = Metric(cost_matrix=cost_matrix, strategy=Savings())
 expected_max_profit_score = Metric(cost_matrix=cost_matrix, strategy=MaxProfit())
 
@@ -236,17 +235,17 @@ fp_cost = np.random.rand(y.size)
 fn_cost = np.random.rand(y.size)
 
 pipeline = Pipeline([
-    ("scale", StandardScaler()),
-    ("model", CSTreeClassifier().set_fit_request(fp_cost=True, fn_cost=True))
+    ('scale', StandardScaler()),
+    ('model', CSTreeClassifier().set_fit_request(fp_cost=True, fn_cost=True)),
 ])
 
 scorer = make_scorer(
     expected_cost_loss,
-    response_method="predict_proba",
+    response_method='predict_proba',
     greater_is_better=False,
 ).set_score_request(fp_cost=True, fn_cost=True)
 
-cross_val_score(pipeline, X, y, scoring=scorer, params={"fp_cost": fp_cost, "fn_cost": fn_cost})
+cross_val_score(pipeline, X, y, scoring=scorer, params={'fp_cost': fp_cost, 'fn_cost': fn_cost})
 ```
 
 ### Cost-aware resampling and relabeling
@@ -283,9 +282,9 @@ X, y = make_classification()
 fp_cost = np.random.rand(y.size)
 fn_cost = np.random.rand(y.size)
 pipeline = Pipeline([
-    ("scaler", StandardScaler()),
-    ("sampler", CostSensitiveSampler().set_fit_resample_request(fp_cost=True, fn_cost=True)),
-    ("model", LogisticRegression())
+    ('scaler', StandardScaler()),
+    ('sampler', CostSensitiveSampler().set_fit_resample_request(fp_cost=True, fn_cost=True)),
+    ('model', LogisticRegression()),
 ])
 
 pipeline.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
@@ -363,15 +362,15 @@ X, y, tp_cost, fp_cost, tn_cost, fn_cost = load_give_me_some_credit(return_X_y_c
 
 pipeline = Pipeline([
     ('scaler', StandardScaler()),
-    ('model', CSLogitClassifier())
+    ('model', CSLogitClassifier()),
 ])
 pipeline.fit(
-    X, 
-    y, 
-    model__tp_cost=tp_cost, 
-    model__fp_cost=fp_cost, 
-    model__tn_cost=tn_cost, 
-    model__fn_cost=fn_cost
+    X,
+    y,
+    model__tp_cost=tp_cost,
+    model__fp_cost=fp_cost,
+    model__tn_cost=tn_cost,
+    model__fn_cost=fn_cost,
 )
 ```
 
