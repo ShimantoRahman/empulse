@@ -1,6 +1,9 @@
 `Unreleased`_
 =============
 
+`0.11.0`_ (08-05-2026)
+======================
+
 - |Feature| Added :class:`~empulse.models.ProfTreeClassifier` to optimize a cost-sensitive metric
   using evolutionary trees (similar to :class:`~empulse.models.ProfLogitClassifier`).
 - |Feature| Added :class:`~empulse.models.CSRateClassifier` to optimize for a specific predicted positive rate.
@@ -213,7 +216,8 @@
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.10.4...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.11.0...main
+.. _0.11.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.11.0
 .. _0.10.4: https://github.com/ShimantoRahman/empulse/releases/tag/0.10.4
 .. _0.9.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0
 .. _0.8.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0
