@@ -397,9 +397,9 @@ def load_upsell_bank_telemarketing(
     tp_cost = contact_cost
     tn_cost = 0.0
 
-    data.loc[:, 'default'] = data['default'].map({'yes': 1, 'no': 0})
-    data.loc[:, 'housing'] = data['housing'].map({'yes': 1, 'no': 0})
-    data.loc[:, 'loan'] = data['loan'].map({'yes': 1, 'no': 0})
+    data['default'] = data['default'].map({'yes': 1, 'no': 0})
+    data['housing'] = data['housing'].map({'yes': 1, 'no': 0})
+    data['loan'] = data['loan'].map({'yes': 1, 'no': 0})
 
     data = data.astype({
         'age': np.uint8,
@@ -937,9 +937,9 @@ def load_credit_scoring_pakdd(
     # normalize feature names
     data.columns = data.columns.str.lower().str.replace('#', '').str.replace('quant', 'n')
     data.columns = data.columns.str.replace('_in_the_application', '').str.replace('residencial', 'residential')
-    data.loc[:, 'sex'] = data['sex'].map({'M': 1, 'F': 0})
+    data['sex'] = data['sex'].map({'M': 1, 'F': 0})
     # fill in single  missing value as male
-    data.loc[:, 'sex'] = data.sex.fillna('1')
+    data['sex'] = data.sex.fillna('1')
 
     column_mapping = {
         'flag_residence_town_eq_working_town': 'lives_in_work_town',
@@ -960,7 +960,7 @@ def load_credit_scoring_pakdd(
     data = data.rename(columns=column_mapping)
 
     # remap values of matiral_status to more readable values
-    data.loc[:, 'marital_status'] = data['marital_status'].map({
+    data['marital_status'] = data['marital_status'].map({
         'S': 'single',
         'M': 'married',
         'D': 'divorced',
@@ -968,7 +968,7 @@ def load_credit_scoring_pakdd(
         'O': 'other',
     })
     # remap values of residence_type to more readable values
-    data.loc[:, 'residence_type'] = data['residence_type'].map({
+    data['residence_type'] = data['residence_type'].map({
         'P': 'owned',
         'A': 'rented',
         'C': 'parents',
