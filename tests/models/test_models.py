@@ -333,8 +333,15 @@ def test_metric_api_consistency(estimator, dataset):
         preds = model.predict_proba(X)[:, 1]
         assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
 
-        model_metric.fit(X, y, a=1, b=10)
-        preds_metric_weighted = model_metric.predict_proba(X)[:, 1]
+        # For evolutionary estimators with very few iterations, use more iterations to ensure
+        # the algorithm is sensitive to cost weights (avoids platform-dependent flakiness).
+        model_metric_weighted = (
+            set_metric_loss(clone(estimator).set_params(max_iter=100), loss)
+            if isinstance(model, ProfTreeClassifier)
+            else model_metric
+        )
+        model_metric_weighted.fit(X, y, a=1, b=10)
+        preds_metric_weighted = model_metric_weighted.predict_proba(X)[:, 1]
         assert not np.allclose(preds_metric_weighted, preds), (
             'Predictions of the metric API do not change with weights.'
         )
