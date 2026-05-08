@@ -98,6 +98,8 @@ def expected_failed_checks(estimator):
         }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
+    if isinstance(estimator, CSRateClassifier):
+        return {'check_methods_subset_invariance': 'Rate will predict differently on different subsets by design.'}
     if isinstance(
         estimator,
         CSTreeClassifier
