@@ -28,17 +28,19 @@ def get_all_functions_and_classes(module):
 
 
 def iter_modules(module_name):
-    """Recursively iterate through all submodules."""
+    """Iterate through all leaf submodules (non-packages) without duplicates."""
     module = importlib.import_module(module_name)
-    if hasattr(module, '__path__'):
-        for _, submodule_name, _ in pkgutil.walk_packages(module.__path__, module.__name__ + '.'):
-            yield from iter_modules(submodule_name)
-    else:
+    if not hasattr(module, '__path__'):
         yield module
+        return
+    # walk_packages already recurses into sub-packages; no need to recurse manually
+    for _, submodule_name, ispkg in pkgutil.walk_packages(module.__path__, module.__name__ + '.'):
+        if not ispkg:
+            yield importlib.import_module(submodule_name)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('module', iter_modules(TOP_MODULE))
+@pytest.mark.parametrize('module', iter_modules(TOP_MODULE), ids=lambda m: m.__name__)
 def test_code_blocks_in_docstrings(module):
     """Test that code blocks in docstrings execute without errors."""
     functions_and_classes = get_all_functions_and_classes(module)
