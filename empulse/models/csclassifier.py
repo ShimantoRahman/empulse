@@ -58,12 +58,12 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         fp_cost: FloatArrayLike | float,
         loss: Metric | None,
     ) -> None:
-        self._append_params_to_metadata_routing()
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
         self.loss = loss
+        self._append_params_to_metadata_routing()
         super().__init__()
 
     def _append_params_to_metadata_routing(self) -> None:

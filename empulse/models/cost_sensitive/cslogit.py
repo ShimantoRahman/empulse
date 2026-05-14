@@ -229,12 +229,6 @@ class CSLogitClassifier(BaseLogitClassifier):
             optimizer_params=optimizer_params,
         )
 
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
-
     def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         optimizer_params = self.optimizer_params or {}
 

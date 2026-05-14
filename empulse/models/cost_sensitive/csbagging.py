@@ -265,11 +265,6 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     ):
         self.estimator = estimator
         self.n_estimators = n_estimators
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
-        self.loss = loss
         self.combination = combination
         self.max_samples = max_samples
         self.max_features = max_features
@@ -281,12 +276,6 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         self.random_state = random_state
         self.verbose = verbose
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
-
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
 
     def _fit(
         self,
