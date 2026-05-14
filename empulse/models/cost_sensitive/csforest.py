@@ -455,6 +455,9 @@ class CSForestClassifier(CostSensitiveClassifier):
         self : object
             Returns self.
         """
+        if self.combination == 'weighted_voting' and not self.bootstrap:
+            raise ValueError('Weighted voting is only available when bootstrap=True.')
+
         if isinstance(self.loss, Metric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
@@ -536,8 +539,6 @@ class CSForestClassifier(CostSensitiveClassifier):
         self.estimator_.fit(X, y)
 
         if self.combination == 'weighted_voting':
-            if not self.bootstrap:
-                raise ValueError('Weighted voting is only available when bootstrap=True.')
             if self.loss is None:
                 self.estimator_weights_ = self._get_oob_weights(
                     X,
