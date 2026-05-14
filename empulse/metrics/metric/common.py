@@ -121,7 +121,9 @@ class PicklableLambda:
             val = float(self.expression.evalf())
             self.func = lambda *args, **kwargs: val
         else:
-            variables = list(self.expression.free_symbols) if self.variables is None else self.variables
+            # Sort free_symbols by name for deterministic variable ordering,
+            # ensuring the lambdified function receives kwargs correctly.
+            variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
             self.func = sympy.lambdify(variables, self.expression)  # type: ignore[assignment]
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D102
