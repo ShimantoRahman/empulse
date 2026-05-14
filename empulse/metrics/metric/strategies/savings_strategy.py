@@ -25,7 +25,6 @@ from .cost_strategy import (
     CostOptimalRate,
     CostOptimalThreshold,
     _build_cost_equation,
-    _format_cost_function,
 )
 from .metric_strategy import MetricStrategy
 
@@ -389,7 +388,7 @@ def _savings_score_to_latex(
 
     i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # noqa: N806
     savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
-        _format_cost_function(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
+        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
     )
 
     for symbol in savings_function.free_symbols:

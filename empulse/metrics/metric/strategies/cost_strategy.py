@@ -369,6 +369,10 @@ class CostLoss:
 def _build_cost_equation(
     tp_cost: sympy.Expr, tn_cost: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> sympy.Expr:
+    """Build the per-sample cost equation as a sympy expression in y (label) and s (score).
+
+    This is the single canonical form used both for numeric evaluation (via lambdify) and for LaTeX rendering.
+    """
     y, s = sympy.symbols('y s')
     cost_function = y * (s * tp_cost + (1 - s) * fn_cost) + (1 - y) * ((1 - s) * tn_cost + s * fp_cost)
     return cost_function
@@ -492,7 +496,7 @@ def _cost_loss_to_latex(
 
     i, N = sympy.symbols('i N')  # noqa: N806
     cost_function = (1 / N) * sympy.Sum(
-        _format_cost_function(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
+        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
     )
 
     for symbol in cost_function.free_symbols:
@@ -502,11 +506,3 @@ def _cost_loss_to_latex(
     output = latex(cost_function, mode='plain', order=None)
 
     return f'$\\displaystyle {output}$'
-
-
-def _format_cost_function(
-    tp_cost: sympy.Expr, tn_cost: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
-) -> sympy.Expr:
-    y, s = sympy.symbols('y s')
-    cost_function = y * (s * tp_cost + (1 - s) * fn_cost) + (1 - y) * ((1 - s) * tn_cost + s * fp_cost)
-    return cost_function
