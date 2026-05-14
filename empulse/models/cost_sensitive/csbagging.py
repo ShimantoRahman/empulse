@@ -507,7 +507,13 @@ class CSBaggingClassifier(CostSensitiveClassifier):
                 y_pred = estimator.predict((X[mask, :])[:, features])
             estimator_weights[i] = weight_fn(y[mask], y_pred, **loss_params)
 
-        estimator_weights /= estimator_weights.sum()
+        total_weight = estimator_weights.sum()
+        if total_weight == 0.0:
+            raise ValueError(
+                'All estimator OOB weights are zero. This can happen with highly imbalanced data '
+                'or a degenerate metric. Cannot normalize weights for weighted voting.'
+            )
+        estimator_weights /= total_weight
 
         return estimator_weights
 
