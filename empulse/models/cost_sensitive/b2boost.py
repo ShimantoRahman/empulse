@@ -187,8 +187,7 @@ class B2BoostClassifier(CSBoostClassifier):
         .add_fp_cost(sympy.Symbol('clv') * sympy.Symbol('delta') + sympy.Symbol('f'))
         .alias('accept_rate', sympy.Symbol('gamma'))
         .alias('incentive_fraction', sympy.Symbol('delta'))
-        .alias('contact_cost', sympy.Symbol('f'))
-        .alias('clv', sympy.Symbol('clv')),
+        .alias('contact_cost', sympy.Symbol('f')),
         Cost(),
     )
 
