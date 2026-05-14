@@ -4,6 +4,7 @@ from typing import Any, Self
 
 import numpy as np
 import sympy
+import sympy.stats.crv_types
 
 from ...._types import FloatNDArray, IntNDArray
 from ..._loss import cy_logit_loss_gradient
