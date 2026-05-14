@@ -39,14 +39,11 @@ class _ScoreFunction(Protocol):
 
 def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
     """
-    Replace instance-dependent array-like parameter values with their mean (float).
+    Return a copy of *parameters* where every array value is replaced by its mean (float).
 
-    Leaves scalar parameters unchanged.
+    Scalar parameters are left unchanged.
     """
-    for key, value in list(parameters.items()):
-        if isinstance(value, np.ndarray):
-            parameters[key] = float(np.mean(value))
-    return parameters
+    return {key: float(np.mean(value)) if isinstance(value, np.ndarray) else value for key, value in parameters.items()}
 
 
 class MaxProfit(MetricStrategy):
