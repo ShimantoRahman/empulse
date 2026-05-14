@@ -21,6 +21,24 @@ from ..common import (
 )
 from .metric_strategy import MetricStrategy
 
+# Mappings from distribution type to its analytical mean expression.
+_FIXED_MEANS: dict[
+    type[sympy.stats.crv_types.SingleContinuousDistribution],
+    'Callable[[tuple[sympy.Expr, ...]], sympy.Expr]',
+] = {
+    sympy.stats.crv_types.ArcsinDistribution: lambda params: (params[0] + params[1]) / 2,
+    sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
+    sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
+    sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
+    sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
+    sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
+    sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+    sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
+    sympy.stats.crv_types.PowerFunctionDistribution: (
+        lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
+    ),
+}
+
 
 def replace_random_var_with_mean(
     tp_benefit: sympy.Expr,
@@ -30,23 +48,6 @@ def replace_random_var_with_mean(
 ) -> tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr]:
     """Replace random variables in the expressions with their means."""
     all_symbols = tp_benefit.free_symbols | tn_benefit.free_symbols | fp_cost.free_symbols | fn_cost.free_symbols
-
-    # Mapping of distributions to their fixed mean expressions
-    fixed_means: dict[
-        sympy.stats.crv_types.SingleContinuousDistribution, Callable[[tuple[sympy.Expr, ...]], sympy.Expr]
-    ] = {
-        sympy.stats.crv_types.ArcsinDistribution: lambda params: (params[0] + params[1]) / 2,
-        sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
-        sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
-        sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
-        sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
-        sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
-        sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
-        sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
-        sympy.stats.crv_types.PowerFunctionDistribution: (
-            lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
-        ),
-    }
 
     # Identify random symbols and replace each by its expectation
     random_symbols = [symbol for symbol in all_symbols if sympy.stats.rv.is_random(symbol)]
@@ -58,10 +59,10 @@ def replace_random_var_with_mean(
         dist_type = type(symbol.pspace.distribution)
 
         # Check if we have a fixed substitution for this distribution
-        if dist_type in fixed_means:
+        if dist_type in _FIXED_MEANS:
             # Extract parameters from the distribution
             params = symbol.pspace.distribution.args
-            subs_map[symbol] = fixed_means[dist_type](params)
+            subs_map[symbol] = _FIXED_MEANS[dist_type](params)
         else:
             try:
                 mean_expr = sympy.stats.E(symbol)
