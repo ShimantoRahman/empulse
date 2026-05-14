@@ -289,7 +289,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         min_samples_split: float = 2,
         min_samples_leaf: float = 1,
         min_weight_fraction_leaf: float = 0.0,
-        max_features: Literal['auto', 'sqrt', 'log2'] | float | None = None,
+        max_features: Literal['sqrt', 'log2'] | float | None = None,
         random_state: int | np.random.RandomState | None = None,
         max_leaf_nodes: int | None = None,
         min_impurity_decrease: float = 0.0,
