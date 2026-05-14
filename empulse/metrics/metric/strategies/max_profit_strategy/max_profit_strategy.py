@@ -177,20 +177,25 @@ class MaxProfit(MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
+        # Compute the profit function once and reuse for both score and rate builders
+        # to avoid rebuilding the sympy expression twice.
+        profit_function = _build_profit_function(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+        random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
+
         self._score_function = _build_max_profit_score(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
+            profit_function=profit_function,
+            random_symbols=random_symbols,
+            deterministic_symbols=deterministic_symbols,
             integration_method=self.integration_method,
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
         )
         self._optimal_rate: RateFn = _build_max_profit_optimal_rate(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
+            profit_function=profit_function,
+            random_symbols=random_symbols,
+            deterministic_symbols=deterministic_symbols,
             integration_method=self.integration_method,
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
@@ -509,20 +514,15 @@ class MaxProfit(MetricStrategy):
 
 
 def _build_max_profit_score(
-    tp_benefit: sympy.Expr,
-    tn_benefit: sympy.Expr,
-    fp_cost: sympy.Expr,
-    fn_cost: sympy.Expr,
+    profit_function: sympy.Expr,
+    random_symbols: list[sympy.Symbol],
+    deterministic_symbols: list[sympy.Symbol],
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
 ) -> _ScoreFunction:
-    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 
-    profit_function = _build_profit_function(
-        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-    )
     if n_random == 0:
         max_profit_score: _ScoreFunction = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
     else:
@@ -554,11 +554,14 @@ def _build_max_profit_optimal_threshold(
     n_mc_samples: int,
     rng: np.random.Generator,
 ) -> ThresholdFn:
+    profit_function = _build_profit_function(
+        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+    )
+    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     rate_fn = _build_max_profit_optimal_rate(
-        tp_benefit=tp_benefit,
-        tn_benefit=tn_benefit,
-        fp_cost=fp_cost,
-        fn_cost=fn_cost,
+        profit_function=profit_function,
+        random_symbols=random_symbols,
+        deterministic_symbols=deterministic_symbols,
         integration_method=integration_method,
         n_mc_samples=n_mc_samples,
         rng=rng,
@@ -567,20 +570,15 @@ def _build_max_profit_optimal_threshold(
 
 
 def _build_max_profit_optimal_rate(
-    tp_benefit: sympy.Expr,
-    tn_benefit: sympy.Expr,
-    fp_cost: sympy.Expr,
-    fn_cost: sympy.Expr,
+    profit_function: sympy.Expr,
+    random_symbols: list[sympy.Symbol],
+    deterministic_symbols: list[sympy.Symbol],
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
 ) -> RateFn:
-    random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
     n_random = len(random_symbols)
 
-    profit_function = _build_profit_function(
-        tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-    )
     rate_function = _build_rate_function()
     if n_random == 0:
         optimal_rate: MetricFn = MaxProfitRateDeterministic(profit_function, deterministic_symbols)
@@ -740,6 +738,11 @@ def _max_profit_score_to_latex(
 ) -> str:
     from sympy.printing.latex import latex
 
+    # Benefits are negated here because _build_profit_function adds tp_benefit and tn_benefit
+    # as positive terms.  For the rendered formula we want to display costs uniformly
+    # (positive = loss), so we pass negated benefits so the formula renders as:
+    #   max_t  [pi_1 * F_1 * (-tp_benefit) + pi_0 * (1-F_0) * (-tn_benefit) - ...]
+    # which under the original sign convention equals the profit maximisation problem.
     profit_function = _build_profit_function(
         tp_benefit=-tp_benefit, tn_benefit=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )
