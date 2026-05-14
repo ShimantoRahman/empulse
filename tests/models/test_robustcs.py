@@ -83,4 +83,4 @@ def test_robustcs_metric_loss(data):
     assert hasattr(model, 'estimator_')
     assert hasattr(model, 'outlier_estimators_')
     assert not np.array_equal(model.costs_['clv'], clv_val)
-    assert not np.array_equal(model.costs_['d'], d_val)
+    assert not np.array_equal(model.costs_['incentive_cost'], d_val)

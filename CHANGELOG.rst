@@ -1,6 +1,9 @@
 `Unreleased`_
 =============
 
+- |Fix| Fix :class:`~empulse.models.RobustCSClassifier` not properly handling outlier sensitive costs
+  when passing a custom loss function from :class:`~empulse.metrics.Metric`.
+
 `0.11.1`_ (08-05-2026)
 ======================
 
