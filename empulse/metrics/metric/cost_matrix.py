@@ -299,6 +299,11 @@ class CostMatrix:
             )
         """
         if isinstance(alias, MutableMapping):
+            for key, value in alias.items():
+                if not isinstance(value, str | sympy.Symbol):
+                    raise TypeError(
+                        f'Alias values must be str or sympy.Symbol, got {type(value).__name__!r} for key {key!r}.'
+                    )
             self._aliases.update(alias)
         elif symbol is not None:
             self._aliases[alias] = str(symbol)
