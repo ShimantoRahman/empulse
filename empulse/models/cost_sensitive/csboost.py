@@ -401,7 +401,6 @@ class CSBoostClassifier(CostSensitiveClassifier):
             objective = self._get_objective('lightgbm', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
         elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator, CatBoostClassifier):
-            # self._initialize_catboost_estimator(tp_cost, tn_cost, fn_cost, fp_cost, **loss_params)
             loss_function, eval_metric = self._get_objective('catboost', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
         else:
@@ -456,7 +455,6 @@ class CSBoostClassifier(CostSensitiveClassifier):
             return CatBoostObjective(loss, **loss_params), CatBoostMetric(loss, **loss_params)
 
         if framework == 'xgboost':
-            # return partial(self.loss._gradient_boost_objective, **loss_params)
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
             return partial(cy_boost_grad_hess, grad_const=grad_const)
         elif framework == 'lightgbm':
