@@ -237,7 +237,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     @property
     def estimators_features_(self) -> list[IntNDArray]:
-        """The subset of drawn features (i.e., the in-bag samples) for each base estimator."""
+        """The subset of drawn features for each base estimator."""
         check_is_fitted(self)
         estimators_features: list[IntNDArray] = self.estimator_.estimators_features_
         return estimators_features
