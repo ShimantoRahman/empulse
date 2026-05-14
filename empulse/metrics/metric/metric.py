@@ -191,7 +191,6 @@ class Metric:
             | self.tn_cost.free_symbols
             | self.fp_cost.free_symbols
             | self.fn_cost.free_symbols
-            | self.cost_matrix._aliases.keys()
         )
 
         # Extract parameters from stochastic variables
@@ -208,7 +207,7 @@ class Metric:
                     for arg in pspace.distribution.args:
                         stochastic_params.update(arg.free_symbols)
 
-        return {str(symbol) for symbol in all_symbols | stochastic_params}
+        return {str(symbol) for symbol in all_symbols | stochastic_params} | set(self.cost_matrix._aliases.keys())
 
     @property
     def _all_parameters(self) -> set[str]:
@@ -218,7 +217,6 @@ class Metric:
             | self.tn_cost.free_symbols
             | self.fp_cost.free_symbols
             | self.fn_cost.free_symbols
-            | self.cost_matrix._aliases.keys()
         )
 
         # Extract parameters from stochastic variables
@@ -237,7 +235,9 @@ class Metric:
                     for arg in pspace.distribution.args:
                         stochastic_params.update(arg.free_symbols)
 
-        return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols}
+        return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols} | set(
+            self.cost_matrix._aliases.keys()
+        )
 
     @property
     def _is_stochastic(self) -> bool:
@@ -246,9 +246,8 @@ class Metric:
             | self.tn_cost.free_symbols
             | self.fp_cost.free_symbols
             | self.fn_cost.free_symbols
-            | self.cost_matrix._aliases.keys()
         )
-        return any(sympy.stats.rv.is_random(symbol) for symbol in set(all_symbols))
+        return any(sympy.stats.rv.is_random(symbol) for symbol in all_symbols)
 
     @property
     def _is_deterministic(self) -> bool:
