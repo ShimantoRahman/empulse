@@ -485,7 +485,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
 
-        if LGBMClassifier is not None and isinstance(self.estimator_, LGBMClassifier):
+        if not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
             y_proba: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
             y_proba: FloatNDArray = expit(y_proba)
             return np.column_stack([1 - y_proba, y_proba])
