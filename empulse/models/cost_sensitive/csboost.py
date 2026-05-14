@@ -338,6 +338,14 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
+        # CatBoost uses sample_weight internally as an index proxy,
+        if (
+            'sample_weight' in fit_params
+            and not isinstance(CatBoostClassifier, TypeVar)
+            and (self.estimator is not None and isinstance(self.estimator, CatBoostClassifier))
+        ):
+            raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
+
         if self.estimator is None:
             self._initialize_default_estimator(y=y, loss=loss, **loss_params)
         else:
@@ -360,8 +368,6 @@ class CSBoostClassifier(CostSensitiveClassifier):
                     message='Can\'t optimize method "evaluate" because self argument is used',
                     category=UserWarning,
                 )
-                if 'sample_weight' in fit_params:
-                    raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
                 self.estimator_.fit(X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE), **fit_params)
         else:
             raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
