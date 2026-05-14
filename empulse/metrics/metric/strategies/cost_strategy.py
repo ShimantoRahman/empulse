@@ -121,6 +121,9 @@ class Cost(MetricStrategy):
         self._prepare_logit_objective: LogitConsts = CostLogitConsts(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
+        self._logit_objective: CostLogitObjective = CostLogitObjective(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
         self._prepare_boost_objective: BoostGradientConst = CostBoostGradientConst(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
@@ -280,8 +283,6 @@ class Cost(MetricStrategy):
             Specifies if an intercept should be included in the model.
         parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the same value is used for all samples (class-dependent).
             - If ``array-like``, the values are used for each sample (instance-dependent).
@@ -293,28 +294,7 @@ class Cost(MetricStrategy):
             The function signature is:
             ``logistic_objective(weights) -> (value, gradient)``
         """
-        grad_const, loss_const1, loss_const2 = self.prepare_logit_objective(features, y_true, **parameters)
-        loss_const1 = (
-            loss_const1.reshape(-1)
-            if isinstance(loss_const1, np.ndarray)
-            else np.full(len(y_true), loss_const1, dtype=np.float64)
-        )
-        loss_const2 = (
-            loss_const2.reshape(-1)
-            if isinstance(loss_const2, np.ndarray)
-            else np.full(len(y_true), loss_const2, dtype=np.float64)
-        )
-        return partial(
-            cy_logit_loss_gradient,
-            grad_const=grad_const,
-            loss_const1=loss_const1,
-            loss_const2=loss_const2,
-            features=features,
-            C=C,
-            l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
-            fit_intercept=fit_intercept,
-        )
+        return self._logit_objective(features, y_true, C, l1_ratio, soft_threshold, fit_intercept, **parameters)
 
     def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
         """
@@ -406,6 +386,51 @@ class CostLogitConsts:
         )
 
         return gradient_const_value, loss_const1_value, loss_const2_value
+
+
+class CostLogitObjective:
+    """Class to build the logit objective function for cost-based metrics."""
+
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        self._logit_consts = CostLogitConsts(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+
+    def __call__(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+        **parameters: Any,
+    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+        """Build the logit objective callable."""
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        grad_const, loss_const1, loss_const2 = self._logit_consts.prepare(features, y_true, **parameters)
+        loss_const1 = (
+            loss_const1.reshape(-1)
+            if isinstance(loss_const1, np.ndarray)
+            else np.full(len(y_true), loss_const1, dtype=np.float64)
+        )
+        loss_const2 = (
+            loss_const2.reshape(-1)
+            if isinstance(loss_const2, np.ndarray)
+            else np.full(len(y_true), loss_const2, dtype=np.float64)
+        )
+        return partial(
+            cy_logit_loss_gradient,
+            grad_const=grad_const,
+            loss_const1=loss_const1,
+            loss_const2=loss_const2,
+            features=features,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+        )
 
 
 class CostBoostGradientConst:

@@ -1,12 +1,10 @@
 from collections.abc import Callable
-from functools import partial
 from typing import Any, Literal, Self
 
 import numpy as np
 import sympy
 
 from ...._types import FloatNDArray, IntNDArray
-from ..._loss import cy_logit_loss_gradient
 from ..common import (
     BoostGradientConst,
     Direction,
@@ -21,6 +19,7 @@ from ..common import (
 from .cost_strategy import (
     CostBoostGradientConst,
     CostLogitConsts,
+    CostLogitObjective,
     CostLoss,
     CostOptimalRate,
     CostOptimalThreshold,
@@ -73,6 +72,12 @@ class Savings(MetricStrategy):
             fn_cost=fn_cost,
         )
         self._prepare_logit_objective: LogitConsts = CostLogitConsts(
+            tp_benefit=tp_benefit,
+            tn_benefit=tn_benefit,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        self._logit_objective = CostLogitObjective(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
@@ -248,8 +253,6 @@ class Savings(MetricStrategy):
             Specifies if an intercept should be included in the model.
         parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the same value is used for all samples (class-dependent).
             - If ``array-like``, the values are used for each sample (instance-dependent).
@@ -261,28 +264,7 @@ class Savings(MetricStrategy):
             The function signature is:
             ``logistic_objective(weights) -> (value, gradient)``
         """
-        grad_const, loss_const1, loss_const2 = self.prepare_logit_objective(features, y_true, **parameters)
-        loss_const1 = (
-            loss_const1.reshape(-1)
-            if isinstance(loss_const1, np.ndarray)
-            else np.full(len(y_true), loss_const1, dtype=np.float64)
-        )
-        loss_const2 = (
-            loss_const2.reshape(-1)
-            if isinstance(loss_const2, np.ndarray)
-            else np.full(len(y_true), loss_const2, dtype=np.float64)
-        )
-        return partial(
-            cy_logit_loss_gradient,
-            grad_const=grad_const,
-            loss_const1=loss_const1,
-            loss_const2=loss_const2,
-            features=features,
-            C=C,
-            l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
-            fit_intercept=fit_intercept,
-        )
+        return self._logit_objective(features, y_true, C, l1_ratio, soft_threshold, fit_intercept, **parameters)
 
     def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
         """
