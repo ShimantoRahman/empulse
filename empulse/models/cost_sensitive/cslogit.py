@@ -295,13 +295,8 @@ def _check_optimize_result(result: OptimizeResult) -> None:
     """
     # handle both scipy and scikit-learn solver names
     if result.status != 0:
-        try:
-            # The message is already decoded in scipy>=1.6.0
-            result_message = result.message.decode('latin1')
-        except AttributeError:
-            result_message = result.message
         warning_msg = (
-            f'L-BFGS failed to converge (status={result.status}):\n{result_message}.\n\n'
+            f'L-BFGS failed to converge (status={result.status}):\n{result.message}.\n\n'
             'Increase the number of iterations (max_iter) '
             'or scale the data as shown in:\n'
             '    https://scikit-learn.org/stable/modules/'
