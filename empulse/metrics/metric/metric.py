@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable
 from numbers import Real
 
@@ -255,29 +256,44 @@ class Metric:
 
     def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
         """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
-        # Map aliases to the appropriate symbols
-        for alias, symbol in self.cost_matrix._aliases.items():
-            if alias in kwargs:
-                kwargs[symbol] = kwargs.pop(alias)
+        # Use a separate output dict to avoid dual-purpose mutation of kwargs
+        params: dict[str, FloatArrayLike | float] = {}
 
-        # Use default values if not provided in kwargs
+        # Map aliases to the appropriate symbol names
+        for key, value in kwargs.items():
+            alias_target = self.cost_matrix._aliases.get(key)
+            if alias_target is not None:
+                params[str(alias_target)] = value
+            else:
+                params[key] = value
+
+        # Use default values if not provided
         for key, value in self.cost_matrix._defaults.items():
-            kwargs.setdefault(key, value)
+            params.setdefault(key, value)
 
-        for key, value in kwargs.items():
+        # Warn about unknown parameters (likely typos), excluding strategy-specific extras
+        # and sklearn metadata-routing kwargs (e.g. sample_weight passed via fit()).
+        sklearn_internal_params = frozenset({'sample_weight'})
+        known = self._all_parameters | self.strategy._extra_kwargs | sklearn_internal_params
+        extra_keys = set(params) - known
+        if extra_keys:
+            warnings.warn(
+                f'Unknown parameters passed to metric: {sorted(extra_keys)}. These will be ignored.',
+                UserWarning,
+                stacklevel=3,
+            )
+
+        out: dict[str, FloatNDArray | float] = {}
+        for key, value in params.items():
             if not isinstance(value, Real | str):
-                kwargs[key] = np.asarray(value).reshape(-1)
-
-        # convert any ints to floats
-        for key, value in kwargs.items():
-            if isinstance(value, np.ndarray) and not np.issubdtype(value.dtype, np.floating):
-                kwargs[key] = value.astype(np.float64)
+                arr = np.asarray(value).reshape(-1)
+                out[key] = arr.astype(np.float64) if not np.issubdtype(arr.dtype, np.floating) else arr
             elif isinstance(value, int):
-                kwargs[key] = float(value)
+                out[key] = float(value)
+            else:
+                out[key] = value  # type: ignore[assignment]
 
-        kwargs: dict[str, FloatNDArray | float]  # redefine kwargs as mypy doesn't understand the above
-
-        return kwargs
+        return out
 
     def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
         """

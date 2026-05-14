@@ -20,6 +20,17 @@ class MetricStrategy(ABC):
         self.name = name
         self.direction = direction
 
+    @property
+    def _extra_kwargs(self) -> set[str]:
+        """Extra keyword arguments accepted by :meth:`score` beyond the cost-matrix parameters.
+
+        Subclasses should override this to declare any additional keyword arguments that
+        their :meth:`score` implementation accepts (e.g. ``{'baseline'}`` for
+        :class:`~empulse.metrics.Savings`).  These are excluded from the unknown-parameter
+        warning raised by :class:`~empulse.metrics.Metric`.
+        """
+        return set()
+
     @abstractmethod
     def build(
         self,

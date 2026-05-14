@@ -35,6 +35,11 @@ class Savings(MetricStrategy):
     def __init__(self) -> None:
         super().__init__(name='savings', direction=Direction.MAXIMIZE)
 
+    @property
+    def _extra_kwargs(self) -> set[str]:
+        # 'baseline' is consumed by Savings.score and is not a cost-matrix symbol.
+        return {'baseline'}
+
     def build(
         self,
         tp_benefit: sympy.Expr,
@@ -90,6 +95,12 @@ class Savings(MetricStrategy):
     ) -> float:
         """
         Compute the metric expected savings score.
+
+        .. note::
+            This method extends the :meth:`MetricStrategy.score` interface with an
+            additional ``baseline`` argument (defaulting to ``'zero_one'``).
+            Callers using the abstract :class:`MetricStrategy` interface will always
+            receive the default baseline behaviour, which is consistent and safe.
 
         Parameters
         ----------
