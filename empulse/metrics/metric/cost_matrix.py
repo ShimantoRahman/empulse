@@ -348,6 +348,14 @@ class CostMatrix:
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
             cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
 
+        Notes
+        -----
+        If you want to set a default using an alias name, you must call
+        :meth:`alias` **before** calling :meth:`set_default`.  Defaults passed
+        via alias names are immediately resolved to their underlying symbol names
+        during this call; any alias registered afterwards will *not* retroactively
+        match previously stored defaults.
+
         """
         # Convert aliases to symbol names before storing defaults
         converted_defaults = {}
