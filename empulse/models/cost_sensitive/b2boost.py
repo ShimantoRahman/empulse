@@ -78,7 +78,7 @@ class B2BoostClassifier(CSBoostClassifier):
     -----
     The instance-specific cost function for customer churn is defined as [1]_:
 
-    .. math:: C(s_i) = y_i[s_i(f-\\gamma (1-\\delta )CLV_i] + (1-y_i)[s_i(\\delta CLV_i + f)]
+    .. math:: C(s_i) = y_i[s_i(f-\\gamma (1-\\delta )CLV_i)] + (1-y_i)[s_i(\\delta CLV_i + f)]
 
     The measure requires that the churn class is encoded as 0, and it is NOT interchangeable.
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
