@@ -21,7 +21,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import MaxProfit, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
-from ...utils._sklearn_compat import _estimator_has
+from ...utils._sklearn_compat import _estimator_has  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
