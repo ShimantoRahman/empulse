@@ -11,6 +11,7 @@ from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ...metrics.metric.common import Direction
 from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 
 try:
@@ -552,7 +553,9 @@ class CatBoostMetric:
         self.loss_params = loss_params
 
     def is_max_optimal(self) -> bool:
-        """Return whether great values of metric are better."""
+        """Return whether greater values of metric are better."""
+        if isinstance(self.metric, Metric):
+            return self.metric.strategy.direction == Direction.MAXIMIZE
         return False
 
     def evaluate(
