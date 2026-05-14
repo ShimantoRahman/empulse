@@ -395,7 +395,7 @@ class CostMatrix:
             model.fit(X, y, a=np.random.rand(y.size), b=5)
         """
         if isinstance(symbol, str):
-            symbol = sympy.sympify(symbol)
+            symbol = sympy.Symbol(symbol)
         if not isinstance(symbol, sympy.Symbol):
             raise TypeError('The symbol must be a sympy.Symbol or a string that can be converted to a sympy.Symbol')
         self._outlier_sensitive_symbols.add(symbol)
