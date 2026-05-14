@@ -434,7 +434,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         **loss_params: Any,
     ) -> Self:
         """
-        Build an example-dependent cost-sensitive decision tree from the training set.
+        Build an example-dependent cost-sensitive random forest from the training set.
 
         Parameters
         ----------
