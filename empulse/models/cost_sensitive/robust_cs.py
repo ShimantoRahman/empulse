@@ -470,6 +470,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
     @property
     def classes_(self) -> NDArray[Any]:  # noqa: D102
+        check_is_fitted(self)
         classes: NDArray[Any] = self.estimator_.classes_
         return classes
 
