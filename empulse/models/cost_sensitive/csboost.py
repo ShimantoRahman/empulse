@@ -31,9 +31,10 @@ from ...metrics import Metric
 from ...metrics._loss import cy_boost_grad_hess
 from ..csclassifier import CostSensitiveClassifier
 
-# Hessian is 0 at score 0.5
-# which means that at initialization the model optimization doesn't do anything
-# therefore we add a small nudge which kickstarts the optimization algorithm (so hessian is not 0)
+# Hessian is 0 at score 0.5 because the AEC objective's hessian evaluates to p*(1-p),
+# which is exactly 0 when p=0.5. A nudge of 1e-2 is large enough to produce a non-zero
+# hessian at initialization (kick-starting the optimizer) yet small enough not to meaningfully
+# bias the starting point away from 0.5.
 _BASE_SCORE = 0.5 + 1e-2
 
 
