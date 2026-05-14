@@ -482,5 +482,20 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
 
 def _invert_dict(d: MutableMapping[K, V]) -> dict[V, K]:
-    """Invert a dictionary, swapping keys and values."""
-    return {v: k for k, v in d.items()}
+    """Invert a dictionary, swapping keys and values.
+
+    Raises
+    ------
+    ValueError
+        If any value maps to more than one key (i.e. a symbol has multiple aliases),
+        because inversion would silently drop entries.
+    """
+    seen: dict[V, K] = {}
+    for k, v in d.items():
+        if v in seen:
+            raise ValueError(
+                f'Cannot invert mapping: value {v!r} is mapped to by more than one key '
+                f'({seen[v]!r} and {k!r}). Each symbol must have at most one alias.'
+            )
+        seen[v] = k
+    return seen
