@@ -13,7 +13,9 @@ All datasets are based on real-world data.
    :template: base.rst
 
    Dataset
+   get_data_home
    load_churn_tv_subscriptions
    load_upsell_bank_telemarketing
-   load_give_me_some_credit
    load_credit_scoring_pakdd
+   fetch_give_me_some_credit
+   fetch_iranian_churn

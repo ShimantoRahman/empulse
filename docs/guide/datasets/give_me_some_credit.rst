@@ -16,6 +16,8 @@ For markets and society to function, individuals and companies need access to cr
 Credit scoring algorithms, which make a guess at the probability of default,
 are the method banks use to determine whether or not a loan should be granted.
 
+The dataset is fetched remotely from OpenML and cached locally on first use.
+
 =================   ==============
 Classes                          2
 Defaulters                    7616
@@ -27,28 +29,24 @@ Features                        10
 Using the Dataset
 =================
 
-The dataset can be loaded through the :func:`~empulse.datasets.load_give_me_some_credit` function.
+The dataset can be fetched through the :func:`~empulse.datasets.fetch_give_me_some_credit` function.
 This returns a :class:`~empulse.datasets.Dataset` object with the following attributes:
 
 - ``data``: the feature matrix
 - ``target``: the target vector
-- ``tp_cost``: the cost of a true positive
-- ``fp_cost``: the cost of a false positive
-- ``fn_cost``: the cost of a false negative
-- ``tn_cost``: the cost of a true negative
+- ``cost_matrix``: a :class:`~empulse.metrics.CostMatrix` with default values pre-filled
+- ``instance_costs``: a dict of per-instance cost drivers (``'cl'``, ``'fp_cost'``)
 - ``feature_names``: the feature names
 - ``target_names``: the target names
 - ``DESCR``: the full description of the dataset
 
 .. code-block:: python
 
-    from empulse.datasets import load_give_me_some_credit
+    from empulse.datasets import fetch_give_me_some_credit
 
-    dataset = load_give_me_some_credit()
+    dataset = fetch_give_me_some_credit()
 
-Alternatively, the load function can also return the features, target, and costs separately,
-by setting ``return_X_y_costs=True``.
-Additionally, you can specify that you want the output in a :class:`pandas:pandas.DataFrame` format,
+You can specify that you want the output in a :class:`pandas:pandas.DataFrame` format
 by setting ``as_frame=True``.
 
 The following code snippet demonstrates how to load the dataset and fit a model using the
@@ -56,15 +54,18 @@ The following code snippet demonstrates how to load the dataset and fit a model 
 
 .. code-block:: python
 
-    from empulse.datasets import load_give_me_some_credit
+    from empulse.datasets import fetch_give_me_some_credit
     from empulse.models import CSLogitClassifier
+    from empulse.metrics import Metric, Cost
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_give_me_some_credit(
-        return_X_y_costs=True,
-        as_frame=True
-    )
+    dataset = fetch_give_me_some_credit(as_frame=True)
+    X, y = dataset.data, dataset.target
+    cl = dataset.instance_costs['cl']
+    fp_cost = dataset.instance_costs['fp_cost']
+    fn_cost = cl * 0.75  # loss_given_default = 0.75
+
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
         ('model', CSLogitClassifier())
@@ -72,10 +73,8 @@ The following code snippet demonstrates how to load the dataset and fit a model 
     pipeline.fit(
         X,
         y,
-        model__tp_cost=tp_cost,
         model__fp_cost=fp_cost,
         model__fn_cost=fn_cost,
-        model__tn_cost=tn_cost
     )
 
 Cost Matrix
@@ -108,14 +107,13 @@ the loss given default is 75%, the term length is 24 months, and the loan to inc
 The default parameters are based on [2]_.
 
 These assumptions can be changed by passing your own values to the
-:func:`~empulse.datasets.load_give_me_some_credit` function:
+:func:`~empulse.datasets.fetch_give_me_some_credit` function:
 
 .. code-block:: python
 
-    from empulse.datasets import load_give_me_some_credit
+    from empulse.datasets import fetch_give_me_some_credit
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_give_me_some_credit(
-        return_X_y_costs=True,
+    dataset = fetch_give_me_some_credit(
         interest_rate=0.0479,
         fund_cost=0.0294,
         max_credit_line=25000,
