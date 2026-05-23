@@ -1,11 +1,17 @@
 from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
+
+if TYPE_CHECKING:
+    from ..metrics.metric.strategies.max_profit_strategy.gradient_piecewise import (
+        MaxProfitLogitGradientPiecewise,
+    )
 
 MIN_POP_SIZE: int = 10
 FEATURE_TO_POP_SIZE_RATIO: int = 10
@@ -369,3 +375,263 @@ class Generation:
     def _log_end(self, stop_time: float) -> None:
         self.logging_fn(self.result)  # type: ignore[arg-type]
         self.logging_fn(f'# ---  {self.name} ({stop_time})  --- #')
+
+
+class LamarckianGeneration(Generation):
+    """Real-coded GA generation with Lamarckian local gradient search.
+
+    Before evaluating each individual's fitness the genome is improved in-place
+    by ``local_steps`` gradient steps (Lamarckian learning: the refined weights
+    replace the original ones).  This lets the GA operate on a much smoother
+    fitness landscape while the population still maintains global diversity
+    across the rugged high-alpha MaxProfit surface.
+
+    The convex hull required by the gradient objective is computed **once** per
+    individual at the start of the local search and then cached across all
+    ``local_steps`` gradient evaluations via the
+    :meth:`~empulse.metrics.metric.strategies.max_profit_strategy.gradient_piecewise.MaxProfitLogitGradientPiecewise.gradient_steps`
+    generator.  This cuts hull-reconstruction overhead by a factor of
+    ``local_steps``.
+
+    Parameters
+    ----------
+    local_steps : int, default=5
+        Number of gradient steps applied to each individual per generation.
+    lr : float, default=0.05
+        Learning rate (step size) for the local search.
+    optimizer : {"adam", "sgd"}, default="adam"
+        Local-search update rule.
+
+        * ``"adam"`` – adaptive moment estimation (recommended for noisy
+          gradients; uses ``beta1``, ``beta2``, and ``eps``).
+        * ``"sgd"`` – plain gradient descent (``theta -= lr * grad``).
+    beta1 : float, default=0.9
+        Adam: exponential decay rate for the first moment estimate.
+        Ignored when ``optimizer="sgd"``.
+    beta2 : float, default=0.999
+        Adam: exponential decay rate for the second moment estimate.
+        Ignored when ``optimizer="sgd"``.
+    eps : float, default=1e-8
+        Adam: small term added to the denominator for numerical stability.
+        Ignored when ``optimizer="sgd"``.
+    grad_clip : float, default=5.0
+        Gradient clipping threshold applied element-wise before the update.
+    **kwargs
+        Forwarded to :class:`Generation`.
+    """
+
+    def __init__(
+        self,
+        local_steps: int = 5,
+        lr: float = 0.05,
+        optimizer: str = 'adam',
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        eps: float = 1e-8,
+        grad_clip: float = 5.0,
+        **kwargs: Any,
+    ):
+        super().__init__(**kwargs)
+        if optimizer not in {'adam', 'sgd'}:
+            raise ValueError(f"`optimizer` must be 'adam' or 'sgd', got {optimizer!r}.")
+        self.local_steps = local_steps
+        self.lr = lr
+        self.optimizer = optimizer
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+        self.grad_clip = grad_clip
+        # Set by LamarckianMemeticOptimizeFn before optimize() is called.
+        self._grad_objective: MaxProfitLogitGradientPiecewise | None = None
+
+    def _local_search(self, theta: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Run ``local_steps`` gradient steps on *theta*.
+
+        The convex hull is built once from the initial *theta* and then reused
+        for all subsequent steps via the ``gradient_steps`` generator.  The
+        update rule is selected by ``self.optimizer``.  After the local search
+        the result is clipped to the search bounds.
+        """
+        assert self._grad_objective is not None, '_grad_objective must be set before optimizing.'
+        theta = theta.copy()
+
+        # Adam moment buffers (only used when optimizer == "adam")
+        m = np.zeros_like(theta)
+        v = np.zeros_like(theta)
+
+        # Open generator – hull is computed from the initial theta on the first
+        # call and then cached for the remaining local_steps - 1 iterations.
+        grad_gen = self._grad_objective.gradient_steps(theta)
+
+        for t in range(1, self.local_steps + 1):
+            grad = next(grad_gen) if t == 1 else grad_gen.send(theta)
+            grad = np.clip(grad, -self.grad_clip, self.grad_clip)
+
+            if self.optimizer == 'sgd':
+                theta = theta - self.lr * grad
+            else:  # adam
+                m = self.beta1 * m + (1.0 - self.beta1) * grad
+                v = self.beta2 * v + (1.0 - self.beta2) * grad**2
+                m_hat = m / (1.0 - self.beta1**t)
+                v_hat = v / (1.0 - self.beta2**t)
+                theta = theta - self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
+
+            theta = np.clip(theta, self.lower_bounds, self.upper_bounds)
+
+        grad_gen.close()
+        return theta
+
+    def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> None:  # type: ignore[override]
+        """Apply Lamarckian local search before scalar evaluation.
+
+        Runs sequentially (no joblib) to avoid pickling the gradient objective.
+        """
+        for ix in range(self.population_size):
+            if np.isnan(self.fitness[ix]):
+                if self._grad_objective is not None:
+                    self.population[ix] = self._local_search(self.population[ix])
+                self.fitness[ix] = float(objective(self.population[ix]))
+                self.result.nfev += 1  # type: ignore[attr-defined]
+
+
+class LamarckianMemeticOptimizeFn:
+    """Picklable Lamarckian Memetic Algorithm optimizer for CSLogitClassifier.
+
+    Combines a real-coded genetic algorithm (population-level diversity) with
+    a gradient local search applied Lamarckian-style to every individual before
+    its fitness is evaluated.  The gradient-refined weights overwrite the
+    original genome so evolution always acts on already-locally-optimised
+    solutions.
+
+    The per-individual local search reuses the ROC convex hull across all
+    ``local_steps`` gradient evaluations (see :class:`LamarckianGeneration`).
+    Final fitness is always evaluated on a fresh hull via
+    :meth:`~empulse.metrics.metric.strategies.max_profit_strategy.gradient_piecewise.MaxProfitLogitGradientPiecewise.score`.
+
+    Parameters
+    ----------
+    bounds : float, default=10.0
+        Symmetric search-space half-width: each coefficient is initialised in
+        ``[-bounds, +bounds]``.
+    population_size : int, default=50
+        Number of individuals in the population.
+    max_iter : int, default=100
+        Maximum number of GA generations.
+    patience : int, default=20
+        Stop early when the best fitness has not improved by more than ``tol``
+        over the last ``patience`` generations.
+    tol : float, default=1e-6
+        Convergence tolerance for the patience criterion.
+    crossover_rate : float, default=0.8
+        Crossover probability (passed to :class:`LamarckianGeneration`).
+    mutation_rate : float, default=0.1
+        Mutation probability (passed to :class:`LamarckianGeneration`).
+    elitism : float, default=0.05
+        Elite fraction (passed to :class:`LamarckianGeneration`).
+    local_steps : int, default=5
+        Number of gradient steps per individual per generation.
+    lr : float, default=0.05
+        Learning rate for the local search.
+    optimizer : {"adam", "sgd"}, default="adam"
+        Local-search update rule passed to :class:`LamarckianGeneration`.
+    beta1 : float, default=0.9
+    beta2 : float, default=0.999
+    eps : float, default=1e-8
+    grad_clip : float, default=5.0
+        Adam / gradient-clipping hyper-parameters.
+    random_state : int, default=42
+        Seed for the GA random-number generator.
+    """
+
+    def __init__(
+        self,
+        bounds: float = 10.0,
+        population_size: int = 50,
+        max_iter: int = 100,
+        patience: int = 20,
+        tol: float = 1e-6,
+        crossover_rate: float = 0.8,
+        mutation_rate: float = 0.1,
+        elitism: float = 0.05,
+        local_steps: int = 5,
+        lr: float = 0.05,
+        optimizer: str = 'adam',
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        eps: float = 1e-8,
+        grad_clip: float = 5.0,
+        random_state: int = 42,
+    ):
+        self.bounds = bounds
+        self.population_size = population_size
+        self.max_iter = max_iter
+        self.patience = patience
+        self.tol = tol
+        self.crossover_rate = crossover_rate
+        self.mutation_rate = mutation_rate
+        self.elitism = elitism
+        self.local_steps = local_steps
+        self.lr = lr
+        self.optimizer = optimizer
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+        self.grad_clip = grad_clip
+        self.random_state = random_state
+
+    def __call__(
+        self,
+        objective: 'MaxProfitLogitGradientPiecewise',
+        X: NDArray[np.float64],
+        **_: Any,
+    ) -> OptimizeResult:
+        """Run the Lamarckian GA with the given objective function."""
+
+        # The GA maximises fitness; CSLogitClassifier minimises the loss, so we
+        # present the negated scalar loss as the fitness signal.  Crucially we
+        # use ``objective.score()`` here (not ``__call__``), which skips the
+        # gradient computation entirely and always uses a fresh hull.
+        def scalar_fn(theta: NDArray[np.float64]) -> float:
+            return -objective.score(theta)
+
+        gen = LamarckianGeneration(
+            population_size=self.population_size,
+            crossover_rate=self.crossover_rate,
+            mutation_rate=self.mutation_rate,
+            elitism=self.elitism,
+            local_steps=self.local_steps,
+            lr=self.lr,
+            optimizer=self.optimizer,
+            beta1=self.beta1,
+            beta2=self.beta2,
+            eps=self.eps,
+            grad_clip=self.grad_clip,
+            random_state=self.random_state,
+            n_jobs=1,  # avoid nested parallelism when run inside joblib Parallel
+        )
+        # Wire up the gradient objective so the local search can call gradient_steps()
+        gen._grad_objective = objective
+
+        bounds_list = [(-self.bounds, self.bounds)] * X.shape[1]
+
+        last_gen: LamarckianGeneration | None = None
+        for i, last_gen in enumerate(gen.optimize(scalar_fn, bounds_list)):
+            if i + 1 >= self.max_iter:
+                break
+            if len(last_gen.fx_best) >= self.patience:
+                recent = last_gen.fx_best[-self.patience :]
+                if max(recent) - min(recent) < self.tol:
+                    break
+
+        ga_result = last_gen.result  # type: ignore[union-attr]
+        # Final loss evaluation on true hull (score() does not increment epoch)
+        loss = objective.score(ga_result.x)
+        return OptimizeResult(
+            x=ga_result.x,
+            success=True,
+            fun=float(loss),
+            message='Lamarckian Memetic finished',
+            status=0,
+            nit=ga_result.nit,
+            nfev=ga_result.nfev,
+        )
