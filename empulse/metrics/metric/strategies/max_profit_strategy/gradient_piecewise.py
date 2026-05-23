@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Any
 
 import numpy as np
@@ -9,9 +10,25 @@ from ...common import _safe_lambdify
 from .common import _convex_hull, extract_distribution_parameters
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
+# Type alias for the hull state tuple cached between gradient steps.
+_HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
+
 
 class MaxProfitLogitGradientPiecewise:
-    """Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models."""
+    """
+    Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models.
+
+    Methods
+    -------
+    * ``__call__(weights)`` – returns ``(value, gradient)`` using a fresh hull.
+    * ``score(weights)`` – returns only the scalar loss (fresh hull, no epoch increment).
+      Cheap when only the objective value is needed (e.g. final fitness evaluation).
+    * ``gradient(weights)`` – returns only the gradient vector (fresh hull, increments epoch).
+      Saves the value-accumulation work when the scalar is not needed.
+    * ``gradient_steps(initial_weights)`` – a *generator* that yields gradients while reusing
+      a cached convex hull across multiple calls.  Ideal for the Lamarckian memetic pattern
+      where a few gradient steps are applied before the true fitness is evaluated.
+    """
 
     def __init__(
         self,
@@ -40,7 +57,6 @@ class MaxProfitLogitGradientPiecewise:
         self.alpha_max = alpha_max
         self._epoch = 0
 
-        # --- 1. PRECOMPUTE DATASET CONSTANTS ---
         self.pos_mask = self.y_true == 1
         self.neg_mask = ~self.pos_mask
         self.n_pos = int(self.pos_mask.sum())
@@ -51,7 +67,6 @@ class MaxProfitLogitGradientPiecewise:
         self.pi0 = float(self.n_pos / len(self.y_true))
         self.pi1 = 1.0 - self.pi0
 
-        # --- 2. PRECOMPUTE DISTRIBUTION & BUSINESS CONSTANTS ---
         self.dist_params, self.kwargs = extract_distribution_parameters(
             parameters, self.score_function.distribution_args
         )
@@ -72,7 +87,6 @@ class MaxProfitLogitGradientPiecewise:
         else:
             self.upper_bound = float(upper_b)
 
-        # --- 3. SYMBOLIC DERIVATIONS ---
         F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
         self.da_dF0_eqs = []
         self.da_dF1_eqs = []
@@ -88,9 +102,6 @@ class MaxProfitLogitGradientPiecewise:
             self.da_dF0_fns.append(_safe_lambdify(da_dF0))
             self.da_dF1_fns.append(_safe_lambdify(da_dF1))
 
-        # --- 4. PRECOMPUTE LAMBDA ARGUMENT DISPATCHERS ---
-        # We pre-calculate exactly which kwargs, F_0, F_1, pi_0, and pi_1 are needed
-        # by each specific sympy function so we can bypass slow filtering in the train loop.
         self.a_reqs = []
         self.da0_reqs = []
         self.da1_reqs = []
@@ -106,22 +117,9 @@ class MaxProfitLogitGradientPiecewise:
             self.da0_reqs.append(_get_reqs(self.da_dF0_eqs[k]))
             self.da1_reqs.append(_get_reqs(self.da_dF1_eqs[k]))
 
-    def _current_alpha(self) -> float:
-        """Compute annealed temperature for the current objective evaluation."""
-        try:
-            alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
-        except OverflowError:
-            alpha = self.alpha_max
-        return float(min(self.alpha_max, alpha))
-
-    def reset(self) -> None:
-        """Reset the objective evaluation."""
-        self._epoch = 0
-
-    def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
-        """Return the negated stochastic EMP objective and gradient for minimization."""
+    def _apply_soft_threshold(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return a copy of *weights* with soft-thresholding applied (if enabled)."""
         start_coef = 1 if self.fit_intercept else 0
-
         w = np.asarray(weights, dtype=np.float64).copy()
         if self.soft_threshold:
             abs_w = np.abs(w[start_coef:])
@@ -131,15 +129,24 @@ class MaxProfitLogitGradientPiecewise:
                 np.sign(w[start_coef:]) * diff,
                 np.where(diff < 0, 0.0, w[start_coef:]),
             )
+        return w
 
-        alpha = self._current_alpha()
-        self._epoch += 1
+    def _compute_y_score(self, w: FloatNDArray) -> FloatNDArray:
+        """Compute logistic scores for every sample."""
+        return expit(self.features @ w)  # type: ignore[return-value]
 
-        # 1. Forward Pass: Dynamic Scores & Hull
-        y_score = expit(self.features @ w)
+    def _compute_hull_state(self, y_score: FloatNDArray) -> _HullCache:
+        """Build the ROC convex hull and derive piecewise segment arrays.
+
+        Returns
+        -------
+        bounds : ndarray, shape (M+1,)
+        seg_tprs : ndarray, shape (M,)
+        seg_fprs : ndarray, shape (M,)
+        M : int
+            Number of piecewise segments.
+        """
         tprs, fprs = _convex_hull(self.y_true, y_score)
-
-        # 2. Extract Piecewise Segments
         bounds, _, _, segment_tprs, segment_fprs = compute_piecewise_bounds(
             self.score_function.compute_bounds_fns,
             tprs,
@@ -153,56 +160,37 @@ class MaxProfitLogitGradientPiecewise:
             lower_bound=self.lower_bound,
             **self.kwargs,
         )
-
-        # --- THE FIX: Force cast SymPy bounds to native NumPy floats ---
         bounds = np.asarray(bounds, dtype=np.float64)
+        seg_tprs = np.asarray(segment_tprs, dtype=np.float64)
+        seg_fprs = np.asarray(segment_fprs, dtype=np.float64)
+        M = len(seg_tprs)  # noqa: N806
+        return bounds, seg_tprs, seg_fprs, M
 
-        # Convert segments to NumPy arrays for vectorization
-        segment_tprs_arr = np.asarray(segment_tprs)  # Shape: (M,)
-        segment_fprs_arr = np.asarray(segment_fprs)  # Shape: (M,)
+    def _compute_thresholds(
+        self,
+        y_score: FloatNDArray,
+        seg_tprs: FloatNDArray,
+        seg_fprs: FloatNDArray,
+    ) -> FloatNDArray:
+        """Compute per-segment classification thresholds from current scores."""
+        rates = np.clip(seg_tprs * self.pi0 + seg_fprs * self.pi1, 0.0, 1.0)
+        return np.quantile(y_score, 1.0 - rates)  # type: ignore[return-value]
 
-        M = len(segment_tprs_arr)  # noqa: N806
-
-        # Compute thresholds for all M segments
-        # rates = segment_tprs_arr * self.pi0 + segment_fprs_arr * self.pi1
-        # T_M = np.array([classification_threshold(self.y_true, y_score, float(r)) for r in rates])  # Shape: (M,)
-        rates = np.clip(segment_tprs_arr * self.pi0 + segment_fprs_arr * self.pi1, 0.0, 1.0)
-        T_M = np.quantile(y_score, 1.0 - rates)  # noqa: N806
-
-        # 3. Precompute logistic derivatives
-        s_pos = y_score[self.pos_mask]  # Shape: (N_pos,)
-        s_neg = y_score[self.neg_mask]  # Shape: (N_neg,)
-        sd_pos = s_pos * (1.0 - s_pos)
-        sd_neg = s_neg * (1.0 - s_neg)
-
-        # --- THE VECTORIZATION MAGIC ---
-        # Broadcast scores (N, 1) against thresholds (1, M) to create a (N, M) matrix of sigmoids
-        # sig_pos = expit(alpha * (s_pos[:, None] - T_M[None, :]))  # Shape: (N_pos, M)
-        # sig_neg = expit(alpha * (s_neg[:, None] - T_M[None, :]))  # Shape: (N_neg, M)
-        sig_pos = expit(alpha * np.subtract.outer(s_pos, T_M))
-        sig_neg = expit(alpha * np.subtract.outer(s_neg, T_M))
-
-        dsig_pos = sig_pos * (1.0 - sig_pos)
-        dsig_neg = sig_neg * (1.0 - sig_neg)
-
-        # Matrix multiplication computes the feature gradients for ALL M segments instantly!
-        # Transpose (N_pos, M) to (M, N_pos) @ (N_pos, F_features) -> Result is (M, F_features)
-        grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # noqa: N806
-        grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # noqa: N806
-
+    def _accumulate_value(
+        self,
+        bounds: FloatNDArray,
+        seg_tprs: FloatNDArray,
+        seg_fprs: FloatNDArray,
+        M: int,  # noqa: N803
+    ) -> float:
+        """Sum the piecewise EMP objective value across all segments and polynomial terms."""
         total_value = 0.0
-        total_gradient = np.zeros_like(w)
-
-        # 4. Loop over polynomial terms (k is usually just 0 and 1, so this loop is tiny)
         for k in range(len(self.score_function.coefficient_eqs)):
-            # Fetch analytical integrals for all M segments
             k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
             R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
-
             if not np.any(R_kM):
                 continue
 
-            # Evaluate sympy lambdas for all M segments simultaneously using array inputs.
             static_kw, n_p0, n_p1, n_F0, n_F1 = self.a_reqs[k]  # noqa: N806
             args_a = static_kw.copy()
             if n_p0:
@@ -210,14 +198,49 @@ class MaxProfitLogitGradientPiecewise:
             if n_p1:
                 args_a['pi_1'] = self.pi1
             if n_F0:
-                args_a['F_0'] = segment_tprs_arr
+                args_a['F_0'] = seg_tprs
             if n_F1:
-                args_a['F_1'] = segment_fprs_arr
+                args_a['F_1'] = seg_fprs
 
             a_k_raw = self.score_function.coefficient_fns[k](**args_a)
             a_k_M = np.broadcast_to(np.asarray(a_k_raw, dtype=np.float64), (M,))  # noqa: N806
+            total_value += float(np.sum(a_k_M * R_kM))
+        return total_value
 
-            # --- EVALUATE da_dF0 ---
+    def _accumulate_gradient(
+        self,
+        w: FloatNDArray,
+        y_score: FloatNDArray,
+        T_M: FloatNDArray,  # noqa: N803
+        bounds: FloatNDArray,
+        seg_tprs: FloatNDArray,
+        seg_fprs: FloatNDArray,
+        M: int,  # noqa: N803
+        alpha: float,
+    ) -> FloatNDArray:
+        """Compute the raw (un-negated, un-regularized) gradient vector."""
+        s_pos = y_score[self.pos_mask]
+        s_neg = y_score[self.neg_mask]
+        sd_pos = s_pos * (1.0 - s_pos)
+        sd_neg = s_neg * (1.0 - s_neg)
+
+        sig_pos = expit(alpha * np.subtract.outer(s_pos, T_M))
+        sig_neg = expit(alpha * np.subtract.outer(s_neg, T_M))
+        dsig_pos = sig_pos * (1.0 - sig_pos)
+        dsig_neg = sig_neg * (1.0 - sig_neg)
+
+        # (M, F) feature-gradient matrices for the two ROC axes
+        grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # noqa: N806
+        grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # noqa: N806
+
+        total_gradient = np.zeros_like(w)
+        for k in range(len(self.score_function.coefficient_eqs)):
+            k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
+            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
+            if not np.any(R_kM):
+                continue
+
+            # da/dF_0
             static_kw0, n_p0, n_p1, n_F0, n_F1 = self.da0_reqs[k]  # noqa: N806
             args_da0 = static_kw0.copy()
             if n_p0:
@@ -225,14 +248,12 @@ class MaxProfitLogitGradientPiecewise:
             if n_p1:
                 args_da0['pi_1'] = self.pi1
             if n_F0:
-                args_da0['F_0'] = segment_tprs_arr
+                args_da0['F_0'] = seg_tprs
             if n_F1:
-                args_da0['F_1'] = segment_fprs_arr
+                args_da0['F_1'] = seg_fprs
+            da_dF0_M = np.broadcast_to(np.asarray(self.da_dF0_fns[k](**args_da0), dtype=np.float64), (M,))  # noqa: N806
 
-            da_dF0_raw = self.da_dF0_fns[k](**args_da0)  # noqa: N806
-            da_dF0_M = np.broadcast_to(np.asarray(da_dF0_raw, dtype=np.float64), (M,))  # noqa: N806
-
-            # --- EVALUATE da_dF1 ---
+            # da/dF_1
             static_kw1, n_p0, n_p1, n_F0, n_F1 = self.da1_reqs[k]  # noqa: N806
             args_da1 = static_kw1.copy()
             if n_p0:
@@ -240,40 +261,202 @@ class MaxProfitLogitGradientPiecewise:
             if n_p1:
                 args_da1['pi_1'] = self.pi1
             if n_F0:
-                args_da1['F_0'] = segment_tprs_arr
+                args_da1['F_0'] = seg_tprs
             if n_F1:
-                args_da1['F_1'] = segment_fprs_arr
+                args_da1['F_1'] = seg_fprs
+            da_dF1_M = np.broadcast_to(np.asarray(self.da_dF1_fns[k](**args_da1), dtype=np.float64), (M,))  # noqa: N806
 
-            da_dF1_raw = self.da_dF1_fns[k](**args_da1)  # noqa: N806
-            da_dF1_M = np.broadcast_to(np.asarray(da_dF1_raw, dtype=np.float64), (M,))  # noqa: N806
-
-            # Accumulate value and gradient arrays
-            total_value += np.sum(a_k_M * R_kM)
-
-            # Multiply the scalars first (Shape: (M,))
             weight_F0 = R_kM * da_dF0_M  # noqa: N806
             weight_F1 = R_kM * da_dF1_M  # noqa: N806
-
-            # Matrix multiplication (M,) @ (M, F) -> instantly reduces to (F,)
             total_gradient += (weight_F0 @ grad_F0_M) + (weight_F1 @ grad_F1_M)
 
-        # Convert to minimization problem
+        return total_gradient
+
+    def _regularization_value(self, coef: FloatNDArray) -> float:
+        """Regularization contribution to the scalar objective."""
+        if self.l1_ratio == 0.0:
+            return 0.5 * float(np.dot(coef, coef)) / self.C
+        if self.l1_ratio == 1.0:
+            return float(np.sum(np.abs(coef))) / self.C
+        return (
+            (1.0 - self.l1_ratio) * 0.5 * float(np.dot(coef, coef)) + self.l1_ratio * float(np.sum(np.abs(coef)))
+        ) / self.C
+
+    def _regularization_gradient(self, coef: FloatNDArray) -> FloatNDArray:
+        """Regularization contribution to the gradient."""
+        if self.l1_ratio == 0.0:
+            return coef / self.C
+        if self.l1_ratio == 1.0:
+            return np.sign(coef) / self.C
+        return ((1.0 - self.l1_ratio) * coef + self.l1_ratio * np.sign(coef)) / self.C
+
+    def _current_alpha(self) -> float:
+        """Compute annealed temperature for the current objective evaluation."""
+        try:
+            alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
+        except OverflowError:
+            alpha = self.alpha_max
+        return float(min(self.alpha_max, alpha))
+
+    def reset(self) -> None:
+        """Reset the epoch counter (annealing schedule)."""
+        self._epoch = 0
+
+    def score(self, weights: FloatNDArray) -> float:
+        """Compute the negated EMP objective value (no gradient).
+
+        Always uses a freshly computed convex hull.  The epoch counter is *not*
+        incremented, because this method is intended for fitness evaluation rather
+        than gradient-based updates.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Negated EMP loss (suitable for minimization).
+        """
+        w = self._apply_soft_threshold(weights)
+        y_score = self._compute_y_score(w)
+        bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
+
+        value = float(-self._accumulate_value(bounds, seg_tprs, seg_fprs, m))
+        start_coef = 1 if self.fit_intercept else 0
+        value += self._regularization_value(w[start_coef:])
+        return value
+
+    def gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Compute the gradient of the negated EMP objective (no scalar value).
+
+        Always uses a freshly computed convex hull.  Increments the epoch counter
+        so the annealing schedule advances exactly once per gradient step.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient vector matched in shape to *weights*.
+        """
+        w = self._apply_soft_threshold(weights)
+        alpha = self._current_alpha()
+        self._epoch += 1
+
+        y_score = self._compute_y_score(w)
+        bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
+        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
+
+        grad = -self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
+        start_coef = 1 if self.fit_intercept else 0
+        grad[start_coef:] += self._regularization_gradient(w[start_coef:])
+        return grad
+
+    def gradient_steps(
+        self,
+        initial_weights: FloatNDArray,
+    ) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """
+        Yield gradients while reusing a cached convex hull.
+
+        The convex hull (and derived piecewise segment arrays) are computed once
+        from *initial_weights* on the first call, then reused for subsequent
+        gradient steps.  This avoids the hull-reconstruction cost inside tight
+        local-search loops (e.g. a few Adam steps applied Lamarckian-style before
+        a fitness evaluation) where the hull is unlikely to change substantially.
+
+        When computing the actual loss (``score()``) always use a fresh hull.
+
+        Parameters
+        ----------
+        initial_weights : ndarray
+            Starting coefficient vector.  The convex hull is built from these
+            scores on the first iteration.
+
+        Yields
+        ------
+        gradient : ndarray
+            Negated, regularized gradient at the current weights.
+
+        Receives (via ``send``)
+        -----------------------
+        weights : ndarray
+            New coefficient vector for the next gradient step.  The cached hull
+            is reused; only scores and thresholds are recomputed.
+        (weights, refresh) : (ndarray, bool)
+            Pass ``refresh=True`` to force the convex hull to be rebuilt from the
+            new *weights* before computing the gradient.
+
+        Examples
+        --------
+        >>> gen = objective.gradient_steps(theta)
+        >>> grad = next(gen)  # hull built from theta
+        >>> grad = gen.send(new_theta)  # hull reused
+        >>> grad = gen.send((new_theta, True))  # hull refreshed
+        >>> gen.close()
+        """
+        weights: FloatNDArray = initial_weights
+        cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)
+
+        while True:
+            w = self._apply_soft_threshold(weights)
+            alpha = self._current_alpha()
+            self._epoch += 1
+
+            y_score = self._compute_y_score(w)
+
+            if cached is None:
+                cached = self._compute_hull_state(y_score)
+
+            bounds, seg_tprs, seg_fprs, m = cached
+            T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
+
+            grad = -self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
+            start_coef = 1 if self.fit_intercept else 0
+            grad[start_coef:] += self._regularization_gradient(w[start_coef:])
+
+            sent = yield grad
+
+            if sent is None:
+                # generator.close() or bare next() with no follow-up send
+                return
+            if isinstance(sent, tuple):
+                weights, refresh = sent
+                if refresh:
+                    cached = None  # force hull rebuild on next iteration
+            else:
+                weights = sent
+                # cached hull is kept
+
+    def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the negated stochastic EMP objective and gradient for minimization.
+
+        Backward-compatible entry point.  Computes both value and gradient from a
+        freshly built convex hull and increments the epoch counter once.
+        """
+        w = self._apply_soft_threshold(weights)
+        alpha = self._current_alpha()
+        self._epoch += 1
+
+        y_score = self._compute_y_score(w)
+        bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
+        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
+
+        total_value = self._accumulate_value(bounds, seg_tprs, seg_fprs, m)
+        total_gradient = self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
+
         value = float(-total_value)
         gradient = -total_gradient
 
-        # 5. Regularization
+        start_coef = 1 if self.fit_intercept else 0
         coef = w[start_coef:]
-        if self.l1_ratio == 0.0:
-            gradient[start_coef:] += coef / self.C
-            value += 0.5 * float(np.dot(coef, coef)) / self.C
-        elif self.l1_ratio == 1.0:
-            gradient[start_coef:] += np.sign(coef) / self.C
-            value += float(np.sum(np.abs(coef))) / self.C
-        else:
-            gradient[start_coef:] += ((1.0 - self.l1_ratio) * coef + self.l1_ratio * np.sign(coef)) / self.C
-            value += (
-                (1.0 - self.l1_ratio) * 0.5 * float(np.dot(coef, coef)) + self.l1_ratio * float(np.sum(np.abs(coef)))
-            ) / self.C
+        value += self._regularization_value(coef)
+        gradient[start_coef:] += self._regularization_gradient(coef)
 
         return value, gradient
 
@@ -292,7 +475,6 @@ class MaxProfitBoostGradientPiecewise:
         self.y_true = np.asarray(y_true).reshape(-1).astype(np.int32)
         self.parameters = parameters
 
-        # --- 1. PRECOMPUTE DATASET CONSTANTS ---
         self.pos_mask = self.y_true == 1
         self.neg_mask = ~self.pos_mask
         self.n_pos = max(int(np.sum(self.pos_mask)), 1)
@@ -301,7 +483,6 @@ class MaxProfitBoostGradientPiecewise:
         self.pi0 = float(self.n_pos / len(self.y_true))
         self.pi1 = 1.0 - self.pi0
 
-        # --- 2. PRECOMPUTE DISTRIBUTION & BUSINESS CONSTANTS ---
         self.dist_params, self.kwargs = extract_distribution_parameters(
             parameters, self.score_function.distribution_args
         )
@@ -321,7 +502,6 @@ class MaxProfitBoostGradientPiecewise:
         else:
             self.upper_bound = float(upper_b)
 
-        # --- 3. SYMBOLIC DERIVATIONS ---
         F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
         self.da_dF0_eqs = []
         self.da_dF1_eqs = []
@@ -336,7 +516,6 @@ class MaxProfitBoostGradientPiecewise:
             self.da_dF0_fns.append(_safe_lambdify(da_dF0))
             self.da_dF1_fns.append(_safe_lambdify(da_dF1))
 
-        # --- 4. PRECOMPUTE LAMBDA ARGUMENT DISPATCHERS ---
         self.da0_reqs = []
         self.da1_reqs = []
         for k in range(len(self.score_function.coefficient_eqs)):
@@ -353,7 +532,6 @@ class MaxProfitBoostGradientPiecewise:
         """Compute the gradient and hessian of the stochastic objective."""
         y_score_arr = expit(np.asarray(y_score, dtype=np.float64).reshape(-1))
 
-        # 1. Forward Pass: Dynamic Hull & Bounds
         tprs, fprs = _convex_hull(self.y_true, y_score_arr)
         bounds, _, _, segment_tprs, segment_fprs = compute_piecewise_bounds(
             self.score_function.compute_bounds_fns,
@@ -374,11 +552,11 @@ class MaxProfitBoostGradientPiecewise:
         segment_fprs_arr = np.asarray(segment_fprs, dtype=np.float64)
         M = len(segment_tprs_arr)  # noqa: N806
 
-        # 2. Vectorized Thresholds
+        # Vectorized Thresholds
         rates = np.clip(segment_tprs_arr * self.pi0 + segment_fprs_arr * self.pi1, 0.0, 1.0)
         T_M = np.quantile(y_score_arr, 1.0 - rates)  # noqa: N806
 
-        # 3. Precompute logistic derivatives for instances
+        # Precompute logistic derivatives for instances
         s_pos = y_score_arr[self.pos_mask]
         s_neg = y_score_arr[self.neg_mask]
 
@@ -391,7 +569,6 @@ class MaxProfitBoostGradientPiecewise:
         sig_sec_pos = alpha**2 * sig_pos * (1.0 - sig_pos) * (1.0 - 2.0 * sig_pos)
         sig_sec_neg = alpha**2 * sig_neg * (1.0 - sig_neg) * (1.0 - 2.0 * sig_neg)
 
-        # 4. Leibniz Summation
         weight_F0_M = np.zeros(M)  # noqa: N806
         weight_F1_M = np.zeros(M)  # noqa: N806
 
@@ -402,7 +579,6 @@ class MaxProfitBoostGradientPiecewise:
             if not np.any(R_kM):
                 continue
 
-            # Fast Dispatch for da_dF0
             static_kw0, n_p0, n_p1, n_F0, n_F1 = self.da0_reqs[k]  # noqa: N806
             args_da0 = static_kw0.copy()
             if n_p0:
@@ -417,7 +593,6 @@ class MaxProfitBoostGradientPiecewise:
             da_dF0_raw = self.da_dF0_fns[k](**args_da0)  # noqa: N806
             da_dF0_M = np.broadcast_to(np.asarray(da_dF0_raw, dtype=np.float64), (M,))  # noqa: N806
 
-            # Fast Dispatch for da_dF1
             static_kw1, n_p0, n_p1, n_F0, n_F1 = self.da1_reqs[k]  # noqa: N806
             args_da1 = static_kw1.copy()
             if n_p0:
@@ -435,11 +610,11 @@ class MaxProfitBoostGradientPiecewise:
             weight_F0_M += R_kM * da_dF0_M  # noqa: N806
             weight_F1_M += R_kM * da_dF1_M  # noqa: N806
 
-        # 5. Convert to minimization constants per segment
+        # Convert to minimization constants per segment
         c_pos_M = -weight_F0_M / self.n_pos  # noqa: N806
         c_neg_M = -weight_F1_M / self.n_neg  # noqa: N806
 
-        # 6. Matrix Multiply to compute global gradients/hessians per instance
+        # Matrix Multiply to compute global gradients/hessians per instance
         grad_pos = sig_prime_pos @ c_pos_M
         grad_neg = sig_prime_neg @ c_neg_M
 
@@ -454,7 +629,6 @@ class MaxProfitBoostGradientPiecewise:
         hessian[self.pos_mask] = hess_pos
         hessian[self.neg_mask] = hess_neg
 
-        # --- THE INITIALIZATION FIX ---
         # At epoch 0, all scores are identical. sigma = 0.5, so the exact hessian is 0.
         # XGBoost refuses to split nodes if sum(hessian) < min_child_weight.
         # We fall back to a strict numerical floor (or gradient magnitude) ONLY when it vanishes.
