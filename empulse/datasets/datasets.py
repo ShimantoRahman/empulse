@@ -112,13 +112,7 @@ def load_churn_tv_subscriptions(*, backend: IntoBackend[EagerAllowed]) -> Datase
     )
 
 
-def load_upsell_bank_telemarketing(
-    *,
-    backend: IntoBackend[EagerAllowed],
-    interest_rate: float = 0.02463333,
-    term_deposit_fraction: float = 0.25,
-    contact_cost: float = 1.0,
-) -> Dataset[Any, Any]:
+def load_upsell_bank_telemarketing(*, backend: IntoBackend[EagerAllowed]) -> Dataset[Any, Any]:
     """
     Load the bank telemarketing dataset (binary classification).
 
@@ -146,12 +140,6 @@ def load_upsell_bank_telemarketing(
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
         ``backend=pandas``.
-    interest_rate : float, default=0.02463333
-        Interest rate of the term deposit (:math:`r`).
-    term_deposit_fraction : float, default=0.25
-        Fraction of the client's balance deposited (:math:`d`).
-    contact_cost : float, default=1.0
-        Cost of contacting the client (:math:`c`).
 
     Returns
     -------
@@ -174,6 +162,16 @@ def load_upsell_bank_telemarketing(
         * - Predicted negative :math:`\\hat{y}_i = 0`
           - ``fn_cost`` :math:`= \\max(r \\cdot d \\cdot balance_i,\\; c)`
           - ``tn_cost`` :math:`= 0`
+
+    The cost matrix uses symbolic parameters with the following defaults:
+
+    - ``interest_rate`` (:math:`r`) = 0.02463333
+    - ``term_deposit_fraction`` (:math:`d`) = 0.25
+    - ``contact_cost`` (:math:`c`) = 1.0
+
+    To override these defaults, pass the desired values when evaluating the metric::
+
+        metric(dataset.target, y_score, interest_rate=0.03, **dataset.instance_costs)
 
     References
     ----------
@@ -199,9 +197,9 @@ def load_upsell_bank_telemarketing(
     feature_df, target_series, balance = process_bank_telemarketing(df)
     cost_matrix, instance_costs = upsell_bank_cost_matrix(
         balance,
-        interest_rate=interest_rate,
-        term_deposit_fraction=term_deposit_fraction,
-        contact_cost=contact_cost,
+        interest_rate=0.02463333,
+        term_deposit_fraction=0.25,
+        contact_cost=1.0,
     )
 
     return Dataset(
@@ -216,16 +214,7 @@ def load_upsell_bank_telemarketing(
     )
 
 
-def load_credit_scoring_pakdd(
-    *,
-    backend: IntoBackend[EagerAllowed],
-    interest_rate: float = 0.63,
-    fund_cost: float = 0.165,
-    max_credit_line: float = 25000,
-    loss_given_default: float = 0.75,
-    term_length_months: int = 24,
-    loan_to_income_ratio: float = 3,
-) -> Dataset[Any, Any]:
+def load_credit_scoring_pakdd(*, backend: IntoBackend[EagerAllowed]) -> Dataset[Any, Any]:
     """
     Load the credit scoring PAKDD 2009 competition dataset (binary classification).
 
@@ -252,18 +241,6 @@ def load_credit_scoring_pakdd(
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
         ``backend=pandas``.
-    interest_rate : float, default=0.63
-        Annual interest rate of the loan.
-    fund_cost : float, default=0.165
-        Annual cost of funds.
-    max_credit_line : float, default=25000
-        Maximum credit line amount.
-    loss_given_default : float, default=0.75
-        Fraction of the loan amount lost upon default.
-    term_length_months : int, default=24
-        Loan term length in months.
-    loan_to_income_ratio : float, default=3
-        Ratio of loan amount to monthly income.
 
     Returns
     -------
@@ -288,6 +265,23 @@ def load_credit_scoring_pakdd(
         * - Predicted negative :math:`\\hat{y}_i = 0`
           - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`
           - ``tn_cost`` :math:`= 0`
+
+    The cost matrix uses symbolic parameters with the following defaults:
+
+    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75
+
+    The following parameters are used to precompute the per-instance credit lines
+    and ``fp_cost`` values stored in ``instance_costs``:
+
+    - ``interest_rate`` = 0.63 (annual)
+    - ``fund_cost`` = 0.165 (annual)
+    - ``max_credit_line`` = 25000
+    - ``term_length_months`` = 24
+    - ``loan_to_income_ratio`` = 3
+
+    To override the symbolic default, pass the desired value when evaluating the metric::
+
+        metric(dataset.target, y_score, loss_given_default=0.6, **dataset.instance_costs)
 
     References
     ----------
@@ -322,12 +316,12 @@ def load_credit_scoring_pakdd(
         monthly_income,
         debt_ratio=np.zeros(len(target_np)),
         target_np=target_np,
-        interest_rate=interest_rate,
-        fund_cost=fund_cost,
-        cl_max=max_credit_line * 0.33,
-        loss_given_default=loss_given_default,
-        term_length_months=term_length_months,
-        loan_to_income_ratio=loan_to_income_ratio,
+        interest_rate=0.63,
+        fund_cost=0.165,
+        cl_max=25000 * 0.33,
+        loss_given_default=0.75,
+        term_length_months=24,
+        loan_to_income_ratio=3,
     )
 
     return Dataset(

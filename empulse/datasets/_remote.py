@@ -84,19 +84,11 @@ References
 """
 
 
-# ---------------------------------------------------------------------------
-# Iranian Churn — UCI ML Repository
-# ---------------------------------------------------------------------------
-
-
 def fetch_iranian_churn(
     *,
     backend: Any,
     data_home: str | Path | None = None,
     download_if_missing: bool = True,
-    incentive_fraction: float = 0.05,
-    contact_fraction: float = 0.01,
-    accept_rate: float = 0.3,
 ) -> Dataset[Any, Any]:
     """
     Fetch the Iranian Churn dataset from the UCI ML Repository (binary classification).
@@ -128,12 +120,6 @@ def fetch_iranian_churn(
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
     download_if_missing : bool, default=True
         If False, raise an ``OSError`` when the data is not cached locally.
-    incentive_fraction : float, default=0.05
-        Fraction of CLV offered as retention incentive (:math:`d`).
-    contact_fraction : float, default=0.01
-        Fraction of CLV spent on contacting the customer (:math:`f`).
-    accept_rate : float, default=0.3
-        Probability that a churner accepts the retention offer (:math:`\\gamma`).
 
     Returns
     -------
@@ -158,8 +144,15 @@ def fetch_iranian_churn(
           - ``fn_cost`` :math:`= CLV_i`
           - ``tn_cost`` :math:`= 0`
 
-    with :math:`d` = ``incentive_fraction``, :math:`f` = ``contact_fraction``,
-    :math:`\\gamma` = ``accept_rate``.
+    The cost matrix uses symbolic parameters with the following defaults:
+
+    - ``incentive_fraction`` (:math:`d`) = 0.05
+    - ``contact_fraction`` (:math:`f`) = 0.01
+    - ``accept_rate`` (:math:`\\gamma`) = 0.3
+
+    To override these defaults, pass the desired values when evaluating the metric::
+
+        metric(dataset.target, y_score, accept_rate=0.5, **dataset.instance_costs)
 
     References
     ----------
@@ -191,9 +184,9 @@ def fetch_iranian_churn(
     feature_df, target_series, clv = process_iranian_churn(raw, backend)
     cost_matrix, instance_costs = churn_retention_cost_matrix(
         clv,
-        incentive_fraction=incentive_fraction,
-        contact_fraction=contact_fraction,
-        accept_rate=accept_rate,
+        incentive_fraction=0.05,
+        contact_fraction=0.01,
+        accept_rate=0.3,
     )
 
     return Dataset(
@@ -214,22 +207,11 @@ def _fetch_uci_iranian_churn_raw() -> dict[str, list[str | None]]:
     return {col: list(arr.astype(str)) for col, arr in {**features, **targets}.items()}  # type: ignore[return-value]
 
 
-# ---------------------------------------------------------------------------
-# Give Me Some Credit — OpenML
-# ---------------------------------------------------------------------------
-
-
 def fetch_give_me_some_credit(
     *,
     backend: Any,
     data_home: str | Path | None = None,
     download_if_missing: bool = True,
-    interest_rate: float = 0.0479,
-    fund_cost: float = 0.0294,
-    max_credit_line: float = 25000,
-    loss_given_default: float = 0.75,
-    term_length_months: int = 24,
-    loan_to_income_ratio: float = 3,
 ) -> Dataset[Any, Any]:
     """
     Fetch the "Give Me Some Credit" dataset from OpenML (binary classification).
@@ -265,18 +247,6 @@ def fetch_give_me_some_credit(
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
     download_if_missing : bool, default=True
         If False, raise an ``OSError`` when the data is not cached locally.
-    interest_rate : float, default=0.0479
-        Annual loan interest rate.
-    fund_cost : float, default=0.0294
-        Annual cost of funds.
-    max_credit_line : float, default=25000
-        Maximum credit line per client.
-    loss_given_default : float, default=0.75
-        Fraction of credit line lost on default.
-    term_length_months : int, default=24
-        Loan term in months.
-    loan_to_income_ratio : float, default=3
-        Loan-to-monthly-income ratio.
 
     Returns
     -------
@@ -301,6 +271,23 @@ def fetch_give_me_some_credit(
         * - Predicted negative :math:`\\hat{y}_i = 0`
           - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`
           - ``tn_cost`` :math:`= 0`
+
+    The cost matrix uses symbolic parameters with the following defaults:
+
+    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75
+
+    The following parameters are used to precompute per-instance credit lines
+    and ``fp_cost`` values stored in ``instance_costs``:
+
+    - ``interest_rate`` = 0.0479 (annual)
+    - ``fund_cost`` = 0.0294 (annual)
+    - ``max_credit_line`` = 25000
+    - ``term_length_months`` = 24
+    - ``loan_to_income_ratio`` = 3
+
+    To override the symbolic default, pass the desired value when evaluating the metric::
+
+        metric(dataset.target, y_score, loss_given_default=0.6, **dataset.instance_costs)
 
     References
     ----------
@@ -335,12 +322,12 @@ def fetch_give_me_some_credit(
         monthly_income_np,
         debt_ratio=debt_ratio_np,
         target_np=target_np,
-        interest_rate=interest_rate,
-        fund_cost=fund_cost,
-        cl_max=max_credit_line,
-        loss_given_default=loss_given_default,
-        term_length_months=term_length_months,
-        loan_to_income_ratio=loan_to_income_ratio,
+        interest_rate=0.0479,
+        fund_cost=0.0294,
+        cl_max=25000,
+        loss_given_default=0.75,
+        term_length_months=24,
+        loan_to_income_ratio=3,
     )
 
     return Dataset(
