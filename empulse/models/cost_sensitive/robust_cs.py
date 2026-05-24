@@ -329,10 +329,10 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
             self.costs_ = {
-                'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),
-                'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),
-                'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),
-                'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),
+                'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # type: ignore[dict-item]
+                'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),  # type: ignore[dict-item]
+                'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),  # type: ignore[dict-item]
+                'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),  # type: ignore[dict-item]
             }
             should_fit = self._determine_outlier_costs()
             self._fit_outlier_estimators(X, y, should_fit)
