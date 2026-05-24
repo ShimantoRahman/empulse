@@ -1,6 +1,6 @@
 from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -45,8 +45,9 @@ class Generation:
     logging_fn : callable, default=print
         Function to use for logging.
 
-    random_state : int or None, default=None
-        Random seed.
+    random_state : int, RandomState or None, default=None
+        Random seed.  Accepts an ``int``, a ``numpy.random.RandomState`` instance,
+        or ``None`` (uses the global NumPy random state).
 
     n_jobs : int or None, default=1
         Number of jobs to run in parallel.
@@ -61,8 +62,9 @@ class Generation:
     population : ndarray, shape (population_size, n_dim)
         Current population.
 
-    population_size : int
+    population_size : int or None
         Number of individuals in the population.
+        If ``None``, population size is set to ``10 * n_features``.
 
     crossover_rate : float
         Probability of crossover.
@@ -123,7 +125,7 @@ class Generation:
         elitism: float = 0.05,
         verbose: bool = False,
         logging_fn: Callable[[str], None] = print,
-        random_state: int | None = None,
+        random_state: int | np.random.RandomState | None = None,
         n_jobs: int | None = 1,
     ):
         super().__init__()
@@ -132,12 +134,11 @@ class Generation:
 
         if population_size is not None:
             if not isinstance(population_size, int):
-                raise TypeError('`pop_size` must be an int.')
+                raise TypeError('`population_size` must be an int.')
             if population_size < MIN_POP_SIZE:
-                raise ValueError(f'`pop_size` must be >= {MIN_POP_SIZE}, got {population_size}.')
-        if population_size is None:
-            population_size = -1
-        self.population_size = population_size
+                raise ValueError(f'`population_size` must be >= {MIN_POP_SIZE}, got {population_size}.')
+        # None is stored as-is; the actual size is resolved in optimize() once n_dim is known.
+        self.population_size: int | None = population_size
 
         if not 0.0 <= crossover_rate <= 1.0:
             raise ValueError('`crossover_rate` must be in [0, 1].')
@@ -189,7 +190,19 @@ class Generation:
         ------
         self : Generation
             Current instance of the optimizer.
+
+        Notes
+        -----
+        This is an **infinite generator**.  The caller is responsible for
+        stopping iteration (e.g. via ``break`` or ``itertools.islice``).
+        Calling ``optimize`` on the same instance a second time resets all
+        accumulated state (``fx_best``, ``result``, ``elite_pool``, etc.).
         """
+        # Reset state so that calling optimize() twice gives a clean run.
+        self.fx_best = []
+        self.elite_pool = []
+        self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)  # type: ignore[call-arg]
+
         # Check bounds
         bounds = list(bounds)
         if not all(
@@ -200,18 +213,16 @@ class Generation:
         array_bounds: NDArray[np.float64] = np.asarray(bounds, dtype=np.float64).T
         self.lower_bounds = array_bounds[0]
         self.upper_bounds = array_bounds[1]
-        if self.lower_bounds is None or self.upper_bounds is None:
-            raise ValueError('`lower_bounds` and `upper_bounds` are None.')
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
-        # Check population size
-        if self.population_size <= 0:
+        # Resolve population size now that n_dim is known.
+        if self.population_size is None:
             self.population_size = self.n_dim * FEATURE_TO_POP_SIZE_RATIO
 
         self.elitism = int(max(1, round(self.population_size * self.elitism_fraction)))
-        self._n_mating_pairs = int(self.population_size / 2)  # Constant for crossover
-        self.fitness = np.empty(self.population_size) * np.nan
+        self._n_mating_pairs = self.population_size // 2
+        self.fitness = np.full(self.population_size, np.nan)
 
         self.population = self._generate_population()
         self._evaluate(objective)
@@ -232,40 +243,31 @@ class Generation:
             self._update_elite_pool()
 
     def _generate_population(self) -> NDArray[np.float64]:
-        if self.n_dim is None:
-            raise ValueError('`n_dim` must be set.')
-        if self.population_size is None:
-            raise ValueError('`population_size` must be set.')
-        population = self.rng.rand(self.population_size, self.n_dim)
+        population = self.rng.rand(self._pop_size, self.n_dim)
         return self.lower_bounds + population * self.delta_bounds  # type: ignore
 
     def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> None:
-        if self.population_size is None:
-            raise ValueError('`population_size` must be set.')
+        nan_mask = np.isnan(self.fitness)
         fitness_values = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._update_fitness)(objective, ix) for ix in range(self.population_size)
+            delayed(self._update_fitness)(objective, ix) for ix in range(self._pop_size)
         )
         self.fitness = np.asarray(fitness_values)
+        # Count re-evaluated individuals after the (possibly parallel) call to
+        # avoid the race condition that arises from incrementing inside workers.
+        self.result.nfev += int(nan_mask.sum())  # type: ignore[attr-defined]
 
     def _update_fitness(self, objective: Callable[[NDArray[np.float64]], float], index: int) -> float:
         fitness_value = float(self.fitness[index])
         if np.isnan(fitness_value):
-            self.result.nfev += 1  # type: ignore[attr-defined]
             return objective(self.population[index])
         else:
             return fitness_value
 
     def _crossover(self) -> None:
         """Perform local arithmetic crossover."""
-        # Make iterator for pairs
-        match_parents = (
-            rnd_pair for rnd_pair in self.rng.choice(self.population_size, (self._n_mating_pairs, 2), replace=False)
-        )
-
-        # Crossover parents
-        for ix1, ix2 in match_parents:
+        for ix1, ix2 in self.rng.choice(self._pop_size, (self._n_pairs, 2), replace=False):
             if self.rng.uniform() < self.crossover_rate:
-                parent1 = self.population[ix1]  # Pass-by-ref
+                parent1 = self.population[ix1]
                 parent2 = self.population[ix2]
                 w = self.rng.uniform(size=self.n_dim)
                 child1 = w * parent1 + (1 - w) * parent2
@@ -277,13 +279,9 @@ class Generation:
 
     def _mutate(self) -> None:
         """Perform uniform random mutation."""
-        if self.population_size is None:
-            raise ValueError('`population_size` must be set.')
-        if self.n_dim is None:
-            raise ValueError('`n_dim` must be set.')
-        for ix in range(self.population_size):
+        for ix in range(self._pop_size):
             if self.rng.uniform() < self.mutation_rate:
-                mutant = self.population[ix]  # inplace
+                mutant = self.population[ix]  # view — mutation writes through to self.population
                 rnd_gene = self.rng.choice(self.n_dim)
                 rnd_val = self.rng.uniform(
                     low=self.lower_bounds[rnd_gene],
@@ -299,10 +297,15 @@ class Generation:
         avg_fitness = float(np.mean(fitness_values))
         max_fitness = float(np.max(fitness_values))
 
-        # Linear scaling
+        # Shift all values above zero before applying linear scaling so that
+        # the scaling formula always operates on non-negative inputs.
         if min_fitness < 0:
             fitness_values -= min_fitness
-            min_fitness = 0
+            avg_fitness -= min_fitness
+            max_fitness -= min_fitness
+            min_fitness = 0.0
+
+        # Linear scaling
         if min_fitness > (2 * avg_fitness - max_fitness):
             denominator = max_fitness - avg_fitness
             a = avg_fitness / (denominator if denominator != 0 else 1e-10)
@@ -315,14 +318,14 @@ class Generation:
 
         # Normalize
         if (normalization_factor := np.sum(scaled_fitness)) == 0:
-            relative_fitness = np.ones(self.population_size) / self.population_size  # Uniform distribution
+            relative_fitness = np.ones(self._pop_size) / self._pop_size  # Uniform distribution
         else:
             relative_fitness = scaled_fitness / normalization_factor
 
         # Select individuals
         select_ix = self.rng.choice(
-            self.population_size,
-            size=self.population_size,
+            self._pop_size,
+            size=self._pop_size,
             replace=True,
             p=relative_fitness,
         )
@@ -356,7 +359,8 @@ class Generation:
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
         # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])
-        self.result.x = self.population[elite_ix[-1]]  # type: ignore[attr-defined]
+        # Store a copy so that subsequent population mutations don't corrupt result.x
+        self.result.x = self.population[elite_ix[-1]].copy()  # type: ignore[attr-defined]
         self.result.fun = self.fx_best[-1]  # type: ignore[attr-defined]
         self.result.nit = len(self.fx_best)  # type: ignore[attr-defined]
 
@@ -372,9 +376,23 @@ class Generation:
         status_msg = f'Iter = {self.result.nit:5d}; nfev = {self.result.nfev:6d}; fx = {self.fx_best[-1]:.4f}'
         self.logging_fn(status_msg)
 
-    def _log_end(self, stop_time: float) -> None:
-        self.logging_fn(self.result)  # type: ignore[arg-type]
-        self.logging_fn(f'# ---  {self.name} ({stop_time})  --- #')
+    # ------------------------------------------------------------------
+    # Narrowing accessors
+    # Private methods are only ever called from optimize(), which always
+    # resolves both attributes to int before any of them are invoked.
+    # cast() lets mypy see the non-optional type without scattering
+    # assert-not-None guards across every method.
+    # ------------------------------------------------------------------
+
+    @property
+    def _pop_size(self) -> int:
+        """population_size as int — valid only after optimize() has been called."""
+        return cast('int', self.population_size)
+
+    @property
+    def _n_pairs(self) -> int:
+        """_n_mating_pairs as int — valid only after optimize() has been called."""
+        return cast('int', self._n_mating_pairs)
 
 
 class LamarckianGeneration(Generation):
@@ -452,7 +470,11 @@ class LamarckianGeneration(Generation):
         update rule is selected by ``self.optimizer``.  After the local search
         the result is clipped to the search bounds.
         """
-        assert self._grad_objective is not None, '_grad_objective must be set before optimizing.'
+        if self._grad_objective is None:
+            raise RuntimeError(
+                '_grad_objective must be set before calling optimize(). '
+                'Assign a MaxProfitLogitGradientPiecewise instance to gen._grad_objective first.'
+            )
         theta = theta.copy()
 
         # Adam moment buffers (only used when optimizer == "adam")
@@ -486,7 +508,7 @@ class LamarckianGeneration(Generation):
 
         Runs sequentially (no joblib) to avoid pickling the gradient objective.
         """
-        for ix in range(self.population_size):
+        for ix in range(self._pop_size):
             if np.isnan(self.fitness[ix]):
                 if self._grad_objective is not None:
                     self.population[ix] = self._local_search(self.population[ix])
@@ -614,7 +636,7 @@ class LamarckianMemeticOptimizeFn:
 
         bounds_list = [(-self.bounds, self.bounds)] * X.shape[1]
 
-        last_gen: LamarckianGeneration | None = None
+        last_gen: Generation | None = None
         for i, last_gen in enumerate(gen.optimize(scalar_fn, bounds_list)):
             if i + 1 >= self.max_iter:
                 break
@@ -623,10 +645,12 @@ class LamarckianMemeticOptimizeFn:
                 if max(recent) - min(recent) < self.tol:
                     break
 
-        ga_result = last_gen.result  # type: ignore[union-attr]
+        # optimize() is an infinite generator so last_gen is always set after at least one iteration.
+        assert last_gen is not None
+        ga_result = last_gen.result
         # Final loss evaluation on true hull (score() does not increment epoch)
         loss = objective.score(ga_result.x)
-        return OptimizeResult(
+        return OptimizeResult(  # type: ignore[call-arg]
             x=ga_result.x,
             success=True,
             fun=float(loss),

@@ -58,7 +58,7 @@ ESTIMATORS = (
     CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
 )
 METRIC_ESTIMATORS = (
-    ProfLogitClassifier(optimizer_params={'max_iter': 50, 'population_size': 10, 'random_state': 42}),
+    ProfLogitClassifier(optimizer_params={'max_iter': 100, 'population_size': 10, 'random_state': 42}),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     CSBoostClassifier(),
     CSLogitClassifier(optimizer_params={'max_iter': 10}),
