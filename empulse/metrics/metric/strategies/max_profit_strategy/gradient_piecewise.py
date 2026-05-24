@@ -5,7 +5,7 @@ import numpy as np
 import sympy
 from scipy.special import expit
 
-from ....._types import FloatNDArray
+from ....._types import Float64Array, FloatNDArray
 from ...common import _safe_lambdify
 from .common import _convex_hull, extract_distribution_parameters
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
@@ -61,8 +61,8 @@ class MaxProfitLogitGradientPiecewise:
         self.neg_mask = ~self.pos_mask
         self.n_pos = int(self.pos_mask.sum())
         self.n_neg = int(self.neg_mask.sum())
-        self.X_pos = self.features[self.pos_mask]
-        self.X_neg = self.features[self.neg_mask]
+        self.X_pos: Float64Array = np.asarray(self.features[self.pos_mask], dtype=np.float64)
+        self.X_neg: Float64Array = np.asarray(self.features[self.neg_mask], dtype=np.float64)
 
         self.pi0 = float(self.n_pos / len(self.y_true))
         self.pi1 = 1.0 - self.pi0
@@ -217,7 +217,7 @@ class MaxProfitLogitGradientPiecewise:
         seg_fprs: FloatNDArray,
         M: int,  # noqa: N803
         alpha: float,
-    ) -> FloatNDArray:
+    ) -> Float64Array:
         """Compute the raw (un-negated, un-regularized) gradient vector."""
         s_pos = y_score[self.pos_mask]
         s_neg = y_score[self.neg_mask]
@@ -233,7 +233,7 @@ class MaxProfitLogitGradientPiecewise:
         grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # noqa: N806
         grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # noqa: N806
 
-        total_gradient = np.zeros_like(w)
+        total_gradient: Float64Array = np.zeros(w.shape, dtype=np.float64)
         for k in range(len(self.score_function.coefficient_eqs)):
             k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
             R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
@@ -282,13 +282,14 @@ class MaxProfitLogitGradientPiecewise:
             (1.0 - self.l1_ratio) * 0.5 * float(np.dot(coef, coef)) + self.l1_ratio * float(np.sum(np.abs(coef)))
         ) / self.C
 
-    def _regularization_gradient(self, coef: FloatNDArray) -> FloatNDArray:
+    def _regularization_gradient(self, coef: FloatNDArray) -> Float64Array:
         """Regularization contribution to the gradient."""
+        coef_f = np.asarray(coef, dtype=np.float64)
         if self.l1_ratio == 0.0:
-            return coef / self.C
+            return coef_f / self.C
         if self.l1_ratio == 1.0:
-            return np.sign(coef) / self.C
-        return ((1.0 - self.l1_ratio) * coef + self.l1_ratio * np.sign(coef)) / self.C
+            return np.sign(coef_f) / self.C
+        return ((1.0 - self.l1_ratio) * coef_f + self.l1_ratio * np.sign(coef_f)) / self.C
 
     def _current_alpha(self) -> float:
         """Compute annealed temperature for the current objective evaluation."""
