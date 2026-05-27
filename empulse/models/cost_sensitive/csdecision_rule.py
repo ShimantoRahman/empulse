@@ -678,6 +678,11 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         y_score: FloatNDArray = estimator_.predict_proba(X)[:, 1]
         return estimator_, y_score, loss_params
 
+    @property
+    def threshold_(self) -> float | None:
+        """The optimal decision threshold determined during fitting."""
+        return getattr(self, 'decision_', None)
+
     def _compute_decision(
         self,
         loss: Metric,
@@ -817,6 +822,11 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     """
 
     _decision_attr_name: ClassVar[str] = 'rate_'
+
+    @property
+    def rate_(self) -> float | None:
+        """The optimal positive rate determined during fitting."""
+        return getattr(self, 'decision_', None)
 
     def _compute_decision(
         self,
