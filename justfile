@@ -113,7 +113,7 @@ BUILDDIR := "docs/_build"
 [group('docs')]
 html:
     {{SPHINXBUILD}} -M html {{SOURCEDIR}} {{BUILDDIR}} {{SPHINXOPTS}}
-    start chrome %CD%\{{BUILDDIR}}\index.html
+    start chrome %CD%\{{BUILDDIR}}\html\index.html
 
 # Build documentation in other formats (e.g., just latex, just epub, etc.)
 [positional-arguments]
