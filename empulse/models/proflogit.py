@@ -1,19 +1,13 @@
 from collections.abc import Callable
-from functools import partial
-from itertools import islice
-from numbers import Integral
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 
-import numpy as np
 from scipy.optimize import OptimizeResult
-from scipy.special import expit
 
-from empulse.optimizers import Generation
+from empulse.optimizers import GeneticAlgorithmOptimizer
 
-from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import MaxProfit, Metric
-from ..metrics.metric.common import Direction
-from ._base import BaseLogitClassifier, OptimizeFn
+from .._types import FloatNDArray
+from ..metrics import MaxProfit
+from ._base import BaseLogitClassifier
 from .csclassifier import MetricStrategyFactory
 
 
@@ -88,29 +82,8 @@ class ProfLogitClassifier(BaseLogitClassifier):
         For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    optimize_fn : Callable, optional
-        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
-        See :ref:`proflogit` for more information.
-
-    optimizer_params : dict[str, Any], optional
-        Additional keyword arguments passed to `optimize_fn`.
-
-        By default, the optimizer is a Real-coded Genetic Algorithm (RGA) with the following parameters:
-
-        - ``max_iter`` : int, default=1000
-            Maximum number of iterations.
-        - ``patience`` : int, default=250
-            Number of iterations with no improvement to wait before stopping the optimization.
-        - ``tolerance`` : float, default=1e-4
-            Relative tolerance to declare convergence.
-        - ``bounds`` : tuple[float, float], default=(-5, 5)
-            Lower and upper bounds for the regression coefficients.
-        - all other parameters are passed to the :class:`~empulse.optimizers.Generation` initializer.
-
-    n_jobs : int, optional
-        Number of parallel jobs to run.
-        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-        ``-1`` means using all processors.
+    optimizer : :class:`empulse.optimizers.Optimizer`, optional
+        Optimization algorithm. See :ref:`proflogit` for more information.
 
     Attributes
     ----------
@@ -133,11 +106,14 @@ class ProfLogitClassifier(BaseLogitClassifier):
     .. code-block:: python
 
         from empulse.models import ProfLogitClassifier
+        from empulse.optimizers import GeneticAlgorithmOptimizer
         from sklearn.datasets import make_classification
 
         X, y = make_classification(n_features=4)
 
-        model = ProfLogitClassifier(C=0.1, l1_ratio=0.5, optimizer_params={'max_iter': 10})
+        model = ProfLogitClassifier(
+            C=0.1, l1_ratio=0.5, optimizer=GeneticAlgorithmOptimizer(max_iter=10)
+        )
         model.fit(X, y, tp_cost=-200, fp_cost=10)
 
     References
@@ -152,133 +128,9 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.
     """
 
-    _parameter_constraints: ClassVar[ParameterConstraint] = {
-        **BaseLogitClassifier._parameter_constraints,
-        'loss': [Metric, None],
-        'n_jobs': [None, Integral],
-    }
-
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
-    def __init__(
-        self,
-        *,
-        tp_cost: FloatArrayLike | float = 0.0,
-        tn_cost: FloatArrayLike | float = 0.0,
-        fn_cost: FloatArrayLike | float = 0.0,
-        fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
-        C: float = 1.0,
-        fit_intercept: bool = True,
-        soft_threshold: bool = False,
-        l1_ratio: float = 1.0,
-        optimize_fn: OptimizeFn | None = None,
-        optimizer_params: dict[str, Any] | None = None,
-        n_jobs: int | None = None,
-    ):
-        super().__init__(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            C=C,
-            fit_intercept=fit_intercept,
-            soft_threshold=soft_threshold,
-            l1_ratio=l1_ratio,
-            loss=loss,
-            optimize_fn=optimize_fn,
-            optimizer_params=optimizer_params,
-        )
-        self.n_jobs = n_jobs
-
-    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
-        optimizer_params = {} if self.optimizer_params is None else self.optimizer_params.copy()
-        optimize_fn: OptimizeFn = _optimize if self.optimize_fn is None else self.optimize_fn
-        optimize_fn = partial(optimize_fn, **optimizer_params)
-
-        if loss.direction == Direction.MINIMIZE:
-            _loss = loss  # noqa: RUF052
-            loss = lambda *args, **kwargs: -_loss(*args, **kwargs)  # type: ignore[assignment]
-
-        objective = partial(
-            _objective,
-            X=X,
-            y=y,
-            loss_fn=partial(loss, **loss_params),
-            C=self.C,
-            l1_ratio=self.l1_ratio,
-            soft_threshold=self.soft_threshold,
-            fit_intercept=self.fit_intercept,
-        )
-        self.result_ = optimize_fn(objective, X)
-
-        if self.fit_intercept:
-            self.intercept_ = self.result_.x[0]
-            self.coef_ = self.result_.x[1:]
-        else:
-            self.coef_ = self.result_.x
-
-        return self
-
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        if isinstance(self.loss, Metric):
-            return self.loss
-        return None
-
-
-def _objective(
-    weights: FloatNDArray,
-    X: FloatNDArray,
-    y: IntNDArray,
-    loss_fn: Callable[[FloatNDArray, FloatNDArray], float],
-    C: float,
-    l1_ratio: float,
-    soft_threshold: bool,
-    fit_intercept: bool,
-) -> float:
-    """ProfLogit's objective function (maximization problem)."""
-    # b is the vector holding the regression coefficients (no intercept)
-    b = weights.copy()[1:] if fit_intercept else weights
-
-    if soft_threshold:
-        threshold = l1_ratio / C
-        b = np.sign(b) * np.maximum(np.abs(b) - threshold, 0)
-
-    logits = np.dot(X, weights)
-    y_pred = expit(logits)  # Invert logit transformation
-    loss = loss_fn(y, y_pred)
-    regularization_term = 0.5 * (1 - l1_ratio) * np.sum(b**2) + l1_ratio * np.sum(np.abs(b))
-    penalty = regularization_term / C
-    return float(loss - penalty)
-
-
-def _optimize(
-    objective: Callable[[FloatNDArray], float],
-    X: FloatNDArray,
-    max_iter: int = 1000,
-    tolerance: float = 1e-4,
-    patience: int = 250,
-    bounds: tuple[float | int, float | int] = (-5, 5),
-    **kwargs: Any,
-) -> OptimizeResult:
-    rga = Generation(**kwargs)
-    previous_score = np.inf
-    iter_stagnant = 0
-    bounds_per_instance = [bounds] * X.shape[1]
-
-    for _ in islice(rga.optimize(objective, bounds_per_instance), max_iter):
-        score = rga.result.fun
-        relative_improvement = (score - previous_score) / previous_score if previous_score != np.inf else np.inf
-        previous_score = score
-        if relative_improvement < tolerance:
-            if (iter_stagnant := iter_stagnant + 1) >= patience:
-                rga.result.message = 'Converged.'  # type: ignore[attr-defined]
-                rga.result.success = True  # type: ignore[attr-defined]
-                break
-        else:
-            iter_stagnant = 0
-    else:
-        rga.result.message = 'Maximum number of iterations reached.'  # type: ignore[attr-defined]
-        rga.result.success = False  # type: ignore[attr-defined]
-    return rga.result
+    def _optimize(self, objective: Callable[[FloatNDArray], float], X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
+        """Optimize the objective function using the Real-coded Genetic Algorithm."""
+        optimize = GeneticAlgorithmOptimizer() if self.optimizer is None else self.optimizer
+        return optimize(objective=objective, X=X, **kwargs)

@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, Literal, Protocol, Self, cast
 
 import numpy as np
@@ -349,9 +349,9 @@ class MaxProfit(MetricStrategy):
         soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
-    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+    ) -> MaxProfitLogitGradientDeterministic | MaxProfitLogitGradientPiecewise:
         """
-        Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
+        Build the prepared logit-gradient objective for the current metric configuration.
 
         Uses the Envelope Theorem combined with a smooth sigmoid approximation of the ROC curve to derive
         an analytically differentiable proxy for the Expected Maximum Profit.
@@ -393,7 +393,8 @@ class MaxProfit(MetricStrategy):
         Raises
         ------
         NotImplementedError
-            If the metric contains stochastic variables (only deterministic case is supported).
+            If the metric is neither purely deterministic nor a
+            ``BasePositiveDistribution`` stochastic variant.
         """
         _check_parameters(self._score_function.deterministic_symbols, parameters)
         agg_params = _aggregate_instance_parameters(dict(parameters))

@@ -31,6 +31,7 @@ from empulse.models import (
     ProfTreeClassifier,
     RobustCSClassifier,
 )
+from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
 from empulse.utils._sklearn_compat import parametrize_with_checks
 
 ESTIMATORS = (
@@ -39,7 +40,7 @@ ESTIMATORS = (
     BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
     B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
     ProfLogitClassifier(
-        tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 2, 'population_size': 10, 'random_state': 42}
+        tp_cost=-1, fp_cost=1, optimizer=GeneticAlgorithmOptimizer(max_iter=2, population_size=10, random_state=42)
     ),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
@@ -47,21 +48,21 @@ ESTIMATORS = (
     CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
     CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
     CSBaggingClassifier(
-        estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}),
+        estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2)),
         n_estimators=2,
         fp_cost=1,
         fn_cost=1,
         random_state=42,
     ),
-    RobustCSClassifier(estimator=CSLogitClassifier(optimizer_params={'max_iter': 2}), fp_cost=1, fn_cost=1),
+    RobustCSClassifier(estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2)), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
     CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
 )
 METRIC_ESTIMATORS = (
-    ProfLogitClassifier(optimizer_params={'max_iter': 100, 'population_size': 10, 'random_state': 42}),
+    ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=100, population_size=10, random_state=42)),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
     CSBoostClassifier(),
-    CSLogitClassifier(optimizer_params={'max_iter': 10}),
+    CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=10)),
     CSTreeClassifier(max_depth=2),
     CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
     CSBaggingClassifier(n_estimators=3, random_state=10),
@@ -88,14 +89,6 @@ def estimator_id(estimator):
 
 
 def expected_failed_checks(estimator):
-    if isinstance(estimator, ProfLogitClassifier):
-        return {
-            'check_classifier_data_not_an_array': 'Sklearn does not set random_state properly in the test. '
-            'Tested internally.',
-            'check_fit_idempotent': 'Sklearn does not set random_state properly in the test. Tested internally.',
-            'check_supervised_y_2d': 'Sklearn does not set random_state properly in the test. Tested internally.',
-            'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.',
-        }
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
     if isinstance(estimator, CSRateClassifier):
@@ -107,7 +100,8 @@ def expected_failed_checks(estimator):
         | CSBaggingClassifier
         | CSLogitClassifier
         | RobustCSClassifier
-        | ProfTreeClassifier,
+        | ProfTreeClassifier
+        | ProfLogitClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
@@ -121,75 +115,6 @@ def test_estimators(estimator, check):
     check(estimator)
 
 
-def test_proflogit_classifier_data_not_an_array():
-    """Monkey patch the check_classifier_data_not_an_array to set the random state of the estimator."""
-
-    def set_random_state(estimator, random_state=None):
-        """Set the random state of an estimator, including optimizer_params if present."""
-        if hasattr(estimator, 'optimizer_params'):
-            if random_state is None:
-                random_state = np.random.RandomState()
-            estimator.optimizer_params['random_state'] = random_state
-
-    import sklearn.utils
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
-
-    sklearn.utils.set_random_state = set_random_state
-    from sklearn.utils.estimator_checks import check_classifier_data_not_an_array
-
-    check_classifier_data_not_an_array(
-        ProfLogitClassifier.__name__,
-        ProfLogitClassifier(tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
-    )
-    sklearn.utils.set_random_state = sklearn_set_random_state
-
-
-def test_proflogit_fit_idempotent():
-    """Monkey patch the check_fit_idempotent to set the random state of the estimator."""
-
-    def set_random_state(estimator, random_state=None):
-        """Set the random state of an estimator, including optimizer_params if present."""
-        if hasattr(estimator, 'optimizer_params'):
-            if random_state is None:
-                random_state = np.random.RandomState()
-            estimator.optimizer_params['random_state'] = random_state
-
-    import sklearn.utils
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
-
-    sklearn.utils.set_random_state = set_random_state
-    from sklearn.utils.estimator_checks import check_fit_idempotent
-
-    check_fit_idempotent(
-        ProfLogitClassifier.__name__,
-        ProfLogitClassifier(tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
-    )
-    sklearn.utils.set_random_state = sklearn_set_random_state
-
-
-def test_proflogit_supervised_y_2d():
-    """Monkey patch the check_supervised_y_2d to set the random state of the estimator."""
-
-    def set_random_state(estimator, random_state=None):
-        """Set the random state of an estimator, including optimizer_params if present."""
-        if hasattr(estimator, 'optimizer_params'):
-            if random_state is None:
-                random_state = np.random.RandomState()
-            estimator.optimizer_params['random_state'] = random_state
-
-    import sklearn.utils
-    from sklearn.utils.estimator_checks import set_random_state as sklearn_set_random_state
-
-    sklearn.utils.set_random_state = set_random_state
-    from sklearn.utils.estimator_checks import check_supervised_y_2d
-
-    check_supervised_y_2d(
-        ProfLogitClassifier.__name__,
-        ProfLogitClassifier(tp_cost=-1, fp_cost=1, optimizer_params={'max_iter': 3, 'random_state': 42}),
-    )
-    sklearn.utils.set_random_state = sklearn_set_random_state
-
-
 @pytest.fixture(scope='module')
 def data():
     return load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
@@ -201,7 +126,7 @@ def data():
     [
         CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
         CSBoostClassifier(XGBClassifier(n_estimators=30)),
-        CSLogitClassifier(optimizer_params={'max_iter': 10}),
+        CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=10)),
         CSTreeClassifier(max_depth=2),
         CSForestClassifier(n_estimators=3, max_depth=1),
         RobustCSClassifier(estimator=CSBoostClassifier(XGBClassifier(n_estimators=30))),

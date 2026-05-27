@@ -1,17 +1,11 @@
-import warnings
-from collections.abc import Callable
-from typing import Any, ClassVar, Self
+from typing import Any
 
-import numpy as np
-from scipy.optimize import OptimizeResult, minimize
-from sklearn.exceptions import ConvergenceWarning
+from scipy.optimize import OptimizeResult
 
-from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import Metric
-from .._base import BaseLogitClassifier, OptimizeFn
-
-GradientLossFn = Callable[[FloatNDArray, FloatNDArray, FloatNDArray], tuple[float, FloatNDArray]]
-ObjectiveFn = Callable[..., float | tuple[float, FloatNDArray] | tuple[float, FloatNDArray, FloatNDArray]]
+from ..._types import FloatNDArray
+from ...metrics import LogitObjective
+from ...optimizers import LBFGSBOptimizer
+from .._base import BaseLogitClassifier
 
 
 class CSLogitClassifier(BaseLogitClassifier):
@@ -89,12 +83,8 @@ class CSLogitClassifier(BaseLogitClassifier):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
-    optimize_fn : Callable, optional
-        Optimization algorithm. Should be a Callable with signature ``optimize(objective, X)``.
-        See :ref:`proflogit` for more information.
-
-    optimizer_params : dict[str, Any], optional
-        Additional keyword arguments passed to `optimize_fn`.
+    optimizer : :class:`empulse.optimizers.Optimizer`, optional
+        Optimization algorithm. See :ref:`cslogit` for more information.
 
     Attributes
     ----------
@@ -196,104 +186,7 @@ class CSLogitClassifier(BaseLogitClassifier):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    _parameter_constraints: ClassVar[ParameterConstraint] = {
-        **BaseLogitClassifier._parameter_constraints,
-    }
-
-    def __init__(
-        self,
-        *,
-        tp_cost: FloatArrayLike | float = 0.0,
-        tn_cost: FloatArrayLike | float = 0.0,
-        fn_cost: FloatArrayLike | float = 0.0,
-        fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
-        C: float = 1.0,
-        fit_intercept: bool = True,
-        soft_threshold: bool = False,
-        l1_ratio: float = 1.0,
-        optimize_fn: OptimizeFn | None = None,
-        optimizer_params: dict[str, Any] | None = None,
-    ):
-        super().__init__(
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            C=C,
-            fit_intercept=fit_intercept,
-            soft_threshold=soft_threshold,
-            l1_ratio=l1_ratio,
-            loss=loss,
-            optimize_fn=optimize_fn,
-            optimizer_params=optimizer_params,
-        )
-
-    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
-        optimizer_params = self.optimizer_params or {}
-
-        objective = loss._logit_objective(
-            features=X,
-            y_true=y,
-            C=self.C,
-            l1_ratio=self.l1_ratio,
-            soft_threshold=self.soft_threshold,
-            fit_intercept=self.fit_intercept,
-            **loss_params,
-        )
-        optimize_fn: Callable[..., OptimizeResult] = (
-            _optimize_jacobian if self.optimize_fn is None else self.optimize_fn
-        )  # type: ignore[no-redef]
-        self.result_ = optimize_fn(objective=objective, X=X, **optimizer_params)
-        self.coef_ = self.result_.x[1:] if self.fit_intercept else self.result_.x
-        if self.fit_intercept:
-            self.intercept_ = self.result_.x[0]
-        return self
-
-
-def _optimize_jacobian(
-    objective: Callable[[FloatNDArray], tuple[float, FloatNDArray]],
-    X: FloatNDArray,
-    max_iter: int = 1000,
-    tolerance: float = 1e-4,
-    **kwargs: Any,
-) -> OptimizeResult:
-    initial_weights = np.zeros(X.shape[1], order='F', dtype=X.dtype)
-
-    result = minimize(
-        objective,
-        initial_weights,
-        method='L-BFGS-B',
-        jac=True,
-        options={
-            'maxiter': max_iter,
-            'maxls': 50,
-            'gtol': tolerance,
-            'ftol': 64 * np.finfo(float).eps,
-        },
-        **kwargs,
-    )
-    _check_optimize_result(result)
-
-    return result
-
-
-def _check_optimize_result(result: OptimizeResult) -> None:
-    """
-    Check the OptimizeResult for successful convergence.
-
-    Parameters
-    ----------
-    result : OptimizeResult
-       Result of the scipy.optimize.minimize function.
-    """
-    # handle both scipy and scikit-learn solver names
-    if result.status != 0:
-        warning_msg = (
-            f'L-BFGS failed to converge (status={result.status}):\n{result.message}.\n\n'
-            'Increase the number of iterations (max_iter) '
-            'or scale the data as shown in:\n'
-            '    https://scikit-learn.org/stable/modules/'
-            'preprocessing.html'
-        )
-        warnings.warn(warning_msg, ConvergenceWarning, stacklevel=2)
+    def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
+        """Optimize the objective function."""
+        optimize = LBFGSBOptimizer() if self.optimizer is None else self.optimizer
+        return optimize(objective=objective, X=X, **kwargs)

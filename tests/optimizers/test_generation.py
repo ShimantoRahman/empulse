@@ -48,7 +48,7 @@ def test_rga_optimize_trigonometric(generation):
         return float(((x**2 + x) * np.cos(x))[0])
 
     bounds = [(-10, 10)]
-    for _ in islice(generation.optimize(objective, bounds), 100):
+    for _ in islice(generation.optimize(objective, bounds), 1000):
         pass
 
     assert generation.result.x == pytest.approx(6.5606, abs=1e-2)
@@ -91,7 +91,7 @@ def test_rga_optimize_rotated_ellipse(generation):
         return -(2 * (x1**2 - x1 * x2 + x2**2))
 
     bounds = [(-1, 1)] * 2
-    for _ in islice(generation.optimize(objective, bounds), 100):
+    for _ in islice(generation.optimize(objective, bounds), 1000):
         pass
 
     assert generation.result.x[0] == pytest.approx(0.0, abs=1e-2)

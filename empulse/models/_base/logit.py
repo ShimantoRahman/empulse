@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from numbers import Integral, Real
+from numbers import Real
 from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
@@ -11,7 +11,8 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import Metric
+from ...metrics import LogitObjective, Metric
+from ...optimizers import Optimizer
 from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 
@@ -32,13 +33,12 @@ OptimizeFn = OptimizeFnKwargs | OptimizeFnNoKwargs | Callable[..., OptimizeResul
 class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
-        'n_jobs': [None, Integral],
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
         'soft_threshold': ['boolean'],
-        'optimize_fn': [callable, None],
         'l1_ratio': [Interval(Real, 0, 1, closed='both')],
-        'optimizer_params': [dict, None],
+        'loss': [Metric, None],
+        'optimizer': [Optimizer, None],
     }
 
     def __init__(
@@ -52,8 +52,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         soft_threshold: bool = True,
         l1_ratio: float = 1.0,
         loss: Metric | None = None,
-        optimize_fn: OptimizeFn | None = None,
-        optimizer_params: dict[str, Any] | None = None,
+        optimizer: Optimizer | None = None,
     ):
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -64,9 +63,17 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         self.soft_threshold = soft_threshold
         self.l1_ratio = l1_ratio
         self.loss = loss
-        self.optimizer_params = optimizer_params
-        self.optimize_fn = optimize_fn
+        self.optimizer = optimizer
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
+
+    @abstractmethod
+    def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
+        """
+        Optimize the objective function.
+
+        Subclasses should decide what the default optimizer is.
+        If `optimize_fn` is provided, it should be used instead of the default optimizer.
+        """
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):
@@ -77,8 +84,27 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
 
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
-    @abstractmethod
-    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self: ...
+    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+        objective = loss._logit_objective(
+            features=X,
+            y_true=y,
+            C=self.C,
+            l1_ratio=self.l1_ratio,
+            soft_threshold=self.soft_threshold,
+            fit_intercept=self.fit_intercept,
+            **loss_params,
+        )
+        self.result_ = self._optimize(objective, X)
+
+        if self.fit_intercept:
+            self.intercept_ = self.result_.x[0]
+            self.coef_ = self.result_.x[1:]
+        else:
+            self.coef_ = self.result_.x
+
+        self.n_iter_ = self.result_.nit
+
+        return self
 
     def _validate_costs(
         self,

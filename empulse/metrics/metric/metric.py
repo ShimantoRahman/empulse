@@ -1,5 +1,4 @@
 import warnings
-from collections.abc import Callable
 from numbers import Real
 
 import numpy as np
@@ -8,7 +7,7 @@ import sympy
 from ..._types import FloatArrayLike, FloatNDArray
 from .common import Direction, _evaluate_expression
 from .cost_matrix import CostMatrix
-from .strategies import MetricStrategy
+from .strategies import LogitObjective, MetricStrategy
 
 
 class Metric:
@@ -424,9 +423,9 @@ class Metric:
         soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
-    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+    ) -> LogitObjective:
         """
-        Compute the metric loss and its gradient with respect to the logistic regression weights.
+        Compute the logit loss and its gradient with respect to the logistic regression weights.
 
         Parameters
         ----------
@@ -452,10 +451,8 @@ class Metric:
 
         Returns
         -------
-        value : float
-            The metric loss to be minimized.
-        gradient : NDArray of shape (n_features,)
-            The gradient of the metric loss with respect to the logistic regression weights.
+        logistic_objective : LogitObjective
+            A class that implements the logit loss and its gradient.
         """
         parameters = self._prepare_parameters(**parameters)
 
@@ -474,41 +471,6 @@ class Metric:
             fit_intercept=fit_intercept,
             **parameters,
         )
-
-    def _prepare_logit_objective(
-        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-        """
-        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
-
-        Parameters
-        ----------
-        features : NDArray of shape (n_samples, n_features)
-            The features of the samples.
-        y_true : NDArray of shape (n_samples,)
-            The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        gradient_const : NDArray of shape (n_samples, n_features)
-            The constant term of the gradient.
-        loss_const1 : NDArray of shape (n_features,)
-            The first constant term of the loss function.
-        loss_const2 : NDArray of shape (n_features,)
-            The second constant term of the loss function.
-        """
-        parameters = self._prepare_parameters(**parameters)
-        for key, value in parameters.items():
-            if isinstance(value, np.ndarray) and value.ndim == 1:
-                parameters[key] = np.expand_dims(value, axis=1)
-        return self.strategy.prepare_logit_objective(features, y_true, **parameters)
 
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float

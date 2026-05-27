@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Generator
 from typing import Any
 
@@ -20,12 +21,13 @@ class MaxProfitLogitGradientPiecewise:
 
     Methods
     -------
-    * ``__call__(weights)`` – returns ``(value, gradient)`` using a fresh hull.
-    * ``score(weights)`` – returns only the scalar loss (fresh hull, no epoch increment).
+    * ``__call__(weights)`` – returns ``(value, gradient)``; delegates to :meth:`logit_loss_gradient`.
+    * ``logit_loss_gradient(weights)`` – returns ``(value, gradient)`` using a fresh hull.
+    * ``logit_loss(weights)`` – returns only the scalar loss (fresh hull, no epoch increment).
       Cheap when only the objective value is needed (e.g. final fitness evaluation).
-    * ``gradient(weights)`` – returns only the gradient vector (fresh hull, increments epoch).
+    * ``logit_gradient(weights)`` – returns only the gradient vector (fresh hull, increments epoch).
       Saves the value-accumulation work when the scalar is not needed.
-    * ``gradient_steps(initial_weights)`` – a *generator* that yields gradients while reusing
+    * ``logit_gradient_steps()`` – a *generator* that yields gradients while reusing
       a cached convex hull across multiple calls.  Ideal for the Lamarckian memetic pattern
       where a few gradient steps are applied before the true fitness is evaluated.
     """
@@ -293,17 +295,68 @@ class MaxProfitLogitGradientPiecewise:
 
     def _current_alpha(self) -> float:
         """Compute annealed temperature for the current objective evaluation."""
+        # External override takes precedence (set by an alpha_schedule on the optimizer)
+        override = getattr(self, '_alpha_override', None)
+        if override is not None:
+            return float(override)
         try:
             alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
         except OverflowError:
             alpha = self.alpha_max
         return float(min(self.alpha_max, alpha))
 
-    def reset(self) -> None:
-        """Reset the epoch counter (annealing schedule)."""
-        self._epoch = 0
+    def set_alpha(self, alpha: float) -> None:
+        """Override the smoothing parameter for the next gradient computation.
 
-    def score(self, weights: FloatNDArray) -> float:
+        When called by a gradient optimizer with an ``alpha_schedule``, the
+        internal epoch-based annealing is bypassed and *alpha* is used directly.
+
+        Parameters
+        ----------
+        alpha : float
+            Smoothing parameter value.
+        """
+        self._alpha_override = float(alpha)
+
+    def reset(self) -> None:
+        """Reset the epoch counter (annealing schedule) and clear any alpha override."""
+        self._epoch = 0
+        self._alpha_override = None
+
+    def with_indices(self, indices: FloatNDArray) -> 'MaxProfitLogitGradientPiecewise':
+        """Return a shallow copy of this objective restricted to *indices*.
+
+        The expensive pre-computed attributes (lambdified sympy expressions,
+        distribution bounds, etc.) are shared with the original object.  Only
+        the data-dependent attributes (``features``, ``y_true``, masks, class
+        counts, and class rates) are re-derived for the batch.
+
+        Parameters
+        ----------
+        indices : array-like of int
+            Row indices into the full training set.
+
+        Returns
+        -------
+        MaxProfitLogitGradientPiecewise
+            A new objective for the selected samples.
+        """
+        obj = copy.copy(self)
+        obj.features = self.features[indices]
+        obj.y_true = self.y_true[indices]  # already int32
+        obj.pos_mask = obj.y_true == 1
+        obj.neg_mask = ~obj.pos_mask
+        obj.n_pos = int(obj.pos_mask.sum())
+        obj.n_neg = int(obj.neg_mask.sum())
+        obj.X_pos = np.asarray(obj.features[obj.pos_mask], dtype=np.float64)
+        obj.X_neg = np.asarray(obj.features[obj.neg_mask], dtype=np.float64)
+        obj.pi0 = float(obj.n_pos / len(obj.y_true))
+        obj.pi1 = 1.0 - obj.pi0
+        obj._epoch = 0
+        obj._alpha_override = getattr(self, '_alpha_override', None)
+        return obj
+
+    def logit_loss(self, weights: FloatNDArray) -> float:
         """Compute the negated EMP objective value (no gradient).
 
         Always uses a freshly computed convex hull.  The epoch counter is *not*
@@ -329,7 +382,7 @@ class MaxProfitLogitGradientPiecewise:
         value += self._regularization_value(w[start_coef:])
         return value
 
-    def gradient(self, weights: FloatNDArray) -> FloatNDArray:
+    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Compute the gradient of the negated EMP objective (no scalar value).
 
         Always uses a freshly computed convex hull.  Increments the epoch counter
@@ -358,10 +411,7 @@ class MaxProfitLogitGradientPiecewise:
         grad[start_coef:] += self._regularization_gradient(w[start_coef:])
         return grad
 
-    def gradient_steps(
-        self,
-        initial_weights: FloatNDArray,
-    ) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+    def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
         """
         Yield gradients while reusing a cached convex hull.
 
@@ -371,7 +421,73 @@ class MaxProfitLogitGradientPiecewise:
         local-search loops (e.g. a few Adam steps applied Lamarckian-style before
         a fitness evaluation) where the hull is unlikely to change substantially.
 
-        When computing the actual loss (``score()``) always use a fresh hull.
+        When computing the actual loss (``logit_loss()``) always use a fresh hull.
+
+        Yields
+        ------
+        gradient : ndarray
+            Negated, regularized gradient at the current weights.
+
+        Receives (via ``send``)
+        -----------------------
+        weights : ndarray
+            New coefficient vector for the next gradient step.  The cached hull
+            is reused; only scores and thresholds are recomputed.
+        (weights, refresh) : (ndarray, bool)
+            Pass ``refresh=True`` to force the convex hull to be rebuilt from the
+            new *weights* before computing the gradient.
+
+        Examples
+        --------
+        >>> gen = objective.logit_gradient_steps(theta)
+        >>> grad = next(gen)  # hull built from theta
+        >>> grad = gen.send(new_theta)  # hull reused
+        >>> grad = gen.send((new_theta, True))  # hull refreshed
+        >>> gen.close()
+        """
+        weights: FloatNDArray
+        cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)
+
+        sent = yield  # prime the generator
+
+        while True:
+            if isinstance(sent, tuple):
+                weights, refresh = sent
+                if refresh:
+                    cached = None
+            else:
+                weights = sent
+
+            w = self._apply_soft_threshold(weights)
+            alpha = self._current_alpha()
+            self._epoch += 1
+
+            y_score = self._compute_y_score(w)
+
+            if cached is None:
+                cached = self._compute_hull_state(y_score)
+
+            bounds, seg_tprs, seg_fprs, m = cached
+            thresholds = self._compute_thresholds(y_score, seg_tprs, seg_fprs)
+
+            grad = -self._accumulate_gradient(w, y_score, thresholds, bounds, seg_tprs, seg_fprs, m, alpha)
+
+            start_coef = 1 if self.fit_intercept else 0
+            grad[start_coef:] += self._regularization_gradient(w[start_coef:])
+
+            sent = yield grad
+
+    def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """
+        Yield gradients while reusing a cached convex hull.
+
+        The convex hull (and derived piecewise segment arrays) are computed once
+        from *initial_weights* on the first call, then reused for subsequent
+        gradient steps.  This avoids the hull-reconstruction cost inside tight
+        local-search loops (e.g. a few Adam steps applied Lamarckian-style before
+        a fitness evaluation) where the hull is unlikely to change substantially.
+
+        When computing the actual loss (``logit_loss()``) always use a fresh hull.
 
         Parameters
         ----------
@@ -395,50 +511,33 @@ class MaxProfitLogitGradientPiecewise:
 
         Examples
         --------
-        >>> gen = objective.gradient_steps(theta)
-        >>> grad = next(gen)  # hull built from theta
-        >>> grad = gen.send(new_theta)  # hull reused
+        >>> gen = objective.logit_gradient_steps()
+        >>> grad = gen.send(theta)  # first time hull is built
+        >>> grad = gen.send(theta)  # hull reused
         >>> grad = gen.send((new_theta, True))  # hull refreshed
         >>> gen.close()
         """
-        weights: FloatNDArray = initial_weights
-        cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)
+        generator = self._logit_gradient_steps()
+        next(generator)
+        return generator
 
-        while True:
-            w = self._apply_soft_threshold(weights)
-            alpha = self._current_alpha()
-            self._epoch += 1
+    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the negated stochastic EMP objective and its gradient for minimization.
 
-            y_score = self._compute_y_score(w)
+        Computes both value and gradient from a freshly built convex hull and increments
+        the epoch counter once.
 
-            if cached is None:
-                cached = self._compute_hull_state(y_score)
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
 
-            bounds, seg_tprs, seg_fprs, m = cached
-            T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
-
-            grad = -self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
-            start_coef = 1 if self.fit_intercept else 0
-            grad[start_coef:] += self._regularization_gradient(w[start_coef:])
-
-            sent = yield grad
-
-            if sent is None:
-                # generator.close() or bare next() with no follow-up send
-                return
-            if isinstance(sent, tuple):
-                weights, refresh = sent
-                if refresh:
-                    cached = None  # force hull rebuild on next iteration
-            else:
-                weights = sent
-                # cached hull is kept
-
-    def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
-        """Return the negated stochastic EMP objective and gradient for minimization.
-
-        Backward-compatible entry point.  Computes both value and gradient from a
-        freshly built convex hull and increments the epoch counter once.
+        Returns
+        -------
+        loss : float
+            Negated EMP value plus regularization.
+        gradient : ndarray
+            Gradient vector matched in shape to *weights*.
         """
         w = self._apply_soft_threshold(weights)
         alpha = self._current_alpha()

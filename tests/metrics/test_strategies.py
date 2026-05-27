@@ -9,7 +9,6 @@ from sklearn.datasets import make_classification
 from empulse.metrics.metric.common import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
-    CostLogitConsts,
     CostLoss,
     CostOptimalRate,
     CostOptimalThreshold,
@@ -156,7 +155,6 @@ def test_picklable_lambda_multiple_pickle_cycles():
     'instance_factory',
     [
         pytest.param(lambda: CostLoss(*_COST_EXPRS), id='CostLoss'),
-        pytest.param(lambda: CostLogitConsts(*_COST_EXPRS), id='CostLogitConsts'),
         pytest.param(lambda: CostBoostGradientConst(*_COST_EXPRS), id='CostBoostGradientConst'),
         pytest.param(lambda: CostOptimalThreshold(*_COST_EXPRS), id='CostOptimalThreshold'),
         pytest.param(lambda: CostOptimalRate(*_COST_EXPRS), id='CostOptimalRate'),
@@ -267,10 +265,6 @@ class TestComputePiecewiseBounds:
     RANDOM_VAR_BOUNDS = (0.0, np.inf)
     DIST_PARAMS: dict = {}  # noqa: RUF012
 
-    # ------------------------------------------------------------------
-    # Bound helpers — plain numpy, matching the sympy-derived formulas.
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _bound_linear_positive(F_0, F_1, F_2, F_3, pi_0, pi_1, contact_cost, **_):  # noqa: N803
         """
@@ -315,10 +309,6 @@ class TestComputePiecewiseBounds:
             fix_inf=fix_inf,
             contact_cost=self.CONTACT_COST,
         )
-
-    # ------------------------------------------------------------------
-    # Tests
-    # ------------------------------------------------------------------
 
     def test_linear_positive_coefficient(self):
         """

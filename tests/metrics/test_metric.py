@@ -15,12 +15,11 @@ from empulse.metrics import (
     expected_cost_loss,
     expected_cost_loss_churn,
     expected_savings_score,
-    make_objective_aec,
     make_objective_churn,
     max_profit_score,
     mpc,
 )
-from empulse.metrics._loss import cy_boost_grad_hess, cy_logit_loss_gradient
+from empulse.metrics._loss import cy_boost_grad_hess
 from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import ComplexRootsError
 
 METRIC_STRATEGIES = [
@@ -640,44 +639,6 @@ def test_objective_aec_gradient_boost(y_true_and_prediction, delta_churn_cost_ma
     gradient_true, hessian_true = objective(y, y_proba)
     assert np.allclose(gradient, gradient_true)
     assert np.allclose(hessian, hessian_true)
-
-
-def test_objective_aec_logit(delta_churn_cost_matrix):
-    customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
-    X, y = make_classification(random_state=12)
-    weights = np.zeros(X.shape[1])
-
-    profit_func = Metric(delta_churn_cost_matrix, Cost())
-    grad_const, loss_const1, loss_const2 = profit_func._prepare_logit_objective(
-        X,
-        y,
-        clv=customer_lifetime_value,
-        delta=incentive_fraction,
-        f=contact_cost,
-        gamma=accept_rate,
-    )
-    metric, gradient = cy_logit_loss_gradient(
-        weights=weights,
-        features=X,
-        grad_const=grad_const,
-        loss_const1=loss_const1.reshape(-1),
-        loss_const2=np.full(y.shape, loss_const2).reshape(-1),
-        C=1.0,
-        l1_ratio=0.0,
-        soft_threshold=False,
-        fit_intercept=True,
-    )
-    tp_benefit = accept_rate * (customer_lifetime_value - incentive_fraction * customer_lifetime_value - contact_cost)
-    tp_benefit += (1 - accept_rate) * -contact_cost
-    fp_cost = incentive_fraction * customer_lifetime_value + contact_cost
-    objective = make_objective_aec(
-        model='cslogit',
-        tp_cost=-tp_benefit,
-        fp_cost=fp_cost,
-    )
-    metric_true, gradient_true = objective(X, weights, y)
-    assert pytest.approx(metric) == metric_true
-    assert np.allclose(gradient, gradient_true)
 
 
 def test_objective_max_profit_logit_deterministic():

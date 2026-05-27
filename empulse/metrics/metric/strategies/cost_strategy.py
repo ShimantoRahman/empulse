@@ -1,17 +1,16 @@
-from collections.abc import Callable
-from functools import partial
+import copy
+from collections.abc import Callable, Generator
 from typing import Any, Self
 
 import numpy as np
 import sympy
 import sympy.stats.crv_types
 
-from ...._types import FloatNDArray, IntNDArray
-from ..._loss import cy_logit_loss_gradient
+from ...._types import Float64Array, FloatNDArray, IntNDArray
+from ..._loss import cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
 from ..common import (
     BoostGradientConst,
     Direction,
-    LogitConsts,
     MetricFn,
     RateFn,
     ThresholdFn,
@@ -85,11 +84,240 @@ def replace_random_var_with_mean(
     return tp_benefit, tn_benefit, fp_cost, fn_cost
 
 
+class CostLogitObjective:
+    """
+    Precomputed cost-metric objective for logistic regression.
+
+    Holds the constants derived from the data and exposes the same API as
+    ``MaxProfitLogitGradientPiecewise``:
+
+    * ``__call__(weights)`` – returns ``(value, gradient)``; delegates to :meth:`logit_loss_gradient`.
+    * ``logit_loss_gradient(weights)`` – returns ``(value, gradient)``
+    * ``logit_loss(weights)`` – returns only the scalar loss
+    * ``logit_gradient(weights)`` – returns only the gradient vector
+    * ``logit_gradient_steps(initial_weights)`` – generator that yields gradients
+      while reusing the (fixed) precomputed constants across iterations
+
+    The constants are computed once during construction and do not change, so
+    the ``refresh`` signal in ``logit_gradient_steps`` is accepted for API
+    compatibility but has no effect.
+    """
+
+    def __init__(
+        self,
+        *,
+        tp_benefit: FloatNDArray,
+        tn_benefit: FloatNDArray,
+        fp_cost: FloatNDArray,
+        fn_cost: FloatNDArray,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        soft_threshold: bool,
+        fit_intercept: bool,
+    ) -> None:
+        grad_const = features * (y_true * (-tp_benefit - fn_cost) + (1 - y_true) * (fp_cost + tn_benefit))
+        loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
+        loss_const2 = y_true * fn_cost - (1 - y_true) * tn_benefit
+
+        # Cast to float64 so Cython's double[:] memoryview accepts the arrays without a copy.
+        self.grad_const: Float64Array = np.asarray(grad_const, dtype=np.float64)
+        self.loss_const1: Float64Array = np.asarray(loss_const1, dtype=np.float64).reshape(-1)
+        self.loss_const2: Float64Array = np.asarray(loss_const2, dtype=np.float64).reshape(-1)
+        self.features: Float64Array = np.asarray(features, dtype=np.float64)
+        self.C = C
+        self.l1_ratio = l1_ratio
+        self.soft_threshold = soft_threshold
+        self.fit_intercept = fit_intercept
+
+    def _common_kwargs(self) -> dict[str, Any]:
+        return {
+            'features': self.features,
+            'C': self.C,
+            'l1_ratio': self.l1_ratio,
+            'soft_threshold': self.soft_threshold,
+            'fit_intercept': self.fit_intercept,
+        }
+
+    def with_indices(self, indices: FloatNDArray) -> 'CostLogitObjective':
+        """Return a new objective restricted to the sample subset given by *indices*.
+
+        The pre-computed constant arrays (``grad_const``, ``loss_const1``,
+        ``loss_const2``, ``features``) are sliced; all scalar attributes are
+        shared.  This is very cheap compared to rebuilding from scratch.
+
+        Parameters
+        ----------
+        indices : array-like of int
+            Row indices into the full training set.
+
+        Returns
+        -------
+        CostLogitObjective
+            A new objective for the selected samples.
+        """
+        obj = copy.copy(self)
+        obj.grad_const = self.grad_const[indices]
+        obj.loss_const1 = self.loss_const1[indices]
+        obj.loss_const2 = self.loss_const2[indices]
+        obj.features = self.features[indices]
+        return obj
+
+    def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return ``(loss, gradient)`` for *weights*.  Delegates to :meth:`logit_loss_gradient`."""
+        return self.logit_loss_gradient(weights)
+
+    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return ``(loss, gradient)`` for *weights*."""
+        w: Float64Array = np.asarray(weights, dtype=np.float64)
+        return cy_logit_loss_gradient(
+            w,
+            grad_const=self.grad_const,
+            loss_const1=self.loss_const1,
+            loss_const2=self.loss_const2,
+            **self._common_kwargs(),
+        )
+
+    def logit_loss(self, weights: FloatNDArray) -> float:
+        """Return only the scalar loss for *weights*.
+
+        No gradient is computed, so this is cheaper when only the objective
+        value is needed (e.g. final fitness evaluation in a memetic algorithm).
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Loss value.
+        """
+        return float(
+            cy_logit_loss(
+                np.asarray(weights, dtype=np.float64),
+                loss_const1=self.loss_const1,
+                loss_const2=self.loss_const2,
+                **self._common_kwargs(),
+            )
+        )
+
+    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return only the gradient vector for *weights*.
+
+        No loss value is accumulated, so this is cheaper when only the
+        gradient is needed (e.g. gradient-descent inner steps).
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient vector matched in shape to *weights*.
+        """
+        return cy_logit_gradient(  # type: ignore[return-value]
+            np.asarray(weights, dtype=np.float64),
+            grad_const=self.grad_const,
+            **self._common_kwargs(),
+        )
+
+    def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """Yield gradients for successive weight vectors.
+
+        Because the constants are derived from fixed data and parameters,
+        there is no expensive state to reconstruct between steps.  The
+        generator accepts the same send-protocol as
+        ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API
+        compatibility: passing ``(weights, refresh)`` works but ``refresh``
+        is silently ignored.
+
+        Parameters
+        ----------
+        initial_weights : ndarray
+            Starting coefficient vector.
+
+        Yields
+        ------
+        gradient : ndarray
+            Gradient at the current weights.
+
+        Receives (via ``send``)
+        -----------------------
+        weights : ndarray
+            New coefficient vector for the next gradient step.
+        (weights, refresh) : (ndarray, bool)
+            ``refresh`` is accepted but ignored.
+
+        """
+        weights: FloatNDArray
+
+        sent = yield
+
+        while True:
+            if sent is None:
+                return
+            if isinstance(sent, tuple):
+                weights, _ = sent  # refresh ignored – constants are fixed
+            else:
+                weights = sent
+
+            grad: Float64Array = cy_logit_gradient(  # type: ignore[assignment]
+                np.asarray(weights, dtype=np.float64),
+                grad_const=self.grad_const,
+                **self._common_kwargs(),
+            )
+            sent = yield grad
+
+    def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """
+        Yield gradients for successive weight vectors.
+
+        Because the constants are derived from fixed data and parameters,
+        there is no expensive state to reconstruct between steps.  The
+        generator accepts the same send-protocol as ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API
+        compatibility: passing ``(weights, refresh)`` works but ``refresh`` is silently ignored.
+
+        Parameters
+        ----------
+        initial_weights : ndarray
+            Starting coefficient vector.
+
+        Yields
+        ------
+        gradient : ndarray
+            Gradient at the current weights.
+
+        Receives (via ``send``)
+        -----------------------
+        weights : ndarray
+            New coefficient vector for the next gradient step.
+        (weights, refresh) : (ndarray, bool)
+            ``refresh`` is accepted but ignored.
+
+        Examples
+        --------
+        >>> gen = objective.logit_gradient_steps()
+        >>> grad = gen.send(theta)
+        >>> gen.close()
+        """
+        generator = self._logit_gradient_steps()
+        next(generator)
+        return generator
+
+
 class Cost(MetricStrategy):
     """Strategy for the Expected Cost metric."""
 
+    _name: str = 'cost'
+    _direction: Direction = Direction.MINIMIZE
+
     def __init__(self) -> None:
-        super().__init__(name='cost', direction=Direction.MINIMIZE)
+        super().__init__(name=self._name, direction=self._direction)
 
     def build(
         self,
@@ -102,6 +330,10 @@ class Cost(MetricStrategy):
         tp_benefit, tn_benefit, fp_cost, fn_cost = replace_random_var_with_mean(
             tp_benefit, tn_benefit, fp_cost, fn_cost
         )
+        self._tp_benefit: sympy.Expr = tp_benefit
+        self._tn_benefit: sympy.Expr = tn_benefit
+        self._fp_cost: sympy.Expr = fp_cost
+        self._fn_cost: sympy.Expr = fn_cost
 
         self._score_function: MetricFn = CostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
@@ -117,12 +349,6 @@ class Cost(MetricStrategy):
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
             fn_cost=fn_cost,
-        )
-        self._prepare_logit_objective: LogitConsts = CostLogitConsts(
-            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-        )
-        self._logit_objective: CostLogitObjective = CostLogitObjective(
-            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
         self._prepare_boost_objective: BoostGradientConst = CostBoostGradientConst(
             tp_benefit=tp_benefit,
@@ -219,40 +445,6 @@ class Cost(MetricStrategy):
         """
         return self._optimal_rate(y_true, y_score, **parameters)
 
-    def prepare_logit_objective(
-        self, features: FloatNDArray, y_true: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-        """
-        Compute the constant term of the loss and gradient of the metric wrt logistic regression coefficients.
-
-        Parameters
-        ----------
-        features : NDArray of shape (n_samples, n_features)
-            The features of the samples.
-        y_true : NDArray of shape (n_samples,)
-            The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        gradient_const : NDArray of shape (n_samples, n_features)
-            The constant term of the gradient.
-        loss_const1 : NDArray of shape (n_features,)
-            The first constant term of the loss function.
-        loss_const2 : NDArray of shape (n_features,)
-            The second constant term of the loss function.
-        """
-        if y_true.ndim == 1:
-            y_true = np.expand_dims(y_true, axis=1)
-
-        return self._prepare_logit_objective.prepare(features, y_true, **parameters)
-
     def logit_objective(
         self,
         features: FloatNDArray,
@@ -262,7 +454,7 @@ class Cost(MetricStrategy):
         soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
-    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
+    ) -> CostLogitObjective:
         """
         Build a function which computes the metric value and the gradient of the metric w.r.t logistic coefficients.
 
@@ -294,7 +486,22 @@ class Cost(MetricStrategy):
             The function signature is:
             ``logistic_objective(weights) -> (value, gradient)``
         """
-        return self._logit_objective(features, y_true, C, l1_ratio, soft_threshold, fit_intercept, **parameters)
+        tp_val = _safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **parameters)
+        fn_val = _safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **parameters)
+        tn_val = _safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **parameters)
+        fp_val = _safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **parameters)
+        return CostLogitObjective(
+            tp_benefit=tp_val,
+            tn_benefit=tn_val,
+            fp_cost=fp_val,
+            fn_cost=fn_val,
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+        )
 
     def prepare_boost_objective(self, y_true: FloatNDArray, **parameters: FloatNDArray | float) -> FloatNDArray:
         """
@@ -357,80 +564,6 @@ def _build_cost_equation(
     y, s = sympy.symbols('y s')
     cost_function = y * (s * tp_cost + (1 - s) * fn_cost) + (1 - y) * ((1 - s) * tn_cost + s * fp_cost)
     return cost_function
-
-
-class CostLogitConsts:
-    """Class to compute the constants of the cost metric for logistic regression."""
-
-    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
-        y, x = sympy.symbols('y x')
-        self.gradient_const = x * (y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit))
-        self.gradient_fn = _safe_lambdify(self.gradient_const)
-        self.loss_const1 = y * -tp_benefit + (1 - y) * fp_cost
-        self.loss_const1_fn = _safe_lambdify(self.loss_const1)
-        self.loss_const2 = y * fn_cost - (1 - y) * tn_benefit
-        self.loss_const2_fn = _safe_lambdify(self.loss_const2)
-
-    def prepare(
-        self, x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
-    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-        """Prepare the constant terms for the logistic regression objective."""
-        gradient_const_value = _safe_run_lambda_array(
-            self.gradient_fn, self.gradient_const, shape=x.shape, y=y_true, x=x, **kwargs
-        )
-        loss_const1_value = _safe_run_lambda_array(
-            self.loss_const1_fn, self.loss_const1, shape=y_true.shape[0], y=y_true, **kwargs
-        )
-        loss_const2_value = _safe_run_lambda_array(
-            self.loss_const2_fn, self.loss_const2, shape=y_true.shape[0], y=y_true, **kwargs
-        )
-
-        return gradient_const_value, loss_const1_value, loss_const2_value
-
-
-class CostLogitObjective:
-    """Class to build the logit objective function for cost-based metrics."""
-
-    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
-        self._logit_consts = CostLogitConsts(
-            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-        )
-
-    def __call__(
-        self,
-        features: FloatNDArray,
-        y_true: FloatNDArray,
-        C: float,
-        l1_ratio: float,
-        soft_threshold: bool,
-        fit_intercept: bool,
-        **parameters: Any,
-    ) -> Callable[[FloatNDArray], tuple[float, FloatNDArray]]:
-        """Build the logit objective callable."""
-        if y_true.ndim == 1:
-            y_true = np.expand_dims(y_true, axis=1)
-        grad_const, loss_const1, loss_const2 = self._logit_consts.prepare(features, y_true, **parameters)
-        loss_const1 = (
-            loss_const1.reshape(-1)
-            if isinstance(loss_const1, np.ndarray)
-            else np.full(len(y_true), loss_const1, dtype=np.float64)
-        )
-        loss_const2 = (
-            loss_const2.reshape(-1)
-            if isinstance(loss_const2, np.ndarray)
-            else np.full(len(y_true), loss_const2, dtype=np.float64)
-        )
-        return partial(
-            cy_logit_loss_gradient,
-            grad_const=grad_const,
-            loss_const1=loss_const1,
-            loss_const2=loss_const2,
-            features=features,
-            C=C,
-            l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
-            fit_intercept=fit_intercept,
-        )
 
 
 class CostBoostGradientConst:
