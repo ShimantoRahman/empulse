@@ -165,9 +165,7 @@ expected_cost_loss = Metric(cost_matrix=cost_matrix, strategy=Cost())
 expected_savings_score = Metric(cost_matrix=cost_matrix, strategy=Savings())
 expected_max_profit_score = Metric(cost_matrix=cost_matrix, strategy=MaxProfit())
 
-expected_cost_loss(
-    y, pipeline.predict_proba(X)[:, 1], opportunity_cost=5, time_wasted_cost=1
-)
+expected_cost_loss(y, pipeline.predict_proba(X)[:, 1], opportunity_cost=5, time_wasted_cost=1)
 ```
 
 Your custom metric can also be optimized by the models:
