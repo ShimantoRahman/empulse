@@ -351,12 +351,15 @@ Empulse provides easy access to real-world datasets for benchmarking cost-sensit
 Each dataset returns the features, the target, and the instance-dependent costs, ready to use in a cost-sensitive model.
 
 ```python
-from empulse.datasets import load_give_me_some_credit
+from empulse.datasets import fetch_give_me_some_credit
 from empulse.models import CSLogitClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-X, y, tp_cost, fp_cost, tn_cost, fn_cost = load_give_me_some_credit(return_X_y_costs=True)
+dataset = fetch_give_me_some_credit()
+X, y = dataset.data, dataset.target
+fp_cost = dataset.instance_costs['fp_cost']
+fn_cost = dataset.instance_costs['cl'] * 0.75  # loss_given_default
 
 pipeline = Pipeline([
     ('scaler', StandardScaler()),
@@ -365,9 +368,7 @@ pipeline = Pipeline([
 pipeline.fit(
     X,
     y,
-    model__tp_cost=tp_cost,
     model__fp_cost=fp_cost,
-    model__tn_cost=tn_cost,
     model__fn_cost=fn_cost,
 )
 ```

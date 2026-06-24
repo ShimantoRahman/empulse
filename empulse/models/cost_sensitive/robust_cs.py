@@ -231,6 +231,9 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
            Advances in Data Analysis and Classification, 17(4), 1057-1079.
     """
 
+    costs_: dict[str, Any]
+    outlier_estimators_: dict[str, Any]
+
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CSCLASSIFIER_PARAMS,
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
