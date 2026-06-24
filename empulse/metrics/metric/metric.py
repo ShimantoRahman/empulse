@@ -144,8 +144,12 @@ class Metric:
         )
 
     @property
-    def __name__(self) -> str:  # noqa: PLW3201
+    def __name__(self) -> str:
         return self.strategy.name
+
+    @__name__.setter  # noqa: A003
+    def __name__(self, value: str) -> None:
+        self.strategy.name = value
 
     @property
     def tp_benefit(self) -> sympy.Expr:  # noqa: D102
@@ -185,7 +189,7 @@ class Metric:
 
     @property
     def _all_symbols(self) -> set[str]:
-        """Return a set of all symbols used in the cost matrix."""
+        """The set of all symbols used in the cost matrix."""
         all_symbols = (
             self.tp_cost.free_symbols
             | self.tn_cost.free_symbols
@@ -211,7 +215,7 @@ class Metric:
 
     @property
     def _all_parameters(self) -> set[str]:
-        """Return a set of cost matrix parameters which can be used."""
+        """The set of cost matrix parameters which can be used."""
         all_symbols = (
             self.tp_cost.free_symbols
             | self.tn_cost.free_symbols

@@ -314,21 +314,21 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
     @property
     def feature_importances_(self) -> FloatNDArray:
-        """Return the feature importances."""
+        """The feature importances."""
         check_is_fitted(self)
         importances: FloatNDArray = self.estimator_.feature_importances_
         return importances
 
     @property
     def max_features_(self) -> int:
-        """Return the inferred value of max_features."""
+        """The inferred value of max_features."""
         check_is_fitted(self)
         max_features: int = self.estimator_.max_features_
         return max_features
 
     @property
     def n_classes_(self) -> int:
-        """Return the number of classes."""
+        """The number of classes."""
         check_is_fitted(self)
         n_classes: int = self.estimator_.n_classes_
         return n_classes

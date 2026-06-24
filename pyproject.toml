@@ -189,6 +189,7 @@ ignore = [
     "D105", # Missing docstring in magic method
     "D301", # Use r""" if any backslashes in a docstring
     "PLW2901", # `for` loop variable overwritten by assignment target
+    "PLW3201", # sklearn uses special dunder methods for estimator tags and such
     "PLC2701", # Private name import {name} from external module {module}
     "PLC0415", # `import` should be at the top-level of a file
     "RUF069",
