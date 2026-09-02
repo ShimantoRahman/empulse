@@ -10,12 +10,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble._base import _partition_estimators
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.validation import check_is_fitted, check_random_state
+from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import Metric, expected_cost_loss
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 

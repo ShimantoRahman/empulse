@@ -6,13 +6,15 @@ from typing import Any, ClassVar, Literal, Protocol, Self, overload
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
+from sklearn.utils import Tags
 from sklearn.utils._metadata_requests import RequestMethod
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import validate_data
 
 from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import Cost, Metric, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
-from ..utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 class MetricStrategyFactory(Protocol):

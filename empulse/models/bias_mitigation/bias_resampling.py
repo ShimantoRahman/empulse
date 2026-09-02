@@ -4,13 +4,14 @@ from typing import Any, ClassVar, Self
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
+from sklearn.utils import Tags
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...samplers import BiasResampler
 from ...samplers._strategies import Strategy, StrategyFn
-from ...utils._sklearn_compat import Tags, type_of_target, validate_data  # type: ignore[attr-defined]
 
 
 class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]

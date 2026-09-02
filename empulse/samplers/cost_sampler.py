@@ -4,12 +4,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import check_random_state
+from sklearn.utils import ClassifierTags, Tags, check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
-from ..utils._sklearn_compat import ClassifierTags, Tags  # type: ignore
 
 
 class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]

@@ -4,12 +4,11 @@ from typing import Any, ClassVar, Self
 
 import numpy as np
 from sklearn.utils._param_validation import Interval, RealNotInt
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import MaxProfit, Metric
 from ...metrics.metric.common import Direction
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 from .evolutionary_tree import EvolutionaryTree
 

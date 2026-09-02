@@ -9,11 +9,11 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
 from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
+from sklearn.utils.validation import _estimator_has, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import Metric
-from ...utils._sklearn_compat import _estimator_has, validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']

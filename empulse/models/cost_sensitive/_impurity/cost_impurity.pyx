@@ -151,7 +151,7 @@ cdef class CostImpurity(ClassificationCriterion):
 
     cdef int update(self, intp_t new_pos) except -1 nogil:
         cdef intp_t pos = self.pos
-        cdef intp_t end_non_missing = self.end - self.n_missing
+        cdef intp_t end_non_missing = self.end
         cdef const intp_t[:] sample_indices = self.sample_indices
         cdef const float64_t[:] sample_weight = self.sample_weight
         cdef intp_t i, p, k, c

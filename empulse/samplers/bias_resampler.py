@@ -7,11 +7,11 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import _safe_indexing, check_random_state
+from sklearn.utils import ClassifierTags, Tags, _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
+from sklearn.utils.multiclass import type_of_target
 
 from .._types import IntNDArray, ParameterConstraint
-from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:  # pragma: no cover

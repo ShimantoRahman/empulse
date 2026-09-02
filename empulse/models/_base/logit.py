@@ -7,13 +7,12 @@ import numpy as np
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import LogitObjective, Metric
 from ...optimizers import Optimizer
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 from ..csclassifier import CostSensitiveClassifier
 
 

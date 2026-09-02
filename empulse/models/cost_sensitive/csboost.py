@@ -8,11 +8,10 @@ from numpy.typing import ArrayLike
 from scipy.special import expit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics.metric.common import Direction
-from ...utils._sklearn_compat import validate_data  # type: ignore[attr-defined]
 
 try:
     from xgboost import XGBClassifier

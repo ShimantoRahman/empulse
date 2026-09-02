@@ -6,11 +6,11 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import clone
-from sklearn.utils import _safe_indexing
+from sklearn.utils import ClassifierTags, Tags, _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
+from sklearn.utils.multiclass import type_of_target
 
 from .._types import FloatNDArray, IntNDArray, ParameterConstraint
-from ..utils._sklearn_compat import ClassifierTags, Tags, type_of_target  # type: ignore
 from ._strategies import Strategy
 
 if TYPE_CHECKING:  # pragma: no cover
