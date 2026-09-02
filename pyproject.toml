@@ -51,6 +51,8 @@ issue-tracker = "https://github.com/ShimantoRahman/empulse/issues"
 changelog = "https://empulse.readthedocs.io/en/stable/project/changelog.html"
 
 [project.optional-dependencies]
+symbolic = ["gplearn>=0.4.3"]
+
 optional = [
     "empulse",
     "xgboost>=1.7.4",
@@ -62,7 +64,7 @@ optional = [
 
 [dependency-groups]
 test = [
-    "empulse[optional]",
+    "empulse[optional, symbolic]",
     "scikit-learn>=1.9.0",
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
@@ -73,7 +75,7 @@ test = [
 ]
 
 docs = [
-    "empulse[optional]",
+    "empulse[optional, symbolic]",
     "sphinx>=7.2.6",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx-copybutton>=0.5.2",

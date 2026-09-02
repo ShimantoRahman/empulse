@@ -12,6 +12,9 @@ from .cost_sensitive import (
 )
 from .cy_proftree import ProfTreeClassifier
 from .proflogit import ProfLogitClassifier
+from .profmempm import ProfMEMPMClassifier
+from .profmpm import ProfMPMClassifier
+from .profsr import ProfSRClassifier
 
 __all__ = [
     'B2BoostClassifier',
@@ -26,6 +29,9 @@ __all__ = [
     'CSThresholdClassifier',
     'CSTreeClassifier',
     'ProfLogitClassifier',
+    'ProfMEMPMClassifier',
+    'ProfMPMClassifier',
+    'ProfSRClassifier',
     'ProfTreeClassifier',
     'RobustCSClassifier',
 ]

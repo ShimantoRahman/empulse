@@ -791,6 +791,9 @@ optional = [
     { name = "lightgbm" },
     { name = "xgboost" },
 ]
+symbolic = [
+    { name = "gplearn" },
+]
 
 [package.dev-dependencies]
 dataframe = [
@@ -799,7 +802,7 @@ dataframe = [
 ]
 dev = [
     { name = "cython" },
-    { name = "empulse", extra = ["optional"] },
+    { name = "empulse", extra = ["optional", "symbolic"] },
     { name = "jupyter" },
     { name = "line-profiler" },
     { name = "mypy" },
@@ -824,7 +827,7 @@ dev = [
     { name = "twine" },
 ]
 docs = [
-    { name = "empulse", extra = ["optional"] },
+    { name = "empulse", extra = ["optional", "symbolic"] },
     { name = "myst-parser" },
     { name = "numpydoc" },
     { name = "pydata-sphinx-theme" },
@@ -841,7 +844,7 @@ lint = [
 ]
 test = [
     { name = "cython" },
-    { name = "empulse", extra = ["optional"] },
+    { name = "empulse", extra = ["optional", "symbolic"] },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "scikit-learn" },
@@ -856,6 +859,7 @@ requires-dist = [
     { name = "catboost", marker = "python_full_version < '3.13' and extra == 'optional'", specifier = ">=1.2.7" },
     { name = "catboost", marker = "python_full_version >= '3.14' and extra == 'optional'", specifier = ">=1.2.9" },
     { name = "empulse", marker = "extra == 'optional'" },
+    { name = "gplearn", marker = "extra == 'symbolic'", specifier = ">=0.4.3" },
     { name = "imbalanced-learn", specifier = ">=0.14.2" },
     { name = "joblib", specifier = ">=1.3.2" },
     { name = "lightgbm", marker = "extra == 'optional'", specifier = ">=4.5.0" },
@@ -867,7 +871,7 @@ requires-dist = [
     { name = "sympy", specifier = ">=1.12.1" },
     { name = "xgboost", marker = "extra == 'optional'", specifier = ">=1.7.4" },
 ]
-provides-extras = ["optional"]
+provides-extras = ["symbolic", "optional"]
 
 [package.metadata.requires-dev]
 dataframe = [
@@ -876,7 +880,7 @@ dataframe = [
 ]
 dev = [
     { name = "cython", specifier = ">=3.1.2" },
-    { name = "empulse", extras = ["optional"] },
+    { name = "empulse", extras = ["optional", "symbolic"] },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "line-profiler", specifier = ">=5.0.0" },
     { name = "mypy", specifier = ">=1.19.1" },
@@ -901,7 +905,7 @@ dev = [
     { name = "twine", specifier = ">=4.0.2" },
 ]
 docs = [
-    { name = "empulse", extras = ["optional"] },
+    { name = "empulse", extras = ["optional", "symbolic"] },
     { name = "myst-parser", specifier = ">=4.0.0" },
     { name = "numpydoc", specifier = ">=1.6.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
@@ -918,7 +922,7 @@ lint = [
 ]
 test = [
     { name = "cython", specifier = ">=3.1.2" },
-    { name = "empulse", extras = ["optional"] },
+    { name = "empulse", extras = ["optional", "symbolic"] },
     { name = "pytest", specifier = ">=7.4.4" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
@@ -1010,6 +1014,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/3e/a80a8c077fd798951169626cde3e239adeba7dab75deb3555716415bd9b0/fqdn-1.5.1.tar.gz", hash = "sha256:105ed3677e767fb5ca086a0c1f4bb66ebc3c100be518f0e0d755d9eae164d89f", size = 6015, upload-time = "2021-03-11T07:16:29.08Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014", size = 9121, upload-time = "2021-03-11T07:16:28.351Z" },
+]
+
+[[package]]
+name = "gplearn"
+version = "0.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "joblib" },
+    { name = "scikit-learn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/fc/2e5195be8489b633438489483e45c940829a74f4101720d9bf1efd0319dc/gplearn-0.4.3.tar.gz", hash = "sha256:3ce24bdf25fbc33ccf0b041a75e63db27804bf103e49e9f6f20824cf673b0047", size = 2197441, upload-time = "2026-01-07T06:45:33.542Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/5e/5a90d0911e160770f1824b5f475a9612e9dfafc90224d0258aab8172ed01/gplearn-0.4.3-py3-none-any.whl", hash = "sha256:e49838b57efa25dadf0e9b52df029254c826cf9bf6d1e8afd5f964ce8f213382", size = 40300, upload-time = "2026-01-07T06:45:29.605Z" },
 ]
 
 [[package]]
