@@ -5,10 +5,12 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import ClassifierTags, Tags, check_random_state
+from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
+from ..metrics import Metric
 
 
 class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
@@ -55,6 +57,14 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit_resample`` method.
 
+    loss : :class:`empulse.metrics.Metric`, default=None
+        Loss function which determines the false positive and false negative costs
+        used for the cost-proportionate resampling.
+
+        - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+          to the :meth:`~empulse.samplers.CostSensitiveSampler.fit_resample` method,
+          and the ``fp_cost``/``fn_cost`` parameters are ignored.
+
     Attributes
     ----------
     sample_indices_ : numpy.ndarray
@@ -90,6 +100,29 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         sampler = CostSensitiveSampler(method='oversampling', random_state=42)
         X_re, y_re = sampler.fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
+    Example using a custom :class:`~empulse.metrics.Metric` loss function:
+
+    .. code-block:: python
+
+        import sympy as sp
+        from empulse.metrics import Metric, Cost, CostMatrix
+        from empulse.samplers import CostSensitiveSampler
+        from sklearn.datasets import make_classification
+
+        clv, d, f = sp.symbols('clv d f')
+        cost_matrix = (
+            CostMatrix()
+            .add_fp_cost(d + f)
+            .add_fn_cost(clv)
+            .alias({'incentive_cost': 'd', 'contact_cost': 'f'})
+        )
+        cost_loss = Metric(cost_matrix, Cost())
+
+        X, y = make_classification()
+
+        sampler = CostSensitiveSampler(method='oversampling', random_state=42, loss=cost_loss)
+        X_re, y_re = sampler.fit_resample(X, y, clv=100, incentive_cost=10, contact_cost=1)
+
     """
 
     _sampling_type: ClassVar[str] = 'bypass'
@@ -100,6 +133,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         'random_state': ['random_state'],
         'fp_cost': [Real, 'array-like'],
         'fn_cost': [Real, 'array-like'],
+        'loss': [Metric, None],
     }
 
     if TYPE_CHECKING:  # pragma: no cover
@@ -116,6 +150,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         random_state: int | np.random.RandomState | None = None,
         fp_cost: float | FloatArrayLike = 0.0,
         fn_cost: float | FloatArrayLike = 0.0,
+        loss: Metric | None = None,
     ):
         super().__init__()
         self.method = method
@@ -124,6 +159,21 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         self.random_state = random_state
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
+        self.loss = loss
+        self._append_params_to_metadata_routing()
+
+    def _get_metric_loss(self) -> Metric | None:
+        """Get the metric loss function if available."""
+        return self.loss
+
+    def _append_params_to_metadata_routing(self) -> None:
+        # Allow passing costs accepted by the metric loss through metadata routing
+        loss = self._get_metric_loss()
+        if isinstance(loss, Metric):
+            self.__class__.set_fit_resample_request = RequestMethod(  # type: ignore[method-assign]
+                'fit_resample',
+                sorted(self.get_metadata_routing().fit_resample.requests.keys() | loss._all_symbols),  # type: ignore[attr-defined]
+            )
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -144,6 +194,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         *,
         fp_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
         fn_cost: float | ArrayLike | Parameter = Parameter.UNCHANGED,
+        **loss_params: Any,
     ) -> tuple[NDArray[Any], NDArray[Any]]:
         """
         Resample the dataset.
@@ -157,10 +208,16 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
+            Ignored if ``loss`` is a :class:`~empulse.metrics.Metric`.
 
         fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
+            Ignored if ``loss`` is a :class:`~empulse.metrics.Metric`.
+
+        loss_params : Any
+            Additional parameters to be passed to the loss function
+            if ``loss`` is a :class:`~empulse.metrics.Metric`.
 
         Returns
         -------
@@ -170,7 +227,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         y_resampled : ndarray of shape (n_samples_new,)
             The corresponding label of `X_resampled`.
         """
-        X, y = super().fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+        X, y = super().fit_resample(X, y, fp_cost=fp_cost, fn_cost=fn_cost, **loss_params)
         X: NDArray[Any]
         y: NDArray[Any]
         return X, y
@@ -181,24 +238,29 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         y: IntNDArray,
         fp_cost: float | FloatArrayLike | Parameter = 0.0,
         fn_cost: float | FloatArrayLike | Parameter = 0.0,
+        **loss_params: Any,
     ) -> tuple[NDArray[Any], NDArray[Any]]:
-        if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost
-        if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost
+        if isinstance(self.loss, Metric):
+            fp_cost, fn_cost, _, _ = self.loss._evaluate_costs(**loss_params)
+        else:
+            if fp_cost is Parameter.UNCHANGED:
+                fp_cost = self.fp_cost
+            if fn_cost is Parameter.UNCHANGED:
+                fn_cost = self.fn_cost
 
-        if (
-            all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
-            and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore[misc, arg-type]
-        ):
-            warnings.warn(
-                'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
-                f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.fit_resample() method.',
-                UserWarning,
-                stacklevel=2,
-            )
-            fp_cost = 1
-            fn_cost = 1
+            if (
+                all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
+                and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore[misc, arg-type]
+            ):
+                warnings.warn(
+                    'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
+                    f'To avoid this warning, set costs explicitly '
+                    f'in the {self.__class__.__name__}.fit_resample() method.',
+                    UserWarning,
+                    stacklevel=2,
+                )
+                fp_cost = 1
+                fn_cost = 1
 
         fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.array(fp_cost)
         fn_cost = np.full_like(y, fn_cost) if isinstance(fn_cost, Real) else np.asarray(fn_cost)
