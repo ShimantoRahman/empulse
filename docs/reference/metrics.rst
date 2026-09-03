@@ -17,6 +17,8 @@ Build your own cost-sensitive metric
 
    Metric
    MetricStrategy
+   MixtureComponent
+   MixtureMetric
    MaxProfit
    CostMatrix
    Cost

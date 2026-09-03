@@ -14,7 +14,17 @@ from .common import classification_threshold
 from .credit_scoring import empcs, empcs_score, mpcs, mpcs_score
 from .lift import lift_score
 from .max_profit import max_profit, max_profit_score
-from .metric import Cost, CostMatrix, LogitObjective, MaxProfit, Metric, MetricStrategy, Savings
+from .metric import (
+    Cost,
+    CostMatrix,
+    LogitObjective,
+    MaxProfit,
+    Metric,
+    MetricStrategy,
+    MixtureComponent,
+    MixtureMetric,
+    Savings,
+)
 from .savings import (
     cost_loss,
     expected_cost_loss,
@@ -31,6 +41,8 @@ __all__ = [
     'MaxProfit',
     'Metric',
     'MetricStrategy',
+    'MixtureComponent',
+    'MixtureMetric',
     'Savings',
     'auepc_score',
     'classification_threshold',
