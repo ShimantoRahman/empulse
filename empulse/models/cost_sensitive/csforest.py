@@ -14,7 +14,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state, valida
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
-from ...metrics import Metric, expected_cost_loss
+from ...metrics import BaseMetric, expected_cost_loss
 from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
@@ -77,7 +77,7 @@ class CSForestClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : Metric or None, default=None
+    loss : BaseMetric or None, default=None
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
@@ -325,7 +325,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
-        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), Metric],
+        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), BaseMetric],
         'combination': [
             StrOptions({'majority_voting', 'weighted_voting'}),
         ],
@@ -340,7 +340,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         criterion: Literal['cost', 'gini', 'entropy', 'log_loss'] = 'cost',
         combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_depth: int | None = None,
@@ -429,7 +429,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         self,
         X: FloatNDArray,
         y: IntNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> Self:
         """
@@ -443,7 +443,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        loss : Metric
+        loss : BaseMetric
             Loss to be optimized.
 
         loss_params : dict
@@ -457,7 +457,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         if self.combination == 'weighted_voting' and not self.bootstrap:
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
-        if isinstance(self.loss, Metric):
+        if isinstance(self.loss, BaseMetric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
@@ -685,7 +685,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         if isinstance(self.max_samples, Real):
             n_samples_bootstrap = max(round(n_samples * self.max_samples), 1)
 
-        weight_fn = self.loss if isinstance(self.loss, Metric) else expected_cost_loss
+        weight_fn = self.loss if isinstance(self.loss, BaseMetric) else expected_cost_loss
 
         for i, estimator in enumerate(self.estimators_):
             unsampled_indices = _generate_unsampled_indices(

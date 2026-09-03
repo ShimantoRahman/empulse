@@ -5,6 +5,7 @@ from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 
 from empulse.metrics import (
+    BaseMetric,
     Cost,
     CostMatrix,
     MaxProfit,
@@ -149,6 +150,95 @@ def test_mixture_repr(empcs_mixture):
 
 def test_mixture_name_property(empcs_mixture):
     assert 'MixtureMetric' in empcs_mixture.__name__
+
+
+# ---- BaseMetric interface: what makes MixtureMetric usable as a model `loss` ----
+# CSLogitClassifier/CSBoostClassifier/CSTreeClassifier/... accept any BaseMetric as their `loss`,
+# not just a plain Metric. These tests verify MixtureMetric satisfies that shared interface,
+# including the extra methods (`strategy`, `_all_symbols`, `_is_deterministic`, `_evaluate_costs`)
+# that model code relies on beyond score/rate/threshold/gradient.
+
+
+def test_mixture_is_a_base_metric(empcs_mixture, credit_scoring_metrics):
+    metric_det, _ = credit_scoring_metrics
+    assert isinstance(metric_det, BaseMetric)
+    assert isinstance(empcs_mixture, BaseMetric)
+
+
+def test_base_metric_cannot_be_instantiated_directly():
+    with pytest.raises(TypeError):
+        BaseMetric()  # type: ignore[abstract]
+
+
+def test_mixture_strategy_matches_components(credit_scoring_metrics):
+    metric_det, _ = credit_scoring_metrics
+    mixture = _two_point_mixture(metric_det, 0.6, 0.4)
+    assert isinstance(mixture.strategy, MaxProfit)
+
+
+def test_mixture_strategy_mismatch_raises():
+    a, b = sympy.symbols('a b')
+    max_metric = Metric(CostMatrix().add_tp_benefit(a), MaxProfit())
+    cost_metric = Metric(CostMatrix().add_tp_cost(b), Cost())
+    mixture = MixtureMetric([
+        MixtureComponent(0.5, max_metric, {}),
+        MixtureComponent(0.5, cost_metric, {}),
+    ])
+    with pytest.raises(ValueError, match='inconsistent strategies'):
+        _ = mixture.strategy
+
+
+def test_mixture_all_symbols_includes_weight_and_component_names(empcs_mixture, credit_scoring_metrics):
+    _, metric_stoch = credit_scoring_metrics
+    symbols = empcs_mixture._all_symbols
+    assert {'success_rate', 'default_rate', 'roi'} <= symbols
+    # 'gamma' is fixed via `parameters` on the two deterministic components, so it is only
+    # contributed by the stochastic component -- exactly as it would be for that Metric alone.
+    assert symbols - {'success_rate', 'default_rate', 'roi'} == metric_stoch._all_symbols - {'roi'}
+
+
+def test_mixture_is_deterministic_false_with_stochastic_component(empcs_mixture):
+    assert empcs_mixture._is_deterministic is False
+
+
+def test_mixture_is_deterministic_true_for_point_masses_only(credit_scoring_metrics):
+    metric_det, _ = credit_scoring_metrics
+    mixture = _two_point_mixture(metric_det, 0.6, 0.4)
+    assert mixture._is_deterministic is True
+
+
+@pytest.mark.parametrize('replace_stochastic', [False, True])
+def test_mixture_evaluate_costs_matches_manual_combination(credit_scoring_metrics, replace_stochastic):
+    metric_det, _ = credit_scoring_metrics
+    mixture = _two_point_mixture(metric_det, 0.6, 0.4)
+    roi = 0.2644
+
+    fp, fn, tp, tn = mixture._evaluate_costs(replace_stochastic=replace_stochastic, roi=roi)
+    fp0, fn0, tp0, tn0 = metric_det._evaluate_costs(replace_stochastic=replace_stochastic, gamma=0.0, roi=roi)
+    fp1, fn1, tp1, tn1 = metric_det._evaluate_costs(replace_stochastic=replace_stochastic, gamma=1.0, roi=roi)
+
+    assert pytest.approx(fp) == 0.6 * fp0 + 0.4 * fp1
+    assert pytest.approx(fn) == 0.6 * fn0 + 0.4 * fn1
+    assert pytest.approx(tp) == 0.6 * tp0 + 0.4 * tp1
+    assert pytest.approx(tn) == 0.6 * tn0 + 0.4 * tn1
+
+
+def test_mixture_evaluate_costs_replace_stochastic_with_stochastic_component(credit_scoring_metrics):
+    """A mixture with a stochastic component can still evaluate scalar costs when means
+
+    are substituted for its random variables (replace_stochastic=True), the same way a
+    standalone stochastic Metric can. This is what lets a MaxProfit-strategy MixtureMetric
+    be used by the scalar-cost model family (ProfLogit, ProfSR, ProfMPM, ProfMEMPM).
+    """
+    metric_det, metric_stoch = credit_scoring_metrics
+    mixture = MixtureMetric([
+        MixtureComponent(0.55, metric_det, {'gamma': 0.0}),
+        MixtureComponent(0.1, metric_det, {'gamma': 1.0}),
+        MixtureComponent(0.35, metric_stoch, {}),
+    ])
+    fp, fn, tp, tn = mixture._evaluate_costs(replace_stochastic=True, roi=0.2644)
+    for cost in (fp, fn, tp, tn):
+        assert np.isfinite(cost)
 
 
 # ---- gradient-boosting / logit objective plumbing checks ----

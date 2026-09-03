@@ -13,7 +13,7 @@ from sklearn.utils.validation import validate_data
 
 from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import Cost, MaxProfit, Metric, MetricStrategy
+from ..metrics import BaseMetric, Cost, MaxProfit, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
 
 
@@ -32,7 +32,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         'tn_cost': ['array-like', Real],
         'fn_cost': ['array-like', Real],
         'fp_cost': ['array-like', Real],
-        'loss': [Metric, None],
+        'loss': [BaseMetric, None],
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = Cost
     _cost_ndim: ClassVar[int] = 0
@@ -58,7 +58,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         tn_cost: FloatArrayLike | float,
         fn_cost: FloatArrayLike | float,
         fp_cost: FloatArrayLike | float,
-        loss: Metric | None,
+        loss: BaseMetric | None,
     ) -> None:
         self.tp_cost = tp_cost
         self.tn_cost = tn_cost
@@ -71,7 +71,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
     def _append_params_to_metadata_routing(self) -> None:
         # Allow passing costs accepted by the metric loss through metadata routing
         loss = self._get_metric_loss()
-        if isinstance(loss, Metric):
+        if isinstance(loss, BaseMetric):
             self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
                 'fit',
                 sorted(self.get_metadata_routing().fit.requests.keys() | loss._all_symbols),  # type: ignore[attr-defined]
@@ -164,7 +164,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         return self._fit(X, y, loss=loss, **loss_params)
 
     @abstractmethod
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self: ...
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self: ...
 
     def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
@@ -298,7 +298,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         fp_cost: FloatArrayLike | float | Parameter,
         params: dict[str, Any],
     ) -> dict[str, Any]:
-        if not isinstance(self._get_metric_loss(), Metric):
+        if not isinstance(self._get_metric_loss(), BaseMetric):
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
@@ -309,27 +309,28 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             params['fp_cost'] = fp_cost
         return params
 
-    def _get_metric_loss(self) -> Metric | None:
+    def _get_metric_loss(self) -> BaseMetric | None:
         """Get the metric loss function if available."""
         return getattr(self, 'loss', None)
 
-    def _get_default_loss(self) -> Metric:
+    def _get_default_loss(self) -> BaseMetric:
         return make_generic_metric(self._default_metric_strategy())
 
     def _prepare_class_costs(self, loss_params: dict[str, Any]) -> tuple[float, float, float, float]:
         """
         Reduce costs/benefits to four class-dependent scalars: tp_benefit, tn_benefit, fp_cost, fn_cost.
 
-        If ``loss`` is a :class:`~empulse.metrics.Metric` built with the
-        :class:`~empulse.metrics.MaxProfit` strategy, any stochastic (random) variables in the
-        cost/benefit expressions are first replaced by their mean so that a scalar value can be
-        derived from them. Instance-dependent (array-like) costs are aggregated by taking their mean.
+        If ``loss`` is a :class:`~empulse.metrics.BaseMetric` (e.g. a :class:`~empulse.metrics.Metric`
+        or :class:`~empulse.metrics.MixtureMetric`) built with the :class:`~empulse.metrics.MaxProfit`
+        strategy, any stochastic (random) variables in the cost/benefit expressions are first replaced
+        by their mean so that a scalar value can be derived from them. Instance-dependent (array-like)
+        costs are aggregated by taking their mean.
 
         Parameters
         ----------
         loss_params : dict[str, Any]
             Parameters to pass to the loss function, or plain ``tp_cost``/``tn_cost``/``fn_cost``/``fp_cost``
-            values when no :class:`~empulse.metrics.Metric` loss is set.
+            values when no :class:`~empulse.metrics.BaseMetric` loss is set.
 
         Returns
         -------
@@ -347,12 +348,12 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             tn_cost = loss_params.get('tn_cost', 0.0)
             fn_cost = loss_params.get('fn_cost', 0.0)
             fp_cost = loss_params.get('fp_cost', 0.0)
-        elif isinstance(self.loss, Metric):
+        elif isinstance(self.loss, BaseMetric):
             if isinstance(self.loss.strategy, MaxProfit):
                 fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(replace_stochastic=True, **loss_params)
             else:
                 raise ValueError(
-                    f'{self.__class__.__name__} only supports Metric losses built with the '
+                    f'{self.__class__.__name__} only supports losses built with the '
                     f'MaxProfit strategy, got {self.loss}.'
                 )
         else:

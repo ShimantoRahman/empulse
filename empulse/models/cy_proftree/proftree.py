@@ -7,7 +7,7 @@ from sklearn.utils._param_validation import Interval, RealNotInt
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import MaxProfit, Metric
+from ...metrics import BaseMetric, MaxProfit
 from ...metrics.metric.common import Direction
 from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 from .evolutionary_tree import EvolutionaryTree
@@ -62,7 +62,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : Metric or None
+    loss : BaseMetric or None
         Fitness function for the genetic algorithm to maximize.
         If ``None``, the :func:`~empulse.metrics.max_profit_score` is used.
 
@@ -189,7 +189,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         alpha: float = 0.0,
         patience: int = 100,
         tolerance: float = 1e-4,
@@ -223,7 +223,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         self.n_jobs = n_jobs
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         """
         Fit a tree to a training set.
 
@@ -235,7 +235,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         y : array-like of shape (n_samples,)
             Target values.
 
-        loss : Metric
+        loss : BaseMetric
             Loss to be optimized.
 
         loss_params : Any
@@ -301,7 +301,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 tol=float(self.tolerance),
                 random_state=random_state,
             )
-        elif isinstance(self.loss, Metric):
+        elif isinstance(self.loss, BaseMetric):
             if isinstance(self.loss.strategy, MaxProfit) and self.loss._is_deterministic:
                 fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
                 tp_benefit = -float(np.mean(tp_cost))

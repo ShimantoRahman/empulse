@@ -58,10 +58,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.Metric` or None, default=None
+    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
         Loss function to optimize.
 
-        If :class`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+        If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
         to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
 
         If ``None``, the loss is set to the Maximum Profit score.

@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
-from ...metrics import Metric
+from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
@@ -71,7 +71,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : Metric or None, default=None
+    loss : BaseMetric or None, default=None
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
@@ -282,7 +282,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         criterion: Literal['cost', 'gini', 'entropy', 'log_loss'] = 'cost',
         splitter: Literal['best', 'random'] = 'best',
         max_depth: int | None = None,
@@ -362,7 +362,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self,
         X: FloatNDArray,
         y: IntArrayLike,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> Self:
         """
@@ -376,7 +376,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        loss: Metric
+        loss: BaseMetric
             Loss to be optimized.
 
         loss_params : dict
@@ -387,7 +387,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self : object
             Returns self.
         """
-        if isinstance(self.loss, Metric):
+        if isinstance(self.loss, BaseMetric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(

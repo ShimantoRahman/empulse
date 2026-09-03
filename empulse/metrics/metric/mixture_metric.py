@@ -5,9 +5,9 @@ import numpy as np
 
 from ..._types import FloatArrayLike, FloatNDArray
 from ..common import classification_threshold
+from .base_metric import BaseMetric
 from .common import Direction
-from .metric import Metric
-from .strategies import LogitObjective
+from .strategies import LogitObjective, MetricStrategy
 
 Weight = float | str | Callable[[dict[str, Any]], float]
 
@@ -29,8 +29,9 @@ class MixtureComponent(NamedTuple):
           derived from other parameters
           (e.g. ``lambda p: 1 - p['success_rate'] - p['default_rate']``).
 
-    metric : Metric
-        The metric to evaluate for this component.
+    metric : BaseMetric
+        The metric to evaluate for this component. Usually a :class:`Metric`, but any
+        :class:`BaseMetric` works, including a nested :class:`MixtureMetric`.
 
     parameters : dict[str, Any]
         Parameter overrides fixed for this component, merged on top of (and taking priority
@@ -39,11 +40,11 @@ class MixtureComponent(NamedTuple):
     """
 
     weight: Weight
-    metric: Metric
+    metric: BaseMetric
     parameters: dict[str, Any]
 
 
-class MixtureMetric:
+class MixtureMetric(BaseMetric):
     r"""
     A weighted linear combination ("mixture") of :class:`Metric` objects.
 
@@ -133,6 +134,63 @@ class MixtureMetric:
     def __name__(self) -> str:
         names = '+'.join(component.metric.__name__ for component in self.components)
         return f'MixtureMetric({names})'
+
+    @property
+    def strategy(self) -> MetricStrategy:
+        """
+        A representative strategy shared by all components.
+
+        Raises a :exc:`ValueError` if components use different :class:`MetricStrategy` types
+        (e.g. mixing a :class:`~empulse.metrics.MaxProfit` component with a
+        :class:`~empulse.metrics.Cost` component). This lets model code that inspects
+        ``loss.strategy`` (e.g. to check ``isinstance(loss.strategy, MaxProfit)``) work
+        transparently with a :class:`MixtureMetric`, exactly as it would with a plain
+        :class:`Metric`.
+        """
+        strategies = [component.metric.strategy for component in self.components]
+        strategy_types = {type(strategy) for strategy in strategies}
+        if len(strategy_types) > 1:
+            raise ValueError(
+                f'MixtureMetric components use inconsistent strategies: {strategy_types}. '
+                'All components must use the same MetricStrategy type.'
+            )
+        return strategies[0]
+
+    @property
+    def _all_symbols(self) -> set[str]:
+        """The set of all parameter names accepted by the mixture (weight names and component symbols)."""
+        symbols = set(self._weight_parameter_names)
+        for component in self.components:
+            # Exclude symbols this component fixes internally: they are never read from the
+            # keyword arguments passed in at call time, since the fixed override always wins.
+            symbols |= component.metric._all_symbols - set(component.parameters.keys())
+        return symbols
+
+    @property
+    def _all_parameters(self) -> set[str]:
+        """The set of parameter names the mixture expects to be supplied by the caller."""
+        symbols = set(self._weight_parameter_names)
+        for component in self.components:
+            symbols |= component.metric._all_parameters - set(component.parameters.keys())
+        return symbols
+
+    @property
+    def _default_parameter_names(self) -> set[str]:
+        """The set of parameter names that have a default value and need not be supplied.
+
+        A mixture weight has no default of its own -- it is always required -- so this is
+        purely the union of each component's own defaults, excluding whatever that component
+        fixes internally (which is never read from the caller-supplied parameters anyway).
+        """
+        names: set[str] = set()
+        for component in self.components:
+            names |= component.metric._default_parameter_names - set(component.parameters.keys())
+        return names
+
+    @property
+    def _is_deterministic(self) -> bool:
+        """Whether every component is free of stochastic (random) variables."""
+        return all(component.metric._is_deterministic for component in self.components)
 
     @property
     def _weight_parameter_names(self) -> set[str]:
@@ -300,6 +358,31 @@ class MixtureMetric:
             )
             weighted_objectives.append((weight, objective))
         return _MixtureLogitObjective(weighted_objectives)
+
+    def _evaluate_costs(
+        self, *, replace_stochastic: bool = False, **parameters: Any
+    ) -> tuple[
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+    ]:
+        """Compute the weighted sum of each component's (class- or instance-dependent) costs."""
+        forwarded = self._forward_parameters(parameters)
+        total_fp: FloatNDArray | float = 0.0
+        total_fn: FloatNDArray | float = 0.0
+        total_tp: FloatNDArray | float = 0.0
+        total_tn: FloatNDArray | float = 0.0
+        for component in self.components:
+            weight = self._resolve_weight(component.weight, parameters)
+            fp_cost, fn_cost, tp_cost, tn_cost = component.metric._evaluate_costs(
+                replace_stochastic=replace_stochastic, **self._component_parameters(component, forwarded)
+            )
+            total_fp = total_fp + weight * fp_cost
+            total_fn = total_fn + weight * fn_cost
+            total_tp = total_tp + weight * tp_cost
+            total_tn = total_tn + weight * tn_cost
+        return total_fp, total_fn, total_tp, total_tn
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(components={self.components!r})'

@@ -15,6 +15,7 @@ Build your own cost-sensitive metric
    :nosignatures:
    :template: base.rst
 
+   BaseMetric
    Metric
    MetricStrategy
    MixtureComponent

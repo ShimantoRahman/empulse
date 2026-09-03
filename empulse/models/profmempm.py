@@ -8,7 +8,7 @@ from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import MaxProfit, Metric
+from ..metrics import BaseMetric, MaxProfit
 from .csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 
 
@@ -84,8 +84,8 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
             Since this model only supports class-dependent costs, array-like costs
             are aggregated to their mean value before fitting.
 
-    loss : :class:`empulse.metrics.Metric` or None, default=None
-        Only :class:`~empulse.metrics.Metric` instances built with the
+    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
+        Only :class:`~empulse.metrics.BaseMetric` instances built with the
         :class:`~empulse.metrics.MaxProfit` strategy are supported, since this model requires
         the costs and benefits to be reducible to four scalar values.
 
@@ -93,7 +93,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
             If the costs or benefits contain stochastic variables, they are replaced by
             their mean/expectation before fitting.
 
-        If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+        If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
         to the :meth:`~empulse.models.ProfMEMPMClassifier.fit` method.
 
         If ``None``, the loss is set to the Maximum Profit score.
@@ -164,7 +164,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         penalty: Literal['l1', 'l2'] = 'l2',
         lambda_reg: float = 0.0,
         ridge_penalty: float = 1e-6,
@@ -174,7 +174,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
         self.ridge_penalty = ridge_penalty
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)
 
         pos_mask = y == 1

@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import LogitObjective, Metric
+from ...metrics import BaseMetric, LogitObjective
 from ...optimizers import Optimizer
 from ..csclassifier import CostSensitiveClassifier
 
@@ -36,7 +36,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         'fit_intercept': ['boolean'],
         'soft_threshold': ['boolean'],
         'l1_ratio': [Interval(Real, 0, 1, closed='both')],
-        'loss': [Metric, None],
+        'loss': [BaseMetric, None],
         'optimizer': [Optimizer, None],
     }
 
@@ -50,7 +50,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         fit_intercept: bool = True,
         soft_threshold: bool = True,
         l1_ratio: float = 1.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         optimizer: Optimizer | None = None,
     ):
         self.tp_cost = tp_cost
@@ -74,7 +74,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         If `optimize_fn` is provided, it should be used instead of the default optimizer.
         """
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
@@ -83,7 +83,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
 
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
-    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         objective = loss._logit_objective(
             features=X,
             y_true=y,
@@ -113,7 +113,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         fp_cost: FloatArrayLike | float | Parameter,
         **loss_params: Any,
     ) -> dict[str, Any]:
-        if not isinstance(self.loss, Metric):
+        if not isinstance(self.loss, BaseMetric):
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )

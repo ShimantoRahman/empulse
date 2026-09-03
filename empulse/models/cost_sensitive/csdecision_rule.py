@@ -19,7 +19,7 @@ from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import MaxProfit, Metric
+from ...metrics import BaseMetric, MaxProfit
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from ..csclassifier import CostSensitiveClassifier
 
@@ -30,7 +30,7 @@ def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
     return float(np.mean(cost)) if isinstance(cost, np.ndarray) else cost
 
 
-def _extract_loss_params(params: dict[str, Any], loss: Metric) -> dict[str, Any]:
+def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, Any]:
     loss_params = {}
     loss_param_names = loss._all_symbols
     for param_name in list(params.keys()):
@@ -74,7 +74,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         pos_label: int | bool | str | None = None,
     ):
         self.estimator = estimator
@@ -82,7 +82,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def _append_params_to_metadata_routing(self) -> None:
-        if isinstance(self._get_metric_loss(), Metric):
+        if isinstance(self._get_metric_loss(), BaseMetric):
             self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
                 'fit',
                 sorted(self.get_metadata_routing()._self_request.fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
@@ -111,7 +111,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         else:
             raise AttributeError('The underlying estimator is not fitted yet.')
 
-    def _get_loss_or_default(self) -> Metric:
+    def _get_loss_or_default(self) -> BaseMetric:
         """Return the configured loss or a generic cost metric."""
         return self.loss if self.loss is not None else make_generic_cost_metric()
 
@@ -175,7 +175,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         # Second condition: loss exists but no loss-specific params provided
         loss_without_params = self.loss is not None and self.loss._all_parameters != (
-            params.keys() | self.loss.cost_matrix._defaults.keys()
+            params.keys() | self.loss._default_parameter_names
         )
 
         return no_costs_no_loss or loss_without_params
@@ -234,7 +234,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
     @abstractmethod
     def _compute_decision(
         self,
-        loss: Metric,
+        loss: BaseMetric,
         y: IntNDArray,
         y_score: FloatNDArray,
         loss_params: dict[str, Any],
@@ -246,7 +246,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         Parameters
         ----------
-        loss : Metric
+        loss : BaseMetric
             The loss function to optimize.
         y : array-like of shape (n_samples,)
             True labels.
@@ -265,7 +265,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
     def _compute_decision_at_predict(
         self,
         y_score: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         loss_params: dict[str, Any],
     ) -> Any:
         """Compute the decision attribute at predict time from the loss function.
@@ -275,7 +275,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         Parameters
         ----------
-        loss : Metric
+        loss : BaseMetric
             The loss function to optimize.
         loss_params : dict
             Parameters for the loss function.
@@ -307,7 +307,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         self,
         X: FloatArrayLike,
         y: ArrayLike,
-        loss: Metric,
+        loss: BaseMetric,
         **params: Any,
     ) -> Self:
         """Fit the classifier.
@@ -546,12 +546,12 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
     random_state : int or None, default=None
         Random state for the calibrator. Ignored when `calibrator` is an Estimator.
 
-    loss : Metric or None, default=None
+    loss : BaseMetric or None, default=None
         The loss function to use for computing the optimal decision threshold.
 
         - If None, the optimal decision threshold is computed based on
           ``tp_cost``, ``tn_cost``, ``fn_cost``, and ``fp_cost``.
-        - If a :class:`~empulse.metrics.Metric`,
+        - If a :class:`~empulse.metrics.BaseMetric`,
           the optimal decision threshold is computed based on the loss parameters provided to
           the :meth:`predict` method.
 
@@ -628,7 +628,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         calibrator: Literal['sigmoid', 'isotonic'] | BaseEstimator | None = 'sigmoid',
         pos_label: int | bool | str | None = None,
         random_state: int | np.random.RandomState | None = None,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
@@ -684,7 +684,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
 
     def _compute_decision(
         self,
-        loss: Metric,
+        loss: BaseMetric,
         y: IntNDArray,
         y_score: FloatNDArray,
         loss_params: dict[str, Any],
@@ -697,7 +697,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
     def _compute_decision_at_predict(
         self,
         y_score: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         loss_params: dict[str, Any],
     ) -> float | FloatNDArray:
         return loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
@@ -763,12 +763,12 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     pos_label : int, str, 'boolean' or None, default=None
         The label of the positive class.
 
-    loss : Metric or None, default=None
+    loss : BaseMetric or None, default=None
         The cost-sensitive metric to optimize.
 
         - If None, the optimal positive rate is computed based on
           ``tp_cost``, ``tn_cost``, ``fn_cost``, and ``fp_cost``.
-        - If a :class:`~empulse.metrics.Metric`,
+        - If a :class:`~empulse.metrics.BaseMetric`,
           the optimal positive rate is computed based on the loss parameters provided to
           the :meth:`fit` or :meth:`predict` method.
 
@@ -829,7 +829,7 @@ class CSRateClassifier(CSDecisionRuleClassifier):
 
     def _compute_decision(
         self,
-        loss: Metric,
+        loss: BaseMetric,
         y: IntNDArray,
         y_score: FloatNDArray,
         loss_params: dict[str, Any],
@@ -839,7 +839,7 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     def _compute_decision_at_predict(
         self,
         y_score: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         loss_params: dict[str, Any],
     ) -> float:
         return loss.optimal_rate(np.array([]), y_score, **loss_params)

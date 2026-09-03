@@ -7,7 +7,7 @@ from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import MaxProfit, Metric
+from ..metrics import BaseMetric, MaxProfit
 from ..metrics.metric.common import Direction
 from .csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 
@@ -65,10 +65,10 @@ class ProfSRClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.Metric` or None, default=None
+    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
         Fitness function for the genetic programming algorithm to optimize.
 
-        If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+        If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
         to the :meth:`~empulse.models.ProfSRClassifier.fit` method.
 
         If ``None``, the loss is set to the Maximum Profit score.
@@ -135,7 +135,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         generations: int = 50,
         population_size: int = 1000,
         parsimony_coefficient: float = 0.01,
@@ -147,7 +147,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         self.random_state = random_state
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         try:
             from gplearn.fitness import make_fitness
             from gplearn.genetic import SymbolicRegressor

@@ -13,7 +13,7 @@ from sklearn.utils.validation import _estimator_has, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import Metric
+from ...metrics import BaseMetric, Metric
 from ..csclassifier import CostSensitiveClassifier
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -242,7 +242,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         'detect_outliers_for': [StrOptions({'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}), list],
     }
 
-    def _get_metric_loss(self) -> Metric | None:
+    def _get_metric_loss(self) -> BaseMetric | None:
         """Get the metric loss function if available."""
         return self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
@@ -266,7 +266,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
     def __post_init__(self) -> None:
         # Allow passing costs accepted by the metric loss through metadata routing
-        if isinstance(self._get_metric_loss(), Metric):
+        if isinstance(self._get_metric_loss(), BaseMetric):
             self.__class__.set_fit_request = RequestMethod(
                 'fit',
                 sorted(
@@ -324,6 +324,13 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
         if metric_loss is not None:
+            if not isinstance(metric_loss, Metric):
+                raise NotImplementedError(
+                    f'{self.__class__.__name__} does not support outlier-sensitive cost detection for composite '
+                    f'losses such as {type(metric_loss).__name__}. Its underlying estimator should use a plain '
+                    'Metric loss (built with a single CostMatrix) for outlier detection to be able to identify '
+                    'which cost expressions are outlier-sensitive.'
+                )
             # Work on a copy so we never mutate the caller's dict.
             estimator_params = dict(fit_params)
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(X, y, metric_loss, estimator_params)
@@ -477,7 +484,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             else:
                 self.outlier_estimators_[cost_name] = None
 
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:  # type: ignore[empty-body]
+    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:  # type: ignore[empty-body]
         pass
 
     @available_if(_estimator_has('predict'))  # type: ignore[misc]

@@ -27,7 +27,7 @@ except ImportError:
     CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
-from ...metrics import Metric
+from ...metrics import BaseMetric
 from ...metrics._loss import cy_boost_grad_hess
 from ..csclassifier import CostSensitiveClassifier
 
@@ -72,7 +72,7 @@ class LGBMObjective:
 class LGBMMetricObjective:
     """Metric objective wrapper for lightgbm using dynamic gradient/hessian evaluation."""
 
-    def __init__(self, metric: Metric, **loss_params: FloatNDArray | float):
+    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
         self.metric = metric
         self.loss_params = loss_params
 
@@ -143,8 +143,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.Metric`, default=None
-        Loss function to optimize. Metric parameters are passed as ``loss_params``
+    loss : :class:`empulse.metrics.BaseMetric`, default=None
+        Loss function to optimize. Loss parameters are passed as ``loss_params``
           to the :Meth:`~empulse.models.CSBoostClassifier.fit` method.
 
     Attributes
@@ -258,7 +258,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
     ) -> None:
         self.estimator = estimator
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
@@ -327,7 +327,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         X: FloatNDArray,
         y: IntNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         *,
         fit_params: dict[str, Any] | None = None,
         **loss_params: Any,
@@ -376,7 +376,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
     def _initialize_default_estimator(
         self,
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> None:
         if isinstance(XGBClassifier, TypeVar):
@@ -391,7 +391,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
     def _initialize_custom_estimator(
         self,
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> None:
         if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator, XGBClassifier):
@@ -411,7 +411,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         framework: Literal['xgboost'],
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> Callable[..., Any]: ...
 
@@ -420,7 +420,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         framework: Literal['lightgbm'],
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> LGBMObjective | LGBMMetricObjective: ...
 
@@ -429,7 +429,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         framework: Literal['catboost'],
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> tuple['CatBoostObjective', 'CatBoostMetric']: ...
 
@@ -437,7 +437,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         framework: Literal['xgboost', 'lightgbm', 'catboost'],
         y: FloatNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> Callable[..., Any] | LGBMObjective | LGBMMetricObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
         # MaxProfit for boosting requires dynamic thresholding from current round predictions,
@@ -497,8 +497,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
 class CatBoostObjective:
     """AEC objective for catboost."""
 
-    def __init__(self, metric_or_gradient_const: Metric | FloatNDArray, **loss_params: FloatNDArray | float):
-        self.metric = metric_or_gradient_const if isinstance(metric_or_gradient_const, Metric) else None
+    def __init__(self, metric_or_gradient_const: BaseMetric | FloatNDArray, **loss_params: FloatNDArray | float):
+        self.metric = metric_or_gradient_const if isinstance(metric_or_gradient_const, BaseMetric) else None
         self.gradient_const = metric_or_gradient_const if isinstance(metric_or_gradient_const, np.ndarray) else None
         self.loss_params = loss_params
 
@@ -553,7 +553,7 @@ class CatBoostMetric:
 
     def is_max_optimal(self) -> bool:
         """Return whether greater values of metric are better."""
-        if isinstance(self.metric, Metric):
+        if isinstance(self.metric, BaseMetric):
             return self.metric.strategy.direction == Direction.MAXIMIZE
         return False
 

@@ -16,7 +16,7 @@ from sklearn.utils.validation import _estimator_has, check_is_fitted, validate_d
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import Metric, expected_cost_loss
+from ...metrics import BaseMetric, expected_cost_loss
 from ..csclassifier import CostSensitiveClassifier
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
@@ -98,11 +98,11 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : Metric, default=None
+    loss : BaseMetric, default=None
         The loss function to use in order to evaluate the costs.
         If ``None``, then the costs provided to the constructor or to the ``fit``
         method are used directly.
-        If a :class:``~empulse.metrics.Metric`` is provided, then the costs are computed using the
+        If a :class:``~empulse.metrics.BaseMetric`` is provided, then the costs are computed using the
         metric, and any costs provided to the
         constructor or to the ``fit`` method are ignored.
 
@@ -250,7 +250,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
         combination: Literal['majority_voting', 'weighted_voting'] = 'majority_voting',
         max_samples: float = 1.0,
         max_features: float = 1.0,
@@ -280,7 +280,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         self,
         X: FloatNDArray,
         y: IntNDArray,
-        loss: Metric,
+        loss: BaseMetric,
         **loss_params: Any,
     ) -> Self:
         """
@@ -295,7 +295,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        loss : Metric
+        loss : BaseMetric
             Loss to be optimized.
 
         loss_params : dict
@@ -309,7 +309,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         if self.combination == 'weighted_voting' and not self.bootstrap:
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
-        if isinstance(self.loss, Metric):
+        if isinstance(self.loss, BaseMetric):
             fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(

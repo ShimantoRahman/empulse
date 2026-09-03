@@ -5,12 +5,13 @@ import numpy as np
 import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
+from .base_metric import BaseMetric
 from .common import Direction, _evaluate_expression, replace_random_var_with_mean
 from .cost_matrix import CostMatrix
 from .strategies import LogitObjective, MetricStrategy
 
 
-class Metric:
+class Metric(BaseMetric):
     """
     Class to create a custom value/cost-sensitive metric.
 
@@ -242,6 +243,11 @@ class Metric:
         return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols} | set(
             self.cost_matrix._aliases.keys()
         )
+
+    @property
+    def _default_parameter_names(self) -> set[str]:
+        """The set of parameter names that have a default value and need not be supplied."""
+        return set(self.cost_matrix._defaults.keys())
 
     @property
     def _is_stochastic(self) -> bool:
