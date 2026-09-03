@@ -23,6 +23,7 @@ Build your own cost-sensitive metric
    MaxProfit
    CostMatrix
    Cost
+   LogCost
    Savings
 
 General Metrics

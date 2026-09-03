@@ -440,9 +440,11 @@ class CSBoostClassifier(CostSensitiveClassifier):
         loss: BaseMetric,
         **loss_params: Any,
     ) -> Callable[..., Any] | LGBMObjective | LGBMMetricObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
-        # MaxProfit for boosting requires dynamic thresholding from current round predictions,
-        # so we evaluate gradients/hessians directly from the metric each iteration.
-        if loss.strategy.name == 'max profit':
+        # MaxProfit requires dynamic thresholding from current round predictions, and LogCost's
+        # per-sample loss is non-linear in the predicted probability (unlike Cost/Savings), so both
+        # evaluate gradients/hessians directly from the metric each iteration instead of going through
+        # a precomputed constant.
+        if loss.strategy.name in {'max profit', 'log cost'}:
             if framework == 'xgboost':
                 return partial(loss._gradient_boost_objective, **loss_params)
             if framework == 'lightgbm':
