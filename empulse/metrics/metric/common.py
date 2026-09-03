@@ -4,12 +4,86 @@ from typing import Any, ParamSpec, Protocol, TypeVar
 
 import numpy as np
 import sympy
+import sympy.stats.crv_types
 
 from ..._types import FloatNDArray, IntNDArray
 
 T = TypeVar('T')
 P = ParamSpec('P')
 R = TypeVar('R')
+
+# Mapping from distribution type to its closed-form mean expression.
+# Used as a fast, reliable fallback for distributions whose expectation
+# sympy.stats.E cannot compute in closed form.
+_FIXED_MEANS: dict[
+    type[sympy.stats.crv_types.SingleContinuousDistribution],
+    Callable[[tuple[sympy.Expr, ...]], sympy.Expr],
+] = {
+    sympy.stats.crv_types.ArcsinDistribution: lambda params: (params[0] + params[1]) / 2,
+    sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
+    sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
+    sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
+    sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
+    sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
+    sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
+    sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
+    sympy.stats.crv_types.PowerFunctionDistribution: (
+        lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
+    ),
+}
+
+
+def _distribution_mean(symbol: sympy.Expr) -> sympy.Expr:
+    """Compute the expectation of a single random symbol's distribution."""
+    dist = symbol.pspace.distribution
+    dist_type = type(dist)
+
+    if dist_type in _FIXED_MEANS:
+        return _FIXED_MEANS[dist_type](dist.args)
+
+    try:
+        mean_expr = sympy.stats.E(symbol)
+        # Verify the expectation can actually be evaluated numerically.
+        sympy.lambdify([], mean_expr, modules=['scipy', 'numpy'])
+    except (NotImplementedError, TypeError) as error:
+        raise NotImplementedError(
+            f"Cannot compute or evaluate expectation for random variable '{symbol}'. "
+            f"The distribution '{dist_type.__name__}' may not support "
+            f'mean computation or lambdification in SymPy.'
+        ) from error
+    return mean_expr
+
+
+def replace_random_var_with_mean(*expressions: sympy.Expr) -> tuple[sympy.Expr, ...]:
+    """
+    Replace stochastic (random) variables in the expressions with their expectation (mean).
+
+    This allows expressions containing stochastic variables to be treated as deterministic,
+    e.g. so that a single scalar cost/benefit value can be derived from them.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        One or more expressions potentially containing random symbols.
+
+    Returns
+    -------
+    tuple of sympy.Expr
+        The input expressions, in the same order, with all random symbols substituted by their mean.
+    """
+    all_symbols: set[sympy.Expr] = set()
+    for expression in expressions:
+        all_symbols |= expression.free_symbols
+
+    random_symbols = [symbol for symbol in all_symbols if sympy.stats.rv.is_random(symbol)]
+    if not random_symbols:
+        return expressions
+
+    subs_map = {symbol: _distribution_mean(symbol) for symbol in random_symbols}
+
+    # xreplace performs exact structural matching, which is faster than subs()
+    # here since we are only replacing atomic random symbols (no pattern matching needed).
+    return tuple(expression.xreplace(subs_map) for expression in expressions)
 
 
 class Direction(Enum):

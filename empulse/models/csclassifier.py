@@ -13,7 +13,7 @@ from sklearn.utils.validation import validate_data
 
 from .._common import Parameter
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import Cost, Metric, MetricStrategy
+from ..metrics import Cost, MaxProfit, Metric, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
 
 
@@ -315,6 +315,56 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
 
     def _get_default_loss(self) -> Metric:
         return make_generic_metric(self._default_metric_strategy())
+
+    def _prepare_class_costs(self, loss_params: dict[str, Any]) -> tuple[float, float, float, float]:
+        """
+        Reduce costs/benefits to four class-dependent scalars: tp_benefit, tn_benefit, fp_cost, fn_cost.
+
+        If ``loss`` is a :class:`~empulse.metrics.Metric` built with the
+        :class:`~empulse.metrics.MaxProfit` strategy, any stochastic (random) variables in the
+        cost/benefit expressions are first replaced by their mean so that a scalar value can be
+        derived from them. Instance-dependent (array-like) costs are aggregated by taking their mean.
+
+        Parameters
+        ----------
+        loss_params : dict[str, Any]
+            Parameters to pass to the loss function, or plain ``tp_cost``/``tn_cost``/``fn_cost``/``fp_cost``
+            values when no :class:`~empulse.metrics.Metric` loss is set.
+
+        Returns
+        -------
+        tp_benefit : float
+            The (class-dependent) benefit of a true positive.
+        tn_benefit : float
+            The (class-dependent) benefit of a true negative.
+        fp_cost : float
+            The (class-dependent) cost of a false positive.
+        fn_cost : float
+            The (class-dependent) cost of a false negative.
+        """
+        if self.loss is None:
+            tp_cost = loss_params.get('tp_cost', 0.0)
+            tn_cost = loss_params.get('tn_cost', 0.0)
+            fn_cost = loss_params.get('fn_cost', 0.0)
+            fp_cost = loss_params.get('fp_cost', 0.0)
+        elif isinstance(self.loss, Metric):
+            if isinstance(self.loss.strategy, MaxProfit):
+                fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(replace_stochastic=True, **loss_params)
+            else:
+                raise ValueError(
+                    f'{self.__class__.__name__} only supports Metric losses built with the '
+                    f'MaxProfit strategy, got {self.loss}.'
+                )
+        else:
+            raise ValueError(f'Unknown loss function: {self.loss}.')
+
+        # This model requires scalar (class-dependent) costs, so instance-dependent
+        # (array-like) costs are aggregated to their mean value.
+        tp_benefit = -float(np.mean(tp_cost))
+        tn_benefit = -float(np.mean(tn_cost))
+        fp_cost = float(np.mean(fp_cost))
+        fn_cost = float(np.mean(fn_cost))
+        return tp_benefit, tn_benefit, fp_cost, fn_cost
 
 
 def _all_float(*arrays: ArrayLike | float | Parameter) -> bool:

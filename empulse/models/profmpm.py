@@ -90,9 +90,12 @@ class ProfMPMClassifier(CostSensitiveClassifier):
 
     loss : :class:`empulse.metrics.Metric` or None, default=None
         Only :class:`~empulse.metrics.Metric` instances built with the
-        :class:`~empulse.metrics.MaxProfit` strategy and deterministic costs and benefits
-        (no stochastic variables) are supported, since this model requires the costs
-        and benefits to be reducible to four scalar values.
+        :class:`~empulse.metrics.MaxProfit` strategy are supported, since this model requires
+        the costs and benefits to be reducible to four scalar values.
+
+        .. note::
+            If the costs or benefits contain stochastic variables, they are replaced by
+            their mean/expectation before fitting.
 
         If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
         to the :meth:`~empulse.models.ProfMPMClassifier.fit` method.
@@ -175,29 +178,7 @@ class ProfMPMClassifier(CostSensitiveClassifier):
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: Metric, **loss_params: Any) -> Self:
-        if self.loss is None:
-            tp_cost = loss_params.get('tp_cost', 0.0)
-            tn_cost = loss_params.get('tn_cost', 0.0)
-            fn_cost = loss_params.get('fn_cost', 0.0)
-            fp_cost = loss_params.get('fp_cost', 0.0)
-        elif isinstance(self.loss, Metric):
-            if isinstance(self.loss.strategy, MaxProfit) and self.loss._is_deterministic:
-                fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
-            else:
-                raise ValueError(
-                    f'{self.__class__.__name__} only supports Metric losses built with the MaxProfit strategy '
-                    'and deterministic costs and benefits (no stochastic variables), '
-                    f'got {self.loss}.'
-                )
-        else:
-            raise ValueError(f'Unknown loss function: {self.loss}.')
-
-        # This model requires scalar (class-dependent) costs, so instance-dependent
-        # (array-like) costs are aggregated to their mean value.
-        tp_benefit = -float(np.mean(tp_cost))
-        tn_benefit = -float(np.mean(tn_cost))
-        fp_cost = float(np.mean(fp_cost))
-        fn_cost = float(np.mean(fn_cost))
+        tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)
 
         pos_mask = y == 1
         neg_mask = y == 0

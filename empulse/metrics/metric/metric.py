@@ -5,7 +5,7 @@ import numpy as np
 import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
-from .common import Direction, _evaluate_expression
+from .common import Direction, _evaluate_expression, replace_random_var_with_mean
 from .cost_matrix import CostMatrix
 from .strategies import LogitObjective, MetricStrategy
 
@@ -537,7 +537,7 @@ class Metric:
         return self.strategy.prepare_boost_objective(y_true, **parameters)
 
     def _evaluate_costs(
-        self, **parameters: FloatNDArray | float
+        self, *, replace_stochastic: bool = False, **parameters: FloatNDArray | float
     ) -> tuple[
         FloatNDArray | float,
         FloatNDArray | float,
@@ -549,6 +549,12 @@ class Metric:
 
         Parameters
         ----------
+        replace_stochastic : bool, default=False
+            If ``True`` and the metric contains stochastic (random) variables, each random
+            variable is first replaced by its mean, allowing the costs to be evaluated as if
+            they were deterministic. If ``False``, stochastic variables are left as-is and
+            evaluating them directly will raise an error.
+
         parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
@@ -566,10 +572,13 @@ class Metric:
             The true negative cost(s).
         """
         parameters = self._prepare_parameters(**parameters)
-        fp_cost = _evaluate_expression(self.fp_cost, **parameters)
-        fn_cost = _evaluate_expression(self.fn_cost, **parameters)
-        tp_cost = _evaluate_expression(self.tp_cost, **parameters)
-        tn_cost = _evaluate_expression(self.tn_cost, **parameters)
+        fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
+        if replace_stochastic and self._is_stochastic:
+            fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(fp_expr, fn_expr, tp_expr, tn_expr)
+        fp_cost = _evaluate_expression(fp_expr, **parameters)
+        fn_cost = _evaluate_expression(fn_expr, **parameters)
+        tp_cost = _evaluate_expression(tp_expr, **parameters)
+        tn_cost = _evaluate_expression(tn_expr, **parameters)
         return fp_cost, fn_cost, tp_cost, tn_cost
 
     def __repr__(self) -> str:
