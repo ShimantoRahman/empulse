@@ -448,6 +448,14 @@ class ExactMaxProfitRatePiecewise:
         # Distribution parameters of the random variable
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
 
+        # When all distribution parameters are hardcoded numeric literals (no free symbols),
+        # extract_distribution_parameters returns an empty dict because the args have no
+        # symbol names to look up in kwargs. Populate from the literal values so that
+        # _integrate (and compute_piecewise_bounds) can still access them. Mirrors the same
+        # fix in BaseMaxProfitScorePiecewise.__call__ above.
+        if not distribution_parameters and not self.dist_params:
+            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args}
+
         fix_inf = not self.derivative.subs(kwargs).is_negative
 
         # We capture upper and lower bounds as the Uniform distribution needs them
