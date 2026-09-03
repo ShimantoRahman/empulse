@@ -7,9 +7,8 @@ import sympy
 from scipy.special import expit
 
 from ....._types import FloatNDArray, IntNDArray
-from ....common import classification_threshold
+from ....common import _compute_confusion_matrix, classification_threshold
 from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
-from .common import _convex_hull
 
 
 def _calculate_profits_deterministic(
@@ -19,14 +18,25 @@ def _calculate_profits_deterministic(
     profit_function: sympy.Expr,
     **kwargs: Any,
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray, float, float]:
+    y_true = np.asarray(y_true)
+    y_score = np.asarray(y_score)
     pi0 = float(np.mean(y_true))
     pi1 = 1 - pi0
-    tprs, fprs = _convex_hull(y_true, y_score)
 
-    profits = np.zeros_like(tprs)
-    for i, (tpr, fpr) in enumerate(zip(tprs, fprs, strict=False)):
-        eval_params = {'pi_0': pi0, 'pi_1': pi1, 'F_0': tpr, 'F_1': fpr, **kwargs}
-        profits[i] = _safe_run_lambda(calculate_profit, profit_function, **eval_params)
+    # not taking convex hull here since it is cheaper to just check every point than computing the convex hull
+    n_pos = float(np.sum(y_true))
+    n_neg = y_true.shape[0] - n_pos
+    confusion_counts, _, _ = _compute_confusion_matrix(y_true, y_score)
+    tprs = confusion_counts[0] / n_pos
+    fprs = confusion_counts[1] / n_neg
+
+    eval_params = {'pi_0': pi0, 'pi_1': pi1, 'F_0': tprs, 'F_1': fprs, **kwargs}
+    profits = np.asarray(_safe_run_lambda(calculate_profit, profit_function, **eval_params), dtype=np.float64)
+    if profits.shape != tprs.shape:
+        # profit_function doesn't actually depend on F_0 and/or F_1 (e.g. a degenerate cost
+        # matrix where the tp/fn or tn/fp terms cancel out), so the lambdified call collapsed
+        # to a scalar. Broadcast it back out to one value per convex-hull point.
+        profits = np.full(tprs.shape, float(profits), dtype=np.float64)
 
     return profits, tprs, fprs, pi0, pi1
 
