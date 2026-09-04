@@ -8,6 +8,7 @@ from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
 from ...common import _safe_lambdify
+from ..metric_strategy import LogitObjective
 from .common import _convex_hull, extract_distribution_parameters
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
@@ -15,7 +16,7 @@ from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
 
 
-class MaxProfitLogitGradientPiecewise:
+class MaxProfitLogitGradientPiecewise(LogitObjective):
     """
     Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models.
 
@@ -58,6 +59,7 @@ class MaxProfitLogitGradientPiecewise:
         self.alpha_growth = alpha_growth
         self.alpha_max = alpha_max
         self._epoch = 0
+        self._alpha_override: float | None = None
 
         self.pos_mask = self.y_true == 1
         self.neg_mask = ~self.pos_mask
@@ -296,9 +298,8 @@ class MaxProfitLogitGradientPiecewise:
     def _current_alpha(self) -> float:
         """Compute annealed temperature for the current objective evaluation."""
         # External override takes precedence (set by an alpha_schedule on the optimizer)
-        override = getattr(self, '_alpha_override', None)
-        if override is not None:
-            return float(override)
+        if self._alpha_override is not None:
+            return float(self._alpha_override)
         try:
             alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
         except OverflowError:
@@ -353,7 +354,7 @@ class MaxProfitLogitGradientPiecewise:
         obj.pi0 = float(obj.n_pos / len(obj.y_true))
         obj.pi1 = 1.0 - obj.pi0
         obj._epoch = 0
-        obj._alpha_override = getattr(self, '_alpha_override', None)
+        obj._alpha_override = self._alpha_override
         return obj
 
     def logit_loss(self, weights: FloatNDArray) -> float:
@@ -448,9 +449,16 @@ class MaxProfitLogitGradientPiecewise:
         weights: FloatNDArray
         cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)
 
-        sent = yield  # prime the generator
+        # Priming yield: its value is discarded by the caller's next(generator) advance below,
+        # so it is never actually observed as a FloatNDArray - mypy doesn't model that.
+        sent = yield  # type: ignore[misc]
 
         while True:
+            # Sending None is an alternative to close() for terminating the generator - matches
+            # the sibling _logit_gradient_steps() implementations (CostLogitObjective,
+            # MaxProfitLogitGradientDeterministic, LogitObjective's own default).
+            if sent is None:
+                return
             if isinstance(sent, tuple):
                 weights, refresh = sent
                 if refresh:

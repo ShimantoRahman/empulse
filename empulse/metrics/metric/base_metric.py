@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .common import Direction
-from .strategies import LogitObjective
+from .strategies import LogitObjective, MetricStrategy
 
 
 class BaseMetric(ABC):
@@ -22,6 +22,20 @@ class BaseMetric(ABC):
     metric from scratch. To combine existing :class:`~empulse.metrics.Metric` objects, use
     :class:`~empulse.metrics.MixtureMetric` instead.
     """
+
+    @property
+    @abstractmethod
+    def strategy(self) -> MetricStrategy:
+        """
+        The strategy used to compute the metric.
+
+        For a composite metric, a representative strategy shared by all of its components.
+        """
+
+    @property
+    @abstractmethod
+    def __name__(self) -> str:
+        """Human-readable name of the metric, e.g. for use as a scorer name."""
 
     @property
     @abstractmethod

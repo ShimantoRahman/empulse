@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 from scipy.optimize import OptimizeResult
 
-from .._types import FloatNDArray
+from .._types import Float64Array, FloatNDArray
 from ..metrics import LogitObjective
 
 
@@ -41,10 +41,10 @@ class Optimizer(ABC):
     ) -> OptimizeResult:
         """Run the optimization and return an :class:`~scipy.optimize.OptimizeResult`."""
 
-    def _initial_weights(self, X: FloatNDArray) -> FloatNDArray:
+    def _initial_weights(self, X: FloatNDArray) -> Float64Array:
         """
         Return a zero weight vector sized to match *X*.
 
         Subclasses may override this to use a different initialization strategy.
         """
-        return np.zeros(X.shape[1], order='F', dtype=X.dtype)
+        return np.zeros(X.shape[1], order='F', dtype=np.float64)

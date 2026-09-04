@@ -230,7 +230,7 @@ class ProfMPMClassifier(CostSensitiveClassifier):
                 reg_term = 0.0
 
             # Minimize negative profit + regularization penalty
-            return -expected_profit + reg_term
+            return float(-expected_profit + reg_term)
 
         w0 = np.ones(n_features) / np.sqrt(n_features)
         b0 = 0.0

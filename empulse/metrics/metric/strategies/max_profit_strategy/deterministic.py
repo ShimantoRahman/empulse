@@ -9,6 +9,7 @@ from scipy.special import expit
 from ....._types import FloatNDArray, IntNDArray
 from ....common import _compute_confusion_matrix, classification_threshold
 from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
+from ..metric_strategy import LogitObjective
 
 
 def _calculate_profits_deterministic(
@@ -145,7 +146,7 @@ class MaxProfitBoostGradientDeterministic:
         return gradient, hessian
 
 
-class MaxProfitLogitGradientDeterministic:
+class MaxProfitLogitGradientDeterministic(LogitObjective):
     """Picklable objective for deterministic MaxProfit optimized with logistic models."""
 
     def __init__(
@@ -182,6 +183,7 @@ class MaxProfitLogitGradientDeterministic:
         self.alpha_growth = alpha_growth
         self.alpha_max = alpha_max
         self._epoch = 0
+        self._alpha_override: float | None = None
         self.tp_benefit = tp_benefit
         self.tn_benefit = tn_benefit
         self.fp_cost = fp_cost
@@ -198,9 +200,8 @@ class MaxProfitLogitGradientDeterministic:
     def _current_alpha(self) -> float:
         """Compute annealed temperature for the current objective evaluation."""
         # External override takes precedence (set by an alpha_schedule on the optimizer)
-        override = getattr(self, '_alpha_override', None)
-        if override is not None:
-            return float(override)
+        if self._alpha_override is not None:
+            return float(self._alpha_override)
         try:
             alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
         except OverflowError:
@@ -245,7 +246,7 @@ class MaxProfitLogitGradientDeterministic:
         obj.X_pos = obj.features[obj.pos_mask]
         obj.X_neg = obj.features[obj.neg_mask]
         obj._epoch = 0
-        obj._alpha_override = getattr(self, '_alpha_override', None)
+        obj._alpha_override = self._alpha_override
         return obj
 
     def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
@@ -371,7 +372,9 @@ class MaxProfitLogitGradientDeterministic:
         """
         weights: FloatNDArray
 
-        sent = yield
+        # Priming yield: its value is discarded by the caller's next(generator) advance below,
+        # so it is never actually observed as a FloatNDArray - mypy doesn't model that.
+        sent = yield  # type: ignore[misc]
 
         while True:
             if sent is None:

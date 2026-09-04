@@ -69,7 +69,7 @@ class LogitObjective(ABC):
         """
         weights: FloatNDArray
 
-        sent = yield
+        sent = yield  # type: ignore[misc]
 
         while True:
             if sent is None:

@@ -2,12 +2,12 @@ from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import OptimizeResult, minimize
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from .._types import Float64Array, FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import BaseMetric, MaxProfit
 from .csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 
@@ -193,7 +193,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
 
         regularized = self.lambda_reg > 0
 
-        def objective(params: FloatNDArray) -> float:
+        def objective(params: Float64Array) -> float:
             w = params[:-1]
             b = params[-1]
 
@@ -224,7 +224,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
                 reg_term = 0.0
 
             # Minimize negative profit + regularization penalty
-            return -expected_profit + reg_term
+            return float(-expected_profit + reg_term)
 
         w0 = np.ones(n_features) / np.sqrt(n_features)
         b0 = 0.0
@@ -236,7 +236,7 @@ class ProfMEMPMClassifier(CostSensitiveClassifier):
             # Fix the scale invariance by constraining the L2 norm of the weight vector to 1.
             constraints = {'type': 'eq', 'fun': lambda params: np.linalg.norm(params[:-1]) - 1.0}
 
-        self.result_ = minimize(
+        self.result_: OptimizeResult = minimize(  # type: ignore[call-overload]
             objective,
             initial_params,
             method='SLSQP',

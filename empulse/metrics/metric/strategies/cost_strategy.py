@@ -19,10 +19,10 @@ from ..common import (
     _safe_run_lambda_array,
     replace_random_var_with_mean,
 )
-from .metric_strategy import MetricStrategy
+from .metric_strategy import LogitObjective, MetricStrategy
 
 
-class CostLogitObjective:
+class CostLogitObjective(LogitObjective):
     """
     Precomputed cost-metric objective for logistic regression.
 
@@ -44,10 +44,10 @@ class CostLogitObjective:
     def __init__(
         self,
         *,
-        tp_benefit: FloatNDArray,
-        tn_benefit: FloatNDArray,
-        fp_cost: FloatNDArray,
-        fn_cost: FloatNDArray,
+        tp_benefit: Float64Array,
+        tn_benefit: Float64Array,
+        fp_cost: Float64Array,
+        fn_cost: Float64Array,
         features: FloatNDArray,
         y_true: FloatNDArray,
         C: float,
@@ -194,7 +194,7 @@ class CostLogitObjective:
         """
         weights: FloatNDArray
 
-        sent = yield
+        sent = yield  # type: ignore[misc]
 
         while True:
             if sent is None:

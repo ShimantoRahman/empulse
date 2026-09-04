@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import Any, ClassVar
 
 from scipy.optimize import OptimizeResult
@@ -6,7 +5,7 @@ from scipy.optimize import OptimizeResult
 from empulse.optimizers import GeneticAlgorithmOptimizer
 
 from .._types import FloatNDArray
-from ..metrics import MaxProfit
+from ..metrics import LogitObjective, MaxProfit
 from ._base import BaseLogitClassifier
 from .csclassifier import MetricStrategyFactory
 
@@ -130,7 +129,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
-    def _optimize(self, objective: Callable[[FloatNDArray], float], X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
+    def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
         """Optimize the objective function using the Real-coded Genetic Algorithm."""
         optimize = GeneticAlgorithmOptimizer() if self.optimizer is None else self.optimizer
         return optimize(objective=objective, X=X, **kwargs)

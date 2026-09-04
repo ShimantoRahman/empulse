@@ -158,13 +158,18 @@ class Metric(BaseMetric):
             aliases=self.cost_matrix._aliases,
             default_names=self.cost_matrix._defaults.keys(),
         )
-        self.strategy = copy.deepcopy(strategy)
-        self.strategy.build(
+        self._strategy = copy.deepcopy(strategy)
+        self._strategy.build(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
+
+    @property
+    def strategy(self) -> MetricStrategy:
+        """The strategy used to compute the metric."""
+        return self._strategy
 
     @property
     def __name__(self) -> str:

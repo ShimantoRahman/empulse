@@ -65,7 +65,12 @@ class LGBMObjective:
         """
         gradient: FloatNDArray
         hessian: FloatNDArray
-        gradient, hessian = cy_boost_grad_hess(y_true, y_score, self.gradient_const)
+        # cy_boost_grad_hess (Cython) requires float64 memoryviews
+        gradient, hessian = cy_boost_grad_hess(
+            np.asarray(y_true, dtype=np.float64),
+            np.asarray(y_score, dtype=np.float64),
+            np.asarray(self.gradient_const, dtype=np.float64),
+        )
         return gradient, hessian
 
 
@@ -457,7 +462,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
         if framework == 'xgboost':
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
-            return partial(cy_boost_grad_hess, grad_const=grad_const)
+            # cy_boost_grad_hess (Cython) requires a float64 memoryview.
+            return partial(cy_boost_grad_hess, grad_const=np.asarray(grad_const, dtype=np.float64))
         elif framework == 'lightgbm':
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
             return LGBMObjective(grad_const)
@@ -538,7 +544,9 @@ class CatBoostObjective:
             gradient, hessian = self.metric._gradient_boost_objective(targets, predictions, **loss_params)
         else:
             gradient_const = self.gradient_const[weights]  # type: ignore[index]
-            gradient, hessian = cy_boost_grad_hess(targets, predictions, gradient_const)
+            # cy_boost_grad_hess (Cython) requires a float64 memoryview; targets is typed as the
+            # broader FloatNDArray to match catboost's own callback convention.
+            gradient, hessian = cy_boost_grad_hess(np.asarray(targets, dtype=np.float64), predictions, gradient_const)
         # convert from two arrays to one list of tuples
         gradient_f = np.asarray(gradient, dtype=np.float32)
         hessian_f = np.asarray(hessian, dtype=np.float32)

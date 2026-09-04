@@ -20,7 +20,7 @@ def _make_result(
     message: str,
     status: int,
 ) -> OptimizeResult:
-    return OptimizeResult(
+    return OptimizeResult(  # type: ignore[call-arg]
         x=weights.copy(),
         fun=loss,
         jac=gradient.copy(),
@@ -103,7 +103,7 @@ class _IterativeGradientOptimizer(Optimizer):
         X: FloatNDArray,
         **kwargs: Any,
     ) -> OptimizeResult:
-        weights = self._initial_weights(X)
+        weights: FloatNDArray = self._initial_weights(X)
         state = self._init_state(weights)
 
         # Mini-batch setup
@@ -125,8 +125,8 @@ class _IterativeGradientOptimizer(Optimizer):
         base_lr: float = getattr(self, 'lr', 1.0)
 
         loss_history: list[float] = []
-        loss = np.inf
-        gradient = np.zeros_like(weights)
+        loss: float = np.inf
+        gradient: FloatNDArray = np.zeros_like(weights)
         nfev = 0
 
         for t in range(1, self.max_iter + 1):

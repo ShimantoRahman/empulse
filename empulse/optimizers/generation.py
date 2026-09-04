@@ -9,9 +9,7 @@ from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
 if TYPE_CHECKING:
-    from ..metrics.metric.strategies.max_profit_strategy.gradient_piecewise import (
-        MaxProfitLogitGradientPiecewise,
-    )
+    from ..metrics import LogitObjective
 
 MIN_POP_SIZE: int = 10
 FEATURE_TO_POP_SIZE_RATIO: int = 10
@@ -459,8 +457,7 @@ class LamarckianGeneration(Generation):
         self.beta2 = beta2
         self.eps = eps
         self.grad_clip = grad_clip
-        # Set by LamarckianMemeticOptimizeFn before optimize() is called.
-        self._grad_objective: MaxProfitLogitGradientPiecewise | None = None
+        self._grad_objective: LogitObjective | None = None
 
     def _local_search(self, theta: NDArray[np.float64]) -> NDArray[np.float64]:
         """Run ``local_steps`` gradient steps on *theta*.
@@ -473,7 +470,7 @@ class LamarckianGeneration(Generation):
         if self._grad_objective is None:
             raise RuntimeError(
                 '_grad_objective must be set before calling optimize(). '
-                'Assign a MaxProfitLogitGradientPiecewise instance to gen._grad_objective first.'
+                'Assign a LogitObjective instance to gen._grad_objective first.'
             )
         theta = theta.copy()
 

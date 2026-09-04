@@ -171,7 +171,7 @@ class ScipyOptimizer(Optimizer):
             fun = objective.logit_loss
             jac = None
 
-        result = minimize(
+        result: OptimizeResult = minimize(  # type: ignore[call-overload]
             fun,
             initial_weights,
             method=self.method,

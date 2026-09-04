@@ -29,7 +29,7 @@ class _DummyMetric(Metric):
     _all_symbols = {'alpha'}  # noqa: RUF012
 
     def __init__(self, strategy):
-        self.strategy = strategy
+        self._strategy = strategy
         self.cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
 
     def optimal_threshold(self, y_true, y_score, **kwargs):

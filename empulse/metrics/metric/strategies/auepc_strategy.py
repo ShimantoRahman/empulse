@@ -3,7 +3,7 @@ from typing import Any, Self
 import numpy as np
 import sympy
 
-from ...._types import FloatNDArray, IntNDArray
+from ...._types import Float64Array, FloatNDArray, IntNDArray
 from ..common import (
     Direction,
     MetricFn,
@@ -58,7 +58,7 @@ class AUEPCScore:
         y_score = np.asarray(y_score, dtype=np.float64).reshape(-1)
         n_samples = y_true.shape[0]
 
-        delta: FloatNDArray = np.asarray(
+        delta: Float64Array = np.asarray(
             _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=n_samples, y=y_true, **kwargs),
             dtype=np.float64,
         )
