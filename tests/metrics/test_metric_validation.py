@@ -11,7 +11,19 @@ import numpy as np
 import pytest
 import sympy
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings, cost_loss, expected_cost_loss
+import empulse.metrics as empulse_metrics
+from empulse.metrics import (
+    BaseMetric,
+    Cost,
+    CostMatrix,
+    MaxProfit,
+    Metric,
+    MixtureComponent,
+    MixtureMetric,
+    Savings,
+    cost_loss,
+    expected_cost_loss,
+)
 from empulse.metrics.metric.common import RESERVED_SYMBOL_NAMES
 
 Y_TRUE = np.array([1, 0, 1, 0, 1])
@@ -439,3 +451,112 @@ def test_symbol_used_only_in_the_threshold_numerator_is_still_required():
 
     with pytest.raises(ValueError, match='expected a value for a'):
         metric.optimal_threshold(Y_TRUE, Y_SCORE)
+
+
+# --- every prebuilt metric reports its own name, not its strategy's --------------------
+
+
+@pytest.mark.parametrize('attr_name', sorted(empulse_metrics.__all__))
+def test_every_public_metric_name_matches_its_attribute_name(attr_name):
+    """
+    Every public `BaseMetric` instance in `empulse.metrics` must report its own name via
+    `__name__`, not e.g. the shared strategy name ('max profit') or (for a MixtureMetric) an
+    auto-composed name built from its components. This is what makes make_scorer(...) and
+    cross-validation results distinguish two different metrics that happen to share a strategy.
+    """
+    obj = getattr(empulse_metrics, attr_name)
+    if not isinstance(obj, BaseMetric):
+        pytest.skip(f'{attr_name} is not a BaseMetric instance')
+
+    assert obj.__name__ == attr_name
+
+
+def test_metric_name_is_settable():
+    metric = Metric(CostMatrix().add_fp_cost('a'), Cost())
+
+    metric.__name__ = 'my_custom_name'
+
+    assert metric.__name__ == 'my_custom_name'
+
+
+def test_mixture_metric_name_defaults_to_a_composed_name():
+    """Sanity check: without an explicit override, MixtureMetric composes a name from its parts."""
+    component_metric = Metric(CostMatrix().add_fp_cost('a'), Cost())
+    mixture = MixtureMetric([MixtureComponent(1.0, component_metric, {})])
+
+    assert mixture.__name__ == f'MixtureMetric({component_metric.__name__})'
+
+
+def test_mixture_metric_name_is_settable():
+    """A MixtureMetric (e.g. empcs_score) must be able to report a clean name too, not just Metric."""
+    component_metric = Metric(CostMatrix().add_fp_cost('a'), Cost())
+    mixture = MixtureMetric([MixtureComponent(1.0, component_metric, {})])
+
+    mixture.__name__ = 'my_mixture_metric'
+
+    assert mixture.__name__ == 'my_mixture_metric'
+
+
+# --- MaxProfit averages instance-dependent parameters (documented, not changed) --------
+
+
+def test_max_profit_averages_array_like_parameters():
+    """
+    Pin the documented (finding 13) MaxProfit behaviour: an array-like parameter is reduced to
+    its mean, so it gives the exact same result as passing that mean directly - unlike Cost, which
+    genuinely uses per-instance values.
+    """
+    cost_matrix = CostMatrix().add_tp_benefit('a').add_fp_cost('b')
+    max_profit_metric = Metric(cost_matrix, MaxProfit())
+    cost_metric = Metric(cost_matrix, Cost())
+
+    array_value = np.array([0.0, 0.0, 0.0, 0.0, 500.0])
+
+    max_profit_from_array = max_profit_metric(Y_TRUE, Y_SCORE, a=array_value, b=1.0)
+    max_profit_from_mean = max_profit_metric(Y_TRUE, Y_SCORE, a=float(array_value.mean()), b=1.0)
+    assert max_profit_from_array == pytest.approx(max_profit_from_mean)
+
+    # Contrast with Cost, which is genuinely instance-dependent and would not collapse like this.
+    cost_from_array = cost_metric(Y_TRUE, Y_SCORE, a=array_value, b=1.0)
+    cost_from_mean = cost_metric(Y_TRUE, Y_SCORE, a=float(array_value.mean()), b=1.0)
+    assert cost_from_array != pytest.approx(cost_from_mean)
+
+
+# --- small consistency fixes (finding 14) -----------------------------------------------
+
+
+def test_fp_benefit_matches_cost_matrix_fp_benefit():
+    """Metric.fp_benefit must delegate to CostMatrix.fp_benefit like its five siblings, not
+    reimplement the negation inline."""
+    cost_matrix = CostMatrix().add_fp_cost('a')
+    metric = Metric(cost_matrix, Cost())
+
+    assert metric.fp_benefit == cost_matrix.fp_benefit
+    assert metric.fp_benefit == -metric.fp_cost
+
+
+def test_empty_cost_matrix_warns_at_construction():
+    with pytest.warns(UserWarning, match='no cost or benefit terms'):
+        Metric(CostMatrix(), Cost())
+
+
+def test_cost_matrix_with_cancelling_terms_warns_at_construction():
+    """A cost matrix whose terms algebraically cancel to exactly zero is just as 'empty'."""
+    a = sympy.Symbol('a')
+    cost_matrix = CostMatrix().add_fp_cost(a).add_fp_cost(-a)
+
+    with pytest.warns(UserWarning, match='no cost or benefit terms'):
+        Metric(cost_matrix, Cost())
+
+
+def test_non_empty_cost_matrix_does_not_warn():
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        Metric(COST_MATRIX, Cost())
+
+
+def test_constant_nonzero_cost_matrix_does_not_warn():
+    """A deliberate constant (non-instance-dependent, non-symbolic) cost is not 'empty'."""
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        Metric(CostMatrix().add_fp_cost(5), Cost())

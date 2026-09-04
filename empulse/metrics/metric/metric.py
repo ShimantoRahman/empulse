@@ -159,6 +159,15 @@ class Metric(BaseMetric):
             aliases=self.cost_matrix._aliases,
             default_names=self.cost_matrix._defaults.keys(),
         )
+        if self.tp_benefit == 0 and self.tn_benefit == 0 and self.fp_cost == 0 and self.fn_cost == 0:
+            warnings.warn(
+                'The cost matrix has no cost or benefit terms (or they cancel out to exactly '
+                'zero); this metric will always evaluate to 0.0 regardless of y_true, y_score, or '
+                'the parameters passed in. Did you forget to call add_tp_benefit()/'
+                'add_tn_benefit()/add_fp_cost()/add_fn_cost() on the CostMatrix?',
+                UserWarning,
+                stacklevel=2,
+            )
         self._strategy = copy.deepcopy(strategy)
         self._strategy.build(
             tp_benefit=self.tp_benefit,
@@ -190,7 +199,7 @@ class Metric(BaseMetric):
 
     @property
     def fp_benefit(self) -> sympy.Expr:  # noqa: D102
-        return -self.cost_matrix.fp_cost
+        return self.cost_matrix.fp_benefit
 
     @property
     def fn_benefit(self) -> sympy.Expr:  # noqa: D102

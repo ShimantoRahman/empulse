@@ -1,6 +1,7 @@
 from .metric.prebuilt_metrics import make_generic_max_profit_metric
 
 max_profit_score = make_generic_max_profit_metric()
+max_profit_score.__name__ = 'max_profit_score'
 max_profit_score.__doc__ = r"""
 Maximum Profit Measure (MP).
 

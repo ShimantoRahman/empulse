@@ -124,6 +124,7 @@ class MixtureMetric(BaseMetric):
             raise ValueError('MixtureMetric requires at least one component.')
         self.components = list(components)
         self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
+        self._name_override: str | None = None
 
     def _apply_defaults(self, parameters: dict[str, Any]) -> dict[str, Any]:
         """Fill in missing parameters (including weight parameters) from :attr:`defaults`."""
@@ -142,8 +143,14 @@ class MixtureMetric(BaseMetric):
 
     @property
     def __name__(self) -> str:
+        if self._name_override is not None:
+            return self._name_override
         names = '+'.join(component.metric.__name__ for component in self.components)
         return f'MixtureMetric({names})'
+
+    @__name__.setter  # noqa: A003
+    def __name__(self, value: str) -> None:
+        self._name_override = value
 
     @property
     def strategy(self) -> MetricStrategy:

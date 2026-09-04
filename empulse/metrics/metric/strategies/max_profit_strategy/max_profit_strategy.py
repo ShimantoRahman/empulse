@@ -116,6 +116,15 @@ class MaxProfit(MetricStrategy):
 
     alpha_max: float, default=100.0
         Maximum value reached by the annealed temperature.
+
+    .. note::
+        Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`, this
+        strategy does **not** take instance-dependent costs/benefits into account: the EMP
+        framework is defined on the aggregate class priors and the score/rate/threshold it
+        computes are global, classifier-level quantities, not per-instance ones. Any array-like
+        parameter you pass is silently reduced to its **mean** before use - passing an
+        instance-dependent array gives the exact same result as passing that array's mean as a
+        plain ``float``.
     """
 
     INTEGRATION_METHODS: ClassVar[list[Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']]] = [
@@ -267,8 +276,10 @@ class MaxProfit(MetricStrategy):
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
 
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
+            - If ``float``, the value is used as-is (class-dependent).
+            - If ``array-like``, the **mean** of the values is used: this strategy does not take
+              instance-dependent costs/benefits into account (see the class docstring), so passing
+              an array gives the same result as passing that array's mean directly.
 
         Returns
         -------
@@ -301,8 +312,10 @@ class MaxProfit(MetricStrategy):
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
 
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
+            - If ``float``, the value is used as-is (class-dependent).
+            - If ``array-like``, the **mean** of the values is used: this strategy does not take
+              instance-dependent costs/benefits into account (see the class docstring), so passing
+              an array gives the same result as passing that array's mean directly.
 
         Returns
         -------
@@ -329,8 +342,10 @@ class MaxProfit(MetricStrategy):
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
 
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
+            - If ``float``, the value is used as-is (class-dependent).
+            - If ``array-like``, the **mean** of the values is used: this strategy does not take
+              instance-dependent costs/benefits into account (see the class docstring), so passing
+              an array gives the same result as passing that array's mean directly.
 
         Returns
         -------
@@ -379,8 +394,10 @@ class MaxProfit(MetricStrategy):
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
 
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
+            - If ``float``, the value is used as-is (class-dependent).
+            - If ``array-like``, the **mean** of the values is used: this strategy does not take
+              instance-dependent costs/benefits into account (see the class docstring), so passing
+              an array gives the same result as passing that array's mean directly.
 
         Returns
         -------

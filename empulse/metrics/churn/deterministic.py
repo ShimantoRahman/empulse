@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_churn_max_profit_metric
 
 mpc_score = make_churn_max_profit_metric(stochastic=False)
+mpc_score.__name__ = 'mpc_score'
 mpc_score.__doc__ = r"""
 Maximum Profit Measure for Customer Churn (MPC).
 

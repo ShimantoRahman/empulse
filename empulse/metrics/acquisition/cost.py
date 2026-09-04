@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_acquisition_cost_metric
 
 expected_cost_loss_acquisition = make_acquisition_cost_metric()
+expected_cost_loss_acquisition.__name__ = 'expected_cost_loss_acquisition'
 expected_cost_loss_acquisition.__doc__ = r"""
 Expected cost of a classifier for customer acquisition.
 

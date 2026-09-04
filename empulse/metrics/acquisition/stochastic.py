@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_acquisition_max_profit_metric
 
 empa_score = make_acquisition_max_profit_metric(stochastic=True)
+empa_score.__name__ = 'empa_score'
 empa_score.__doc__ = r"""
 Expected Maximum Profit measure for customer Acquisition (EMPA).
 

@@ -207,6 +207,7 @@ def cost_loss(
 
 
 expected_cost_loss = make_generic_cost_metric()
+expected_cost_loss.__name__ = 'expected_cost_loss'
 expected_cost_loss.__doc__ = r"""
 Expected cost of a classifier.
 
@@ -253,6 +254,7 @@ Examples
 
 
 expected_log_cost_loss = make_generic_log_cost_metric()
+expected_log_cost_loss.__name__ = 'expected_log_cost_loss'
 expected_log_cost_loss.__doc__ = r"""
 Expected log cost of a classifier.
 
@@ -496,6 +498,7 @@ def savings_score(
 
 
 expected_savings_score = make_generic_savings_metric()
+expected_savings_score.__name__ = 'expected_savings_score'
 expected_savings_score.__doc__ = r"""
 Expected savings of a classifier compared to a baseline.
 

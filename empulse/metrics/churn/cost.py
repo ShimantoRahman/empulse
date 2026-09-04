@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_churn_cost_metric
 
 expected_cost_loss_churn = make_churn_cost_metric()
+expected_cost_loss_churn.__name__ = 'expected_cost_loss_churn'
 expected_cost_loss_churn.__doc__ = r"""
 Expected cost of a classifier for customer churn.
 

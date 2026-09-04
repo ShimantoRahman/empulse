@@ -5,6 +5,7 @@ from ..metric.prebuilt_metrics import (
 )
 
 empc_score = make_churn_max_profit_metric(stochastic=True)
+empc_score.__name__ = 'empc_score'
 empc_score.__doc__ = r"""
 Expected Maximum Profit Measure for Customer Churn (EMPC).
 
@@ -58,6 +59,7 @@ References
 """
 
 empb_score = make_churn_empirical_max_profit_metric()
+empb_score.__name__ = 'empb_score'
 empb_score.__doc__ = r"""
 Expected Maximum Profit Measure for B2B Customer Churn (EMPB).
 
@@ -104,6 +106,7 @@ References
 """
 
 auepc_score = make_churn_auepc_metric()
+auepc_score.__name__ = 'auepc_score'
 auepc_score.__doc__ = r"""
 Area Under the Expected Profit Curve (AUEPC).
 

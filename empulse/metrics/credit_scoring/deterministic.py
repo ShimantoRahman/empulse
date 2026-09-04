@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_credit_scoring_max_profit_metric
 
 mpcs_score = make_credit_scoring_max_profit_metric()
+mpcs_score.__name__ = 'mpcs_score'
 mpcs_score.__doc__ = r"""
 Maximum Profit measure for Credit Scoring (MPCS).
 

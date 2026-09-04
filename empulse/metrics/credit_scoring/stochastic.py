@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_credit_scoring_empirical_max_profit_metric
 
 empcs_score = make_credit_scoring_empirical_max_profit_metric()
+empcs_score.__name__ = 'empcs_score'
 empcs_score.__doc__ = r"""
 Expected Maximum Profit measure for Credit Scoring (EMPCS).
 

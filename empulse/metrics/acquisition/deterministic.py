@@ -1,6 +1,7 @@
 from ..metric.prebuilt_metrics import make_acquisition_max_profit_metric
 
 mpa_score = make_acquisition_max_profit_metric(stochastic=False)
+mpa_score.__name__ = 'mpa_score'
 mpa_score.__doc__ = r"""
 Maximum Profit measure for customer Acquisition (MPA).
 
