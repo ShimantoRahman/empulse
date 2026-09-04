@@ -7,7 +7,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree._tree import Tree
 from sklearn.utils import Bunch
 from sklearn.utils._param_validation import Hidden, StrOptions
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
@@ -501,6 +501,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             The predicted classes.
         """
         check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
         y_pred: NDArray[Any] = self.estimator_.predict(X, check_input=check_input)
         return y_pred
 
@@ -528,6 +529,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             classes corresponds to that in the attribute :term:`classes_`.
         """
         check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
         y_proba: FloatNDArray = self.estimator_.predict_proba(X, check_input=check_input)
         return y_proba
 
