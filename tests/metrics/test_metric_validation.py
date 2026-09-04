@@ -560,3 +560,34 @@ def test_constant_nonzero_cost_matrix_does_not_warn():
     with warnings.catch_warnings():
         warnings.simplefilter('error')
         Metric(CostMatrix().add_fp_cost(5), Cost())
+
+
+# --- Savings reduces stochastic variables to their mean, matching Cost (finding 12) ----
+
+
+def test_savings_accepts_a_stochastic_cost_matrix():
+    """Savings must no longer raise NotImplementedError for a stochastic cost matrix."""
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), sympy.Symbol('beta'))
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost('b')
+    metric = Metric(cost_matrix, Savings())
+
+    score = metric(Y_TRUE, Y_SCORE, clv=100.0, b=1.0, alpha=6.0, beta=14.0)
+
+    assert isinstance(score, float)
+
+
+def test_savings_stochastic_result_matches_mean_substitution():
+    """Savings on a stochastic cost matrix must give the exact same result as substituting the
+    random variable's mean directly - matching Cost's existing (unchanged) behaviour."""
+    gamma = sympy.stats.Beta('gamma', 6, 14)  # numeric alpha/beta: E[gamma] is a plain number
+    stochastic_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost('b')
+    stochastic_metric = Metric(stochastic_matrix, Savings())
+
+    mean_gamma = float(sympy.stats.E(gamma))
+    deterministic_matrix = CostMatrix().add_tp_benefit(mean_gamma * sympy.Symbol('clv')).add_fp_cost('b')
+    deterministic_metric = Metric(deterministic_matrix, Savings())
+
+    stochastic_result = stochastic_metric(Y_TRUE, Y_SCORE, clv=100.0, b=1.0)
+    deterministic_result = deterministic_metric(Y_TRUE, Y_SCORE, clv=100.0, b=1.0)
+
+    assert stochastic_result == pytest.approx(deterministic_result)

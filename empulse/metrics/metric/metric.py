@@ -44,12 +44,14 @@ class Metric(BaseMetric):
           This metric supports the use of stochastic variables.
         - If :class:`~empulse.metrics.Cost`, the metric computes the expected cost loss of a classifier.
           This metric supports passing instance-dependent costs in the form of array-likes.
-          This metric does not support stochastic variables.
+          Any stochastic variable is reduced to its mean before use; the metric itself is always
+          evaluated deterministically.
         - If :class:`~empulse.metrics.Savings`,
           the metric computes the savings that can be achieved by a classifier
           over a naive classifier which always predicts 0 or 1 (whichever is better).
           This metric supports passing instance-dependent costs in the form of array-likes.
-          This metric does not support stochastic variables.
+          Any stochastic variable is reduced to its mean before use; the metric itself is always
+          evaluated deterministically.
 
     Attributes
     ----------

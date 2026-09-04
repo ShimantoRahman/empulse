@@ -38,10 +38,10 @@ class Savings(Cost):
         """Build the metric strategy."""
         super().build(tp_benefit, tn_benefit, fp_cost, fn_cost)
         self._score_function: MetricFn = SavingsScore(  # type: ignore[assignment]
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
+            tp_benefit=self._tp_benefit,
+            tn_benefit=self._tn_benefit,
+            fp_cost=self._fp_cost,
+            fn_cost=self._fn_cost,
         )
         return self
 
@@ -102,8 +102,6 @@ class SavingsScore:
         self.cost_equation = _build_cost_equation(
             tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-        if any(sympy.stats.rv.is_random(symbol) for symbol in self.cost_equation.free_symbols):
-            raise NotImplementedError('Random variables are not supported for the savings metric.')
         self.all_zero_equation, self.all_one_equation = _build_naive_cost_functions(self.cost_equation)
 
         self.cost_func = _safe_lambdify(self.cost_equation)
