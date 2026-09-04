@@ -1,6 +1,7 @@
 import inspect
 
 import numpy as np
+import pandas as pd
 import pytest
 import sympy
 from sklearn import config_context
@@ -14,7 +15,7 @@ from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 from xgboost import XGBClassifier
 
-from empulse.datasets import load_give_me_some_credit
+from empulse.datasets import fetch_give_me_some_credit
 from empulse.metrics import Cost, CostMatrix, Metric, cost_loss, mpc_score
 from empulse.models import (
     B2BoostClassifier,
@@ -117,7 +118,14 @@ def test_estimators(estimator, check):
 
 @pytest.fixture(scope='module')
 def data():
-    return load_give_me_some_credit(return_X_y_costs=True, as_frame=True)
+    dataset = fetch_give_me_some_credit(backend=pd)
+    X = dataset.data
+    y = dataset.target
+    fp_cost = dataset.instance_costs['fp_cost']
+    fn_cost = dataset.instance_costs['cl'] * 0.75  # loss_given_default
+    tp_cost = 0.0
+    tn_cost = 0.0
+    return X, y, tp_cost, fp_cost, tn_cost, fn_cost
 
 
 @pytest.mark.slow
