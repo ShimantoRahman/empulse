@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from itertools import islice
 from typing import Any
 
@@ -6,8 +7,24 @@ from scipy.optimize import OptimizeResult
 
 from .._types import FloatNDArray
 from ..metrics import LogitObjective
+from ..metrics.metric.common import Direction
 from ._base import Optimizer
 from .generation import Generation, LamarckianGeneration
+
+
+def _as_generation_fitness(
+    logit_loss: Callable[[FloatNDArray], float], direction: Direction
+) -> Callable[[FloatNDArray], float]:
+    """Adapt a minimization loss into whatever direction :meth:`Generation.optimize` expects.
+
+    ``LogitObjective.logit_loss`` is always a loss for *minimization*, while
+    :class:`~empulse.optimizers.Generation` (``direction = Direction.MAXIMIZE``) selects and
+    reports the *highest*-fitness individual. Negate here so the two conventions line up, rather
+    than handing a minimization loss straight to a maximizer.
+    """
+    if direction is Direction.MAXIMIZE:
+        return lambda weights: -logit_loss(weights)
+    return logit_loss
 
 
 class GeneticAlgorithmOptimizer(Optimizer):
@@ -106,16 +123,21 @@ class GeneticAlgorithmOptimizer(Optimizer):
         rga = Generation(**generation_kwargs)
         bounds_per_feature = [self.bounds] * X.shape[1]
 
-        previous_score = np.inf
+        # Generation.optimize() always maximizes; objective.logit_loss is a loss for minimization.
+        fitness = _as_generation_fitness(objective.logit_loss, rga.direction)
+
+        previous_loss: float | None = None
         iter_stagnant = 0
 
-        for _ in islice(rga.optimize(objective.logit_loss, bounds_per_feature), self.max_iter):
-            score = rga.result.fun  # type: ignore[attr-defined]
-            if previous_score != np.inf:
-                relative_improvement = (score - previous_score) / abs(previous_score)
+        for _ in islice(rga.optimize(fitness, bounds_per_feature), self.max_iter):
+            fitness_value = rga.result.fun  # type: ignore[attr-defined]
+            loss = -fitness_value if rga.direction is Direction.MAXIMIZE else fitness_value
+            if previous_loss is not None:
+                denominator = max(abs(previous_loss), 1e-12)
+                relative_improvement = (previous_loss - loss) / denominator
             else:
                 relative_improvement = np.inf
-            previous_score = score
+            previous_loss = loss
 
             if relative_improvement < self.tolerance:
                 iter_stagnant += 1
@@ -129,7 +151,11 @@ class GeneticAlgorithmOptimizer(Optimizer):
             rga.result.message = 'Maximum number of iterations reached.'  # type: ignore[attr-defined]
             rga.result.success = False  # type: ignore[attr-defined]
 
-        return rga.result  # type: ignore[return-value]
+        result = rga.result
+        if rga.direction is Direction.MAXIMIZE:
+            # Report `fun` as a loss, per the Optimizer contract (see Optimizer.__call__ docstring).
+            result.fun = -result.fun  # type: ignore[attr-defined]
+        return result  # type: ignore[return-value]
 
 
 class MemeticOptimizer(Optimizer):
@@ -243,8 +269,15 @@ class MemeticOptimizer(Optimizer):
 
         bounds_list = [(-self.bounds, self.bounds)] * X.shape[1]
 
+        # Generation.optimize() always maximizes; objective.logit_loss is a loss for
+        # minimization. Adapt once here rather than handing a minimization loss to a maximizer.
+        # (The Lamarckian local search itself descends the true loss directly via
+        # `_grad_objective.logit_gradient_steps()`, independent of this adapter, so both the
+        # local search and the population-level GA now pull in the same direction.)
+        fitness = _as_generation_fitness(objective.logit_loss, gen.direction)
+
         last_gen: Generation | None = None
-        for i, last_gen in enumerate(gen.optimize(objective.logit_loss, bounds_list)):
+        for i, last_gen in enumerate(gen.optimize(fitness, bounds_list)):
             if i + 1 >= self.max_iter:
                 break
             if len(last_gen.fx_best) >= self.patience:

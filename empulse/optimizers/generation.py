@@ -19,6 +19,7 @@ class Generation:
     """
     A single generation of a Real-coded Genetic Algorithm (RGA).
 
+    :meth:`optimize` always **maximizes** the objective function passed to it.
     Read more in the :ref:`User Guide <proflogit>`.
 
     Parameters
