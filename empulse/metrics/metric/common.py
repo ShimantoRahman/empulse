@@ -93,6 +93,42 @@ class Direction(Enum):
     MINIMIZE = auto()
 
 
+# Symbol names used internally by Metric and its strategies to inject data (labels, scores,
+# true/false positive rates, class priors) into the lambdified cost-matrix expressions, or used
+# by to_latex() rendering. A user-defined symbol or alias sharing one of these names would either
+# be silently fused with the internal one, or raise a confusing internal TypeError - see
+# Metric.__init__ and _check_reserved_symbol_names().
+RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i'})
+
+
+def _check_reserved_symbol_names(*expressions: sympy.Expr, alias_names: Iterable[str] = ()) -> None:
+    """
+    Raise if a cost matrix uses a symbol name (or alias) reserved for internal use.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        The cost-matrix expressions (e.g. ``tp_benefit``, ``tn_benefit``, ``fp_cost``,
+        ``fn_cost``) to check for reserved free symbol names.
+    alias_names : Iterable[str], default=()
+        The alias names registered on the cost matrix, checked alongside the expressions' own
+        free symbol names.
+
+    Raises
+    ------
+    ValueError
+        If any free symbol name or alias collides with a name in :data:`RESERVED_SYMBOL_NAMES`.
+    """
+    symbol_names = {str(symbol) for expression in expressions for symbol in expression.free_symbols}
+    reserved_in_use = (symbol_names | set(alias_names)) & RESERVED_SYMBOL_NAMES
+    if reserved_in_use:
+        raise ValueError(
+            f'The cost matrix uses symbol name(s) or alias(es) {sorted(reserved_in_use)} that are reserved '
+            f'for internal use by Metric and its strategies. Reserved names: {sorted(RESERVED_SYMBOL_NAMES)}. '
+            'Please rename the corresponding symbol(s) or alias(es).'
+        )
+
+
 class MetricFn(Protocol):  # noqa: D101
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...  # noqa: D102
 

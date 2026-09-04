@@ -7,7 +7,7 @@ import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .base_metric import BaseMetric
-from .common import Direction, _evaluate_expression, replace_random_var_with_mean
+from .common import Direction, _check_reserved_symbol_names, _evaluate_expression, replace_random_var_with_mean
 from .cost_matrix import CostMatrix
 from .strategies import LogitObjective, MetricStrategy
 
@@ -137,6 +137,13 @@ class Metric(BaseMetric):
 
     def __init__(self, cost_matrix: CostMatrix, strategy: MetricStrategy) -> None:
         self.cost_matrix = copy.deepcopy(cost_matrix)
+        _check_reserved_symbol_names(
+            self.tp_benefit,
+            self.tn_benefit,
+            self.fp_cost,
+            self.fn_cost,
+            alias_names=self.cost_matrix._aliases.keys(),
+        )
         self.strategy = copy.deepcopy(strategy)
         self.strategy.build(
             tp_benefit=self.tp_benefit,

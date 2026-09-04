@@ -4,11 +4,14 @@ Misuse / defensive-guard tests for the Metric core.
 These guard against ways Metric can be misused that don't raise an error but instead silently compute the wrong number.
 """
 
+import re
+
 import numpy as np
 import pytest
 import sympy
 
-from empulse.metrics import Cost, CostMatrix, Metric
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings
+from empulse.metrics.metric.common import RESERVED_SYMBOL_NAMES
 
 Y_TRUE = np.array([1, 0, 1, 0, 1])
 Y_SCORE = np.array([0.9, 0.1, 0.8, 0.2, 0.7])
@@ -100,3 +103,41 @@ def test_mutating_source_cost_matrix_new_parameter_is_unknown_to_the_metric():
 
     with pytest.warns(UserWarning, match=r"Unknown parameters passed to metric: \['b'\]"):
         metric(Y_TRUE, Y_SCORE, a=100.0, b=100.0)
+
+
+# --- user symbols colliding with names reserved for internal use --------------------
+
+
+@pytest.mark.parametrize('reserved_name', sorted(RESERVED_SYMBOL_NAMES))
+@pytest.mark.parametrize('strategy', [Cost(), Savings(), MaxProfit()], ids=['Cost', 'Savings', 'MaxProfit'])
+def test_reserved_symbol_name_is_rejected_at_construction(reserved_name, strategy):
+    """
+    A cost-matrix symbol sharing a name reserved for internal use (e.g. ``y``, ``s``, ``F_0``)
+    must be rejected at `Metric` construction time, for every strategy - not silently fused with
+    the internal symbol of the same name, and not left to surface as a cryptic internal error
+    only once the metric is actually called.
+    """
+    # Built from an explicit sympy.Symbol rather than the bare string: sympy.sympify() special-cases
+    # some single-letter names (e.g. 'N' parses to the sympy.N() function, not a Symbol), which is a
+    # sympy quirk unrelated to what's under test here.
+    cost_matrix = CostMatrix().add_tp_benefit(sympy.Symbol(reserved_name)).add_fp_cost('b')
+
+    with pytest.raises(ValueError, match=re.escape(f"'{reserved_name}'")):
+        Metric(cost_matrix, strategy)
+
+
+@pytest.mark.parametrize('reserved_name', sorted(RESERVED_SYMBOL_NAMES))
+def test_reserved_alias_name_is_rejected_at_construction(reserved_name):
+    """An alias sharing a name reserved for internal use must be rejected too, not just a bare symbol."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({reserved_name: 'a'})
+
+    with pytest.raises(ValueError, match=re.escape(f"'{reserved_name}'")):
+        Metric(cost_matrix, Cost())
+
+
+def test_non_reserved_symbol_names_are_unaffected():
+    """Sanity check: ordinary symbol names must not be rejected by the reserved-name guard."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+    metric = Metric(cost_matrix, Cost())
+
+    assert metric(Y_TRUE, Y_SCORE, a=1.0, b=1.0) == pytest.approx(0.18)
