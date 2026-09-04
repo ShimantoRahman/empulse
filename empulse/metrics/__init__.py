@@ -15,9 +15,11 @@ from .credit_scoring import empcs, empcs_score, mpcs, mpcs_score
 from .lift import lift_score
 from .max_profit import max_profit, max_profit_score
 from .metric import (
+    AUEPC,
     BaseMetric,
     Cost,
     CostMatrix,
+    EmpiricalMaxProfit,
     LogCost,
     LogitObjective,
     MaxProfit,
@@ -37,9 +39,11 @@ from .savings import (
 )
 
 __all__ = [
+    'AUEPC',
     'BaseMetric',
     'Cost',
     'CostMatrix',
+    'EmpiricalMaxProfit',
     'LogCost',
     'LogitObjective',
     'MaxProfit',

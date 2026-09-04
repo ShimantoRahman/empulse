@@ -216,15 +216,15 @@ class TestEMPB(BaseTestMetric.TestMetric):
         },
     ]
     expected_values: ClassVar[dict] = {
-        'perfect_prediction': (525.0, 0.5),
-        'incorrect_prediction': (325.0, 1.0),
+        'perfect_prediction': (420.0, 0.5),
+        'incorrect_prediction': (220.0, 1.0),
         'different_parameters': [
-            (1202.3649999999961, 0.4434389140271493),
-            (297.00625, 0.1493212669683258),
-            (2748.0045454553197, 0.4434389140271493),
+            (613.3149999999998, 0.22171945701357465),
+            (0.5562499999999986, 0.004524886877828055),
+            (2311.6409090909074, 0.4434389140271493),
             (0.0, 0.0),
-            (1202.3649999999961, 0.4434389140271493),
-            (2541.7823529411744, 0.4434389140271493),
+            (613.3149999999998, 0.22171945701357465),
+            (1882.9588235294116, 0.4434389140271493),
         ],
     }
 
@@ -246,12 +246,12 @@ class TestEMPB(BaseTestMetric.TestMetric):
         )
 
     def test_half_correct_prediction(self):
-        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10), (345.0, 0.95))
-        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10), (325.0, 1.0))
-        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10), (345.0, 0.95))
-        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10), (325.0, 1.0))
-        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10), (345.0, 0.95))
-        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10), (325.0, 1.0))
+        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10), (240.0, 0.95))
+        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10), (220.0, 1.0))
+        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10), (240.0, 0.95))
+        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10), (220.0, 1.0))
+        self.assertAlmostEqualMetric(self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10), (240.0, 0.95))
+        self.assertAlmostEqualMetric(self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10), (220.0, 1.0))
 
     def test_arraylikes(self):
         import pandas as pd
@@ -789,26 +789,26 @@ class TestAUEPC(unittest.TestCase):
     ]
     expected_values_normalized: ClassVar[dict] = {
         'perfect_prediction': 1,
-        'incorrect_prediction': -0.07459262529519728,
+        'incorrect_prediction': -0.16940550923828587,
         'different_parameters': [
-            0.3726488528130955,
-            -0.26850465203900215,
-            0.7143793287225152,
-            -47.71032557628596,
-            0.3726488528130955,
-            0.6811263188760222,
+            -1.3664037613352236,
+            -2.881332663358627,
+            0.6865903317894541,
+            0.0,
+            -1.3664037613352236,
+            0.5394807908218511,
         ],
     }
     expected_values_unnormalized: ClassVar[dict] = {
         'perfect_prediction': 1,
-        'incorrect_prediction': -0.07459262529519728,
+        'incorrect_prediction': -0.16940550923828587,
         'different_parameters': [
-            0.3726488528130955,
-            -0.26850465203900215,
-            0.7143793287225152,
-            -47.71032557628596,
-            0.3726488528130955,
-            0.6811263188760222,
+            -1.3664037613352236,
+            -2.881332663358627,
+            0.6865903317894541,
+            0.0,
+            -1.3664037613352236,
+            0.5394807908218511,
         ],
     }
 
@@ -837,31 +837,31 @@ class TestAUEPC(unittest.TestCase):
         )
 
     def test_half_correct_prediction_normalized(self):
-        assert self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10) == pytest.approx(0.5323411973013544)
-        assert self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10) == pytest.approx(0.39306617740344846)
-        assert self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10) == pytest.approx(0.5323411973013544)
-        assert self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10) == pytest.approx(0.39306617740344846)
-        assert self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10) == pytest.approx(0.5323411973013544)
-        assert self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10) == pytest.approx(0.39306617740344846)
+        assert self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10) == pytest.approx(0.49164031038463635)
+        assert self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10) == pytest.approx(0.3389541803770778)
+        assert self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10) == pytest.approx(0.49164031038463635)
+        assert self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10) == pytest.approx(0.3389541803770778)
+        assert self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10) == pytest.approx(0.49164031038463635)
+        assert self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10) == pytest.approx(0.3389541803770778)
 
     def test_half_correct_prediction_unnormalized(self):
         assert self.metric([0, 1] * 10, [1, 1] * 10, clv=[100, 200] * 10, normalize=False) == pytest.approx(
-            0.5057241374362866
+            0.4670582948654045
         )
         assert self.metric([1, 0] * 10, [1, 1] * 10, clv=[200, 100] * 10, normalize=False) == pytest.approx(
-            0.37341286853327604
+            0.3220064713582239
         )
         assert self.metric([0, 1] * 10, [0, 0] * 10, clv=[100, 200] * 10, normalize=False) == pytest.approx(
-            0.5057241374362866
+            0.4670582948654045
         )
         assert self.metric([1, 0] * 10, [0, 0] * 10, clv=[200, 100] * 10, normalize=False) == pytest.approx(
-            0.37341286853327604
+            0.3220064713582239
         )
         assert self.metric([0, 1] * 10, [0.5, 0.5] * 10, clv=[100, 200] * 10, normalize=False) == pytest.approx(
-            0.5057241374362866
+            0.4670582948654045
         )
         assert self.metric([1, 0] * 10, [0.5, 0.5] * 10, clv=[200, 100] * 10, normalize=False) == pytest.approx(
-            0.37341286853327604
+            0.3220064713582239
         )
 
     def test_arraylikes(self):

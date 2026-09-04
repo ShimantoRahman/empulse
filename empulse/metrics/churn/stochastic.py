@@ -483,8 +483,11 @@ def empb(
     sorted_y_true = y_true[sorted_indices]
     sorted_clv = clv[sorted_indices]
 
-    # Calculate cumulative sums for benefits and costs
-    cumulative_benefits = np.cumsum(gamma * ((1 - incentive_fraction) * sorted_clv - contact_cost) * sorted_y_true)
+    # Calculate cumulative sums for benefits and costs.
+    # The contact cost is incurred whenever a churner is contacted, regardless of whether they
+    # accept the incentive offer, so it is not scaled by the acceptance rate (gamma); only the
+    # retention benefit net of the incentive cost is contingent on acceptance.
+    cumulative_benefits = np.cumsum((gamma * (1 - incentive_fraction) * sorted_clv - contact_cost) * sorted_y_true)
     cumulative_costs = np.cumsum((-contact_cost - incentive_fraction * sorted_clv) * (1 - sorted_y_true))
     cumulative_profits = cumulative_benefits + cumulative_costs
 
@@ -592,7 +595,7 @@ def auepc_score(
     perfect_clv_targets = clv[perfect_pred_indices]
 
     perfect_benefits = np.cumsum(
-        accept_rate * ((1 - incentive_fraction) * perfect_clv_targets - contact_cost) * perfect_targets
+        (accept_rate * (1 - incentive_fraction) * perfect_clv_targets - contact_cost) * perfect_targets
     )
     perfect_costs = np.cumsum((-contact_cost - incentive_fraction * perfect_clv_targets) * (1 - perfect_targets))
     perfect_profits = perfect_benefits + perfect_costs
@@ -602,7 +605,7 @@ def auepc_score(
     targets = y_true[sorted_indices]
     clv_targets = clv[sorted_indices]
 
-    benefits = np.cumsum(accept_rate * ((1 - incentive_fraction) * clv_targets - contact_cost) * targets)
+    benefits = np.cumsum((accept_rate * (1 - incentive_fraction) * clv_targets - contact_cost) * targets)
     costs = np.cumsum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
     profits = benefits + costs
 
