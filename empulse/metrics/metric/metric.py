@@ -291,8 +291,21 @@ class Metric(BaseMetric):
     def _is_deterministic(self) -> bool:
         return not self._is_stochastic
 
-    def _prepare_parameters(self, **kwargs: FloatArrayLike | float) -> dict[str, FloatNDArray | float]:
-        """Swap aliases with the appropriate symbols and convert the values to numpy arrays."""
+    def _prepare_parameters(
+        self, *, n_samples: int | None = None, **kwargs: FloatArrayLike | float
+    ) -> dict[str, FloatNDArray | float]:
+        """
+        Swap aliases with the appropriate symbols and convert the values to numpy arrays.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            The number of samples being scored (typically ``y_true.size``). When given, every
+            array-like parameter must have this length or be a scalar-like array of length 1;
+            anything else raises a ``ValueError`` naming the offending parameter. When ``None``,
+            no length check is performed - callers that don't have an obvious sample count to
+            check against (e.g. ``_evaluate_costs``) simply omit it.
+        """
         # Use a separate output dict to avoid dual-purpose mutation of kwargs
         params: dict[str, FloatArrayLike | float] = {}
 
@@ -333,7 +346,15 @@ class Metric(BaseMetric):
         for key, value in params.items():
             if not isinstance(value, Real | str):
                 arr = np.asarray(value).reshape(-1)
-                out[key] = arr.astype(np.float64) if not np.issubdtype(arr.dtype, np.floating) else arr
+                arr = arr.astype(np.float64) if not np.issubdtype(arr.dtype, np.floating) else arr
+                if n_samples is not None and arr.size not in (1, n_samples):
+                    caller_key = resolved_from.get(key, key)
+                    raise ValueError(
+                        f"Parameter '{caller_key}' has length {arr.size}, but expected length "
+                        f'{n_samples} (one value per sample, matching y_true/y_score) or a '
+                        f'single value (length 1, applied to every sample).'
+                    )
+                out[key] = arr
             elif isinstance(value, int):
                 out[key] = float(value)
             else:
@@ -374,7 +395,7 @@ class Metric(BaseMetric):
         y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
-        parameters = self._prepare_parameters(**parameters)
+        parameters = self._prepare_parameters(n_samples=y_true.size, **parameters)
         return self.strategy.score(y_true.astype(np.intp), y_score, **parameters)
 
     def optimal_threshold(
@@ -419,7 +440,8 @@ class Metric(BaseMetric):
         y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
-        parameters = self._prepare_parameters(**parameters)
+        n_samples = y_true.size or y_score.size or None
+        parameters = self._prepare_parameters(n_samples=n_samples, **parameters)
         return self.strategy.optimal_threshold(y_true, y_score, **parameters)
 
     def optimal_rate(
@@ -462,7 +484,8 @@ class Metric(BaseMetric):
         y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
-        parameters = self._prepare_parameters(**parameters)
+        n_samples = y_true.size or y_score.size or None
+        parameters = self._prepare_parameters(n_samples=n_samples, **parameters)
         return self.strategy.optimal_rate(y_true, y_score, **parameters)
 
     def _logit_objective(
@@ -505,7 +528,7 @@ class Metric(BaseMetric):
         logistic_objective : LogitObjective
             A class that implements the logit loss and its gradient.
         """
-        parameters = self._prepare_parameters(**parameters)
+        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
 
         if y_true.ndim == 1:
             y_true = np.expand_dims(y_true, axis=1)
@@ -550,8 +573,7 @@ class Metric(BaseMetric):
         hessian : NDArray of shape (n_samples,)
             The hessian of the metric loss with respect to the gradient boosting weights.
         """
-        parameters = self._prepare_parameters(**parameters)
-        # y_proba = scipy.special.expit(y_score)
+        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
         y_proba = y_score
         gradient, hessian = self.strategy.gradient_boost_objective(y_true, y_proba, **parameters)
         return gradient, hessian
@@ -577,7 +599,7 @@ class Metric(BaseMetric):
         gradient_const : NDArray of shape (n_samples, n_features)
             The constant term of the gradient.
         """
-        parameters = self._prepare_parameters(**parameters)
+        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
         for key, value in parameters.items():
             if isinstance(value, np.ndarray) and value.ndim == 1:
                 parameters[key] = np.expand_dims(value, axis=1)
@@ -618,7 +640,7 @@ class Metric(BaseMetric):
         tn_cost : float or NDArray of shape (n_samples,)
             The true negative cost(s).
         """
-        parameters = self._prepare_parameters(**parameters)
+        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
         fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
         if replace_stochastic and self._is_stochastic:
             fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(fp_expr, fn_expr, tp_expr, tn_expr)

@@ -1,4 +1,5 @@
 import copy
+import warnings
 from collections.abc import Generator
 from typing import Any, Self
 
@@ -521,6 +522,75 @@ class CostBoostGradientConst:
         return gradient_const_value
 
 
+def _solve_optimal_threshold(
+    numerator: FloatNDArray | float, denominator: FloatNDArray | float
+) -> FloatNDArray | float:
+    """
+    Solve ``numerator / denominator`` for the optimal threshold, guarding against degenerate cases.
+
+    Raises rather than silently substituting a value when the denominator is exactly zero (the
+    cost matrix does not define a meaningful threshold for those parameters), and clips-with-warning
+    rather than silently returning a threshold outside ``[0, 1]``.
+
+    Parameters
+    ----------
+    numerator : float or ndarray
+        ``fp_cost + tn_benefit``, evaluated for the given parameters.
+    denominator : float or ndarray
+        ``fp_cost + tn_benefit + fn_cost + tp_benefit``, evaluated for the given parameters.
+
+    Returns
+    -------
+    threshold : float or ndarray
+        The optimal threshold(s), each guaranteed to lie in ``[0, 1]``.
+
+    Raises
+    ------
+    ValueError
+        If the denominator is exactly zero for any sample: the cost matrix does not define a
+        meaningful threshold for those parameter values.
+    """
+    if np.isscalar(denominator):
+        if denominator == 0:
+            raise ValueError(
+                'Cannot compute the optimal threshold/rate: the cost matrix is degenerate for the '
+                'given parameters (fp_cost + tn_benefit + fn_cost + tp_benefit evaluates to 0, so '
+                'the threshold that maximizes the expected cost metric is undefined). Check the '
+                'cost matrix and the parameter values passed in.'
+            )
+        threshold: FloatNDArray | float = numerator / denominator  # type: ignore[operator, assignment]
+    else:
+        denom_arr = np.asarray(denominator, dtype=np.float64)
+        if np.any(denom_arr == 0):
+            raise ValueError(
+                'Cannot compute the optimal threshold/rate: the cost matrix is degenerate for at '
+                'least one sample (fp_cost + tn_benefit + fn_cost + tp_benefit evaluates to 0, so '
+                'the threshold that maximizes the expected cost metric is undefined for that '
+                'sample). Check the cost matrix and the (possibly instance-dependent) parameter '
+                'values passed in.'
+            )
+        threshold = np.asarray(numerator, dtype=np.float64) / denom_arr
+
+    if np.isscalar(threshold):
+        out_of_range = bool(threshold < 0 or threshold > 1)  # type: ignore[operator]
+    else:
+        out_of_range = bool(np.any((threshold < 0) | (threshold > 1)))  # type: ignore[operator]
+    if out_of_range:
+        warnings.warn(
+            'The optimal threshold computed from the cost matrix fell outside [0, 1] and was '
+            'clipped. This means the cost matrix implies an always-positive or always-negative '
+            'decision rule for (at least some of) the given parameters - double check the cost '
+            'matrix and the parameter values passed in.',
+            UserWarning,
+            stacklevel=3,
+        )
+        threshold = (
+            float(np.clip(threshold, 0.0, 1.0)) if np.isscalar(threshold) else np.clip(threshold, 0.0, 1.0)  # type: ignore[arg-type]
+        )
+
+    return float(threshold) if np.isscalar(threshold) else threshold  # type: ignore[arg-type]
+
+
 class CostOptimalThreshold:
     """Class to compute the optimal threshold for the cost metric."""
 
@@ -532,20 +602,11 @@ class CostOptimalThreshold:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
         """Compute the optimal threshold(s). `y_true` and `y_score` are unused and kept for API compatibility."""
-        _check_parameters(self.denominator_expression.free_symbols, parameters)
+        all_symbols = self.denominator_expression.free_symbols | self.numerator_expression.free_symbols
+        _check_parameters(all_symbols, parameters)
         denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
         numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
-
-        eps = float(np.finfo(np.float64).eps)
-        if np.isscalar(denominator):
-            if denominator == 0:
-                denominator = eps
-        else:
-            denom_arr = np.asarray(denominator, dtype=np.float64)
-            denominator = np.where(denom_arr == 0, eps, denom_arr)
-
-        optimal: FloatNDArray | float = numerator / denominator  # type: ignore[operator, assignment]
-        return float(optimal) if np.isscalar(optimal) else optimal  # type: ignore[arg-type]
+        return _solve_optimal_threshold(numerator, denominator)
 
 
 class CostOptimalRate:
@@ -559,19 +620,11 @@ class CostOptimalRate:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
         """Compute the optimal predicted positive rate."""
-        _check_parameters(self.denominator_expression.free_symbols, parameters)
+        all_symbols = self.denominator_expression.free_symbols | self.numerator_expression.free_symbols
+        _check_parameters(all_symbols, parameters)
         denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
         numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
-
-        # Robust division to avoid divide-by-zero
-        eps = float(np.finfo(np.float64).eps)
-        if np.isscalar(denominator):
-            denom_safe: FloatNDArray | float = denominator if denominator != 0 else eps  # type: ignore[assignment]
-        else:
-            denom_arr = np.asarray(denominator, dtype=np.float64)
-            denom_safe = np.where(denom_arr == 0, eps, denom_arr)  # type: ignore[assignment]
-
-        t_star: FloatNDArray | float = numerator / denom_safe  # type: ignore[operator, assignment]
+        t_star = _solve_optimal_threshold(numerator, denominator)
 
         scores = np.asarray(y_score)
         if scores.ndim > 1:

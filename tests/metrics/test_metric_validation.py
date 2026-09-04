@@ -5,6 +5,7 @@ These guard against ways Metric can be misused that don't raise an error but ins
 """
 
 import re
+import warnings
 
 import numpy as np
 import pytest
@@ -331,3 +332,110 @@ def test_call_accepts_a_row_vector_y_score():
     score = metric(Y_TRUE, Y_SCORE.reshape(1, -1), a=1.0, b=1.0)
 
     assert score == pytest.approx(metric(Y_TRUE, Y_SCORE, a=1.0, b=1.0))
+
+
+# --- wrong-length instance-dependent parameters ---------------------------------------
+
+
+def test_wrong_length_array_parameter_raises():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match=r"Parameter 'a' has length 3, but expected length 5"):
+        metric(Y_TRUE, Y_SCORE, a=np.array([1.0, 2.0, 3.0]), b=1.0)
+
+
+def test_wrong_length_array_parameter_error_names_the_alias_the_caller_used():
+    """The error should name what the caller actually typed, not the resolved symbol name."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'})
+    metric = Metric(cost_matrix, Cost())
+
+    with pytest.raises(ValueError, match=r"Parameter 'my_cost' has length 2"):
+        metric(Y_TRUE, Y_SCORE, my_cost=np.array([1.0, 2.0]), b=1.0)
+
+
+def test_size_one_array_parameter_is_accepted_as_scalar_broadcast():
+    """A length-1 array must be accepted as a scalar-like broadcast, not rejected as 'wrong length'."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    broadcast = metric(Y_TRUE, Y_SCORE, a=np.array([2.0]), b=1.0)
+    scalar = metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
+
+    assert broadcast == pytest.approx(scalar)
+
+
+def test_correct_length_array_parameter_is_accepted():
+    metric = Metric(COST_MATRIX, Cost())
+
+    score = metric(Y_TRUE, Y_SCORE, a=np.full(Y_TRUE.shape, 2.0), b=1.0)
+
+    assert score == pytest.approx(metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0))
+
+
+def test_optimal_threshold_also_validates_parameter_length():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match=r"Parameter 'a' has length 2, but expected length 5"):
+        metric.optimal_threshold(Y_TRUE, Y_SCORE, a=np.array([1.0, 2.0]), b=1.0)
+
+
+def test_optimal_threshold_predict_time_empty_arrays_skip_length_check():
+    """The documented empty-placeholder path (both y_true and y_score empty) must not spuriously
+    reject scalar-reduced loss params - there's no sample count to check a length against."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    threshold = metric.optimal_threshold(np.array([]), np.array([]), a=1.0, b=1.0)
+
+    assert threshold == pytest.approx(0.5)
+
+
+# --- optimal_threshold/optimal_rate out of [0, 1] or degenerate cost matrices --------
+
+
+def test_degenerate_cost_matrix_raises_instead_of_returning_a_huge_number():
+    """A cost matrix whose denominator evaluates to 0 must raise, not silently substitute eps."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='degenerate'):
+        metric.optimal_threshold(Y_TRUE, Y_SCORE, a=1.0, b=-1.0)
+
+
+def test_degenerate_cost_matrix_raises_for_optimal_rate_too():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='degenerate'):
+        metric.optimal_rate(Y_TRUE, Y_SCORE, a=1.0, b=-1.0)
+
+
+def test_out_of_range_threshold_is_clipped_and_warns():
+    """A threshold outside [0, 1] must be clipped into range and warn, not returned raw."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
+        threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=1.0, b=-3.0)
+
+    assert 0.0 <= threshold <= 1.0
+
+
+def test_in_range_threshold_does_not_warn():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=1.0, b=1.0)
+
+    assert 0.0 <= threshold <= 1.0
+
+
+def test_symbol_used_only_in_the_threshold_numerator_is_still_required():
+    """
+    A symbol that cancels out of the denominator (fp_cost + tn_benefit + fn_cost + tp_benefit) but
+    survives in the numerator (fp_cost + tn_benefit) must still be caught as missing by
+    _check_parameters - not left to surface as a cryptic internal TypeError.
+    """
+    a = sympy.Symbol('a')
+    # numerator = fp_cost + tn_benefit = a; denominator = a + 0 + (1 - a) + 0 = 1 (a cancels out).
+    cost_matrix = CostMatrix().add_fp_cost(a).add_fn_cost(1 - a)
+    metric = Metric(cost_matrix, Cost())
+
+    with pytest.raises(ValueError, match='expected a value for a'):
+        metric.optimal_threshold(Y_TRUE, Y_SCORE)

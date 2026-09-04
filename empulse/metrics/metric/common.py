@@ -95,10 +95,12 @@ class Direction(Enum):
 
 # Symbol names used internally by Metric and its strategies to inject data (labels, scores,
 # true/false positive rates, class priors) into the lambdified cost-matrix expressions, or used
-# by to_latex() rendering. A user-defined symbol or alias sharing one of these names would either
-# be silently fused with the internal one, or raise a confusing internal TypeError - see
+# by to_latex() rendering, or as a keyword-only parameter of Metric._prepare_parameters(). A
+# user-defined symbol or alias sharing one of these names would either be silently fused with the
+# internal one, raise a confusing internal TypeError, or (for 'n_samples') actually be captured by
+# _prepare_parameters()'s own n_samples parameter instead of reaching its **kwargs - see
 # Metric.__init__ and _check_reserved_symbol_names().
-RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i'})
+RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i', 'n_samples'})
 
 
 def _check_reserved_symbol_names(*expressions: sympy.Expr, alias_names: Iterable[str] = ()) -> None:

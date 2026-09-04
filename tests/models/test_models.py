@@ -325,7 +325,10 @@ def test_data_types_metric_loss(estimator, dataset):
     """Test that the estimators accept different data types when using metric loss."""
     X, y, _, _ = dataset
     tp_cost = 0
-    tn_cost = np.arange(y.size, dtype=np.float32)
+    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
+    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
+    # cost matrix that Metric.optimal_threshold() now correctly rejects, which isn't what this test is about.
+    tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
 
@@ -383,7 +386,11 @@ def test_data_types_metric_loss_predict_time(estimator, dataset):
     """Test that predict-time estimators accept different data types through the Metric loss API."""
     X, y, _, _ = dataset
     tp_cost = 0
-    tn_cost = np.arange(y.size, dtype=np.float32)
+    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
+    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
+    # cost matrix that Metric.optimal_threshold() now correctly rejects (see
+    # METRIC_CORE_REVIEW.md finding 08), which isn't what this test is about.
+    tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
 

@@ -95,6 +95,15 @@
   set *before* the alias was registered used to be silently stored under that raw (untranslated)
   name and then silently ignored, instead of ever being applied.
 - |Fix| :class:`~empulse.metrics.Metric` now validates ``y_true``/``y_score``.
+- |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` naming the offending
+  parameter when an instance-dependent (array-like) ``cost_matrix`` parameter's length doesn't
+  match ``y_true``/``y_score`` and isn't a single value broadcastable to every sample. Previously
+  a length mismatch surfaced as an unrelated numpy broadcasting error, e.g. ``operands could not
+  be broadcast together with shapes (3,) (5,)``, that didn't say which parameter was wrong.
+- |Fix| :meth:`Metric.optimal_threshold() <empulse.metrics.Metric.optimal_threshold>` and
+  :meth:`~empulse.metrics.Metric.optimal_rate` now raise a ``ValueError`` when the cost matrix is
+  degenerate for the given parameters (``fp_cost + tn_benefit + fn_cost + tp_benefit`` evaluates
+  to 0, making the optimal threshold undefined).
 
 `0.11.1`_ (08-05-2026)
 ======================

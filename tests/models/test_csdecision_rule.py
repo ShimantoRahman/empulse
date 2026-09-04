@@ -221,8 +221,8 @@ class TestPredictTimeCosts:
         [
             (1.0, 0.0, 5.0, 1.0),
             (0.0, 1.0, 1.0, 5.0),
-            (2.0, 2.0, 2.0, 2.0),
-            (1.0, 1.0, 1.0, 1.0),
+            (2.0, 2.0, 2.0, 3.0),
+            (1.0, 0.5, 1.0, 1.0),
         ],
     )
     def test_predict_with_costs(self, classifier_type, data, tp_cost, tn_cost, fn_cost, fp_cost):
