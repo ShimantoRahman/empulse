@@ -7,7 +7,17 @@ import sympy
 from sklearn.datasets import make_classification
 
 import empulse.models
-from empulse.metrics import CostMatrix, MaxProfit, Metric
+from empulse.metrics import (
+    CostMatrix,
+    LogCost,
+    MaxProfit,
+    Metric,
+    empc_score,
+    expected_cost_loss,
+    expected_log_cost_loss,
+    max_profit_score,
+    mpc_score,
+)
 from empulse.models import CSBoostClassifier
 
 # Define the classifiers to test
@@ -97,6 +107,61 @@ def test_csboost_with_deterministic_max_profit_metric(dataset):
     xgboost = pytest.importorskip('xgboost')
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=1.0))
+
+    X, y, _, _ = dataset
+    model = CSBoostClassifier(
+        estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0),
+        loss=metric,
+    )
+    model.fit(X, y, clv=5.0)
+    y_proba = model.predict_proba(X)
+
+    assert y_proba.shape == (X.shape[0], len(np.unique(y)))
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+@pytest.mark.parametrize(
+    'metric',
+    [
+        pytest.param(empc_score, id='empc_score'),
+        pytest.param(mpc_score, id='mpc_score'),
+        pytest.param(max_profit_score, id='max_profit_score'),
+        pytest.param(expected_log_cost_loss, id='expected_log_cost_loss'),
+        pytest.param(expected_cost_loss, id='expected_cost_loss'),
+    ],
+)
+def test_csboost_fits_with_renamed_prebuilt_metrics(dataset, metric):
+    """Regression test for CSBoostClassifier dispatching on `strategy.name`.
+
+    Every prebuilt metric renames its strategy via `Metric.__name__` (e.g.
+    `empc_score.__name__ = 'empc_score'`), which used to make `_get_objective` take the wrong
+    branch and raise `NotImplementedError` for MaxProfit/LogCost-backed metrics. All prebuilt
+    metrics used here have defaults for every parameter, so no `loss_params` are needed.
+    """
+    xgboost = pytest.importorskip('xgboost')
+    X, y, _, _ = dataset
+    model = CSBoostClassifier(estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0), loss=metric)
+    model.fit(X, y)
+    y_proba = model.predict_proba(X)
+
+    assert y_proba.shape == (X.shape[0], len(np.unique(y)))
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+@pytest.mark.parametrize('strategy_factory', [MaxProfit, LogCost])
+def test_csboost_dispatch_ignores_strategy_name(dataset, strategy_factory):
+    """Renaming a custom metric must not change which boosting objective is built.
+
+    Before the fix, `CSBoostClassifier._get_objective` compared `loss.strategy.name` against
+    `{'max profit', 'log cost'}`; renaming the metric (as every prebuilt metric does) made it
+    silently take the constant-gradient branch instead of raising, or - for a strategy that does
+    implement `prepare_boost_objective` - would have trained on the wrong gradients silently.
+    """
+    xgboost = pytest.importorskip('xgboost')
+    clv = sympy.symbols('clv')
+    metric = Metric(CostMatrix().add_tp_benefit(clv), strategy_factory())
+    metric.__name__ = 'renamed_metric'
+    assert metric.strategy.name == 'renamed_metric'
 
     X, y, _, _ = dataset
     model = CSBoostClassifier(

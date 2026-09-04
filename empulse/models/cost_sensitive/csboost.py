@@ -448,7 +448,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         # per-sample loss is non-linear in the predicted probability (unlike Cost/Savings), so both
         # evaluate gradients/hessians directly from the metric each iteration instead of going through
         # a precomputed constant.
-        if loss.strategy.name in {'max profit', 'log cost'}:
+        if loss.strategy.requires_dynamic_boost_objective:
             if framework == 'xgboost':
                 return partial(loss._gradient_boost_objective, **loss_params)
             if framework == 'lightgbm':

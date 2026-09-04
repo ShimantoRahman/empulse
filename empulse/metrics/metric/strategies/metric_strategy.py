@@ -190,6 +190,17 @@ class MetricStrategy(ABC):
         self.direction = direction
 
     @property
+    def requires_dynamic_boost_objective(self) -> bool:
+        """Whether gradients must be recomputed from the metric each boosting round.
+
+        ``True`` for strategies whose per-sample loss is not linear in the predicted
+        probability (e.g. :class:`~empulse.metrics.LogCost`) or that need the current round's
+        scores to locate a threshold (e.g. :class:`~empulse.metrics.MaxProfit`); such strategies
+        cannot use the precomputed constant returned by :meth:`prepare_boost_objective`.
+        """
+        return False
+
+    @property
     def _extra_kwargs(self) -> set[str]:
         """Extra keyword arguments accepted by :meth:`score` beyond the cost-matrix parameters.
 

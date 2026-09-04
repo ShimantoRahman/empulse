@@ -189,6 +189,11 @@ class LogCost(MetricStrategy):
     def __init__(self) -> None:
         super().__init__(name=self._name, direction=self._direction)
 
+    @property
+    def requires_dynamic_boost_objective(self) -> bool:
+        """LogCost's per-sample loss is non-linear in the predicted probability."""
+        return True
+
     def build(
         self,
         tp_benefit: sympy.Expr,

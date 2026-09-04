@@ -170,6 +170,11 @@ class MaxProfit(MetricStrategy):
         else:
             self._rng = np.random.default_rng(random_state)
 
+    @property
+    def requires_dynamic_boost_objective(self) -> bool:
+        """MaxProfit needs the current round's predictions to locate its profit-optimal threshold."""
+        return True
+
     def _current_boost_alpha(self) -> float:
         """Compute annealed temperature for the current boosting objective evaluation."""
         try:

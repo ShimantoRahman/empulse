@@ -358,7 +358,7 @@ class Metric(BaseMetric):
             if not isinstance(value, Real | str):
                 arr = np.asarray(value).reshape(-1)
                 arr = arr.astype(np.float64) if not np.issubdtype(arr.dtype, np.floating) else arr
-                if n_samples is not None and arr.size not in (1, n_samples):
+                if n_samples is not None and arr.size not in {1, n_samples}:
                     caller_key = resolved_from.get(key, key)
                     raise ValueError(
                         f"Parameter '{caller_key}' has length {arr.size}, but expected length "

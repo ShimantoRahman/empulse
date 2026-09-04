@@ -6,6 +6,7 @@ import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
 
+from empulse.metrics import Cost, LogCost, MaxProfit, Savings
 from empulse.metrics.metric.common import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
@@ -209,6 +210,33 @@ def test_strategy_classes_are_picklable(instance_factory):
     pickled = pickle.dumps(instance)
     restored = pickle.loads(pickled)
     assert restored is not None
+
+
+@pytest.mark.parametrize(
+    'strategy_factory, expected',
+    [
+        pytest.param(Cost, False, id='Cost'),
+        pytest.param(Savings, False, id='Savings'),
+        pytest.param(MaxProfit, True, id='MaxProfit'),
+        pytest.param(LogCost, True, id='LogCost'),
+    ],
+)
+def test_requires_dynamic_boost_objective(strategy_factory, expected):
+    """MaxProfit and LogCost need per-round gradients; Cost and Savings use a precomputed constant."""
+    strategy = strategy_factory()
+    assert strategy.requires_dynamic_boost_objective is expected
+
+
+def test_requires_dynamic_boost_objective_survives_rename():
+    """Renaming a strategy (e.g. via Metric.__name__) must not change its objective capability.
+
+    Regression test: CSBoostClassifier used to dispatch on `strategy.name`, which
+    `Metric.__name__`'s setter overwrites - every prebuilt metric (empc_score, mpc_score, ...)
+    renames its strategy this way, so they all silently took the wrong branch.
+    """
+    strategy = MaxProfit()
+    strategy.name = 'my_custom_metric'
+    assert strategy.requires_dynamic_boost_objective is True
 
 
 def test_max_profit_boost_gradient_piecewise_is_picklable(dataset):
