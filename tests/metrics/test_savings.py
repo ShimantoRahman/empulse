@@ -4,10 +4,13 @@ import pytest
 from empulse.metrics.savings import (
     _compute_expected_cost,
     cost_loss,
+    savings_score,
+)
+
+from .reference.savings import (
     expected_cost_loss,
     expected_log_cost_loss,
     expected_savings_score,
-    savings_score,
 )
 
 

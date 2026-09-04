@@ -1,8 +1,71 @@
 `Unreleased`_
 =============
 
+- |Feature| Added :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC`
+  strategies for building custom metrics that compute the empirical (convex-hull-based) maximum
+  profit and the area under the empirical profit curve, respectively.
+- |Feature| :class:`~empulse.metrics.MixtureMetric` now accepts a ``defaults`` argument to set
+  default values for its parameters, mirroring :meth:`~empulse.metrics.CostMatrix.set_default`.
+- |API| ``empc``, ``mpc``, ``empa``, ``mpa``, ``empcs``, ``mpcs``, ``empb``, ``make_objective_churn``,
+  ``make_objective_acquisition``, and their supporting ``AECObjectiveChurn``, ``AECMetricChurn``,
+  ``AECObjectiveAcquisition``, and ``AECMetricAcquisition`` classes have been removed.
+  :func:`~empulse.metrics.empc_score`,
+  :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.empa_score`,
+  :func:`~empulse.metrics.mpa_score`, :func:`~empulse.metrics.empcs_score`,
+  :func:`~empulse.metrics.mpcs_score`, :func:`~empulse.metrics.empb_score`, and
+  :func:`~empulse.metrics.auepc_score` are now prebuilt :class:`~empulse.metrics.Metric`/
+  :class:`~empulse.metrics.MixtureMetric` instances instead of hand-written functions.
+  The decision threshold (previously returned alongside the score by the removed
+  ``empc``/``mpc``/``empa``/``mpa``/``empcs``/``mpcs``/``empb`` functions) can still be obtained
+  with the ``.optimal_rate(...)`` method on the corresponding ``*_score`` instance.
+  Training a boosting model directly on any of these metrics (previously done through
+  ``make_objective_churn``/``make_objective_acquisition``) is now done by passing the metric
+  as the ``loss`` argument to :class:`~empulse.models.CSBoostClassifier`.
+- |API| :func:`~empulse.metrics.expected_cost_loss_churn` and
+  :func:`~empulse.metrics.expected_cost_loss_acquisition` now always return the mean cost per
+  instance (previously they returned the summed cost by default, with an optional
+  ``normalize=True`` argument to switch to the mean).
+- |API| :func:`~empulse.metrics.empa_score`'s ``beta`` parameter now represents the *scale* of the
+  Gamma-distributed contribution (mean = ``alpha * beta``), instead of the *rate*
+  (mean = ``alpha / beta``) used by the previous ``empa``/``empa_score`` functions. The default
+  value has been adjusted accordingly, so calls that rely on the default are unaffected; only
+  explicit non-default ``beta=`` overrides behave differently.
+- |API| The generic (domain-agnostic) native functions ``max_profit``, ``make_objective_aec``, and
+  the supporting ``AECObjective`` and ``AECMetric`` classes have been removed.
+  :func:`~empulse.metrics.max_profit_score`, :func:`~empulse.metrics.expected_cost_loss`,
+  :func:`~empulse.metrics.expected_log_cost_loss`, and :func:`~empulse.metrics.expected_savings_score`
+  are now prebuilt :class:`~empulse.metrics.Metric` instances instead of hand-written functions
+  (:func:`~empulse.metrics.cost_loss` and :func:`~empulse.metrics.savings_score`, the hard-label
+  variants that auto-threshold continuous scores, are unaffected and remain plain functions, since
+  there is no :class:`~empulse.metrics.Metric`/:class:`~empulse.metrics.MetricStrategy` equivalent
+  for that behavior). The decision threshold (previously returned alongside the score by the
+  removed ``max_profit`` function) can still be obtained with the ``.optimal_rate(...)`` method on
+  :func:`~empulse.metrics.max_profit_score`. Training a boosting or logistic-regression model
+  directly on any of these metrics (previously done through ``make_objective_aec``) is now done by
+  passing the metric as the ``loss`` argument to a cost-sensitive model, e.g.
+  :class:`~empulse.models.CSBoostClassifier` or :class:`~empulse.models.CSLogitClassifier`.
+- |API| :func:`~empulse.metrics.max_profit_score` now takes ``tp_cost``/``tn_cost`` parameters
+  (costs) instead of the previous native ``max_profit``/``max_profit_score`` functions'
+  ``tp_benefit``/``tn_benefit`` parameters (benefits): ``tp_cost = -tp_benefit`` and
+  ``tn_cost = -tn_benefit``. ``fp_cost``/``fn_cost`` are unchanged. This matches the parameter
+  naming already used throughout the rest of the package (e.g. the cost-sensitive models' default
+  loss).
+- |API| :func:`~empulse.metrics.expected_cost_loss` and :func:`~empulse.metrics.expected_log_cost_loss`
+  now always return the mean cost per instance (previously they returned the summed cost by
+  default, with an optional ``normalize=True`` argument to switch to the mean). This also affects
+  the default (unweighted-``loss``) out-of-bag weighted-voting behavior of
+  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
+  which use :func:`~empulse.metrics.expected_cost_loss` as their fallback per-estimator weight.
 - |Fix| Fix :class:`~empulse.models.RobustCSClassifier` not properly handling outlier sensitive costs
   when passing a custom loss function from :class:`~empulse.metrics.Metric`.
+- |Fix| Fix :func:`~empulse.metrics.empb_score` and :func:`~empulse.metrics.auepc_score` not always
+  incurring the contact cost for customers who are not contacted.
+- |Fix| Fix :func:`~empulse.metrics.expected_savings_score`'s (and the
+  :class:`~empulse.metrics.Savings` strategy's) ``baseline='prior'`` option: it previously computed
+  the baseline cost by hard-thresholding the constant prior probability (via the same logic as
+  :func:`~empulse.metrics.cost_loss`), which usually made it silently degenerate to the same result
+  as ``baseline='zero_one'``/``'one'``. It now correctly evaluates the expected cost of predicting
+  the prior probability of the majority or minority class, whichever is cheaper, as documented.
 
 `0.11.1`_ (08-05-2026)
 ======================

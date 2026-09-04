@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 import numpy as np
@@ -83,6 +83,11 @@ class MixtureMetric(BaseMetric):
         ``y_score``, and should be built from the same underlying cost-matrix pattern, only
         differing in how the uncertain symbol is fixed or distributed for that component.
 
+    defaults : Mapping[str, float], optional
+        Default values for parameters (including weight parameters named by a component's
+        :attr:`~MixtureComponent.weight`), used when not supplied at call time.
+        Mirrors :meth:`~empulse.metrics.CostMatrix.set_default` for a plain :class:`Metric`.
+
     Examples
     --------
     Reimplementing the cost structure behind :func:`~empulse.metrics.empcs_score` using
@@ -114,10 +119,15 @@ class MixtureMetric(BaseMetric):
         empcs_metric(y_true, y_proba, success_rate=0.55, default_rate=0.1, roi=0.2644)
     """
 
-    def __init__(self, components: Sequence[MixtureComponent]) -> None:
+    def __init__(self, components: Sequence[MixtureComponent], defaults: Mapping[str, float] | None = None) -> None:
         if not components:
             raise ValueError('MixtureMetric requires at least one component.')
         self.components = list(components)
+        self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
+
+    def _apply_defaults(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Fill in missing parameters (including weight parameters) from :attr:`defaults`."""
+        return {**self.defaults, **parameters}
 
     @property
     def direction(self) -> Direction:
@@ -178,11 +188,12 @@ class MixtureMetric(BaseMetric):
     def _default_parameter_names(self) -> set[str]:
         """The set of parameter names that have a default value and need not be supplied.
 
-        A mixture weight has no default of its own -- it is always required -- so this is
-        purely the union of each component's own defaults, excluding whatever that component
-        fixes internally (which is never read from the caller-supplied parameters anyway).
+        A mixture weight has no default of its own unless one is set via :attr:`defaults`, so
+        this is the union of each component's own defaults (excluding whatever that component
+        fixes internally, which is never read from the caller-supplied parameters anyway) plus
+        any names covered by :attr:`defaults`.
         """
-        names: set[str] = set()
+        names: set[str] = set(self.defaults.keys())
         for component in self.components:
             names |= component.metric._default_parameter_names - set(component.parameters.keys())
         return names
@@ -235,6 +246,7 @@ class MixtureMetric(BaseMetric):
         score : float
             The mixture's combined score.
         """
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         total = 0.0
         for component in self.components:
@@ -261,6 +273,7 @@ class MixtureMetric(BaseMetric):
         optimal_rate : float
             The mixture's combined optimal predicted positive rate.
         """
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         total = 0.0
         for component in self.components:
@@ -299,10 +312,12 @@ class MixtureMetric(BaseMetric):
         optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
+        parameters = self._apply_defaults(parameters)
         rate = self.optimal_rate(y_true, y_score, **parameters)
         return classification_threshold(y_true, y_score, rate)  # type: ignore[return-value]
 
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         total: FloatNDArray | None = None
         for component in self.components:
@@ -317,6 +332,7 @@ class MixtureMetric(BaseMetric):
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any
     ) -> tuple[FloatNDArray, FloatNDArray]:
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         total_gradient: FloatNDArray | None = None
         total_hessian: FloatNDArray | None = None
@@ -343,6 +359,7 @@ class MixtureMetric(BaseMetric):
         fit_intercept: bool,
         **parameters: Any,
     ) -> LogitObjective:
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         weighted_objectives = []
         for component in self.components:
@@ -368,6 +385,7 @@ class MixtureMetric(BaseMetric):
         FloatNDArray | float,
     ]:
         """Compute the weighted sum of each component's (class- or instance-dependent) costs."""
+        parameters = self._apply_defaults(parameters)
         forwarded = self._forward_parameters(parameters)
         total_fp: FloatNDArray | float = 0.0
         total_fn: FloatNDArray | float = 0.0

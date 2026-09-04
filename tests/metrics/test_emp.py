@@ -1,6 +1,7 @@
 import pytest
 
-from empulse.metrics import max_profit, mpc
+from .reference.churn import mpc
+from .reference.max_profit import max_profit
 
 
 def test_mpc_replication():

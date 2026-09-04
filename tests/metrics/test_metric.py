@@ -11,16 +11,15 @@ from empulse.metrics import (
     MaxProfit,
     Metric,
     Savings,
-    empc,
     expected_cost_loss,
     expected_cost_loss_churn,
     expected_savings_score,
-    make_objective_churn,
     max_profit_score,
-    mpc,
 )
 from empulse.metrics._loss import cy_boost_grad_hess
 from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import ComplexRootsError
+
+from .reference.churn import empc, make_objective_churn, mpc
 
 METRIC_STRATEGIES = [
     Cost(),
@@ -213,7 +212,6 @@ def test_metric_vs_expected_loss(
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
         accept_rate=accept_rate,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -294,7 +292,6 @@ def test_metric_upsell_cost(y_true_and_prediction, bank_upsell_cost_matrix):
         tp_cost=contact_cost,
         fp_cost=contact_cost,
         fn_cost=interest_rate * deposit_fraction * balance,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -331,7 +328,6 @@ def test_metric_upsell_cost_inverse(y_true_and_prediction):
         tp_cost=contact_cost,
         fp_cost=contact_cost,
         fn_cost=interest_rate * deposit_fraction * balance,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -357,7 +353,6 @@ def test_metric_upsell_cost_matrix(y_true_and_prediction, bank_upsell_cost_matri
         tn_cost=contact_cost,
         fp_cost=contact_cost,
         fn_cost=interest_rate * deposit_fraction * balance,
-        normalize=True,
     )
     assert pytest.approx(metric_result, rel=1e-3) == cost_result
 
@@ -379,7 +374,7 @@ def test_metric_upsell_max_profit(y_true_and_prediction, bank_upsell_cost_matrix
     profit_result = max_profit_score(
         y,
         y_proba,
-        tp_benefit=-contact_cost,
+        tp_cost=contact_cost,
         fp_cost=contact_cost,
         fn_cost=interest_rate * deposit_fraction * balance,
     )
@@ -429,7 +424,6 @@ def test_metric_arraylikes(y_true_and_prediction, delta_churn_cost_matrix):
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
         accept_rate=accept_rate,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -506,7 +500,6 @@ def test_metric_alias(y_true_and_prediction, delta_churn_cost_matrix):
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
         accept_rate=accept_rate,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -540,7 +533,6 @@ def test_metric_alias_symbols(y_true_and_prediction):
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
         accept_rate=accept_rate,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 
@@ -571,7 +563,6 @@ def test_metric_set_default(y_true_and_prediction, delta_churn_cost_matrix):
         incentive_fraction=incentive_fraction,
         contact_cost=contact_cost,
         accept_rate=accept_rate,
-        normalize=True,
     )
     assert pytest.approx(metric_result) == cost_result
 

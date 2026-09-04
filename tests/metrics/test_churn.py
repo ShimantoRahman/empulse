@@ -7,9 +7,7 @@ from typing import ClassVar
 import numpy as np
 import pytest
 
-from empulse.metrics import empb, empc, expected_cost_loss_churn, mpc
-from empulse.metrics.churn.stochastic import auepc_score
-
+from .reference.churn import auepc_score, empb, empc, expected_cost_loss_churn, mpc
 from .test_metrics import BaseTestMetric, BaseTestRelationMetrics
 
 

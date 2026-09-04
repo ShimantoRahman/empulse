@@ -172,7 +172,6 @@ class CSLogitClassifier(BaseLogitClassifier):
             expected_cost_loss,
             response_method='predict_proba',
             greater_is_better=False,
-            normalize=True,
         )
         scorer = scorer.set_score_request(fn_cost=True, fp_cost=True)
 

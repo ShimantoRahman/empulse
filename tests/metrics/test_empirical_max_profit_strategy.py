@@ -30,8 +30,10 @@ import sympy
 import sympy.stats
 
 from empulse.metrics import CostMatrix, EmpiricalMaxProfit, Metric
-from empulse.metrics.churn.stochastic import empb, empb_score
+from empulse.metrics.churn.stochastic import empb_score
 from empulse.metrics.metric.strategies.empirical_max_profit_strategy import EmpiricalMaxProfitScore
+
+from .reference.churn import empb
 
 
 @pytest.fixture(scope='module')

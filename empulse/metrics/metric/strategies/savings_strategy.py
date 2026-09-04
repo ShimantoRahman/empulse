@@ -144,14 +144,31 @@ class SavingsScore:
                 np.mean(_safe_run_lambda(self.all_one_function, self.all_one_equation, y=y_true, **kwargs))
             )
         elif baseline == 'prior':
-            prior = np.mean(y_true)
-            cost_base = float(
+            prior_pos = float(np.mean(y_true))
+            prior_neg = 1 - prior_pos
+            prior_pos_score = float(
                 np.mean(
                     _safe_run_lambda(
-                        self.cost_func, self.cost_equation, y=y_true, s=np.full_like(y_true, prior), **kwargs
+                        self.cost_func,
+                        self.cost_equation,
+                        y=y_true,
+                        s=np.full(y_true.shape, prior_pos, dtype=np.float64),
+                        **kwargs,
                     )
                 )
             )
+            prior_neg_score = float(
+                np.mean(
+                    _safe_run_lambda(
+                        self.cost_func,
+                        self.cost_equation,
+                        y=y_true,
+                        s=np.full(y_true.shape, prior_neg, dtype=np.float64),
+                        **kwargs,
+                    )
+                )
+            )
+            cost_base = min(prior_pos_score, prior_neg_score)
         else:
             raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
 

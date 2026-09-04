@@ -23,8 +23,9 @@ import sympy
 import sympy.stats
 
 from empulse.metrics import AUEPC, CostMatrix, Metric
-from empulse.metrics.churn.stochastic import auepc_score
 from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
+
+from .reference.churn import auepc_score
 
 
 @pytest.fixture(scope='module')

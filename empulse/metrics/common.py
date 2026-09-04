@@ -26,10 +26,10 @@ def classification_threshold(y_true: FloatArrayLike, y_score: FloatArrayLike, cu
     Examples
     --------
     >>> from empulse.metrics import classification_threshold
-    >>> from empulse.metrics import empc
+    >>> from empulse.metrics import empc_score
     >>> y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     >>> y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
-    >>> score, threshold = empc(y_true, y_score)
+    >>> threshold = empc_score.optimal_rate(y_true, y_score)
     >>> classification_threshold(y_true, y_score, threshold)
     0.2
     """
@@ -60,31 +60,3 @@ def _compute_confusion_matrix(
     false_positives = np.delete(false_positives, duplicated_prediction_indices)
 
     return np.array([true_positives, false_positives]), sorted_indices, duplicated_prediction_indices
-
-
-def _compute_prior_class_probabilities(y_true: FloatNDArray) -> tuple[float, float]:
-    """Calculate prior class probabilities from target values."""
-    positive_class_prob = float(np.mean(y_true))  # pi_0
-    negative_class_prob = 1 - positive_class_prob  # pi_1
-
-    return positive_class_prob, negative_class_prob
-
-
-def _compute_tpr_fpr_diffs(
-    true_positive_rates: FloatNDArray, false_positive_rates: FloatNDArray
-) -> tuple[FloatNDArray, FloatNDArray]:
-    """Calculate differences between subsequent true positive rates and false positive rates."""
-    tpr_diff = np.diff(true_positive_rates, axis=0)  # F_0(T_i) - F_0(T_{i-1})
-    fpr_diff = np.diff(false_positive_rates, axis=0)  # F_1(T_i) - F_1(T_{i-1})
-
-    return tpr_diff, fpr_diff
-
-
-def _compute_profits(
-    y_true: FloatNDArray, y_pred: FloatNDArray, cost_benefits: FloatNDArray
-) -> tuple[FloatNDArray, FloatNDArray]:
-    n_samples = y_pred.shape[0]
-    confusion_matrix, _, _ = _compute_confusion_matrix(y_true, y_pred)
-    profit_matrix = np.dot(confusion_matrix.T, cost_benefits) / n_samples
-    customer_thresholds = np.sum(confusion_matrix, axis=0) / n_samples
-    return profit_matrix, customer_thresholds

@@ -42,7 +42,7 @@ def dataset():
 
 
 def test_log_cost_score_matches_native_function(dataset):
-    """Metric(cost_matrix, LogCost()) should reproduce expected_log_cost_loss (normalize=True)."""
+    """Metric(cost_matrix, LogCost()) should reproduce expected_log_cost_loss."""
     _, y = dataset
     rng = np.random.default_rng(1)
     y_proba = rng.uniform(0.01, 0.99, size=y.shape)
@@ -52,7 +52,7 @@ def test_log_cost_score_matches_native_function(dataset):
     metric = Metric(cost_matrix, LogCost())
 
     result = metric(y, y_proba, tp=0.3, tn=0.6, fp=1.2, fn=2.1)
-    expected = expected_log_cost_loss(y, y_proba, tp_cost=0.3, tn_cost=0.6, fp_cost=1.2, fn_cost=2.1, normalize=True)
+    expected = expected_log_cost_loss(y, y_proba, tp_cost=0.3, tn_cost=0.6, fp_cost=1.2, fn_cost=2.1)
 
     assert result == pytest.approx(expected)
 
@@ -69,7 +69,7 @@ def test_log_cost_instance_dependent_costs(dataset):
     metric = Metric(cost_matrix, LogCost())
 
     result = metric(y, y_proba, fn=fn_cost)
-    expected = expected_log_cost_loss(y, y_proba, fn_cost=fn_cost, fp_cost=1.0, normalize=True)
+    expected = expected_log_cost_loss(y, y_proba, fn_cost=fn_cost, fp_cost=1.0)
 
     assert result == pytest.approx(expected)
 

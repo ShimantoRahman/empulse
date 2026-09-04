@@ -561,7 +561,6 @@ class CSForestClassifier(CostSensitiveClassifier):
                     tn_cost=tn_cost,
                     fn_cost=fn_cost,
                     fp_cost=fp_cost,
-                    check_input=False,
                 )
             else:
                 self.estimator_weights_ = self._get_oob_weights(X, y, **loss_params)

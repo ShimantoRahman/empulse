@@ -13,11 +13,11 @@ from empulse.metrics import (
     MixtureComponent,
     MixtureMetric,
     classification_threshold,
-    empcs,
     empcs_score,
-    mpcs,
     mpcs_score,
 )
+
+from .reference.credit_scoring import empcs, mpcs
 
 
 @pytest.fixture(scope='module')
