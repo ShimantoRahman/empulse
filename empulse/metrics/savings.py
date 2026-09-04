@@ -207,70 +207,94 @@ def cost_loss(
 
 
 expected_cost_loss = make_generic_cost_metric()
-#: Expected cost of a classifier.
-#:
-#: A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.Cost`
-#: strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
-#: ``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters. Call as
-#: ``expected_cost_loss(y_true, y_proba, tp_cost=..., tn_cost=..., fp_cost=..., fn_cost=...)``.
-#:
-#: .. seealso::
-#:
-#:     :func:`~empulse.metrics.cost_loss` : Cost of a classifier using hard (thresholded) labels.
-#:
-#:     :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
-#:     compared to using a baseline.
-#:
-#: .. note::
-#:    This replaces the previous native ``expected_cost_loss`` function, which by default
-#:    returned the *summed* cost (with an optional ``normalize=True`` argument to switch to the
-#:    mean). This metric always returns the *mean* cost per instance.
-#:
-#: Examples
-#: --------
-#: .. code-block:: python
-#:
-#:     import numpy as np
-#:     from empulse.metrics import expected_cost_loss
-#:
-#:     y_proba = [0.2, 0.9, 0.1, 0.2]
-#:     y_true = [0, 1, 1, 0]
-#:     fp_cost = np.array([4, 1, 2, 2])
-#:     fn_cost = np.array([1, 3, 3, 1])
-#:     expected_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
+expected_cost_loss.__doc__ = r"""
+Expected cost of a classifier.
+
+A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.Cost`
+strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
+``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters.
+
+.. seealso::
+
+    :func:`~empulse.metrics.cost_loss` : Cost of a classifier using hard (thresholded) labels.
+
+    :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
+    compared to using a baseline.
+
+.. note::
+   This replaces the previous native ``expected_cost_loss`` function, which by default
+   returned the *summed* cost (with an optional ``normalize=True`` argument to switch to the
+   mean). This metric always returns the *mean* cost per instance.
+
+.. rubric:: Methods
+
+``__call__(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the expected cost of a classifier.
+
+``optimal_threshold(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the classification threshold(s) that minimize(s) the expected cost.
+
+``optimal_rate(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the predicted positive rate that minimizes the expected cost.
+
+Examples
+--------
+.. code-block:: python
+
+    import numpy as np
+    from empulse.metrics import expected_cost_loss
+
+    y_proba = [0.2, 0.9, 0.1, 0.2]
+    y_true = [0, 1, 1, 0]
+    fp_cost = np.array([4, 1, 2, 2])
+    fn_cost = np.array([1, 3, 3, 1])
+    expected_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
+"""
 
 
 expected_log_cost_loss = make_generic_log_cost_metric()
-#: Expected log cost of a classifier.
-#:
-#: A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.LogCost`
-#: strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
-#: ``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters. Call as
-#: ``expected_log_cost_loss(y_true, y_proba, tp_cost=..., tn_cost=..., fp_cost=..., fn_cost=...)``.
-#: When ``tp_cost`` and ``tn_cost`` equal -1, and ``fp_cost`` and ``fn_cost`` equal 0, the expected
-#: log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
-#:
-#: .. seealso::
-#:
-#:     :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
-#:
-#: .. note::
-#:    This replaces the previous native ``expected_log_cost_loss`` function, which by default
-#:    returned the *summed* log cost (with an optional ``normalize=True`` argument to switch to
-#:    the mean). This metric always returns the *mean* log cost per instance.
-#:
-#: Examples
-#: --------
-#: .. code-block:: python
-#:
-#:     import numpy as np
-#:     from empulse.metrics import expected_log_cost_loss
-#:
-#:     y_proba = [0.1, 0.9, 0.8, 0.2]
-#:     y_true = [0, 1, 1, 0]
-#:     fp_cost = np.array([4, 1, 2, 2])
-#:     fn_cost = np.array([1, 3, 3, 1])
-#:     expected_log_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
+expected_log_cost_loss.__doc__ = r"""
+Expected log cost of a classifier.
+
+A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.LogCost`
+strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
+``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters.
+When ``tp_cost`` and ``tn_cost`` equal -1, and ``fp_cost`` and ``fn_cost`` equal 0, the expected
+log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
+
+.. seealso::
+
+    :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
+
+.. note::
+   This replaces the previous native ``expected_log_cost_loss`` function, which by default
+   returned the *summed* log cost (with an optional ``normalize=True`` argument to switch to
+   the mean). This metric always returns the *mean* log cost per instance.
+
+.. rubric:: Methods
+
+``__call__(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the expected log cost of a classifier.
+
+``optimal_threshold(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the classification threshold(s) that minimize(s) the expected log cost.
+
+``optimal_rate(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
+    Compute the predicted positive rate that minimizes the expected log cost.
+
+Examples
+--------
+.. code-block:: python
+
+    import numpy as np
+    from empulse.metrics import expected_log_cost_loss
+
+    y_proba = [0.1, 0.9, 0.8, 0.2]
+    y_true = [0, 1, 1, 0]
+    fp_cost = np.array([4, 1, 2, 2])
+    fn_cost = np.array([1, 3, 3, 1])
+    expected_log_cost_loss(y_true, y_proba, fp_cost=fp_cost, fn_cost=fn_cost)
+"""
 
 
 def savings_score(
@@ -472,43 +496,55 @@ def savings_score(
 
 
 expected_savings_score = make_generic_savings_metric()
-#: Expected savings of a classifier compared to a baseline.
-#:
-#: A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.Savings`
-#: strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
-#: ``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters, plus a ``baseline`` argument. Call as
-#: ``expected_savings_score(y_true, y_proba, tp_cost=..., tn_cost=..., fp_cost=..., fn_cost=...,
-#: baseline='zero_one')``.
-#:
-#: ``baseline`` accepts:
-#:
-#: - ``'zero_one'`` (default): a naive model that predicts all zeros or all ones, whichever is
-#:   better.
-#: - ``'one'``: a model that predicts all ones.
-#: - ``'zero'``: a model that predicts all zeros.
-#: - ``'prior'``: a model that predicts the prior probability of the majority or minority class,
-#:   whichever is better.
-#: - array-like: target probabilities of a baseline model.
-#:
-#: With 1 being the perfect model, 0 being as good as the baseline model, and values smaller than
-#: 0 being worse than the baseline model.
-#:
-#: .. seealso::
-#:
-#:     :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to a
-#:     baseline, using hard (thresholded) labels.
-#:
-#:     :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
-#:
-#: Examples
-#: --------
-#: .. code-block:: python
-#:
-#:     import numpy as np
-#:     from empulse.metrics import expected_savings_score
-#:
-#:     y_pred = [0.4, 0.8, 0.75, 0.1]
-#:     y_true = [0, 1, 1, 0]
-#:     fp_cost = np.array([4, 1, 2, 2])
-#:     fn_cost = np.array([1, 3, 3, 1])
-#:     expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+expected_savings_score.__doc__ = r"""
+Expected savings of a classifier compared to a baseline.
+
+A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metrics.Savings`
+strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
+``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters, plus a ``baseline`` argument.
+
+``baseline`` accepts:
+
+- ``'zero_one'`` (default): a naive model that predicts all zeros or all ones, whichever is
+  better.
+- ``'one'``: a model that predicts all ones.
+- ``'zero'``: a model that predicts all zeros.
+- ``'prior'``: a model that predicts the prior probability of the majority or minority class,
+  whichever is better.
+- array-like: target probabilities of a baseline model.
+
+With 1 being the perfect model, 0 being as good as the baseline model, and values smaller than
+0 being worse than the baseline model.
+
+.. seealso::
+
+    :func:`~empulse.metrics.savings_score` : Cost savings of a classifier compared to a
+    baseline, using hard (thresholded) labels.
+
+    :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
+
+.. rubric:: Methods
+
+``__call__(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0, baseline='zero_one')``
+    Compute the expected savings of a classifier compared to a baseline.
+
+``optimal_threshold(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0, baseline='zero_one')``
+    Compute the classification threshold(s) that minimize(s) the expected cost
+    (equivalently, that maximize(s) the expected savings).
+
+``optimal_rate(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0, baseline='zero_one')``
+    Compute the predicted positive rate that minimizes the expected cost.
+
+Examples
+--------
+.. code-block:: python
+
+    import numpy as np
+    from empulse.metrics import expected_savings_score
+
+    y_pred = [0.4, 0.8, 0.75, 0.1]
+    y_true = [0, 1, 1, 0]
+    fp_cost = np.array([4, 1, 2, 2])
+    fn_cost = np.array([1, 3, 3, 1])
+    expected_savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+"""

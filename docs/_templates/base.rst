@@ -19,6 +19,13 @@
    :inherited-members:
    :special-members: __call__
 
+{%- elif objtype == "data" -%}
+
+.. currentmodule:: {{ module }}
+
+.. autodata:: {{ objname }}
+   :no-value:
+
 {%- else -%}
 
 .. currentmodule:: {{ module }}

@@ -10,6 +10,39 @@ models in the context of customer churn, credit scoring, and acquisition.
 Build your own cost-sensitive metric
 ------------------------------------
 
+Metrics can be built by combining a :class:`~empulse.metrics.CostMatrix` with a :class:`~empulse.metrics.MetricStrategy`.
+The cost matrix defines the costs and benefits associated with different outcomes,
+while the metric strategy defines how to compute the metric based on the cost matrix and the model's predictions.
+
+Cost Matrix
+~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+   :template: base.rst
+
+   CostMatrix
+
+Metric Strategies
+~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+   :template: base.rst
+
+   MetricStrategy
+   MaxProfit
+   EmpiricalMaxProfit
+   AUEPC
+   Cost
+   LogCost
+   Savings
+
+Metrics
+~~~~~~~
+
 .. autosummary::
    :toctree: generated/
    :nosignatures:
@@ -17,16 +50,8 @@ Build your own cost-sensitive metric
 
    BaseMetric
    Metric
-   MetricStrategy
    MixtureComponent
    MixtureMetric
-   MaxProfit
-   EmpiricalMaxProfit
-   AUEPC
-   CostMatrix
-   Cost
-   LogCost
-   Savings
 
 General Metrics
 ---------------
@@ -47,6 +72,8 @@ General Metrics
 Customer Acquisition Metrics
 ----------------------------
 
+See :ref:`prebuilt_acquisition_metrics` for an explanation of the cost-benefit matrix.
+
 .. autosummary::
    :toctree: generated/
    :nosignatures:
@@ -59,6 +86,8 @@ Customer Acquisition Metrics
 
 Customer Churn Metrics
 ----------------------
+
+See :ref:`prebuilt_churn_metrics` for an explanation of the cost-benefit matrix.
 
 .. autosummary::
    :toctree: generated/
@@ -73,6 +102,8 @@ Customer Churn Metrics
 
 Credit Scoring Metrics
 ----------------------
+
+See :ref:`prebuilt_credit_scoring_metrics` for an explanation of the cost-benefit matrix.
 
 .. autosummary::
    :toctree: generated/
