@@ -7,7 +7,13 @@ import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .base_metric import BaseMetric
-from .common import Direction, _check_reserved_symbol_names, _evaluate_expression, replace_random_var_with_mean
+from .common import (
+    Direction,
+    _check_known_alias_and_default_targets,
+    _check_reserved_symbol_names,
+    _evaluate_expression,
+    replace_random_var_with_mean,
+)
 from .cost_matrix import CostMatrix
 from .strategies import LogitObjective, MetricStrategy
 
@@ -144,6 +150,14 @@ class Metric(BaseMetric):
             self.fn_cost,
             alias_names=self.cost_matrix._aliases.keys(),
         )
+        _check_known_alias_and_default_targets(
+            self.tp_benefit,
+            self.tn_benefit,
+            self.fp_cost,
+            self.fn_cost,
+            aliases=self.cost_matrix._aliases,
+            default_names=self.cost_matrix._defaults.keys(),
+        )
         self.strategy = copy.deepcopy(strategy)
         self.strategy.build(
             tp_benefit=self.tp_benefit,
@@ -276,13 +290,22 @@ class Metric(BaseMetric):
         # Use a separate output dict to avoid dual-purpose mutation of kwargs
         params: dict[str, FloatArrayLike | float] = {}
 
-        # Map aliases to the appropriate symbol names
+        # Map aliases to the appropriate symbol names. Track which caller-supplied key each
+        # resolved symbol name came from, so that passing both a symbol and one of its aliases
+        # (or two different aliases for the same symbol) raises instead of silently letting
+        # whichever kwarg happens to be seen last win - which would make the result depend on
+        # the caller's kwarg order.
+        resolved_from: dict[str, str] = {}
         for key, value in kwargs.items():
             alias_target = self.cost_matrix._aliases.get(key)
-            if alias_target is not None:
-                params[str(alias_target)] = value
-            else:
-                params[key] = value
+            symbol_name = str(alias_target) if alias_target is not None else key
+            if symbol_name in resolved_from:
+                raise ValueError(
+                    f"Got conflicting values for symbol '{symbol_name}': passed both as "
+                    f"'{resolved_from[symbol_name]}' and '{key}'. Pass only one of these."
+                )
+            resolved_from[symbol_name] = key
+            params[symbol_name] = value
 
         # Use default values if not provided
         for key, value in self.cost_matrix._defaults.items():

@@ -141,3 +141,88 @@ def test_non_reserved_symbol_names_are_unaffected():
     metric = Metric(cost_matrix, Cost())
 
     assert metric(Y_TRUE, Y_SCORE, a=1.0, b=1.0) == pytest.approx(0.18)
+
+
+# --- passing both an alias and its underlying symbol ---------------------------------
+
+
+@pytest.mark.parametrize('kwarg_order', ['symbol_first', 'alias_first'])
+def test_alias_and_underlying_symbol_together_raises(kwarg_order):
+    """
+    Passing both a symbol and one of its aliases must raise, regardless of which one the caller
+    happened to type first - not silently let whichever kwarg is seen last win, which would make
+    the result depend on kwarg order.
+    """
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'})
+    metric = Metric(cost_matrix, Cost())
+    kwargs = (
+        {'a': 1.0, 'my_cost': 999.0, 'b': 1.0}
+        if kwarg_order == 'symbol_first'
+        else {
+            'my_cost': 999.0,
+            'a': 1.0,
+            'b': 1.0,
+        }
+    )
+
+    with pytest.raises(ValueError, match="conflicting values for symbol 'a'"):
+        metric(Y_TRUE, Y_SCORE, **kwargs)
+
+
+def test_two_aliases_for_the_same_symbol_together_raises():
+    """Passing two different aliases that both target the same symbol must raise too."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a', 'other_name': 'a'})
+    metric = Metric(cost_matrix, Cost())
+
+    with pytest.raises(ValueError, match="conflicting values for symbol 'a'"):
+        metric(Y_TRUE, Y_SCORE, my_cost=1.0, other_name=2.0, b=1.0)
+
+
+def test_alias_or_symbol_passed_alone_is_unaffected():
+    """Sanity check: passing only the symbol, or only the alias, must still work as before."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'})
+    metric = Metric(cost_matrix, Cost())
+
+    assert metric(Y_TRUE, Y_SCORE, a=1.0, b=1.0) == pytest.approx(0.18)
+    assert metric(Y_TRUE, Y_SCORE, my_cost=1.0, b=1.0) == pytest.approx(0.18)
+
+
+# --- alias()/set_default() referring to a symbol that does not exist -----------------
+
+
+def test_alias_target_typo_is_rejected_at_construction():
+    """An alias whose target does not match any cost-matrix symbol must be rejected at construction."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'aa'})  # 'aa' is a typo for 'a'
+
+    with pytest.raises(ValueError, match="'my_cost' -> 'aa'"):
+        Metric(cost_matrix, Cost())
+
+
+def test_set_default_before_alias_is_rejected_at_construction():
+    """
+    `set_default()` called with an alias name before that alias is registered stores the raw,
+    untranslated key (see the ordering note in `CostMatrix.set_default`'s docstring) - this must
+    be rejected at `Metric` construction time rather than silently dropped.
+    """
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').set_default(my_cost=5.0).alias({'my_cost': 'a'})
+
+    with pytest.raises(ValueError, match=r"default\(s\) for \['my_cost'\]"):
+        Metric(cost_matrix, Cost())
+
+
+def test_set_default_after_alias_is_accepted():
+    """Sanity check: the documented correct ordering (alias() before set_default()) must still work."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'}).set_default(my_cost=5.0)
+    metric = Metric(cost_matrix, Cost())
+
+    # The default should behave exactly like passing a=5.0 explicitly.
+    expected = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Cost())(Y_TRUE, Y_SCORE, a=5.0, b=1.0)
+    assert metric(Y_TRUE, Y_SCORE, b=1.0) == pytest.approx(expected)
+
+
+def test_default_for_a_real_symbol_is_accepted():
+    """Sanity check: a default set directly on a real symbol name (no alias involved) must work."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').set_default(a=1.0)
+    metric = Metric(cost_matrix, Cost())
+
+    assert metric(Y_TRUE, Y_SCORE, b=1.0) == pytest.approx(0.18)

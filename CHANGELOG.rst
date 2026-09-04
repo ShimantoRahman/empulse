@@ -4,8 +4,6 @@
 - |Feature| Added :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC`
   strategies for building custom metrics that compute the empirical (convex-hull-based) maximum
   profit and the area under the empirical profit curve, respectively.
-- |Feature| :class:`~empulse.metrics.MixtureMetric` now accepts a ``defaults`` argument to set
-  default values for its parameters, mirroring :meth:`~empulse.metrics.CostMatrix.set_default`.
 - |API| ``empc``, ``mpc``, ``empa``, ``mpa``, ``empcs``, ``mpcs``, ``empb``, ``make_objective_churn``,
   ``make_objective_acquisition``, and their supporting ``AECObjectiveChurn``, ``AECMetricChurn``,
   ``AECObjectiveAcquisition``, and ``AECMetricAcquisition`` classes have been removed.
@@ -66,6 +64,36 @@
   :func:`~empulse.metrics.cost_loss`), which usually made it silently degenerate to the same result
   as ``baseline='zero_one'``/``'one'``. It now correctly evaluates the expected cost of predicting
   the prior probability of the majority or minority class, whichever is cheaper, as documented.
+- |Fix| :class:`~empulse.metrics.Metric` no longer shares mutable strategy state when the same
+  :class:`~empulse.metrics.MetricStrategy` instance (e.g. a configured
+  :class:`~empulse.metrics.MaxProfit`) is passed to more than one ``Metric``. Previously, building
+  a second ``Metric`` from an already-used strategy instance silently rebuilt that strategy in
+  place, so the first ``Metric`` would start returning values computed from the second metric's
+  cost matrix instead of its own. Each ``Metric`` now builds and owns an independent copy of the
+  strategy it is given.
+- |Fix| :class:`~empulse.metrics.Metric` no longer stays linked to the mutable
+  :class:`~empulse.metrics.CostMatrix` it was constructed from. Previously, modifying the
+  ``CostMatrix`` object after building a ``Metric`` from it silently desynchronized the metric's
+  advertised cost expressions (e.g. ``metric.fn_cost``) from what it actually computed, so a
+  parameter the metric claimed to depend on could be silently ignored when scoring. ``Metric`` now
+  takes an independent copy of its cost matrix at construction time.
+- |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` at construction time if the
+  cost matrix uses a symbol name or alias reserved for internal use (``y``, ``s``, ``F_0``,
+  ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i``). Previously, a colliding symbol name was either
+  silently fused with the identically-named internal variable (e.g. a user symbol named ``F_0`` in
+  a :class:`~empulse.metrics.MaxProfit` metric), producing a wrong score with no warning, or raised
+  a confusing internal ``TypeError`` only once the metric was called (e.g. a symbol named ``y`` or
+  ``s``).
+- |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` when called with both a
+  symbol's own name and one of its aliases (or with two different aliases for the same symbol).
+  Previously, whichever keyword argument was seen last silently won, so the computed score
+  depended on the order the keyword arguments happened to be passed in.
+- |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` at construction time if an
+  alias's target, or a :meth:`~empulse.metrics.CostMatrix.set_default` parameter name, does not
+  match any symbol used in the cost matrix. This also catches the ordering footgun documented on
+  :meth:`~empulse.metrics.CostMatrix.set_default`, where a default keyed by an alias name that was
+  set *before* the alias was registered used to be silently stored under that raw (untranslated)
+  name and then silently ignored, instead of ever being applied.
 
 `0.11.1`_ (08-05-2026)
 ======================
