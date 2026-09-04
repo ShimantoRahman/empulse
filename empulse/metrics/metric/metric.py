@@ -1,3 +1,4 @@
+import copy
 import warnings
 from numbers import Real
 
@@ -135,8 +136,8 @@ class Metric(BaseMetric):
     """
 
     def __init__(self, cost_matrix: CostMatrix, strategy: MetricStrategy) -> None:
-        self.cost_matrix = cost_matrix
-        self.strategy = strategy
+        self.cost_matrix = copy.deepcopy(cost_matrix)
+        self.strategy = copy.deepcopy(strategy)
         self.strategy.build(
             tp_benefit=self.tp_benefit,
             tn_benefit=self.tn_benefit,
