@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import sympy
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, Savings, cost_loss, expected_cost_loss
 from empulse.metrics.metric.common import RESERVED_SYMBOL_NAMES
 
 Y_TRUE = np.array([1, 0, 1, 0, 1])
@@ -226,3 +226,108 @@ def test_default_for_a_real_symbol_is_accepted():
     metric = Metric(cost_matrix, Cost())
 
     assert metric(Y_TRUE, Y_SCORE, b=1.0) == pytest.approx(0.18)
+
+
+# --- Metric performs no validation of y_true / y_score (regression vs. cost_loss) ----
+
+
+COST_MATRIX = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+
+
+@pytest.mark.parametrize(
+    'y_true',
+    [
+        np.array([1, 2, 1, 2, 1]),
+        np.array([0, 1, 0, 1, 2]),
+    ],
+)
+def test_non_binary_y_true_raises(y_true):
+    """A non-binary y_true must be rejected, matching cost_loss()'s existing behaviour."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='should be binary'):
+        metric(y_true, Y_SCORE, a=1.0, b=1.0)
+
+
+def test_single_class_y_true_is_accepted():
+    """
+    A y_true with only one distinct value must be accepted, not rejected.
+
+    Unlike cost_loss()/lift_score(), Metric deliberately does not require variance in y_true: a
+    single-class fold or sample-weighted subset is a legitimate input here (e.g. cross-validation,
+    or the `check_classifiers_one_label_sample_weights` sklearn compliance check), and rejecting it
+    would be needless friction rather than catching a real mistake.
+    """
+    metric = Metric(COST_MATRIX, Cost())
+
+    score = metric(np.array([1, 1, 1, 1, 1]), Y_SCORE, a=1.0, b=1.0)
+
+    assert isinstance(score, float)
+
+
+def test_nan_in_y_true_raises():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='NaN'):
+        metric(np.array([1.0, 0.0, np.nan, 0.0, 1.0]), Y_SCORE, a=1.0, b=1.0)
+
+
+def test_nan_in_y_score_raises():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='NaN'):
+        metric(Y_TRUE, np.array([0.9, 0.1, np.nan, 0.2, 0.7]), a=1.0, b=1.0)
+
+
+def test_inf_in_y_score_raises():
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='Inf'):
+        metric(Y_TRUE, np.array([0.9, 0.1, np.inf, 0.2, 0.7]), a=1.0, b=1.0)
+
+
+def test_expected_cost_loss_and_cost_loss_raise_the_same_error_on_non_binary_labels():
+    """expected_cost_loss (a Metric) and cost_loss (the legacy function) must reject bad input alike."""
+    y_bad = np.array([1, 2, 1, 2, 1])
+
+    with pytest.raises(ValueError, match='should be binary') as legacy_exc_info:
+        cost_loss(y_bad, Y_SCORE, fp_cost=1.0, fn_cost=1.0)
+    with pytest.raises(ValueError, match='should be binary') as metric_exc_info:
+        expected_cost_loss(y_bad, Y_SCORE, fp_cost=1.0, fn_cost=1.0)
+
+    assert str(legacy_exc_info.value) == str(metric_exc_info.value)
+
+
+def test_optimal_threshold_still_accepts_empty_y_true_and_y_score():
+    """The documented empty-placeholder path (predict-time threshold, no labels available) must still work."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    threshold = metric.optimal_threshold(np.array([]), np.array([]), a=1.0, b=1.0)
+
+    assert threshold == pytest.approx(0.5)
+
+
+def test_optimal_rate_still_accepts_empty_y_true_with_real_y_score():
+    """The documented empty-y_true path (rate needed, but no labels available yet) must still work."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    rate = metric.optimal_rate(np.array([]), Y_SCORE, a=1.0, b=1.0)
+
+    assert 0.0 <= rate <= 1.0
+
+
+def test_optimal_threshold_validates_non_empty_y_true():
+    """When y_true is actually provided (non-empty), it must still be validated like everywhere else."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='should be binary'):
+        metric.optimal_threshold(np.array([1, 2, 1, 2, 1]), Y_SCORE, a=1.0, b=1.0)
+
+
+def test_call_accepts_a_row_vector_y_score():
+    """A shape (1, n_samples) y_score (as catboost's internal metric callback passes) must still work."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    score = metric(Y_TRUE, Y_SCORE.reshape(1, -1), a=1.0, b=1.0)
+
+    assert score == pytest.approx(metric(Y_TRUE, Y_SCORE, a=1.0, b=1.0))

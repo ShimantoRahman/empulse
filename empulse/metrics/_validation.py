@@ -8,14 +8,15 @@ from sklearn.utils import column_or_1d
 from .._types import FloatArrayLike, FloatNDArray
 
 
-def _check_y_true(y_true: FloatArrayLike) -> FloatNDArray:
+def _check_y_true(y_true: FloatArrayLike, *, check_variance: bool = True) -> FloatNDArray:
     y_true: FloatNDArray = np.asarray(y_true)
     y_true: FloatNDArray = column_or_1d(y_true)
     _check_numeric(y_true)
     _check_nan(y_true)
     _check_inf(y_true)
     _check_binary(y_true)
-    _check_variance(y_true)
+    if check_variance:
+        _check_variance(y_true)
     return y_true
 
 

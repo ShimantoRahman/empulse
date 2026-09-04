@@ -6,6 +6,7 @@ import numpy as np
 import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray
+from .._validation import _check_y_pred, _check_y_true
 from .base_metric import BaseMetric
 from .common import (
     Direction,
@@ -369,12 +370,12 @@ class Metric(BaseMetric):
         score: float
             The computed metric score or loss.
         """
-        y_true = np.asarray(y_true).reshape(-1)
-        y_score = np.asarray(y_score).reshape(-1)
+        y_true = _check_y_true(np.asarray(y_true).reshape(-1), check_variance=False)
+        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         parameters = self._prepare_parameters(**parameters)
-        return self.strategy.score(y_true, y_score, **parameters)
+        return self.strategy.score(y_true.astype(np.intp), y_score, **parameters)
 
     def optimal_threshold(
         self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
@@ -412,8 +413,10 @@ class Metric(BaseMetric):
             The optimal classification threshold(s).
         """
         y_true = np.asarray(y_true).reshape(-1)
-        y_score = np.asarray(y_score).reshape(-1)
         # y_true may be empty when optimal_threshold/optimal_rate don't need labels
+        if y_true.size > 0:
+            y_true = _check_y_true(y_true, check_variance=False)
+        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         parameters = self._prepare_parameters(**parameters)
@@ -453,8 +456,10 @@ class Metric(BaseMetric):
             The optimal predicted positive rate.
         """
         y_true = np.asarray(y_true).reshape(-1)
-        y_score = np.asarray(y_score).reshape(-1)
         # y_true may be empty when optimal_rate doesn't need labels (threshold-only path)
+        if y_true.size > 0:
+            y_true = _check_y_true(y_true, check_variance=False)
+        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         parameters = self._prepare_parameters(**parameters)

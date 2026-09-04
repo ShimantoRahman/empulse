@@ -343,7 +343,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
         else:
             self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)
-            self.decision_ = self._compute_decision(loss, y, y_score, loss_params)
+            y_binary = np.where(np.asarray(y) == self.classes_[1], 1, 0)
+            self.decision_ = self._compute_decision(loss, y_binary, y_score, loss_params)
 
         if hasattr(self.estimator_, 'n_features_in_'):
             self.n_features_in_ = self.estimator_.n_features_in_

@@ -94,6 +94,7 @@
   :meth:`~empulse.metrics.CostMatrix.set_default`, where a default keyed by an alias name that was
   set *before* the alias was registered used to be silently stored under that raw (untranslated)
   name and then silently ignored, instead of ever being applied.
+- |Fix| :class:`~empulse.metrics.Metric` now validates ``y_true``/``y_score``.
 
 `0.11.1`_ (08-05-2026)
 ======================
