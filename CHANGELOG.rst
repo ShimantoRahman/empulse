@@ -54,6 +54,17 @@
   the default (unweighted-``loss``) out-of-bag weighted-voting behavior of
   :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
   which use :func:`~empulse.metrics.expected_cost_loss` as their fallback per-estimator weight.
+- |Fix| Cost-sensitive models can now be trained with a ``loss`` metric whose cost matrix names one
+  of its symbols (or aliases) ``tp_cost``, ``tn_cost``, ``fp_cost`` or ``fn_cost``. Those names
+  collide with the dedicated ``fit``/``predict`` parameters of the same name, so the value bound to
+  the parameter and was silently discarded instead of reaching the metric, and training failed with
+  ``TypeError: _lambdifygenerated() missing 1 required positional argument``. This affected the cost
+  matrices shipped with :func:`~empulse.datasets.load_churn_tv_subscriptions`,
+  :func:`~empulse.datasets.load_credit_scoring_pakdd` and
+  :func:`~empulse.datasets.fetch_give_me_some_credit`. Such values are now routed to the metric, and
+  a cost argument that the metric does not use raises a warning instead of being dropped silently.
+  Note that ``__init__``-time costs are still not forwarded to a metric loss, since they default to
+  ``0.0`` and would silently zero out a cost matrix term of the same name.
 - |Fix| Fix :class:`~empulse.models.RobustCSClassifier` not properly handling outlier sensitive costs
   when passing a custom loss function from :class:`~empulse.metrics.Metric`.
 - |Fix| Fix :func:`~empulse.metrics.empb_score` and :func:`~empulse.metrics.auepc_score` not always

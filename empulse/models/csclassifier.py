@@ -146,6 +146,15 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             loss_params['tn_cost'] = tn_cost
             loss_params['fn_cost'] = fn_cost
             loss_params['fp_cost'] = fp_cost
+        else:
+            loss_params = self._route_costs_to_loss(
+                loss_,
+                loss_params,
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+            )
         loss_params = self._normalize_cost_shapes(loss_params, size=y.size)
 
         loss = loss_ if loss_ is not None else self._get_default_loss()
@@ -235,6 +244,73 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
 
         return tp_cost, tn_cost, fn_cost, fp_cost  # type: ignore[return-value]
 
+    def _route_costs_to_loss(
+        self,
+        loss: BaseMetric,
+        params: dict[str, Any],
+        *,
+        tp_cost: FloatArrayLike | float | Parameter,
+        tn_cost: FloatArrayLike | float | Parameter,
+        fn_cost: FloatArrayLike | float | Parameter,
+        fp_cost: FloatArrayLike | float | Parameter,
+        caller: str = 'fit',
+    ) -> dict[str, Any]:
+        """
+        Route explicitly passed cost arguments through to a :class:`~empulse.metrics.BaseMetric` loss.
+
+        A cost matrix may legitimately name one of its symbols (or aliases) ``tp_cost``, ``tn_cost``,
+        ``fn_cost`` or ``fp_cost`` -- several of the bundled datasets do. Those names collide with this
+        method's own keyword parameters, so the value binds to the parameter instead of landing in
+        ``**loss_params`` and would otherwise never reach the metric. Any such value that names a symbol
+        of ``loss`` is forwarded here.
+
+        Only values passed explicitly by the caller are forwarded. The ``__init__``-time cost attributes
+        are deliberately *not* consulted: they describe plain costs and default to ``0.0``, so falling
+        back to them would silently override a cost matrix default with zero.
+
+        Parameters
+        ----------
+        loss : BaseMetric
+            The metric loss the costs should be routed to.
+        params : dict[str, Any]
+            Loss parameters collected so far. Not mutated; an updated copy is returned.
+        tp_cost, tn_cost, fn_cost, fp_cost : float or array-like or Parameter
+            The cost arguments as passed by the caller. ``Parameter.UNCHANGED`` means "not passed".
+        caller : str, default='fit'
+            Name of the calling method, used in the warning message.
+
+        Returns
+        -------
+        params : dict[str, Any]
+            The loss parameters, extended with any cost argument that names a symbol of ``loss``.
+        """
+        params = dict(params)
+        symbols = loss._all_symbols
+        ignored = []
+        for name, value in (
+            ('tp_cost', tp_cost),
+            ('tn_cost', tn_cost),
+            ('fn_cost', fn_cost),
+            ('fp_cost', fp_cost),
+        ):
+            if value is Parameter.UNCHANGED:
+                continue
+            if name in symbols:
+                params[name] = value
+            else:
+                ignored.append(name)
+
+        if ignored:
+            warnings.warn(
+                f'{", ".join(ignored)} passed to {self.__class__.__name__}.{caller}() '
+                f'{"is" if len(ignored) == 1 else "are"} ignored because a `loss` metric is set '
+                f'and the metric does not use {"that name" if len(ignored) == 1 else "those names"}. '
+                f'Pass the parameters its cost matrix expects instead: {sorted(symbols)}.',
+                UserWarning,
+                stacklevel=3,
+            )
+        return params
+
     def _add_standard_costs_to_params(
         self,
         tp_cost: FloatArrayLike | float | Parameter,
@@ -243,7 +319,8 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         fp_cost: FloatArrayLike | float | Parameter,
         params: dict[str, Any],
     ) -> dict[str, Any]:
-        if not isinstance(self._get_metric_loss(), BaseMetric):
+        loss = self._get_metric_loss()
+        if not isinstance(loss, BaseMetric):
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
             )
@@ -252,6 +329,16 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             params['tn_cost'] = tn_cost
             params['fn_cost'] = fn_cost
             params['fp_cost'] = fp_cost
+        else:
+            params = self._route_costs_to_loss(
+                loss,
+                params,
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
+                caller='predict',
+            )
         return params
 
     def _get_metric_loss(self) -> BaseMetric | None:
