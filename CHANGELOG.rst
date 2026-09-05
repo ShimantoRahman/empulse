@@ -121,6 +121,13 @@
   metric strategy containing a stochastic (``sympy.stats``) variable.
 - |Fix| :class:`~empulse.models.CSBoostClassifier` no longer mutates a caller-supplied
   ``fit_params`` dict in place.
+- |Fix| :class:`~empulse.models.CSTreeClassifier` no longer mutates a user-supplied custom
+  ``criterion`` instance in place.
+- |Fix| :class:`~empulse.models.CSBoostClassifier`'s LightGBM and CatBoost backends now start
+  from the intended probability. The internal base-score nudge was applied as a raw (log-odds)
+  score for LightGBM's ``init_score``/CatBoost's ``baseline`` but as a probability for XGBoost's
+  ``base_score``, and neither LightGBM nor CatBoost persist that offset into the saved model, so
+  ``predict_proba`` now adds it back manually before converting to a probability.
 
 `0.11.1`_ (08-05-2026)
 ======================

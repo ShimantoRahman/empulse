@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal, Self, TypeVar, overload
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.special import expit
+from scipy.special import expit, logit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted, validate_data
@@ -35,7 +35,13 @@ from ..csclassifier import CostSensitiveClassifier
 # which is exactly 0 when p=0.5. A nudge of 1e-2 is large enough to produce a non-zero
 # hessian at initialization (kick-starting the optimizer) yet small enough not to meaningfully
 # bias the starting point away from 0.5.
-_BASE_SCORE = 0.5 + 1e-2
+#
+# XGBoost's `base_score` is a probability, but LightGBM's `init_score` and CatBoost's `baseline`
+# are raw (log-odds) scores - the same literal nudge does not mean "start at ~51% probability" in
+# both spaces (expit(0.51) != 0.51). Two separate constants keep the *actual* starting probability
+# consistent across backends.
+_BASE_SCORE_PROBA = 0.5 + 1e-2
+_BASE_SCORE_RAW = float(logit(_BASE_SCORE_PROBA))
 
 
 class LGBMObjective:
@@ -357,7 +363,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator_, XGBClassifier):
             self.estimator_.fit(X, y, **fit_params)
         elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
-            self.estimator_.fit(X, y, init_score=np.full(y.shape, _BASE_SCORE), **fit_params)
+            self.estimator_.fit(X, y, init_score=np.full(y.shape, _BASE_SCORE_RAW), **fit_params)
         elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
             indices = np.arange(X.shape[0])
             with warnings.catch_warnings():
@@ -371,7 +377,9 @@ class CSBoostClassifier(CostSensitiveClassifier):
                     message='Can\'t optimize method "evaluate" because self argument is used',
                     category=UserWarning,
                 )
-                self.estimator_.fit(X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE), **fit_params)
+                self.estimator_.fit(
+                    X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE_RAW), **fit_params
+                )
         else:
             raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
         return self
@@ -389,7 +397,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 '`pip install xgboost`'
             )
         objective = self._get_objective('xgboost', y, loss=loss, **loss_params)
-        self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE)
+        self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE_PROBA)
 
     def _initialize_custom_estimator(
         self,
@@ -399,7 +407,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
     ) -> None:
         if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator, XGBClassifier):
             objective = self._get_objective('xgboost', y=y, loss=loss, **loss_params)
-            self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE)
+            self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE_PROBA)
         elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator, LGBMClassifier):
             objective = self._get_objective('lightgbm', y=y, loss=loss, **loss_params)
             self.estimator_ = clone(self.estimator).set_params(objective=objective)
@@ -491,12 +499,22 @@ class CSBoostClassifier(CostSensitiveClassifier):
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
 
+        # LightGBM's `init_score` and CatBoost's `baseline` (both set to _BASE_SCORE_RAW in `_fit`)
+        # bias training gradients only - neither library persists them into the saved model, so the
+        # raw score returned by predict() must have that same offset added back manually before
+        # converting to a probability. XGBoost's `base_score` has no such issue: it is a genuine
+        # model parameter that base_score-aware predict_proba() already accounts for.
         if not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
-            y_proba: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
-            y_proba: FloatNDArray = expit(y_proba)
+            raw_score: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
+            y_proba: FloatNDArray = expit(raw_score + _BASE_SCORE_RAW)
             return np.column_stack([1 - y_proba, y_proba])
 
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X)  # type: ignore[no-redef]
+        if not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
+            raw_score = self.estimator_.predict(X, prediction_type='RawFormulaVal')
+            y_proba = expit(raw_score + _BASE_SCORE_RAW)
+            return np.column_stack([1 - y_proba, y_proba])
+
+        y_proba = self.estimator_.predict_proba(X)  # type: ignore[no-redef]
         return y_proba
 
 

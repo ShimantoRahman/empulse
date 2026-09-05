@@ -4,6 +4,7 @@ from unittest import mock
 import numpy as np
 import pytest
 import sympy
+from scipy.special import expit
 from sklearn.datasets import make_classification
 
 import empulse.models
@@ -19,6 +20,7 @@ from empulse.metrics import (
     mpc_score,
 )
 from empulse.models import CSBoostClassifier
+from empulse.models.cost_sensitive.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
 
 # Define the classifiers to test
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
@@ -235,3 +237,85 @@ def test_csboost_fit_does_not_mutate_callers_fit_params_dict(dataset):
     # Second call reuses the same (still-empty) dict and passes no sample_weight at all.
     model2.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params)
     assert shared_fit_params == {}
+
+
+class TestBaseScoreSpace:
+    """Regression tests for _BASE_SCORE meaning a probability for XGBoost but a raw score elsewhere.
+
+    XGBoost's `base_score` is documented as a probability; LightGBM's `init_score` and CatBoost's
+    `baseline` are raw (log-odds) scores. Using the same literal constant for all three meant
+    `expit(0.51) != 0.51` was silently ignored, and neither LightGBM nor CatBoost persist that
+    offset into the saved model, so `predict_proba` must add it back manually before `expit`.
+    """
+
+    def test_base_score_constants_are_logit_pairs(self):
+        """_BASE_SCORE_RAW must be the logit of _BASE_SCORE_PROBA, not the same literal value."""
+        assert _BASE_SCORE_RAW != _BASE_SCORE_PROBA
+        assert expit(_BASE_SCORE_RAW) == pytest.approx(_BASE_SCORE_PROBA)
+
+    def test_lightgbm_predict_proba_reconstructs_raw_offset(self, dataset):
+        """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
+
+        LightGBM does not persist `init_score` into the trained model, so the offset used at fit
+        time must be added back manually at predict time.
+        """
+        lightgbm = pytest.importorskip('lightgbm')
+        X, y, fn_cost, fp_cost = dataset
+        model = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=5, max_depth=2, verbosity=-1))
+        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
+        raw_score = model.estimator_.predict_proba(X, raw_score=True)
+        expected_proba = expit(raw_score + _BASE_SCORE_RAW)
+        actual_proba = model.predict_proba(X)[:, 1]
+
+        np.testing.assert_allclose(actual_proba, expected_proba)
+        # Regression guard: the old (buggy) reconstruction without the offset must NOT match.
+        assert not np.allclose(actual_proba, expit(raw_score))
+
+    def test_catboost_predict_proba_reconstructs_raw_offset(self, dataset):
+        """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
+
+        CatBoost does not persist `baseline` into the trained model either, and its predict/
+        predict_proba have no way to resupply it at predict time, so it must be reconstructed
+        manually from the raw formula value.
+        """
+        catboost = pytest.importorskip('catboost')
+        X, y, fn_cost, fp_cost = dataset
+        model = CSBoostClassifier(
+            estimator=catboost.CatBoostClassifier(n_estimators=5, max_depth=2, verbose=False, allow_writing_files=False)
+        )
+        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+
+        raw_score = model.estimator_.predict(X, prediction_type='RawFormulaVal')
+        expected_proba = expit(raw_score + _BASE_SCORE_RAW)
+        actual_proba = model.predict_proba(X)[:, 1]
+
+        np.testing.assert_allclose(actual_proba, expected_proba)
+        assert not np.allclose(actual_proba, expit(raw_score))
+
+    @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
+    def test_predict_proba_starts_near_intended_probability_with_minimal_learning(self, library, classifier_name):
+        """With a near-zero learning rate, every backend's baseline probability should be ~0.51.
+
+        This isolates the `_BASE_SCORE` initialization from each backend's own tree-growing
+        algorithm (which otherwise dominates a three-way comparison and makes it a noisy test):
+        with learning_rate effectively disabling any real tree contribution, predict_proba should
+        reflect (approximately) the shared starting probability, ~0.51, regardless of backend.
+        """
+        classifier_module = pytest.importorskip(library)
+        classifier_class = getattr(classifier_module, classifier_name)
+        X, y = make_classification(n_samples=100, random_state=0)
+
+        kwargs = {'n_estimators': 3, 'max_depth': 1}
+        if library == 'catboost':
+            kwargs.update(learning_rate=1e-6, verbose=False, allow_writing_files=False)
+        elif library == 'lightgbm':
+            kwargs.update(learning_rate=1e-6, verbosity=-1)
+        else:
+            kwargs.update(learning_rate=1e-6, verbosity=0)
+
+        model = CSBoostClassifier(estimator=classifier_class(**kwargs))
+        model.fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        mean_proba = model.predict_proba(X)[:, 1].mean()
+
+        assert mean_proba == pytest.approx(_BASE_SCORE_PROBA, abs=0.02)
