@@ -1,5 +1,4 @@
 import threading
-from collections.abc import Callable
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
@@ -18,6 +17,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, expected_cost_loss
 from ..csclassifier import CostSensitiveClassifier
+from ._ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
 
@@ -356,6 +356,12 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         else:
             self.base_estimator_ = clone(self.estimator)
 
+        if self.combination == 'weighted_voting' and not hasattr(self.base_estimator_, 'predict_proba'):
+            raise ValueError(
+                f'Weighted voting requires the base estimator to implement `predict_proba`, '
+                f'but {type(self.base_estimator_).__name__} does not.'
+            )
+
         with config_context(enable_metadata_routing=True):
             self.estimator_ = BaggingClassifier(
                 estimator=self.base_estimator_.set_fit_request(tp_cost=True, fp_cost=True, tn_cost=True, fn_cost=True),
@@ -489,31 +495,21 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     def _get_oob_weights(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> FloatNDArray:
         n_samples = y.shape[0]
-
-        estimator_weights = np.zeros(self.n_estimators, dtype=np.float64)
         weight_fn = self.loss if self.loss is not None else expected_cost_loss
 
+        raw_values = np.empty(self.n_estimators, dtype=np.float64)
         for i, estimator, samples, features in zip(
             range(self.n_estimators), self.estimators_, self.estimators_samples_, self.estimators_features_, strict=True
         ):
             # Create mask for OOB samples
             mask = ~indices_to_mask(samples, n_samples)
 
-            if hasattr(estimator, 'predict_proba'):
-                y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
-            else:
-                y_pred = estimator.predict((X[mask, :])[:, features])
-            estimator_weights[i] = weight_fn(y[mask], y_pred, **loss_params)
+            y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
+            oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
+            raw_values[i] = weight_fn(y[mask], y_pred, **oob_loss_params)
 
-        total_weight = estimator_weights.sum()
-        if total_weight == 0.0:
-            raise ValueError(
-                'All estimator OOB weights are zero. This can happen with highly imbalanced data '
-                'or a degenerate metric. Cannot normalize weights for weighted voting.'
-            )
-        estimator_weights /= total_weight
-
-        return estimator_weights
+        weights: FloatNDArray = goodness_weights(raw_values, weight_fn.direction)
+        return weights
 
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:
         X = validate_data(self, X, reset=False)
@@ -526,21 +522,10 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         all_proba = np.zeros((X.shape[0], n_classes), dtype=np.float64)
         lock = threading.Lock()
         Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
-            delayed(_accumulate_weighted_prediction_non_tree)(e.predict_proba, X, all_proba, weight, lock)
-            for e, weight in zip(self.estimators_, self.estimator_weights_, strict=True)
+            delayed(accumulate_weighted_prediction)(e.predict_proba, X[:, features], all_proba, weight, lock)
+            for e, features, weight in zip(
+                self.estimators_, self.estimators_features_, self.estimator_weights_, strict=True
+            )
         )
 
         return all_proba
-
-
-def _accumulate_weighted_prediction_non_tree(
-    predict: Callable[[FloatNDArray], FloatNDArray],
-    X: FloatNDArray,
-    out: FloatNDArray,
-    weight: float,
-    lock: threading.Lock,
-) -> None:
-    """Calculate the weighted prediction."""
-    prediction = predict(X)
-    with lock:
-        out += prediction * weight  # type: ignore[misc]

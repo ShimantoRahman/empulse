@@ -1,6 +1,6 @@
 import threading
 from collections.abc import Callable
-from numbers import Integral, Real
+from functools import partial
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
@@ -16,6 +16,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, expected_cost_loss
 from ..csclassifier import CostSensitiveClassifier
+from ._ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
 
 RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()
@@ -670,22 +671,10 @@ class CSForestClassifier(CostSensitiveClassifier):
         X = X.astype(np.float32)
 
         n_samples = y.shape[0]
-        estimator_weights = np.zeros(self.n_estimators, dtype=np.float64)
-
-        if self.max_samples is None:
-            n_samples_bootstrap = n_samples
-
-        if isinstance(self.max_samples, Integral):
-            if self.max_samples > n_samples:
-                msg = '`max_samples` must be <= n_samples={} but got value {}'
-                raise ValueError(msg.format(n_samples, self.max_samples))
-            n_samples_bootstrap = self.max_samples
-
-        if isinstance(self.max_samples, Real):
-            n_samples_bootstrap = max(round(n_samples * self.max_samples), 1)
-
+        n_samples_bootstrap = self.estimator_._n_samples_bootstrap
         weight_fn = self.loss if isinstance(self.loss, BaseMetric) else expected_cost_loss
 
+        raw_values = np.empty(self.n_estimators, dtype=np.float64)
         for i, estimator in enumerate(self.estimators_):
             unsampled_indices = _generate_unsampled_indices(
                 estimator.random_state,
@@ -694,11 +683,11 @@ class CSForestClassifier(CostSensitiveClassifier):
             )
 
             y_pred = self.estimator_._get_oob_predictions(estimator, X[unsampled_indices, :])
-            estimator_weights[i] += weight_fn(y[unsampled_indices], y_pred[:, 1, 0], **kwargs)
+            oob_kwargs = subset_loss_params(kwargs, unsampled_indices, n_samples)
+            raw_values[i] = weight_fn(y[unsampled_indices], y_pred[:, 1, 0], **oob_kwargs)
 
-        estimator_weights /= estimator_weights.sum()
-
-        return estimator_weights
+        weights: FloatNDArray = goodness_weights(raw_values, weight_fn.direction)
+        return weights
 
     def _predict_weighted_proba(self, X: FloatArrayLike) -> FloatNDArray:
         X: FloatNDArray = self.estimator_._validate_X_predict(X)
@@ -710,7 +699,9 @@ class CSForestClassifier(CostSensitiveClassifier):
         all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)  # type: ignore[arg-type, type-var]
         lock = threading.Lock()
         Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
-            delayed(_accumulate_weighted_prediction)(e.predict_proba, X, all_proba, weight, lock)
+            delayed(accumulate_weighted_prediction)(
+                partial(e.predict_proba, check_input=False), X, all_proba, weight, lock
+            )
             for e, weight in zip(self.estimators_, self.estimator_weights_, strict=True)
         )
 
@@ -734,16 +725,3 @@ def _generate_sample_indices(random_state: int, n_samples: int, n_samples_bootst
     sample_indices: IntNDArray = random_instance.randint(0, n_samples, n_samples_bootstrap, dtype=np.int32)
 
     return sample_indices
-
-
-def _accumulate_weighted_prediction(
-    predict: Callable[..., FloatNDArray],
-    X: FloatArrayLike,
-    out: FloatNDArray,
-    weight: float,
-    lock: threading.Lock,
-) -> None:
-    """Calculate the weighted prediction."""
-    prediction = predict(X, check_input=False)
-    with lock:
-        out += prediction * weight  # type: ignore[misc]

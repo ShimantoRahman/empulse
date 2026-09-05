@@ -114,7 +114,17 @@
   fit of the base estimator instead - and, if any of the metric's own parameter names happened to
   be passed, forwarded them straight into the base estimator's ``fit()``, which doesn't recognize
   them, raising a ``TypeError``. The same fix also stops an unrelated extra keyword argument (e.g.
-  a routed ``sample_weight``) from disabling cost-sensitive fitting.
+  a routed ``sample_weight``) from disabling cost-sensitive fitting.zzzzzz dd
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` with ``combination='weighted_voting'`` no
+  longer raises a shape error when a sub-estimator draws a feature subset (``max_features < 1.0``
+  or ``bootstrap_features=True``).
+- |Fix| :class:`~empulse.models.CSForestClassifier` with ``combination='weighted_voting'`` no
+  longer produces ``NaN`` out-of-bag estimator weights when ``max_samples`` is an ``int``.
+  ``numbers.Integral`` is a subclass of ``numbers.Real``.
+- |Fix| Out-of-bag weighted voting (:class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier` with ``combination='weighted_voting'``) no longer
+  gives *more* weight to *worse* estimators, and no longer raises when instance-dependent
+  (array-like) costs are used together with weighted voting.
 
 `0.11.1`_ (08-05-2026)
 ======================
