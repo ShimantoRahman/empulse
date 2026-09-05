@@ -120,12 +120,10 @@ class ScipyOptimizer(Optimizer):
     options : dict or None, default=None
         Extra entries merged into the ``options`` dict passed to scipy.
         ``maxiter`` is always set from *max_iter* but can be overridden here.
-    bounds : sequence of (min, max) pairs, optional
-        Bounds for each variable.  Applied only when the chosen method
-        supports bounds.
     **scipy_kwargs
         Additional keyword arguments forwarded verbatim to
-        :func:`scipy.optimize.minimize`.
+        :func:`scipy.optimize.minimize`, e.g. ``bounds=[(min, max), ...]`` for methods that
+        support bounds.
 
     Examples
     --------

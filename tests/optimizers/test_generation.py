@@ -3,7 +3,7 @@ from itertools import islice
 import numpy as np
 import pytest
 
-from empulse.optimizers import Generation
+from empulse.optimizers import Generation, LamarckianGeneration
 
 
 @pytest.fixture
@@ -118,6 +118,7 @@ def test_rga_generate_population(generation):
     generation.upper_bounds = np.array([10, 10])
     generation.delta_bounds = np.array([20, 20])
     generation.n_dim = 2
+    generation._pop_size_ = generation.population_size
     generation.population = generation._generate_population()
     assert generation.population.shape == (10, 2)
     assert np.all(generation.population >= -10) and np.all(generation.population <= 10)
@@ -137,3 +138,63 @@ def test_rga_fitness_calculation(generation):
     # Check if fitness is calculated correctly
     for fitness_val, x in zip(generation.fitness, generation.population, strict=False):
         assert fitness_val == pytest.approx(objective(x))
+
+
+class TestPopulationSizeResolution:
+    """`population_size=None` is resolved from `n_dim` each `optimize()` call rather than being
+    cached by mutating the constructor argument, so reusing an instance on a different-dimensional
+    problem doesn't silently keep a stale population size.
+    """
+
+    def test_constructor_argument_is_not_mutated(self):
+        def objective(x):
+            return -np.sum(x**2)
+
+        gen = Generation(population_size=None, random_state=0)
+        assert gen.population_size is None
+        for _ in islice(gen.optimize(objective, [(-1, 1)] * 3), 2):
+            pass
+        assert gen.population_size is None
+
+    def test_second_optimize_call_re_resolves_for_new_dimensionality(self):
+        def objective(x):
+            return -np.sum(x**2)
+
+        gen = Generation(population_size=None, random_state=0)
+        for _ in islice(gen.optimize(objective, [(-1, 1)] * 2), 2):
+            pass
+        assert gen.population.shape == (20, 2)
+
+        for _ in islice(gen.optimize(objective, [(-1, 1)] * 5), 2):
+            pass
+        assert gen.population.shape == (50, 5)
+
+
+class TestLamarckianGenerationRequiresGradObjective:
+    """`grad_objective` is a required constructor argument rather than a private attribute the
+    caller must remember to assign onto the instance after construction.
+    """
+
+    def test_missing_grad_objective_raises_type_error(self):
+        with pytest.raises(TypeError):
+            LamarckianGeneration(population_size=10, random_state=0)  # type: ignore[call-arg]
+
+    def test_accepts_grad_objective_as_constructor_argument(self):
+        class _DummyGradObjective:
+            def logit_gradient_steps(self):
+                theta = yield
+                while True:
+                    theta = yield np.zeros_like(theta)
+
+        gen = LamarckianGeneration(grad_objective=_DummyGradObjective(), population_size=10, random_state=0)
+        assert gen._grad_objective is not None
+
+    def test_invalid_local_search_optimizer_raises(self):
+        class _DummyGradObjective:
+            def logit_gradient_steps(self):
+                theta = yield
+                while True:
+                    theta = yield np.zeros_like(theta)
+
+        with pytest.raises(ValueError, match="'adam' or 'sgd'"):
+            LamarckianGeneration(grad_objective=_DummyGradObjective(), optimizer='invalid')

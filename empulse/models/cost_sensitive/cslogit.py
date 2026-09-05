@@ -69,7 +69,7 @@ class CSLogitClassifier(BaseLogitClassifier):
     fit_intercept : bool, default=True
         Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
 
-    soft_threshold : bool, default=False
+    soft_threshold : bool, default=True
         If ``True``, apply soft-thresholding to the regression coefficients.
 
     l1_ratio : float, default=1.0

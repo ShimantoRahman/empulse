@@ -174,8 +174,8 @@ class MemeticOptimizer(Optimizer):
 
     Parameters
     ----------
-    bounds : float, default=10.0
-        Symmetric search-space half-width: each coefficient is initialised in ``[-bounds, +bounds]``.
+    bounds : tuple of (float, float), default=(-10.0, 10.0)
+        Symmetric lower and upper bounds applied to every coefficient.
     population_size : int, default=50
         Number of individuals in the population.
     max_iter : int, default=100
@@ -208,7 +208,7 @@ class MemeticOptimizer(Optimizer):
 
     def __init__(
         self,
-        bounds: float = 10.0,
+        bounds: tuple[float | int, float | int] = (-10.0, 10.0),
         population_size: int = 50,
         max_iter: int = 100,
         patience: int = 20,
@@ -225,6 +225,8 @@ class MemeticOptimizer(Optimizer):
         grad_clip: float = 5.0,
         random_state: int = 42,
     ):
+        if optimizer not in {'adam', 'sgd'}:
+            raise ValueError(f"`optimizer` must be 'adam' or 'sgd', got {optimizer!r}.")
         self.bounds = bounds
         self.population_size = population_size
         self.max_iter = max_iter
@@ -250,6 +252,7 @@ class MemeticOptimizer(Optimizer):
     ) -> OptimizeResult:
         """Run the Lamarckian GA with the given objective function."""
         gen = LamarckianGeneration(
+            grad_objective=objective,
             population_size=self.population_size,
             crossover_rate=self.crossover_rate,
             mutation_rate=self.mutation_rate,
@@ -264,10 +267,8 @@ class MemeticOptimizer(Optimizer):
             random_state=self.random_state,
             n_jobs=1,  # avoid nested parallelism when run inside joblib Parallel
         )
-        # Wire up the gradient objective so the local search can call gradient_steps()
-        gen._grad_objective = objective
 
-        bounds_list = [(-self.bounds, self.bounds)] * X.shape[1]
+        bounds_list = [self.bounds] * X.shape[1]
 
         # Generation.optimize() always maximizes; objective.logit_loss is a loss for
         # minimization. Adapt once here rather than handing a minimization loss to a maximizer.

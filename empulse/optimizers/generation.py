@@ -68,8 +68,8 @@ class Generation:
         Current population.
 
     population_size : int or None
-        Number of individuals in the population.
-        If ``None``, population size is set to ``10 * n_features``.
+        The *population_size* constructor argument, unchanged by :meth:`optimize`. ``None`` means
+        the actual size used each run is resolved from ``10 * n_features`` and kept internally.
 
     crossover_rate : float
         Probability of crossover.
@@ -78,7 +78,13 @@ class Generation:
         Probability of mutation.
 
     elitism : int
-        The number of individuals of the population that are transferred to the next generation without change.
+        The number of individuals of the population that are transferred to the next generation
+        without change. Set to ``0`` until :meth:`optimize` resolves it from *elitism_fraction*
+        once the population size is known.
+
+    elitism_fraction : float
+        The *elitism* constructor argument, stored under its own name since *elitism* itself is
+        repurposed as the resolved individual count above.
 
     verbose : bool
         If ``True``, print status messages.
@@ -169,6 +175,7 @@ class Generation:
         self.n_jobs = n_jobs
 
         # Attributes
+        self._pop_size_: int | None = None
         self._n_mating_pairs: int | None = None
         self.elite_pool: list[tuple[NDArray[np.float64], np.float64]] = []  # individual, fitness
         self.fx_best: list[np.float64] = []
@@ -223,13 +230,17 @@ class Generation:
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
-        # Resolve population size now that n_dim is known.
-        if self.population_size is None:
-            self.population_size = self.n_dim * FEATURE_TO_POP_SIZE_RATIO
+        # Resolve population size now that n_dim is known. Stored separately from
+        # `population_size` (left untouched at whatever the constructor received) so a second
+        # `optimize()` call on a different-dimensional problem re-resolves it instead of reusing
+        # a stale size from the first call.
+        self._pop_size_ = (
+            self.population_size if self.population_size is not None else self.n_dim * FEATURE_TO_POP_SIZE_RATIO
+        )
 
-        self.elitism = int(max(1, round(self.population_size * self.elitism_fraction)))
-        self._n_mating_pairs = self.population_size // 2
-        self.fitness = np.full(self.population_size, np.nan)
+        self.elitism = int(max(1, round(self._pop_size * self.elitism_fraction)))
+        self._n_mating_pairs = self._pop_size // 2
+        self.fitness = np.full(self._pop_size, np.nan)
 
         self.population = self._generate_population()
         self._evaluate(objective)
@@ -393,8 +404,8 @@ class Generation:
 
     @property
     def _pop_size(self) -> int:
-        """population_size as int — valid only after optimize() has been called."""
-        return cast('int', self.population_size)
+        """Resolved population size as int — valid only after optimize() has been called."""
+        return cast('int', self._pop_size_)
 
     @property
     def _n_pairs(self) -> int:
@@ -441,12 +452,16 @@ class LamarckianGeneration(Generation):
         Ignored when ``optimizer="sgd"``.
     grad_clip : float, default=5.0
         Gradient clipping threshold applied element-wise before the update.
+    grad_objective : LogitObjective
+        Objective providing the gradient steps for the local search
+        (:meth:`~empulse.metrics.LogitObjective.logit_gradient_steps`).
     **kwargs
         Forwarded to :class:`Generation`.
     """
 
     def __init__(
         self,
+        grad_objective: 'LogitObjective',
         local_steps: int = 5,
         lr: float = 0.05,
         optimizer: str = 'adam',
@@ -466,7 +481,7 @@ class LamarckianGeneration(Generation):
         self.beta2 = beta2
         self.eps = eps
         self.grad_clip = grad_clip
-        self._grad_objective: LogitObjective | None = None
+        self._grad_objective = grad_objective
 
     def _local_search(self, theta: NDArray[np.float64]) -> NDArray[np.float64]:
         """Run ``local_steps`` gradient steps on *theta*.
@@ -476,11 +491,6 @@ class LamarckianGeneration(Generation):
         update rule is selected by ``self.optimizer``.  After the local search
         the result is clipped to the search bounds.
         """
-        if self._grad_objective is None:
-            raise RuntimeError(
-                '_grad_objective must be set before calling optimize(). '
-                'Assign a LogitObjective instance to gen._grad_objective first.'
-            )
         theta = theta.copy()
 
         # Adam moment buffers (only used when optimizer == "adam")
@@ -514,7 +524,6 @@ class LamarckianGeneration(Generation):
         """
         for ix in range(self._pop_size):
             if np.isnan(self.fitness[ix]):
-                if self._grad_objective is not None:
-                    self.population[ix] = self._local_search(self.population[ix])
+                self.population[ix] = self._local_search(self.population[ix])
                 self.fitness[ix] = float(objective(self.population[ix]))
                 self.result.nfev += 1  # type: ignore[attr-defined]

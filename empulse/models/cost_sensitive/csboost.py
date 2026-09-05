@@ -156,7 +156,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
     loss : :class:`empulse.metrics.BaseMetric`, default=None
         Loss function to optimize. Loss parameters are passed as ``loss_params``
-          to the :Meth:`~empulse.models.CSBoostClassifier.fit` method.
+          to the :meth:`~empulse.models.CSBoostClassifier.fit` method.
 
     Attributes
     ----------

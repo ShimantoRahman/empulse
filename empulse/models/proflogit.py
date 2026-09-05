@@ -36,10 +36,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -58,7 +58,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Loss function to optimize.
 
         If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
-        to the :Meth:`~empulse.models.ProfLogitClassifier.fit` method.
+        to the :meth:`~empulse.models.ProfLogitClassifier.fit` method.
 
         If ``None``, the loss is set to the Maximum Profit score.
 
@@ -69,7 +69,7 @@ class ProfLogitClassifier(BaseLogitClassifier):
     fit_intercept : bool, default=True
         Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
 
-    soft_threshold : bool, default=False
+    soft_threshold : bool, default=True
         If ``True``, apply soft-thresholding to the regression coefficients.
 
     l1_ratio : float, default=1.0

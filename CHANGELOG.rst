@@ -134,6 +134,8 @@
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
   no longer mutate a user-supplied ``calibrator`` estimator instance in place; a clone is
   configured and fitted instead, so the constructor argument is safe to reuse or refit.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  documented ``soft_threshold`` as defaulting to ``False``; the actual default is ``True``.
 
 `0.11.1`_ (08-05-2026)
 ======================

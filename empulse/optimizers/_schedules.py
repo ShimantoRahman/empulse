@@ -129,7 +129,7 @@ class ExponentialSchedule(Schedule):
 
     .. math::
 
-        v_t = \\max\\bigl(v_{\\min},\\; v_0 \\cdot \\gamma^t\\bigr)
+        v_t = \max\bigl(v_{\min},\; v_0 \cdot \gamma^t\bigr)
 
     Parameters
     ----------
@@ -172,7 +172,7 @@ class StepSchedule(Schedule):
 
     .. math::
 
-        v_t = \\max\\bigl(v_{\\min},\\; v_0 \\cdot \\gamma^{\\lfloor t / s \\rfloor}\\bigr)
+        v_t = \max\bigl(v_{\min},\; v_0 \cdot \gamma^{\lfloor t / s \rfloor}\bigr)
 
     Parameters
     ----------
@@ -221,8 +221,8 @@ class CosineAnnealingSchedule(Schedule):
 
     .. math::
 
-        v_t = v_{\\min} + \\tfrac{1}{2}(v_{\\max} - v_{\\min})
-              \\bigl(1 + \\cos(\\pi\\, t / T_{\\max})\\bigr)
+        v_t = v_{\min} + \tfrac{1}{2}(v_{\max} - v_{\min})
+              \bigl(1 + \cos(\pi\, t / T_{\max})\bigr)
 
     When ``cycle=True`` the schedule restarts after *t_max* epochs.
 
@@ -273,10 +273,12 @@ class CosineAnnealingSchedule(Schedule):
 class WarmupSchedule(Schedule):
     """Linear warm-up for *warmup_steps* epochs, then delegates to *after_schedule*.
 
-    During warm-up the value increases linearly from 0 to the value returned
-    by *after_schedule* at epoch 0.  After the warm-up period,
-    *after_schedule* is called with the *shifted* epoch
-    (so epoch ``warmup_steps`` maps to ``after_schedule(0)``).
+    Let ``target = after_schedule(0)``. During warm-up (epochs ``0`` to ``warmup_steps - 1``),
+    the value increases linearly from ``target / warmup_steps`` at epoch 0 to the full *target*
+    at epoch ``warmup_steps - 1``. From epoch ``warmup_steps`` onward, *after_schedule* is called
+    with the *shifted* epoch (``epoch - warmup_steps``), so epoch ``warmup_steps`` itself also maps
+    to ``after_schedule(0)`` - the same value the warm-up just reached, so the schedule holds
+    steady across the boundary rather than jumping.
 
     Parameters
     ----------
