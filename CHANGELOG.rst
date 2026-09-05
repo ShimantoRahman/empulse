@@ -117,8 +117,8 @@
   :class:`~empulse.models.CSBaggingClassifier` with ``combination='weighted_voting'``) no longer
   gives *more* weight to *worse* estimators, and no longer raises when instance-dependent
   (array-like) costs are used together with weighted voting.
-- |Fix| :class:`~empulse.models.CSTreeClassifier` no longer raises when fitted with a
-  metric strategy containing a stochastic (``sympy.stats``) variable.
+- |Fix| :class:`~empulse.models.CSTreeClassifier` and  :class:`~empulse.models.CSForestClassifier`
+  no longer raises when fitted with a metric strategy containing a stochastic (``sympy.stats``) variable.
 - |Fix| :class:`~empulse.models.CSBoostClassifier` no longer mutates a caller-supplied
   ``fit_params`` dict in place.
 - |Fix| :class:`~empulse.models.CSTreeClassifier` no longer mutates a user-supplied custom
@@ -128,6 +128,9 @@
   score for LightGBM's ``init_score``/CatBoost's ``baseline`` but as a probability for XGBoost's
   ``base_score``, and neither LightGBM nor CatBoost persist that offset into the saved model, so
   ``predict_proba`` now adds it back manually before converting to a probability.
+- |Fix| :class:`~empulse.models.BiasRelabelingClassifier`, :class:`~empulse.models.BiasResamplingClassifier`,
+  and :class:`~empulse.models.BiasReweighingClassifier` now raise a clear ``ValueError`` when
+  ``sensitive_feature`` does not have the same length as ``y``, instead of silently proceeding.
 
 `0.11.1`_ (08-05-2026)
 ======================

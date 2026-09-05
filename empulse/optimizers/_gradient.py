@@ -40,7 +40,7 @@ class _IterativeGradientOptimizer(Optimizer):
     Convergence is declared when *either* condition holds:
 
     * ``||gradient||_inf < tolerance``, or
-    * the absolute loss improvement over the last ``patience`` iterations is
+    * the loss range (max - min) over the last ``patience`` iterations is
       below ``tolerance``.
     """
 
@@ -129,6 +129,12 @@ class _IterativeGradientOptimizer(Optimizer):
         gradient: FloatNDArray = np.zeros_like(weights)
         nfev = 0
 
+        # Best-so-far iterate: the loss surface (particularly MaxProfit's) can be rugged and
+        # non-convex, so the last iterate visited is not necessarily the best one.
+        best_loss = np.inf
+        best_weights = weights.copy()
+        best_gradient = gradient.copy()
+
         for t in range(1, self.max_iter + 1):
             # Apply alpha schedule (no-op if objective doesn't support it)
             if self.alpha_schedule is not None and hasattr(objective, 'set_alpha'):
@@ -148,12 +154,17 @@ class _IterativeGradientOptimizer(Optimizer):
             nfev += 1
             loss_history.append(float(loss))
 
+            if loss < best_loss:
+                best_loss = loss
+                best_weights = weights.copy()
+                best_gradient = gradient.copy()
+
             # Gradient-norm convergence
             if float(np.max(np.abs(gradient))) < self.tolerance:
                 return _make_result(
-                    weights,
-                    loss,
-                    gradient,
+                    best_weights,
+                    best_loss,
+                    best_gradient,
                     nit=t,
                     nfev=nfev,
                     success=True,
@@ -161,14 +172,16 @@ class _IterativeGradientOptimizer(Optimizer):
                     status=0,
                 )
 
-            # Loss-plateau convergence (patience window)
+            # Loss-plateau convergence (patience window): compare the window's range, not just
+            # its endpoints, so an objective that oscillates back to its starting value isn't
+            # mistaken for having converged.
             if len(loss_history) > self.patience:
                 window = loss_history[-self.patience - 1 :]
-                if abs(window[0] - window[-1]) < self.tolerance:
+                if (max(window) - min(window)) < self.tolerance:
                     return _make_result(
-                        weights,
-                        loss,
-                        gradient,
+                        best_weights,
+                        best_loss,
+                        best_gradient,
                         nit=t,
                         nfev=nfev,
                         success=True,
@@ -179,9 +192,9 @@ class _IterativeGradientOptimizer(Optimizer):
             weights, state = self._step(weights, gradient, state, t, effective_lr)
 
         return _make_result(
-            weights,
-            loss,
-            gradient,
+            best_weights,
+            best_loss,
+            best_gradient,
             nit=self.max_iter,
             nfev=nfev,
             success=False,

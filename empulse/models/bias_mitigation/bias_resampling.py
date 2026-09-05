@@ -1,20 +1,13 @@
-from collections.abc import Callable
-from typing import Any, ClassVar, Self
+from typing import Any
 
-import numpy as np
-from numpy.typing import ArrayLike, NDArray
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
-from sklearn.utils import Tags
-from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.base import clone
 
-from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ..._types import FloatNDArray, IntNDArray
 from ...samplers import BiasResampler
-from ...samplers._strategies import Strategy, StrategyFn
+from ._base import BaseBiasMitigationClassifier
 
 
-class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BiasResamplingClassifier(BaseBiasMitigationClassifier):
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
 
@@ -143,108 +136,9 @@ class BiasResamplingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _parameter_constraints: ClassVar[ParameterConstraint] = {
-        'estimator': [HasMethods(['fit', 'predict_proba']), None],
-        'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
-        'transform_feature': [callable, None],
-    }
-
-    def __init__(
-        self,
-        estimator: Any,
-        *,
-        strategy: StrategyFn | Strategy = 'statistical parity',
-        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
-    ):
-        self.estimator = estimator
-        self.strategy = strategy
-        self.transform_feature = transform_feature
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
-
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any) -> Self:
-        """
-        Fit the estimator and resample the instances according to the strategy.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Training data.
-        y : 1D array-like, shape=(n_samples,)
-            Target values.
-        sensitive_feature : 1D array-like, shape=(n_samples,), default = None
-            Sensitive feature used to determine the group weights.
-        fit_params : dict
-            Additional parameters passed to the estimator's `fit` method.
-
-        Returns
-        -------
-        self : BiasResamplingClassifier
-        """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-        if sensitive_feature is None:
-            self.estimator_ = clone(self.estimator)
-            self.estimator_.fit(X, y, **fit_params)
-            return self
-        sensitive_feature = np.asarray(sensitive_feature)
-
+    def _fit_mitigated(self, X: FloatNDArray, y: IntNDArray, sensitive_feature: IntNDArray, **fit_params: Any) -> Any:
         sampler = BiasResampler(strategy=self.strategy, transform_feature=self.transform_feature)
         X, y = sampler.fit_resample(X, y, sensitive_feature=sensitive_feature)
-        self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X, y, **fit_params)
-
-        return self
-
-    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
-        """
-        Predict class probabilities for X.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
-            Predicted class probabilities.
-        """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
-        return y_proba
-
-    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
-        """
-        Predict class labels for X.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-
-        Returns
-        -------
-        y_pred : 1D numpy.ndarray, shape=(n_samples,)
-            Predicted class labels.
-        """
-        y_proba = self.predict_proba(X)
-        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
-        return y_pred
+        estimator_ = clone(self.estimator)
+        estimator_.fit(X, y, **fit_params)
+        return estimator_

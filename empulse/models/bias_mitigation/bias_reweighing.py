@@ -1,17 +1,12 @@
-from collections.abc import Callable
 from itertools import product
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
-from sklearn.utils import Tags
-from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.base import clone
 
-from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...samplers._strategies import Strategy, StrategyFn, _independent_weights
+from ..._types import FloatNDArray, IntNDArray
+from ...samplers._strategies import StrategyFn, _independent_weights
+from ._base import BaseBiasMitigationClassifier
 
 
 def _to_sample_weights(
@@ -33,7 +28,7 @@ def _independent_sample_weights(y_true: FloatNDArray, sensitive_feature: IntNDAr
     return _to_sample_weights(group_weights, y_true, sensitive_feature)
 
 
-class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BiasReweighingClassifier(BaseBiasMitigationClassifier):
     """
     Classifier which reweighs instances during training to remove bias against a subgroup.
 
@@ -150,118 +145,18 @@ class BiasReweighingClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[
            Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
-    _parameter_constraints: ClassVar[ParameterConstraint] = {
-        'estimator': [HasMethods(['fit', 'predict_proba']), None],
-        'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
-        'transform_feature': [callable, None],
-    }
-
-    strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
+    _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_sample_weights,
         'demographic parity': _independent_sample_weights,
     }
 
-    def __init__(
-        self,
-        estimator: Any,
-        *,
-        strategy: StrategyFn | Strategy = 'statistical parity',
-        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
-    ):
-        self.estimator = estimator
-        self.strategy = strategy
-        self.transform_feature = transform_feature
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
-
-    @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
-    def fit(self, X: ArrayLike, y: ArrayLike, *, sensitive_feature: ArrayLike | None = None, **fit_params: Any) -> Self:
-        """
-        Fit the estimator and reweigh the instances according to the strategy.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_features)
-        y : 1D array-like, shape=(n_samples,)
-        sensitive_feature : 1D array-like, shape=(n_samples,), default = None
-            Sensitive attribute used to determine the sample weights.
-        fit_params : dict
-            Additional parameters passed to the estimator's `fit` method.
-
-        Returns
-        -------
-        self : BiasReweighingClassifier
-        """
-        X, y = validate_data(self, X, y)
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
-        self.classes_ = np.unique(y)
-        if len(self.classes_) == 1:
-            raise ValueError("Classifier can't train when only one class is present.")
-
-        if sensitive_feature is None:
-            self.estimator_ = clone(self.estimator)
-            self.estimator_.fit(X, y, **fit_params)
-            return self
-        sensitive_feature = np.asarray(sensitive_feature)
-
-        strategy_fn = self.strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
+    def _fit_mitigated(self, X: FloatNDArray, y: IntNDArray, sensitive_feature: IntNDArray, **fit_params: Any) -> Any:
+        strategy_fn = self._strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
 
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)
 
         sample_weights = strategy_fn(y, sensitive_feature)
-        self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
-
-        return self
-
-    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
-        """
-        Predict class probabilities for X.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Features to predict.
-
-        Returns
-        -------
-        y_pred : 2D numpy.ndarray, shape=(n_samples, n_classes)
-            Predicted class probabilities.
-        """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X)
-        return y_proba
-
-    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
-        """
-        Predict class labels for X.
-
-        Parameters
-        ----------
-        X : 2D array-like, shape=(n_samples, n_dim)
-            Features to predict.
-
-        Returns
-        -------
-        y_pred : 1D numpy.ndarray, shape=(n_samples,)
-            Predicted class labels.
-        """
-        y_proba = self.predict_proba(X)
-        y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
-        return y_pred
+        estimator_ = clone(self.estimator)
+        estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
+        return estimator_

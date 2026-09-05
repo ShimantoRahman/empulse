@@ -4,7 +4,7 @@ from typing import Any, ClassVar, Self
 
 import numpy as np
 from sklearn.utils._param_validation import Interval, RealNotInt
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
@@ -275,95 +275,54 @@ class ProfTreeClassifier(CostSensitiveClassifier):
 
         self.tree_ = EvolutionaryTree()
         loss_ = self._get_metric_loss()
-        if loss_ is None:
-            tp_cost = loss_params.get('tp_cost', 0)
-            tn_cost = loss_params.get('tn_cost', 0)
-            fn_cost = loss_params.get('fn_cost', 0)
-            fp_cost = loss_params.get('fp_cost', 0)
-            self.tree_.fit_max_profit(
-                X=X.astype(np.float32),
-                y=y.astype(np.int32),
-                tp_benefit=-float(np.mean(tp_cost)),
-                tn_benefit=-float(np.mean(tn_cost)),
-                fp_cost=float(np.mean(fp_cost)),
-                fn_cost=float(np.mean(fn_cost)),
-                pop_size=int(population_size),
-                crossover_rate=float(crossover_rate),
-                grow_rate=float(grow_rate),
-                prune_rate=float(prune_rate),
-                mutate_split_rate=float(mutate_split_rate),
-                mutate_value_rate=float(mutate_value_rate),
-                max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
-                min_samples_split=int(min_samples_split),
-                min_samples_leaf=int(min_samples_leaf),
-                alpha=float(self.alpha),
-                max_generations=int(self.max_iter),
-                patience=int(self.patience),
-                tol=float(self.tolerance),
-                random_state=random_state,
-            )
-        elif isinstance(loss_, BaseMetric):
-            if isinstance(loss_.strategy, MaxProfit) and loss_._is_deterministic:
-                fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(**loss_params)
-                tp_benefit = -float(np.mean(tp_cost))
-                tn_benefit = -float(np.mean(tn_cost))
-                fp_cost = float(np.mean(fp_cost))
-                fn_cost = float(np.mean(fn_cost))
-                self.tree_.fit_max_profit(
-                    X=X.astype(np.float32),
-                    y=y.astype(np.int32),
-                    tp_benefit=tp_benefit,
-                    tn_benefit=tn_benefit,
-                    fp_cost=fp_cost,
-                    fn_cost=fn_cost,
-                    pop_size=int(population_size),
-                    crossover_rate=float(crossover_rate),
-                    grow_rate=float(grow_rate),
-                    prune_rate=float(prune_rate),
-                    mutate_split_rate=float(mutate_split_rate),
-                    mutate_value_rate=float(mutate_value_rate),
-                    max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
-                    min_samples_split=int(min_samples_split),
-                    min_samples_leaf=int(min_samples_leaf),
-                    alpha=float(self.alpha),
-                    max_generations=int(self.max_iter),
-                    patience=int(self.patience),
-                    tol=float(self.tolerance),
-                    random_state=random_state,
-                )
-            else:
-                if loss_.direction is Direction.MAXIMIZE:
-                    fitness_fn = lambda *args, **kwargs: -loss_(*args, **kwargs)
-                else:
-                    fitness_fn = loss_
-                fitness_fn = partial(fitness_fn, **loss_params)
-
-                y_proba = np.random.default_rng().random(y.size, dtype=np.float32)
-                try:  # catch issue with the loss function before it goes into C world
-                    fitness_fn(y.astype(np.int32), y_proba)
-                except (TypeError, ValueError) as e:
-                    raise ValueError(f'The loss function {loss_} threw an error when evaluating the function.') from e
-                self.tree_.fit_custom(
-                    X=X.astype(np.float32),
-                    y=y.astype(np.int32),
-                    pop_size=int(population_size),
-                    crossover_rate=float(crossover_rate),
-                    grow_rate=float(grow_rate),
-                    prune_rate=float(prune_rate),
-                    mutate_split_rate=float(mutate_split_rate),
-                    mutate_value_rate=float(mutate_value_rate),
-                    max_depth=int(self.max_depth) if self.max_depth is not None else MAX_INT,
-                    min_samples_split=int(min_samples_split),
-                    min_samples_leaf=int(min_samples_leaf),
-                    alpha=float(self.alpha),
-                    max_generations=int(self.max_iter),
-                    patience=int(self.patience),
-                    tol=float(self.tolerance),
-                    fitness_function=fitness_fn,
-                    random_state=random_state,
-                )
-        else:
+        if loss_ is not None and not isinstance(loss_, BaseMetric):
             raise ValueError(f'Unknown loss function: {loss_}.')
+
+        common_kwargs: dict[str, Any] = {
+            'X': X.astype(np.float32),
+            'y': y.astype(np.int32),
+            'pop_size': int(population_size),
+            'crossover_rate': float(crossover_rate),
+            'grow_rate': float(grow_rate),
+            'prune_rate': float(prune_rate),
+            'mutate_split_rate': float(mutate_split_rate),
+            'mutate_value_rate': float(mutate_value_rate),
+            'max_depth': int(self.max_depth) if self.max_depth is not None else MAX_INT,
+            'min_samples_split': int(min_samples_split),
+            'min_samples_leaf': int(min_samples_leaf),
+            'alpha': float(self.alpha),
+            'max_generations': int(self.max_iter),
+            'patience': int(self.patience),
+            'tol': float(self.tolerance),
+            'random_state': random_state,
+        }
+
+        # `_prepare_class_costs` supports exactly the two cases handled by `fit_max_profit`
+        # (no custom loss, or a deterministic MaxProfit metric); a stochastic MaxProfit metric or
+        # any other strategy needs the full custom fitness-function path instead.
+        use_fit_max_profit = loss_ is None or (isinstance(loss_.strategy, MaxProfit) and loss_._is_deterministic)
+
+        if use_fit_max_profit:
+            tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)
+            self.tree_.fit_max_profit(
+                **common_kwargs, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+            )
+        else:
+            # `use_fit_max_profit` is only False when `loss_ is None` is False, i.e. `loss_` is a
+            # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
+            assert loss_ is not None
+            if loss_.direction is Direction.MAXIMIZE:
+                fitness_fn = lambda *args, **kwargs: -loss_(*args, **kwargs)
+            else:
+                fitness_fn = loss_
+            fitness_fn = partial(fitness_fn, **loss_params)
+
+            y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
+            try:  # catch issue with the loss function before it goes into C world
+                fitness_fn(y.astype(np.int32), y_proba)
+            except (TypeError, ValueError) as e:
+                raise ValueError(f'The loss function {loss_} threw an error when evaluating the function.') from e
+            self.tree_.fit_custom(**common_kwargs, fitness_function=fitness_fn)
 
         self.n_iter_ = self.tree_.n_generations
 

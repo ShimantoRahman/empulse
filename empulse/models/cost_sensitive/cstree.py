@@ -12,7 +12,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
-from ._impurity import CostImpurity, EntropyCostImpurity, GiniCostImpurity
+from ._impurity import CostImpurity, build_cost_criterion
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
 TREE_PARAM_CONSTRAINTS.pop('criterion')
@@ -389,77 +389,12 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
 
         n_samples = X.shape[0]
-        for name, cost in zip(
-            ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'], [tp_cost, tn_cost, fn_cost, fp_cost], strict=True
-        ):
-            if isinstance(cost, np.ndarray) and cost.shape[0] != n_samples:
-                raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
-
-        min_cost = float('inf')
-        for cost in [tp_cost, tn_cost, fn_cost, fp_cost]:
-            if isinstance(cost, np.ndarray):
-                min_cost = min(min_cost, float(np.min(cost)))
-            else:
-                min_cost = min(min_cost, float(cost))
-
-        # Apply offset if minimum is negative (copy arrays to avoid mutation)
-        cost_offset = -min_cost if min_cost < 0 else 0.0
-        if cost_offset > 0:
-            tp_cost = tp_cost.copy() + cost_offset if isinstance(tp_cost, np.ndarray) else tp_cost + cost_offset
-            tn_cost = tn_cost.copy() + cost_offset if isinstance(tn_cost, np.ndarray) else tn_cost + cost_offset
-            fn_cost = fn_cost.copy() + cost_offset if isinstance(fn_cost, np.ndarray) else fn_cost + cost_offset
-            fp_cost = fp_cost.copy() + cost_offset if isinstance(fp_cost, np.ndarray) else fp_cost + cost_offset
-
-        if self.criterion == 'cost':
-            self.criterion_ = CostImpurity(
-                n_outputs=1,
-                n_classes=np.array([2], dtype=np.intp),
-            )
-        elif self.criterion == 'gini':
-            self.criterion_ = GiniCostImpurity(
-                n_outputs=1,
-                n_classes=np.array([2], dtype=np.intp),
-            )
-        elif self.criterion in {'entropy', 'log_loss'}:
-            self.criterion_ = EntropyCostImpurity(
-                n_outputs=1,
-                n_classes=np.array([2], dtype=np.intp),
-            )
-        elif isinstance(self.criterion, CostImpurity):
-            # Construct a fresh instance of the same type rather than reusing (or deep-copying)
-            # the user-supplied instance directly: `_fit` unconditionally overwrites all cost state
-            # via set_costs()/set_array_costs() below, so nothing on the passed-in instance needs
-            # to be preserved. Storing it directly would mutate an __init__ parameter, corrupting
-            # sklearn's clone()/get_params() contract (and any other estimator sharing the same
-            # instance); `copy.deepcopy` is not safe here either, since a CostImpurity's C-level
-            # cost buffers are uninitialized until set_array_costs() has been called at least once,
-            # and CostImpurity.__deepcopy__ dereferences them unconditionally.
-            self.criterion_ = type(self.criterion)(
-                n_outputs=1,
-                n_classes=np.array([2], dtype=np.intp),
-            )
-        else:
-            raise ValueError(f'Unknown criterion: {self.criterion}')
-
-        self.criterion_.set_costs(
-            tp_cost=tp_cost if not isinstance(tp_cost, np.ndarray) else 0.0,
-            tn_cost=tn_cost if not isinstance(tn_cost, np.ndarray) else 0.0,
-            fp_cost=fp_cost if not isinstance(fp_cost, np.ndarray) else 0.0,
-            fn_cost=fn_cost if not isinstance(fn_cost, np.ndarray) else 0.0,
-        )
-        self.criterion_.set_array_costs(
-            tp_cost=tp_cost.reshape(-1).astype(np.float64)
-            if isinstance(tp_cost, np.ndarray)
-            else np.array([], dtype=np.float64),
-            tn_cost=tn_cost.reshape(-1).astype(np.float64)
-            if isinstance(tn_cost, np.ndarray)
-            else np.array([], dtype=np.float64),
-            fp_cost=fp_cost.reshape(-1).astype(np.float64)
-            if isinstance(fp_cost, np.ndarray)
-            else np.array([], dtype=np.float64),
-            fn_cost=fn_cost.reshape(-1).astype(np.float64)
-            if isinstance(fn_cost, np.ndarray)
-            else np.array([], dtype=np.float64),
+        self.criterion_ = build_cost_criterion(
+            self.criterion,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
             n_samples=n_samples,
         )
 

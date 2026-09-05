@@ -139,3 +139,10 @@ def test_metadatarouting(X, y, sensitive_feature):
             pytest.fail('GridSearchCV is not fitted')
         assert isinstance(search.score(X, y), float)
         assert isinstance(search.predict(X), np.ndarray)
+
+
+def test_sensitive_feature_length_mismatch_raises(X, y, sensitive_feature):
+    """Regression test: a sensitive_feature of the wrong length used to be silently accepted."""
+    model = BiasRelabelingClassifier(estimator=LogisticRegression())
+    with pytest.raises(ValueError, match='sensitive_feature must have the same length as y'):
+        model.fit(X, y, sensitive_feature=sensitive_feature[:-1])

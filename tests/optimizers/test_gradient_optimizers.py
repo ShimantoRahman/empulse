@@ -121,6 +121,34 @@ class _AlphaTrackingObjective(_ShiftedQuadraticObjective):
         self.alphas_received.append(alpha)
 
 
+class _ScriptedObjective:
+    """Returns a pre-programmed sequence of losses, ignoring `weights` entirely.
+
+    Lets a test dictate the exact loss trajectory the optimizer sees, independent of any real
+    optimization dynamics - used to test best-so-far tracking and the loss-plateau convergence
+    check in isolation. The gradient is always a constant all-ones vector (never below a sane
+    tolerance), so gradient-norm convergence never fires and only the loss-plateau/max-iter exit
+    paths are exercised. Records the `weights` array passed in at each call for later comparison.
+    """
+
+    def __init__(self, losses: list[float], n_features: int = 1) -> None:
+        self.losses = losses
+        self.n_features = n_features
+        self.calls = 0
+        self.weights_seen: list[np.ndarray] = []
+
+    def logit_loss_gradient(self, weights: np.ndarray) -> tuple[float, np.ndarray]:
+        self.weights_seen.append(weights.copy())
+        idx = min(self.calls, len(self.losses) - 1)
+        loss = self.losses[idx]
+        self.calls += 1
+        gradient = np.ones(self.n_features)
+        return float(loss), gradient
+
+    def with_indices(self, indices: np.ndarray) -> '_ScriptedObjective':
+        return self
+
+
 def _make_X(n_samples: int = 20, n_features: int = 4) -> np.ndarray:
     """Reproducible random feature matrix."""
     return np.random.default_rng(0).standard_normal((n_samples, n_features))
@@ -642,3 +670,105 @@ class TestOptimizeResult:
         obj = _ShiftedQuadraticObjective(n_features=6)
         result = Adam(lr=0.05, max_iter=100)(obj, _make_X(n_features=6))
         assert result.x.shape == (6,)
+
+    def test_result_fun_and_jac_are_correct_on_max_iter_exit(self, X):
+        """Regression test: the max-iter exit path used to return fun/jac from BEFORE the last step.
+
+        `weights` is updated via `_step()` after `loss`/`gradient` are computed each iteration, so
+        the common (max-iter-exhausted) exit returning the post-step `weights` alongside the
+        pre-step `loss`/`gradient` described a different point than `result.x`. The early-return
+        (convergence) paths never had this bug; this test targets the max-iter path specifically.
+        """
+        obj = _ShiftedQuadraticObjective(n_features=X.shape[1])
+        # tolerance=0 and patience=9999 guarantee the max-iter path is taken.
+        result = SGD(lr=1e-3, max_iter=5, tolerance=0.0, patience=9999)(obj, X)
+        assert result.success is False
+        assert result.fun == pytest.approx(obj.logit_loss(result.x), rel=1e-5)
+        np.testing.assert_allclose(result.jac, obj.logit_gradient(result.x), rtol=1e-5)
+
+
+class TestBestIterateTracking:
+    """Regression tests: the optimizer used to return the LAST iterate, not the best one seen.
+
+    `alpha_schedule` exists precisely because loss surfaces like MaxProfit's are rugged and
+    non-convex, so the final iterate is routinely worse than an earlier one. Uses a scripted
+    objective with a hand-picked loss trajectory to test this in full isolation from any real
+    optimization dynamics.
+    """
+
+    def test_returns_best_loss_not_last(self):
+        # A dip at index 1 (loss=1.0), then a worse plateau at 4.0 for the rest of the run.
+        losses = [5.0, 1.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0]
+        obj = _ScriptedObjective(losses, n_features=1)
+        # tolerance=0 (gradient is always 1.0, never "below" 0) and patience=9999 disable both
+        # early-convergence paths, forcing the max-iter exit - the one most likely to return a
+        # stale point if best-so-far tracking were missing.
+        result = SGD(lr=0.1, max_iter=len(losses), tolerance=0.0, patience=9999)(obj, np.zeros((1, 1)))
+
+        assert result.fun == pytest.approx(1.0)
+        assert result.fun != pytest.approx(losses[-1])
+
+    def test_returned_x_and_jac_correspond_to_the_best_iterate(self):
+        """result.x/result.jac must be the weights/gradient recorded AT the best-loss call, not the last."""
+        losses = [5.0, 1.0, 3.0, 4.0, 4.0, 4.0]
+        obj = _ScriptedObjective(losses, n_features=1)
+        result = SGD(lr=0.1, max_iter=len(losses), tolerance=0.0, patience=9999)(obj, np.zeros((1, 1)))
+
+        best_index = losses.index(min(losses))
+        np.testing.assert_allclose(result.x, obj.weights_seen[best_index])
+        np.testing.assert_allclose(result.jac, np.ones(1))
+
+    def test_best_iterate_returned_on_gradient_norm_convergence_path_too(self):
+        """Best-so-far tracking must also apply when convergence is declared mid-run, not only at max-iter."""
+        # Gradient magnitude decreases towards the tolerance, so convergence fires at the last
+        # index; loss dips earlier and rises again before convergence is declared.
+        losses = [5.0, 1.0, 3.0, 3.0]
+        obj = _ScriptedGradientNormObjective(losses, n_features=1)
+        result = SGD(lr=0.1, max_iter=len(losses), tolerance=0.5, patience=9999)(obj, np.zeros((1, 1)))
+
+        assert result.success is True
+        assert result.fun == pytest.approx(1.0)
+
+
+class _ScriptedGradientNormObjective(_ScriptedObjective):
+    """Like _ScriptedObjective, but the gradient norm decreases each call so convergence can fire.
+
+    The last entry's gradient (0.1) is below the 0.5 tolerance used in the test above, so the
+    gradient-norm convergence path is the one that returns - while the loss trajectory still dips
+    and rises, exercising best-so-far tracking on that specific exit path.
+    """
+
+    def logit_loss_gradient(self, weights: np.ndarray) -> tuple[float, np.ndarray]:
+        self.weights_seen.append(weights.copy())
+        idx = min(self.calls, len(self.losses) - 1)
+        loss = self.losses[idx]
+        # Gradient magnitude: 10.0, 5.0, 1.0, 0.1, ... - drops below tolerance=0.5 at the last call.
+        magnitude = [10.0, 5.0, 1.0, 0.1][min(self.calls, 3)]
+        self.calls += 1
+        gradient = np.full(self.n_features, magnitude)
+        return float(loss), gradient
+
+
+class TestLossPlateauUsesRange:
+    """Regression test: loss-plateau convergence compared only the window's endpoints.
+
+    `abs(window[0] - window[-1]) < tolerance` declares convergence whenever the loss returns to
+    (approximately) its starting value, even if it swung wildly in between. The fix compares the
+    window's range (`max - min`) instead, matching what `MemeticOptimizer` already does.
+    """
+
+    def test_oscillation_back_to_start_does_not_trigger_early_convergence(self):
+        # Window endpoints are equal (10.0 and 10.0), but the window contains a large swing
+        # (down to 0.0, up to 20.0) that the old endpoint-only check would have missed entirely.
+        losses = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 20.0, 10.0]
+        obj = _ScriptedObjective(losses, n_features=1)
+        # patience=8 -> window = last 9 losses = the full list above.
+        # tolerance is small enough that the old endpoint check (|10-10|=0 < tolerance) would
+        # have declared convergence at iteration 9, well before max_iter is reached.
+        result = SGD(lr=0.1, max_iter=len(losses), tolerance=1e-6, patience=8)(obj, np.zeros((1, 1)))
+
+        # With the range-based check, (max(window) - min(window)) = 20.0, nowhere near tolerance,
+        # so the run must exhaust max_iter instead of falsely declaring convergence.
+        assert result.success is False
+        assert result.nit == len(losses)
+        assert 'maximum number of iterations' in result.message.lower()
