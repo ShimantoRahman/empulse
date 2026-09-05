@@ -86,6 +86,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinxcontrib.sass",
     "sphinx_codeautolink",
+    "sphinx_design",
     # see sphinxext folder for custom extensions
     "override_pst_pagetoc",
 ]
@@ -192,16 +193,6 @@ html_theme_options = {
     # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-exclude_patterns
     # In particular, "**" specifies the default for all pages
     # Use :html_theme.sidebar_secondary.remove: for file-wide removal
-    # "secondary_sidebar_items": {
-    #     "**": [
-    #         "page-toc",
-    #         "sourcelink",
-    #         # Sphinx-Gallery-specific sidebar components
-    #         # https://sphinx-gallery.github.io/stable/advanced.html#using-sphinx-gallery-sidebar-components
-    #         "sg_download_links",
-    #         "sg_launcher_links",
-    #     ],
-    # },
     "secondary_sidebar_items": {
         "**": ["page-toc"],
     },
@@ -222,20 +213,3 @@ sass_targets = {
 html_js_files = [
     "js/custom-icon.js",
 ]
-
-def add_js_css_files(app, pagename, templatename, context, doctree):
-    """Load additional JS and CSS files only for certain pages.
-
-    Note that `html_js_files` and `html_css_files` are included in all pages and
-    should be used for the ones that are used by multiple pages. All page-specific
-    JS and CSS files should be added here instead.
-    """
-    if pagename == "api":
-        # Internal: API search intialization and styling
-        app.add_js_file("_static/js/api-search.js")
-        app.add_css_file("_static/css/api-search.css")
-
-
-def setup(app):
-    # triggered just before the HTML for an individual page is created
-    app.connect("html-page-context", add_js_css_files)

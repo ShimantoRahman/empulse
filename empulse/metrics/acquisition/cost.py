@@ -13,16 +13,17 @@ be (calibrated) probabilities. This metric always returns the average cost per s
 
 .. rubric:: Methods
 
-``__call__(y_true, y_proba, *, contribution=7000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+All three methods take ``y_true`` and ``y_proba``, followed by the keyword-only parameters
+``contribution=7000``, ``contact_cost=50``, ``sales_cost=500``, ``direct_selling=1`` and
+``commission=0.1``.
+
+``__call__(y_true, y_proba, **parameters)``
     Compute the expected cost of a classifier.
 
-``optimal_threshold(y_true, y_proba, *, contribution=7000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+``optimal_threshold(y_true, y_proba, **parameters)``
     Compute the classification threshold(s) that minimize(s) the expected cost.
 
-``optimal_rate(y_true, y_proba, *, contribution=7000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+``optimal_rate(y_true, y_proba, **parameters)``
     Compute the predicted positive rate that minimizes the expected cost.
 
 Examples

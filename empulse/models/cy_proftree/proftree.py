@@ -153,7 +153,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         Controls the randomness of the estimator.
         To obtain a deterministic behaviour
         during fitting, ``random_state`` has to be fixed to an integer.
-        See :term:`Sklearn Glossary <random_state>` for details.
+        See :term:`Sklearn Glossary <sklearn:random_state>` for details.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -343,7 +343,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         -------
         proba : ndarray of shape (n_samples, n_classes)
             The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False).astype(np.float32)

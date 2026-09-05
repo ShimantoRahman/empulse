@@ -31,7 +31,7 @@ class B2BoostClassifier(CSBoostClassifier):
     Cost-sensitive gradient boosting classifier for B2B customer churn.
 
     B2BoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
-    and :class:`catboost.CatBoostClassifier`.
+    and `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
@@ -39,7 +39,7 @@ class B2BoostClassifier(CSBoostClassifier):
     Parameters
     ----------
     estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` \
-    or :class:`catboost.CatBoostClassifier`, optional
+    or `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 

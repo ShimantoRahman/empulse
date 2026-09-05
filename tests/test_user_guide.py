@@ -6,12 +6,26 @@ import traceback
 import pytest
 from sklearn import set_config
 
-# Directory containing the user guide files
-GUIDE_DIR = 'docs/guide'
+# Directory containing the documentation. All prose pages are walked, not just docs/guide,
+# so the code blocks in the getting-started and tutorial pages are executed too.
+DOCS_DIR = 'docs'
 
-# Adjust GUIDE_DIR if the current working directory is "tests/"
+# Adjust DOCS_DIR if the current working directory is "tests/"
 if os.getcwd().endswith('tests'):
-    GUIDE_DIR = '../' + GUIDE_DIR
+    DOCS_DIR = '../' + DOCS_DIR
+
+# Build output and generated API stubs are not hand-written prose and contain no examples worth
+# executing (the stubs' content comes from docstrings, which tests/test_docstring.py already covers).
+EXCLUDED_DIRS = {'_build', '_static', '_templates', 'sphinxext', 'generated'}
+
+
+def _iter_doc_files():
+    for root, dirs, files in os.walk(DOCS_DIR):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
+        for file in files:
+            if file.endswith('.rst'):
+                yield os.path.join(root, file)
+
 
 # Regular expression to find code blocks
 CODE_BLOCK_RE = re.compile(r'\.\. code-block:: python\n\s*([\s\S]*?)(?=\n\S|$)')
@@ -35,10 +49,7 @@ def execute_code_blocks(code_blocks):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    'file_path',
-    [os.path.join(root, file) for root, _, files in os.walk(GUIDE_DIR) for file in files if file.endswith('.rst')],
-)
+@pytest.mark.parametrize('file_path', sorted(_iter_doc_files()))
 def test_code_blocks_in_user_guides(file_path):
     """Test that code blocks in user guide files execute without errors."""
     with open(file_path, encoding='utf-8') as f:

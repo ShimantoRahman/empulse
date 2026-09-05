@@ -87,7 +87,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         Controls the randomness of the estimator.
         To obtain a deterministic behaviour
         during fitting, ``random_state`` has to be fixed to an integer.
-        See :term:`Sklearn Glossary <random_state>` for details.
+        See :term:`Sklearn Glossary <sklearn:random_state>` for details.
 
     Attributes
     ----------

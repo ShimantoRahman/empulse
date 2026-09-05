@@ -26,7 +26,7 @@ unified sklearn-compatible interface.  If no estimator is supplied, an
      - :class:`lightgbm:lightgbm.LGBMClassifier`
      - Pass as ``estimator``; install via ``pip install lightgbm``
    * - CatBoost
-     - :class:`catboost.CatBoostClassifier`
+     - `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__
      - Pass as ``estimator``; install via ``pip install catboost``.
        ``sample_weight`` cannot be used because it is reserved for internal index passing.
 

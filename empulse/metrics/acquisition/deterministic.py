@@ -14,16 +14,17 @@ See :func:`~empulse.metrics.empa_score` for a stochastic version of this metric.
 
 .. rubric:: Methods
 
-``__call__(y_true, y_score, *, contribution=8000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+All three methods take ``y_true`` and ``y_score``, followed by the keyword-only parameters
+``contribution=8000``, ``contact_cost=50``, ``sales_cost=500``, ``direct_selling=1`` and
+``commission=0.1``.
+
+``__call__(y_true, y_score, **parameters)``
     Compute the maximum profit that can be achieved by a classifier at its optimal decision threshold.
 
-``optimal_threshold(y_true, y_score, *, contribution=8000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+``optimal_threshold(y_true, y_score, **parameters)``
     Compute the classification threshold that maximizes the profit.
 
-``optimal_rate(y_true, y_score, *, contribution=8000, contact_cost=50, sales_cost=500, direct_selling=1, 
-  commission=0.1)``
+``optimal_rate(y_true, y_score, **parameters)``
     Compute the predicted positive rate (fraction of leads that should be targeted) at which
     the maximum profit is achieved.
 

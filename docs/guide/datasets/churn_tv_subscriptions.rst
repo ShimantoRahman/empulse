@@ -32,39 +32,40 @@ This returns a :class:`~empulse.datasets.Dataset` object with the following attr
 
 - ``data``: the feature matrix
 - ``target``: the target vector
-- ``tp_cost``: the cost of a true positive
-- ``fp_cost``: the cost of a false positive
-- ``fn_cost``: the cost of a false negative
-- ``tn_cost``: the cost of a true negative
+- ``cost_matrix``: a :class:`~empulse.metrics.CostMatrix` over the four outcome terms
+- ``instance_costs``: a dict of per-instance cost arrays
+  (``'tp_benefit'``, ``'tn_benefit'``, ``'fp_cost'``, ``'fn_cost'``)
 - ``feature_names``: the feature names
 - ``target_names``: the target names
 - ``DESCR``: the full description of the dataset
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_churn_tv_subscriptions
 
-    dataset = load_churn_tv_subscriptions()
+    dataset = load_churn_tv_subscriptions(backend=pd)
 
-Alternatively, the load function can also return the features, target, and costs separately,
-by setting ``return_X_y_costs=True``.
-Additionally, you can specify that you want the output in a :class:`pandas:pandas.DataFrame` format,
-by setting ``as_frame=True``.
+The ``backend`` argument selects the dataframe library used for ``data`` and ``target``.
+Pass the module itself — ``backend=pd`` for pandas or ``backend=pl`` for polars.
 
-The following code snippet demonstrates how to load the dataset and fit a model using the
-:class:`~empulse.models.CSLogitClassifier`:
+Unlike the other churn datasets, this one ships **precomputed** costs: its cost matrix is not
+built from symbolic business parameters, so each of the four outcome terms is supplied directly
+as an array in ``instance_costs``. That makes it a good fit for the plain cost arguments of the
+models, which take costs rather than benefits — so the two benefit terms are negated:
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_churn_tv_subscriptions
     from empulse.models import CSLogitClassifier
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_churn_tv_subscriptions(
-        return_X_y_costs=True,
-        as_frame=True
-    )
+    dataset = load_churn_tv_subscriptions(backend=pd)
+    X, y = dataset.data, dataset.target
+    costs = dataset.instance_costs
+
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
         ('model', CSLogitClassifier())
@@ -72,11 +73,22 @@ The following code snippet demonstrates how to load the dataset and fit a model 
     pipeline.fit(
         X,
         y,
-        model__tp_cost=tp_cost,
-        model__fp_cost=fp_cost,
-        model__fn_cost=fn_cost,
-        model__tn_cost=tn_cost
+        model__tp_cost=-costs['tp_benefit'],
+        model__tn_cost=-costs['tn_benefit'],
+        model__fp_cost=costs['fp_cost'],
+        model__fn_cost=costs['fn_cost'],
     )
+
+To *evaluate* a model instead, wrap the cost matrix in a :class:`~empulse.metrics.Metric` and pass
+the instance costs straight through:
+
+.. code-block:: python
+
+    from empulse.metrics import Metric, Cost
+
+    cost = Metric(dataset.cost_matrix, Cost())
+    y_score = pipeline.predict_proba(X)[:, 1]
+    score = cost(y, y_score, **dataset.instance_costs)
 
 Cost Matrix
 ===========

@@ -179,15 +179,14 @@ class CSForestClassifier(CostSensitiveClassifier):
         The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`,
         :meth:`decision_path` and :meth:`apply` are all parallelized over the
         trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend`
-        context. ``-1`` means using all processors. See :term:`Glossary
-        <n_jobs>` for more details.
+        context. ``-1`` means using all processors. See :term:`Glossary <sklearn:n_jobs>` for more details.
 
     random_state : int, RandomState instance or None, default=None
         Controls both the randomness of the bootstrapping of the samples used
         when building trees (if ``bootstrap=True``) and the sampling of the
         features to consider when looking for the best split at each node
         (if ``max_features < n_features``).
-        See :term:`Glossary <random_state>` for details.
+        See :term:`Glossary <sklearn:random_state>` for details.
 
     verbose : int, default=0
         Controls the verbosity when fitting and predicting.
@@ -195,8 +194,8 @@ class CSForestClassifier(CostSensitiveClassifier):
     warm_start : bool, default=False
         When set to ``True``, reuse the solution of the previous call to fit
         and add more estimators to the ensemble, otherwise, just fit a whole
-        new forest. See :term:`Glossary <warm_start>` and
-        :ref:`tree_ensemble_warm_start` for details.
+        new forest. See :term:`Glossary <sklearn:warm_start>` and
+        :ref:`sklearn:tree_ensemble_warm_start` for details.
 
     class_weight : {"balanced", "balanced_subsample"}, dict or list of dicts, \
             default=None
@@ -228,8 +227,8 @@ class CSForestClassifier(CostSensitiveClassifier):
         Complexity parameter used for Minimal Cost-Complexity Pruning. The
         subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`minimal_cost_complexity_pruning` for details. See
-        :ref:`sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
+        :ref:`sklearn:minimal_cost_complexity_pruning` for details. See
+        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
         for an example of such pruning.
 
     max_samples : int or float, default=None
@@ -256,7 +255,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         The constraints hold over the probability of the positive class.
 
-        Read more in the :ref:`User Guide <monotonic_cst_gbdt>`.
+        Read more in the :ref:`Sklearn User Guide <sklearn:monotonic_cst_gbdt>`.
 
     Attributes
     ----------
@@ -275,12 +274,12 @@ class CSForestClassifier(CostSensitiveClassifier):
         number of classes for each output (multi-output problem).
 
     n_features_in_ : int
-        Number of features seen during :term:`fit`.
+        Number of features seen during :term:`fit <sklearn:fit>`.
 
         .. versionadded:: 0.24
 
     feature_names_in_ : ndarray of shape (`n_features_in_`,)
-        Names of features seen during :term:`fit`. Defined only when `X`
+        Names of features seen during :term:`fit <sklearn:fit>`. Defined only when `X`
         has feature names that are all strings.
 
         .. versionadded:: 1.0
@@ -392,7 +391,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     @property
     def n_classes_(self) -> int | list[int]:
-        """The number of classes seen during :term:`fit`."""
+        """The number of classes seen during :term:`fit <sklearn:fit>`."""
         check_is_fitted(self)
         n_classes: int | list[int] = self.estimator_.n_classes_
         return n_classes
@@ -548,7 +547,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         -------
         p : ndarray of shape (n_samples, n_classes), or a list of such arrays
             The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         y_proba = self.predict_proba(X)

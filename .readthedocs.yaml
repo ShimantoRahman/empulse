@@ -17,3 +17,7 @@ build:
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
   configuration: docs/conf.py
+  # The build is warning-free; keep it that way. Broken cross-references and missing toctree
+  # entries used to ship silently because nothing failed the build.
+  # Run `just html-strict` locally to reproduce.
+  fail_on_warning: true

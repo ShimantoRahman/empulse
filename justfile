@@ -120,6 +120,11 @@ html:
     {{SPHINXBUILD}} -M html {{SOURCEDIR}} {{BUILDDIR}} {{SPHINXOPTS}}
     start chrome %CD%\{{BUILDDIR}}\html\index.html
 
+# Build HTML documentation, failing on any warning (matches Read the Docs)
+[group('docs')]
+html-strict:
+    {{SPHINXBUILD}} -b html -W --keep-going {{SOURCEDIR}} {{BUILDDIR}}/html-strict {{SPHINXOPTS}}
+
 # Build documentation in other formats (e.g., just latex, just epub, etc.)
 [positional-arguments]
 [group('docs')]
@@ -140,4 +145,4 @@ verify-version:
 # Run all preflight checks before deployment
 [windows]
 [group('deploy')]
-preflight: verify-version check-cython-abi linkcheck tox update-sklearn-compat sklearn-compat
+preflight: verify-version check-cython-abi html-strict linkcheck tox update-sklearn-compat sklearn-compat

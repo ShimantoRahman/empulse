@@ -143,7 +143,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         improvement of the criterion is identical for several splits and one
         split has to be selected at random. To obtain a deterministic behaviour
         during fitting, ``random_state`` has to be fixed to an integer.
-        See :term:`Sklearn Glossary <random_state>` for details.
+        See :term:`Sklearn Glossary <sklearn:random_state>` for details.
 
     max_leaf_nodes : int, default=None
         Grow a tree with ``max_leaf_nodes`` in best-first fashion.
@@ -191,8 +191,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         Complexity parameter used for Minimal Cost-Complexity Pruning. The
         subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`minimal_cost_complexity_pruning` for details. See
-        :ref:`sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
+        :ref:`sklearn:minimal_cost_complexity_pruning` for details. See
+        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
         for an example of such pruning.
 
     monotonic_cst : array-like of int of shape (n_features), default=None
@@ -210,7 +210,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         The constraints hold over the probability of the positive class.
 
-        Read more in the :ref:`Sklearn User Guide <monotonic_cst_gbdt>`.
+        Read more in the :ref:`Sklearn User Guide <sklearn:monotonic_cst_gbdt>`.
 
     Attributes
     ----------
@@ -241,10 +241,10 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         output (for multi-output problems).
 
     n_features_in_ : int
-        Number of features seen during :term:`fit`.
+        Number of features seen during :term:`fit <sklearn:fit>`.
 
     feature_names_in_ : ndarray of shape (`n_features_in_`,)
-        Names of features seen during :term:`fit`. Defined only when `X`
+        Names of features seen during :term:`fit <sklearn:fit>`. Defined only when `X`
         has feature names that are all strings.
 
     n_outputs_ : int
@@ -253,7 +253,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     tree_ : Tree instance
         The underlying Tree object. Please refer to
         ``help(sklearn.tree._tree.Tree)`` for attributes of Tree object and
-        :ref:`sphx_glr_auto_examples_tree_plot_unveil_tree_structure.py`
+        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_unveil_tree_structure.py`
         for basic usage of these attributes.
 
     References
@@ -463,7 +463,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         -------
         proba : ndarray of shape (n_samples, n_classes)
             The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
@@ -485,7 +485,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         -------
         proba : ndarray of shape (n_samples, n_classes)
             The class log-probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         y_log_proba: FloatNDArray = self.estimator_.predict_log_proba(X)
@@ -524,7 +524,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         """
         Compute the pruning path during Minimal Cost-Complexity Pruning.
 
-        See :ref:`minimal_cost_complexity_pruning` for details on the pruning process.
+        See :ref:`sklearn:minimal_cost_complexity_pruning` for details on the pruning process.
 
         Parameters
         ----------

@@ -165,11 +165,16 @@ def fetch_iranian_churn(
 
     .. code-block:: python
 
+        import numpy as np
         import pandas as pd
         from empulse.datasets import fetch_iranian_churn
         from empulse.metrics import Metric, Cost
 
         dataset = fetch_iranian_churn(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
@@ -301,11 +306,16 @@ def fetch_give_me_some_credit(
 
     .. code-block:: python
 
+        import numpy as np
         import pandas as pd
         from empulse.datasets import fetch_give_me_some_credit
         from empulse.metrics import Metric, Cost
 
         dataset = fetch_give_me_some_credit(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """

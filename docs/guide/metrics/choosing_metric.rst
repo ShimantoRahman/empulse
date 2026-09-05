@@ -1,3 +1,5 @@
+.. _choosing_metric:
+
 =========================
 Choosing the right metric
 =========================

@@ -33,55 +33,51 @@ This returns a :class:`~empulse.datasets.Dataset` object with the following attr
 
 - ``data``: the feature matrix
 - ``target``: the target vector
-- ``tp_cost``: the cost of a true positive
-- ``fp_cost``: the cost of a false positive
-- ``fn_cost``: the cost of a false negative
-- ``tn_cost``: the cost of a true negative
+- ``cost_matrix``: a :class:`~empulse.metrics.CostMatrix` with default values pre-filled
+- ``instance_costs``: a dict of per-instance cost drivers (``'balance'``)
 - ``feature_names``: the feature names
 - ``target_names``: the target names
 - ``DESCR``: the full description of the dataset
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_upsell_bank_telemarketing
 
-    dataset = load_upsell_bank_telemarketing()
+    dataset = load_upsell_bank_telemarketing(backend=pd)
 
-Alternatively, the load function can also return the features, target, and costs separately,
-by setting ``return_X_y_costs=True``.
-Additionally, you can specify that you want the output in a :class:`pandas:pandas.DataFrame` format,
-by setting ``as_frame=True``.
+The ``backend`` argument selects the dataframe library used for ``data`` and ``target``.
+Pass the module itself — ``backend=pd`` for pandas or ``backend=pl`` for polars.
 
-The following code snippet demonstrates how to load the dataset and fit a model using the
-:class:`~empulse.models.CSLogitClassifier`:
+The cost matrix is symbolic: only the customer ``balance`` varies per instance, while the
+interest rate, term deposit fraction and contact cost are parameters with defaults.
+Pass the cost matrix to the model as a :class:`~empulse.metrics.Metric` loss, and hand it the
+instance costs at fit time:
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_upsell_bank_telemarketing
+    from empulse.metrics import Metric, Cost
     from empulse.models import CSLogitClassifier
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler, TargetEncoder
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_upsell_bank_telemarketing(
-        return_X_y_costs=True,
-        as_frame=True
-    )
+    dataset = load_upsell_bank_telemarketing(backend=pd)
+    X, y = dataset.data, dataset.target
+
+    numeric = X.select_dtypes(include=['number']).columns
+    categorical = X.select_dtypes(exclude=['number']).columns
+
     pipeline = Pipeline([
         ('preprocessor', ColumnTransformer([
-            ('num', StandardScaler(), X.select_dtypes(include=['number']).columns),
-            ('cat', TargetEncoder(), X.select_dtypes(include=['category']).columns)
+            ('num', StandardScaler(), numeric),
+            ('cat', TargetEncoder(), categorical),
         ])),
-        ('model', CSLogitClassifier())
+        ('model', CSLogitClassifier(loss=Metric(dataset.cost_matrix, Cost())))
     ])
-    pipeline.fit(
-        X,
-        y,
-        model__tp_cost=tp_cost,
-        model__fp_cost=fp_cost,
-        model__fn_cost=fn_cost,
-        model__tn_cost=tn_cost
-    )
+    pipeline.fit(X, y, model__balance=dataset.instance_costs['balance'])
 
 Cost Matrix
 ===========
@@ -107,18 +103,30 @@ with
 Using default parameters, it is assumed that :math:`c = 1`, :math:`r = 0.02463333`, :math:`d_i = 0.25` for all clients.
 The default parameters are based on [4]_.
 
-These assumptions can be changed by passing your own values to the
-:func:`~empulse.datasets.load_upsell_bank_telemarketing` function:
+These assumptions are symbolic parameters of the cost matrix, exposed under the aliases
+``interest_rate``, ``term_deposit_fraction`` and ``contact_cost``.
+Override any of them by passing the alias when evaluating the metric:
 
 .. code-block:: python
 
+    import numpy as np
+    import pandas as pd
     from empulse.datasets import load_upsell_bank_telemarketing
+    from empulse.metrics import Metric, Cost
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_upsell_bank_telemarketing(
-        return_X_y_costs=True,
+    dataset = load_upsell_bank_telemarketing(backend=pd)
+
+    # replace with your own model's predicted probabilities
+    y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
+    cost = Metric(dataset.cost_matrix, Cost())
+    score = cost(
+        dataset.target,
+        y_score,
         interest_rate=0.05,
         term_deposit_fraction=0.30,
         contact_cost=10,
+        **dataset.instance_costs,
     )
 
 Data Description

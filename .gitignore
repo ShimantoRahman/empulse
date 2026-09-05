@@ -70,6 +70,11 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+# autosummary stubs, regenerated on every build. Stale stubs for removed names otherwise
+# linger and break the build with "document isn't included in any toctree" / autodoc import errors.
+docs/reference/generated/
+# compiled by sphinxcontrib.sass from _static/scss/
+docs/_static/css/custom.css
 
 # PyBuilder
 target/

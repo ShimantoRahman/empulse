@@ -415,7 +415,7 @@ generations.  At each generation, trees are selected, crossed over, and mutated;
 their fitness is measured by a profit metric (default:
 :class:`~empulse.metrics.MaxProfit`).
 Because the search is gradient-free, it can optimise non-smooth and non-convex
-objectives that are intractable for gradient-based methods [1]_.
+objectives that are intractable for gradient-based methods [2]_.
 
 Basic usage
 -----------

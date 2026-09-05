@@ -49,55 +49,50 @@ This returns a :class:`~empulse.datasets.Dataset` object with the following attr
 
 - ``data``: the feature matrix
 - ``target``: the target vector
-- ``tp_cost``: the cost of a true positive
-- ``fp_cost``: the cost of a false positive
-- ``fn_cost``: the cost of a false negative
-- ``tn_cost``: the cost of a true negative
+- ``cost_matrix``: a :class:`~empulse.metrics.CostMatrix` with default values pre-filled
+- ``instance_costs``: a dict of per-instance cost drivers (``'cl'``, ``'fp_cost'``)
 - ``feature_names``: the feature names
 - ``target_names``: the target names
 - ``DESCR``: the full description of the dataset
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_credit_scoring_pakdd
 
-    dataset = load_credit_scoring_pakdd()
+    dataset = load_credit_scoring_pakdd(backend=pd)
 
-Alternatively, the load function can also return the features, target, and costs separately,
-by setting ``return_X_y_costs=True``.
-Additionally, you can specify that you want the output in a :class:`pandas:pandas.DataFrame` format,
-by setting ``as_frame=True``.
+The ``backend`` argument selects the dataframe library used for ``data`` and ``target``.
+Pass the module itself — ``backend=pd`` for pandas or ``backend=pl`` for polars.
 
-The following code snippet demonstrates how to load the dataset and fit a model using the
-:class:`~empulse.models.CSLogitClassifier`:
+The dataset contains categorical features, so they have to be encoded before a linear model can be
+fitted. The following code snippet demonstrates how to load the dataset and fit a
+:class:`~empulse.models.CSLogitClassifier` on its cost matrix:
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import load_credit_scoring_pakdd
+    from empulse.metrics import Metric, Cost
     from empulse.models import CSLogitClassifier
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler, TargetEncoder
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_credit_scoring_pakdd(
-        return_X_y_costs=True,
-        as_frame=True
-    )
+    dataset = load_credit_scoring_pakdd(backend=pd)
+    X, y = dataset.data, dataset.target
+
+    numeric = X.select_dtypes(include=['number']).columns
+    categorical = X.select_dtypes(exclude=['number']).columns
+
     pipeline = Pipeline([
         ('preprocessor', ColumnTransformer([
-            ('num', StandardScaler(), X.select_dtypes(include=['number']).columns),
-            ('cat', TargetEncoder(), X.select_dtypes(include=['category']).columns)
+            ('num', StandardScaler(), numeric),
+            ('cat', TargetEncoder(), categorical),
         ])),
-        ('model', CSLogitClassifier())
+        ('model', CSLogitClassifier(loss=Metric(dataset.cost_matrix, Cost())))
     ])
-    pipeline.fit(
-        X,
-        y,
-        model__tp_cost=tp_cost,
-        model__fp_cost=fp_cost,
-        model__fn_cost=fn_cost,
-        model__tn_cost=tn_cost
-    )
+    pipeline.fit(X, y, **{f'model__{name}': value for name, value in dataset.instance_costs.items()})
 
 Cost Matrix
 ===========
@@ -128,22 +123,28 @@ it is assumed that the interest rate is 63%, the cost of running the fund is 16.
 the loss given default is 75%, the term length is 24 months, and the loan to income ratio is 3.
 The default parameters are based on [2]_.
 
-These assumptions can be changed by passing your own values to the
-:func:`~empulse.datasets.load_credit_scoring_pakdd` function:
+The interest rate, fund cost, maximum credit line, term length and loan-to-income ratio are applied
+when the dataset is built, and are baked into the ``'fp_cost'`` and ``'cl'`` arrays returned in
+``instance_costs``.
+
+The loss given default remains symbolic, so it can be overridden at evaluation time by passing its
+alias ``loss_given_default`` to the metric:
 
 .. code-block:: python
 
+    import numpy as np
+    import pandas as pd
     from empulse.datasets import load_credit_scoring_pakdd
+    from empulse.metrics import Metric, Cost
 
-    X, y, tp_cost, fp_cost, fn_cost, tn_cost = load_credit_scoring_pakdd(
-        return_X_y_costs=True,
-        interest_rate=0.63,
-        fund_cost=0.165,
-        max_credit_line=25000,
-        loss_given_default=0.75,
-        term_length_months=24,
-        loan_to_income_ratio=3,
-    )
+    dataset = load_credit_scoring_pakdd(backend=pd)
+
+    # replace with your own model's predicted probabilities
+    y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
+    cost = Metric(dataset.cost_matrix, Cost())
+    default_lgd = cost(dataset.target, y_score, **dataset.instance_costs)
+    higher_lgd = cost(dataset.target, y_score, loss_given_default=0.9, **dataset.instance_costs)
 
 Data Description
 ================

@@ -135,13 +135,13 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     warm_start : bool, default=False
         When set to True, reuse the solution of the previous call to fit
         and add more estimators to the ensemble, otherwise, just fit
-        a whole new ensemble. See :term:`the Glossary <warm_start>`.
+        a whole new ensemble. See :term:`the Glossary <sklearn:warm_start>`.
 
     n_jobs : int, default=None
         The number of jobs to run in parallel for both :meth:`fit` and
         :meth:`predict`. ``None`` means 1 unless in a
         :obj:`joblib.parallel_backend` context. ``-1`` means using all
-        processors. See :term:`Glossary <n_jobs>` for more details.
+        processors. See :term:`Glossary <sklearn:n_jobs>` for more details.
 
     random_state : int, RandomState instance or None, default=None
         Controls the random resampling of the original dataset
@@ -149,7 +149,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         If the base estimator accepts a `random_state` attribute, a different
         seed is generated for each instance in the ensemble.
         Pass an int for reproducible output across multiple function calls.
-        See :term:`Glossary <random_state>`.
+        See :term:`Glossary <sklearn:random_state>`.
 
     verbose : int, default=0
         Controls the verbosity when fitting and predicting.
@@ -207,7 +207,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     @property
     def n_classes_(self) -> IntNDArray:
-        """The number of classes seen during :term:`fit`."""
+        """The number of classes seen during :term:`fit <sklearn:fit>`."""
         check_is_fitted(self)
         n_classes: int | list[int] = self.estimator_.n_classes_
         n_classes_ = np.array(n_classes)
@@ -435,7 +435,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         -------
         p : ndarray of shape (n_samples, n_classes)
             The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         X: FloatNDArray = validate_data(self, X, reset=False)
@@ -465,7 +465,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         -------
         p : ndarray of shape (n_samples, n_classes)
             The class log-probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+            classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
         y_proba = self.predict_proba(X)

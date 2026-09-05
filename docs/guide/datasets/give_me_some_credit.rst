@@ -42,25 +42,26 @@ This returns a :class:`~empulse.datasets.Dataset` object with the following attr
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import fetch_give_me_some_credit
 
-    dataset = fetch_give_me_some_credit()
+    dataset = fetch_give_me_some_credit(backend=pd)
 
-You can specify that you want the output in a :class:`pandas:pandas.DataFrame` format
-by setting ``as_frame=True``.
+The ``backend`` argument selects the dataframe library used for ``data`` and ``target``.
+Pass the module itself — ``backend=pd`` for pandas or ``backend=pl`` for polars.
 
 The following code snippet demonstrates how to load the dataset and fit a model using the
 :class:`~empulse.models.CSLogitClassifier`:
 
 .. code-block:: python
 
+    import pandas as pd
     from empulse.datasets import fetch_give_me_some_credit
     from empulse.models import CSLogitClassifier
-    from empulse.metrics import Metric, Cost
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
-    dataset = fetch_give_me_some_credit(as_frame=True)
+    dataset = fetch_give_me_some_credit(backend=pd)
     X, y = dataset.data, dataset.target
     cl = dataset.instance_costs['cl']
     fp_cost = dataset.instance_costs['fp_cost']
@@ -106,21 +107,28 @@ it is assumed that the interest rate is 4.79%, the cost of running the fund is 2
 the loss given default is 75%, the term length is 24 months, and the loan to income ratio is 3.
 The default parameters are based on [2]_.
 
-These assumptions can be changed by passing your own values to the
-:func:`~empulse.datasets.fetch_give_me_some_credit` function:
+The interest rate, fund cost, maximum credit line, term length and loan-to-income ratio are
+applied when the dataset is built, and are baked into the ``'fp_cost'`` and ``'cl'`` arrays
+returned in ``instance_costs``.
+
+The loss given default remains symbolic, so it can be overridden at evaluation time by passing
+its alias ``loss_given_default`` to the metric:
 
 .. code-block:: python
 
+    import numpy as np
+    import pandas as pd
     from empulse.datasets import fetch_give_me_some_credit
+    from empulse.metrics import Metric, Cost
 
-    dataset = fetch_give_me_some_credit(
-        interest_rate=0.0479,
-        fund_cost=0.0294,
-        max_credit_line=25000,
-        loss_given_default=0.75,
-        term_length_months=24,
-        loan_to_income_ratio=3,
-    )
+    dataset = fetch_give_me_some_credit(backend=pd)
+
+    # replace with your own model's predicted probabilities
+    y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
+    cost = Metric(dataset.cost_matrix, Cost())
+    default_lgd = cost(dataset.target, y_score, **dataset.instance_costs)
+    higher_lgd = cost(dataset.target, y_score, loss_given_default=0.9, **dataset.instance_costs)
 
 Data Description
 ================

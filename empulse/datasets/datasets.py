@@ -87,11 +87,16 @@ def load_churn_tv_subscriptions(*, backend: IntoBackend[EagerAllowed]) -> Datase
 
     .. code-block:: python
 
+        import numpy as np
         import pandas as pd
         from empulse.datasets import load_churn_tv_subscriptions
         from empulse.metrics import Metric, Cost
 
         dataset = load_churn_tv_subscriptions(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
@@ -184,11 +189,16 @@ def load_upsell_bank_telemarketing(*, backend: IntoBackend[EagerAllowed]) -> Dat
 
     .. code-block:: python
 
+        import numpy as np
         import pandas as pd
         from empulse.datasets import load_upsell_bank_telemarketing
         from empulse.metrics import Metric, Cost
 
         dataset = load_upsell_bank_telemarketing(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
@@ -295,11 +305,16 @@ def load_credit_scoring_pakdd(*, backend: IntoBackend[EagerAllowed]) -> Dataset[
 
     .. code-block:: python
 
+        import numpy as np
         import pandas as pd
         from empulse.datasets import load_credit_scoring_pakdd
         from empulse.metrics import Metric, Cost
 
         dataset = load_credit_scoring_pakdd(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """

@@ -98,7 +98,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
     Cost-sensitive gradient boosting classifier.
 
     CSBoostClassifier supports :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier`
-    and :class:`catboost.CatBoostClassifier` as base estimators.
+    and `CatBoostClassifier
+    <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__ as base estimators.
     By default, it uses XGBoost classifier with default hyperparameters.
 
     Read more in the :ref:`User Guide <csboost>`.
@@ -114,7 +115,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
     Parameters
     ----------
     estimator : :class:`xgboost:xgboost.XGBClassifier`, :class:`lightgbm:lightgbm.LGBMClassifier` \
-    or :class:`catboost.CatBoostClassifier`, optional
+    or `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__, optional
         XGBoost or LightGBM classifier to be fit with desired hyperparameters.
         If not provided, a XGBoost classifier with default hyperparameters is used.
 

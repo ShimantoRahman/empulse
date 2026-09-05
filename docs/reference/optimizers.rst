@@ -1,5 +1,6 @@
 .. module:: empulse.optimizers
 
+==================
 empulse.optimizers
 ==================
 
