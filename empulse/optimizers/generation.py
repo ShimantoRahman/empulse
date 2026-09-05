@@ -61,8 +61,8 @@ class Generation:
         Name of the optimizer.
 
     direction : Direction
-        Optimization direction, always ``Direction.MAXIMIZE``.
-        Callers handing this class a loss (which is minimized by convention) must negate it first;
+        Optimization direction, always ``Direction.MAXIMIZE``. Callers handing this class a loss
+        (which is minimized by convention) must negate it first.
 
     population : ndarray, shape (population_size, n_dim)
         Current population.

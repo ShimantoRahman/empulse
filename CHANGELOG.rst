@@ -104,6 +104,17 @@
   :meth:`~empulse.metrics.Metric.optimal_rate` now raise a ``ValueError`` when the cost matrix is
   degenerate for the given parameters (``fp_cost + tn_benefit + fn_cost + tp_benefit`` evaluates
   to 0, making the optimal threshold undefined).
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  no longer silently skip learning a cost-sensitive threshold/rate when fitted with an aliased
+  :class:`~empulse.metrics.Metric` with every required parameter supplied through its alias.
+  Previously, the decision of whether to fit cost-sensitively compared the metric's full set of
+  accepted parameter spellings (both a symbol's raw name *and* its alias) for equality against the
+  caller-supplied keys; since a caller only ever supplies one spelling per parameter, that equality
+  could never hold for an aliased metric, so it always fell back to a plain (non-cost-sensitive)
+  fit of the base estimator instead - and, if any of the metric's own parameter names happened to
+  be passed, forwarded them straight into the base estimator's ``fit()``, which doesn't recognize
+  them, raising a ``TypeError``. The same fix also stops an unrelated extra keyword argument (e.g.
+  a routed ``sample_weight``) from disabling cost-sensitive fitting.
 
 `0.11.1`_ (08-05-2026)
 ======================

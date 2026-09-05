@@ -1,5 +1,6 @@
 import copy
 import warnings
+from collections.abc import Iterable
 from numbers import Real
 
 import numpy as np
@@ -301,6 +302,12 @@ class Metric(BaseMetric):
     @property
     def _is_deterministic(self) -> bool:
         return not self._is_stochastic
+
+    def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
+        """Return the required symbol names not covered by *supplied* (aliases resolved)."""
+        resolved_supplied = {str(self.cost_matrix._aliases.get(key, key)) for key in supplied}
+        required_symbols = self._all_parameters - set(self.cost_matrix._aliases.keys()) - self._default_parameter_names
+        return required_symbols - resolved_supplied
 
     def _prepare_parameters(
         self, *, n_samples: int | None = None, **kwargs: FloatArrayLike | float

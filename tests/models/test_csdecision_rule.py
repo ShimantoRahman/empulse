@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
+import sympy
 from sklearn import config_context
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 
-from empulse.metrics import CostMatrix, MaxProfit, Metric
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
 
 
@@ -330,3 +331,72 @@ class TestMetadataRouting:
             clf.set_fit_request(fp_cost=True, fn_cost=True, tn_cost=True, tp_cost=True)
             clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
         assert hasattr(clf, 'decision_')
+
+
+class TestAliasedMetric:
+    """
+    Regression tests for cost-sensitive fitting silently skipping on an aliased Metric.
+
+    `_should_skip_cost_sensitive_fit` used to compare `loss._all_parameters` (which lists both a
+    symbol's raw name and its alias) for equality against the caller's supplied keys. Since a
+    caller only ever supplies one spelling per parameter, that equality could never hold for an
+    aliased metric, so it silently skipped learning a threshold/rate and instead forwarded the
+    loss's kwargs straight to the base estimator's `fit`, which doesn't recognize them.
+    """
+
+    @staticmethod
+    def _make_aliased_metric():
+        clv, d = sympy.symbols('clv d')
+        return Metric(CostMatrix().add_fn_cost(clv).add_fp_cost(d).alias({'incentive_cost': 'd'}), Cost())
+
+    @staticmethod
+    def _make_unaliased_metric():
+        clv, d = sympy.symbols('clv d')
+        return Metric(CostMatrix().add_fn_cost(clv).add_fp_cost(d), Cost())
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_aliased_metric_fits_cost_sensitively(self, classifier_type, data):
+        """Fitting with every parameter supplied via its alias must not skip the decision."""
+        X, y = data
+        clf = _make_model(classifier_type, loss=self._make_aliased_metric())
+        clf.fit(X, y, clv=100.0, incentive_cost=10.0)
+        assert hasattr(clf, 'decision_')
+        assert clf.decision_ is not None
+        assert not (isinstance(clf.decision_, float) and np.isnan(clf.decision_))
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_aliased_and_unaliased_metric_agree(self, classifier_type, data):
+        """The alias is purely cosmetic: it must not change the fitted decision."""
+        X, y = data
+        clf_aliased = _make_model(classifier_type, loss=self._make_aliased_metric())
+        clf_aliased.fit(X, y, clv=100.0, incentive_cost=10.0)
+
+        clf_unaliased = _make_model(classifier_type, loss=self._make_unaliased_metric())
+        clf_unaliased.fit(X, y, clv=100.0, d=10.0)
+
+        assert clf_aliased.decision_ == pytest.approx(clf_unaliased.decision_)
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_extra_kwarg_does_not_disable_cost_sensitive_fit(self, classifier_type, data):
+        """An unrelated extra kwarg (e.g. routed sample_weight) must not disable the decision."""
+        X, y = data
+        with config_context(enable_metadata_routing=True):
+            base = LogisticRegression(max_iter=200).set_fit_request(sample_weight=True)
+            if classifier_type == 'threshold':
+                clf = CSThresholdClassifier(base, calibrator=None, loss=self._make_unaliased_metric())
+            else:
+                clf = CSRateClassifier(base, loss=self._make_unaliased_metric())
+            clf.fit(X, y, clv=100.0, d=10.0, sample_weight=np.ones(len(y)))
+        assert hasattr(clf, 'decision_')
+        assert clf.decision_ is not None
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_partial_aliased_params_do_not_leak_to_estimator(self, classifier_type, data):
+        """Supplying only some of an aliased metric's params must not forward them to fit()."""
+        X, y = data
+        clf = _make_model(classifier_type, loss=self._make_aliased_metric())
+        # Only `clv` is supplied; `incentive_cost`/`d` is missing, so cost-sensitive fitting is
+        # correctly skipped - but `clv` must not leak into LogisticRegression.fit() as a kwarg.
+        clf.fit(X, y, clv=100.0)
+        assert hasattr(clf, 'estimator_')
+        assert not hasattr(clf, 'decision_')

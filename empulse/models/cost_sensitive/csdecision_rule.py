@@ -165,7 +165,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         Returns True if:
         1. All init costs are zero/default AND all fit costs are unchanged/zero AND no loss function
-        2. Loss function exists but no loss-specific parameters were provided
+        2. Loss function exists but the caller did not supply values for parameters it requires
         """
         # First condition: no costs provided and no loss function
         costs_not_provided = self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost) or self._all_costs_zero(
@@ -173,10 +173,12 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         )
         no_costs_no_loss = self._all_init_costs_zero() and costs_not_provided and self.loss is None
 
-        # Second condition: loss exists but no loss-specific params provided
-        loss_without_params = self.loss is not None and self.loss._all_parameters != (
-            params.keys() | self.loss._default_parameter_names
-        )
+        # Second condition: loss exists but the caller left at least one required parameter
+        # unsupplied. `_missing_parameters` treats a parameter as covered under either its symbol
+        # name or any alias (never both), and ignores unrelated extra keys (e.g. sample_weight) -
+        # unlike a direct comparison against `_all_parameters`, which lists both spellings and can
+        # never be satisfied for an aliased metric.
+        loss_without_params = self.loss is not None and bool(self.loss._missing_parameters(params.keys()))
 
         return no_costs_no_loss or loss_without_params
 
@@ -337,9 +339,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             params.get('fp_cost', Parameter.UNCHANGED),
             params,
         ):
-            estimator_params = {
-                k: v for k, v in params.items() if k not in {'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}
-            }
+            loss_param_names = self._get_loss_or_default()._all_symbols
+            estimator_params = {k: v for k, v in params.items() if k not in loss_param_names}
             self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
         else:
             self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)

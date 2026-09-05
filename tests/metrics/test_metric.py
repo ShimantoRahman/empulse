@@ -544,6 +544,49 @@ def test_matrix_alias_wrong_types(y_true_and_prediction):
         cost_matrix.alias(None)  # type: ignore
 
 
+class TestMissingParameters:
+    """
+    Tests for Metric._missing_parameters, used by CSThresholdClassifier/CSRateClassifier.
+
+    Regression coverage for a bug where comparing `_all_parameters` (which lists both a symbol's
+    raw name and its alias) for equality against the caller-supplied keys could never succeed for
+    an aliased metric, since a caller only ever supplies one spelling per parameter.
+    """
+
+    @staticmethod
+    def _aliased_metric():
+        clv, d = sympy.symbols('clv d')
+        return Metric(CostMatrix().add_fn_cost(clv).add_fp_cost(d).alias({'incentive_cost': 'd'}), Cost())
+
+    def test_nothing_supplied(self):
+        metric = self._aliased_metric()
+        assert metric._missing_parameters([]) == {'clv', 'd'}
+
+    def test_supplied_by_symbol_name(self):
+        metric = self._aliased_metric()
+        assert metric._missing_parameters(['clv', 'd']) == set()
+
+    def test_supplied_by_alias(self):
+        """A parameter is satisfied by its alias just as well as by its raw symbol name."""
+        metric = self._aliased_metric()
+        assert metric._missing_parameters(['clv', 'incentive_cost']) == set()
+
+    def test_partial_supply_still_reports_missing(self):
+        metric = self._aliased_metric()
+        assert metric._missing_parameters(['clv']) == {'d'}
+
+    def test_unrelated_extra_keys_are_ignored(self):
+        """Extra keys the metric doesn't recognize (e.g. sample_weight) don't affect the result."""
+        metric = self._aliased_metric()
+        assert metric._missing_parameters(['clv', 'incentive_cost', 'sample_weight']) == set()
+
+    def test_default_parameters_are_never_missing(self):
+        clv, d = sympy.symbols('clv d')
+        metric = Metric(CostMatrix().add_fn_cost(clv).add_fp_cost(d).set_default(clv=100.0), Cost())
+        assert metric._missing_parameters([]) == {'d'}
+        assert metric._missing_parameters(['d']) == set()
+
+
 def test_metric_set_default(y_true_and_prediction, delta_churn_cost_matrix):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction

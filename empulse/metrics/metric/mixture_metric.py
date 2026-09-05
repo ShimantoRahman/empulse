@@ -1,4 +1,4 @@
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 import numpy as np
@@ -209,6 +209,22 @@ class MixtureMetric(BaseMetric):
     def _is_deterministic(self) -> bool:
         """Whether every component is free of stochastic (random) variables."""
         return all(component.metric._is_deterministic for component in self.components)
+
+    def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
+        """
+        Return the required parameter names not covered by *supplied*.
+
+        A mixture-level default (:attr:`defaults`) counts as covered for every component, in
+        addition to whatever the caller passed, since it is merged in before parameters are
+        forwarded (see :meth:`_apply_defaults`). Parameters a component fixes internally
+        (:attr:`MixtureComponent.parameters`) are never required from the caller.
+        """
+        effectively_supplied = set(supplied) | self.defaults.keys()
+        missing = {name for name in self._weight_parameter_names if name not in effectively_supplied}
+        for component in self.components:
+            fixed = component.parameters.keys()
+            missing |= component.metric._missing_parameters(effectively_supplied) - fixed
+        return missing
 
     @property
     def _weight_parameter_names(self) -> set[str]:

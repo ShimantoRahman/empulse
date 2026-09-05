@@ -197,6 +197,39 @@ def test_mixture_all_symbols_includes_weight_and_component_names(empcs_mixture, 
     assert symbols - {'success_rate', 'default_rate', 'roi'} == metric_stoch._all_symbols - {'roi'}
 
 
+def test_mixture_missing_parameters_nothing_supplied(empcs_mixture):
+    """Without a mixture-level default, every weight name and component symbol is required."""
+    assert empcs_mixture._missing_parameters([]) == {'success_rate', 'default_rate', 'roi'}
+
+
+def test_mixture_missing_parameters_all_supplied(empcs_mixture):
+    assert empcs_mixture._missing_parameters(['success_rate', 'default_rate', 'roi']) == set()
+
+
+def test_mixture_missing_parameters_partial(empcs_mixture):
+    assert empcs_mixture._missing_parameters(['success_rate']) == {'default_rate', 'roi'}
+
+
+def test_mixture_missing_parameters_mixture_level_default_covers_every_component():
+    """A parameter covered by MixtureMetric's own `defaults` counts as supplied everywhere."""
+    gamma, roi = sympy.symbols('gamma roi')
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
+    mixture = MixtureMetric(
+        [
+            MixtureComponent('success_rate', metric_det, {'gamma': 0.0}),
+            MixtureComponent('default_rate', metric_det, {'gamma': 1.0}),
+        ],
+        defaults={'roi': 0.2644},
+    )
+    assert mixture._missing_parameters([]) == {'success_rate', 'default_rate'}
+    assert mixture._missing_parameters(['success_rate', 'default_rate']) == set()
+
+
+def test_mixture_missing_parameters_real_prebuilt_metric_has_no_missing_by_default():
+    """empcs_score sets defaults for every one of its parameters, so nothing is ever missing."""
+    assert empcs_score._missing_parameters([]) == set()
+
+
 def test_mixture_is_deterministic_false_with_stochastic_component(empcs_mixture):
     assert empcs_mixture._is_deterministic is False
 

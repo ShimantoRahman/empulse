@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .common import Direction
@@ -61,6 +62,18 @@ class BaseMetric(ABC):
     @abstractmethod
     def _is_deterministic(self) -> bool:
         """Whether the metric is free of stochastic (random) variables."""
+
+    @abstractmethod
+    def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
+        """Return the required parameter names not covered by *supplied*.
+
+        A parameter counts as covered when *supplied* contains it under any of its accepted
+        spellings (its raw symbol name or any alias registered for it), or when it has a default
+        value and therefore need not be supplied at all. Unlike comparing against
+        :attr:`_all_parameters` directly, this correctly handles metrics with aliases (where a
+        parameter is satisfied by *either* spelling, never both) and tolerates unrelated extra
+        keys in *supplied* (e.g. ``sample_weight``).
+        """
 
     @abstractmethod
     def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
