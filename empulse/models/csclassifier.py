@@ -176,8 +176,12 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
     def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int) -> dict[str, Any]:
         for key, value in loss_params.items():
             if isinstance(value, np.ndarray):
-                if value.size != size:
-                    raise ValueError(f'The size of the cost parameter {key} must be {size}, but got {value.size}.')
+                if value.size not in {1, size}:
+                    raise ValueError(
+                        f"Parameter '{key}' has length {value.size}, but expected length "
+                        f'{size} (one value per sample, matching y) or a single value '
+                        '(length 1, applied to every sample).'
+                    )
                 loss_params[key] = value.reshape(-1)
         return loss_params
 

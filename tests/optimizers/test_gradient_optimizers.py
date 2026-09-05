@@ -257,6 +257,14 @@ class TestStepSchedule:
     def test_repr(self):
         assert 'StepSchedule' in repr(StepSchedule(1.0, step_size=10, gamma=0.5))
 
+    def test_zero_step_size_raises(self):
+        with pytest.raises(ValueError):
+            StepSchedule(start_value=1.0, step_size=0)
+
+    def test_negative_step_size_raises(self):
+        with pytest.raises(ValueError):
+            StepSchedule(start_value=1.0, step_size=-1)
+
 
 class TestCosineAnnealingSchedule:
     def test_starts_at_max(self):
@@ -292,6 +300,14 @@ class TestCosineAnnealingSchedule:
     def test_repr(self):
         assert 'CosineAnnealingSchedule' in repr(CosineAnnealingSchedule(max_value=1.0, min_value=0.0, t_max=100))
 
+    def test_zero_t_max_raises(self):
+        with pytest.raises(ValueError):
+            CosineAnnealingSchedule(max_value=1.0, min_value=0.0, t_max=0)
+
+    def test_negative_t_max_raises(self):
+        with pytest.raises(ValueError):
+            CosineAnnealingSchedule(max_value=1.0, min_value=0.0, t_max=-5)
+
 
 class TestWarmupSchedule:
     def test_first_epoch_is_fraction(self):
@@ -326,6 +342,14 @@ class TestWarmupSchedule:
 
     def test_repr(self):
         assert 'WarmupSchedule' in repr(WarmupSchedule(warmup_steps=10, after_schedule=ConstantSchedule(1.0)))
+
+    def test_zero_warmup_steps_raises(self):
+        with pytest.raises(ValueError):
+            WarmupSchedule(warmup_steps=0, after_schedule=ConstantSchedule(1.0))
+
+    def test_negative_warmup_steps_raises(self):
+        with pytest.raises(ValueError):
+            WarmupSchedule(warmup_steps=-1, after_schedule=ConstantSchedule(1.0))
 
 
 @pytest.mark.parametrize(

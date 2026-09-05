@@ -11,15 +11,23 @@ from ._base import Optimizer
 
 
 def _check_optimize_result(result: OptimizeResult, optimizer_name: str = 'scipy') -> None:
-    """Warn if the optimiser did not converge."""
-    if result.status != 0:
-        warnings.warn(
-            f'{optimizer_name} failed to converge (status={result.status}):\n{result.message}.\n\n'
-            'Increase max_iter or scale the data as shown in:\n'
-            '    https://scikit-learn.org/stable/modules/preprocessing.html',
-            ConvergenceWarning,
-            stacklevel=3,
-        )
+    """Warn if the optimizer did not converge.
+
+    Not every ``scipy.optimize.minimize`` method populates ``result.status`` (some only set
+    ``result.success``), so convergence is judged from ``success`` (defaulting to converged/``True``
+    if even that is missing) rather than requiring ``status`` to exist. ``status`` is read
+    defensively too, since it is only used for the warning message.
+    """
+    if getattr(result, 'success', True):
+        return
+    status = getattr(result, 'status', 0)
+    warnings.warn(
+        f'{optimizer_name} failed to converge (status={status}):\n{result.message}.\n\n'
+        'Increase max_iter or scale the data as shown in:\n'
+        '    https://scikit-learn.org/stable/modules/preprocessing.html',
+        ConvergenceWarning,
+        stacklevel=3,
+    )
 
 
 class LBFGSBOptimizer(Optimizer):

@@ -179,7 +179,7 @@ class StepSchedule(Schedule):
     start_value : float
         Value at epoch 0.
     step_size : int
-        Number of epochs between each reduction.
+        Number of epochs between each reduction.  Must be at least 1.
     gamma : float, default=0.1
         Multiplicative factor applied at each drop.  Use ``gamma < 1`` for
         decay (LR reduction) or ``gamma > 1`` for growth (alpha warm-up).
@@ -204,6 +204,8 @@ class StepSchedule(Schedule):
         gamma: float = 0.1,
         min_value: float = 0.0,
     ) -> None:
+        if step_size < 1:
+            raise ValueError('step_size must be at least 1.')
         self.start_value = start_value
         self.step_size = step_size
         self.gamma = gamma
@@ -231,7 +233,7 @@ class CosineAnnealingSchedule(Schedule):
     min_value : float
         Value reached at epoch *t_max*.
     t_max : int
-        Half-period of the cosine curve (epochs from max to min).
+        Half-period of the cosine curve (epochs from max to min).  Must be at least 1.
     cycle : bool, default=False
         If ``True``, restart the annealing cycle after *t_max* epochs.
 
@@ -255,6 +257,8 @@ class CosineAnnealingSchedule(Schedule):
         t_max: int,
         cycle: bool = False,
     ) -> None:
+        if t_max < 1:
+            raise ValueError('t_max must be at least 1.')
         self.max_value = max_value
         self.min_value = min_value
         self.t_max = t_max
@@ -277,7 +281,7 @@ class WarmupSchedule(Schedule):
     Parameters
     ----------
     warmup_steps : int
-        Number of epochs for the linear warm-up phase.
+        Number of epochs for the linear warm-up phase.  Must be at least 1.
     after_schedule : Schedule
         Schedule to use after the warm-up.  Its 0-based epoch counter restarts
         at the end of the warm-up.
@@ -294,6 +298,8 @@ class WarmupSchedule(Schedule):
     """
 
     def __init__(self, warmup_steps: int, after_schedule: Schedule) -> None:
+        if warmup_steps < 1:
+            raise ValueError('warmup_steps must be at least 1.')
         self.warmup_steps = warmup_steps
         self.after_schedule = after_schedule
 
