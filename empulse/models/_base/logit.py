@@ -9,7 +9,6 @@ from scipy.special import expit
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, LogitObjective
 from ...optimizers import Optimizer
@@ -53,15 +52,10 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         loss: BaseMetric | None = None,
         optimizer: Optimizer | None = None,
     ):
-        self.tp_cost = tp_cost
-        self.tn_cost = tn_cost
-        self.fn_cost = fn_cost
-        self.fp_cost = fp_cost
         self.C = C
         self.fit_intercept = fit_intercept
         self.soft_threshold = soft_threshold
         self.l1_ratio = l1_ratio
-        self.loss = loss
         self.optimizer = optimizer
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
@@ -78,8 +72,13 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         if self.fit_intercept and not np.all(X[:, 0] == 1):
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
-        if self.loss is None:
-            loss_params = self._validate_costs(**loss_params)
+        if self._get_metric_loss() is None:
+            # `fit()` already checked/converted these costs; the logit objective additionally
+            # needs instance-dependent costs as a column vector rather than a flat array.
+            for key in ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'):
+                value = loss_params[key]
+                if not isinstance(value, Real) and (value := np.asarray(value)).ndim == 1:
+                    loss_params[key] = np.expand_dims(value, axis=1)
 
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
@@ -104,35 +103,6 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         self.n_iter_ = self.result_.nit
 
         return self
-
-    def _validate_costs(
-        self,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        **loss_params: Any,
-    ) -> dict[str, Any]:
-        if not isinstance(self.loss, BaseMetric):
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
-
-            if not isinstance(tp_cost, Real) and (tp_cost := np.asarray(tp_cost)).ndim == 1:
-                tp_cost = np.expand_dims(tp_cost, axis=1)
-            if not isinstance(tn_cost, Real) and (tn_cost := np.asarray(tn_cost)).ndim == 1:
-                tn_cost = np.expand_dims(tn_cost, axis=1)
-            if not isinstance(fn_cost, Real) and (fn_cost := np.asarray(fn_cost)).ndim == 1:
-                fn_cost = np.expand_dims(fn_cost, axis=1)
-            if not isinstance(fp_cost, Real) and (fp_cost := np.asarray(fp_cost)).ndim == 1:
-                fp_cost = np.expand_dims(fp_cost, axis=1)
-
-            # Assume that the loss function takes the following parameters:
-            loss_params['tp_cost'] = tp_cost
-            loss_params['tn_cost'] = tn_cost
-            loss_params['fn_cost'] = fn_cost
-            loss_params['fp_cost'] = fp_cost
-        return loss_params
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """

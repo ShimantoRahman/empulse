@@ -387,8 +387,9 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self : object
             Returns self.
         """
-        if isinstance(self.loss, BaseMetric):
-            fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
+        loss_ = self._get_metric_loss()
+        if isinstance(loss_, BaseMetric):
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(**loss_params)
         else:
             tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
                 tp_cost=loss_params.get('tp_cost', Parameter.UNCHANGED),

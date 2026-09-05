@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from numbers import Real
-from typing import Any, ClassVar, Literal, Protocol, Self, overload
+from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -35,8 +35,6 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         'loss': [BaseMetric, None],
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = Cost
-    _cost_ndim: ClassVar[int] = 0
-    _array_cost_ndim: ClassVar[int] = 1
     _set_default_costs: ClassVar[bool] = True
 
     def _more_tags(self) -> dict[str, bool]:
@@ -138,25 +136,16 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
 
         loss_ = self._get_metric_loss()
         if loss_ is None:
-            if self._cost_ndim > 0:
-                tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                    tp_cost=tp_cost,
-                    tn_cost=tn_cost,
-                    fn_cost=fn_cost,
-                    fp_cost=fp_cost,
-                    force_array=True,
-                    n_samples=int(X.shape[0]),
-                )
-            else:
-                tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                    tp_cost=tp_cost,
-                    tn_cost=tn_cost,
-                    fn_cost=fn_cost,
-                    fp_cost=fp_cost,
-                )
-            loss_params = self._add_standard_costs_to_params(
-                tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, params=loss_params
+            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
+                tp_cost=tp_cost,
+                tn_cost=tn_cost,
+                fn_cost=fn_cost,
+                fp_cost=fp_cost,
             )
+            loss_params['tp_cost'] = tp_cost
+            loss_params['tn_cost'] = tn_cost
+            loss_params['fn_cost'] = fn_cost
+            loss_params['fp_cost'] = fp_cost
         loss_params = self._normalize_cost_shapes(loss_params, size=y.size)
 
         loss = loss_ if loss_ is not None else self._get_default_loss()
@@ -185,16 +174,13 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         return y_pred
 
     def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int) -> dict[str, Any]:
-        shape = -1 if self._array_cost_ndim == 1 else (1, -1)
-
         for key, value in loss_params.items():
             if isinstance(value, np.ndarray):
                 if value.size != size:
                     raise ValueError(f'The size of the cost parameter {key} must be {size}, but got {value.size}.')
-                loss_params[key] = value.reshape(shape)
+                loss_params[key] = value.reshape(-1)
         return loss_params
 
-    @overload
     def _check_costs(
         self,
         *,
@@ -203,43 +189,6 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         fn_cost: FloatArrayLike | float | Parameter,
         fp_cost: FloatArrayLike | float | Parameter,
         caller: str = 'fit',
-        force_array: Literal[True] = True,
-        n_samples: int,
-    ) -> tuple[
-        FloatNDArray,
-        FloatNDArray,
-        FloatNDArray,
-        FloatNDArray,
-    ]: ...
-
-    @overload
-    def _check_costs(
-        self,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        caller: str = 'fit',
-        force_array: Literal[False] = False,
-        n_samples: int | None = None,
-    ) -> tuple[
-        FloatNDArray | float,
-        FloatNDArray | float,
-        FloatNDArray | float,
-        FloatNDArray | float,
-    ]: ...
-
-    def _check_costs(
-        self,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        caller: str = 'fit',
-        force_array: bool = False,
-        n_samples: int | None = None,
     ) -> tuple[
         FloatNDArray | float,
         FloatNDArray | float,
@@ -271,22 +220,14 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             fp_cost = 1
             fn_cost = 1
 
-        if force_array:
-            if n_samples is None:
-                raise ValueError('n_samples should be set when force_array is True.')
-            tp_cost = np.asarray(tp_cost) if not isinstance(tp_cost, Real) else np.full(n_samples, tp_cost)
-            tn_cost = np.asarray(tn_cost) if not isinstance(tn_cost, Real) else np.full(n_samples, tn_cost)
-            fn_cost = np.asarray(fn_cost) if not isinstance(fn_cost, Real) else np.full(n_samples, fn_cost)
-            fp_cost = np.asarray(fp_cost) if not isinstance(fp_cost, Real) else np.full(n_samples, fp_cost)
-        else:
-            if not isinstance(tp_cost, Real):
-                tp_cost = np.asarray(tp_cost)
-            if not isinstance(tn_cost, Real):
-                tn_cost = np.asarray(tn_cost)
-            if not isinstance(fn_cost, Real):
-                fn_cost = np.asarray(fn_cost)
-            if not isinstance(fp_cost, Real):
-                fp_cost = np.asarray(fp_cost)
+        if not isinstance(tp_cost, Real):
+            tp_cost = np.asarray(tp_cost)
+        if not isinstance(tn_cost, Real):
+            tn_cost = np.asarray(tn_cost)
+        if not isinstance(fn_cost, Real):
+            fn_cost = np.asarray(fn_cost)
+        if not isinstance(fp_cost, Real):
+            fp_cost = np.asarray(fp_cost)
 
         return tp_cost, tn_cost, fn_cost, fp_cost  # type: ignore[return-value]
 
@@ -343,21 +284,21 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         fn_cost : float
             The (class-dependent) cost of a false negative.
         """
-        if self.loss is None:
+        loss_ = self._get_metric_loss()
+        if loss_ is None:
             tp_cost = loss_params.get('tp_cost', 0.0)
             tn_cost = loss_params.get('tn_cost', 0.0)
             fn_cost = loss_params.get('fn_cost', 0.0)
             fp_cost = loss_params.get('fp_cost', 0.0)
-        elif isinstance(self.loss, BaseMetric):
-            if isinstance(self.loss.strategy, MaxProfit):
-                fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(replace_stochastic=True, **loss_params)
+        elif isinstance(loss_, BaseMetric):
+            if isinstance(loss_.strategy, MaxProfit):
+                fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
             else:
                 raise ValueError(
-                    f'{self.__class__.__name__} only supports losses built with the '
-                    f'MaxProfit strategy, got {self.loss}.'
+                    f'{self.__class__.__name__} only supports losses built with the MaxProfit strategy, got {loss_}.'
                 )
         else:
-            raise ValueError(f'Unknown loss function: {self.loss}.')
+            raise ValueError(f'Unknown loss function: {loss_}.')
 
         # This model requires scalar (class-dependent) costs, so instance-dependent
         # (array-like) costs are aggregated to their mean value.

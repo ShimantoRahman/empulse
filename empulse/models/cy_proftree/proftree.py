@@ -274,7 +274,8 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             random_state = int(self.random_state) if self.random_state is not None else -1
 
         self.tree_ = EvolutionaryTree()
-        if self.loss is None:
+        loss_ = self._get_metric_loss()
+        if loss_ is None:
             tp_cost = loss_params.get('tp_cost', 0)
             tn_cost = loss_params.get('tn_cost', 0)
             fn_cost = loss_params.get('fn_cost', 0)
@@ -301,9 +302,9 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 tol=float(self.tolerance),
                 random_state=random_state,
             )
-        elif isinstance(self.loss, BaseMetric):
-            if isinstance(self.loss.strategy, MaxProfit) and self.loss._is_deterministic:
-                fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
+        elif isinstance(loss_, BaseMetric):
+            if isinstance(loss_.strategy, MaxProfit) and loss_._is_deterministic:
+                fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(**loss_params)
                 tp_benefit = -float(np.mean(tp_cost))
                 tn_benefit = -float(np.mean(tn_cost))
                 fp_cost = float(np.mean(fp_cost))
@@ -331,19 +332,17 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                     random_state=random_state,
                 )
             else:
-                if self.loss.direction is Direction.MAXIMIZE:
-                    fitness_fn = lambda *args, **kwargs: -self.loss(*args, **kwargs)
+                if loss_.direction is Direction.MAXIMIZE:
+                    fitness_fn = lambda *args, **kwargs: -loss_(*args, **kwargs)
                 else:
-                    fitness_fn = self.loss
+                    fitness_fn = loss_
                 fitness_fn = partial(fitness_fn, **loss_params)
 
                 y_proba = np.random.default_rng().random(y.size, dtype=np.float32)
                 try:  # catch issue with the loss function before it goes into C world
                     fitness_fn(y.astype(np.int32), y_proba)
                 except (TypeError, ValueError) as e:
-                    raise ValueError(
-                        f'The loss function {self.loss} threw an error when evaluating the function.'
-                    ) from e
+                    raise ValueError(f'The loss function {loss_} threw an error when evaluating the function.') from e
                 self.tree_.fit_custom(
                     X=X.astype(np.float32),
                     y=y.astype(np.int32),
@@ -364,7 +363,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                     random_state=random_state,
                 )
         else:
-            raise ValueError(f'Unknown loss function: {self.loss}.')
+            raise ValueError(f'Unknown loss function: {loss_}.')
 
         self.n_iter_ = self.tree_.n_generations
 
