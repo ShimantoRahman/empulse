@@ -1,0 +1,9 @@
+﻿ConstantSchedule
+================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: ConstantSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

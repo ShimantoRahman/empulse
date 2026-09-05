@@ -1,0 +1,601 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>1.4. Customer Churn Metrics — Empulse 0.12.0-dev0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=92121101"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script src="../../_static/design-tabs.js?v=f930bc37"></script>
+<script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/metrics/prebuilt_churn_metrics';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="prebuilt_acquisition_metrics.html" rel="next" title="1.5. Customer Acquisition Metrics"/>
+<link href="metric_class_in_model.html" rel="prev" title="1.3. Use your custom metric inside a model"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../metrics_guide.html">1. Metrics</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="choosing_metric.html">1.1. Choosing the right metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_defined_value_metric.html">1.2. Define your own cost-sensitive or value metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metric_class_in_model.html">1.3. Use your custom metric inside a model</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">1.4. Customer Churn Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prebuilt_acquisition_metrics.html">1.5. Customer Acquisition Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prebuilt_credit_scoring_metrics.html">1.6. Credit Scoring Metrics</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../models_guide.html">2. Cost-sensitive and Value-driven models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/linear_models.html">2.1. Linear Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/csboost.html">2.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/tree_models.html">2.3. Tree-Based Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/threshold_tuning.html">2.4. Threshold Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../models/robustcs.html">2.5. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../preprocessing_guide.html">3. Model-Independent Preprocessing</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/bias_mitigation.html">3.1. Bias Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/cost_sampling.html">3.2. Cost-Proportionate Sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../instance_based_cv.html">4. Cross-Validation with Instance-dependent Costs</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets_guide.html">5. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">5.3.1. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">5.3.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">5.3.3. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">5.3.4. 2011 Kaggle competition Give Me Some Credit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/iranian_churn.html">5.3.5. Iranian Churn Dataset</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../metrics_guide.html"><span class="section-number">1. </span>Metrics</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">1.4. </span>Customer Churn Metrics</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="customer-churn-metrics">
+<span id="prebuilt-churn-metrics"></span><h1><span class="section-number">1.4. </span>Customer Churn Metrics<a class="headerlink" href="#customer-churn-metrics" title="Link to this heading">#</a></h1>
+<p>Customer churn is the use case value-driven classification was originally developed for, and
+Empulse ships a family of ready-made metrics for it. They all describe the same business
+situation: you predict which customers are about to leave, contact the ones you predict will
+churn, and offer them a retention incentive.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These names are <strong>prebuilt</strong> <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instances, not functions.
+Earlier versions of Empulse exposed hand-written <code class="docutils literal notranslate"><span class="pre">empc</span></code>, <code class="docutils literal notranslate"><span class="pre">mpc</span></code> and <code class="docutils literal notranslate"><span class="pre">empb</span></code> functions
+which returned a <code class="docutils literal notranslate"><span class="pre">(score,</span> <span class="pre">threshold)</span></code> tuple; those have been removed. The score is now
+obtained by calling the metric, and the threshold by its
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_rate" title="empulse.metrics.Metric.optimal_rate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_rate</span></code></a> or
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_threshold" title="empulse.metrics.Metric.optimal_threshold"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_threshold</span></code></a> method.</p>
+</div>
+<section id="the-cost-benefit-matrix">
+<h2><span class="section-number">1.4.1. </span>The Cost-Benefit Matrix<a class="headerlink" href="#the-cost-benefit-matrix" title="Link to this heading">#</a></h2>
+<p>Contacting a customer costs <span class="math notranslate nohighlight">\(f\)</span> whether or not the offer is accepted. A contacted customer
+accepts the retention offer with probability <span class="math notranslate nohighlight">\(\gamma\)</span>, in which case you keep their customer
+lifetime value <span class="math notranslate nohighlight">\(CLV\)</span> but pay the incentive <span class="math notranslate nohighlight">\(d\)</span>. Customers you do not contact cost you
+nothing extra, so the two “predicted negative” outcomes are zero.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual churner <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual non-churner <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted churner <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tp_benefit</span></code> <span class="math notranslate nohighlight">\(= \gamma (CLV - d - f) - (1 - \gamma) f\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> <span class="math notranslate nohighlight">\(= d + f\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted non-churner <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> <span class="math notranslate nohighlight">\(= 0\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tn_benefit</span></code> <span class="math notranslate nohighlight">\(= 0\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The metrics differ in how they treat <span class="math notranslate nohighlight">\(\gamma\)</span>, and in whether the incentive is a fixed
+amount or a fraction of the customer’s value.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 25.0%"/>
+<col style="width: 20.0%"/>
+<col style="width: 25.0%"/>
+<col style="width: 30.0%"/>
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Metric</p></th>
+<th class="head"><p>Strategy</p></th>
+<th class="head"><p>Acceptance rate <span class="math notranslate nohighlight">\(\gamma\)</span></p></th>
+<th class="head"><p>Incentive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a></p></td>
+<td><p>Fixed (<code class="docutils literal notranslate"><span class="pre">accept_rate</span></code>)</p></td>
+<td><p>Fixed amount (<code class="docutils literal notranslate"><span class="pre">incentive_cost</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Beta(alpha,</span> <span class="pre">beta)</span></code></p></td>
+<td><p>Fixed amount (<code class="docutils literal notranslate"><span class="pre">incentive_cost</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.EmpiricalMaxProfit.html#empulse.metrics.EmpiricalMaxProfit" title="empulse.metrics.EmpiricalMaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmpiricalMaxProfit</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Beta(alpha,</span> <span class="pre">beta)</span></code></p></td>
+<td><p>Fraction of CLV (<code class="docutils literal notranslate"><span class="pre">incentive_fraction</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.AUEPC.html#empulse.metrics.AUEPC" title="empulse.metrics.AUEPC"><code class="xref py py-class docutils literal notranslate"><span class="pre">AUEPC</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Beta(alpha,</span> <span class="pre">beta)</span></code></p></td>
+<td><p>Fraction of CLV (<code class="docutils literal notranslate"><span class="pre">incentive_fraction</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_churn</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a></p></td>
+<td><p>Fixed (<code class="docutils literal notranslate"><span class="pre">accept_rate</span></code>)</p></td>
+<td><p>Fraction of CLV (<code class="docutils literal notranslate"><span class="pre">incentive_fraction</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="maximum-profit-for-customer-churn-mpc">
+<h2><span class="section-number">1.4.2. </span>Maximum Profit for Customer Churn (MPC)<a class="headerlink" href="#maximum-profit-for-customer-churn-mpc" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc_score</span></code></a> treats the acceptance rate as a single known number <a class="footnote-reference brackets" href="#id3" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>. It
+reports the profit per customer at the profit-maximising cut-off.</p>
+<p>Defaults: <code class="docutils literal notranslate"><span class="pre">accept_rate=0.3</span></code>, <code class="docutils literal notranslate"><span class="pre">clv=200</span></code>, <code class="docutils literal notranslate"><span class="pre">incentive_cost=10</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost=1</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a>
+
+<span class="n">y_true</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.array.html#numpy.array" title="numpy.array"><span class="n">np</span><span class="o">.</span><span class="n">array</span></a><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">y_score</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.array.html#numpy.array" title="numpy.array"><span class="n">np</span><span class="o">.</span><span class="n">array</span></a><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">])</span>
+
+<span class="n">profit</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">)</span>
+<span class="n">profit_custom</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="expected-maximum-profit-for-customer-churn-empc">
+<h2><span class="section-number">1.4.3. </span>Expected Maximum Profit for Customer Churn (EMPC)<a class="headerlink" href="#expected-maximum-profit-for-customer-churn-empc" title="Link to this heading">#</a></h2>
+<p>In practice you rarely know the acceptance rate exactly. <a class="reference internal" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a>
+models <span class="math notranslate nohighlight">\(\gamma\)</span> as a <code class="docutils literal notranslate"><span class="pre">Beta(alpha,</span> <span class="pre">beta)</span></code> random variable and integrates over it, giving the
+<em>expected</em> maximum profit <a class="footnote-reference brackets" href="#id4" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p>
+<p>Defaults: <code class="docutils literal notranslate"><span class="pre">alpha=6</span></code>, <code class="docutils literal notranslate"><span class="pre">beta=14</span></code> (a mean acceptance rate of <span class="math notranslate nohighlight">\(6/(6+14) = 0.3\)</span>),
+<code class="docutils literal notranslate"><span class="pre">clv=200</span></code>, <code class="docutils literal notranslate"><span class="pre">incentive_cost=10</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost=1</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a>
+
+<span class="n">expected_profit</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">clv</span></code> may be instance-dependent, which is the usual reason to reach for this metric: customers
+are not equally valuable, and targeting should follow value rather than churn probability alone.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span> <span class="mi">250</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">900</span><span class="p">,</span> <span class="mi">120</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">300</span><span class="p">])</span>
+
+<span class="n">expected_profit_per_customer</span> <span class="o">=</span> <span class="n">empc_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="how-many-customers-should-you-target">
+<h3><span class="section-number">1.4.3.1. </span>How many customers should you target?<a class="headerlink" href="#how-many-customers-should-you-target" title="Link to this heading">#</a></h3>
+<p>This is the question the maximum-profit family exists to answer.
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_rate" title="empulse.metrics.Metric.optimal_rate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_rate</span></code></a> returns the fraction of the customer base to contact,
+and <a class="reference internal" href="../../reference/generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><code class="xref py py-func docutils literal notranslate"><span class="pre">classification_threshold</span></code></a> converts that fraction into a probability
+cut-off you can hand to a classifier.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><span class="n">classification_threshold</span></a>
+
+<span class="n">target_fraction</span> <span class="o">=</span> <span class="n">empc_score</span><span class="o">.</span><span class="n">optimal_rate</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+<span class="n">threshold</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><span class="n">classification_threshold</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">customer_threshold</span><span class="o">=</span><span class="n">target_fraction</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The removed <code class="docutils literal notranslate"><span class="pre">empc</span></code>/<code class="docutils literal notranslate"><span class="pre">mpc</span></code> functions returned this fraction alongside the score as a tuple.
+Use <code class="docutils literal notranslate"><span class="pre">.optimal_rate(...)</span></code> instead, and note it accepts the same parameters as the metric.</p>
+</div>
+</section>
+</section>
+<section id="expected-maximum-profit-with-a-fractional-incentive-empb">
+<h2><span class="section-number">1.4.4. </span>Expected Maximum Profit with a fractional incentive (EMPB)<a class="headerlink" href="#expected-maximum-profit-with-a-fractional-incentive-empb" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a> expresses the retention offer as a <em>fraction</em> of the
+customer’s value rather than a flat amount, which fits discount-based campaigns better. It uses
+the <a class="reference internal" href="../../reference/generated/empulse.metrics.EmpiricalMaxProfit.html#empulse.metrics.EmpiricalMaxProfit" title="empulse.metrics.EmpiricalMaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmpiricalMaxProfit</span></code></a> strategy, computing the profit from the empirical
+convex hull of the ROC curve instead of a closed-form integral.</p>
+<p>Defaults: <code class="docutils literal notranslate"><span class="pre">alpha=6</span></code>, <code class="docutils literal notranslate"><span class="pre">beta=14</span></code>, <code class="docutils literal notranslate"><span class="pre">incentive_fraction=0.05</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost=15</span></code>.
+<code class="docutils literal notranslate"><span class="pre">clv</span></code> has no default and must be supplied.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><span class="n">empb_score</span></a>
+
+<span class="n">profit_b</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><span class="n">empb_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+<span class="n">profit_b_custom</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><span class="n">empb_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">,</span> <span class="n">incentive_fraction</span><span class="o">=</span><span class="mf">0.10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="area-under-the-expected-profit-curve-auepc">
+<h2><span class="section-number">1.4.5. </span>Area Under the Expected Profit Curve (AUEPC)<a class="headerlink" href="#area-under-the-expected-profit-curve-auepc" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a> uses the same cost matrix as
+<a class="reference internal" href="../../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a>, but summarises the whole profit curve rather than only its
+peak. Where EMPB asks “how much can I make at the best cut-off?”, AUEPC asks “how good is this
+ranking across all cut-offs?” — making it the more robust choice when the operating point is not
+yet fixed.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><span class="n">auepc_score</span></a>
+
+<span class="n">ranking_quality</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><span class="n">auepc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="expected-cost-loss-for-churn">
+<h2><span class="section-number">1.4.6. </span>Expected Cost Loss for Churn<a class="headerlink" href="#expected-cost-loss-for-churn" title="Link to this heading">#</a></h2>
+<p>The metrics above maximise profit and expect <em>ranking scores</em>. When you instead want to
+<strong>minimise cost</strong> and already have calibrated probabilities,
+<a class="reference internal" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_churn</span></code></a> applies the same business model through the
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> strategy. Lower is better, and it always returns the mean cost per
+customer.</p>
+<p>Defaults: <code class="docutils literal notranslate"><span class="pre">accept_rate=0.3</span></code>, <code class="docutils literal notranslate"><span class="pre">clv=200</span></code>, <code class="docutils literal notranslate"><span class="pre">incentive_fraction=0.05</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost=1</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><span class="n">expected_cost_loss_churn</span></a>
+
+<span class="n">y_proba</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.65</span><span class="p">])</span>
+
+<span class="n">mean_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><span class="n">expected_cost_loss_churn</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_proba</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-a-churn-metric-to-train-a-model">
+<h2><span class="section-number">1.4.7. </span>Using a churn metric to train a model<a class="headerlink" href="#using-a-churn-metric-to-train-a-model" title="Link to this heading">#</a></h2>
+<p>Because these are <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instances, they can be passed straight to a
+model as its <code class="docutils literal notranslate"><span class="pre">loss</span></code>, so the model optimises the business objective during training rather than
+only being scored on it afterwards.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><span class="n">expected_cost_loss_churn</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">CSBoostClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">n_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">clv_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">CSBoostClassifier</span></a><span class="p">(</span><span class="n">loss</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><span class="n">expected_cost_loss_churn</span></a><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_train</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Not every strategy is supported by every model. See <a class="reference internal" href="metric_class_in_model.html#metric-class-in-model"><span class="std std-ref">Use your custom metric inside a model</span></a> for the
+compatibility table — in particular, the <a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy used by
+<code class="docutils literal notranslate"><span class="pre">empc_score</span></code>/<code class="docutils literal notranslate"><span class="pre">mpc_score</span></code> is only supported by a subset of models.</p>
+</div>
+</section>
+<section id="see-also">
+<h2><span class="section-number">1.4.8. </span>See also<a class="headerlink" href="#see-also" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="choosing_metric.html#choosing-metric"><span class="std std-ref">Choosing the right metric</span></a> — how to pick between cost, savings and profit metrics.</p></li>
+<li><p><a class="reference internal" href="user_defined_value_metric.html#user-defined-value-metric"><span class="std std-ref">Define your own cost-sensitive or value metric</span></a> — build your own metric when none of these fit.</p></li>
+<li><p><a class="reference internal" href="prebuilt_acquisition_metrics.html#prebuilt-acquisition-metrics"><span class="std std-ref">Customer Acquisition Metrics</span></a> and <a class="reference internal" href="prebuilt_credit_scoring_metrics.html#prebuilt-credit-scoring-metrics"><span class="std std-ref">Credit Scoring Metrics</span></a> — the equivalent
+families for other use cases.</p></li>
+</ul>
+</section>
+<section id="references">
+<h2><span class="section-number">1.4.9. </span>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a href="#id1" role="doc-backlink">1</a><span class="fn-bracket">]</span></span>
+<p>Verbeke, W., Dejaeger, K., Martens, D., Hur, J., &amp; Baesens, B. (2012).
+New insights into churn prediction in the telecommunication sector:
+A profit driven data mining approach.
+<em>European Journal of Operational Research</em>, 218(1), 211-229.</p>
+</aside>
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a href="#id2" role="doc-backlink">2</a><span class="fn-bracket">]</span></span>
+<p>Verbraken, T., Verbeke, W., &amp; Baesens, B. (2013).
+A novel profit maximizing metric for measuring classification performance of customer
+churn prediction models. <em>IEEE Transactions on Knowledge and Data Engineering</em>,
+25(5), 961-973.</p>
+</aside>
+</aside>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="metric_class_in_model.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">1.3. </span>Use your custom metric inside a model</p>
+</div>
+</a>
+<a class="right-next" href="prebuilt_acquisition_metrics.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">1.5. </span>Customer Acquisition Metrics</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-cost-benefit-matrix">1.4.1. The Cost-Benefit Matrix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#maximum-profit-for-customer-churn-mpc">1.4.2. Maximum Profit for Customer Churn (MPC)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-maximum-profit-for-customer-churn-empc">1.4.3. Expected Maximum Profit for Customer Churn (EMPC)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-many-customers-should-you-target">1.4.3.1. How many customers should you target?</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-maximum-profit-with-a-fractional-incentive-empb">1.4.4. Expected Maximum Profit with a fractional incentive (EMPB)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#area-under-the-expected-profit-curve-auepc">1.4.5. Area Under the Expected Profit Curve (AUEPC)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-cost-loss-for-churn">1.4.6. Expected Cost Loss for Churn</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-churn-metric-to-train-a-model">1.4.7. Using a churn metric to train a model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#see-also">1.4.8. See also</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">1.4.9. References</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

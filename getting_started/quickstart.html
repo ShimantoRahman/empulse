@@ -1,0 +1,457 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Quickstart — Empulse 0.12.0-dev0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../_static/documentation_options.js?v=92121101"></script>
+<script src="../_static/doctools.js?v=9bcbadda"></script>
+<script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../_static/copybutton.js?v=f281be69"></script>
+<script src="../_static/design-tabs.js?v=f930bc37"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'getting_started/quickstart';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../_static/favicon.ico" rel="icon"/>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="overview.html" rel="next" title="Which tool do I need?"/>
+<link href="installation.html" rel="prev" title="Installation"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Which tool do I need?</a></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../getting_started.html">Getting Started</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis">Quickstart</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="quickstart">
+<span id="id1"></span><h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">#</a></h1>
+<p>This page takes about five minutes and ends with a model that makes money instead of one that
+merely scores well. We will use a real telecom churn dataset where each customer has their own
+lifetime value.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[optional]</span> <span class="pre">pandas</span></code>. The dataset is downloaded once and cached
+under <code class="docutils literal notranslate"><span class="pre">~/empulse_data</span></code>.</p>
+</div>
+<section id="a-good-model-that-loses-money">
+<h2>A good model that loses money<a class="headerlink" href="#a-good-model-that-loses-money" title="Link to this heading">#</a></h2>
+<p>Start with an ordinary logistic regression and judge it the ordinary way.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="pandas"><span class="nn">pandas</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/datasets.html#module-empulse.datasets" title="empulse.datasets"><span class="nn">empulse.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.datasets.fetch_iranian_churn.html#empulse.datasets.fetch_iranian_churn" title="empulse.datasets.fetch_iranian_churn"><span class="n">fetch_iranian_churn</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html#sklearn.metrics.accuracy_score" title="sklearn.metrics.accuracy_score"><span class="n">accuracy_score</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html#sklearn.metrics.roc_auc_score" title="sklearn.metrics.roc_auc_score"><span class="n">roc_auc_score</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html#sklearn.model_selection.train_test_split" title="sklearn.model_selection.train_test_split"><span class="n">train_test_split</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.pipeline.html#module-sklearn.pipeline" title="sklearn.pipeline"><span class="nn">sklearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.preprocessing.html#module-sklearn.preprocessing" title="sklearn.preprocessing"><span class="nn">sklearn.preprocessing</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a>
+
+<span class="n">dataset</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.datasets.fetch_iranian_churn.html#empulse.datasets.fetch_iranian_churn" title="empulse.datasets.fetch_iranian_churn"><span class="n">fetch_iranian_churn</span></a><span class="p">(</span><span class="n">backend</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="pandas"><span class="n">pd</span></a><span class="p">)</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">target</span>
+<span class="n">clv</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">instance_costs</span><span class="p">[</span><span class="s1">'clv'</span><span class="p">]</span>  <span class="c1"># each customer's lifetime value</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">clv_train</span><span class="p">,</span> <span class="n">clv_test</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html#sklearn.model_selection.train_test_split" title="sklearn.model_selection.train_test_split"><span class="n">train_test_split</span></a><span class="p">(</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">clv</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">stratify</span><span class="o">=</span><span class="n">y</span>
+<span class="p">)</span>
+
+<span class="n">baseline</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([</span>
+    <span class="p">(</span><span class="s1">'scaler'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a><span class="p">()),</span>
+    <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">)),</span>
+<span class="p">])</span><span class="o">.</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.fit" title="sklearn.pipeline.Pipeline.fit"><span class="n">fit</span></a><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+
+<span class="n">y_score_baseline</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'accuracy: </span><span class="si">{</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html#sklearn.metrics.accuracy_score" title="sklearn.metrics.accuracy_score"><span class="n">accuracy_score</span></a><span class="p">(</span><span class="n">y_test</span><span class="p">,</span><span class="w"> </span><span class="n">baseline</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">))</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'roc auc : </span><span class="si">{</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html#sklearn.metrics.roc_auc_score" title="sklearn.metrics.roc_auc_score"><span class="n">roc_auc_score</span></a><span class="p">(</span><span class="n">y_test</span><span class="p">,</span><span class="w"> </span><span class="n">y_score_baseline</span><span class="p">)</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This reports an accuracy of about <strong>0.889</strong> and an ROC AUC of about <strong>0.926</strong>. By the usual
+standards, a good model.</p>
+</section>
+<section id="now-ask-what-it-is-worth">
+<h2>Now ask what it is worth<a class="headerlink" href="#now-ask-what-it-is-worth" title="Link to this heading">#</a></h2>
+<p>The dataset ships a cost matrix describing the retention campaign: contacting a customer costs
+money, the retention offer costs money, and losing a customer costs their lifetime value. Wrap it
+in a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> with the <a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> strategy to get the
+expected cost per customer.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a>
+
+<a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">())</span>
+
+<span class="n">baseline_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score_baseline</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_test</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'cost per customer: </span><span class="si">{</span><span class="n">baseline_cost</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That prints roughly <strong>7.20</strong> — a <em>loss</em> of 7.20 per customer. The model ranks customers well, but
+acting on its predictions loses money, because it was never told that missing a high-value churner
+is far worse than wasting a discount on a loyal one.</p>
+</section>
+<section id="train-on-the-cost-matrix-instead">
+<h2>Train on the cost matrix instead<a class="headerlink" href="#train-on-the-cost-matrix-instead" title="Link to this heading">#</a></h2>
+<p>Pass the very same metric to a model as its <code class="docutils literal notranslate"><span class="pre">loss</span></code>, and hand it the per-customer values at fit
+time.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">CSBoostClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.cost_sensitive.csboost.CSBoostClassifier"><span class="n">CSBoostClassifier</span></a><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_train</span><span class="p">)</span>
+
+<span class="n">y_score</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">model_cost</span> <span class="o">=</span> <span class="n">expected_cost</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_test</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'accuracy: </span><span class="si">{</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">))</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'cost per customer: </span><span class="si">{</span><span class="n">model_cost</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now the cost is about <strong>-2.78</strong>. A negative cost is a profit: the same campaign now <em>earns</em> 2.78
+per customer instead of losing 7.20. Across the 945 customers in the test set that is a swing of
+roughly 9,400 — and accuracy barely moved (0.898 vs 0.889).</p>
+<p>That is the whole point. Accuracy could not see the difference; the cost matrix could.</p>
+</section>
+<section id="how-many-customers-should-you-actually-target">
+<h2>How many customers should you actually target?<a class="headerlink" href="#how-many-customers-should-you-actually-target" title="Link to this heading">#</a></h2>
+<p>A cost matrix also tells you where to put the decision threshold. Instead of the default 0.5, ask
+the metric for the profit-maximising operating point.</p>
+<p><a class="reference internal" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a> is the Expected Maximum Profit for Customer Churn — it treats
+the offer-acceptance rate as uncertain and reports the profit you can expect at the best cut-off,
+along with the fraction of the customer base to contact.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><span class="n">classification_threshold</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a>
+
+<span class="n">profit</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_test</span><span class="p">)</span>
+<span class="n">target_fraction</span> <span class="o">=</span> <span class="n">empc_score</span><span class="o">.</span><span class="n">optimal_rate</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv_test</span><span class="p">)</span>
+<span class="n">threshold</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../reference/generated/empulse.metrics.classification_threshold.html#empulse.metrics.classification_threshold" title="empulse.metrics.classification_threshold"><span class="n">classification_threshold</span></a><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">customer_threshold</span><span class="o">=</span><span class="n">target_fraction</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'expected profit per customer: </span><span class="si">{</span><span class="n">profit</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'contact the top </span><span class="si">{</span><span class="n">target_fraction</span><span class="si">:</span><span class="s1">.1%</span><span class="si">}</span><span class="s1"> of customers (score &gt;= </span><span class="si">{</span><span class="n">threshold</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">)'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This says to contact roughly the top <strong>26%</strong> of customers, at an expected profit of about <strong>19.71</strong>
+per customer.</p>
+</section>
+<section id="putting-the-threshold-to-work">
+<h2>Putting the threshold to work<a class="headerlink" href="#putting-the-threshold-to-work" title="Link to this heading">#</a></h2>
+<p>Apply it to the scores you already have:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">targeted</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_score</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#int" title="int"><span class="nb">int</span></a><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s1">'targeting </span><span class="si">{</span><span class="n">targeted</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s1">.1%</span><span class="si">}</span><span class="s1"> of customers'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you would rather have an estimator that does this for you, wrap the model in
+<a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a>, which learns the cost-optimal threshold itself, or
+in scikit-learn’s <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.FixedThresholdClassifier.html#sklearn.model_selection.FixedThresholdClassifier" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedThresholdClassifier</span></code></a> to pin the value
+above. See <a class="reference internal" href="../guide/models/threshold_tuning.html#threshold-tuning"><span class="std std-ref">Threshold Tuning</span></a> for both.</p>
+</section>
+<section id="where-next">
+<h2>Where next<a class="headerlink" href="#where-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../tutorial.html"><span class="doc">Tutorial</span></a> — the full version of this story, including how the cost matrix is built from
+first principles and how to cross-validate it.</p></li>
+<li><p><a class="reference internal" href="overview.html"><span class="doc">Which tool do I need?</span></a> — which Empulse component fits your problem.</p></li>
+<li><p><a class="reference internal" href="../guide/metrics/prebuilt_churn_metrics.html#prebuilt-churn-metrics"><span class="std std-ref">Customer Churn Metrics</span></a> — the other ready-made churn metrics.</p></li>
+<li><p><a class="reference internal" href="../guide/metrics/user_defined_value_metric.html#user-defined-value-metric"><span class="std std-ref">Define your own cost-sensitive or value metric</span></a> — write a cost matrix for your own use case.</p></li>
+</ul>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="installation.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title">Installation</p>
+</div>
+</a>
+<a class="right-next" href="overview.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title">Which tool do I need?</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-good-model-that-loses-money">A good model that loses money</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#now-ask-what-it-is-worth">Now ask what it is worth</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train-on-the-cost-matrix-instead">Train on the cost matrix instead</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-many-customers-should-you-actually-target">How many customers should you actually target?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#putting-the-threshold-to-work">Putting the threshold to work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-next">Where next</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

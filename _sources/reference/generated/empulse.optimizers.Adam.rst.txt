@@ -1,0 +1,9 @@
+﻿Adam
+====
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: Adam
+   :members:
+   :inherited-members:
+   :special-members: __call__

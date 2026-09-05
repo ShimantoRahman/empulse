@@ -1,0 +1,9 @@
+﻿AUEPC
+=====
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: AUEPC
+   :members:
+   :inherited-members:
+   :special-members: __call__

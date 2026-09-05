@@ -1,0 +1,993 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>2.4. Threshold Tuning — Empulse 0.12.0-dev0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=a1165396" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=92121101"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script src="../../_static/design-tabs.js?v=f930bc37"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/models/threshold_tuning';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="robustcs.html" rel="next" title="2.5. Robust Cost-Sensitive Classification (RobustCS)"/>
+<link href="tree_models.html" rel="prev" title="2.3. Tree-Based Cost-Sensitive Models"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../metrics_guide.html">1. Metrics</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/choosing_metric.html">1.1. Choosing the right metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/user_defined_value_metric.html">1.2. Define your own cost-sensitive or value metric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/metric_class_in_model.html">1.3. Use your custom metric inside a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/prebuilt_churn_metrics.html">1.4. Customer Churn Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/prebuilt_acquisition_metrics.html">1.5. Customer Acquisition Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../metrics/prebuilt_credit_scoring_metrics.html">1.6. Credit Scoring Metrics</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../models_guide.html">2. Cost-sensitive and Value-driven models</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="linear_models.html">2.1. Linear Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csboost.html">2.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tree_models.html">2.3. Tree-Based Cost-Sensitive Models</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">2.4. Threshold Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robustcs.html">2.5. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../preprocessing_guide.html">3. Model-Independent Preprocessing</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/bias_mitigation.html">3.1. Bias Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/cost_sampling.html">3.2. Cost-Proportionate Sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../instance_based_cv.html">4. Cross-Validation with Instance-dependent Costs</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets_guide.html">5. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">5.3.1. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">5.3.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">5.3.3. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">5.3.4. 2011 Kaggle competition Give Me Some Credit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/iranian_churn.html">5.3.5. Iranian Churn Dataset</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../models_guide.html"><span class="section-number">2. </span>Cost-sensitive and Value-driven models</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">2.4. </span>Threshold Tuning</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="threshold-tuning">
+<span id="csrate"></span><span id="csthreshold"></span><span id="id1"></span><h1><span class="section-number">2.4. </span>Threshold Tuning<a class="headerlink" href="#threshold-tuning" title="Link to this heading">#</a></h1>
+<p>After training a probabilistic classifier you typically predict the <em>positive</em> class for every
+sample whose score exceeds 0.5.  That default threshold is almost never optimal when
+misclassification costs are asymmetric.  Empulse provides two dedicated meta-estimators
+for analytic threshold / rate selection, and the <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> class
+integrates seamlessly with scikit-learn’s <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a>
+for cross-validated threshold search.</p>
+<div class="pst-scrollable-table-container"><table class="table" id="id4">
+<caption><span class="caption-text">Choosing an approach</span><a class="headerlink" href="#id4" title="Link to this table">#</a></caption>
+<colgroup>
+<col style="width: 30.0%"/>
+<col style="width: 35.0%"/>
+<col style="width: 35.0%"/>
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>Analytic (empulse)</p></th>
+<th class="head"><p>Cross-validated search (sklearn)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Class</p></td>
+<td><p><a class="reference internal" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> / <a class="reference internal" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a></p></td>
+<td><p><a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>How it works</p></td>
+<td><p>Derives the decision boundary analytically from the cost matrix at fit time</p></td>
+<td><p>Scans candidate thresholds via cross-validation and picks the best one</p></td>
+</tr>
+<tr class="row-even"><td><p>Computation speed</p></td>
+<td><p>Fast — a single closed-form computation</p></td>
+<td><p>Slower — depends on <code class="docutils literal notranslate"><span class="pre">cv</span></code> splits × candidate thresholds</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="csthresholdclassifier">
+<span id="csthreshold-classifier"></span><h2><span class="section-number">2.4.1. </span>CSThresholdClassifier<a class="headerlink" href="#csthresholdclassifier" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> wraps any probabilistic base classifier.
+During <code class="docutils literal notranslate"><span class="pre">fit</span></code> it calibrates the probabilities (optional but recommended, sigmoid by default),
+then computes the cost-optimal decision threshold analytically.  During <code class="docutils literal notranslate"><span class="pre">predict</span></code> it applies
+that stored threshold — or recomputes it on-the-fly when you pass fresh cost information.</p>
+<section id="quick-start">
+<h3><span class="section-number">2.4.1.1. </span>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>   <span class="c1"># cost of a false positive (e.g. wasted marketing spend)</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>   <span class="c1"># cost of a false negative (e.g. missed churner)</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Optimal threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="cost-matrix">
+<h3><span class="section-number">2.4.1.2. </span>Cost Matrix<a class="headerlink" href="#cost-matrix" title="Link to this heading">#</a></h3>
+<p>The classifier accepts the same four cost terms as all cost-sensitive Empulse models.</p>
+<section id="constant-costs">
+<h4><span class="section-number">2.4.1.2.1. </span>Constant costs<a class="headerlink" href="#constant-costs" title="Link to this heading">#</a></h4>
+<p>Pass a scalar to apply the same cost to every sample:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+
+<span class="c1"># Low recall penalty, high precision penalty</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+    <span class="n">tp_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>   <span class="c1"># benefit of catching a churner</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>    <span class="c1"># cost of contacting a non-churner</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tn_cost</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="instance-dependent-costs">
+<h4><span class="section-number">2.4.1.2.2. </span>Instance-dependent costs<a class="headerlink" href="#instance-dependent-costs" title="Link to this heading">#</a></h4>
+<p>Pass per-sample cost arrays to <code class="docutils literal notranslate"><span class="pre">fit</span></code> when each observation has its own cost profile
+(e.g., individual Customer Lifetime Values):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generator.html#numpy.random.default_rng" title="numpy.random.default_rng"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span></a><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<span class="n">model</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">tp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+<span class="c1"># For instance-dependent costs, multiple thresholds are learned</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">threshold_</span><span class="p">)</span>  <span class="c1"># array of shape (n_samples,)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Instance-dependent costs require
+<a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing" title="(in scikit-learn v1.9)"><span class="xref std std-ref">metadata routing</span></a> to be enabled via
+<code class="docutils literal notranslate"><span class="pre">sklearn.set_config(enable_metadata_routing=True)</span></code>.</p>
+</div>
+</section>
+<section id="custom-metric">
+<h4><span class="section-number">2.4.1.2.3. </span>Custom Metric<a class="headerlink" href="#custom-metric" title="Link to this heading">#</a></h4>
+<p>For non-standard business objectives, pass a <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance
+as the <code class="docutils literal notranslate"><span class="pre">loss</span></code> parameter.  The model will learn the decision threshold that maximises /
+minimises that metric:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<span class="n">clv</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="p">,</span> <span class="n">contact_cost</span><span class="p">,</span> <span class="n">accept_rate</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span>
+    <span class="s1">'clv incentive_cost contact_cost accept_rate'</span>
+<span class="p">)</span>
+
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">accept_rate</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">incentive_cost</span> <span class="o">-</span> <span class="n">contact_cost</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">accept_rate</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">contact_cost</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">incentive_cost</span> <span class="o">+</span> <span class="n">contact_cost</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">())</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+    <span class="n">loss</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Optimal threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="probability-calibration">
+<h3><span class="section-number">2.4.1.3. </span>Probability Calibration<a class="headerlink" href="#probability-calibration" title="Link to this heading">#</a></h3>
+<p>Analytic thresholds are only meaningful when the model outputs well-calibrated
+probabilities.  <code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code> ships with an optional internal calibration
+step controlled by the <code class="docutils literal notranslate"><span class="pre">calibrator</span></code> parameter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.ensemble.html#module-sklearn.ensemble" title="sklearn.ensemble"><span class="nn">sklearn.ensemble</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<span class="c1"># sigmoid calibration (default) — fast, suitable for Platt scaling</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model_sigmoid</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">calibrator</span><span class="o">=</span><span class="s1">'sigmoid'</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># isotonic calibration — more flexible, needs larger datasets</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model_isotonic</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">calibrator</span><span class="o">=</span><span class="s1">'isotonic'</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># No calibration — use only when probabilities are already well-calibrated</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">model_none</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+    <span class="n">calibrator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="override-the-threshold-at-predict-time">
+<h3><span class="section-number">2.4.1.4. </span>Override the Threshold at Predict Time<a class="headerlink" href="#override-the-threshold-at-predict-time" title="Link to this heading">#</a></h3>
+<p>You can supply different costs at inference time without re-fitting the model.  This is
+useful when costs vary by deployment context (e.g. different campaigns):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="c1"># Use the threshold learned at fit time</span>
+<span class="n">y_pred_default</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+<span class="c1"># Override: higher false-positive penalty at inference (more conservative)</span>
+<span class="n">y_pred_conservative</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Count how many fewer positives the conservative threshold produces</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Standard positives  : </span><span class="si">{</span><span class="n">y_pred_default</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Conservative positives: </span><span class="si">{</span><span class="n">y_pred_conservative</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Overriding at predict time recomputes the threshold analytically from the new
+costs — no re-fitting occurs.  This does <strong>not</strong> work with <code class="docutils literal notranslate"><span class="pre">MaxProfit</span></code>-based
+metrics because that strategy requires label information from the training set.</p>
+</div>
+</section>
+<section id="sklearn-integration">
+<h3><span class="section-number">2.4.1.5. </span>sklearn Integration<a class="headerlink" href="#sklearn-integration" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code> is a fully sklearn-compatible meta-estimator: it implements
+<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>, <code class="docutils literal notranslate"><span class="pre">predict_log_proba</span></code>, and <code class="docutils literal notranslate"><span class="pre">decision_function</span></code> by delegating to the
+wrapped estimator, and it works inside <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> and
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GridSearchCV</span></code></a>.</p>
+<section id="pipeline-with-cross-validation">
+<h4><span class="section-number">2.4.1.5.1. </span>Pipeline with cross-validation<a class="headerlink" href="#pipeline-with-cross-validation" title="Link to this heading">#</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.pipeline.html#module-sklearn.pipeline" title="sklearn.pipeline"><span class="nn">sklearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.preprocessing.html#module-sklearn.preprocessing" title="sklearn.preprocessing"><span class="nn">sklearn.preprocessing</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">tp_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generator.html#numpy.random.default_rng" title="numpy.random.default_rng"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span></a><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipeline</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([</span>
+    <span class="p">(</span><span class="s1">'scaler'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a><span class="p">()),</span>
+    <span class="p">(</span>
+        <span class="s1">'model'</span><span class="p">,</span>
+        <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">())</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">tp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="p">),</span>
+<span class="p">])</span>
+
+<span class="n">scores</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipeline</span></a><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s1">'tp_cost'</span><span class="p">:</span> <span class="n">tp_cost</span><span class="p">})</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">scores</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+</pre></div>
+</div>
+</section>
+<section id="hyperparameter-search">
+<h4><span class="section-number">2.4.1.5.2. </span>Hyperparameter search<a class="headerlink" href="#hyperparameter-search" title="Link to this heading">#</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generator.html#numpy.random.default_rng" title="numpy.random.default_rng"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span></a><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">grid</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">())</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">param_grid</span><span class="o">=</span><span class="p">{</span><span class="s1">'estimator__C'</span><span class="p">:</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.logspace.html#numpy.logspace" title="numpy.logspace"><span class="n">np</span><span class="o">.</span><span class="n">logspace</span></a><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">)},</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">grid</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Best C: </span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">best_params_</span><span class="p">[</span><span class="s1">'estimator__C'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="csrateclassifier">
+<span id="csrate-classifier"></span><h2><span class="section-number">2.4.2. </span>CSRateClassifier<a class="headerlink" href="#csrateclassifier" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a> classifies the <em>top-k</em> most-likely-positive
+samples as positive, where <em>k</em> is chosen to maximise the cost-sensitive metric.  Instead
+of a raw score threshold it learns a <strong>positive rate</strong> — the fraction of all samples that
+should be labelled positive.</p>
+<section id="when-to-use-csrateclassifier-over-csthresholdclassifier">
+<h3><span class="section-number">2.4.2.1. </span>When to use <code class="docutils literal notranslate"><span class="pre">CSRateClassifier</span></code> over <code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code><a class="headerlink" href="#when-to-use-csrateclassifier-over-csthresholdclassifier" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Your deployment has a fixed capacity constraint (e.g. <em>“we can only call 10 % of customers”</em>).  <code class="docutils literal notranslate"><span class="pre">CSRateClassifier</span></code> naturally implements a top-k selection rule.</p></li>
+<li><p>Your probabilities are ordinal but not well-calibrated and you cannot or do not want to calibrate them.</p></li>
+<li><p>You want a decision rule that is invariant to monotone transformations of the predicted scores.</p></li>
+</ul>
+</section>
+<section id="id2">
+<h3><span class="section-number">2.4.2.2. </span>Quick Start<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span>
+    <span class="n">tp_cost</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>   <span class="c1"># benefit of catching a churner</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>    <span class="c1"># cost of contacting a non-churner</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Optimal positive rate: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">rate_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><span class="section-number">2.4.2.3. </span>Custom Metric<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<p>Like <code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code>, the rate classifier accepts a custom
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a>
+
+<span class="n">clv</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="p">,</span> <span class="n">contact_cost</span><span class="p">,</span> <span class="n">accept_rate</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span>
+    <span class="s1">'clv incentive_cost contact_cost accept_rate'</span>
+<span class="p">)</span>
+
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">accept_rate</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">incentive_cost</span> <span class="o">-</span> <span class="n">contact_cost</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">accept_rate</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">contact_cost</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">incentive_cost</span> <span class="o">+</span> <span class="n">contact_cost</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">())</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span> <span class="n">loss</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Optimal positive rate: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">rate_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="override-the-rate-at-predict-time">
+<h3><span class="section-number">2.4.2.4. </span>Override the Rate at Predict Time<a class="headerlink" href="#override-the-rate-at-predict-time" title="Link to this heading">#</a></h3>
+<p>Exactly like <code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code>, you can supply fresh cost parameters at
+inference time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.cost_sensitive.csdecision_rule.CSRateClassifier"><span class="n">CSRateClassifier</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span> <span class="n">tp_cost</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="c1"># Double the benefit → expect a higher positive rate</span>
+<span class="n">y_pred_generous</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">tp_cost</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Default   positives: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Generous  positives: </span><span class="si">{</span><span class="n">y_pred_generous</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tunedthresholdclassifiercv-with-empulse-metrics">
+<span id="tuned-threshold-cv"></span><h2><span class="section-number">2.4.3. </span>TunedThresholdClassifierCV with empulse Metrics<a class="headerlink" href="#tunedthresholdclassifiercv-with-empulse-metrics" title="Link to this heading">#</a></h2>
+<p>Scikit-learn 1.5+ ships with
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a>, which scans a grid
+of threshold candidates via cross-validation and picks the one that maximises a scorer.
+Any callable Empulse metric — whether a standalone score function or a
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance — can be wrapped into a scorer with
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_scorer</span></code></a> and plugged straight in.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Use <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a> when:</p>
+<ul class="simple">
+<li><p>your classifier’s probability estimates are not well-calibrated <em>and</em> you cannot
+add calibration, or</p></li>
+<li><p>the cost structure changes frequently between evaluations and you want the
+threshold tuned holistically via cross-validation rather than analytically.</p></li>
+</ul>
+</div>
+<section id="using-a-built-in-empulse-score-function">
+<h3><span class="section-number">2.4.3.1. </span>Using a built-in empulse score function<a class="headerlink" href="#using-a-built-in-empulse-score-function" title="Link to this heading">#</a></h3>
+<p>All standalone empulse score functions (<code class="docutils literal notranslate"><span class="pre">mpc_score</span></code>, <code class="docutils literal notranslate"><span class="pre">empc_score</span></code>, <code class="docutils literal notranslate"><span class="pre">expected_cost_loss</span></code>, etc.)
+follow the <code class="docutils literal notranslate"><span class="pre">(y_true,</span> <span class="pre">y_score,</span> <span class="pre">**kwargs)</span> <span class="pre">→</span> <span class="pre">float</span></code> signature accepted by
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_scorer</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.ensemble.html#module-sklearn.ensemble" title="sklearn.ensemble"><span class="nn">sklearn.ensemble</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># MPC is a profit metric — higher is better</span>
+    <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+    <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Tuned threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">best_threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-a-custom-metric-instance">
+<h3><span class="section-number">2.4.3.2. </span>Using a custom <code class="docutils literal notranslate"><span class="pre">Metric</span></code> instance<a class="headerlink" href="#using-a-custom-metric-instance" title="Link to this heading">#</a></h3>
+<p>A <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> object is itself callable with signature
+<code class="docutils literal notranslate"><span class="pre">(y_true,</span> <span class="pre">y_score,</span> <span class="pre">**parameters)</span> <span class="pre">→</span> <span class="pre">float</span></code>, so it can be passed directly to
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_scorer</span></code></a>.  Set <code class="docutils literal notranslate"><span class="pre">greater_is_better</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code>
+when you use <a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> or <a class="reference internal" href="../../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a>
+(higher is better) and to <code class="docutils literal notranslate"><span class="pre">False</span></code> for <a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> (lower is better):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.ensemble.html#module-sklearn.ensemble" title="sklearn.ensemble"><span class="nn">sklearn.ensemble</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a>
+
+<span class="c1"># --- Define the custom profit metric ---</span>
+<span class="n">clv</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="p">,</span> <span class="n">contact_cost</span><span class="p">,</span> <span class="n">accept_rate</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span>
+    <span class="s1">'clv incentive_cost contact_cost accept_rate'</span>
+<span class="p">)</span>
+
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">accept_rate</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">incentive_cost</span> <span class="o">-</span> <span class="n">contact_cost</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">accept_rate</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">contact_cost</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">incentive_cost</span> <span class="o">+</span> <span class="n">contact_cost</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">())</span>
+
+<span class="c1"># --- Create scorer from the Metric ---</span>
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">profit_metric</span></a><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># MaxProfit — higher is better</span>
+    <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+    <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># --- Tune the threshold ---</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Tuned threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">best_threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="using-a-cost-minimisation-metric">
+<h4><span class="section-number">2.4.3.2.1. </span>Using a cost-minimisation Metric<a class="headerlink" href="#using-a-cost-minimisation-metric" title="Link to this heading">#</a></h4>
+<p>When the strategy is <a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a>, the metric returns a <em>loss</em>
+(lower is better).  Set <code class="docutils literal notranslate"><span class="pre">greater_is_better=False</span></code> accordingly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.linear_model.html#module-sklearn.linear_model" title="sklearn.linear_model"><span class="nn">sklearn.linear_model</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a>
+
+<span class="n">fp</span><span class="p">,</span> <span class="n">fn</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span><span class="s1">'fp fn'</span><span class="p">)</span>
+
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">cost_metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">())</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">cost_metric</span></a><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>   <span class="c1"># Cost — lower is better</span>
+    <span class="n">fp</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">fn</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="sklearn.linear_model._logistic.LogisticRegression"><span class="n">LogisticRegression</span></a><span class="p">(),</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Tuned threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">best_threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="instance-dependent-costs-with-metadata-routing">
+<h4><span class="section-number">2.4.3.2.2. </span>Instance-dependent costs with metadata routing<a class="headerlink" href="#instance-dependent-costs-with-metadata-routing" title="Link to this heading">#</a></h4>
+<p>Instance-dependent costs (per-sample arrays) can be passed to the scorer via
+<a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing" title="(in scikit-learn v1.9)"><span class="xref std std-ref">metadata routing</span></a>.  Enable routing globally, request
+the cost array on the scorer, then pass it to <code class="docutils literal notranslate"><span class="pre">fit</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.ensemble.html#module-sklearn.ensemble" title="sklearn.ensemble"><span class="nn">sklearn.ensemble</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="c1"># Per-sample false-positive cost (e.g. individual campaign spend)</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generator.html#numpy.random.default_rng" title="numpy.random.default_rng"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span></a><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+        <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><span class="n">expected_cost_loss</span></a><span class="p">,</span>
+        <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+        <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># tell the scorer to expect fp_cost</span>
+<span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="n">fp_cost</span><span class="p">)</span>   <span class="c1"># pass the array directly to fit</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Tuned threshold: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">best_threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="combining-threshold-tuning-with-hyperparameter-search">
+<h3><span class="section-number">2.4.3.3. </span>Combining threshold tuning with hyperparameter search<a class="headerlink" href="#combining-threshold-tuning-with-hyperparameter-search" title="Link to this heading">#</a></h3>
+<p><a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a> can be nested inside
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GridSearchCV</span></code></a> to jointly optimise both the base
+estimator’s hyperparameters and the decision threshold:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.ensemble.html#module-sklearn.ensemble" title="sklearn.ensemble"><span class="nn">sklearn.ensemble</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+    <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">tuned_model</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">TunedThresholdClassifierCV</span></a><span class="p">(</span>
+    <span class="n">estimator</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier" title="sklearn.ensemble._gb.GradientBoostingClassifier"><span class="n">GradientBoostingClassifier</span></a><span class="p">(),</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">grid_search</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="sklearn.model_selection._classification_threshold.TunedThresholdClassifierCV"><span class="n">tuned_model</span></a><span class="p">,</span>
+    <span class="n">param_grid</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">'estimator__n_estimators'</span><span class="p">:</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+        <span class="s1">'estimator__max_depth'</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">grid_search</span><span class="o">.</span><span class="n">best_estimator_</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Best params  : </span><span class="si">{</span><span class="n">grid_search</span><span class="o">.</span><span class="n">best_params_</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/library/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="sa">f</span><span class="s2">"Best threshold: </span><span class="si">{</span><span class="n">best</span><span class="o">.</span><span class="n">best_threshold_</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../metrics/user_defined_value_metric.html#user-defined-value-metric"><span class="std std-ref">Define your own cost-sensitive or value metric</span></a> — how to build a custom <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p></li>
+<li><p><a class="reference internal" href="../metrics/metric_class_in_model.html#metric-class-in-model"><span class="std std-ref">Use your custom metric inside a model</span></a> — which Empulse models accept a <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> as <code class="docutils literal notranslate"><span class="pre">loss</span></code></p></li>
+<li><p><a class="reference internal" href="linear_models.html#cslogit"><span class="std std-ref">Linear Cost-Sensitive Models</span></a> — linear models that bake the cost-sensitive objective directly into training</p></li>
+<li><p><a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TunedThresholdClassifierCV.html#sklearn.model_selection.TunedThresholdClassifierCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TunedThresholdClassifierCV</span></code></a> — sklearn reference</p></li>
+</ul>
+</div>
+</section>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="tree_models.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">2.3. </span>Tree-Based Cost-Sensitive Models</p>
+</div>
+</a>
+<a class="right-next" href="robustcs.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">2.5. </span>Robust Cost-Sensitive Classification (RobustCS)</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#csthresholdclassifier">2.4.1. CSThresholdClassifier</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-start">2.4.1.1. Quick Start</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-matrix">2.4.1.2. Cost Matrix</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#constant-costs">2.4.1.2.1. Constant costs</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#instance-dependent-costs">2.4.1.2.2. Instance-dependent costs</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-metric">2.4.1.2.3. Custom Metric</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#probability-calibration">2.4.1.3. Probability Calibration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#override-the-threshold-at-predict-time">2.4.1.4. Override the Threshold at Predict Time</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sklearn-integration">2.4.1.5. sklearn Integration</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-with-cross-validation">2.4.1.5.1. Pipeline with cross-validation</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#hyperparameter-search">2.4.1.5.2. Hyperparameter search</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#csrateclassifier">2.4.2. CSRateClassifier</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#when-to-use-csrateclassifier-over-csthresholdclassifier">2.4.2.1. When to use <code class="docutils literal notranslate"><span class="pre">CSRateClassifier</span></code> over <code class="docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2.4.2.2. Quick Start</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2.4.2.3. Custom Metric</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#override-the-rate-at-predict-time">2.4.2.4. Override the Rate at Predict Time</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tunedthresholdclassifiercv-with-empulse-metrics">2.4.3. TunedThresholdClassifierCV with empulse Metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-built-in-empulse-score-function">2.4.3.1. Using a built-in empulse score function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-custom-metric-instance">2.4.3.2. Using a custom <code class="docutils literal notranslate"><span class="pre">Metric</span></code> instance</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-cost-minimisation-metric">2.4.3.2.1. Using a cost-minimisation Metric</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#instance-dependent-costs-with-metadata-routing">2.4.3.2.2. Instance-dependent costs with metadata routing</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#combining-threshold-tuning-with-hyperparameter-search">2.4.3.3. Combining threshold tuning with hyperparameter search</a></li>
+</ul>
+</li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (MIT License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

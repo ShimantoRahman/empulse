@@ -1,0 +1,6 @@
+﻿get\_data\_home
+===============
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: get_data_home

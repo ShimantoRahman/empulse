@@ -1,0 +1,957 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.metrics.metric.strategies.metric_strategy &#8212; Empulse 0.12.0-dev0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../../_static/documentation_options.js?v=92121101"></script>
+    <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/metrics/metric/strategies/metric_strategy';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.metrics.metric.strategies.metric_strategy</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.metrics.metric.strategies.metric_strategy</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sympy</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">...._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">IntNDArray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..common</span><span class="w"> </span><span class="kn">import</span> <span class="n">Direction</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LogitObjective</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to compute the loss and gradient of a logistic regression objective.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Regularized loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient of the loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Regularized gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_logit_gradient_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Yield gradients for successive weight vectors.</span>
+
+<span class="sd">        Because the constants are derived from fixed data and parameters,</span>
+<span class="sd">        there is no expensive state to reconstruct between steps.  The</span>
+<span class="sd">        generator accepts the same send-protocol as</span>
+<span class="sd">        ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API</span>
+<span class="sd">        compatibility: passing ``(weights, refresh)`` works but ``refresh``</span>
+<span class="sd">        is silently ignored.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Gradient at the current weights.</span>
+
+<span class="sd">        Receives (via ``send``)</span>
+<span class="sd">        -----------------------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            New coefficient vector for the next gradient step.</span>
+<span class="sd">        (weights, refresh) : (ndarray, bool)</span>
+<span class="sd">            ``refresh`` is accepted but ignored.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span>
+
+        <span class="n">sent</span> <span class="o">=</span> <span class="k">yield</span>  <span class="c1"># type: ignore[misc]</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sent</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">weights</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sent</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">weights</span> <span class="o">=</span> <span class="n">sent</span>
+
+            <span class="n">sent</span> <span class="o">=</span> <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_gradient_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Yield gradients for successive weight vectors.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Gradient at the current weights.</span>
+
+<span class="sd">        Receives (via ``send``)</span>
+<span class="sd">        -----------------------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            New coefficient vector for the next gradient step.</span>
+<span class="sd">        (weights, refresh) : (ndarray, bool)</span>
+<span class="sd">            ``refresh`` is accepted but ignored.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; gen = objective.logit_gradient_steps()</span>
+<span class="sd">        &gt;&gt;&gt; grad = gen.send(new_theta)  # first time gradient is computed from scratch</span>
+<span class="sd">        &gt;&gt;&gt; grad = gen.send(new_theta)  # gradient computed from cached information</span>
+<span class="sd">        &gt;&gt;&gt; grad = gen.send((new_theta, True))  # gradient computed from scratch</span>
+<span class="sd">        &gt;&gt;&gt; gen.close()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">generator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logit_gradient_steps</span><span class="p">()</span>
+        <span class="nb">next</span><span class="p">(</span><span class="n">generator</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">generator</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_loss_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss and its gradient for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">            Loss minus regularization.</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Regularized gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_loss</span><span class="p">(</span><span class="n">weights</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss and its gradient for minimization.</span>
+
+<span class="sd">        Here for backward compatibility.  Delegates to ``logit_loss_gradient``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_loss_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: B027</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).</span>
+
+<span class="sd">        Gradient optimizers with an ``alpha_schedule`` call this before each gradient</span>
+<span class="sd">        computation to externally drive the annealing schedule.  Objectives that</span>
+<span class="sd">        implement alpha annealing (e.g. :class:`MaxProfitLogitGradientPiecewise`)</span>
+<span class="sd">        override this method; all others silently ignore the call.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        alpha : float</span>
+<span class="sd">            New alpha value to use for the next gradient computation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># no-op: override in subclasses that support alpha annealing</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">with_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;LogitObjective&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a new objective restricted to the sample subset given by *indices*.</span>
+
+<span class="sd">        Used by gradient optimizers for mini-batch training.  The default</span>
+<span class="sd">        implementation raises :exc:`NotImplementedError`; concrete objectives</span>
+<span class="sd">        that store their data should override this method.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : ndarray of int</span>
+<span class="sd">            Row indices into the full training set.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LogitObjective</span>
+<span class="sd">            A new objective for the selected samples.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            If this objective does not support mini-batch slicing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> does not support mini-batch training. Override with_indices() to enable it.&#39;</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="MetricStrategy">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MetricStrategy</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class for metric strategies.</span>
+
+<span class="sd">    This class defines the interface for metric strategies.</span>
+<span class="sd">    Metric strategies are used to compute the metric value, gradient, and hessian.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">direction</span><span class="p">:</span> <span class="n">Direction</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">direction</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">requires_dynamic_boost_objective</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether gradients must be recomputed from the metric each boosting round.</span>
+
+<span class="sd">        ``True`` for strategies whose per-sample loss is not linear in the predicted</span>
+<span class="sd">        probability (e.g. :class:`~empulse.metrics.LogCost`) or that need the current round&#39;s</span>
+<span class="sd">        scores to locate a threshold (e.g. :class:`~empulse.metrics.MaxProfit`); such strategies</span>
+<span class="sd">        cannot use the precomputed constant returned by :meth:`prepare_boost_objective`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extra_kwargs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extra keyword arguments accepted by :meth:`score` beyond the cost-matrix parameters.</span>
+
+<span class="sd">        Subclasses should override this to declare any additional keyword arguments that</span>
+<span class="sd">        their :meth:`score` implementation accepts (e.g. ``{&#39;baseline&#39;}`` for</span>
+<span class="sd">        :class:`~empulse.metrics.Savings`).  These are excluded from the unknown-parameter</span>
+<span class="sd">        warning raised by :class:`~empulse.metrics.Metric`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MetricStrategy.build">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.build">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tp_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">tn_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build the metric strategy.&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.score">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.score">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">IntNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the metric score or loss.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true: array-like of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+
+<span class="sd">        y_score: array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted labels, probabilities, or decision scores (based on the chosen metric).</span>
+
+<span class="sd">        parameters: float or array-like of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        score: float</span>
+<span class="sd">            The computed metric score or loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.optimal_threshold">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.optimal_threshold">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">optimal_threshold</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">IntNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the classification threshold(s) to optimize the metric value.</span>
+
+<span class="sd">        i.e., the score threshold at which an observation should be classified as positive to optimize the metric.</span>
+<span class="sd">        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.</span>
+<span class="sd">        For class-dependent costs and benefits, this will return a single threshold value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true: array-like of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+
+<span class="sd">        y_score: array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted labels, probabilities, or decision scores (based on the chosen metric).</span>
+
+<span class="sd">        parameters: float or array-like of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        optimal_threshold: float | FloatNDArray</span>
+<span class="sd">            The optimal classification threshold(s).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Optimal threshold is not defined for the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> strategy&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.optimal_rate">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.optimal_rate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">optimal_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">IntNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the predicted positive rate to optimize the metric value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true: array-like of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+
+<span class="sd">        y_score: array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted labels, probabilities, or decision scores (based on the chosen metric).</span>
+
+<span class="sd">        parameters: float or array-like of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        optimal_rate: float</span>
+<span class="sd">            The optimal predicted positive rate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Optimal rate is not defined for the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> strategy&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.logit_objective">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.logit_objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_objective</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">features</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+        <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+        <span class="n">C</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">soft_threshold</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">fit_intercept</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LogitObjective</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the logit loss and its gradient with respect to the logistic regression weights.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        features : NDArray of shape (n_samples, n_features)</span>
+<span class="sd">            The features of the samples.</span>
+<span class="sd">        y_true : NDArray of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+<span class="sd">        C : float</span>
+<span class="sd">            Regularization strength parameter. Smaller values specify stronger regularization.</span>
+<span class="sd">        l1_ratio : float</span>
+<span class="sd">            The Elastic-Net mixing parameter, with range 0 &lt;= l1_ratio &lt;= 1.</span>
+<span class="sd">            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.</span>
+<span class="sd">        soft_threshold : bool</span>
+<span class="sd">            Indicator of whether soft thresholding is applied during optimization.</span>
+<span class="sd">        fit_intercept : bool</span>
+<span class="sd">            Specifies if an intercept should be included in the model.</span>
+<span class="sd">        parameters : float or NDArray of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        logistic_objective : LogitObjective</span>
+<span class="sd">            A class that implements the logit loss and its gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Gradient of the logit function is not defined for the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> strategy&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.gradient_boost_objective">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.gradient_boost_objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gradient_boost_objective</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">y_score</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient of the metric with respect to gradient boosting instances.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true: array-like of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+
+<span class="sd">        y_score: array-like of shape (n_samples,)</span>
+<span class="sd">            The predicted labels, probabilities, or decision scores (based on the chosen metric).</span>
+
+<span class="sd">        parameters: float or array-like of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gradient : NDArray of shape (n_samples,)</span>
+<span class="sd">            The gradient of the metric loss with respect to the gradient boosting weights.</span>
+<span class="sd">        hessian : NDArray of shape (n_samples,)</span>
+<span class="sd">            The hessian of the metric loss with respect to the gradient boosting weights.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;Gradient and Hessian of the gradient boosting function is not defined for the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> strategy&#39;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.prepare_boost_objective">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.prepare_boost_objective">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_boost_objective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient&#39;s constant term of the metric wrt gradient boost.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true : NDArray of shape (n_samples,)</span>
+<span class="sd">            The ground truth labels.</span>
+<span class="sd">        parameters : float or NDArray of shape (n_samples,)</span>
+<span class="sd">            The parameter values for the costs and benefits defined in the metric.</span>
+<span class="sd">            If any parameter is a stochastic variable, you should pass values for their distribution parameters.</span>
+<span class="sd">            You can set the parameter values for either the symbol names or their aliases.</span>
+
+<span class="sd">            - If ``float``, the same value is used for all samples (class-dependent).</span>
+<span class="sd">            - If ``array-like``, the values are used for each sample (instance-dependent).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gradient_const : NDArray of shape (n_samples, n_features)</span>
+<span class="sd">            The constant term of the gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;Gradient and Hessian of the gradient boosting function is not defined for the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> strategy&#39;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MetricStrategy.to_latex">
+<a class="viewcode-back" href="../../../../../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy.to_latex">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_latex</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tp_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">tn_benefit</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">sympy</span><span class="o">.</span><span class="n">Expr</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the LaTeX representation of the metric.&quot;&quot;&quot;</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">(direction=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s1">)&#39;</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

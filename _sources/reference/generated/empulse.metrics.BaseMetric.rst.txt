@@ -1,0 +1,9 @@
+﻿BaseMetric
+==========
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: BaseMetric
+   :members:
+   :inherited-members:
+   :special-members: __call__

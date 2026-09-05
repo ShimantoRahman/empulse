@@ -1,0 +1,9 @@
+﻿ProfTreeClassifier
+==================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: ProfTreeClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

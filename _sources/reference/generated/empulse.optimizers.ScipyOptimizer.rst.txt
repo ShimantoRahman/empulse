@@ -1,0 +1,9 @@
+﻿ScipyOptimizer
+==============
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: ScipyOptimizer
+   :members:
+   :inherited-members:
+   :special-members: __call__

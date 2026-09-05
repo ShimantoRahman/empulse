@@ -1,0 +1,9 @@
+﻿CosineAnnealingSchedule
+=======================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: CosineAnnealingSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

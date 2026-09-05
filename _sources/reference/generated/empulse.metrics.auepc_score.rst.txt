@@ -1,0 +1,7 @@
+﻿auepc\_score
+============
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: auepc_score
+   :no-value:

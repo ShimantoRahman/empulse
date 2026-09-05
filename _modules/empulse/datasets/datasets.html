@@ -1,0 +1,867 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.datasets.datasets &#8212; Empulse 0.12.0-dev0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a1165396" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=92121101"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/datasets/datasets';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.datasets.datasets</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.datasets.datasets</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Local cost-sensitive datasets bundled with empulse.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">._base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._cost_matrices</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">churn_precomputed_cost_matrix</span><span class="p">,</span>
+    <span class="n">credit_scoring_cost_matrix</span><span class="p">,</span>
+    <span class="n">upsell_bank_cost_matrix</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_read_csv_gz</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._process</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">process_bank_telemarketing</span><span class="p">,</span>
+    <span class="n">process_churn_tv</span><span class="p">,</span>
+    <span class="n">process_credit_scoring_pakdd</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">narwhals.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">EagerAllowed</span><span class="p">,</span> <span class="n">IntoBackend</span>
+
+<span class="n">_DATA_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">&#39;data&#39;</span>
+<span class="n">_DESC_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">&#39;descriptions&#39;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_description</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">_DESC_DIR</span> <span class="o">/</span> <span class="n">name</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">fh</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="load_churn_tv_subscriptions">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_churn_tv_subscriptions.html#empulse.datasets.load_churn_tv_subscriptions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_churn_tv_subscriptions</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="n">IntoBackend</span><span class="p">[</span><span class="n">EagerAllowed</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the TV Subscription Churn dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will churn or not.</span>
+<span class="sd">    The target variable is whether the customer churned, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    This dataset is from a TV cable provider containing all 9410 customers</span>
+<span class="sd">    active during the first semester of 2014.</span>
+<span class="sd">    Feature names are anonymized to protect the privacy of the customers.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;churn_tv_subscriptions&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                       455</span>
+<span class="sd">    Non-churners                  8955</span>
+<span class="sd">    Samples                       9410</span>
+<span class="sd">    Features                        45</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains the precomputed per-customer costs:</span>
+<span class="sd">        ``tp_benefit``, ``fp_cost``, ``tn_benefit``, ``fn_cost``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The per-instance costs stored in the dataset were derived from the</span>
+<span class="sd">    churn retention cost model of Bahnsen et al. (2015).  The individual</span>
+<span class="sd">    cost drivers (CLV, incentive cost, contact cost, acceptance probability)</span>
+<span class="sd">    are not stored; only the final computed values are available.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           `&quot;A novel cost-sensitive framework for customer churn predictive modeling&quot;</span>
+<span class="sd">           &lt;http://www.decisionanalyticsjournal.com/content/pdf/s40165-015-0014-6.pdf&gt;`__,</span>
+<span class="sd">           Decision Analytics, 2:5, 2015.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import load_churn_tv_subscriptions</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = load_churn_tv_subscriptions(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_csv_gz</span><span class="p">(</span><span class="n">_DATA_DIR</span> <span class="o">/</span> <span class="s1">&#39;churn_tv_subscriptions.csv.gz&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+    <span class="n">feature_df</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">process_churn_tv</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">cost_matrix</span> <span class="o">=</span> <span class="n">churn_precomputed_cost_matrix</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feature_df</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feature_df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Churn TV Subscriptions&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_read_description</span><span class="p">(</span><span class="s1">&#39;churn_tv_subscriptions.rst&#39;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_upsell_bank_telemarketing">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_upsell_bank_telemarketing.html#empulse.datasets.load_upsell_bank_telemarketing">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_upsell_bank_telemarketing</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="n">IntoBackend</span><span class="p">[</span><span class="n">EagerAllowed</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the bank telemarketing dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a client will subscribe to a term deposit</span>
+<span class="sd">    after being called by the bank.</span>
+<span class="sd">    The target variable is whether the client subscribed, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    Features recorded *after* the contact event are excluded to avoid data leakage.</span>
+<span class="sd">    Only clients with a positive balance are considered.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;upsell_bank_telemarketing&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Subscribers                   4787</span>
+<span class="sd">    Non-subscribers              33144</span>
+<span class="sd">    Samples                      37931</span>
+<span class="sd">    Features                        10</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;balance&#39;: array}`` — the client&#39;s</span>
+<span class="sd">        average yearly balance in euros, which drives the false-negative cost.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= c`</span>
+<span class="sd">          - ``fp_cost`` :math:`= c`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= \\max(r \\cdot d \\cdot balance_i,\\; c)`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``interest_rate`` (:math:`r`) = 0.02463333</span>
+<span class="sd">    - ``term_deposit_fraction`` (:math:`d`) = 0.25</span>
+<span class="sd">    - ``contact_cost`` (:math:`c`) = 1.0</span>
+
+<span class="sd">    To override these defaults, pass the desired values when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, interest_rate=0.03, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Moro, S., Rita, P., &amp; Cortez, P. (2014).</span>
+<span class="sd">           Bank Marketing [Dataset]. UCI Machine Learning Repository.</span>
+<span class="sd">           https://doi.org/10.24432/C5K306.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import load_upsell_bank_telemarketing</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = load_upsell_bank_telemarketing(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_csv_gz</span><span class="p">(</span><span class="n">_DATA_DIR</span> <span class="o">/</span> <span class="s1">&#39;bankmarketing.csv.gz&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+    <span class="n">feature_df</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">balance</span> <span class="o">=</span> <span class="n">process_bank_telemarketing</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">upsell_bank_cost_matrix</span><span class="p">(</span>
+        <span class="n">balance</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.02463333</span><span class="p">,</span>
+        <span class="n">term_deposit_fraction</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+        <span class="n">contact_cost</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feature_df</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feature_df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no subscription&#39;</span><span class="p">,</span> <span class="s1">&#39;subscription&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Bank Telemarketing&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_read_description</span><span class="p">(</span><span class="s1">&#39;bankmarketing.rst&#39;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_credit_scoring_pakdd">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.load_credit_scoring_pakdd.html#empulse.datasets.load_credit_scoring_pakdd">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_credit_scoring_pakdd</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="n">IntoBackend</span><span class="p">[</span><span class="n">EagerAllowed</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the credit scoring PAKDD 2009 competition dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will default on a loan in the</span>
+<span class="sd">    next two years.</span>
+<span class="sd">    The target variable is whether the customer defaulted, &#39;yes&#39; = 1 and &#39;no&#39; = 0.</span>
+
+<span class="sd">    Only clients with a personal income between 100 and 10000 are considered.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;credit_scoring_pakdd&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaulters                    7743</span>
+<span class="sd">    Non-defaulters               31195</span>
+<span class="sd">    Samples                      38938</span>
+<span class="sd">    Features                        25</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains:</span>
+
+<span class="sd">        - ``&#39;cl&#39;``: estimated credit line per client (used in ``fn_cost = cl * lgd``).</span>
+<span class="sd">        - ``&#39;fp_cost&#39;``: precomputed FP cost per client.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` :math:`= r_i - (1 - \\pi_1) \\bar{r} + \\pi_1 \\overline{Cl} L_{gd}`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75</span>
+
+<span class="sd">    The following parameters are used to precompute the per-instance credit lines</span>
+<span class="sd">    and ``fp_cost`` values stored in ``instance_costs``:</span>
+
+<span class="sd">    - ``interest_rate`` = 0.63 (annual)</span>
+<span class="sd">    - ``fund_cost`` = 0.165 (annual)</span>
+<span class="sd">    - ``max_credit_line`` = 25000</span>
+<span class="sd">    - ``term_length_months`` = 24</span>
+<span class="sd">    - ``loan_to_income_ratio`` = 3</span>
+
+<span class="sd">    To override the symbolic default, pass the desired value when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, loss_given_default=0.6, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="sd">           in Proceedings of the International Conference on Machine Learning</span>
+<span class="sd">           and Applications, 2014.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import load_credit_scoring_pakdd</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = load_credit_scoring_pakdd(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_csv_gz</span><span class="p">(</span>
+        <span class="n">_DATA_DIR</span> <span class="o">/</span> <span class="s1">&#39;creditscoring2.csv.gz&#39;</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="n">null_values</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+    <span class="n">feature_df</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">monthly_income</span> <span class="o">=</span> <span class="n">process_credit_scoring_pakdd</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">target_np</span> <span class="o">=</span> <span class="n">target_series</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">credit_scoring_cost_matrix</span><span class="p">(</span>
+        <span class="n">monthly_income</span><span class="p">,</span>
+        <span class="n">debt_ratio</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_np</span><span class="p">)),</span>
+        <span class="n">target_np</span><span class="o">=</span><span class="n">target_np</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.63</span><span class="p">,</span>
+        <span class="n">fund_cost</span><span class="o">=</span><span class="mf">0.165</span><span class="p">,</span>
+        <span class="n">cl_max</span><span class="o">=</span><span class="mi">25000</span> <span class="o">*</span> <span class="mf">0.33</span><span class="p">,</span>
+        <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">term_length_months</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">loan_to_income_ratio</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feature_df</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feature_df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Credit Scoring PAKDD 2009&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_read_description</span><span class="p">(</span><span class="s1">&#39;creditscoring2.rst&#39;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (MIT License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

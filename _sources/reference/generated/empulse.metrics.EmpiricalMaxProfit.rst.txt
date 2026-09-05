@@ -1,0 +1,9 @@
+﻿EmpiricalMaxProfit
+==================
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: EmpiricalMaxProfit
+   :members:
+   :inherited-members:
+   :special-members: __call__
