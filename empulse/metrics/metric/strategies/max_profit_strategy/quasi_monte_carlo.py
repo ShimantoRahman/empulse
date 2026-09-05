@@ -6,11 +6,10 @@ import scipy
 import sympy
 from scipy.stats._qmc import Sobol
 from sympy.stats import pspace
-from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
 from ...common import _check_parameters
-from .common import _convex_hull, extract_distribution_parameters
+from .common import _convex_hull, _evaluate_sampled_integrands, _substitute_integrand, extract_distribution_parameters
 
 FrozenScipyDist = (
     scipy.stats._distn_infrastructure.rv_continuous_frozen | scipy.stats._distn_infrastructure.rv_discrete_frozen
@@ -141,6 +140,7 @@ class MaxProfitScoreQuasiMonteCarlo:
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
+        dist_params: dict[str, Any] = {}
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
@@ -160,53 +160,23 @@ class MaxProfitScoreQuasiMonteCarlo:
                         scipy_dist_params = sympy_dist_params
                         scipy_distributions.append(scipy_distribution(*scipy_dist_params))
                 self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
+            dist_params = self.cached_dist_params
 
-            profit_integrand = (
-                self.profit_function
-                .subs(kwargs)
-                .subs(self.cached_dist_params)
-                .subs('pi_0', positive_class_prior)
-                .subs('pi_1', negative_class_prior)
-            )
-            if self.rate_function is not None:
-                rate_integrand = (
-                    self.rate_function
-                    .subs(kwargs)
-                    .subs(self.cached_dist_params)
-                    .subs('pi_0', positive_class_prior)
-                    .subs('pi_1', negative_class_prior)
-                )
-        else:
-            profit_integrand = (
-                self.profit_function.subs(kwargs).subs('pi_0', positive_class_prior).subs('pi_1', negative_class_prior)
-            )
-            if self.rate_function is not None:
-                rate_integrand = (
-                    self.rate_function
-                    .subs(kwargs)
-                    .subs('pi_0', positive_class_prior)
-                    .subs('pi_1', negative_class_prior)
-                )
+        profit_integrand = _substitute_integrand(
+            self.profit_function, kwargs, dist_params, positive_class_prior, negative_class_prior
+        )
+        rate_integrand = (
+            _substitute_integrand(self.rate_function, kwargs, dist_params, positive_class_prior, negative_class_prior)
+            if self.rate_function is not None
+            else None
+        )
 
-        profit_integrands = [
-            lambdify(self.random_symbols, profit_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
-            for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
-        ]
-
-        results = np.empty((len(profit_integrands), self.n_mc_samples))
-        for i, integrand in enumerate(profit_integrands):
-            results[i, :] = integrand(*self.param_grid)
-        if self.rate_function is None:
-            result = float(results.max(axis=0).mean())
-        else:
-            rate_integrands = [
-                lambdify(self.random_symbols, rate_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
-                for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
-            ]
-            rate_results = np.empty((len(profit_integrands), self.n_mc_samples))
-            best_indices = results.argmax(axis=0)
-            for i, integrand in enumerate(rate_integrands):
-                rate_results[i, :] = integrand(*self.param_grid)
-            result = float(rate_results[best_indices, np.arange(self.n_mc_samples)].mean())
-
-        return result
+        return _evaluate_sampled_integrands(
+            profit_integrand,
+            rate_integrand,
+            true_positive_rates,
+            false_positive_rates,
+            self.random_symbols,
+            self.param_grid,
+            self.n_mc_samples,
+        )

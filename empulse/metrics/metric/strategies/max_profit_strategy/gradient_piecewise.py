@@ -7,14 +7,107 @@ from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
 from ...common import _safe_lambdify
-from .common import _BaseMaxProfitLogitObjective, _convex_hull, extract_distribution_parameters
+from .common import (
+    _BaseMaxProfitLogitObjective,
+    _convex_hull,
+    _smooth_step_derivatives,
+    extract_distribution_parameters,
+)
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
 # Type alias for the hull state tuple cached between gradient steps.
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
 
 
-class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
+def _parse_lambdify_reqs(eq: sympy.Expr, kwargs: dict[str, Any]) -> tuple[dict[str, Any], bool, bool, bool, bool]:
+    """Split kwargs into the static subset an expression needs and its dynamic requirements.
+
+    Returns the subset of *kwargs* the expression's free symbols actually need, plus which
+    dynamic ROC-axis inputs (``pi_0``, ``pi_1``, ``F_0``, ``F_1``) it requires.
+    """
+    reqs = {str(s) for s in eq.free_symbols}
+    static_kws = {key: val for key, val in kwargs.items() if key in reqs}
+    return static_kws, 'pi_0' in reqs, 'pi_1' in reqs, 'F_0' in reqs, 'F_1' in reqs
+
+
+def _build_lambdify_args(
+    reqs: tuple[dict[str, Any], bool, bool, bool, bool],
+    pi0: float,
+    pi1: float,
+    seg_tprs: FloatNDArray,
+    seg_fprs: FloatNDArray,
+) -> dict[str, Any]:
+    """Assemble the kwargs a lambdified expression needs, given its requirements from `_parse_lambdify_reqs`."""
+    static_kw, n_p0, n_p1, n_F0, n_F1 = reqs  # noqa: N806
+    args = static_kw.copy()
+    if n_p0:
+        args['pi_0'] = pi0
+    if n_p1:
+        args['pi_1'] = pi1
+    if n_F0:
+        args['F_0'] = seg_tprs
+    if n_F1:
+        args['F_1'] = seg_fprs
+    return args
+
+
+class _PiecewiseDerivativeState:
+    """Shared setup for MaxProfit's single-stochastic-variable piecewise objectives.
+
+    Precomputes the distribution parameters, the exact float bounds of the stochastic
+    variable's support, and the profit function's F_0/F_1 derivatives (plus the static/dynamic
+    argument requirements each one needs) - all data-independent, so it only needs computing
+    once from *score_function* and *parameters*, shared unchanged by both the logit and
+    boosting piecewise objectives.
+    """
+
+    def _init_piecewise_state(
+        self, score_function: BasePositiveDistribution, parameters: dict[str, FloatNDArray | float]
+    ) -> None:
+        self.score_function = score_function
+
+        self.dist_params, self.kwargs = extract_distribution_parameters(
+            parameters, self.score_function.distribution_args
+        )
+        self.fix_inf = not self.score_function.derivative.subs(self.kwargs).is_negative
+
+        # Precalculate the exact float bounds of the distribution to avoid sympy overhead in loop
+        lower_b = self.score_function.random_var_bounds[0]
+        if isinstance(lower_b, sympy.Expr):
+            lower_b = lower_b.subs(self.dist_params)
+            self.lower_bound = -np.inf if lower_b == -sympy.oo else float(lower_b)
+        else:
+            self.lower_bound = float(lower_b)
+
+        upper_b = self.score_function.random_var_bounds[1]
+        if isinstance(upper_b, sympy.Expr):
+            upper_b = upper_b.subs(self.dist_params)
+            self.upper_bound = np.inf if upper_b == sympy.oo else float(upper_b)
+        else:
+            self.upper_bound = float(upper_b)
+
+        F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
+        self.da_dF0_eqs = []
+        self.da_dF1_eqs = []
+        self.da_dF0_fns = []
+        self.da_dF1_fns = []
+
+        for eq in self.score_function.coefficient_eqs:
+            da_dF0 = sympy.diff(eq, F_0)  # noqa: N806
+            da_dF1 = sympy.diff(eq, F_1)  # noqa: N806
+            self.da_dF0_eqs.append(da_dF0)
+            self.da_dF1_eqs.append(da_dF1)
+            self.da_dF0_fns.append(_safe_lambdify(da_dF0))
+            self.da_dF1_fns.append(_safe_lambdify(da_dF1))
+
+        self.da0_reqs = []
+        self.da1_reqs = []
+        for k in range(len(self.score_function.coefficient_eqs)):
+            self.da0_reqs.append(_parse_lambdify_reqs(self.da_dF0_eqs[k], self.kwargs))
+            self.da1_reqs.append(_parse_lambdify_reqs(self.da_dF1_eqs[k], self.kwargs))
+
+
+class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDerivativeState):
     """
     Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models.
 
@@ -53,57 +146,8 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
             fit_intercept=fit_intercept,
             alpha=alpha,
         )
-        self.score_function = score_function
-
-        self.dist_params, self.kwargs = extract_distribution_parameters(
-            parameters, self.score_function.distribution_args
-        )
-        self.fix_inf = not self.score_function.derivative.subs(self.kwargs).is_negative
-
-        # Precalculate the exact float bounds of the distribution to avoid sympy overhead in loop
-        lower_b = self.score_function.random_var_bounds[0]
-        if isinstance(lower_b, sympy.Expr):
-            lower_b = lower_b.subs(self.dist_params)
-            self.lower_bound = -np.inf if lower_b == -sympy.oo else float(lower_b)
-        else:
-            self.lower_bound = float(lower_b)
-
-        upper_b = self.score_function.random_var_bounds[1]
-        if isinstance(upper_b, sympy.Expr):
-            upper_b = upper_b.subs(self.dist_params)
-            self.upper_bound = np.inf if upper_b == sympy.oo else float(upper_b)
-        else:
-            self.upper_bound = float(upper_b)
-
-        F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
-        self.da_dF0_eqs = []
-        self.da_dF1_eqs = []
-        self.da_dF0_fns = []
-        self.da_dF1_fns = []
-
-        for eq in self.score_function.coefficient_eqs:
-            da_dF0 = sympy.diff(eq, F_0)  # noqa: N806
-            da_dF1 = sympy.diff(eq, F_1)  # noqa: N806
-
-            self.da_dF0_eqs.append(da_dF0)
-            self.da_dF1_eqs.append(da_dF1)
-            self.da_dF0_fns.append(_safe_lambdify(da_dF0))
-            self.da_dF1_fns.append(_safe_lambdify(da_dF1))
-
-        self.a_reqs = []
-        self.da0_reqs = []
-        self.da1_reqs = []
-
-        for k in range(len(self.score_function.coefficient_eqs)):
-            # Helper to parse required arguments once
-            def _get_reqs(eq: sympy.Expr) -> tuple[dict[str, Any], bool, bool, bool, bool]:
-                reqs = {str(s) for s in eq.free_symbols}
-                static_kws = {key: val for key, val in self.kwargs.items() if key in reqs}
-                return static_kws, 'pi_0' in reqs, 'pi_1' in reqs, 'F_0' in reqs, 'F_1' in reqs
-
-            self.a_reqs.append(_get_reqs(self.score_function.coefficient_eqs[k]))
-            self.da0_reqs.append(_get_reqs(self.da_dF0_eqs[k]))
-            self.da1_reqs.append(_get_reqs(self.da_dF1_eqs[k]))
+        self._init_piecewise_state(score_function, parameters)
+        self.a_reqs = [_parse_lambdify_reqs(eq, self.kwargs) for eq in self.score_function.coefficient_eqs]
 
     def _compute_hull_state(self, y_score: FloatNDArray) -> _HullCache:
         """Build the ROC convex hull and derive piecewise segment arrays.
@@ -161,17 +205,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
             if not np.any(R_kM):
                 continue
 
-            static_kw, n_p0, n_p1, n_F0, n_F1 = self.a_reqs[k]  # noqa: N806
-            args_a = static_kw.copy()
-            if n_p0:
-                args_a['pi_0'] = self.pi0
-            if n_p1:
-                args_a['pi_1'] = self.pi1
-            if n_F0:
-                args_a['F_0'] = seg_tprs
-            if n_F1:
-                args_a['F_1'] = seg_fprs
-
+            args_a = _build_lambdify_args(self.a_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
             a_k_raw = self.score_function.coefficient_fns[k](**args_a)
             a_k_M = np.broadcast_to(np.asarray(a_k_raw, dtype=np.float64), (M,))  # noqa: N806
             total_value += float(np.sum(a_k_M * R_kM))
@@ -194,10 +228,8 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
         sd_pos = s_pos * (1.0 - s_pos)
         sd_neg = s_neg * (1.0 - s_neg)
 
-        sig_pos = expit(alpha * np.subtract.outer(s_pos, T_M))
-        sig_neg = expit(alpha * np.subtract.outer(s_neg, T_M))
-        dsig_pos = sig_pos * (1.0 - sig_pos)
-        dsig_neg = sig_neg * (1.0 - sig_neg)
+        _, dsig_pos = _smooth_step_derivatives(np.subtract.outer(s_pos, T_M), alpha, order=1)
+        _, dsig_neg = _smooth_step_derivatives(np.subtract.outer(s_neg, T_M), alpha, order=1)
 
         # (M, F) feature-gradient matrices for the two ROC axes
         grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # noqa: N806
@@ -211,29 +243,11 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
                 continue
 
             # da/dF_0
-            static_kw0, n_p0, n_p1, n_F0, n_F1 = self.da0_reqs[k]  # noqa: N806
-            args_da0 = static_kw0.copy()
-            if n_p0:
-                args_da0['pi_0'] = self.pi0
-            if n_p1:
-                args_da0['pi_1'] = self.pi1
-            if n_F0:
-                args_da0['F_0'] = seg_tprs
-            if n_F1:
-                args_da0['F_1'] = seg_fprs
+            args_da0 = _build_lambdify_args(self.da0_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
             da_dF0_M = np.broadcast_to(np.asarray(self.da_dF0_fns[k](**args_da0), dtype=np.float64), (M,))  # noqa: N806
 
             # da/dF_1
-            static_kw1, n_p0, n_p1, n_F0, n_F1 = self.da1_reqs[k]  # noqa: N806
-            args_da1 = static_kw1.copy()
-            if n_p0:
-                args_da1['pi_0'] = self.pi0
-            if n_p1:
-                args_da1['pi_1'] = self.pi1
-            if n_F0:
-                args_da1['F_0'] = seg_tprs
-            if n_F1:
-                args_da1['F_1'] = seg_fprs
+            args_da1 = _build_lambdify_args(self.da1_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
             da_dF1_M = np.broadcast_to(np.asarray(self.da_dF1_fns[k](**args_da1), dtype=np.float64), (M,))  # noqa: N806
 
             weight_F0 = R_kM * da_dF0_M  # noqa: N806
@@ -404,7 +418,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
         return value, gradient
 
 
-class MaxProfitBoostGradientPiecewise:
+class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
     """Prepared piecewise objective for MaxProfit stochastic gradient boosting."""
 
     def __init__(
@@ -414,7 +428,6 @@ class MaxProfitBoostGradientPiecewise:
         y_true: FloatNDArray,
         parameters: dict[str, FloatNDArray | float],
     ) -> None:
-        self.score_function = score_function
         self.y_true = np.asarray(y_true).reshape(-1).astype(np.int32)
         self.parameters = parameters
 
@@ -426,50 +439,7 @@ class MaxProfitBoostGradientPiecewise:
         self.pi0 = float(self.n_pos / len(self.y_true))
         self.pi1 = 1.0 - self.pi0
 
-        self.dist_params, self.kwargs = extract_distribution_parameters(
-            parameters, self.score_function.distribution_args
-        )
-        self.fix_inf = not self.score_function.derivative.subs(self.kwargs).is_negative
-
-        lower_b = self.score_function.random_var_bounds[0]
-        if isinstance(lower_b, sympy.Expr):
-            lower_b = lower_b.subs(self.dist_params)
-            self.lower_bound = -np.inf if lower_b == -sympy.oo else float(lower_b)
-        else:
-            self.lower_bound = float(lower_b)
-
-        upper_b = self.score_function.random_var_bounds[1]
-        if isinstance(upper_b, sympy.Expr):
-            upper_b = upper_b.subs(self.dist_params)
-            self.upper_bound = np.inf if upper_b == sympy.oo else float(upper_b)
-        else:
-            self.upper_bound = float(upper_b)
-
-        F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
-        self.da_dF0_eqs = []
-        self.da_dF1_eqs = []
-        self.da_dF0_fns = []
-        self.da_dF1_fns = []
-
-        for eq in self.score_function.coefficient_eqs:
-            da_dF0 = sympy.diff(eq, F_0)  # noqa: N806
-            da_dF1 = sympy.diff(eq, F_1)  # noqa: N806
-            self.da_dF0_eqs.append(da_dF0)
-            self.da_dF1_eqs.append(da_dF1)
-            self.da_dF0_fns.append(_safe_lambdify(da_dF0))
-            self.da_dF1_fns.append(_safe_lambdify(da_dF1))
-
-        self.da0_reqs = []
-        self.da1_reqs = []
-        for k in range(len(self.score_function.coefficient_eqs)):
-
-            def _get_reqs(eq: sympy.Expr) -> tuple[dict[str, Any], bool, bool, bool, bool]:
-                reqs = {str(s) for s in eq.free_symbols}
-                static_kws = {key: val for key, val in self.kwargs.items() if key in reqs}
-                return static_kws, 'pi_0' in reqs, 'pi_1' in reqs, 'F_0' in reqs, 'F_1' in reqs
-
-            self.da0_reqs.append(_get_reqs(self.da_dF0_eqs[k]))
-            self.da1_reqs.append(_get_reqs(self.da_dF1_eqs[k]))
+        self._init_piecewise_state(score_function, parameters)
 
     def __call__(self, y_score: FloatNDArray, alpha: float) -> tuple[FloatNDArray, FloatNDArray]:
         """Compute the gradient and hessian of the stochastic objective."""
@@ -503,14 +473,14 @@ class MaxProfitBoostGradientPiecewise:
         s_pos = y_score_arr[self.pos_mask]
         s_neg = y_score_arr[self.neg_mask]
 
-        sig_pos = expit(alpha * np.subtract.outer(s_pos, T_M))
-        sig_neg = expit(alpha * np.subtract.outer(s_neg, T_M))
+        _, factor1_pos, factor2_pos = _smooth_step_derivatives(np.subtract.outer(s_pos, T_M), alpha)
+        _, factor1_neg, factor2_neg = _smooth_step_derivatives(np.subtract.outer(s_neg, T_M), alpha)
 
-        sig_prime_pos = alpha * sig_pos * (1.0 - sig_pos)
-        sig_prime_neg = alpha * sig_neg * (1.0 - sig_neg)
+        sig_prime_pos = alpha * factor1_pos
+        sig_prime_neg = alpha * factor1_neg
 
-        sig_sec_pos = alpha**2 * sig_pos * (1.0 - sig_pos) * (1.0 - 2.0 * sig_pos)
-        sig_sec_neg = alpha**2 * sig_neg * (1.0 - sig_neg) * (1.0 - 2.0 * sig_neg)
+        sig_sec_pos = alpha**2 * factor2_pos
+        sig_sec_neg = alpha**2 * factor2_neg
 
         weight_F0_M = np.zeros(M)  # noqa: N806
         weight_F1_M = np.zeros(M)  # noqa: N806
@@ -522,31 +492,11 @@ class MaxProfitBoostGradientPiecewise:
             if not np.any(R_kM):
                 continue
 
-            static_kw0, n_p0, n_p1, n_F0, n_F1 = self.da0_reqs[k]  # noqa: N806
-            args_da0 = static_kw0.copy()
-            if n_p0:
-                args_da0['pi_0'] = self.pi0
-            if n_p1:
-                args_da0['pi_1'] = self.pi1
-            if n_F0:
-                args_da0['F_0'] = segment_tprs_arr
-            if n_F1:
-                args_da0['F_1'] = segment_fprs_arr
-
+            args_da0 = _build_lambdify_args(self.da0_reqs[k], self.pi0, self.pi1, segment_tprs_arr, segment_fprs_arr)
             da_dF0_raw = self.da_dF0_fns[k](**args_da0)  # noqa: N806
             da_dF0_M = np.broadcast_to(np.asarray(da_dF0_raw, dtype=np.float64), (M,))  # noqa: N806
 
-            static_kw1, n_p0, n_p1, n_F0, n_F1 = self.da1_reqs[k]  # noqa: N806
-            args_da1 = static_kw1.copy()
-            if n_p0:
-                args_da1['pi_0'] = self.pi0
-            if n_p1:
-                args_da1['pi_1'] = self.pi1
-            if n_F0:
-                args_da1['F_0'] = segment_tprs_arr
-            if n_F1:
-                args_da1['F_1'] = segment_fprs_arr
-
+            args_da1 = _build_lambdify_args(self.da1_reqs[k], self.pi0, self.pi1, segment_tprs_arr, segment_fprs_arr)
             da_dF1_raw = self.da_dF1_fns[k](**args_da1)  # noqa: N806
             da_dF1_M = np.broadcast_to(np.asarray(da_dF1_raw, dtype=np.float64), (M,))  # noqa: N806
 

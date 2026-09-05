@@ -1,10 +1,11 @@
 import copy
 from collections.abc import Iterable
-from typing import Any, Self
+from typing import Any, Literal, Self, overload
 
 import numpy as np
 import sympy
 from scipy.special import expit
+from sympy.utilities import lambdify
 
 from ....._types import Float64Array, FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull
@@ -23,6 +24,98 @@ def extract_distribution_parameters(
         str(key): parameters.pop(str(key)) for key in distribution_args if str(key) in parameters
     }
     return distribution_parameters, parameters
+
+
+def _substitute_integrand(
+    expr: sympy.Expr,
+    kwargs: dict[str, Any],
+    dist_params: dict[str, Any],
+    pi0: float,
+    pi1: float,
+) -> sympy.Expr:
+    """Substitute deterministic parameters, distribution parameters, and class priors into *expr*.
+
+    ``dist_params={}`` is a no-op substitution, so this covers both the "distribution parameters
+    are fixed numeric literals" and "distribution parameters were just resolved from kwargs" cases
+    used by the Monte-Carlo, Quasi-Monte-Carlo, and quadrature integration backends.
+    """
+    return expr.subs(kwargs).subs(dist_params).subs('pi_0', pi0).subs('pi_1', pi1)
+
+
+def _evaluate_sampled_integrands(
+    profit_integrand: sympy.Expr,
+    rate_integrand: sympy.Expr | None,
+    true_positive_rates: Iterable[float],
+    false_positive_rates: Iterable[float],
+    random_symbols: Iterable[sympy.Symbol],
+    param_grid: list[Any],
+    n_samples: int,
+) -> float:
+    """Evaluate a profit (and optional rate) integrand over a sampled parameter grid.
+
+    Used by both the Monte-Carlo and Quasi-Monte-Carlo integration backends, which differ only
+    in how *param_grid* is generated (plain sympy sampling vs. a Sobol sequence mapped through
+    each distribution's inverse CDF). For each convex-hull point, lambdifies the integrand at
+    that point's F_0/F_1 and evaluates it over every sample in *param_grid*.
+
+    Returns
+    -------
+    float
+        When *rate_integrand* is ``None``: the mean, over samples, of the per-sample maximum
+        profit. Otherwise: the mean, over samples, of the predicted-positive rate at each
+        sample's profit-maximizing convex-hull point.
+    """
+    profit_integrands = [
+        lambdify(random_symbols, profit_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
+        for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
+    ]
+
+    results = np.empty((len(profit_integrands), n_samples))
+    for i, integrand in enumerate(profit_integrands):
+        results[i, :] = integrand(*param_grid)
+    if rate_integrand is None:
+        return float(results.max(axis=0).mean())
+
+    rate_integrands = [
+        lambdify(random_symbols, rate_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
+        for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
+    ]
+    rate_results = np.empty((len(profit_integrands), n_samples))
+    best_indices = results.argmax(axis=0)
+    for i, integrand in enumerate(rate_integrands):
+        rate_results[i, :] = integrand(*param_grid)
+    return float(rate_results[best_indices, np.arange(n_samples)].mean())
+
+
+@overload
+def _smooth_step_derivatives(
+    diff: FloatNDArray, alpha: float, order: Literal[1]
+) -> tuple[FloatNDArray, FloatNDArray]: ...
+@overload
+def _smooth_step_derivatives(
+    diff: FloatNDArray, alpha: float, order: Literal[2] = 2
+) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]: ...
+def _smooth_step_derivatives(
+    diff: FloatNDArray, alpha: float, order: Literal[1, 2] = 2
+) -> tuple[FloatNDArray, FloatNDArray] | tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
+    """Sigmoid approximation of a step function, and its derivative factors.
+
+    *diff* is ``scores - threshold`` (or ``np.subtract.outer(scores, thresholds)`` for a matrix
+    of per-segment thresholds). Returns ``sigma = expit(alpha * diff)`` together with the
+    *unscaled* logistic factors ``sigma * (1 - sigma)`` (``order=1``) and, for ``order=2``
+    (default), also ``sigma * (1 - sigma) * (1 - 2 * sigma)``.
+
+    The true first and second derivatives of ``sigma`` with respect to the *scores* axis are
+    these factors multiplied by ``alpha`` and ``alpha**2`` respectively - callers apply that
+    scaling themselves, so it can be combined with any other per-caller ``alpha`` factor (e.g.
+    an outer ``alpha / n_pos`` term) without multiplying by ``alpha`` twice.
+    """
+    sigma = expit(alpha * diff)
+    factor1 = sigma * (1.0 - sigma)
+    if order == 1:
+        return sigma, factor1
+    factor2 = factor1 * (1.0 - 2.0 * sigma)
+    return sigma, factor1, factor2
 
 
 class _BaseMaxProfitLogitObjective(LogitObjective):

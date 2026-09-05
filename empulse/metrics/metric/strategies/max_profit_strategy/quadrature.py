@@ -10,7 +10,7 @@ from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
 from ...common import _check_parameters
-from .common import _convex_hull, extract_distribution_parameters
+from .common import _convex_hull, _substitute_integrand, extract_distribution_parameters
 
 
 def compute_integral_multiple_quad(
@@ -112,23 +112,16 @@ class MaxProfitScoreQuad:
             bounds.subs(distribution_parameters) if isinstance(bounds, sympy.Expr) else bounds for bounds in bounds
         ]
 
-        profit_integrand_ = (
-            self.profit_function
-            .subs(kwargs)
-            .subs(distribution_parameters)
-            .subs('pi_0', positive_class_prior)
-            .subs('pi_1', negative_class_prior)
+        profit_integrand_ = _substitute_integrand(
+            self.profit_function, kwargs, distribution_parameters, positive_class_prior, negative_class_prior
         )
-        if self.rate_function is not None:
-            rate_integrand_ = (
-                self.rate_function
-                .subs(kwargs)
-                .subs(distribution_parameters)
-                .subs('pi_0', positive_class_prior)
-                .subs('pi_1', negative_class_prior)
+        rate_integrand_ = (
+            _substitute_integrand(
+                self.rate_function, kwargs, distribution_parameters, positive_class_prior, negative_class_prior
             )
-        else:
-            rate_integrand_ = None
+            if self.rate_function is not None
+            else None
+        )
         return compute_integral_multiple_quad(
             profit_integrand_,
             rate_integrand_,

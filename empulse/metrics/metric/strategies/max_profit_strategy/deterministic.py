@@ -3,12 +3,11 @@ from typing import Any
 
 import numpy as np
 import sympy
-from scipy.special import expit
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import _compute_confusion_matrix, classification_threshold
 from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
-from .common import _BaseMaxProfitLogitObjective
+from .common import _BaseMaxProfitLogitObjective, _smooth_step_derivatives
 
 
 def _calculate_profits_deterministic(
@@ -41,8 +40,14 @@ def _calculate_profits_deterministic(
     return profits, tprs, fprs, pi0, pi1
 
 
-class MaxProfitScoreDeterministic:
-    """Compute the maximum profit for all deterministic variables."""
+class _BaseMaxProfitDeterministic:
+    """Shared setup for MaxProfit's fully-deterministic (no stochastic variable) score/rate.
+
+    Subclasses differ only in how they reduce the per-hull-point profit array (and the
+    corresponding TPR/FPR/class-prior values at its maximizing point) to a single float:
+    :class:`MaxProfitScoreDeterministic` takes the profit's max, :class:`MaxProfitRateDeterministic`
+    reports the predicted-positive rate at the profit-maximizing point.
+    """
 
     def __init__(self, profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]) -> None:
         self.profit_function = profit_function
@@ -52,40 +57,28 @@ class MaxProfitScoreDeterministic:
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
         _check_parameters((*self.deterministic_symbols,), kwargs)
-        profits, *_ = _calculate_profits_deterministic(
+        profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(
             y_true, y_score, self.calculate_profit, self.profit_function, **kwargs
         )
+        return self._reduce(profits, tprs, fprs, pi0, pi1)
+
+    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
+        raise NotImplementedError
+
+
+class MaxProfitScoreDeterministic(_BaseMaxProfitDeterministic):
+    """Compute the maximum profit for all deterministic variables."""
+
+    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
         return float(profits.max())
 
 
-def _calculate_optimal_rate_deterministic(
-    y_true: IntNDArray,
-    y_score: FloatNDArray,
-    calculate_profit: Callable[..., float],
-    profit_function: sympy.Expr,
-    **kwargs: Any,
-) -> float:
-    profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(
-        y_true, y_score, calculate_profit, profit_function, **kwargs
-    )
-    best_index = np.argmax(profits)
-    return float(tprs[best_index] * pi0 + fprs[best_index] * pi1)
-
-
-class MaxProfitRateDeterministic:
+class MaxProfitRateDeterministic(_BaseMaxProfitDeterministic):
     """Compute the maximum profit for all deterministic variables."""
 
-    def __init__(self, profit_function: sympy.Expr, deterministic_symbols: Iterable[sympy.Symbol]) -> None:
-        self.profit_function = profit_function
-        self.deterministic_symbols = deterministic_symbols
-        self.calculate_profit = _safe_lambdify(profit_function)
-
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the cost loss."""
-        _check_parameters((*self.deterministic_symbols,), kwargs)
-        return _calculate_optimal_rate_deterministic(
-            y_true, y_score, self.calculate_profit, self.profit_function, **kwargs
-        )
+    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
+        best_index = np.argmax(profits)
+        return float(tprs[best_index] * pi0 + fprs[best_index] * pi1)
 
 
 class MaxProfitBoostGradientDeterministic:
@@ -132,9 +125,9 @@ class MaxProfitBoostGradientDeterministic:
         rate = float(tprs[best_idx] * pi0 + fprs[best_idx] * pi1)
         threshold = float(classification_threshold(self.y_true, y_score_arr, rate))
 
-        sigma = expit(alpha * (y_score_arr - threshold))
-        sigma_prime = alpha * sigma * (1.0 - sigma)
-        sigma_second = alpha**2 * sigma * (1.0 - sigma) * (1.0 - 2.0 * sigma)
+        _, factor1, factor2 = _smooth_step_derivatives(y_score_arr - threshold, alpha)
+        sigma_prime = alpha * factor1
+        sigma_second = alpha**2 * factor2
 
         c_pos = -((self.tp_benefit + self.fn_cost) * pi0) / self.n_pos
         c_neg = ((self.tn_benefit + self.fp_cost) * pi1) / self.n_neg
@@ -206,10 +199,8 @@ class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
         s_pos = y_score[self.pos_mask]
         s_neg = y_score[self.neg_mask]
 
-        sig_pos = expit(alpha * (s_pos - threshold))
-        sig_neg = expit(alpha * (s_neg - threshold))
-        dsig_pos = sig_pos * (1.0 - sig_pos)
-        dsig_neg = sig_neg * (1.0 - sig_neg)
+        _, dsig_pos = _smooth_step_derivatives(s_pos - threshold, alpha, order=1)
+        _, dsig_neg = _smooth_step_derivatives(s_neg - threshold, alpha, order=1)
 
         sd_pos = s_pos * (1.0 - s_pos)
         sd_neg = s_neg * (1.0 - s_neg)
