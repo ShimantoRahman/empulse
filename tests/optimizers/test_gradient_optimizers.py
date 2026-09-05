@@ -235,6 +235,23 @@ class TestExponentialSchedule:
     def test_repr(self):
         assert 'ExponentialSchedule' in repr(ExponentialSchedule(1.0, 0.5))
 
+    def test_max_value_ceiling(self):
+        s = ExponentialSchedule(start_value=1.0, gamma=2.0, max_value=5.0)
+        assert s(3) == pytest.approx(5.0)
+
+    def test_max_value_none_is_unbounded(self):
+        s = ExponentialSchedule(start_value=1.0, gamma=2.0)
+        assert s(10) == pytest.approx(2.0**10)
+
+    def test_overflow_with_max_value_returns_max_value(self):
+        """OverflowError from a huge gamma should fall back to max_value, not start_value."""
+        s = ExponentialSchedule(start_value=1.0, gamma=1e308, max_value=100.0)
+        assert s(1000) == pytest.approx(100.0)
+
+    def test_max_value_below_min_value_raises(self):
+        with pytest.raises(ValueError, match='max_value must be >= min_value'):
+            ExponentialSchedule(start_value=1.0, gamma=2.0, min_value=1.0, max_value=0.5)
+
 
 class TestStepSchedule:
     def test_no_drop_before_step_size(self):
@@ -264,6 +281,18 @@ class TestStepSchedule:
     def test_negative_step_size_raises(self):
         with pytest.raises(ValueError):
             StepSchedule(start_value=1.0, step_size=-1)
+
+    def test_max_value_ceiling(self):
+        s = StepSchedule(start_value=1.0, step_size=1, gamma=2.0, max_value=5.0)
+        assert s(10) == pytest.approx(5.0)
+
+    def test_max_value_none_is_unbounded(self):
+        s = StepSchedule(start_value=1.0, step_size=1, gamma=2.0)
+        assert s(10) == pytest.approx(2.0**10)
+
+    def test_max_value_below_min_value_raises(self):
+        with pytest.raises(ValueError, match='max_value must be >= min_value'):
+            StepSchedule(start_value=1.0, step_size=1, gamma=2.0, min_value=1.0, max_value=0.5)
 
 
 class TestCosineAnnealingSchedule:

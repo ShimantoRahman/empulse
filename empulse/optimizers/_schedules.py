@@ -125,11 +125,11 @@ class LinearSchedule(Schedule):
 class ExponentialSchedule(Schedule):
     r"""Exponential schedule: ``value = start_value * gamma ** epoch``.
 
-    Optionally clipped from below at *min_value*.
+    Optionally clipped from below at *min_value* and/or from above at *max_value*.
 
     .. math::
 
-        v_t = \max\bigl(v_{\min},\; v_0 \cdot \gamma^t\bigr)
+        v_t = \min\Bigl(v_{\max},\; \max\bigl(v_{\min},\; v_0 \cdot \gamma^t\bigr)\Bigr)
 
     Parameters
     ----------
@@ -140,6 +140,13 @@ class ExponentialSchedule(Schedule):
         for decay; ``gamma > 1`` can be used for growth (e.g. alpha annealing).
     min_value : float, default=0.0
         Lower bound on the returned value.
+    max_value : float, optional
+        Upper bound on the returned value.  Useful for capping a growth
+        schedule (``gamma > 1``), e.g. an annealed smoothing parameter that
+        should not exceed a fixed ceiling.  If ``None`` (default), the value
+        is unbounded above; on overflow of ``gamma ** epoch`` it then falls
+        back to *start_value*.  If given, it must be ``>= min_value``, and an
+        overflow falls back to *max_value* instead.
 
     Examples
     --------
@@ -150,21 +157,33 @@ class ExponentialSchedule(Schedule):
         # Decaying learning rate
         lr_schedule = ExponentialSchedule(start_value=1e-2, gamma=0.99, min_value=1e-5)
 
-        # Growing alpha schedule (smoothing parameter warm-up)
-        alpha_schedule = ExponentialSchedule(start_value=0.1, gamma=1.05, min_value=0.0)
+        # Growing alpha schedule (smoothing parameter warm-up), capped at 100.0
+        alpha_schedule = ExponentialSchedule(start_value=1.0, gamma=1.1, max_value=100.0)
     """
 
-    def __init__(self, start_value: float, gamma: float, min_value: float = 0.0) -> None:
+    def __init__(
+        self,
+        start_value: float,
+        gamma: float,
+        min_value: float = 0.0,
+        max_value: float | None = None,
+    ) -> None:
+        if max_value is not None and max_value < min_value:
+            raise ValueError('max_value must be >= min_value.')
         self.start_value = start_value
         self.gamma = gamma
         self.min_value = min_value
+        self.max_value = max_value
 
     def __call__(self, epoch: int) -> float:
         try:
             value = self.start_value * (self.gamma**epoch)
         except OverflowError:
-            value = self.start_value
-        return float(max(self.min_value, value))
+            value = self.max_value if self.max_value is not None else self.start_value
+        value = max(self.min_value, value)
+        if self.max_value is not None:
+            value = min(self.max_value, value)
+        return float(value)
 
 
 class StepSchedule(Schedule):
@@ -172,7 +191,7 @@ class StepSchedule(Schedule):
 
     .. math::
 
-        v_t = \max\bigl(v_{\min},\; v_0 \cdot \gamma^{\lfloor t / s \rfloor}\bigr)
+        v_t = \min\Bigl(v_{\max},\; \max\bigl(v_{\min},\; v_0 \cdot \gamma^{\lfloor t / s \rfloor}\bigr)\Bigr)
 
     Parameters
     ----------
@@ -185,6 +204,11 @@ class StepSchedule(Schedule):
         decay (LR reduction) or ``gamma > 1`` for growth (alpha warm-up).
     min_value : float, default=0.0
         Lower bound on the returned value.
+    max_value : float, optional
+        Upper bound on the returned value.  Useful for capping a growth
+        schedule (``gamma > 1``), e.g. an annealed smoothing parameter that
+        should not exceed a fixed ceiling.  If ``None`` (default), the value
+        is unbounded above.  If given, it must be ``>= min_value``.
 
     Examples
     --------
@@ -195,6 +219,9 @@ class StepSchedule(Schedule):
         # Halve the learning rate every 100 epochs
         lr_schedule = StepSchedule(start_value=1e-2, step_size=100, gamma=0.5)
         optimizer = SGD(lr=1e-2, lr_schedule=lr_schedule)
+
+        # Double alpha every 50 epochs, capped at 100.0
+        alpha_schedule = StepSchedule(start_value=1.0, step_size=50, gamma=2.0, max_value=100.0)
     """
 
     def __init__(
@@ -203,17 +230,24 @@ class StepSchedule(Schedule):
         step_size: int,
         gamma: float = 0.1,
         min_value: float = 0.0,
+        max_value: float | None = None,
     ) -> None:
         if step_size < 1:
             raise ValueError('step_size must be at least 1.')
+        if max_value is not None and max_value < min_value:
+            raise ValueError('max_value must be >= min_value.')
         self.start_value = start_value
         self.step_size = step_size
         self.gamma = gamma
         self.min_value = min_value
+        self.max_value = max_value
 
     def __call__(self, epoch: int) -> float:
         value = self.start_value * (self.gamma ** (epoch // self.step_size))
-        return float(max(self.min_value, value))
+        value = max(self.min_value, value)
+        if self.max_value is not None:
+            value = min(self.max_value, value)
+        return float(value)
 
 
 class CosineAnnealingSchedule(Schedule):
