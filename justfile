@@ -37,6 +37,11 @@ upload: build
 compile:
     uv sync --reinstall-package empulse
 
+# Check that the installed Cython matches the Cython scikit-learn's extensions were built with
+[group('test')]
+check-cython-abi:
+    uv run python scripts/check_cython_abi.py
+
 # Run pytest tests (optionally specify: models, metrics, or run all by default)
 [group('test')]
 test target='':
@@ -135,4 +140,4 @@ verify-version:
 # Run all preflight checks before deployment
 [windows]
 [group('deploy')]
-preflight: verify-version linkcheck tox update-sklearn-compat sklearn-compat
+preflight: verify-version check-cython-abi linkcheck tox update-sklearn-compat sklearn-compat
