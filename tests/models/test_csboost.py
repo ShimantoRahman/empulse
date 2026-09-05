@@ -108,7 +108,7 @@ def test_csboost_with_invalid_estimator_type(dataset):
 def test_csboost_with_deterministic_max_profit_metric(dataset):
     xgboost = pytest.importorskip('xgboost')
     clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=1.0))
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
 
     X, y, _, _ = dataset
     model = CSBoostClassifier(

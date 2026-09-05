@@ -108,14 +108,13 @@ class MaxProfit(MetricStrategy):
         This argument is ignored when ``integration_technique='quad'``.
 
     alpha: float, default=1.0
-        Initial temperature used in the smooth sigmoid approximation for ``logit_objective``.
-
-    alpha_growth: float, default=1.1
-        Exponential growth factor :math:`\\gamma` of the annealing schedule.
-        Set to ``1.0`` to keep a constant temperature.
-
-    alpha_max: float, default=100.0
-        Maximum value reached by the annealed temperature.
+        Temperature of the smooth sigmoid approximation used by ``logit_objective`` and
+        ``gradient_boost_objective`` to make the (otherwise piecewise-constant) TPR/FPR
+        differentiable. Held constant here; to anneal it during logistic-regression training,
+        pass an ``alpha_schedule`` to the optimizer instead (e.g. :class:`~empulse.optimizers.SGD`,
+        :class:`~empulse.optimizers.Adam`, :class:`~empulse.optimizers.RMSProp`) -
+        :class:`~empulse.optimizers.ExponentialSchedule` and :class:`~empulse.optimizers.StepSchedule`
+        both support a growth factor with a ``max_value`` ceiling.
 
     .. note::
         Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`, this
@@ -140,8 +139,6 @@ class MaxProfit(MetricStrategy):
         n_mc_samples_exp: int = 16,
         random_state: np.random.Generator | int | None = None,
         alpha: float = 1.0,
-        alpha_growth: float = 1.1,
-        alpha_max: float = 100.0,
     ):
         super().__init__(name='max profit', direction=Direction.MAXIMIZE)
         if integration_method not in self.INTEGRATION_METHODS:
@@ -153,16 +150,7 @@ class MaxProfit(MetricStrategy):
         self.n_mc_samples: int = 2**n_mc_samples_exp
         if alpha <= 0:
             raise ValueError('alpha must be strictly positive.')
-        if alpha_growth < 1.0:
-            raise ValueError('alpha_growth must be >= 1.0.')
-        if alpha_max <= 0:
-            raise ValueError('alpha_max must be strictly positive.')
-        if alpha > alpha_max:
-            raise ValueError('alpha must be <= alpha_max.')
         self.alpha = alpha
-        self.alpha_growth = alpha_growth
-        self.alpha_max = alpha_max
-        self._boost_epoch = 0
         self._boost_objective: MaxProfitBoostGradientDeterministic | MaxProfitBoostGradientPiecewise | None = None
         self._boost_signature: tuple[tuple[int, ...], tuple[tuple[str, float], ...]] | None = None
         if isinstance(random_state, np.random.Generator):
@@ -174,14 +162,6 @@ class MaxProfit(MetricStrategy):
     def requires_dynamic_boost_objective(self) -> bool:
         """MaxProfit needs the current round's predictions to locate its profit-optimal threshold."""
         return True
-
-    def _current_boost_alpha(self) -> float:
-        """Compute annealed temperature for the current boosting objective evaluation."""
-        try:
-            alpha = self.alpha * (self.alpha_growth**self._boost_epoch)
-        except OverflowError:
-            alpha = self.alpha_max
-        return float(min(self.alpha_max, alpha))
 
     def build(
         self,
@@ -219,7 +199,6 @@ class MaxProfit(MetricStrategy):
         self._tn_benefit = tn_benefit
         self._fp_cost = fp_cost
         self._fn_cost = fn_cost
-        self._boost_epoch = 0
         self._boost_objective = None
         self._boost_signature = None
         return self
@@ -472,8 +451,7 @@ class MaxProfit(MetricStrategy):
 
         Automatically handles deterministic and stochastic piecewise integrals.
         """
-        alpha = self._current_boost_alpha()
-        self._boost_epoch += 1
+        alpha = self.alpha
 
         y_true_arr = np.asarray(y_true).reshape(-1)
         agg_params = _aggregate_instance_parameters(dict(parameters))

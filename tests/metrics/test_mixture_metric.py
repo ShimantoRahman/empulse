@@ -302,12 +302,8 @@ def _with_intercept(X):
 
 
 def test_gradient_boost_objective_matches_manual_combination(y_true_and_prediction):
-    # alpha_growth=1.0 disables MaxProfit's boosting-epoch alpha annealing: the strategy
-    # object shared by both mixture components keeps a running epoch counter across calls,
-    # so with annealing left on, two separately-invoked "expected" calls would land on a
-    # different epoch (and thus a different smoothing alpha) than the mixture's own calls.
     gamma, roi = sympy.symbols('gamma roi')
-    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit(alpha_growth=1.0))
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
     y, y_proba = y_true_and_prediction
     w0, w1, roi_val = 0.6, 0.4, 0.2644
     mixture = _two_point_mixture(metric_det, w0, w1)
@@ -396,12 +392,8 @@ def test_logit_objective_with_indices_and_set_alpha(credit_scoring_metrics):
 
 
 def test_logit_gradient_steps_matches_direct_call():
-    # alpha_growth=1.0: this calls the objective twice (once directly, once via the
-    # steps generator) on purpose, so annealing must be disabled or the second call would
-    # legitimately see a different (annealed) alpha than the first -- see the note on
-    # test_gradient_boost_objective_matches_manual_combination above.
     gamma, roi_sym = sympy.symbols('gamma roi')
-    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi_sym), MaxProfit(alpha_growth=1.0))
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi_sym), MaxProfit())
     X_raw, y = make_classification(n_samples=40, n_features=3, n_informative=2, n_redundant=0, random_state=5)
     X = _with_intercept(X_raw)
     roi = 0.2644

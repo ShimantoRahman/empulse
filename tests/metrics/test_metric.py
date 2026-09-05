@@ -731,15 +731,9 @@ def test_max_profit_logit_alpha_is_constant():
     assert objective.alpha == pytest.approx(7.0)  # type: ignore[attr-defined]
 
 
-def test_max_profit_alpha_schedule_validation():
+def test_max_profit_alpha_validation():
     with pytest.raises(ValueError, match='alpha must be strictly positive'):
         MaxProfit(alpha=0.0)
-    with pytest.raises(ValueError, match=r'alpha_growth must be >= 1.0'):
-        MaxProfit(alpha_growth=0.99)
-    with pytest.raises(ValueError, match='alpha_max must be strictly positive'):
-        MaxProfit(alpha_max=0.0)
-    with pytest.raises(ValueError, match='alpha must be <= alpha_max'):
-        MaxProfit(alpha=2.0, alpha_max=1.0)
 
 
 def test_max_profit_complex_roots(y_true_and_prediction):
@@ -762,7 +756,7 @@ def test_max_profit_complex_roots(y_true_and_prediction):
 
 def test_objective_boost_max_profit_deterministic_linear():
     clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=1.0))
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
 
     _, y = make_classification(n_samples=40, random_state=12)
     y_score = np.linspace(-1.0, 1.0, y.shape[0])
@@ -775,20 +769,27 @@ def test_objective_boost_max_profit_deterministic_linear():
     assert np.all(hessian >= 0)
 
 
-def test_objective_boost_max_profit_alpha_annealing_schedule():
+def test_objective_boost_max_profit_alpha_is_constant_across_fits():
+    """Regression test: MaxProfit's boosting-side alpha used to anneal via an epoch counter that
+    was reset only in `build()` (i.e. once, from `Metric.__init__`), so a second call resumed
+    annealing from wherever the first call left off, making repeated calls on the same `Metric`
+    non-reproducible. Alpha is now a plain constant, so repeated calls with identical inputs must
+    return identical results.
+    """
     clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=2.0, alpha_max=3.0))
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=2.0))
 
     _, y = make_classification(n_samples=40, random_state=23)
     y_score = np.linspace(-1.0, 1.0, y.shape[0])
 
-    assert metric.strategy._current_boost_alpha() == pytest.approx(1.0)  # type: ignore[attr-defined]
-    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
-    assert metric.strategy._current_boost_alpha() == pytest.approx(2.0)  # type: ignore[attr-defined]
-    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
-    assert metric.strategy._current_boost_alpha() == pytest.approx(3.0)  # type: ignore[attr-defined]
-    _ = metric._gradient_boost_objective(y, y_score, clv=5.0)
-    assert metric.strategy._current_boost_alpha() == pytest.approx(3.0)  # type: ignore[attr-defined]
+    assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
+    gradient_1, hessian_1 = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
+    gradient_2, hessian_2 = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
+
+    np.testing.assert_array_equal(gradient_1, gradient_2)
+    np.testing.assert_array_equal(hessian_1, hessian_2)
 
 
 def test_repr_metric(uniform_dist_matrix):

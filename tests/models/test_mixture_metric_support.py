@@ -30,7 +30,7 @@ def dataset():
 def two_point_mixture():
     """A MaxProfit MixtureMetric mixing two point masses of `gamma` -- gradient-trainable today."""
     gamma, roi = sympy.symbols('gamma roi')
-    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit(alpha_growth=1.0))
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
     return MixtureMetric([
         MixtureComponent(0.6, metric_det, {'gamma': 0.0}),
         MixtureComponent(0.4, metric_det, {'gamma': 1.0}),
@@ -80,12 +80,12 @@ def test_cslogit_mixture_metric_matches_weighted_average_gamma(dataset):
     common_kwargs = {'C': 1e6, 'l1_ratio': 0.0, 'soft_threshold': False}
 
     def fit_plain(g):
-        metric = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit(alpha_growth=1.0))
+        metric = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
         model = CSLogitClassifier(loss=metric, **common_kwargs)
         model.fit(X, y, gamma=g, roi=0.2644)
         return model.coef_
 
-    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit(alpha_growth=1.0))
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
     mixture = MixtureMetric([
         MixtureComponent(0.6, metric_det, {'gamma': 0.0}),
         MixtureComponent(0.4, metric_det, {'gamma': 1.0}),
@@ -109,7 +109,7 @@ def test_cslogit_mixture_metric_weights_are_not_ignored(dataset):
     """
     X, y = dataset
     gamma, roi = sympy.symbols('gamma roi')
-    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit(alpha_growth=1.0))
+    metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
     common_kwargs = {'C': 1e6, 'l1_ratio': 0.0, 'soft_threshold': False}
 
     mixture_a = MixtureMetric([

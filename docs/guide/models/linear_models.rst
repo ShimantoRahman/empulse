@@ -287,7 +287,7 @@ Available schedules:
    * - :class:`~empulse.optimizers.LinearSchedule`
      - Linear interpolation from ``start_value`` to ``end_value`` over ``n_steps`` epochs
    * - :class:`~empulse.optimizers.ExponentialSchedule`
-     - ``value = start_value × gamma^epoch``, clipped at ``min_value``
+     - ``value = start_value × gamma^epoch``, clipped at ``min_value`` and, optionally, ``max_value``
    * - :class:`~empulse.optimizers.StepSchedule`
      - Multiplies by ``gamma`` every ``step_size`` epochs
    * - :class:`~empulse.optimizers.CosineAnnealingSchedule`
@@ -322,6 +322,18 @@ training progresses is a form of curriculum learning:
 
 The ``alpha_schedule`` is silently ignored on objectives that do not expose a
 ``set_alpha`` method, so it is always safe to set.
+
+:class:`~empulse.metrics.MaxProfit` itself only takes a single, constant ``alpha`` - it does not
+anneal on its own. To reproduce a growing-then-capped temperature (e.g. starting at ``1.0`` and
+annealing up to a ceiling of ``100.0`` at a rate of ``1.1`` per epoch), use an ``alpha_schedule``
+with a ``max_value``:
+
+.. code-block:: python
+
+    from empulse.optimizers import Adam, ExponentialSchedule
+
+    alpha_schedule = ExponentialSchedule(start_value=1.0, gamma=1.1, max_value=100.0)
+    model = ProfLogitClassifier(optimizer=Adam(lr=1e-2, alpha_schedule=alpha_schedule))
 
 Mini-batch training
 ~~~~~~~~~~~~~~~~~~~
