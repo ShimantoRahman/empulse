@@ -504,9 +504,10 @@ class CSBoostClassifier(CostSensitiveClassifier):
         # raw score returned by predict() must have that same offset added back manually before
         # converting to a probability. XGBoost's `base_score` has no such issue: it is a genuine
         # model parameter that base_score-aware predict_proba() already accounts for.
+        y_proba: FloatNDArray
         if not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
             raw_score: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
-            y_proba: FloatNDArray = expit(raw_score + _BASE_SCORE_RAW)
+            y_proba = expit(raw_score + _BASE_SCORE_RAW)
             return np.column_stack([1 - y_proba, y_proba])
 
         if not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
@@ -514,7 +515,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
             y_proba = expit(raw_score + _BASE_SCORE_RAW)
             return np.column_stack([1 - y_proba, y_proba])
 
-        y_proba = self.estimator_.predict_proba(X)  # type: ignore[no-redef]
+        y_proba = self.estimator_.predict_proba(X)
         return y_proba
 
 

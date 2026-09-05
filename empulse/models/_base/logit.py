@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable
 from numbers import Real
 from typing import Any, ClassVar, Protocol, Self
@@ -38,6 +38,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         'loss': [BaseMetric, None],
         'optimizer': [Optimizer, None],
     }
+    _default_optimizer: ClassVar[type[Optimizer]]
 
     def __init__(
         self,
@@ -59,14 +60,10 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         self.optimizer = optimizer
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    @abstractmethod
     def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
-        """
-        Optimize the objective function.
-
-        Subclasses should decide what the default optimizer is.
-        If `optimize_fn` is provided, it should be used instead of the default optimizer.
-        """
+        """Optimize the objective function using `self.optimizer`, or `_default_optimizer` if unset."""
+        optimize = self._default_optimizer() if self.optimizer is None else self.optimizer
+        return optimize(objective=objective, X=X, **kwargs)
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):

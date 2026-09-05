@@ -1,10 +1,6 @@
-from typing import Any
+from typing import ClassVar
 
-from scipy.optimize import OptimizeResult
-
-from ..._types import FloatNDArray
-from ...metrics import LogitObjective
-from ...optimizers import LBFGSBOptimizer
+from ...optimizers import LBFGSBOptimizer, Optimizer
 from .._base import BaseLogitClassifier
 
 
@@ -185,7 +181,4 @@ class CSLogitClassifier(BaseLogitClassifier):
            European Journal of Operational Research, 297(1), 291-300.
     """
 
-    def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
-        """Optimize the objective function."""
-        optimize = LBFGSBOptimizer() if self.optimizer is None else self.optimizer
-        return optimize(objective=objective, X=X, **kwargs)
+    _default_optimizer: ClassVar[type[Optimizer]] = LBFGSBOptimizer

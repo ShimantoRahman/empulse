@@ -289,13 +289,14 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         """
 
     @abstractmethod
-    def _apply_decision(self, X: FloatArrayLike, decision: Any) -> NDArray[Any]:
+    def _apply_decision(self, y_score: FloatNDArray, decision: Any) -> NDArray[Any]:
         """Apply the decision rule to produce class label predictions.
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features)
-            Input samples.
+        y_score : ndarray of shape (n_samples,)
+            The predicted positive-class probabilities, already computed by the caller so this
+            method doesn't need to score `X` a second time.
         decision : Any
             The decision value (threshold, rate, etc.).
 
@@ -411,6 +412,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
                 estimator: Any = getattr(self, 'estimator_', self.estimator)
                 y_pred: NDArray[Any] = estimator.predict(X)
                 return y_pred
+            y_score = self.predict_proba(X)[:, 1]
         else:
             if getattr(self, 'estimator_', None) is None:
                 raise NotFittedError
@@ -424,10 +426,10 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             loss_params = self._add_standard_costs_to_params(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params
             )
-            y_proba = self.predict_proba(X)[:, 1]
-            decision = self._compute_decision_at_predict(y_proba, loss, loss_params)
+            y_score = self.predict_proba(X)[:, 1]
+            decision = self._compute_decision_at_predict(y_score, loss, loss_params)
 
-        return self._apply_decision(X, decision)
+        return self._apply_decision(y_score, decision)
 
     @available_if(_estimator_has('predict_proba'))
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
@@ -649,14 +651,13 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         )
 
     def _get_calibrator(self, estimator: Any) -> Any:
-        if self.calibrator == 'sigmoid':
+        if self.calibrator in {'sigmoid', 'isotonic'}:
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
-            return CalibratedClassifierCV(estimator, method='sigmoid', cv=cv, ensemble=False)
-        elif self.calibrator == 'isotonic':
-            cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
-            return CalibratedClassifierCV(estimator, method='isotonic', cv=cv, ensemble=False)
+            return CalibratedClassifierCV(estimator, method=self.calibrator, cv=cv, ensemble=False)
         else:
-            return self.calibrator.set_params(estimator=estimator)  # type: ignore[union-attr]
+            # Clone first so refitting a fitted decision-rule classifier cannot mutate the
+            # calibrator instance the caller passed to __init__.
+            return clone(self.calibrator).set_params(estimator=estimator)  # type: ignore[union-attr]
 
     def _fit_estimator(
         self, X: FloatArrayLike, y: ArrayLike, **params: Any
@@ -704,7 +705,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
     ) -> float | FloatNDArray:
         return loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
 
-    def _apply_decision(self, X: FloatArrayLike, decision: Any) -> NDArray[Any]:
+    def _apply_decision(self, y_score: FloatNDArray, decision: Any) -> NDArray[Any]:
         if self.pos_label is None:
             map_thresholded_score_to_label = np.array([0, 1])
         else:
@@ -712,8 +713,6 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
             neg_label_idx = np.flatnonzero(self.classes_ != self.pos_label)[0]
             map_thresholded_score_to_label = np.array([neg_label_idx, pos_label_idx])
 
-        estimator: Any = getattr(self, 'estimator_', self.estimator)
-        y_score = estimator.predict_proba(X)[:, 1]
         y_pred: NDArray[Any] = self.classes_[map_thresholded_score_to_label[(y_score >= decision).astype(int)]]
         return y_pred
 
@@ -846,8 +845,7 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     ) -> float:
         return loss.optimal_rate(np.array([]), y_score, **loss_params)
 
-    def _apply_decision(self, X: FloatArrayLike, decision: Any) -> NDArray[Any]:
-        y_score = self.estimator_.predict_proba(X)[:, 1]
+    def _apply_decision(self, y_score: FloatNDArray, decision: Any) -> NDArray[Any]:
         n_samples = len(y_score)
 
         if np.isnan(decision):

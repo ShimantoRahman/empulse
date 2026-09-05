@@ -69,3 +69,17 @@ def test_one_variable(y):
     assert clf.result_.x.shape == (1,)
     assert isinstance(clf.result_, OptimizeResult)
     assert clf.result_.message == 'Maximum number of iterations reached.'
+
+
+class TestDefaultOptimizer:
+    """`_optimize` is implemented once on `BaseLogitClassifier`, driven by the
+    `_default_optimizer` ClassVar each subclass sets.
+    """
+
+    def test_default_optimizer_is_genetic_algorithm(self):
+        assert ProfLogitClassifier._default_optimizer is GeneticAlgorithmOptimizer
+
+    def test_none_optimizer_falls_back_to_default(self, X, y):
+        clf = ProfLogitClassifier(tp_cost=-1, fp_cost=1, optimizer=None)
+        clf.fit(X, y)
+        assert isinstance(clf.result_, OptimizeResult)

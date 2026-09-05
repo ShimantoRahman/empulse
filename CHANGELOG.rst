@@ -131,6 +131,9 @@
 - |Fix| :class:`~empulse.models.BiasRelabelingClassifier`, :class:`~empulse.models.BiasResamplingClassifier`,
   and :class:`~empulse.models.BiasReweighingClassifier` now raise a clear ``ValueError`` when
   ``sensitive_feature`` does not have the same length as ``y``, instead of silently proceeding.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  no longer mutate a user-supplied ``calibrator`` estimator instance in place; a clone is
+  configured and fitted instead, so the constructor argument is safe to reuse or refit.
 
 `0.11.1`_ (08-05-2026)
 ======================

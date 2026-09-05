@@ -86,6 +86,22 @@ class TestCSThresholdCalibration:
         clf.fit(X, y, fp_cost=1.0, fn_cost=2.0)
         assert hasattr(clf, 'decision_')
 
+    def test_custom_calibrator_instance_not_mutated_by_fit(self, data):
+        """A user-supplied calibrator object must not have its `estimator` set in place.
+
+        Previously `_get_calibrator` called `self.calibrator.set_params(estimator=estimator)`
+        directly on the constructor argument, so fitting (or refitting with a clone, e.g. inside
+        cross-validation) would silently bind a fitted estimator into the object the caller still
+        holds a reference to.
+        """
+        from sklearn.calibration import CalibratedClassifierCV
+
+        custom_calibrator = CalibratedClassifierCV(cv=3)
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(max_iter=2), calibrator=custom_calibrator)
+        clf.fit(X, y)
+        assert custom_calibrator.estimator is None
+
 
 # ===================================================================
 # CSRateClassifier-specific tests
@@ -274,6 +290,30 @@ class TestPredictTimeCosts:
         clf.fit(X, y, alpha=0.1)
         with pytest.raises(ValueError, match='MaxProfit'):
             clf.predict(X, alpha=0.2)
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_predict_scores_estimator_only_once(self, classifier_type, data):
+        """
+        `predict` must not call the base estimator's `predict_proba` twice on the same X.
+
+        Previously `predict` computed `y_proba` itself to pick the decision, then
+        `_apply_decision` re-scored `X` through `estimator_.predict_proba` a second time,
+        doubling the cost of an expensive base estimator.
+        """
+        X, y = data
+        clf = _make_model(classifier_type)
+        clf.fit(X, y)
+        call_count = 0
+        original_predict_proba = clf.estimator_.predict_proba
+
+        def counting_predict_proba(X_inner):
+            nonlocal call_count
+            call_count += 1
+            return original_predict_proba(X_inner)
+
+        clf.estimator_.predict_proba = counting_predict_proba
+        clf.predict(X, fp_cost=1.0, fn_cost=2.0)
+        assert call_count == 1
 
 
 class TestPredictUsesFittedDecision:
