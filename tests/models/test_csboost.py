@@ -210,3 +210,28 @@ def test_csboost_import_error_message_quality(dataset, missing_library, library_
             error_message = str(exc_info.value)
             assert 'required' in error_message.lower()
             assert 'install' in error_message.lower() or 'pip install' in error_message.lower()
+
+
+def test_csboost_fit_does_not_mutate_callers_fit_params_dict(dataset):
+    """Regression test: `_fit` used to mutate the caller's `fit_params` dict in place.
+
+    Reusing one `fit_params` dict across two `fit()` calls (or across GridSearchCV folds) would
+    silently carry `sample_weight` from the first call into the second, since `sample_weight`
+    (passed as a loss-param kwarg) was popped straight into the caller-supplied `fit_params` dict.
+    Uses LightGBM rather than XGBoost: XGBoost's custom-objective path does not support
+    `sample_weight` at all (a separate, pre-existing limitation unrelated to this bug).
+    """
+    lightgbm = pytest.importorskip('lightgbm')
+    X, y, fn_cost, fp_cost = dataset
+
+    shared_fit_params: dict = {}
+    model1 = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=2, max_depth=1, verbosity=-1))
+    model1.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params, sample_weight=np.ones(len(y)))
+
+    # The caller's dict must be untouched - it was empty going in and must still be empty.
+    assert shared_fit_params == {}
+
+    model2 = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=2, max_depth=1, verbosity=-1))
+    # Second call reuses the same (still-empty) dict and passes no sample_weight at all.
+    model2.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params)
+    assert shared_fit_params == {}

@@ -336,8 +336,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         fit_params: dict[str, Any] | None = None,
         **loss_params: Any,
     ) -> Self:
-        if fit_params is None:
-            fit_params = {}
+        fit_params = {} if fit_params is None else dict(fit_params)
         # allow sample weights still to be passed as kwargs to comply with sklearn interface
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')

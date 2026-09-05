@@ -107,14 +107,6 @@
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
   no longer silently skip learning a cost-sensitive threshold/rate when fitted with an aliased
   :class:`~empulse.metrics.Metric` with every required parameter supplied through its alias.
-  Previously, the decision of whether to fit cost-sensitively compared the metric's full set of
-  accepted parameter spellings (both a symbol's raw name *and* its alias) for equality against the
-  caller-supplied keys; since a caller only ever supplies one spelling per parameter, that equality
-  could never hold for an aliased metric, so it always fell back to a plain (non-cost-sensitive)
-  fit of the base estimator instead - and, if any of the metric's own parameter names happened to
-  be passed, forwarded them straight into the base estimator's ``fit()``, which doesn't recognize
-  them, raising a ``TypeError``. The same fix also stops an unrelated extra keyword argument (e.g.
-  a routed ``sample_weight``) from disabling cost-sensitive fitting.zzzzzz dd
 - |Fix| :class:`~empulse.models.CSBaggingClassifier` with ``combination='weighted_voting'`` no
   longer raises a shape error when a sub-estimator draws a feature subset (``max_features < 1.0``
   or ``bootstrap_features=True``).
@@ -125,6 +117,10 @@
   :class:`~empulse.models.CSBaggingClassifier` with ``combination='weighted_voting'``) no longer
   gives *more* weight to *worse* estimators, and no longer raises when instance-dependent
   (array-like) costs are used together with weighted voting.
+- |Fix| :class:`~empulse.models.CSTreeClassifier` no longer raises when fitted with a
+  metric strategy containing a stochastic (``sympy.stats``) variable.
+- |Fix| :class:`~empulse.models.CSBoostClassifier` no longer mutates a caller-supplied
+  ``fit_params`` dict in place.
 
 `0.11.1`_ (08-05-2026)
 ======================

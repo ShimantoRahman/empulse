@@ -9,7 +9,6 @@ from sklearn.utils import Bunch
 from sklearn.utils._param_validation import Hidden, StrOptions
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
@@ -387,16 +386,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self : object
             Returns self.
         """
-        loss_ = self._get_metric_loss()
-        if isinstance(loss_, BaseMetric):
-            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(**loss_params)
-        else:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=loss_params.get('tp_cost', Parameter.UNCHANGED),
-                tn_cost=loss_params.get('tn_cost', Parameter.UNCHANGED),
-                fn_cost=loss_params.get('fn_cost', Parameter.UNCHANGED),
-                fp_cost=loss_params.get('fp_cost', Parameter.UNCHANGED),
-            )
+        fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
 
         n_samples = X.shape[0]
         for name, cost in zip(
@@ -436,7 +426,18 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
                 n_classes=np.array([2], dtype=np.intp),
             )
         elif isinstance(self.criterion, CostImpurity):
-            self.criterion_ = self.criterion
+            # Construct a fresh instance of the same type rather than reusing (or deep-copying)
+            # the user-supplied instance directly: `_fit` unconditionally overwrites all cost state
+            # via set_costs()/set_array_costs() below, so nothing on the passed-in instance needs
+            # to be preserved. Storing it directly would mutate an __init__ parameter, corrupting
+            # sklearn's clone()/get_params() contract (and any other estimator sharing the same
+            # instance); `copy.deepcopy` is not safe here either, since a CostImpurity's C-level
+            # cost buffers are uninitialized until set_array_costs() has been called at least once,
+            # and CostImpurity.__deepcopy__ dereferences them unconditionally.
+            self.criterion_ = type(self.criterion)(
+                n_outputs=1,
+                n_classes=np.array([2], dtype=np.intp),
+            )
         else:
             raise ValueError(f'Unknown criterion: {self.criterion}')
 
