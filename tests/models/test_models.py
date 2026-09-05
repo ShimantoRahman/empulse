@@ -30,10 +30,20 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
+    ProfMEMPMClassifier,
+    ProfMPMClassifier,
+    ProfSRClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
 from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
+
+try:
+    import gplearn  # noqa: F401
+
+    HAS_GPLEARN = True
+except ImportError:
+    HAS_GPLEARN = False
 
 ESTIMATORS = (
     BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -58,6 +68,13 @@ ESTIMATORS = (
     RobustCSClassifier(estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2)), fp_cost=1, fn_cost=1),
     CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
     CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
+    ProfMPMClassifier(tp_cost=-1, fp_cost=1),
+    ProfMEMPMClassifier(tp_cost=-1, fp_cost=1),
+    *(
+        (ProfSRClassifier(tp_cost=-1, fp_cost=1, generations=2, population_size=20, random_state=42),)
+        if HAS_GPLEARN
+        else ()
+    ),
 )
 METRIC_ESTIMATORS = (
     ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=100, population_size=10, random_state=42)),
@@ -102,7 +119,8 @@ def expected_failed_checks(estimator):
         | CSLogitClassifier
         | RobustCSClassifier
         | ProfTreeClassifier
-        | ProfLogitClassifier,
+        | ProfLogitClassifier
+        | ProfSRClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
