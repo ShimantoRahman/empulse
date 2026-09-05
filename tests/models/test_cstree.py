@@ -89,3 +89,76 @@ def test_cstree_with_stochastic_maxprofit_metric(data):
     model = CSTreeClassifier(loss=metric).fit(X, y, contact_cost=1.0)
     y_proba = model.predict_proba(X)
     assert y_proba.shape == (100, 2)
+
+
+class TestSklearnDelegation:
+    """CSTreeClassifier delegates most of the DecisionTreeClassifier introspection API straight
+    to `self.estimator_`; these thin wrappers had no test coverage at all.
+    """
+
+    @pytest.fixture
+    def model(self, data):
+        X, y = data
+        return CSTreeClassifier(max_depth=3, random_state=42).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+
+    def test_feature_importances(self, model, data):
+        X, _ = data
+        importances = model.feature_importances_
+        assert importances.shape == (X.shape[1],)
+        assert np.isclose(importances.sum(), 1.0)
+        np.testing.assert_array_equal(importances, model.estimator_.feature_importances_)
+
+    def test_max_features(self, model):
+        assert model.max_features_ == model.estimator_.max_features_
+
+    def test_n_classes(self, model):
+        assert model.n_classes_ == model.estimator_.n_classes_ == 2
+
+    def test_n_outputs(self, model):
+        assert model.n_outputs_ == model.estimator_.n_outputs_ == 1
+
+    def test_tree_(self, model):
+        from sklearn.tree._tree import Tree
+
+        assert isinstance(model.tree_, Tree)
+        assert model.tree_ is model.estimator_.tree_
+
+    def test_get_depth(self, model):
+        assert model.get_depth() == model.estimator_.get_depth()
+        assert model.get_depth() <= 3
+
+    def test_get_n_leaves(self, model):
+        assert model.get_n_leaves() == model.estimator_.get_n_leaves()
+        assert model.get_n_leaves() > 0
+
+    def test_apply(self, model, data):
+        X, _ = data
+        leaves = model.apply(X)
+        np.testing.assert_array_equal(leaves, model.estimator_.apply(X))
+        assert leaves.shape == (X.shape[0],)
+
+    def test_cost_complexity_pruning_path(self, model, data):
+        X, y = data
+        path = model.cost_complexity_pruning_path(X, y)
+        assert 'ccp_alphas' in path
+        assert 'impurities' in path
+        assert len(path.ccp_alphas) == len(path.impurities)
+
+    def test_decision_path(self, model, data):
+        X, _ = data
+        indicator = model.decision_path(X)
+        assert indicator.shape[0] == X.shape[0]
+        np.testing.assert_array_equal(indicator.toarray(), model.estimator_.decision_path(X).toarray())
+
+    def test_not_fitted_raises(self, data):
+        from sklearn.exceptions import NotFittedError
+
+        model = CSTreeClassifier()
+        with pytest.raises(NotFittedError):
+            _ = model.feature_importances_
+        with pytest.raises(NotFittedError):
+            model.get_depth()
+        with pytest.raises(NotFittedError):
+            model.get_n_leaves()
+        with pytest.raises(NotFittedError):
+            _ = model.tree_
