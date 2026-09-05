@@ -1,12 +1,14 @@
 from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import numpy as np
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
+
+from ..metrics.metric.common import Direction
 
 if TYPE_CHECKING:
     from ..metrics import LogitObjective
@@ -57,6 +59,10 @@ class Generation:
     ----------
     name : str
         Name of the optimizer.
+
+    direction : Direction
+        Optimization direction, always ``Direction.MAXIMIZE``.
+        Callers handing this class a loss (which is minimized by convention) must negate it first;
 
     population : ndarray, shape (population_size, n_dim)
         Current population.
@@ -115,6 +121,8 @@ class Generation:
     elite_pool : list
         List of elite individuals.
     """
+
+    direction: ClassVar[Direction] = Direction.MAXIMIZE
 
     def __init__(
         self,
