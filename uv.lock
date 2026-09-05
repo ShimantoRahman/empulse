@@ -781,10 +781,6 @@ symbolic = [
 ]
 
 [package.dev-dependencies]
-dataframe = [
-    { name = "pandas" },
-    { name = "polars" },
-]
 dev = [
     { name = "cython" },
     { name = "empulse", extra = ["optional", "symbolic"] },
@@ -832,6 +828,8 @@ lint = [
 test = [
     { name = "cython" },
     { name = "empulse", extra = ["optional", "symbolic"] },
+    { name = "pandas" },
+    { name = "polars" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "scikit-learn" },
@@ -861,10 +859,6 @@ requires-dist = [
 provides-extras = ["symbolic", "optional"]
 
 [package.metadata.requires-dev]
-dataframe = [
-    { name = "pandas", specifier = ">=2.2.0" },
-    { name = "polars", specifier = ">=1.40.1" },
-]
 dev = [
     { name = "cython", specifier = "==3.2.5" },
     { name = "empulse", extras = ["optional", "symbolic"] },
@@ -912,6 +906,8 @@ lint = [
 test = [
     { name = "cython", specifier = "==3.2.5" },
     { name = "empulse", extras = ["optional", "symbolic"] },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "polars", specifier = ">=1.40.1" },
     { name = "pytest", specifier = ">=7.4.4" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
     { name = "scikit-learn", specifier = ">=1.9.0" },

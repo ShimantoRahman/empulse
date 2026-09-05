@@ -72,6 +72,8 @@ test = [
     "cython==3.2.5",
     "tox-uv>=1.25.0",
     "setuptools>=80.9.0",
+    "pandas>=2.2.0",
+    "polars>=1.40.1",
 ]
 
 docs = [
@@ -93,16 +95,10 @@ lint = [
     "scipy-stubs>=1.15.3.0",
 ]
 
-dataframe = [
-    "pandas>=2.2.0",
-    "polars>=1.40.1"
-]
-
 dev = [
     { include-group = "test" },
     { include-group = "docs" },
     { include-group = "lint" },
-    { include-group = "dataframe" },
     "twine>=4.0.2",
     "jupyter>=1.1.1",
     "line-profiler>=5.0.0",
