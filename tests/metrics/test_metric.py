@@ -701,9 +701,13 @@ def test_objective_max_profit_logit_deterministic():
     assert np.all(np.isfinite(gradient))
 
 
-def test_objective_max_profit_logit_alpha_annealing_schedule():
+def test_max_profit_logit_alpha_is_constant():
+    """MaxProfit's logit objective no longer anneals alpha internally (see CHANGELOG): alpha is a
+    plain constant that only ``set_alpha`` can change. Annealing on the logit path is now solely
+    the job of an optimizer ``alpha_schedule`` (e.g. :class:`~empulse.optimizers.ExponentialSchedule`).
+    """
     clv = sympy.symbols('clv')
-    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0, alpha_growth=10.0, alpha_max=5.0))
+    metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
 
     X, y = make_classification(n_samples=40, n_features=4, random_state=21)
     objective = metric._logit_objective(
@@ -717,11 +721,14 @@ def test_objective_max_profit_logit_alpha_annealing_schedule():
     )
 
     weights = np.zeros(X.shape[1], dtype=np.float64)
-    assert objective._current_alpha() == pytest.approx(1.0)  # type: ignore[attr-defined]
+    assert objective.alpha == pytest.approx(1.0)  # type: ignore[attr-defined]
     _ = objective(weights)
-    assert objective._current_alpha() == pytest.approx(5.0)  # type: ignore[attr-defined]
+    assert objective.alpha == pytest.approx(1.0)  # type: ignore[attr-defined]
     _ = objective(weights)
-    assert objective._current_alpha() == pytest.approx(5.0)  # type: ignore[attr-defined]
+    assert objective.alpha == pytest.approx(1.0)  # type: ignore[attr-defined]
+
+    objective.set_alpha(7.0)  # type: ignore[attr-defined]
+    assert objective.alpha == pytest.approx(7.0)  # type: ignore[attr-defined]
 
 
 def test_max_profit_alpha_schedule_validation():

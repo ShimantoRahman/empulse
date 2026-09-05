@@ -437,9 +437,7 @@ class MaxProfit(MetricStrategy):
                 l1_ratio=l1_ratio,
                 soft_threshold=soft_threshold,
                 fit_intercept=fit_intercept,
-                alpha_0=self.alpha,
-                alpha_growth=self.alpha_growth,
-                alpha_max=self.alpha_max,
+                alpha=self.alpha,
                 tp_benefit=tp_val,
                 tn_benefit=tn_val,
                 fp_cost=fp_val,
@@ -457,9 +455,7 @@ class MaxProfit(MetricStrategy):
                 l1_ratio=l1_ratio,
                 soft_threshold=soft_threshold,
                 fit_intercept=fit_intercept,
-                alpha_0=self.alpha,
-                alpha_growth=self.alpha_growth,
-                alpha_max=self.alpha_max,
+                alpha=self.alpha,
                 parameters=agg_params,
             )
         else:

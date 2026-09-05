@@ -1,5 +1,4 @@
-import copy
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 import numpy as np
@@ -9,7 +8,7 @@ from scipy.special import expit
 from ....._types import FloatNDArray, IntNDArray
 from ....common import _compute_confusion_matrix, classification_threshold
 from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
-from ..metric_strategy import LogitObjective
+from .common import _BaseMaxProfitLogitObjective
 
 
 def _calculate_profits_deterministic(
@@ -146,7 +145,7 @@ class MaxProfitBoostGradientDeterministic:
         return gradient, hessian
 
 
-class MaxProfitLogitGradientDeterministic(LogitObjective):
+class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
     """Picklable objective for deterministic MaxProfit optimized with logistic models."""
 
     def __init__(
@@ -160,113 +159,38 @@ class MaxProfitLogitGradientDeterministic(LogitObjective):
         l1_ratio: float,
         soft_threshold: bool,
         fit_intercept: bool,
-        alpha_0: float,
-        alpha_growth: float,
-        alpha_max: float,
+        alpha: float,
         tp_benefit: float,
         tn_benefit: float,
         fp_cost: float,
         fn_cost: float,
         parameters: dict[str, FloatNDArray | float],
     ) -> None:
+        super().__init__(
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+            alpha=alpha,
+        )
         self.profit_function = profit_function
         self.deterministic_symbols = deterministic_symbols
         self.calculate_profit = _safe_lambdify(profit_function)
-
-        self.features = features
-        self.y_true = y_true.ravel().astype(np.int32)
-        self.C = C
-        self.l1_ratio = l1_ratio
-        self.soft_threshold = soft_threshold
-        self.fit_intercept = fit_intercept
-        self.alpha_0 = alpha_0
-        self.alpha_growth = alpha_growth
-        self.alpha_max = alpha_max
-        self._epoch = 0
-        self._alpha_override: float | None = None
         self.tp_benefit = tp_benefit
         self.tn_benefit = tn_benefit
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
         self.parameters = parameters
 
-        self.pos_mask = self.y_true == 1
-        self.neg_mask = ~self.pos_mask
-        self.n_pos = int(self.pos_mask.sum())
-        self.n_neg = int(self.neg_mask.sum())
-        self.X_pos = self.features[self.pos_mask]
-        self.X_neg = self.features[self.neg_mask]
-
-    def _current_alpha(self) -> float:
-        """Compute annealed temperature for the current objective evaluation."""
-        # External override takes precedence (set by an alpha_schedule on the optimizer)
-        if self._alpha_override is not None:
-            return float(self._alpha_override)
-        try:
-            alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
-        except OverflowError:
-            alpha = self.alpha_max
-        return float(min(self.alpha_max, alpha))
-
-    def set_alpha(self, alpha: float) -> None:
-        """Override the smoothing parameter for the next gradient computation.
-
-        Parameters
-        ----------
-        alpha : float
-            Smoothing parameter value.
-        """
-        self._alpha_override = float(alpha)
-
-    def reset(self) -> None:
-        """Reset the epoch counter (annealing schedule) and clear any alpha override."""
-        self._epoch = 0
-        self._alpha_override = None
-
-    def with_indices(self, indices: FloatNDArray) -> 'MaxProfitLogitGradientDeterministic':
-        """Return a shallow copy of this objective restricted to *indices*.
-
-        Parameters
-        ----------
-        indices : array-like of int
-            Row indices into the full training set.
-
-        Returns
-        -------
-        MaxProfitLogitGradientDeterministic
-            A new objective for the selected samples.
-        """
-        obj = copy.copy(self)
-        obj.features = self.features[indices]
-        obj.y_true = self.y_true[indices]  # already int32
-        obj.pos_mask = obj.y_true == 1
-        obj.neg_mask = ~obj.pos_mask
-        obj.n_pos = int(obj.pos_mask.sum())
-        obj.n_neg = int(obj.neg_mask.sum())
-        obj.X_pos = obj.features[obj.pos_mask]
-        obj.X_neg = obj.features[obj.neg_mask]
-        obj._epoch = 0
-        obj._alpha_override = self._alpha_override
-        return obj
-
     def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the negated max-profit objective and gradient for minimization."""
-        start_coef = 1 if self.fit_intercept else 0
+        start_coef = self._start_coef
+        w = self._apply_soft_threshold(weights)
+        alpha = self.alpha
 
-        w = np.asarray(weights, dtype=np.float64).copy()
-        if self.soft_threshold:
-            abs_w = np.abs(w[start_coef:])
-            diff = abs_w - self.C
-            w[start_coef:] = np.where(
-                diff > 0,
-                np.sign(w[start_coef:]) * diff,
-                np.where(diff < 0, 0.0, w[start_coef:]),
-            )
-
-        alpha = self._current_alpha()
-        self._epoch += 1
-
-        y_score = expit(self.features @ w)
+        y_score = self._compute_y_score(w)
         profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(
             self.y_true,
             y_score.astype(np.float64),
@@ -301,17 +225,8 @@ class MaxProfitLogitGradientDeterministic(LogitObjective):
         gradient = np.asarray(-grad_profit, dtype=np.float64)
 
         coef = w[start_coef:]
-        if self.l1_ratio == 0.0:
-            gradient[start_coef:] += coef / self.C
-            value += 0.5 * float(np.dot(coef, coef)) / self.C
-        elif self.l1_ratio == 1.0:
-            gradient[start_coef:] += np.sign(coef) / self.C
-            value += float(np.sum(np.abs(coef))) / self.C
-        else:
-            gradient[start_coef:] += ((1.0 - self.l1_ratio) * coef + self.l1_ratio * np.sign(coef)) / self.C
-            value += (
-                (1.0 - self.l1_ratio) * 0.5 * float(np.dot(coef, coef)) + self.l1_ratio * float(np.sum(np.abs(coef)))
-            ) / self.C
+        value += self._regularization_value(coef)
+        gradient[start_coef:] += self._regularization_gradient(coef)
 
         return value, gradient
 
@@ -350,61 +265,3 @@ class MaxProfitLogitGradientDeterministic(LogitObjective):
         """
         _, gradient = self(weights)
         return gradient
-
-    def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
-        """
-        Yield gradients for successive weight vectors.
-
-        For the deterministic case there is no cached state to amortize, so
-        this is a simple loop that calls :meth:`logit_gradient` at each step.
-
-        Yields
-        ------
-        gradient : ndarray
-            Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted for API compatibility but has no effect.
-        """
-        weights: FloatNDArray
-
-        # Priming yield: its value is discarded by the caller's next(generator) advance below,
-        # so it is never actually observed as a FloatNDArray - mypy doesn't model that.
-        sent = yield  # type: ignore[misc]
-
-        while True:
-            if sent is None:
-                return
-            if isinstance(sent, tuple):
-                weights, _ = sent
-            else:
-                weights = sent
-
-            sent = yield self.logit_gradient(weights)
-
-    def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
-        """
-        Yield gradients for successive weight vectors.
-
-        For the deterministic case there is no cached state to amortize, so
-        this is a simple loop that calls :meth:`logit_gradient` at each step.
-
-        Yields
-        ------
-        gradient : ndarray
-            Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted for API compatibility but has no effect.
-        """
-        generator = self._logit_gradient_steps()
-        next(generator)
-        return generator

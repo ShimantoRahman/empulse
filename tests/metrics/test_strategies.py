@@ -265,9 +265,7 @@ def test_max_profit_logit_gradient_piecewise_is_picklable(dataset):
         l1_ratio=0.0,
         soft_threshold=False,
         fit_intercept=True,
-        alpha_0=1.0,
-        alpha_growth=1.1,
-        alpha_max=100.0,
+        alpha=1.0,
         parameters={'contact_cost': 1.0},
     )
     pickled = pickle.dumps(instance)

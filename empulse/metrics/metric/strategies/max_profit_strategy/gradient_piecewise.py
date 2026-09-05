@@ -1,4 +1,3 @@
-import copy
 from collections.abc import Generator
 from typing import Any
 
@@ -8,15 +7,14 @@ from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
 from ...common import _safe_lambdify
-from ..metric_strategy import LogitObjective
-from .common import _convex_hull, extract_distribution_parameters
+from .common import _BaseMaxProfitLogitObjective, _convex_hull, extract_distribution_parameters
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
 # Type alias for the hull state tuple cached between gradient steps.
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
 
 
-class MaxProfitLogitGradientPiecewise(LogitObjective):
+class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective):
     """
     Picklable objective for Piecewise Stochastic MaxProfit optimized with logistic models.
 
@@ -24,9 +22,9 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
     -------
     * ``__call__(weights)`` – returns ``(value, gradient)``; delegates to :meth:`logit_loss_gradient`.
     * ``logit_loss_gradient(weights)`` – returns ``(value, gradient)`` using a fresh hull.
-    * ``logit_loss(weights)`` – returns only the scalar loss (fresh hull, no epoch increment).
+    * ``logit_loss(weights)`` – returns only the scalar loss (fresh hull).
       Cheap when only the objective value is needed (e.g. final fitness evaluation).
-    * ``logit_gradient(weights)`` – returns only the gradient vector (fresh hull, increments epoch).
+    * ``logit_gradient(weights)`` – returns only the gradient vector (fresh hull).
       Saves the value-accumulation work when the scalar is not needed.
     * ``logit_gradient_steps()`` – a *generator* that yields gradients while reusing
       a cached convex hull across multiple calls.  Ideal for the Lamarckian memetic pattern
@@ -43,33 +41,19 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
         l1_ratio: float,
         soft_threshold: bool,
         fit_intercept: bool,
-        alpha_0: float,
-        alpha_growth: float,
-        alpha_max: float,
+        alpha: float,
         parameters: dict[str, FloatNDArray | float],
     ) -> None:
+        super().__init__(
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            soft_threshold=soft_threshold,
+            fit_intercept=fit_intercept,
+            alpha=alpha,
+        )
         self.score_function = score_function
-        self.features = features
-        self.y_true = y_true.ravel().astype(np.int32)
-        self.C = C
-        self.l1_ratio = l1_ratio
-        self.soft_threshold = soft_threshold
-        self.fit_intercept = fit_intercept
-        self.alpha_0 = alpha_0
-        self.alpha_growth = alpha_growth
-        self.alpha_max = alpha_max
-        self._epoch = 0
-        self._alpha_override: float | None = None
-
-        self.pos_mask = self.y_true == 1
-        self.neg_mask = ~self.pos_mask
-        self.n_pos = int(self.pos_mask.sum())
-        self.n_neg = int(self.neg_mask.sum())
-        self.X_pos: Float64Array = np.asarray(self.features[self.pos_mask], dtype=np.float64)
-        self.X_neg: Float64Array = np.asarray(self.features[self.neg_mask], dtype=np.float64)
-
-        self.pi0 = float(self.n_pos / len(self.y_true))
-        self.pi1 = 1.0 - self.pi0
 
         self.dist_params, self.kwargs = extract_distribution_parameters(
             parameters, self.score_function.distribution_args
@@ -120,24 +104,6 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
             self.a_reqs.append(_get_reqs(self.score_function.coefficient_eqs[k]))
             self.da0_reqs.append(_get_reqs(self.da_dF0_eqs[k]))
             self.da1_reqs.append(_get_reqs(self.da_dF1_eqs[k]))
-
-    def _apply_soft_threshold(self, weights: FloatNDArray) -> FloatNDArray:
-        """Return a copy of *weights* with soft-thresholding applied (if enabled)."""
-        start_coef = 1 if self.fit_intercept else 0
-        w = np.asarray(weights, dtype=np.float64).copy()
-        if self.soft_threshold:
-            abs_w = np.abs(w[start_coef:])
-            diff = abs_w - self.C
-            w[start_coef:] = np.where(
-                diff > 0,
-                np.sign(w[start_coef:]) * diff,
-                np.where(diff < 0, 0.0, w[start_coef:]),
-            )
-        return w
-
-    def _compute_y_score(self, w: FloatNDArray) -> FloatNDArray:
-        """Compute logistic scores for every sample."""
-        return expit(self.features @ w)  # type: ignore[return-value]
 
     def _compute_hull_state(self, y_score: FloatNDArray) -> _HullCache:
         """Build the ROC convex hull and derive piecewise segment arrays.
@@ -276,93 +242,11 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
 
         return total_gradient
 
-    def _regularization_value(self, coef: FloatNDArray) -> float:
-        """Regularization contribution to the scalar objective."""
-        if self.l1_ratio == 0.0:
-            return 0.5 * float(np.dot(coef, coef)) / self.C
-        if self.l1_ratio == 1.0:
-            return float(np.sum(np.abs(coef))) / self.C
-        return (
-            (1.0 - self.l1_ratio) * 0.5 * float(np.dot(coef, coef)) + self.l1_ratio * float(np.sum(np.abs(coef)))
-        ) / self.C
-
-    def _regularization_gradient(self, coef: FloatNDArray) -> Float64Array:
-        """Regularization contribution to the gradient."""
-        coef_f = np.asarray(coef, dtype=np.float64)
-        if self.l1_ratio == 0.0:
-            return coef_f / self.C
-        if self.l1_ratio == 1.0:
-            return np.sign(coef_f) / self.C
-        return ((1.0 - self.l1_ratio) * coef_f + self.l1_ratio * np.sign(coef_f)) / self.C
-
-    def _current_alpha(self) -> float:
-        """Compute annealed temperature for the current objective evaluation."""
-        # External override takes precedence (set by an alpha_schedule on the optimizer)
-        if self._alpha_override is not None:
-            return float(self._alpha_override)
-        try:
-            alpha = self.alpha_0 * (self.alpha_growth**self._epoch)
-        except OverflowError:
-            alpha = self.alpha_max
-        return float(min(self.alpha_max, alpha))
-
-    def set_alpha(self, alpha: float) -> None:
-        """Override the smoothing parameter for the next gradient computation.
-
-        When called by a gradient optimizer with an ``alpha_schedule``, the
-        internal epoch-based annealing is bypassed and *alpha* is used directly.
-
-        Parameters
-        ----------
-        alpha : float
-            Smoothing parameter value.
-        """
-        self._alpha_override = float(alpha)
-
-    def reset(self) -> None:
-        """Reset the epoch counter (annealing schedule) and clear any alpha override."""
-        self._epoch = 0
-        self._alpha_override = None
-
-    def with_indices(self, indices: FloatNDArray) -> 'MaxProfitLogitGradientPiecewise':
-        """Return a shallow copy of this objective restricted to *indices*.
-
-        The expensive pre-computed attributes (lambdified sympy expressions,
-        distribution bounds, etc.) are shared with the original object.  Only
-        the data-dependent attributes (``features``, ``y_true``, masks, class
-        counts, and class rates) are re-derived for the batch.
-
-        Parameters
-        ----------
-        indices : array-like of int
-            Row indices into the full training set.
-
-        Returns
-        -------
-        MaxProfitLogitGradientPiecewise
-            A new objective for the selected samples.
-        """
-        obj = copy.copy(self)
-        obj.features = self.features[indices]
-        obj.y_true = self.y_true[indices]  # already int32
-        obj.pos_mask = obj.y_true == 1
-        obj.neg_mask = ~obj.pos_mask
-        obj.n_pos = int(obj.pos_mask.sum())
-        obj.n_neg = int(obj.neg_mask.sum())
-        obj.X_pos = np.asarray(obj.features[obj.pos_mask], dtype=np.float64)
-        obj.X_neg = np.asarray(obj.features[obj.neg_mask], dtype=np.float64)
-        obj.pi0 = float(obj.n_pos / len(obj.y_true))
-        obj.pi1 = 1.0 - obj.pi0
-        obj._epoch = 0
-        obj._alpha_override = self._alpha_override
-        return obj
-
     def logit_loss(self, weights: FloatNDArray) -> float:
         """Compute the negated EMP objective value (no gradient).
 
-        Always uses a freshly computed convex hull.  The epoch counter is *not*
-        incremented, because this method is intended for fitness evaluation rather
-        than gradient-based updates.
+        Always uses a freshly computed convex hull.  Intended for fitness evaluation
+        rather than gradient-based updates.
 
         Parameters
         ----------
@@ -379,15 +263,14 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
 
         value = float(-self._accumulate_value(bounds, seg_tprs, seg_fprs, m))
-        start_coef = 1 if self.fit_intercept else 0
+        start_coef = self._start_coef
         value += self._regularization_value(w[start_coef:])
         return value
 
     def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Compute the gradient of the negated EMP objective (no scalar value).
 
-        Always uses a freshly computed convex hull.  Increments the epoch counter
-        so the annealing schedule advances exactly once per gradient step.
+        Always uses a freshly computed convex hull.
 
         Parameters
         ----------
@@ -400,15 +283,14 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
             Gradient vector matched in shape to *weights*.
         """
         w = self._apply_soft_threshold(weights)
-        alpha = self._current_alpha()
-        self._epoch += 1
+        alpha = self.alpha
 
         y_score = self._compute_y_score(w)
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
         T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
 
         grad = -self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
-        start_coef = 1 if self.fit_intercept else 0
+        start_coef = self._start_coef
         grad[start_coef:] += self._regularization_gradient(w[start_coef:])
         return grad
 
@@ -440,9 +322,9 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
 
         Examples
         --------
-        >>> gen = objective.logit_gradient_steps(theta)
-        >>> grad = next(gen)  # hull built from theta
-        >>> grad = gen.send(new_theta)  # hull reused
+        >>> gen = objective.logit_gradient_steps()
+        >>> grad = gen.send(theta)  # first time hull is built
+        >>> grad = gen.send(theta)  # hull reused
         >>> grad = gen.send((new_theta, True))  # hull refreshed
         >>> gen.close()
         """
@@ -467,8 +349,7 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
                 weights = sent
 
             w = self._apply_soft_threshold(weights)
-            alpha = self._current_alpha()
-            self._epoch += 1
+            alpha = self.alpha
 
             y_score = self._compute_y_score(w)
 
@@ -480,60 +361,15 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
 
             grad = -self._accumulate_gradient(w, y_score, thresholds, bounds, seg_tprs, seg_fprs, m, alpha)
 
-            start_coef = 1 if self.fit_intercept else 0
+            start_coef = self._start_coef
             grad[start_coef:] += self._regularization_gradient(w[start_coef:])
 
             sent = yield grad
 
-    def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
-        """
-        Yield gradients while reusing a cached convex hull.
-
-        The convex hull (and derived piecewise segment arrays) are computed once
-        from *initial_weights* on the first call, then reused for subsequent
-        gradient steps.  This avoids the hull-reconstruction cost inside tight
-        local-search loops (e.g. a few Adam steps applied Lamarckian-style before
-        a fitness evaluation) where the hull is unlikely to change substantially.
-
-        When computing the actual loss (``logit_loss()``) always use a fresh hull.
-
-        Parameters
-        ----------
-        initial_weights : ndarray
-            Starting coefficient vector.  The convex hull is built from these
-            scores on the first iteration.
-
-        Yields
-        ------
-        gradient : ndarray
-            Negated, regularized gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.  The cached hull
-            is reused; only scores and thresholds are recomputed.
-        (weights, refresh) : (ndarray, bool)
-            Pass ``refresh=True`` to force the convex hull to be rebuilt from the
-            new *weights* before computing the gradient.
-
-        Examples
-        --------
-        >>> gen = objective.logit_gradient_steps()
-        >>> grad = gen.send(theta)  # first time hull is built
-        >>> grad = gen.send(theta)  # hull reused
-        >>> grad = gen.send((new_theta, True))  # hull refreshed
-        >>> gen.close()
-        """
-        generator = self._logit_gradient_steps()
-        next(generator)
-        return generator
-
     def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the negated stochastic EMP objective and its gradient for minimization.
 
-        Computes both value and gradient from a freshly built convex hull and increments
-        the epoch counter once.
+        Computes both value and gradient from a freshly built convex hull.
 
         Parameters
         ----------
@@ -548,8 +384,7 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
             Gradient vector matched in shape to *weights*.
         """
         w = self._apply_soft_threshold(weights)
-        alpha = self._current_alpha()
-        self._epoch += 1
+        alpha = self.alpha
 
         y_score = self._compute_y_score(w)
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
@@ -561,7 +396,7 @@ class MaxProfitLogitGradientPiecewise(LogitObjective):
         value = float(-total_value)
         gradient = -total_gradient
 
-        start_coef = 1 if self.fit_intercept else 0
+        start_coef = self._start_coef
         coef = w[start_coef:]
         value += self._regularization_value(coef)
         gradient[start_coef:] += self._regularization_gradient(coef)
