@@ -73,7 +73,10 @@ choice depends on what you have and what you want.
 
 There are three more — :class:`~empulse.metrics.LogCost`,
 :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC` — covered in
-:ref:`choosing_metric`.
+:ref:`choosing_metric`, along with the sign-flipped siblings
+:class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.MinCost` and
+:class:`~empulse.metrics.EmpiricalMinCost`, which report the same quantities the other way
+round.
 
 .. warning::
     :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings` assume ``y_score`` holds
@@ -162,5 +165,5 @@ Where next
 
 - :doc:`../tutorial` — a complete worked example end to end.
 - :ref:`cost_matrix` — the cost matrix formalism and the builder API.
-- :ref:`choosing_metric` — the six strategies and what each one measures.
+- :ref:`choosing_metric` — the strategies and what each one measures.
 - :doc:`../guide` — reference-depth guides for every component.

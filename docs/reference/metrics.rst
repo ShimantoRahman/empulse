@@ -34,9 +34,12 @@ Metric Strategies
 
    MetricStrategy
    MaxProfit
+   MinCost
    EmpiricalMaxProfit
+   EmpiricalMinCost
    AUEPC
    Cost
+   Profit
    LogCost
    Savings
 

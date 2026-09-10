@@ -9,8 +9,8 @@ A cost matrix says what the outcomes are worth. It does not say what number to r
 different questions: what will this model cost me, how much better is it than doing nothing, and
 how much could it earn at the best possible cut-off.
 
-Empulse ships six. This page covers what each one computes, what it needs from you, and which
-models can train on it.
+Empulse ships six, plus a sign-flipped sibling for three of them. This page covers what each
+one computes, what it needs from you, and which models can train on it.
 
 .. code-block:: python
 
@@ -364,6 +364,54 @@ it.
 
     The peak is the maximum profit, the shaded area is the AUEPC, and the convex hull is the
     frontier the empirical measure walks along.
+
+Costs or profits: the same metric, either way round
+===================================================
+
+A cost matrix can be read as costs to minimise or as profits to maximise, and which one you want to
+*read* is a presentation choice. Three strategies therefore come as a pair, computing exactly the
+same quantity and reporting it with the opposite sign:
+
+.. list-table::
+    :widths: 30 30 40
+    :header-rows: 1
+
+    * - Minimise
+      - Maximise
+      - Computes
+    * - :class:`~empulse.metrics.Cost`
+      - :class:`~empulse.metrics.Profit`
+      - Expected value per instance at the scores you pass in
+    * - :class:`~empulse.metrics.MinCost`
+      - :class:`~empulse.metrics.MaxProfit`
+      - Value at the best cut-off, from the modelled score distributions
+    * - :class:`~empulse.metrics.EmpiricalMinCost`
+      - :class:`~empulse.metrics.EmpiricalMaxProfit`
+      - Value at the best cut-off actually achievable on this dataset
+
+A sibling reports the negation of its partner, and nothing else about it changes:
+
+.. code-block:: python
+
+    from empulse.metrics import Profit
+
+    print(Metric(matrix, Cost())(y_true, y_score))
+    print(Metric(matrix, Profit())(y_true, y_score))
+
+The optimal threshold and rate are identical for both members of a pair, since a best cut-off is
+the same point whichever way you phrase the axis. Models are unaffected too: they optimise the
+metric as a loss, which removes the sign difference, so training on
+:class:`~empulse.metrics.Cost` and on :class:`~empulse.metrics.Profit` fits exactly the same model.
+Pick whichever reads better in your reporting.
+
+:class:`~empulse.metrics.MinCost` accepts the same arguments as
+:class:`~empulse.metrics.MaxProfit`, and is accepted anywhere its partner is -- including by the
+minimax models and by :class:`~empulse.models.ProfTreeClassifier`'s fast path.
+
+.. note::
+    :class:`~empulse.metrics.Savings` has no sibling. It is already a ratio against a baseline, and
+    every profit-phrased version of it reduces to either the same number or its negation, so there
+    is nothing distinct to add.
 
 Which models can train on which
 ===============================

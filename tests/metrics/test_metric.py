@@ -10,6 +10,8 @@ from empulse.metrics import (
     CostMatrix,
     MaxProfit,
     Metric,
+    MinCost,
+    Profit,
     Savings,
     expected_cost_loss,
     expected_cost_loss_churn,
@@ -25,6 +27,8 @@ METRIC_STRATEGIES = [
     Cost(),
     MaxProfit(),
     Savings(),
+    Profit(),
+    MinCost(),
 ]
 
 
@@ -804,10 +808,22 @@ def test_repr_metric(uniform_dist_matrix):
 
 
 def test_repr_latex_max_profit(uniform_dist_matrix):
+    """MaxProfit renders the profit being maximized: the TP benefit less the FP cost."""
     profit_func = Metric(uniform_dist_matrix, MaxProfit())
     assert profit_func._repr_latex_() == (
+        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(- f \\left(1 - '
+        '\\gamma\\right) + \\left(clv - d - f\\right) \\gamma\\right) - F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
+        '+ \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha \\leq \\gamma \\\\0 & \\text{otherwise} '
+        '\\end{cases}\\, d\\gamma$'
+    )
+
+
+def test_repr_latex_min_cost(uniform_dist_matrix):
+    """MinCost renders the same quantity negated: every outcome's cost, added up."""
+    cost_func = Metric(uniform_dist_matrix, MinCost())
+    assert cost_func._repr_latex_() == (
         '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(f \\left(1 - '
-        '\\gamma\\right) - \\left(clv - d - f\\right) \\gamma\\right) - F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
+        '\\gamma\\right) - \\left(clv - d - f\\right) \\gamma\\right) + F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
         '+ \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha \\leq \\gamma \\\\0 & \\text{otherwise} '
         '\\end{cases}\\, d\\gamma$'
     )

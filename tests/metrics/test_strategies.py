@@ -6,7 +6,7 @@ import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, LogCost, MaxProfit, Savings
+from empulse.metrics import Cost, LogCost, MaxProfit, MinCost, Profit, Savings
 from empulse.metrics.metric.common import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
@@ -219,6 +219,8 @@ def test_strategy_classes_are_picklable(instance_factory):
         pytest.param(Savings, False, id='Savings'),
         pytest.param(MaxProfit, True, id='MaxProfit'),
         pytest.param(LogCost, True, id='LogCost'),
+        pytest.param(Profit, False, id='Profit'),
+        pytest.param(MinCost, True, id='MinCost'),
     ],
 )
 def test_requires_dynamic_boost_objective(strategy_factory, expected):

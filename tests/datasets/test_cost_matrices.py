@@ -48,7 +48,7 @@ class TestChurnPrecomputedCostMatrix:
 
 
 class TestChurnRetentionCostMatrix:
-    DEFAULTS: ClassVar[dict[str, float]] = {'incentive_fraction': 0.05, 'contact_fraction': 0.01, 'accept_rate': 0.3}
+    DEFAULTS: ClassVar[dict[str, float]] = {'incentive_fraction': 0.05, 'contact_cost': 1, 'accept_rate': 0.3}
 
     def test_returns_tuple(self, clv):
         result = churn_retention_cost_matrix(clv, **self.DEFAULTS)
@@ -76,7 +76,7 @@ class TestChurnRetentionCostMatrix:
         cm, costs = churn_retention_cost_matrix(
             clv,
             incentive_fraction=incentive_fraction,
-            contact_fraction=0.01,
+            contact_cost=1,
             accept_rate=0.3,
         )
         assert isinstance(cm, CostMatrix)

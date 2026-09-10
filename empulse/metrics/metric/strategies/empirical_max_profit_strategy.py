@@ -1,4 +1,4 @@
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 import numpy as np
 import sympy
@@ -235,8 +235,69 @@ class EmpiricalMaxProfit(MetricStrategy):
         return _empirical_max_profit_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
 
+class EmpiricalMinCost(EmpiricalMaxProfit):
+    """
+    Strategy for the Empirical Minimum Cost metric.
+
+    The cost phrasing of :class:`EmpiricalMaxProfit`: it walks the same ranking and reports the
+    value at the same optimal cutoff negated, as a cost to minimize rather than a profit to
+    maximize. Which of the two you use is a presentation choice -- models train identically on
+    either, because they optimize :meth:`~empulse.metrics.BaseMetric._loss`, which removes the sign
+    difference.
+
+    .. seealso::
+        :class:`EmpiricalMaxProfit` : The profit phrasing of the same metric.
+    """
+
+    _name: str = 'empirical min cost'
+    _direction: Direction = Direction.MINIMIZE
+
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the empirical minimum cost score.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        score: float
+            The empirical minimum cost score.
+        """
+        return -super().score(y_true, y_score, **parameters)
+
+    def to_latex(
+        self,
+        tp_benefit: sympy.Expr,
+        tn_benefit: sympy.Expr,
+        fp_cost: sympy.Expr,
+        fn_cost: sympy.Expr,
+    ) -> str:
+        """Return the LaTeX representation of the metric."""
+        # Negating all four inputs negates the per-sample delta; minimizing the negated cumulative
+        # sum is the same cutoff that maximizes the original one.
+        return _empirical_max_profit_to_latex(-tp_benefit, -tn_benefit, -fp_cost, -fn_cost, operator='min')
+
+
 def _empirical_max_profit_to_latex(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+    operator: Literal['max', 'min'] = 'max',
 ) -> str:
     from sympy.printing.latex import latex
 
@@ -248,7 +309,8 @@ def _empirical_max_profit_to_latex(
     delta_latex = latex(delta_equation, mode='plain', order=None)
 
     formula = (
-        r'\max_{k \in \{0, ..., N\}} \sum_{i=1}^{k} \Delta_{\pi(i)}' + r'\quad\text{where }\Delta_i = ' + delta_latex
+        rf'\{operator}_{{k \in \{{0, ..., N\}}}} \sum_{{i=1}}^{{k}} \Delta_{{\pi(i)}}'
+        r'\quad\text{where }\Delta_i = ' + delta_latex
     )
 
     return f'$\\displaystyle {formula}$'

@@ -478,6 +478,62 @@ class Cost(MetricStrategy):
         return _cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
 
+class Profit(Cost):
+    """
+    Strategy for the Expected Profit metric.
+
+    The profit phrasing of :class:`Cost`: it computes the same quantity and reports it negated, so
+    that a higher score is a better model. Which of the two you use is a presentation choice --
+    models train identically on either, because they optimize
+    :meth:`~empulse.metrics.BaseMetric._loss`, which removes the sign difference.
+
+    .. seealso::
+        :class:`Cost` : The cost phrasing of the same metric.
+    """
+
+    _name: str = 'profit'
+    _direction: Direction = Direction.MAXIMIZE
+
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the expected profit score.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        score: float
+            The expected profit score.
+        """
+        return -super().score(y_true, y_score, **parameters)
+
+    def to_latex(
+        self,
+        tp_benefit: sympy.Expr,
+        tn_benefit: sympy.Expr,
+        fp_cost: sympy.Expr,
+        fn_cost: sympy.Expr,
+    ) -> str:
+        """Return the LaTeX representation of the metric."""
+        # The rendered expression is linear in the four inputs, so negating all four renders the
+        # negation of the cost formula, i.e. the profit formula.
+        return _cost_loss_to_latex(-tp_benefit, -tn_benefit, -fp_cost, -fn_cost)
+
+
 class CostLoss:
     """Class to compute the metric for binary classification."""
 

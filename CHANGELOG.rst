@@ -1,6 +1,13 @@
 `Unreleased`_
 =============
 
+- |Feature| Added :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.MinCost` and
+  :class:`~empulse.metrics.EmpiricalMinCost`, the sign-flipped siblings of
+  :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.MaxProfit` and
+  :class:`~empulse.metrics.EmpiricalMaxProfit`. Each computes the same quantity as its partner
+  and reports it with the opposite sign, so a cost matrix can be read as costs to minimize or
+  as profits to maximize. The choice is presentational: the optimal threshold and rate are
+  unchanged, and models fit identically on either member of a pair.
 - |Feature| Added :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC`
   strategies for building custom metrics that compute the empirical (convex-hull-based) maximum
   profit and the area under the empirical profit curve, respectively.
@@ -59,6 +66,12 @@
   the default (unweighted-``loss``) out-of-bag weighted-voting behavior of
   :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
   which use :func:`~empulse.metrics.expected_cost_loss` as their fallback per-estimator weight.
+- |Fix| The LaTeX rendering of a :class:`~empulse.metrics.MaxProfit` metric (shown by
+  ``metric._repr_latex_()``, e.g. in a notebook) had the wrong sign on its false-positive and
+  false-negative terms: it negated the true-positive and true-negative benefits but left the
+  costs untouched, so the rendered formula was neither the profit nor the cost. It now renders
+  the profit being maximized. Only the displayed formula was affected; the computed metric
+  value was always correct.
 - |Fix| Cost-sensitive models can now be trained with a ``loss`` metric whose cost matrix names one
   of its symbols (or aliases) ``tp_cost``, ``tn_cost``, ``fp_cost`` or ``fn_cost``. Those names
   collide with the dedicated ``fit``/``predict`` parameters of the same name, so the value bound to

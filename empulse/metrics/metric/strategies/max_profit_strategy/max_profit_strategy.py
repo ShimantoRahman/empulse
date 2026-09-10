@@ -133,6 +133,9 @@ class MaxProfit(MetricStrategy):
         'monte-carlo',
     ]
 
+    _name: str = 'max profit'
+    _direction: Direction = Direction.MAXIMIZE
+
     def __init__(
         self,
         integration_method: Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo'] = 'auto',
@@ -140,7 +143,7 @@ class MaxProfit(MetricStrategy):
         random_state: np.random.Generator | int | None = None,
         alpha: float = 1.0,
     ):
-        super().__init__(name='max profit', direction=Direction.MAXIMIZE)
+        super().__init__(name=self._name, direction=self._direction)
         if integration_method not in self.INTEGRATION_METHODS:
             raise ValueError(
                 f'Integration method {integration_method} is not supported. '
@@ -515,6 +518,62 @@ class MaxProfit(MetricStrategy):
         )
 
 
+class MinCost(MaxProfit):
+    """
+    Strategy for the Minimum Cost metric.
+
+    The cost phrasing of :class:`MaxProfit`: it locates the same optimal threshold and reports the
+    value there negated, as a cost to minimize rather than a profit to maximize. Which of the two
+    you use is a presentation choice -- models train identically on either, because they optimize
+    :meth:`~empulse.metrics.BaseMetric._loss`, which removes the sign difference.
+
+    It takes the same arguments as :class:`MaxProfit`; see there for their meaning.
+
+    .. seealso::
+        :class:`MaxProfit` : The profit phrasing of the same metric.
+    """
+
+    _name: str = 'min cost'
+    _direction: Direction = Direction.MINIMIZE
+
+    def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the minimum cost score.
+
+        Parameters
+        ----------
+        y_true: array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score: array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        parameters: float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        score: float
+            The minimum cost score.
+        """
+        return -super().score(y_true, y_score, **parameters)
+
+    def to_latex(
+        self,
+        tp_benefit: sympy.Expr,
+        tn_benefit: sympy.Expr,
+        fp_cost: sympy.Expr,
+        fn_cost: sympy.Expr,
+    ) -> str:
+        """Return the LaTeX representation of the metric."""
+        return _max_profit_score_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost, phrasing='cost')
+
+
 def _build_max_profit_score(
     profit_function: sympy.Expr,
     random_symbols: list[sympy.Symbol],
@@ -581,6 +640,26 @@ def _build_profit_function(
         - neg_prior * fp_cost * fpr
     )
     return profit_function
+
+
+def _build_cost_function(
+    tp_cost: sympy.Expr, tn_cost: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+) -> sympy.Expr:
+    """Build the threshold-level expected cost, the exact negation of :func:`_build_profit_function`.
+
+    Written in terms of costs (``tp_cost = -tp_benefit``) so that every term is added rather than
+    subtracted, which is how a cost formula reads. Used only for rendering
+    :class:`MinCost`; negating :func:`_build_profit_function`'s arguments instead would produce the
+    same value but render each cost as a double negative.
+    """
+    pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
+    cost_function = (
+        tp_cost * pos_prior * tpr
+        + tn_cost * neg_prior * (1 - fpr)
+        + fn_cost * pos_prior * (1 - tpr)
+        + neg_prior * fp_cost * fpr
+    )
+    return cost_function
 
 
 def _build_rate_function() -> sympy.Expr:
@@ -685,18 +764,25 @@ def _build_max_profit_stochastic(
 
 
 def _max_profit_score_to_latex(
-    tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
+    tp_benefit: sympy.Expr,
+    tn_benefit: sympy.Expr,
+    fp_cost: sympy.Expr,
+    fn_cost: sympy.Expr,
+    phrasing: Literal['profit', 'cost'] = 'profit',
 ) -> str:
     from sympy.printing.latex import latex
 
-    # Benefits are negated here because _build_profit_function adds tp_benefit and tn_benefit
-    # as positive terms.  For the rendered formula we want to display costs uniformly
-    # (positive = loss), so we pass negated benefits so the formula renders as:
-    #   max_t  [pi_1 * F_1 * (-tp_benefit) + pi_0 * (1-F_0) * (-tn_benefit) - ...]
-    # which under the original sign convention equals the profit maximisation problem.
-    profit_function = _build_profit_function(
-        tp_benefit=-tp_benefit, tn_benefit=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-    )
+    # Both builders already apply the sign convention, so the four expressions are passed through
+    # as they are. `_build_cost_function` returns the exact negation of `_build_profit_function`,
+    # which is what MinCost reports.
+    if phrasing == 'cost':
+        profit_function = _build_cost_function(
+            tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+    else:
+        profit_function = _build_profit_function(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
     random_symbols = [symbol for symbol in profit_function.free_symbols if is_random(symbol)]
 
     if random_symbols:
