@@ -7,24 +7,19 @@ from scipy.optimize import OptimizeResult
 
 from .._types import FloatNDArray
 from ..metrics import LogitObjective
-from ..metrics.metric.common import Direction
 from ._base import Optimizer
 from .generation import Generation, LamarckianGeneration
 
 
-def _as_generation_fitness(
-    logit_loss: Callable[[FloatNDArray], float], direction: Direction
-) -> Callable[[FloatNDArray], float]:
-    """Adapt a minimization loss into whatever direction :meth:`Generation.optimize` expects.
+def _as_generation_fitness(logit_loss: Callable[[FloatNDArray], float]) -> Callable[[FloatNDArray], float]:
+    """Adapt a minimization loss into the fitness :meth:`Generation.optimize` expects.
 
     ``LogitObjective.logit_loss`` is always a loss for *minimization*, while
-    :class:`~empulse.optimizers.Generation` (``direction = Direction.MAXIMIZE``) selects and
-    reports the *highest*-fitness individual. Negate here so the two conventions line up, rather
-    than handing a minimization loss straight to a maximizer.
+    :class:`~empulse.optimizers.Generation` maximizes by construction (``direction =
+    Direction.MAXIMIZE``): it selects and reports the *highest*-fitness individual. Negate here so
+    the two conventions line up, rather than handing a minimization loss straight to a maximizer.
     """
-    if direction is Direction.MAXIMIZE:
-        return lambda weights: -logit_loss(weights)
-    return logit_loss
+    return lambda weights: -logit_loss(weights)
 
 
 class GeneticAlgorithmOptimizer(Optimizer):
@@ -124,14 +119,14 @@ class GeneticAlgorithmOptimizer(Optimizer):
         bounds_per_feature = [self.bounds] * X.shape[1]
 
         # Generation.optimize() always maximizes; objective.logit_loss is a loss for minimization.
-        fitness = _as_generation_fitness(objective.logit_loss, rga.direction)
+        fitness = _as_generation_fitness(objective.logit_loss)
 
         previous_loss: float | None = None
         iter_stagnant = 0
 
         for _ in islice(rga.optimize(fitness, bounds_per_feature), self.max_iter):
             fitness_value = rga.result.fun  # type: ignore[attr-defined]
-            loss = -fitness_value if rga.direction is Direction.MAXIMIZE else fitness_value
+            loss = -fitness_value
             if previous_loss is not None:
                 denominator = max(abs(previous_loss), 1e-12)
                 relative_improvement = (previous_loss - loss) / denominator
@@ -152,9 +147,8 @@ class GeneticAlgorithmOptimizer(Optimizer):
             rga.result.success = False  # type: ignore[attr-defined]
 
         result = rga.result
-        if rga.direction is Direction.MAXIMIZE:
-            # Report `fun` as a loss, per the Optimizer contract (see Optimizer.__call__ docstring).
-            result.fun = -result.fun  # type: ignore[attr-defined]
+        # Report `fun` as a loss, per the Optimizer contract (see Optimizer.__call__ docstring).
+        result.fun = -result.fun  # type: ignore[attr-defined]
         return result  # type: ignore[return-value]
 
 
@@ -275,7 +269,7 @@ class MemeticOptimizer(Optimizer):
         # (The Lamarckian local search itself descends the true loss directly via
         # `_grad_objective.logit_gradient_steps()`, independent of this adapter, so both the
         # local search and the population-level GA now pull in the same direction.)
-        fitness = _as_generation_fitness(objective.logit_loss, gen.direction)
+        fitness = _as_generation_fitness(objective.logit_loss)
 
         last_gen: Generation | None = None
         for i, last_gen in enumerate(gen.optimize(fitness, bounds_list)):

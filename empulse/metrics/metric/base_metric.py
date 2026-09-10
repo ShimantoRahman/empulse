@@ -22,6 +22,26 @@ class BaseMetric(ABC):
     Subclassing :class:`BaseMetric` directly is only necessary when implementing a new kind of
     metric from scratch. To combine existing :class:`~empulse.metrics.Metric` objects, use
     :class:`~empulse.metrics.MixtureMetric` instead.
+
+    Notes
+    -----
+    Implementations follow a single orientation rule, so that models never have to branch on
+    :attr:`direction`:
+
+    - :meth:`__call__` returns the metric in its natural orientation, which :attr:`direction`
+      describes. This is the only orientation a user sees.
+    - :meth:`_loss`, :meth:`_logit_objective`, :meth:`_gradient_boost_objective` and
+      :meth:`_prepare_boost_objective` are always **minimized**, whatever :attr:`direction` says.
+      These are what models optimize.
+    - :meth:`optimal_rate`, :meth:`optimal_threshold` and :meth:`_evaluate_costs` are
+      orientation-free: an optimal threshold is the same point whether the metric is phrased as a
+      cost to minimize or a profit to maximize.
+
+    The gradient-based objectives are only required to be *monotonically equivalent* to
+    :meth:`_loss`, not equal to it: they must have the same minimizer, but may differ by an
+    increasing transformation. :class:`~empulse.metrics.Savings` is the standing example -- it is
+    maximized, but reuses :class:`~empulse.metrics.Cost`'s objectives, and minimizing expected cost
+    is equivalent to maximizing savings because savings is a decreasing affine map of cost.
     """
 
     @property
@@ -78,6 +98,16 @@ class BaseMetric(ABC):
     @abstractmethod
     def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
         """Compute the metric score or loss."""
+
+    def _loss(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
+        """Compute the metric as a value to be minimized, whatever its :attr:`direction`.
+
+        Models optimize a loss, while a metric may naturally be a score (:attr:`direction` is
+        :attr:`~empulse.metrics.metric.common.Direction.MAXIMIZE`). This is the single place where
+        the two conventions are reconciled, so that no model has to negate a metric itself.
+        """
+        value = self(y_true, y_score, **parameters)
+        return -value if self.direction is Direction.MAXIMIZE else value
 
     @abstractmethod
     def optimal_rate(

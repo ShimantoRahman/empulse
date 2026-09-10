@@ -11,7 +11,6 @@ from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics.metric.common import Direction
 
 try:
     from xgboost import XGBClassifier
@@ -575,14 +574,13 @@ class CatBoostObjective:
 class CatBoostMetric:
     """AEC metric for catboost."""
 
-    def __init__(self, metric: Callable[..., float], **loss_params: FloatNDArray | float):
+    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
         self.metric = metric
         self.loss_params = loss_params
 
     def is_max_optimal(self) -> bool:
         """Return whether greater values of metric are better."""
-        if isinstance(self.metric, BaseMetric):
-            return self.metric.strategy.direction == Direction.MAXIMIZE
+        # `evaluate` reports `BaseMetric._loss`, which is minimized whatever the metric's direction.
         return False
 
     def evaluate(
@@ -617,7 +615,7 @@ class CatBoostMetric:
         }
 
         y_proba = expit(predictions)
-        return self.metric(targets, y_proba, **loss_params), 1
+        return self.metric._loss(targets, y_proba, **loss_params), 1
 
     def get_final_error(self, error: float, weight: float) -> float:
         """

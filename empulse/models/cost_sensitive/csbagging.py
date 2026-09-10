@@ -497,7 +497,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         n_samples = y.shape[0]
         weight_fn = self.loss if self.loss is not None else expected_cost_loss
 
-        raw_values = np.empty(self.n_estimators, dtype=np.float64)
+        losses = np.empty(self.n_estimators, dtype=np.float64)
         for i, estimator, samples, features in zip(
             range(self.n_estimators), self.estimators_, self.estimators_samples_, self.estimators_features_, strict=True
         ):
@@ -506,9 +506,9 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
-            raw_values[i] = weight_fn(y[mask], y_pred, **oob_loss_params)
+            losses[i] = weight_fn._loss(y[mask], y_pred, **oob_loss_params)
 
-        weights: FloatNDArray = goodness_weights(raw_values, weight_fn.direction)
+        weights: FloatNDArray = goodness_weights(losses)
         return weights
 
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:

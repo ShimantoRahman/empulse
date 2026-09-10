@@ -7,25 +7,21 @@ from typing import Any
 import numpy as np
 
 from ..._types import FloatNDArray
-from ...metrics.metric.common import Direction
 
 
-def goodness_weights(raw_values: FloatNDArray, direction: Direction) -> FloatNDArray:
+def goodness_weights(losses: FloatNDArray) -> FloatNDArray:
     """
-    Convert per-estimator metric values into normalized, non-negative voting weights.
+    Convert per-estimator loss values into normalized, non-negative voting weights.
 
-    A metric value on its own does not say whether a higher or lower estimator got the better
-    weight: a loss (``direction=MINIMIZE``) must be inverted before "more weight = better", and
-    normalizing signed values by their raw sum is unsound (the sum can be near zero, or individual
-    weights can end up negative). This maps every value to a "goodness" score honouring *direction*,
-    shifts it to be non-negative, and normalizes it to sum to 1.
+    A loss points the wrong way for weighting -- a lower value is a better estimator, so it must be
+    inverted before "more weight = better" -- and normalizing signed values by their raw sum is
+    unsound (the sum can be near zero, or individual weights can end up negative). This maps every
+    loss to a "goodness" score, shifts it to be non-negative, and normalizes it to sum to 1.
 
     Parameters
     ----------
-    raw_values : ndarray of shape (n_estimators,)
-        The metric value computed for each estimator (on its out-of-bag samples).
-    direction : Direction
-        Whether higher (``MAXIMIZE``) or lower (``MINIMIZE``) *raw_values* are better.
+    losses : ndarray of shape (n_estimators,)
+        The loss computed for each estimator (on its out-of-bag samples), lower is better.
 
     Returns
     -------
@@ -34,8 +30,7 @@ def goodness_weights(raw_values: FloatNDArray, direction: Direction) -> FloatNDA
         estimator has the same goodness (nothing to distinguish them by) or when the values are
         non-finite.
     """
-    raw_values = np.asarray(raw_values, dtype=np.float64)
-    goodness: FloatNDArray = raw_values if direction is Direction.MAXIMIZE else -raw_values
+    goodness: FloatNDArray = -np.asarray(losses, dtype=np.float64)
     n_estimators = goodness.shape[0]
     if not np.isfinite(goodness).all():
         return np.full(n_estimators, 1.0 / n_estimators)

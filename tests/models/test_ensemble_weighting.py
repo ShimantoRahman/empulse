@@ -3,7 +3,6 @@ import threading
 import numpy as np
 import pytest
 
-from empulse.metrics.metric.common import Direction
 from empulse.models.cost_sensitive._ensemble_weighting import (
     accumulate_weighted_prediction,
     goodness_weights,
@@ -14,48 +13,39 @@ from empulse.models.cost_sensitive._ensemble_weighting import (
 class TestGoodnessWeights:
     """Regression tests for OOB weighting giving more weight to worse estimators.
 
-    `goodness_weights` must honour `direction` (a loss should be inverted before "more weight =
-    better") and must not blow up when normalizing signed values.
+    `goodness_weights` takes values from `BaseMetric._loss`, which is always minimized, so a lower
+    value must win the higher weight. It must also not blow up when normalizing signed values.
     """
 
-    def test_loss_lower_is_better(self):
-        """For a MINIMIZE metric (a loss), the lowest value should get the highest weight."""
+    def test_lower_loss_gets_more_weight(self):
         losses = np.array([1.0, 5.0, 0.5, 10.0])
-        weights = goodness_weights(losses, Direction.MINIMIZE)
+        weights = goodness_weights(losses)
         assert weights.argmax() == 2  # lowest loss
         assert weights.argmin() == 3  # highest loss
 
-    def test_score_higher_is_better(self):
-        """For a MAXIMIZE metric (a score), the highest value should get the highest weight."""
+    def test_negated_score_ranks_the_same_way(self):
+        """A MAXIMIZE metric reaches this via `_loss`, i.e. negated; the best score must still win."""
         scores = np.array([1.0, 5.0, 0.5, 10.0])
-        weights = goodness_weights(scores, Direction.MAXIMIZE)
+        weights = goodness_weights(-scores)
         assert weights.argmax() == 3  # highest score
         assert weights.argmin() == 2  # lowest score
 
-    @pytest.mark.parametrize('direction', [Direction.MINIMIZE, Direction.MAXIMIZE])
-    def test_weights_are_non_negative_and_sum_to_one(self, direction):
-        values = np.array([-3.0, 0.5, 2.0, -1.0])
-        weights = goodness_weights(values, direction)
+    def test_weights_are_non_negative_and_sum_to_one(self):
+        weights = goodness_weights(np.array([-3.0, 0.5, 2.0, -1.0]))
         assert (weights >= 0).all()
         assert weights.sum() == pytest.approx(1.0)
 
-    @pytest.mark.parametrize('direction', [Direction.MINIMIZE, Direction.MAXIMIZE])
-    def test_signed_values_do_not_produce_negative_weights(self, direction):
+    def test_signed_values_do_not_produce_negative_weights(self):
         """Normalizing signed values by their raw sum can go negative; goodness-shifting must not."""
-        values = np.array([-10.0, -5.0, 3.0, 8.0])
-        weights = goodness_weights(values, direction)
+        weights = goodness_weights(np.array([-10.0, -5.0, 3.0, 8.0]))
         assert (weights >= 0).all()
 
-    @pytest.mark.parametrize('direction', [Direction.MINIMIZE, Direction.MAXIMIZE])
-    def test_identical_values_fall_back_to_uniform(self, direction):
-        values = np.array([2.0, 2.0, 2.0])
-        weights = goodness_weights(values, direction)
+    def test_identical_values_fall_back_to_uniform(self):
+        weights = goodness_weights(np.array([2.0, 2.0, 2.0]))
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
 
-    @pytest.mark.parametrize('direction', [Direction.MINIMIZE, Direction.MAXIMIZE])
-    def test_non_finite_values_fall_back_to_uniform(self, direction):
-        values = np.array([1.0, np.nan, 3.0])
-        weights = goodness_weights(values, direction)
+    def test_non_finite_values_fall_back_to_uniform(self):
+        weights = goodness_weights(np.array([1.0, np.nan, 3.0]))
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
 
 

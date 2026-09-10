@@ -1,6 +1,6 @@
 from functools import partial
 from numbers import Integral, Real
-from typing import Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 from sklearn.utils._param_validation import Interval, RealNotInt
@@ -8,9 +8,11 @@ from sklearn.utils.validation import check_is_fitted, check_random_state, valida
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
-from ...metrics.metric.common import Direction
 from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 from .evolutionary_tree import EvolutionaryTree
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 MAX_INT = 2147483647
 
@@ -311,11 +313,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             # `use_fit_max_profit` is only False when `loss_ is None` is False, i.e. `loss_` is a
             # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
             assert loss_ is not None
-            if loss_.direction is Direction.MAXIMIZE:
-                fitness_fn = lambda *args, **kwargs: -loss_(*args, **kwargs)
-            else:
-                fitness_fn = loss_
-            fitness_fn = partial(fitness_fn, **loss_params)
+            fitness_fn: Callable[..., float] = partial(loss_._loss, **loss_params)
 
             y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
             try:  # catch issue with the loss function before it goes into C world

@@ -19,6 +19,11 @@
   Training a boosting model directly on any of these metrics (previously done through
   ``make_objective_churn``/``make_objective_acquisition``) is now done by passing the metric
   as the ``loss`` argument to :class:`~empulse.models.CSBoostClassifier`.
+- |API| When :class:`~empulse.models.CSBoostClassifier` is used with the CatBoost backend and a
+  ``loss`` metric that is maximized (e.g. :func:`~empulse.metrics.empc_score`), the value CatBoost
+  reports for the evaluation metric is now negated, so that lower is better for every metric. This
+  affects CatBoost's training output and ``best_score_`` only; the model that is selected, and
+  early stopping, are unchanged.
 - |API| :func:`~empulse.metrics.expected_cost_loss_churn` and
   :func:`~empulse.metrics.expected_cost_loss_acquisition` now always return the mean cost per
   instance (previously they returned the summed cost by default, with an optional

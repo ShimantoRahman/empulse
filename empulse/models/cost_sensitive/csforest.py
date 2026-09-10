@@ -612,7 +612,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         n_samples_bootstrap = self.estimator_._n_samples_bootstrap
         weight_fn = self.loss if isinstance(self.loss, BaseMetric) else expected_cost_loss
 
-        raw_values = np.empty(self.n_estimators, dtype=np.float64)
+        losses = np.empty(self.n_estimators, dtype=np.float64)
         for i, estimator in enumerate(self.estimators_):
             unsampled_indices = _generate_unsampled_indices(
                 estimator.random_state,
@@ -622,9 +622,9 @@ class CSForestClassifier(CostSensitiveClassifier):
 
             y_pred = self.estimator_._get_oob_predictions(estimator, X[unsampled_indices, :])
             oob_kwargs = subset_loss_params(kwargs, unsampled_indices, n_samples)
-            raw_values[i] = weight_fn(y[unsampled_indices], y_pred[:, 1, 0], **oob_kwargs)
+            losses[i] = weight_fn._loss(y[unsampled_indices], y_pred[:, 1, 0], **oob_kwargs)
 
-        weights: FloatNDArray = goodness_weights(raw_values, weight_fn.direction)
+        weights: FloatNDArray = goodness_weights(losses)
         return weights
 
     def _predict_weighted_proba(self, X: FloatArrayLike) -> FloatNDArray:

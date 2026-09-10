@@ -8,7 +8,6 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import BaseMetric, MaxProfit
-from ..metrics.metric.common import Direction
 from .csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 
 
@@ -158,22 +157,19 @@ class ProfSRClassifier(CostSensitiveClassifier):
                 'Install it with `pip install empulse[symbolic]` or `pip install gplearn`.'
             ) from e
 
-        greater_is_better = loss.direction is Direction.MAXIMIZE
-        worst_value = -np.inf if greater_is_better else np.inf
-
         def _fitness(y_true: FloatNDArray, y_pred: FloatNDArray, sample_weight: FloatNDArray) -> float:
             y_score = expit(y_pred)
             try:
-                score = loss(y_true, y_score, **loss_params)
+                value = loss._loss(y_true, y_score, **loss_params)
             except (ValueError, TypeError):
                 # Raised for example when gplearn validates the fitness function
                 # with dummy arrays that do not match the shape of the cost parameters.
-                return worst_value
-            if not np.isfinite(score):
-                return worst_value
-            return float(score)
+                return np.inf
+            if not np.isfinite(value):
+                return np.inf
+            return float(value)
 
-        fitness = make_fitness(function=_fitness, greater_is_better=greater_is_better)
+        fitness = make_fitness(function=_fitness, greater_is_better=False)
 
         self.model_ = SymbolicRegressor(
             population_size=self.population_size,
