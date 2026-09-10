@@ -21,7 +21,7 @@ def empulse_spine(theme: dict[str, str]) -> str:
     c.text(gx + cell, gy + cell * 2 + 20, 'CostMatrix', fill='blue-strong', size=13, weight='600')
     c.text(gx + cell, gy + cell * 2 + 38, 'what an outcome is worth', fill='ink-muted', size=11)
 
-    c.text(gx + cell * 2 + 30, gy + cell, '+', fill='ink-muted', size=20)
+    c.text(gx + cell * 2 + 40, gy + cell, '+', fill='ink-muted', size=20)
 
     sx, sy, sw, sh = 168, gy + 6, 118, 40
     c.box(sx, sy, sw, sh, fill='blue-soft', stroke='blue-strong', radius=20)
@@ -64,7 +64,7 @@ def empulse_spine(theme: dict[str, str]) -> str:
     c.circle(ux + uw - 18, ry, 10, fill='purple-strong')
     c.text(ux + uw - 18, ry + 1, '5', fill='paper', size=11, weight='600')
 
-    c.text(462, 26, 'define once', fill='blue-strong', size=12, weight='600', italic=True)
+    c.text(240, 26, 'define once', fill='blue-strong', size=12, weight='600', italic=True)
     c.text(690, 26, 'reuse everywhere', fill='purple-strong', size=12, weight='600', italic=True)
     c.line(40, 40, 460, 40, stroke='blue-strong', width=1, dash='3 4')
     c.line(478, 40, 880, 40, stroke='purple-strong', width=1, dash='3 4')
