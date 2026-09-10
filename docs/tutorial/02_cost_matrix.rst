@@ -16,7 +16,7 @@ class is "will churn", so "predicted positive" means "contact this customer".
 Write :math:`CLV_i` for a customer's lifetime value, and express the two campaign costs as
 fractions of it:
 
-- :math:`f` — the cost of contacting a customer (``contact_fraction``), incurred whether or not
+- :math:`f` — the cost of contacting a customer (``contact_cost``), incurred whether or not
   they accept.
 - :math:`d` — the retention incentive (``incentive_fraction``), only paid if they accept.
 - :math:`\gamma` — the probability a contacted customer accepts the offer (``accept_rate``).
@@ -28,27 +28,30 @@ their value, minus the incentive and the contact cost. With probability :math:`1
 leave anyway and we are out the contact cost.
 
 .. math::
-    \text{tp benefit} = \gamma\,(CLV_i - d \cdot CLV_i - f \cdot CLV_i) - (1 - \gamma)\, f \cdot CLV_i
+    \text{tp benefit} = \gamma\,(CLV_i - d \cdot CLV_i - f) - (1 - \gamma)\, f
 
 **False positive** — a loyal customer we contact needlessly. They were never leaving, so there is
 no value to save; we simply pay to contact them and, if they take it, the discount.
 
 .. math::
-    \text{fp cost} = d \cdot CLV_i + f \cdot CLV_i
+    \text{fp cost} = d \cdot CLV_i + f
 
-**False negative** — a churner we failed to flag. They leave, and we lose their entire value.
+**False negative** — a churner we failed to flag and they leave.
 
 .. math::
-    \text{fn cost} = CLV_i
+    \text{fn cost} = 0
 
 **True negative** — a loyal customer we correctly leave alone. Nothing happens, nothing is spent.
 
 .. math::
     \text{tn benefit} = 0
 
-Note the asymmetry that the baseline model could not see: a false negative costs a full
-:math:`CLV_i`, while a false positive costs only a few percent of it. With the defaults below, a
-false negative is roughly **17 times** more expensive.
+Note the asymmetry the baseline model could not see. The ``fn_cost`` cell is zero, but that does
+not make a false negative free: it forgoes the whole ``tp_benefit`` you would have earned by
+contacting that churner. At the average customer value, that foregone benefit is about **134**,
+while contacting a loyal customer needlessly costs about **25**. Getting a churner wrong is roughly
+**five times** more expensive than a needless call — and a classifier trained on accuracy treats
+the two as equal.
 
 Building it in Empulse
 ======================
@@ -65,14 +68,13 @@ business parameters stay named rather than being baked into numbers.
 
     cost_matrix = (
         CostMatrix()
-        .add_tp_benefit(gamma * (clv - d * clv - f * clv))
-        .add_tp_benefit(-(1 - gamma) * f * clv)
-        .add_fp_cost(d * clv + f * clv)
-        .add_fn_cost(clv)
+        .add_tp_benefit(gamma * (clv - d * clv - f))
+        .add_tp_benefit(-(1 - gamma) * f)
+        .add_fp_cost(d * clv + f)
         .alias('accept_rate', gamma)
         .alias('incentive_fraction', d)
-        .alias('contact_fraction', f)
-        .set_default(accept_rate=0.3, incentive_fraction=0.05, contact_fraction=0.01)
+        .alias('contact_cost', f)
+        .set_default(accept_rate=0.3, incentive_fraction=0.05, contact_cost=1)
     )
 
 Three things are worth noting:
@@ -88,7 +90,7 @@ Three things are worth noting:
 .. note::
     This is exactly the matrix :func:`~empulse.datasets.fetch_iranian_churn` already ships as
     ``dataset.cost_matrix``, so the rest of the tutorial uses that instead of rebuilding it. It is
-    also the same matrix behind the prebuilt :ref:`churn metrics <prebuilt_churn_metrics>`.
+    also similar to the matrix behind the prebuilt :ref:`churn metrics <prebuilt_churn_metrics>`.
 
 Which parameters vary per customer?
 ===================================

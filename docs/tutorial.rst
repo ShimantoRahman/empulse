@@ -10,9 +10,9 @@ modelling because every customer carries their own lifetime value. That makes th
 question not "who is most likely to leave?" but "who is most profitable to keep?" — and those two
 questions have different answers.
 
-Along the way you will see why a model with a good ROC AUC can still lose money, how to write a
-cost matrix that captures the campaign's economics, how to train a model on it, and how to choose
-the threshold and validate the whole thing.
+Along the way you will see why a model with a good ROC AUC can still leave most of the available
+value uncaptured, how to write a cost matrix that captures the campaign's economics, how to train a
+model on it, and how to choose the threshold and validate the whole thing.
 
 .. note::
     Needs ``pip install empulse[optional] pandas``. The dataset downloads once and is cached under

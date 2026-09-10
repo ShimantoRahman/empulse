@@ -49,40 +49,48 @@ A cost matrix on its own is not a number. A **strategy** decides how it becomes 
 choice depends on what you have and what you want.
 
 .. list-table::
-    :widths: 18 16 26 40
+    :widths: 22 16 22 40
     :header-rows: 1
 
     * - Strategy
       - Direction
       - Expects
       - Use when
-    * - :class:`~empulse.metrics.Cost`
-      - Lower is better
+    * - :class:`~empulse.metrics.Profit` /
+        :class:`~empulse.metrics.Cost`
+      - Higher / lower is better
       - Calibrated probabilities
-      - You want the expected cost per instance, in currency.
+      - You want the expected value per instance, in currency, with per-instance values honoured.
+    * - :class:`~empulse.metrics.MaxProfit` /
+        :class:`~empulse.metrics.MinCost`
+      - Higher / lower is better
+      - Ranking scores
+      - The threshold is not fixed yet and you want the value at the best possible cut-off —
+        optionally averaging over uncertain business parameters.
     * - :class:`~empulse.metrics.Savings`
       - Higher is better
       - Calibrated probabilities
-      - You want that same cost relative to a naive baseline, as a 0-1 ratio that is comparable
+      - You want that same cost relative to a naive baseline, as a scale-free ratio comparable
         across datasets.
-    * - :class:`~empulse.metrics.MaxProfit`
-      - Higher is better
-      - Ranking scores
-      - The threshold is not fixed yet and you want the profit at the best possible cut-off —
-        optionally averaging over uncertain business parameters.
 
-There are three more — :class:`~empulse.metrics.LogCost`,
-:class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC` — covered in
-:ref:`choosing_metric`, along with the sign-flipped siblings
-:class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.MinCost` and
-:class:`~empulse.metrics.EmpiricalMinCost`, which report the same quantities the other way
-round.
+The first two rows are pairs: each reports the same quantity with the opposite sign, so picking one
+is a presentation choice and models train identically on either. There are three more strategies —
+:class:`~empulse.metrics.LogCost`, :class:`~empulse.metrics.EmpiricalMaxProfit` (with its sibling
+:class:`~empulse.metrics.EmpiricalMinCost`) and :class:`~empulse.metrics.AUEPC` — covered in
+:ref:`choosing_metric`.
 
 .. warning::
-    :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings` assume ``y_score`` holds
-    calibrated probabilities; :class:`~empulse.metrics.MaxProfit` only needs a ranking. Passing the
-    wrong kind does not raise an error, it just returns a misleading number. See
-    :ref:`choosing_metric` for the details.
+    :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Cost` and
+    :class:`~empulse.metrics.Savings` assume ``y_score`` holds calibrated probabilities;
+    :class:`~empulse.metrics.MaxProfit` only needs a ranking, and averages instance-dependent
+    values away. Passing the wrong kind does not raise an error, it just returns a misleading
+    number. See :ref:`choosing_metric` for the details.
+
+.. note::
+    :class:`~empulse.metrics.Savings` needs its baseline to have a strictly positive cost. If
+    "predict everything negative" costs nothing under your cost matrix, there is no baseline cost
+    to take a fraction of and the ratio is not meaningful — reach for
+    :class:`~empulse.metrics.Profit` instead.
 
 Not every model supports every strategy — :ref:`metric_class_in_model` has the compatibility table.
 
