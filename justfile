@@ -114,6 +114,11 @@ SPHINXBUILD := "sphinx-build"
 SOURCEDIR := "docs"
 BUILDDIR := "docs/_build"
 
+# Regenerate the documentation figures (light and dark variants)
+[group('docs')]
+figures:
+    uv run python scripts/figures/build.py
+
 # Build HTML documentation
 [group('docs')]
 html:

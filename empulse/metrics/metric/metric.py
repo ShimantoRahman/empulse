@@ -29,7 +29,7 @@ class Metric(BaseMetric):
     (true positive, true negative, false positive, false negative).
     The strategy defines how to compute the metric based on the cost matrix.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+    Read more in the :ref:`User Guide <metric_objects>`.
 
     Parameters
     ----------

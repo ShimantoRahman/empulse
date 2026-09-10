@@ -14,7 +14,7 @@ class CostMatrix:
     Stochastic variables are supported and can be specified using sympy.stats random variables.
     Stochastic variables are assumed to be independent of each other.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+    Read more in the :ref:`User Guide <cost_matrix>`.
 
     Attributes
     ----------

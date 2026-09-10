@@ -137,17 +137,16 @@ def fetch_iranian_churn(
           - Actual positive :math:`y_i = 1`
           - Actual negative :math:`y_i = 0`
         * - Predicted positive :math:`\\hat{y}_i = 1`
-          - ``tp_benefit`` :math:`= \\gamma (CLV_i - d \\cdot CLV_i - f \\cdot CLV_i)
-            - (1-\\gamma) f \\cdot CLV_i`
-          - ``fp_cost`` :math:`= d \\cdot CLV_i + f \\cdot CLV_i`
+          - ``tp_benefit`` :math:`= \\gamma (CLV_i - d \\cdot CLV_i - f) - (1-\\gamma) f`
+          - ``fp_cost`` :math:`= d \\cdot CLV_i + f`
         * - Predicted negative :math:`\\hat{y}_i = 0`
-          - ``fn_cost`` :math:`= CLV_i`
+          - ``fn_cost`` :math:`= 0`
           - ``tn_cost`` :math:`= 0`
 
     The cost matrix uses symbolic parameters with the following defaults:
 
     - ``incentive_fraction`` (:math:`d`) = 0.05
-    - ``contact_fraction`` (:math:`f`) = 0.01
+    - ``contact_cost`` (:math:`f`) = 1
     - ``accept_rate`` (:math:`\\gamma`) = 0.3
 
     To override these defaults, pass the desired values when evaluating the metric::
@@ -190,7 +189,7 @@ def fetch_iranian_churn(
     cost_matrix, instance_costs = churn_retention_cost_matrix(
         clv,
         incentive_fraction=0.05,
-        contact_fraction=0.01,
+        contact_cost=1,
         accept_rate=0.3,
     )
 

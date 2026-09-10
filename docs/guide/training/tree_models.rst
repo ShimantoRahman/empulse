@@ -72,32 +72,13 @@ Quick Start
     y_proba = forest.predict_proba(X)[:, 1]
 
 
-Cost Matrix
-===========
+Specifying costs
+================
 
-All four models accept the same four cost terms:
-
-* ``tp_cost`` — benefit / cost of a true positive
-* ``tn_cost`` — benefit / cost of a true negative
-* ``fp_cost`` — cost of a false positive
-* ``fn_cost`` — cost of a false negative
-
-Constant costs
---------------
-
-Pass a scalar to apply the same cost to every sample:
-
-.. code-block:: python
-
-    from empulse.models import CSTreeClassifier
-
-    model = CSTreeClassifier(fp_cost=5, fn_cost=1, tp_cost=0, tn_cost=0)
-
-Instance-dependent costs
-------------------------
-
-Pass a 1-D array of length ``n_samples`` to ``fit`` to assign a unique cost
-to each individual observation:
+All four models accept costs the same two ways as every other cost-sensitive model in Empulse: as
+plain ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, scalar or per-sample, or as a
+:class:`~empulse.metrics.Metric` passed as ``loss``. :ref:`specifying_costs` has the rules;
+:ref:`instance_based_cv` covers getting per-sample arrays through cross-validation.
 
 .. code-block:: python
 
@@ -112,12 +93,9 @@ to each individual observation:
     model = CSForestClassifier(fn_cost=1)
     model.fit(X, y, tp_cost=clv - contact_cost, fp_cost=contact_cost)
 
-.. note::
-
-    Costs passed to ``fit`` take priority over costs passed to ``__init__``.
-    It is best practice to pass instance-dependent costs through ``fit``
-    rather than the constructor, because scikit-learn cloners do not carry
-    sample arrays.
+Unlike the linear and boosting models, the tree-based models can train on **any** of the six
+strategies, including the two ranking-based ones — a tree only needs a scalar fitness for a split,
+not a gradient. See :ref:`metric_class_in_model`.
 
 
 Cost-Sensitive Decision Tree (CSTreeClassifier)
@@ -556,80 +534,25 @@ as the fitness function:
 sklearn Integration
 ===================
 
-All four models are fully scikit-learn compatible: they can be embedded in
-:class:`~sklearn.pipeline.Pipeline`, evaluated with
-:func:`~sklearn.model_selection.cross_val_score`, and tuned with
-:class:`~sklearn.model_selection.GridSearchCV`.
-When instance-dependent costs are used,
-:ref:`metadata routing <sklearn:metadata_routing>` must be enabled.
-
-Pipeline with cross-validation
--------------------------------
+All four models are ordinary scikit-learn estimators and drop into
+:class:`~sklearn.pipeline.Pipeline`, :func:`~sklearn.model_selection.cross_val_score` and
+:class:`~sklearn.model_selection.GridSearchCV` unchanged. Per-sample costs reach each fold through
+metadata routing — see :ref:`instance_based_cv`.
 
 .. code-block:: python
 
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import CSForestClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    fp_cost = np.random.default_rng(0).uniform(1, 10, size=len(y))
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('model', CSForestClassifier(n_estimators=50, fn_cost=1)
-                    .set_fit_request(fp_cost=True)),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, params={'fp_cost': fp_cost})
-
-Hyperparameter search
----------------------
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
-    from empulse.metrics import expected_cost_loss
-    from empulse.models import CSForestClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=200, random_state=0)
-    fp_cost = np.random.default_rng(0).uniform(1, 10, size=len(y))
-    fn_cost = 1.0
 
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        ('model', CSForestClassifier().set_fit_request(fp_cost=True)),
+        ('model', CSForestClassifier(n_estimators=10, fp_cost=5, fn_cost=1)),
     ])
 
-    scorer = make_scorer(
-        expected_cost_loss,
-        response_method='predict_proba',
-        greater_is_better=False,
-        normalize=True,
-        fn_cost=fn_cost,
-    ).set_score_request(fp_cost=True)
-
-    grid_search = GridSearchCV(
-        pipeline,
-        param_grid={'model__n_estimators': [50, 100, 200]},
-        scoring=scorer,
-    )
-    grid_search.fit(X, y, fp_cost=fp_cost)
-    print(f"Best n_estimators: {grid_search.best_params_['model__n_estimators']}")
+    grid_search = GridSearchCV(pipeline, {'model__max_depth': [3, 5]}, cv=3)
+    grid_search.fit(X, y)
+    print(grid_search.best_params_['model__max_depth'])
 
 
 Choosing the Right Model
@@ -662,6 +585,6 @@ References
        *Expert Systems with Applications*, 42(19), 6609–6619, 2015.
        https://doi.org/10.1016/j.eswa.2015.04.042
 
-.. [2] Höppner, S., Stripling, E., Baesens, B., Broucke, S. V., & Verdonck, T. (2017).
-       Profit driven decision trees for churn prediction. arXiv preprint arXiv:1712.08101.
+.. [2] Höppner, S., Stripling, E., Baesens, B., vanden Broucke, S., & Verdonck, T. (2020).
+       Profit driven decision trees for churn prediction. European journal of operational research, 284(3), 920-933.
 

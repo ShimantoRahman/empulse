@@ -86,10 +86,11 @@ with the prebuilt churn metrics:
 Cost Matrix
 ===========
 
-Contacting a customer costs a fraction :math:`f` of their value, whether or not they accept.
-A contacted customer accepts the retention offer with probability :math:`\gamma`, in which case
-their value is retained minus the incentive, a fraction :math:`d` of that value. Losing a customer
-you did not contact costs their full value.
+Contacting a customer costs a fixed amount :math:`f`, whether or not they accept. A contacted
+customer accepts the retention offer with probability :math:`\gamma`, in which case their value is
+retained minus the incentive, a fraction :math:`d` of that value. A churner who is not contacted
+simply leaves, which costs the campaign nothing — the lost value is an opportunity cost the
+campaign never had a claim on.
 
 .. list-table::
 
@@ -97,10 +98,10 @@ you did not contact costs their full value.
       - Actual churner :math:`y_i = 1`
       - Actual non-churner :math:`y_i = 0`
     * - Predicted churner :math:`\hat{y}_i = 1`
-      - ``tp_benefit`` :math:`= \gamma (CLV_i - d \cdot CLV_i - f \cdot CLV_i) - (1-\gamma) f \cdot CLV_i`
-      - ``fp_cost`` :math:`= d \cdot CLV_i + f \cdot CLV_i`
+      - ``tp_benefit`` :math:`= \gamma (CLV_i - d \cdot CLV_i - f) - (1-\gamma) f`
+      - ``fp_cost`` :math:`= d \cdot CLV_i + f`
     * - Predicted non-churner :math:`\hat{y}_i = 0`
-      - ``fn_cost`` :math:`= CLV_i`
+      - ``fn_cost`` :math:`= 0`
       - ``tn_benefit`` :math:`= 0`
 
 The symbolic parameters carry these defaults, and can be overridden by passing their alias:
@@ -118,9 +119,9 @@ The symbolic parameters carry these defaults, and can be overridden by passing t
     * - ``incentive_fraction`` (:math:`d`)
       - 0.05
       - Retention incentive, as a fraction of CLV
-    * - ``contact_fraction`` (:math:`f`)
-      - 0.01
-      - Cost of contacting a customer, as a fraction of CLV
+    * - ``contact_cost`` (:math:`f`)
+      - 1
+      - Cost of contacting a customer, as an absolute amount
 
 .. code-block:: python
 
@@ -135,18 +136,12 @@ The symbolic parameters carry these defaults, and can be overridden by passing t
         clv=dataset.instance_costs['clv'],
     )
 
-.. warning::
-    132 of the 3150 customers have a ``Customer Value`` of exactly 0. For those rows every term of
-    the cost matrix evaluates to 0, which makes the profit-optimal decision undefined for that
-    customer. As a result :meth:`~empulse.metrics.Metric.optimal_threshold` and
-    :meth:`~empulse.metrics.Metric.optimal_rate` raise a ``ValueError`` for the
-    :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings` strategies on this
-    dataset.
-
-    The :class:`~empulse.metrics.MaxProfit` strategy is unaffected, because it derives the
-    operating point from the ROC convex hull across the whole population rather than per customer.
-    Use ``empc_score.optimal_rate(...)`` as shown above, or drop the zero-value customers if you
-    need a cost-based threshold.
+.. note::
+    132 of the 3150 customers have a ``Customer Value`` of exactly 0. Contacting them can only lose
+    the contact cost, so :meth:`~empulse.metrics.Metric.optimal_threshold` assigns them a threshold
+    of ``1.0`` — never contact. With instance-dependent costs the method returns one threshold per
+    customer, which is the point: the break-even churn probability is much lower for a valuable
+    customer than for a worthless one.
 
 Data Description
 ================

@@ -53,6 +53,19 @@ Metrics
    MixtureComponent
    MixtureMetric
 
+Extension Points
+~~~~~~~~~~~~~~~~
+
+Abstract base classes for writing a custom :class:`~empulse.metrics.MetricStrategy`. Most users
+never need these.
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+   :template: base.rst
+
+   LogitObjective
+
 General Metrics
 ---------------
 

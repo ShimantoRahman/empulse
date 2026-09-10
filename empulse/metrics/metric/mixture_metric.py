@@ -73,7 +73,7 @@ class MixtureMetric(BaseMetric):
     first combining the components' rates and then converting that single combined rate to a
     threshold, rather than combining the components' own thresholds.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+    Read more in the :ref:`User Guide <metric_objects>`.
 
     Parameters
     ----------

@@ -21,7 +21,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
     The predicted score of a program is squashed through the logistic function to obtain
     a probability estimate, which is used to evaluate the loss function.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+    Read more in the :ref:`User Guide <profsr>`.
 
     .. note::
         This classifier requires the optional `gplearn <https://gplearn.readthedocs.io/>`_ dependency.
@@ -115,8 +115,9 @@ class ProfSRClassifier(CostSensitiveClassifier):
 
     References
     ----------
-    .. [1] Koza, J. R. (1992). Genetic Programming: On the Programming of Computers by Means
-        of Natural Selection. MIT Press.
+    .. [1] Aliaga, Samuel and Vairetti, Carla and Maldonado, Sebastián,
+       Profit-driven Symbolic Regression for Customer Churn Prediction (August 09, 2026).
+       Available at SSRN: https://ssrn.com/abstract=7256098 or http://dx.doi.org/10.2139/ssrn.7256098
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {

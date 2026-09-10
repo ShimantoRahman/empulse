@@ -6,12 +6,67 @@
 Threshold Tuning
 ===========================
 
-After training a probabilistic classifier you typically predict the *positive* class for every
-sample whose score exceeds 0.5.  That default threshold is almost never optimal when
-misclassification costs are asymmetric.  Empulse provides two dedicated meta-estimators
-for analytic threshold / rate selection, and the :class:`~empulse.metrics.Metric` class
-integrates seamlessly with scikit-learn's :class:`~sklearn:sklearn.model_selection.TunedThresholdClassifierCV`
-for cross-validated threshold search.
+A trained model gives every instance a score. Turning that into an action needs one more decision:
+where to draw the line. The default of 0.5 is a convention, not an answer — it is optimal only when
+a false positive and a false negative cost exactly the same.
+
+Two ways to say the same thing
+==============================
+
+There are two equivalent ways to express where the line goes, and which one is more useful depends
+on who has to act on it.
+
+A **threshold** is a cut-off on the score: act on everything above 0.31. It follows directly from
+the cost matrix — the break-even point is where the expected cost of acting equals the expected
+cost of not acting — and it does not depend on how many instances you happen to be scoring.
+
+A **rate** is a fraction of the population: act on the top 26%. It is the form a campaign manager
+can work with, because it translates straight into a budget and a call list, and it is invariant to
+any monotone rescaling of the scores.
+
+.. themed-figure:: threshold_and_rate
+    :alt: A population sorted by score with one cut through it, labelled above as a fraction of
+        the population and below as a score cut-off.
+
+    One cut, two ways of naming it.
+
+Every metric can produce both, and :func:`~empulse.metrics.classification_threshold` converts a
+rate into the threshold that achieves it on a given set of scores:
+
+.. code-block:: python
+
+    from sklearn.datasets import make_classification
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LogisticRegression
+    from empulse.metrics import Cost, CostMatrix, Metric, classification_threshold
+
+    X, y = make_classification(n_samples=2000, weights=[0.85], random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
+
+    model = LogisticRegression(max_iter=500).fit(X_train, y_train)
+    y_score = model.predict_proba(X_test)[:, 1]
+
+    matrix = CostMatrix().add_fp_cost('c_fp').add_fn_cost('c_fn').set_default(c_fp=1.0, c_fn=10.0)
+    expected_cost = Metric(matrix, Cost())
+
+    rate = expected_cost.optimal_rate(y_test, y_score)
+    threshold = expected_cost.optimal_threshold(y_test, y_score)
+
+    print(f'act on the top {rate:.1%}, i.e. score >= {threshold:.3f}')
+    print(round(classification_threshold(y_test, y_score, customer_threshold=rate), 3))
+
+The two meta-estimators in this page are the same two views made into estimators:
+:class:`~empulse.models.CSThresholdClassifier` fixes a threshold,
+:class:`~empulse.models.CSRateClassifier` fixes a rate. Prefer the rate form when you have a
+capacity constraint — a fixed number of calls your team can make — or when the model's scores are
+ordinally meaningful but not calibrated.
+
+.. warning::
+    A threshold derived from a cost matrix is a statement about probabilities, so it is only as
+    trustworthy as the model's calibration. See :ref:`calibration`.
+
+Analytic or searched
+====================
 
 .. list-table:: Choosing an approach
    :header-rows: 1
@@ -66,58 +121,28 @@ Quick Start
 Cost Matrix
 -----------
 
-The classifier accepts the same four cost terms as all cost-sensitive Empulse models.
+``CSThresholdClassifier`` accepts costs the same two ways as every other cost-sensitive model —
+plain ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, or a
+:class:`~empulse.metrics.Metric` as ``loss``. See :ref:`specifying_costs`.
 
-Constant costs
-~~~~~~~~~~~~~~
-
-Pass a scalar to apply the same cost to every sample:
-
-.. code-block:: python
-
-    from empulse.models import CSThresholdClassifier
-    from sklearn.linear_model import LogisticRegression
-
-    # Low recall penalty, high precision penalty
-    model = CSThresholdClassifier(
-        LogisticRegression(),
-        tp_cost=10,   # benefit of catching a churner
-        fp_cost=2,    # cost of contacting a non-churner
-        fn_cost=0,
-        tn_cost=0,
-    )
-
-Instance-dependent costs
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Pass per-sample cost arrays to ``fit`` when each observation has its own cost profile
-(e.g., individual Customer Lifetime Values):
+One consequence is specific to this model: with **instance-dependent** costs, ``threshold_``
+becomes an array of shape ``(n_samples,)`` rather than a scalar, because each row has its own
+break-even point. That is the strongest practical reason to use per-row costs at all.
 
 .. code-block:: python
 
     import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.linear_model import LogisticRegression
     from empulse.models import CSThresholdClassifier
 
-    set_config(enable_metadata_routing=True)
+    fn_cost = np.random.default_rng(0).uniform(1, 20, size=len(y_train))
 
-    X, y = make_classification(n_samples=500, random_state=0)
-    clv = np.random.default_rng(0).uniform(100, 1000, size=len(y))
+    model = CSThresholdClassifier(LogisticRegression(max_iter=500), fp_cost=1)
+    model.fit(X_train, y_train, fn_cost=fn_cost)
 
-    model = CSThresholdClassifier(
-        LogisticRegression(),
-    ).set_fit_request(tp_cost=True)
+    print(np.shape(model.threshold_))
 
-    model.fit(X, y, tp_cost=clv)
-    # For instance-dependent costs, multiple thresholds are learned
-    print(model.threshold_)  # array of shape (n_samples,)
-
-.. note::
-    Instance-dependent costs require
-    :ref:`metadata routing <sklearn:metadata_routing>` to be enabled via
-    ``sklearn.set_config(enable_metadata_routing=True)``.
+Getting those arrays through cross-validation needs metadata routing — see
+:ref:`instance_based_cv`.
 
 Custom Metric
 ~~~~~~~~~~~~~
@@ -158,39 +183,10 @@ minimises that metric:
 Probability Calibration
 -----------------------
 
-Analytic thresholds are only meaningful when the model outputs well-calibrated
-probabilities.  ``CSThresholdClassifier`` ships with an optional internal calibration
-step controlled by the ``calibrator`` parameter:
-
-.. code-block:: python
-
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import GradientBoostingClassifier
-    from empulse.models import CSThresholdClassifier
-
-    # sigmoid calibration (default) — fast, suitable for Platt scaling
-    model_sigmoid = CSThresholdClassifier(
-        GradientBoostingClassifier(),
-        calibrator='sigmoid',
-        fp_cost=5,
-        fn_cost=1,
-    )
-
-    # isotonic calibration — more flexible, needs larger datasets
-    model_isotonic = CSThresholdClassifier(
-        GradientBoostingClassifier(),
-        calibrator='isotonic',
-        fp_cost=5,
-        fn_cost=1,
-    )
-
-    # No calibration — use only when probabilities are already well-calibrated
-    model_none = CSThresholdClassifier(
-        LogisticRegression(),
-        calibrator=None,
-        fp_cost=5,
-        fn_cost=1,
-    )
+An analytic threshold is a statement about probabilities, so it is only meaningful if the model's
+probabilities are. ``CSThresholdClassifier`` therefore calibrates by default, controlled by the
+``calibrator`` parameter — ``'sigmoid'``, ``'isotonic'``, ``None``, or an estimator of your own.
+:ref:`calibration` covers the choice, and how much it moves the numbers.
 
 Override the Threshold at Predict Time
 ----------------------------------------
@@ -227,75 +223,24 @@ useful when costs vary by deployment context (e.g. different campaigns):
 sklearn Integration
 -------------------
 
-``CSThresholdClassifier`` is a fully sklearn-compatible meta-estimator: it implements
-``predict_proba``, ``predict_log_proba``, and ``decision_function`` by delegating to the
-wrapped estimator, and it works inside :class:`~sklearn:sklearn.pipeline.Pipeline` and
-:class:`~sklearn:sklearn.model_selection.GridSearchCV`.
-
-Pipeline with cross-validation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import CSThresholdClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    tp_cost = np.random.default_rng(0).uniform(100, 500, size=len(y))
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        (
-            'model',
-            CSThresholdClassifier(LogisticRegression()).set_fit_request(tp_cost=True),
-        ),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, params={'tp_cost': tp_cost})
-    print(scores.mean())
-
-Hyperparameter search
-~~~~~~~~~~~~~~~~~~~~~
+``CSThresholdClassifier`` delegates ``predict_proba``, ``predict_log_proba`` and
+``decision_function`` to the wrapped estimator, so it drops into
+:class:`~sklearn.pipeline.Pipeline`, :func:`~sklearn.model_selection.cross_val_score` and
+:class:`~sklearn.model_selection.GridSearchCV` unchanged. Hyperparameters of the wrapped estimator
+are addressed through ``estimator__``, and per-row costs travel through metadata routing — see
+:ref:`instance_based_cv`.
 
 .. code-block:: python
 
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
-    from empulse.metrics import expected_cost_loss
-    from empulse.models import CSThresholdClassifier
 
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    fp_cost = np.random.default_rng(0).uniform(1, 10, size=len(y))
-
-    scorer = make_scorer(
-        expected_cost_loss,
-        response_method='predict_proba',
-        greater_is_better=False,
-        normalize=True,
-        fn_cost=1.0,
-    ).set_score_request(fp_cost=True)
-
-    grid = GridSearchCV(
-        CSThresholdClassifier(LogisticRegression()).set_fit_request(fp_cost=True),
-        param_grid={'estimator__C': np.logspace(-3, 2, 6)},
-        scoring=scorer,
+    search = GridSearchCV(
+        CSThresholdClassifier(LogisticRegression(max_iter=500), fp_cost=1, fn_cost=10),
+        {'estimator__C': [0.1, 1.0]},
+        cv=3,
     )
-    grid.fit(X, y, fp_cost=fp_cost)
-    print(f"Best C: {grid.best_params_['estimator__C']:.4f}")
+    search.fit(X_train, y_train)
+    print(search.best_params_['estimator__C'])
 
 
 .. _csrate_classifier:
@@ -564,7 +509,6 @@ the cost array on the scorer, then pass it to ``fit``:
             expected_cost_loss,
             response_method='predict_proba',
             greater_is_better=False,
-            normalize=True,
             fn_cost=1.0,
         )
         .set_score_request(fp_cost=True)   # tell the scorer to expect fp_cost

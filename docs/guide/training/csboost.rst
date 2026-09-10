@@ -53,32 +53,60 @@ Quick Start
 Choosing a Backend
 ==================
 
-Pass any supported estimator to the ``estimator`` argument:
+Pass any supported estimator to the ``estimator`` argument. All three are installed by
+``pip install empulse[optional]``; the cost-sensitive objective is identical, so the choice is the
+usual one between the libraries themselves.
 
-.. code-block:: python
+.. tab-set::
 
-    from xgboost import XGBClassifier
-    from lightgbm import LGBMClassifier
-    from catboost import CatBoostClassifier
-    from empulse.models import CSBoostClassifier
+    .. tab-item:: XGBoost
+        :sync: xgboost
 
-    # XGBoost (explicit)
-    model_xgb = CSBoostClassifier(
-        XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05),
-        fp_cost=5, fn_cost=1,
-    )
+        The default. Used when ``estimator`` is left as ``None``.
 
-    # LightGBM
-    model_lgbm = CSBoostClassifier(
-        LGBMClassifier(n_estimators=200, num_leaves=31),
-        fp_cost=5, fn_cost=1,
-    )
+        .. code-block:: python
 
-    # CatBoost
-    model_cat = CSBoostClassifier(
-        CatBoostClassifier(iterations=200, depth=4, verbose=0),
-        fp_cost=5, fn_cost=1,
-    )
+            from xgboost import XGBClassifier
+            from empulse.models import CSBoostClassifier
+
+            model = CSBoostClassifier(
+                XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05),
+                fp_cost=5,
+                fn_cost=1,
+            )
+
+    .. tab-item:: LightGBM
+        :sync: lightgbm
+
+        Usually the fastest to fit on wide data.
+
+        .. code-block:: python
+
+            from lightgbm import LGBMClassifier
+            from empulse.models import CSBoostClassifier
+
+            model = CSBoostClassifier(
+                LGBMClassifier(n_estimators=200, num_leaves=31, verbose=-1),
+                fp_cost=5,
+                fn_cost=1,
+            )
+
+    .. tab-item:: CatBoost
+        :sync: catboost
+
+        Handles categorical features natively, but does **not** accept ``sample_weight`` — it uses
+        that argument internally to carry sample indices through to the cost-sensitive objective.
+
+        .. code-block:: python
+
+            from catboost import CatBoostClassifier
+            from empulse.models import CSBoostClassifier
+
+            model = CSBoostClassifier(
+                CatBoostClassifier(iterations=200, depth=4, verbose=0),
+                fp_cost=5,
+                fn_cost=1,
+            )
 
 .. note::
     When using :class:`~sklearn:sklearn.model_selection.GridSearchCV` to tune
@@ -100,61 +128,43 @@ Pass any supported estimator to the ``estimator`` argument:
     )
 
 
-Cost Matrix
-===========
+Specifying costs
+================
 
-Constant costs
---------------
+``CSBoostClassifier`` accepts costs the same two ways as every other cost-sensitive model in
+Empulse: as plain ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, scalar or per-sample, or
+as a :class:`~empulse.metrics.Metric` passed as ``loss``. The rules — where each may be set, how
+constructor and ``fit`` values interact, and how the two forms may be mixed — are in
+:ref:`specifying_costs`.
 
-Pass scalars at construction to use the same cost for every sample:
-
-.. code-block:: python
-
-    from empulse.models import CSBoostClassifier
-
-    model = CSBoostClassifier(
-        tp_cost=0,    # no benefit for correct positives
-        fp_cost=5,    # cost of contacting a non-churner
-        tn_cost=0,
-        fn_cost=1,    # cost of missing a churner
-    )
-
-Instance-dependent costs
-------------------------
-
-Pass per-sample arrays to ``fit`` to give each observation its own cost profile
-(e.g. individual Customer Lifetime Values):
+One rule is specific to this model: arguments for the underlying booster go in a dedicated
+``fit_params`` dict, since anything else would be ambiguous with a cost or metric parameter.
 
 .. code-block:: python
 
-    import numpy as np
     from sklearn.datasets import make_classification
     from empulse.models import CSBoostClassifier
 
     X, y = make_classification(n_samples=500, random_state=0)
-    clv = np.random.default_rng(0).uniform(100, 1000, size=len(y))
 
-    model = CSBoostClassifier(fn_cost=1)
-    model.fit(X, y, tp_cost=clv)   # instance-dependent TP benefit
-
-Costs can be mixed: pass scalar class-level costs at construction and override
-selected terms with arrays at ``fit`` time.  Costs provided to ``fit`` always
-take precedence.
-
+    model = CSBoostClassifier(fp_cost=5, fn_cost=1)
+    model.fit(X, y, fit_params={'verbose': False})
 
 Custom Loss Function
 ====================
 
-The ``loss`` parameter accepts a :class:`~empulse.metrics.Metric` instance so you can
-define your own business objective using the symbolic cost matrix API.  Both
-:class:`~empulse.metrics.Cost` (expected cost minimisation) and
-:class:`~empulse.metrics.MaxProfit` (profit maximisation) strategies are supported.
+The ``loss`` parameter accepts any :class:`~empulse.metrics.Metric`, so the objective can be
+written from business parameters rather than four flat numbers.
+:class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.LogCost` and
+:class:`~empulse.metrics.Savings` are fully supported;
+:class:`~empulse.metrics.MaxProfit` works but is experimental here, and the two ranking-based
+strategies are not available on a gradient-boosted model. :ref:`metric_class_in_model` has the
+matrix.
 
 .. code-block:: python
 
     import sympy
-    from sklearn.datasets import make_classification
-    from empulse.metrics import Metric, MaxProfit, CostMatrix
+    from empulse.metrics import CostMatrix, Metric, Cost
     from empulse.models import CSBoostClassifier
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
@@ -166,109 +176,52 @@ define your own business objective using the symbolic cost matrix API.  Both
         .add_fp_cost(d + f)
         .alias({'incentive_cost': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
     )
-    profit_metric = Metric(cost_matrix, MaxProfit())
+    expected_cost = Metric(cost_matrix, Cost())
 
-    X, y = make_classification(n_samples=1000, random_state=0)
     clvs = 200 + 100 * abs(y - 0.5)   # toy instance-dependent CLV
 
-    model = CSBoostClassifier(loss=profit_metric)
+    model = CSBoostClassifier(loss=expected_cost)
     model.fit(X, y, clv=clvs, incentive_cost=10, contact_cost=1, accept_rate=0.3)
 
-.. note::
-    ``MaxProfit`` re-evaluates the gradient and hessian from the current round's
-    predicted scores at every boosting iteration, enabling dynamic threshold
-    optimisation during training.  ``Cost`` and ``Savings`` are faster because
-    they pre-compute a constant gradient vector before training starts.
-
-Read the :ref:`User Guide <user_defined_value_metric>` for how to build custom
-:class:`~empulse.metrics.Metric` definitions, and :ref:`metric_class_in_model`
-for the full strategy compatibility matrix.
+See :ref:`user_defined_value_metric` for worked cost matrices to use here.
 
 
 sklearn Integration
 ===================
 
-``CSBoostClassifier`` is fully sklearn-compatible and works inside
+``CSBoostClassifier`` is fully sklearn-compatible and drops into
 :class:`~sklearn:sklearn.pipeline.Pipeline`,
-:class:`~sklearn:sklearn.model_selection.cross_val_score`, and
-:class:`~sklearn:sklearn.model_selection.GridSearchCV`.
-When instance-dependent costs must flow through cross-validation you need to
-enable :ref:`metadata routing <sklearn:metadata_routing>`.
+:func:`~sklearn:sklearn.model_selection.cross_val_score` and
+:class:`~sklearn:sklearn.model_selection.GridSearchCV` unchanged. Per-sample costs reach each fold
+through metadata routing, covered in :ref:`instance_based_cv`.
 
-Pipeline with cross-validation
--------------------------------
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import CSBoostClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    fn_cost = np.random.default_rng(0).uniform(1, 5, size=len(y))
-    fp_cost = 5.0
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('model', CSBoostClassifier().set_fit_request(fn_cost=True, fp_cost=True)),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
-    print(scores.mean())
-
-Hyperparameter search
----------------------
+One caveat is specific to this model. Searching over the booster's own hyperparameters means
+addressing them as ``model__estimator__*``, and :class:`~sklearn.model_selection.GridSearchCV`
+cannot set attributes on the default ``estimator=None``. Pass an explicit booster instance:
 
 .. code-block:: python
 
     import numpy as np
-    from sklearn import set_config
     from sklearn.datasets import make_classification
-    from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
     from xgboost import XGBClassifier
-    from empulse.metrics import expected_cost_loss
     from empulse.models import CSBoostClassifier
 
-    set_config(enable_metadata_routing=True)
-
     X, y = make_classification(n_samples=500, random_state=0)
-    fn_cost = np.random.default_rng(0).uniform(1, 5, size=len(y))
-    fp_cost = 5.0
 
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        (
-            'model',
-            CSBoostClassifier(XGBClassifier(n_jobs=2)).set_fit_request(fn_cost=True, fp_cost=True),
-        ),
+        ('model', CSBoostClassifier(XGBClassifier(n_jobs=2), fp_cost=5, fn_cost=1)),
     ])
-
-    scorer = (
-        make_scorer(
-            expected_cost_loss,
-            response_method='predict_proba',
-            greater_is_better=False,
-            normalize=True,
-        )
-        .set_score_request(fn_cost=True, fp_cost=True)
-    )
 
     grid_search = GridSearchCV(
         pipeline,
-        param_grid={'model__estimator__learning_rate': np.logspace(-3, 0, 5)},
-        scoring=scorer,
+        param_grid={'model__estimator__learning_rate': np.logspace(-3, 0, 3)},
     )
-    grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-    print(f"Best learning rate: {grid_search.best_params_['model__estimator__learning_rate']:.4f}")
+    grid_search.fit(X, y)
+    print(grid_search.best_params_['model__estimator__learning_rate'])
 
 
 .. _b2boost:
@@ -347,42 +300,17 @@ When all customers have the same lifetime value, pass a scalar:
     model = B2BoostClassifier(clv=300, accept_rate=0.25, incentive_fraction=0.1, contact_cost=5)
     model.fit(X, y)
 
-Pipeline with cross-validation
--------------------------------
+Scoring a B2Boost model
+-----------------------
+
+:func:`~empulse.metrics.empb_score` is the natural companion metric: it is built from the same B2B
+churn cost matrix, so tuning against it optimises the quantity the model was trained on. Pass the
+shared business parameters to both.
 
 .. code-block:: python
 
     import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import B2BoostClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    clv = np.random.default_rng(0).uniform(100, 500, size=len(y))
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        (
-            'model',
-            B2BoostClassifier(contact_cost=10).set_fit_request(clv=True),
-        ),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, params={'clv': clv})
-    print(scores.mean())
-
-Hyperparameter search
----------------------
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
+    from sklearn import config_context
     from sklearn.datasets import make_classification
     from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
@@ -392,40 +320,38 @@ Hyperparameter search
     from empulse.metrics import empb_score
     from empulse.models import B2BoostClassifier
 
-    set_config(enable_metadata_routing=True)
-
     X, y = make_classification(n_samples=500, random_state=0)
     clv = np.random.default_rng(0).uniform(100, 500, size=len(y))
     contact_cost = 10.0
 
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        (
-            'model',
-            B2BoostClassifier(
-                XGBClassifier(),
-                contact_cost=contact_cost,
-            ).set_fit_request(clv=True),
-        ),
-    ])
-
-    scorer = (
-        make_scorer(
+    with config_context(enable_metadata_routing=True):
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            (
+                'model',
+                B2BoostClassifier(
+                    XGBClassifier(), contact_cost=contact_cost
+                ).set_fit_request(clv=True),
+            ),
+        ])
+        scorer = make_scorer(
             empb_score,
             response_method='predict_proba',
             greater_is_better=True,
             contact_cost=contact_cost,
-        )
-        .set_score_request(clv=True)
-    )
+        ).set_score_request(clv=True)
 
-    grid_search = GridSearchCV(
-        pipeline,
-        param_grid={'model__estimator__learning_rate': np.logspace(-3, 0, 5)},
-        scoring=scorer,
-    )
-    grid_search.fit(X, y, clv=clv)
-    print(f"Best learning rate: {grid_search.best_params_['model__estimator__learning_rate']:.4f}")
+        grid_search = GridSearchCV(
+            pipeline,
+            param_grid={'model__estimator__learning_rate': np.logspace(-3, 0, 3)},
+            scoring=scorer,
+        )
+        grid_search.fit(X, y, clv=clv)
+
+    print(grid_search.best_params_['model__estimator__learning_rate'])
+
+See :ref:`instance_based_cv` for the routing mechanics, and :ref:`prebuilt_churn_metrics` for the
+other churn metrics that pair with this model.
 
 
 References

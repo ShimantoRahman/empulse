@@ -4,21 +4,42 @@
 Datasets
 ========
 
+Everything in the previous stages needs a cost matrix. Writing one for your own problem is the
+subject of :ref:`cost_matrix`; these five datasets come with theirs already written.
+
 Empulse bundles five real-world cost-sensitive datasets for benchmarking and for the examples
 throughout this documentation. Each one ships not just features and a target, but a
 :class:`~empulse.metrics.CostMatrix` encoding the business problem it came from — which is what
-makes them useful for value-driven work, where a plain feature matrix is not enough.
+makes them useful for value-driven work, where a plain feature matrix is not enough. They are also
+the fastest way to see a realistic cost matrix that somebody else had to derive.
 
 Every loader returns a :class:`~empulse.datasets.Dataset` and takes a required, keyword-only
-``backend`` argument naming the dataframe library to use:
+``backend`` argument. Pass the dataframe library's *module* itself, not a string — neither pandas
+nor polars is a hard dependency of Empulse, so the loader takes the one you already have.
 
-.. code-block:: python
+.. tab-set::
 
-    import pandas as pd
-    from empulse.datasets import fetch_iranian_churn
+    .. tab-item:: pandas
+        :sync: pandas
 
-    dataset = fetch_iranian_churn(backend=pd)
-    X, y = dataset.data, dataset.target
+        .. code-block:: python
+
+            import pandas as pd
+            from empulse.datasets import fetch_iranian_churn
+
+            dataset = fetch_iranian_churn(backend=pd)
+            X, y = dataset.data, dataset.target
+
+    .. tab-item:: polars
+        :sync: polars
+
+        .. code-block:: python
+
+            import polars as pl
+            from empulse.datasets import fetch_iranian_churn
+
+            polars_dataset = fetch_iranian_churn(backend=pl)
+            X_polars, y_polars = polars_dataset.data, polars_dataset.target
 
 Choosing a dataset
 ==================
@@ -42,7 +63,7 @@ Choosing a dataset
     * - :ref:`Churn TV subscriptions <churn_tv_subscriptions>`
       - 9,379
       - 46
-      - 4.8%
+      - 4.79%
       - Bundled
       - Precomputed, all four terms
     * - :ref:`Bank telemarketing upsell <upsell_bank_telemarketing>`
@@ -90,6 +111,9 @@ of these datasets put to work.
 
 .. toctree::
     :maxdepth: 2
-    :glob:
 
-    datasets/*
+    datasets/iranian_churn.rst
+    datasets/churn_tv_subscriptions.rst
+    datasets/bank_telemarketing.rst
+    datasets/credit_scoring_pakdd.rst
+    datasets/give_me_some_credit.rst

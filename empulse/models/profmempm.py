@@ -21,7 +21,7 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     the unit-norm constraint is dropped and an L1 or L2 penalty (controlled by ``penalty``)
     on the weight vector is added to the objective instead, controlling the scale of ``w``.
 
-    Read more in the :ref:`User Guide <user_defined_value_metric>`.
+    Read more in the :ref:`User Guide <profmempm>`.
 
     Parameters
     ----------
@@ -137,9 +137,9 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
 
     References
     ----------
-    .. [1] Bravo, C., & Vanderschueren, T. (2023, September). Profit maximizing
-        distribution-free classifiers: a study on the minimax probability machine.
-        In Joint European Conference on Machine Learning and Knowledge Discovery in Databases.
+    .. [1] Maldonado, S., López, J., & Vairetti, C. (2020).
+       Profit-based churn prediction based on minimax probability machines.
+       European Journal of Operational Research, 284(1), 273-284.
     """
 
     def _worst_case_accuracies(self, k_1: float, k_0: float) -> tuple[float, float]:

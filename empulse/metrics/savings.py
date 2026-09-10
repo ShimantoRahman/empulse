@@ -315,7 +315,8 @@ def savings_score(
 
     The cost savings of a classifiers is the cost the classifier saved over a baseline classification model.
     By default, a naive algorithm is used (predicting all ones or zeros whichever is better).
-    With 1 being the perfect model, 0 being as good as the baseline model,
+    With 1 being the perfect model (assuming 0 cost is the lowest you can go,
+    for negative costs the savings metric can go higher than 1), 0 being as good as the baseline model,
     and values smaller than 0 being worse than the baseline model.
 
     Modified from `costcla.metrics.savings_score`.
@@ -516,7 +517,9 @@ strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cos
   whichever is better.
 - array-like: target probabilities of a baseline model.
 
-With 1 being the perfect model, 0 being as good as the baseline model, and values smaller than
+With 1 being the perfect model (assuming 0 cost is the lowest you can go,
+for negative costs the savings metric can go higher than 1), 
+0 being as good as the baseline model, and values smaller than
 0 being worse than the baseline model.
 
 .. seealso::

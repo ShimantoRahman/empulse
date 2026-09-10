@@ -66,6 +66,35 @@ If you wish to change this behavior, you can set the ``percentile_threshold`` pa
     X_resampled, y_resampled = sampler.fit_resample(X, y)
 
 
+Sampling from a cost matrix
+===========================
+
+The examples above pass the four cost terms directly. The sampler also accepts a
+:class:`~empulse.metrics.Metric` as ``loss``, in which case its cost matrix decides the sampling
+weights and its symbols become ``fit_resample`` parameters — the same two-track API the models use,
+described in :ref:`specifying_costs`.
+
+.. code-block:: python
+
+    import numpy as np
+    from empulse.metrics import Cost, CostMatrix, Metric
+    from empulse.samplers import CostSensitiveSampler
+
+    matrix = (
+        CostMatrix()
+        .add_fn_cost('clv')
+        .add_fp_cost('contact_cost')
+        .set_default(contact_cost=1)
+    )
+
+    clv = np.random.default_rng(0).uniform(50, 500, size=len(y))
+    sampler = CostSensitiveSampler(loss=Metric(matrix, Cost()), random_state=42)
+    X_resampled, y_resampled = sampler.fit_resample(X, y, clv=clv)
+
+    print(X_resampled.shape)
+
+When a ``loss`` is set, the plain ``fp_cost`` and ``fn_cost`` constructor arguments are ignored.
+
 Using the Cost-Sensitive Sampler in a Pipeline
 ==============================================
 
@@ -83,6 +112,9 @@ This sampler can easily be used inside an imbalanced-learn :class:`imblearn:imbl
         ('classifier', LogisticRegression())
     ])
     pipeline.fit(X, y)
+
+Per-sample costs inside a cross-validation loop have to be sliced per fold, which the sampler
+supports through ``set_fit_resample_request`` — see :ref:`instance_based_cv`.
 
 References
 ==========

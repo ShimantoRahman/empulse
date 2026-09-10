@@ -11,10 +11,8 @@ this trade-off, following the profit-based framework of Verbraken et al. [1]_.
 
 .. note::
     These names are **prebuilt** :class:`~empulse.metrics.Metric` and
-    :class:`~empulse.metrics.MixtureMetric` instances, not functions. Earlier versions of Empulse
-    exposed hand-written ``empcs`` and ``mpcs`` functions returning a ``(score, threshold)``
-    tuple; those have been removed. Call the metric for the score, and use
-    :meth:`~empulse.metrics.Metric.optimal_rate` for the fraction of applicants to reject.
+    :class:`~empulse.metrics.MixtureMetric` instances, not functions. Call one to get the score, and
+    use :meth:`~empulse.metrics.Metric.optimal_rate` for the fraction of applicants to reject.
 
 The Cost-Benefit Matrix
 =======================

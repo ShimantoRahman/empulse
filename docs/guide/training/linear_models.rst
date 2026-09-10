@@ -54,28 +54,14 @@ Quick Start
     y_proba = cslogit.predict_proba(X)[:, 1]
 
 
-Cost Matrix
-===========
+Specifying costs
+================
 
-Both models accept four cost terms: true positive (``tp_cost``), true negative
-(``tn_cost``), false positive (``fp_cost``), and false negative (``fn_cost``).
-
-Constant costs
---------------
-
-Pass a scalar to apply the same cost to every sample:
-
-.. code-block:: python
-
-    from empulse.models import CSLogitClassifier
-
-    model = CSLogitClassifier(fp_cost=5, fn_cost=1, tp_cost=0, tn_cost=0)
-
-Instance-dependent costs
-------------------------
-
-Pass a 1-D array of length ``n_samples`` to the ``fit`` method to use a
-different cost for every individual observation:
+Both models accept costs the same two ways as every other cost-sensitive model in Empulse: as plain
+``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, scalar or per-sample, or as a
+:class:`~empulse.metrics.Metric` passed as ``loss``. :ref:`specifying_costs` covers where each may
+be set and how the two interact; :ref:`instance_based_cv` covers getting per-sample arrays through
+cross-validation.
 
 .. code-block:: python
 
@@ -84,18 +70,11 @@ different cost for every individual observation:
     from empulse.models import CSLogitClassifier
 
     X, y = make_classification(n_samples=200, random_state=0)
-    clv = np.random.default_rng(0).uniform(100, 1000, size=len(y))  # customer lifetime value
+    clv = np.random.default_rng(0).uniform(100, 1000, size=len(y))
     contact_cost = 10
 
     model = CSLogitClassifier(fn_cost=1)
     model.fit(X, y, tp_cost=clv - contact_cost, fp_cost=contact_cost)
-
-.. note::
-
-    Costs passed to ``fit`` take priority over costs passed to ``__init__``.
-    It is best practice to always pass instance-dependent costs through ``fit``
-    rather than through the constructor, since scikit-learn cloners do not
-    carry sample arrays.
 
 
 Regularization
@@ -400,77 +379,27 @@ converges in far fewer generations than a plain RGA:
 sklearn Integration
 ===================
 
-Both models are fully compatible with scikit-learn pipelines, cross-validation,
-and hyperparameter search.  When using instance-dependent costs you need to
-enable :ref:`metadata routing <sklearn:metadata_routing>`.
-
-Pipeline with cross-validation
--------------------------------
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import CSLogitClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=200, random_state=0)
-    fp_cost = np.random.default_rng(0).uniform(1, 10, size=len(y))
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('model', CSLogitClassifier(C=0.1).set_fit_request(fp_cost=True)),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, cv=3, params={'fp_cost': fp_cost})
-
-Hyperparameter search
----------------------
+Both models are ordinary scikit-learn estimators and drop into
+:class:`~sklearn:sklearn.pipeline.Pipeline`,
+:func:`~sklearn:sklearn.model_selection.cross_val_score` and
+:class:`~sklearn:sklearn.model_selection.GridSearchCV` unchanged. Per-sample costs reach each fold
+through metadata routing — see :ref:`instance_based_cv`.
 
 .. code-block:: python
 
     import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
-    from empulse.metrics import expected_cost_loss
-    from empulse.models import CSLogitClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=200, random_state=0)
-    fp_cost = np.random.default_rng(0).uniform(1, 10, size=len(y))
-    fn_cost = 1.0
 
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        ('model', CSLogitClassifier().set_fit_request(fp_cost=True)),
+        ('model', CSLogitClassifier(fp_cost=5, fn_cost=1)),
     ])
 
-    scorer = make_scorer(
-        expected_cost_loss,
-        response_method='predict_proba',
-        greater_is_better=False,
-        normalize=True,
-        fn_cost=fn_cost,
-    ).set_score_request(fp_cost=True)
-
-    grid_search = GridSearchCV(
-        pipeline,
-        param_grid={'model__C': np.logspace(-1, 2, 2)},
-        scoring=scorer,
-        cv=3,
-    )
-    grid_search.fit(X, y, fp_cost=fp_cost)
-    print(f"Best C: {grid_search.best_params_['model__C']:.4f}")
+    grid_search = GridSearchCV(pipeline, {'model__C': np.logspace(-2, 1, 4)}, cv=3)
+    grid_search.fit(X, y)
+    print(grid_search.best_params_['model__C'])
 
 
 Inspecting the Optimization Result

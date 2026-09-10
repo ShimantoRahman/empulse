@@ -71,6 +71,10 @@ choice depends on what you have and what you want.
       - The threshold is not fixed yet and you want the profit at the best possible cut-off —
         optionally averaging over uncertain business parameters.
 
+There are three more — :class:`~empulse.metrics.LogCost`,
+:class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC` — covered in
+:ref:`choosing_metric`.
+
 .. warning::
     :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings` assume ``y_score`` holds
     calibrated probabilities; :class:`~empulse.metrics.MaxProfit` only needs a ranking. Passing the
@@ -100,6 +104,10 @@ Choosing a model
     * - :ref:`ProfLogitClassifier <proflogit>` / :ref:`ProfTreeClassifier <proftree>`
       - Your objective is non-smooth (typically :class:`~empulse.metrics.MaxProfit`) and needs a
         gradient-free optimizer.
+    * - :ref:`ProfMPMClassifier / ProfMEMPMClassifier <profmpm>`
+      - You need a worst-case guarantee rather than an average, with no distributional assumption.
+    * - :ref:`ProfSRClassifier <profsr>`
+      - You want an interpretable formula rather than coefficients.
     * - :ref:`B2BoostClassifier <b2boost>`
       - You have a B2B churn problem and want the cost matrix pre-wired.
     * - :ref:`RobustCSClassifier <robustcs>`
@@ -110,33 +118,41 @@ Two ways to specify costs
 
 Every cost-sensitive model accepts costs in either of two forms.
 
-**Plain costs** — quickest, when your costs are just four numbers or four arrays:
+.. tab-set::
 
-.. code-block:: python
+    .. tab-item:: Plain costs
+        :sync: plain
 
-    from empulse.models import CSBoostClassifier
-    from sklearn.datasets import make_classification
+        Quickest, when your costs are just four numbers or four arrays.
 
-    X, y = make_classification(n_samples=200, random_state=42)
+        .. code-block:: python
 
-    model = CSBoostClassifier()
-    model.fit(X, y, fp_cost=5, fn_cost=100)
+            from empulse.models import CSBoostClassifier
+            from sklearn.datasets import make_classification
 
-**A Metric** — when costs are built from business parameters, or you want the same definition used
-for scoring and training:
+            X, y = make_classification(n_samples=200, random_state=42)
 
-.. code-block:: python
+            model = CSBoostClassifier()
+            model.fit(X, y, fp_cost=5, fn_cost=100)
 
-    from empulse.metrics import Cost, CostMatrix, Metric
+    .. tab-item:: A Metric
+        :sync: metric
 
-    cost_matrix = (
-        CostMatrix()
-        .add_fp_cost('discount')
-        .add_fn_cost('lost_value')
-        .set_default(discount=5, lost_value=100)
-    )
-    model = CSBoostClassifier(loss=Metric(cost_matrix, Cost()))
-    model.fit(X, y)
+        When costs are built from business parameters, or you want the same definition used for
+        scoring and training.
+
+        .. code-block:: python
+
+            from empulse.metrics import Cost, CostMatrix, Metric
+
+            cost_matrix = (
+                CostMatrix()
+                .add_fp_cost('discount')
+                .add_fn_cost('lost_value')
+                .set_default(discount=5, lost_value=100)
+            )
+            model = CSBoostClassifier(loss=Metric(cost_matrix, Cost()))
+            model.fit(X, y)
 
 Prefer the second when a parameter varies per instance, when you want to tune a business parameter
 by cross-validation, or when the cost formula is more than a single number per outcome.
@@ -145,5 +161,6 @@ Where next
 ==========
 
 - :doc:`../tutorial` — a complete worked example end to end.
-- :ref:`choosing_metric` — the concepts behind cost matrices and strategies.
+- :ref:`cost_matrix` — the cost matrix formalism and the builder API.
+- :ref:`choosing_metric` — the six strategies and what each one measures.
 - :doc:`../guide` — reference-depth guides for every component.

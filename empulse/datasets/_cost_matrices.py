@@ -30,7 +30,7 @@ def churn_retention_cost_matrix(
     clv: FloatNDArray,
     *,
     incentive_fraction: float,
-    contact_fraction: float,
+    contact_cost: float,
     accept_rate: float,
 ) -> tuple[CostMatrix, dict[str, FloatNDArray]]:
     """Churn retention cost matrix (Bahnsen et al. 2015).
@@ -41,8 +41,8 @@ def churn_retention_cost_matrix(
         Per-customer customer lifetime value.
     incentive_fraction : float
         Fraction of CLV offered as retention incentive (:math:`d`).
-    contact_fraction : float
-        Fraction of CLV spent on contacting the customer (:math:`f`).
+    contact_cost : float
+        The cost of contacting the customer (:math:`f`).
     accept_rate : float
         Probability that a churner accepts the retention offer (:math:`\\gamma`).
 
@@ -55,14 +55,13 @@ def churn_retention_cost_matrix(
     clv_sym, d_sym, f_sym, gamma_sym = sp.symbols('clv d f gamma')
     cost_matrix = (
         CostMatrix()
-        .add_tp_benefit(gamma_sym * (clv_sym - d_sym * clv_sym - f_sym * clv_sym))
-        .add_tp_benefit(-(1 - gamma_sym) * f_sym * clv_sym)
-        .add_fp_cost(d_sym * clv_sym + f_sym * clv_sym)
-        .add_fn_cost(clv_sym)
-        .alias({'incentive_fraction': 'd', 'contact_fraction': 'f', 'accept_rate': 'gamma'})
+        .add_tp_benefit(gamma_sym * (clv_sym - d_sym * clv_sym - f_sym))
+        .add_tp_benefit(-(1 - gamma_sym) * f_sym)
+        .add_fp_cost(d_sym * clv_sym + f_sym)
+        .alias({'incentive_fraction': 'd', 'contact_cost': 'f', 'accept_rate': 'gamma'})
         .set_default(
             incentive_fraction=incentive_fraction,
-            contact_fraction=contact_fraction,
+            contact_cost=contact_cost,
             accept_rate=accept_rate,
         )
     )

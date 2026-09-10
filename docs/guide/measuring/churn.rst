@@ -10,12 +10,10 @@ situation: you predict which customers are about to leave, contact the ones you 
 churn, and offer them a retention incentive.
 
 .. note::
-    These names are **prebuilt** :class:`~empulse.metrics.Metric` instances, not functions.
-    Earlier versions of Empulse exposed hand-written ``empc``, ``mpc`` and ``empb`` functions
-    which returned a ``(score, threshold)`` tuple; those have been removed. The score is now
-    obtained by calling the metric, and the threshold by its
+    These names are **prebuilt** :class:`~empulse.metrics.Metric` instances, not functions. Call one
+    to get the score, and ask it for the operating point with
     :meth:`~empulse.metrics.Metric.optimal_rate` or
-    :meth:`~empulse.metrics.Metric.optimal_threshold` method.
+    :meth:`~empulse.metrics.Metric.optimal_threshold`.
 
 The Cost-Benefit Matrix
 =======================

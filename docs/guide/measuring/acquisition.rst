@@ -9,10 +9,9 @@ money contacting *leads* in the hope of converting them. Empulse ships ready-mad
 use case, following the profit-based framework of Verbraken et al. [1]_.
 
 .. note::
-    These names are **prebuilt** :class:`~empulse.metrics.Metric` instances, not functions.
-    Earlier versions of Empulse exposed hand-written ``empa`` and ``mpa`` functions returning a
-    ``(score, threshold)`` tuple; those have been removed. Call the metric for the score, and use
-    :meth:`~empulse.metrics.Metric.optimal_rate` for the fraction of leads to target.
+    These names are **prebuilt** :class:`~empulse.metrics.Metric` instances, not functions. Call one
+    to get the score, and use :meth:`~empulse.metrics.Metric.optimal_rate` for the fraction of leads
+    to target.
 
 The Cost-Benefit Matrix
 =======================
@@ -96,10 +95,9 @@ Defaults: ``alpha=12``, ``beta=1/0.0015`` (a mean contribution of
     expected_profit = empa_score(y_true, y_score)
 
 .. warning::
-    ``beta`` is the **scale** of the Gamma distribution (mean = ``alpha * beta``), not the
-    **rate** (mean = ``alpha / beta``) used by the removed ``empa`` function. The default was
-    adjusted so that calling with no arguments reproduces the previous result, but an explicit
-    non-default ``beta=`` means something different than it used to.
+    ``beta`` is the **scale** of the Gamma distribution, not the rate, so the mean contribution is
+    ``alpha * beta``. Passing a rate where a scale is expected inverts the distribution's spread
+    without raising anything.
 
 How many leads should you target?
 ---------------------------------

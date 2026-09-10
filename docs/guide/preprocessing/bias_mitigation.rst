@@ -46,54 +46,68 @@ The parameter :math:`N` is carefully chosen to create a discrimination-free clas
 A second discrimination-free prediction model is then trained on the massaged dataset.
 Note that only the training data is altered to retain objective model evaluation on holdout data.
 
-To use the relabeling technique, you can use the :class:`~empulse.samplers.BiasRelabler` sampler.
-You should pass the model which is used to rank the high-value non-events and low-value events.
+Relabeling comes in two forms: a sampler that hands back the altered training set, and a classifier
+that relabels and fits in one step. Both need a model to rank the candidates with.
 
 .. code-block:: python
 
     import numpy as np
     from sklearn.datasets import make_classification
     from sklearn.linear_model import LogisticRegression
-    from empulse.samplers import BiasRelabler
 
     X, y = make_classification(random_state=42)
     high_clv = np.random.randint(0, 2, X.shape[0])
 
-    relabler = BiasRelabler(estimator=LogisticRegression())
-    X_relabeled, y_relabeled = relabler.fit_resample(X, y, sensitive_feature=high_clv)
+.. tab-set::
 
-This can easily used inside an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
-(note that the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers):
+    .. tab-item:: Sampler
+        :sync: sampler
 
-.. code-block:: python
+        :class:`~empulse.samplers.BiasRelabler` returns the relabeled data, so you can inspect what
+        changed before fitting anything.
 
-    from imblearn.pipeline import Pipeline
-    from sklearn import config_context
+        .. code-block:: python
 
-    with config_context(enable_metadata_routing=True):
-        pipeline = Pipeline([
-            ('sampler', BiasRelabler(
-                LogisticRegression()
-            ).set_fit_resample_request(sensitive_feature=True)),
-            ('model', LogisticRegression())
-        ])
+            from empulse.samplers import BiasRelabler
 
-        pipeline.fit(X, y, sensitive_feature=high_clv)
+            relabler = BiasRelabler(estimator=LogisticRegression())
+            X_relabeled, y_relabeled = relabler.fit_resample(X, y, sensitive_feature=high_clv)
 
-Alternatively, the :class:`~empulse.model.BiasRelabelingClassifier` does this in one step and
-can be used with scikit learn pipelines.
-It will use the same model to rank the high-value non-events and low-value events as to train the final model.
+        It slots into an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline` — note that
+        the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers.
 
-.. code-block:: python
+        .. code-block:: python
 
-    from empulse.models import BiasRelabelingClassifier
+            from imblearn.pipeline import Pipeline
+            from sklearn import config_context
 
-    model = BiasRelabelingClassifier(estimator=LogisticRegression())
-    model.fit(X, y, sensitive_feature=high_clv)
+            with config_context(enable_metadata_routing=True):
+                pipeline = Pipeline([
+                    ('sampler', BiasRelabler(
+                        LogisticRegression()
+                    ).set_fit_resample_request(sensitive_feature=True)),
+                    ('model', LogisticRegression())
+                ])
+
+                pipeline.fit(X, y, sensitive_feature=high_clv)
+
+    .. tab-item:: Classifier
+        :sync: classifier
+
+        :class:`~empulse.models.BiasRelabelingClassifier` does it in one step and works in an
+        ordinary scikit-learn pipeline. It uses the same model to rank candidates as to train the
+        final model.
+
+        .. code-block:: python
+
+            from empulse.models import BiasRelabelingClassifier
+
+            model = BiasRelabelingClassifier(estimator=LogisticRegression())
+            model.fit(X, y, sensitive_feature=high_clv)
 
 If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
 you can pass a function to the ``transform_feature`` parameter.
-This works for both the :class:`~empulse.samplers.BiasRelabler` and :class:`~empulse.model.BiasRelabelingClassifier`.
+This works for both the :class:`~empulse.samplers.BiasRelabler` and :class:`~empulse.models.BiasRelabelingClassifier`.
 
 For example, here we convert the clv feature to a high clv indicator
 if the clv is in the top 20% of all clv values in the training data.
@@ -138,50 +152,64 @@ These weights are then used to systematically under- or oversample each group in
 In this process, overrepresented groups are undersampled, while underrepresented groups are oversampled.
 This approach is particularly useful for algorithms where you cannot pass sample weights during training.
 
-To use the relabeling technique, you can use the :class:`~empulse.samplers.BiasResampler` sampler.
+Resampling comes in the same two forms as relabeling.
 
 .. code-block:: python
 
     import numpy as np
     from sklearn.datasets import make_classification
-    from empulse.samplers import BiasResampler
+    from sklearn.linear_model import LogisticRegression
 
     X, y = make_classification(random_state=42)
     high_clv = np.random.randint(0, 2, X.shape[0])
 
-    resampler = BiasResampler()
-    X_resampled, y_resampled = resampler.fit_resample(X, y, sensitive_feature=high_clv)
+.. tab-set::
 
-This can easily used inside an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline`
-(note that the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers):
+    .. tab-item:: Sampler
+        :sync: sampler
 
-.. code-block:: python
+        :class:`~empulse.samplers.BiasResampler` returns the resampled data. Unlike relabeling it
+        needs no ranking model, because the group weights follow from the label distribution alone.
 
-    from imblearn.pipeline import Pipeline
-    from sklearn.linear_model import LogisticRegression
+        .. code-block:: python
 
-    with config_context(enable_metadata_routing=True):
-        pipeline = Pipeline([
-            ('sampler', BiasResampler().set_fit_resample_request(sensitive_feature=True)),
-            ('model', LogisticRegression())
-        ])
+            from empulse.samplers import BiasResampler
 
-        pipeline.fit(X, y, sensitive_feature=high_clv)
+            resampler = BiasResampler()
+            X_resampled, y_resampled = resampler.fit_resample(X, y, sensitive_feature=high_clv)
 
-Alternatively, the :class:`~empulse.model.BiasResamplingClassifier` does this in one step and
-can be used with scikit learn pipelines.
-You should pass the model which is fitted with the resampled data.
+        It slots into an imbalanced-learn :class:`imblearn:imblearn.pipeline.Pipeline` — note that
+        the scikit-learn :class:`sklearn:sklearn.pipeline.Pipeline` does not support samplers.
 
-.. code-block:: python
+        .. code-block:: python
 
-    from empulse.models import BiasResamplingClassifier
+            from imblearn.pipeline import Pipeline
+            from sklearn import config_context
 
-    model = BiasResamplingClassifier(LogisticRegression())
-    model.fit(X, y, sensitive_feature=high_clv)
+            with config_context(enable_metadata_routing=True):
+                pipeline = Pipeline([
+                    ('sampler', BiasResampler().set_fit_resample_request(sensitive_feature=True)),
+                    ('model', LogisticRegression())
+                ])
+
+                pipeline.fit(X, y, sensitive_feature=high_clv)
+
+    .. tab-item:: Classifier
+        :sync: classifier
+
+        :class:`~empulse.models.BiasResamplingClassifier` does it in one step and works in an
+        ordinary scikit-learn pipeline. Pass the model that should be fitted on the resampled data.
+
+        .. code-block:: python
+
+            from empulse.models import BiasResamplingClassifier
+
+            model = BiasResamplingClassifier(LogisticRegression())
+            model.fit(X, y, sensitive_feature=high_clv)
 
 If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
 you can pass a function to the ``transform_feature`` parameter.
-This works for both the :class:`~empulse.samplers.BiasResampler` and :class:`~empulse.model.BiasResamplingClassifier`.
+This works for both the :class:`~empulse.samplers.BiasResampler` and :class:`~empulse.models.BiasResamplingClassifier`.
 
 For example, here we convert the clv feature to a high clv indicator
 if the clv is in the top 20% of all clv values in the training data.
@@ -222,7 +250,7 @@ However, instead of resampling the data, the weights are used to influence the t
 The weights are passed to the training algorithm to adjust the loss function.
 This way, the algorithm gives more weight to underrepresented groups and less weight to overrepresented groups.
 
-To use the relabeling technique, you can use the :class:`~empulse.model.BiasReweighingClassifier`.
+To use the relabeling technique, you can use the :class:`~empulse.models.BiasReweighingClassifier`.
 You should pass the model which is fitted with the computed sample weights.
 
 .. code-block:: python

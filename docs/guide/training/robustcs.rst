@@ -5,8 +5,8 @@ Robust Cost-Sensitive Classification (RobustCS)
 ===============================================
 
 Instance-dependent cost-sensitive learning relies on accurate per-sample cost estimates.
-In practice those estimates often contain noise and outliers — a single erroneous CLV or
-exaggerated contact cost can bias the whole cost surface.
+In practice those estimates often contain noise and outliers — a single erroneous or exaggerated
+CLV can bias the whole cost surface.
 :class:`~empulse.models.RobustCSClassifier` wraps **any** cost-sensitive estimator in a
 three-step framework [1]_ that detects and corrects outlier costs before training:
 
@@ -291,86 +291,29 @@ selected for outlier correction or had zero variance:
 sklearn Integration
 ===================
 
-:class:`~empulse.models.RobustCSClassifier` is a fully sklearn-compatible meta-estimator.
-Enable :ref:`metadata routing <sklearn:metadata_routing>` to route instance-dependent
-costs through pipelines and cross-validation.
+:class:`~empulse.models.RobustCSClassifier` is an ordinary scikit-learn meta-estimator and drops
+into :class:`~sklearn.pipeline.Pipeline`, :func:`~sklearn.model_selection.cross_val_score` and
+:class:`~sklearn.model_selection.GridSearchCV` unchanged. Per-sample costs reach each fold through
+metadata routing — see :ref:`instance_based_cv`. Note that outlier detection then happens
+**inside** each fold, on that fold's costs, which is what you want: fitting the outlier estimator
+on the full array would leak information across folds.
 
-Pipeline with cross-validation
--------------------------------
-
-.. code-block:: python
-
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import cross_val_score
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-    from empulse.models import CSBoostClassifier, RobustCSClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    fn_cost = np.random.default_rng(0).uniform(1, 5, size=len(y))
-    fp_cost = 5.0
-
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        (
-            'model',
-            RobustCSClassifier(CSBoostClassifier()).set_fit_request(fn_cost=True, fp_cost=True),
-        ),
-    ])
-
-    scores = cross_val_score(pipeline, X, y, params={'fn_cost': fn_cost, 'fp_cost': fp_cost})
-    print(scores.mean())
-
-Hyperparameter search
----------------------
+Hyperparameters of the wrapped estimator are addressed through ``estimator__``:
 
 .. code-block:: python
 
-    import numpy as np
-    from sklearn import set_config
-    from sklearn.datasets import make_classification
-    from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
-    from empulse.metrics import expected_cost_loss
-    from empulse.models import CSLogitClassifier, RobustCSClassifier
-
-    set_config(enable_metadata_routing=True)
-
-    X, y = make_classification(n_samples=500, random_state=0)
-    fn_cost = np.random.default_rng(0).uniform(1, 5, size=len(y))
-    fp_cost = 5.0
 
     pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        (
-            'model',
-            RobustCSClassifier(CSLogitClassifier()).set_fit_request(fn_cost=True, fp_cost=True),
-        ),
+        ('model', RobustCSClassifier(CSLogitClassifier(fp_cost=5, fn_cost=1))),
     ])
 
-    scorer = (
-        make_scorer(
-            expected_cost_loss,
-            response_method='predict_proba',
-            greater_is_better=False,
-            normalize=True,
-        )
-        .set_score_request(fn_cost=True, fp_cost=True)
-    )
-
-    grid_search = GridSearchCV(
-        pipeline,
-        param_grid={'model__estimator__C': np.logspace(-3, 2, 6)},
-        scoring=scorer,
-    )
-    grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-    print(f"Best C: {grid_search.best_params_['model__estimator__C']:.4f}")
+    grid_search = GridSearchCV(pipeline, {'model__estimator__C': [0.1, 1.0]}, cv=3)
+    grid_search.fit(X, y)
+    print(grid_search.best_params_['model__estimator__C'])
 
 
 References

@@ -89,6 +89,7 @@ extensions = [
     "sphinx_design",
     # see sphinxext folder for custom extensions
     "override_pst_pagetoc",
+    "themed_figure",
 ]
 
 numpydoc_show_class_members = False
