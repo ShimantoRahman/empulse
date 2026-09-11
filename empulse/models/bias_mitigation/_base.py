@@ -74,12 +74,13 @@ class BaseBiasMitigationClassifier(ClassifierMixin, BaseEstimator):  # type: ign
             Target values.
         sensitive_feature : 1D array-like, shape=(n_samples,), default = None
             Sensitive feature used to mitigate bias. If ``None``, the base estimator is fit as-is.
-        fit_params : dict
+        **fit_params : dict
             Additional parameters passed to the estimator's `fit` method.
 
         Returns
         -------
         self : BaseBiasMitigationClassifier
+            The fitted estimator.
         """
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
@@ -111,6 +112,7 @@ class BaseBiasMitigationClassifier(ClassifierMixin, BaseEstimator):  # type: ign
         Parameters
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+            Training data.
 
         Returns
         -------
@@ -129,6 +131,7 @@ class BaseBiasMitigationClassifier(ClassifierMixin, BaseEstimator):  # type: ign
         Parameters
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_dim)
+            Training data.
 
         Returns
         -------

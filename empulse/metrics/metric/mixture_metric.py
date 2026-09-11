@@ -16,7 +16,7 @@ class MixtureComponent(NamedTuple):
     """
     One term of a :class:`MixtureMetric`.
 
-    Attributes
+    Parameters
     ----------
     weight : float | str | Callable[[dict], float]
         The mixture weight for this component.
@@ -42,6 +42,11 @@ class MixtureComponent(NamedTuple):
     weight: Weight
     metric: BaseMetric
     parameters: dict[str, Any]
+
+
+MixtureComponent.weight.__doc__ = 'The mixture weight for this component.'
+MixtureComponent.metric.__doc__ = 'The metric to evaluate for this component.'
+MixtureComponent.parameters.__doc__ = 'Parameter overrides fixed for this component.'
 
 
 class MixtureMetric(BaseMetric):
@@ -260,7 +265,7 @@ class MixtureMetric(BaseMetric):
             The ground truth labels.
         y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores.
-        parameters : float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             Parameter values, including any weight parameters named by a component's
             :attr:`~MixtureComponent.weight`.
 
@@ -287,7 +292,7 @@ class MixtureMetric(BaseMetric):
             The ground truth labels.
         y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores.
-        parameters : float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             Parameter values, including any weight parameters named by a component's
             :attr:`~MixtureComponent.weight`.
 
@@ -326,7 +331,7 @@ class MixtureMetric(BaseMetric):
             The ground truth labels.
         y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores.
-        parameters : float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             Parameter values, including any weight parameters named by a component's
             :attr:`~MixtureComponent.weight`.
 

@@ -64,7 +64,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         Fitness function for the genetic programming algorithm to optimize.
 
         If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
@@ -99,6 +99,12 @@ class ProfSRClassifier(CostSensitiveClassifier):
     n_iter_ : int
         Number of generations evolved.
 
+    References
+    ----------
+    .. [1] Aliaga, Samuel and Vairetti, Carla and Maldonado, Sebastián,
+       Profit-driven Symbolic Regression for Customer Churn Prediction (August 09, 2026).
+       Available at SSRN: https://ssrn.com/abstract=7256098 or http://dx.doi.org/10.2139/ssrn.7256098
+
     Examples
     --------
 
@@ -111,12 +117,6 @@ class ProfSRClassifier(CostSensitiveClassifier):
 
         model = ProfSRClassifier(generations=10, population_size=100, random_state=42)
         model.fit(X, y, tp_cost=-200, fp_cost=10)
-
-    References
-    ----------
-    .. [1] Aliaga, Samuel and Vairetti, Carla and Maldonado, Sebastián,
-       Profit-driven Symbolic Regression for Customer Churn Prediction (August 09, 2026).
-       Available at SSRN: https://ssrn.com/abstract=7256098 or http://dx.doi.org/10.2139/ssrn.7256098
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {

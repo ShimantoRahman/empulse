@@ -29,15 +29,6 @@ class CSLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -56,11 +47,14 @@ class CSLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.Metric`, default=None
-        Loss function which should be optimized.
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
-        - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
-          to the :meth:`~empulse.models.CSLogitClassifier.fit` method.
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
 
     C : float, default=1.0
         Inverse of regularization strength; must be a positive ``float``.
@@ -79,6 +73,11 @@ class CSLogitClassifier(BaseLogitClassifier):
             - For ``l1_ratio = 1`` it is a L1 penalty.
             - For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
 
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
+        Loss function which should be optimized.
+        If given, metric parameters are passed as ``loss_params``
+        to the :meth:`~empulse.models.CSLogitClassifier.fit` method.
+
     optimizer : :class:`empulse.optimizers.Optimizer`, optional
         Optimization algorithm. See :ref:`cslogit` for more information.
 
@@ -96,6 +95,12 @@ class CSLogitClassifier(BaseLogitClassifier):
     intercept_ : float
         Intercept of the logit model.
         Only available when ``fit_intercept=True``.
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
 
     Examples
     --------
@@ -173,12 +178,6 @@ class CSLogitClassifier(BaseLogitClassifier):
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
         grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-    References
-    ----------
-    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
-           Instance-dependent cost-sensitive learning for detecting transfer fraud.
-           European Journal of Operational Research, 297(1), 291-300.
     """
 
     _default_optimizer: ClassVar[type[Optimizer]] = LBFGSBOptimizer

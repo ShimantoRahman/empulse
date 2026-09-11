@@ -23,6 +23,11 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
 
     Read more in the :ref:`User Guide <profmempm>`.
 
+    .. seealso::
+
+        :class:`~empulse.models.ProfMPMClassifier` : The unregularized minimax probability
+        machine this class extends.
+
     Parameters
     ----------
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -77,7 +82,7 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
             Since this model only supports class-dependent costs, array-like costs
             are aggregated to their mean value before fitting.
 
-    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         Only :class:`~empulse.metrics.BaseMetric` instances built with the
         :class:`~empulse.metrics.MaxProfit` strategy are supported, since this model requires
         the costs and benefits to be reducible to four scalar values.
@@ -122,6 +127,12 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
 
+    References
+    ----------
+    .. [1] Maldonado, S., López, J., & Vairetti, C. (2020).
+       Profit-based churn prediction based on minimax probability machines.
+       European Journal of Operational Research, 284(1), 273-284.
+
     Examples
     --------
 
@@ -134,12 +145,6 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
 
         model = ProfMEMPMClassifier()
         model.fit(X, y, tp_cost=-200, fp_cost=10)
-
-    References
-    ----------
-    .. [1] Maldonado, S., López, J., & Vairetti, C. (2020).
-       Profit-based churn prediction based on minimax probability machines.
-       European Journal of Operational Research, 284(1), 273-284.
     """
 
     def _worst_case_accuracies(self, k_1: float, k_0: float) -> tuple[float, float]:

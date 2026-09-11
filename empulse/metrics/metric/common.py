@@ -289,7 +289,7 @@ def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | fl
     ----------
     expression : sympy.Expr
         The sympy expression to convert.
-    parameters : float or NDArray of shape (n_samples,)
+    **parameters : float or NDArray of shape (n_samples,)
         The parameter values for the costs and benefits defined in the metric.
         If any parameter is a stochastic variable, you should pass values for their distribution parameters.
         You can set the parameter values for either the symbol names or their aliases.
@@ -357,7 +357,7 @@ def _safe_run_lambda(
         A lambda function that computes the value of the expression.
     expression : sympy.Expr
         The sympy expression to convert.
-    parameters : float or NDArray of shape (n_samples,)
+    **parameters : float or NDArray of shape (n_samples,)
         The parameter values for the costs and benefits defined in the metric.
         If any parameter is a stochastic variable, you should pass values for their distribution parameters.
         You can set the parameter values for either the symbol names or their aliases.
@@ -388,7 +388,7 @@ def _safe_run_lambda_array(
         The sympy expression to convert.
     shape : int or tuple of int
         Shape of the output array.
-    parameters : float or NDArray of shape (n_samples,)
+    **parameters : float or NDArray of shape (n_samples,)
         The parameter values for the costs and benefits defined in the metric.
         If any parameter is a stochastic variable, you should pass values for their distribution parameters.
         You can set the parameter values for either the symbol names or their aliases.

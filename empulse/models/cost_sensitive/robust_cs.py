@@ -34,6 +34,12 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
     Read more in the :ref:`User Guide <robustcs>`.
 
+    .. seealso::
+
+        :class:`~empulse.models.CSLogitClassifier`, :class:`~empulse.models.CSBoostClassifier` :
+        typical estimators to wrap, since both accept the four cost keyword arguments this
+        meta-estimator imputes.
+
     Parameters
     ----------
     estimator : Estimator
@@ -72,15 +78,6 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -99,6 +96,14 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
 
     Attributes
     ----------
@@ -116,6 +121,12 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
     Constant costs are not used for outlier detection and imputation.
 
     Code adapted from [1]_.
+
+    References
+    ----------
+    .. [1] De Vos, S., Vanderschueren, T., Verdonck, T., & Verbeke, W. (2023).
+           Robust instance-dependent cost-sensitive classification.
+           Advances in Data Analysis and Classification, 17(4), 1057-1079.
 
     Examples
     --------
@@ -222,12 +233,6 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
         grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-    References
-    ----------
-    .. [1] De Vos, S., Vanderschueren, T., Verdonck, T., & Verbeke, W. (2023).
-           Robust instance-dependent cost-sensitive classification.
-           Advances in Data Analysis and Classification, 17(4), 1057-1079.
     """
 
     costs_: dict[str, Any]
@@ -291,16 +296,14 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
+            Training data.
 
         y : array-like of shape (n_samples,)
+            Target values.
 
         tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
 
         tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
@@ -310,7 +313,11 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
-        fit_params : dict
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
+
+        **fit_params : dict
             Additional keyword arguments to pass to the estimator's fit method.
 
         Returns
@@ -487,25 +494,29 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         pass
 
     @available_if(_estimator_has('predict'))  # type: ignore[misc]
-    def predict(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
+    def predict(self, X: FloatArrayLike) -> FloatNDArray:
+        """Predict class labels with the wrapped estimator fitted on cleaned costs."""
         check_is_fitted(self, 'estimator_')
         y_pred: FloatNDArray = self.estimator_.predict(X)
         return y_pred
 
     @available_if(_estimator_has('predict_proba'))  # type: ignore[misc]
-    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
+    def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
+        """Predict class probabilities with the wrapped estimator."""
         check_is_fitted(self, 'estimator_')
         y_proba: FloatNDArray = self.estimator_.predict_proba(X)
         return y_proba
 
     @available_if(_estimator_has('decision_function'))  # type: ignore[misc]
-    def decision_function(self, X: FloatArrayLike) -> FloatNDArray:  # noqa: D102
+    def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
+        """Return the wrapped estimator's decision function values."""
         check_is_fitted(self, 'estimator_')
         y_score: FloatNDArray = self.estimator_.decision_function(X)
         return y_score
 
     @property
-    def classes_(self) -> NDArray[Any]:  # noqa: D102
+    def classes_(self) -> NDArray[Any]:
+        """The class labels, taken from the fitted estimator."""
         check_is_fitted(self)
         classes: NDArray[Any] = self.estimator_.classes_
         return classes

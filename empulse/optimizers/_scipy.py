@@ -11,7 +11,8 @@ from ._base import Optimizer
 
 
 def _check_optimize_result(result: OptimizeResult, optimizer_name: str = 'scipy') -> None:
-    """Warn if the optimizer did not converge.
+    """
+    Warn if the optimizer did not converge.
 
     Not every ``scipy.optimize.minimize`` method populates ``result.status`` (some only set
     ``result.success``), so convergence is judged from ``success`` (defaulting to converged/``True``
@@ -31,7 +32,8 @@ def _check_optimize_result(result: OptimizeResult, optimizer_name: str = 'scipy'
 
 
 class LBFGSBOptimizer(Optimizer):
-    """Limited-memory BFGS with box constraints (L-BFGS-B) via :func:`scipy.optimize.minimize`.
+    """
+    Limited-memory BFGS with box constraints (L-BFGS-B) via :func:`scipy.optimize.minimize`.
 
     This is the default optimizer for :class:`~empulse.models.CSLogitClassifier`.
     It is well-suited for smooth objectives and scales to thousands of features.
@@ -75,7 +77,23 @@ class LBFGSBOptimizer(Optimizer):
         X: FloatNDArray,
         **kwargs: Any,
     ) -> OptimizeResult:
-        """Run L-BFGS-B optimisation."""
+        """
+        Run the L-BFGS-B optimization and return the optimization result.
+
+        Parameters
+        ----------
+        objective : :class:`~empulse.metrics.LogitObjective`
+            Prepared objective exposing the loss and gradient of the logit model.
+        X : ndarray of shape (n_samples, n_features)
+            Feature matrix, used only to size the coefficient vector.
+        **kwargs : Any
+            Forwarded to the underlying solver.
+
+        Returns
+        -------
+        result : :class:`scipy.optimize.OptimizeResult`
+            The optimization result; ``fun`` is reported as a loss to be minimized.
+        """
         initial_weights = self._initial_weights(X)
         result = minimize(
             objective.logit_loss_gradient,
@@ -95,7 +113,8 @@ class LBFGSBOptimizer(Optimizer):
 
 
 class ScipyOptimizer(Optimizer):
-    """General-purpose wrapper around :func:`scipy.optimize.minimize`.
+    """
+    General-purpose wrapper around :func:`scipy.optimize.minimize`.
 
     Supports every method that :func:`scipy.optimize.minimize` accepts
     (e.g. ``'CG'``, ``'BFGS'``, ``'Newton-CG'``, ``'TNC'``, ``'SLSQP'``).
@@ -163,7 +182,23 @@ class ScipyOptimizer(Optimizer):
         X: FloatNDArray,
         **kwargs: Any,
     ) -> OptimizeResult:
-        """Run scipy optimisation."""
+        """
+        Run the SciPy optimization and return the optimization result.
+
+        Parameters
+        ----------
+        objective : :class:`~empulse.metrics.LogitObjective`
+            Prepared objective exposing the loss and gradient of the logit model.
+        X : ndarray of shape (n_samples, n_features)
+            Feature matrix, used only to size the coefficient vector.
+        **kwargs : Any
+            Forwarded to the underlying solver.
+
+        Returns
+        -------
+        result : :class:`scipy.optimize.OptimizeResult`
+            The optimization result; ``fun`` is reported as a loss to be minimized.
+        """
         initial_weights = self._initial_weights(X)
 
         merged_options = {'maxiter': self.max_iter, **self.options}

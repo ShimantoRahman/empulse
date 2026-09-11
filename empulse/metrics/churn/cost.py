@@ -24,6 +24,12 @@ This metric always returns the average cost per sample.
 ``optimal_rate(y_true, y_proba, *, accept_rate=0.3, clv=200, incentive_fraction=0.05, contact_cost=1)``
     Compute the predicted positive rate that minimizes the expected cost.
 
+References
+----------
+.. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+    B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+    Annals of Operations Research, 1-27.
+
 Examples
 --------
 .. code-block:: python
@@ -35,10 +41,4 @@ Examples
     expected_cost_loss_churn(
         y_true, y_proba, accept_rate=0.3, clv=200, incentive_fraction=0.05, contact_cost=1
     )
-
-References
-----------
-.. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
-    B2Boost: Instance-dependent profit-driven modelling of B2B churn.
-    Annals of Operations Research, 1-27.
 """

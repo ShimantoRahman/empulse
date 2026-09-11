@@ -11,12 +11,9 @@ leads are contacted and then referred to intermediaries, which receive a commiss
 contribution of a successful acquisition is modeled as a Gamma distribution.
 
 .. note::
-    Unlike the retired native ``empa``/``empa_score`` functions, ``beta`` here is the *scale*
-    of the Gamma distribution (mean = ``alpha * beta``), not its *rate* (mean =
-    ``alpha / beta``). This is a consequence of how :class:`~empulse.metrics.MaxProfit`'s
-    stochastic-integration engine parameterizes distributions. The default value has been
-    adjusted (``1 / 0.0015``) so that calling with no arguments reproduces the same result as
-    before.
+    ``beta`` is the *scale* of the Gamma distribution (mean = ``alpha * beta``), not its *rate*
+    (mean = ``alpha / beta``), following how :class:`~empulse.metrics.MaxProfit`'s
+    stochastic-integration engine parameterizes distributions.
 
 See :func:`~empulse.metrics.mpa_score` for a deterministic version of this metric.
 

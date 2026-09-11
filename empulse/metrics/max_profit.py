@@ -9,11 +9,6 @@ A generic :class:`~empulse.metrics.Metric` built from the :class:`~empulse.metri
 strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cost``,
 ``tn_cost``, ``fp_cost``, and ``fn_cost`` parameters (all costs; a benefit is a negative cost).
 
-.. note::
-   This replaces the previous native ``max_profit``/``max_profit_score`` functions, which took
-   ``tp_benefit``/``tn_benefit`` (instead of ``tp_cost``/``tn_cost``). ``tp_cost = -tp_benefit``
-   and ``tn_cost = -tn_benefit``; ``fp_cost``/``fn_cost`` are unchanged.
-
 The MP is defined as [1]_:
 
 .. math::
@@ -32,6 +27,13 @@ where :math:`T` is the threshold at which the maximum profit is achieved.
 
 ``optimal_rate(y_true, y_score, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
     Compute the predicted positive rate at which the maximum profit is achieved.
+
+References
+----------
+.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+    A Novel Profit Maximizing Metric for Measuring Classification
+    Performance of Customer Churn Prediction Models. IEEE Transactions on
+    Knowledge and Data Engineering, 25(5), 961-973.
 
 Examples
 --------
@@ -52,11 +54,4 @@ Reimplement MPC:
     fp_cost = d + f
 
     max_profit_score(y_true, y_score, tp_cost=tp_cost, fp_cost=fp_cost)
-
-References
-----------
-.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
-    A Novel Profit Maximizing Metric for Measuring Classification
-    Performance of Customer Churn Prediction Models. IEEE Transactions on
-    Knowledge and Data Engineering, 25(5), 961-973.
 """

@@ -100,14 +100,14 @@ class AUEPC(MetricStrategy):
     support use as a model training objective (no ``logit_objective`` or
     ``gradient_boost_objective``): it evaluates a full ranking, not the outcome of a single sample.
 
+    .. seealso::
+        :func:`~empulse.metrics.auepc_score` : the underlying metric function.
+
     Parameters
     ----------
     normalize : bool, default=True
         Whether to normalize the AUEPC score so that a perfect model scores 1.0.
         This is only useful when part of the expected profit curve is negative.
-
-    .. seealso::
-        :func:`~empulse.metrics.auepc_score` : the underlying metric function.
     """
 
     _name: str = 'auepc'
@@ -144,13 +144,13 @@ class AUEPC(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores used to rank the samples.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -160,7 +160,7 @@ class AUEPC(MetricStrategy):
 
         Returns
         -------
-        score: float
+        score : float
             The AUEPC score.
         """
         return self._score_function(y_true, y_score, **parameters)

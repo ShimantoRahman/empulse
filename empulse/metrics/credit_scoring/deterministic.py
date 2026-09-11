@@ -32,6 +32,12 @@ NOT interchangeable. However, this implementation assumes the standard notation
     Compute the predicted positive rate (fraction of loan applications that should be
     accepted) at which the maximum profit is achieved.
 
+References
+----------
+.. [1] Verbraken, T., Bravo, C., Weber, R., & Baesens, B. (2014).
+    Development and application of consumer credit scoring models using profit-based
+    classification measures. European Journal of Operational Research, 238(2), 505-513.
+
 Examples
 --------
 .. code-block:: python
@@ -41,10 +47,4 @@ Examples
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     mpcs_score(y_true, y_score, loan_lost_rate=0.275, roi=0.2644)
-
-References
-----------
-.. [1] Verbraken, T., Bravo, C., Weber, R., & Baesens, B. (2014).
-    Development and application of consumer credit scoring models using profit-based
-    classification measures. European Journal of Operational Research, 238(2), 505-513.
 """

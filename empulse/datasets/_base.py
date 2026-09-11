@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 
 def get_data_home(data_home: str | Path | None = None) -> Path:
-    """Return the path to the empulse data directory.
+    """
+    Return the path to the empulse data directory.
 
     By default, this is ``~/empulse_data``.
     The directory is created if it does not exist.
@@ -29,7 +30,8 @@ def get_data_home(data_home: str | Path | None = None) -> Path:
 
     Returns
     -------
-    data_home : Path
+    Path
+        The resolved data directory (created if missing).
     """
     if data_home is None:
         data_home = os.environ.get('EMPULSE_DATA_HOME', Path.home() / 'empulse_data')
@@ -43,7 +45,10 @@ class Dataset(Generic[IntoDataFrameT, IntoSeriesT]):
     """
     Container object for datasets returned by the load / fetch functions.
 
-    Attributes
+    Returned by every ``load_*`` / ``fetch_*`` function; also accepts these as constructor
+    arguments if you need to build one by hand.
+
+    Parameters
     ----------
     data : :class:`pandas:pandas.DataFrame`, :class:`numpy:numpy.ndarray`, or \
            any dataframe supported by narwhals

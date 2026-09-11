@@ -82,9 +82,9 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         y: ArrayLike,
         *,
         tp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
-        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         tn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         fn_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
+        fp_cost: FloatArrayLike | float | Parameter = Parameter.UNCHANGED,
         **loss_params: Any,
     ) -> Self:
         """
@@ -102,10 +102,6 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
 
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
         tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
             If array-like, then it is the cost of each true negative classification.
@@ -114,7 +110,11 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
-        loss_params : Any
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
+
+        **loss_params : Any
             Additional parameter to be passed to the loss function.
 
         Returns

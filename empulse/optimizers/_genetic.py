@@ -12,7 +12,8 @@ from .generation import Generation, LamarckianGeneration
 
 
 def _as_generation_fitness(logit_loss: Callable[[FloatNDArray], float]) -> Callable[[FloatNDArray], float]:
-    """Adapt a minimization loss into the fitness :meth:`Generation.optimize` expects.
+    """
+    Adapt a minimization loss into the fitness :meth:`Generation.optimize` expects.
 
     ``LogitObjective.logit_loss`` is always a loss for *minimization*, while
     :class:`~empulse.optimizers.Generation` maximizes by construction (``direction =
@@ -23,7 +24,8 @@ def _as_generation_fitness(logit_loss: Callable[[FloatNDArray], float]) -> Calla
 
 
 class GeneticAlgorithmOptimizer(Optimizer):
-    """Real-coded Genetic Algorithm (RGA) optimizer for logit models.
+    """
+    Real-coded Genetic Algorithm (RGA) optimizer for logit models.
 
     Uses :class:`~empulse.optimizers.Generation` under the hood with
     patience-based early stopping.  This is the default optimizer for
@@ -102,7 +104,23 @@ class GeneticAlgorithmOptimizer(Optimizer):
         X: FloatNDArray,
         **kwargs: Any,
     ) -> OptimizeResult:
-        """Run the genetic algorithm."""
+        """
+        Run the genetic algorithm and return the optimization result.
+
+        Parameters
+        ----------
+        objective : :class:`~empulse.metrics.LogitObjective`
+            Prepared objective exposing the loss and gradient of the logit model.
+        X : ndarray of shape (n_samples, n_features)
+            Feature matrix, used only to size the coefficient vector.
+        **kwargs : Any
+            Forwarded to the underlying solver.
+
+        Returns
+        -------
+        result : :class:`scipy.optimize.OptimizeResult`
+            The optimization result; ``fun`` is reported as a loss to be minimized.
+        """
         generation_kwargs: dict[str, Any] = {
             'crossover_rate': self.crossover_rate,
             'mutation_rate': self.mutation_rate,
@@ -192,10 +210,13 @@ class MemeticOptimizer(Optimizer):
     optimizer : {"adam", "sgd"}, default="adam"
         Local-search update rule passed to :class:`LamarckianGeneration`.
     beta1 : float, default=0.9
+        Adam: exponential decay rate for the first moment estimate. Ignored when ``optimizer="sgd"``.
     beta2 : float, default=0.999
+        Adam: exponential decay rate for the second moment estimate. Ignored when ``optimizer="sgd"``.
     eps : float, default=1e-8
+        Adam: small term added to the denominator for numerical stability. Ignored when ``optimizer="sgd"``.
     grad_clip : float, default=5.0
-        Adam / gradient-clipping hyper-parameters.
+        Gradient clipping threshold applied element-wise before the update.
     random_state : int, default=42
         Seed for the GA random-number generator.
     """
@@ -244,7 +265,23 @@ class MemeticOptimizer(Optimizer):
         X: FloatNDArray,
         **_: Any,
     ) -> OptimizeResult:
-        """Run the Lamarckian GA with the given objective function."""
+        """
+        Run the Lamarckian memetic algorithm and return the optimization result.
+
+        Parameters
+        ----------
+        objective : :class:`~empulse.metrics.LogitObjective`
+            Prepared objective exposing the loss and gradient of the logit model.
+        X : ndarray of shape (n_samples, n_features)
+            Feature matrix, used only to size the coefficient vector.
+        **_ : Any
+            Ignored; accepted for interface compatibility.
+
+        Returns
+        -------
+        result : :class:`scipy.optimize.OptimizeResult`
+            The optimization result; ``fun`` is reported as a loss to be minimized.
+        """
         gen = LamarckianGeneration(
             grad_objective=objective,
             population_size=self.population_size,

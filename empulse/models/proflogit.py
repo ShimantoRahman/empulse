@@ -27,15 +27,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -54,13 +45,14 @@ class ProfLogitClassifier(BaseLogitClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.BaseMetric` or None, default=None
-        Loss function to optimize.
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
-        If :class:`~empulse.metrics.BaseMetric`, metric parameters are passed as ``loss_params``
-        to the :meth:`~empulse.models.ProfLogitClassifier.fit` method.
-
-        If ``None``, the loss is set to the Maximum Profit score.
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
 
     C : float, default=1.0
         Inverse of regularization strength; must be a positive ``float``.
@@ -77,6 +69,11 @@ class ProfLogitClassifier(BaseLogitClassifier):
         For ``l1_ratio = 0`` the penalty is a L2 penalty.
         For ``l1_ratio = 1`` it is a L1 penalty.
         For ``0 < l1_ratio < 1``, the penalty is a combination of L1 and L2.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
+        Loss function to optimize. If given, metric parameters are passed as ``loss_params``
+        to the :meth:`~empulse.models.ProfLogitClassifier.fit` method.
+        If ``None``, the loss is set to the Maximum Profit score.
 
     optimizer : :class:`empulse.optimizers.Optimizer`, optional
         Optimization algorithm. See :ref:`proflogit` for more information.
@@ -96,6 +93,17 @@ class ProfLogitClassifier(BaseLogitClassifier):
         Intercept of the logit model.
         Only available when ``fit_intercept=True``.
 
+    References
+    ----------
+    .. [1] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
+        Snoeck, M. (2017). Profit Maximizing Logistic Model for
+        Customer Churn Prediction Using Genetic Algorithms.
+        Swarm and Evolutionary Computation.
+    .. [2] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
+        Snoeck, M. (2015). Profit Maximizing Logistic Regression Modeling for
+        Customer Churn Prediction. IEEE International Conference on
+        Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.
+
     Examples
     --------
 
@@ -111,17 +119,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
             C=0.1, l1_ratio=0.5, optimizer=GeneticAlgorithmOptimizer(max_iter=10)
         )
         model.fit(X, y, tp_cost=-200, fp_cost=10)
-
-    References
-    ----------
-    .. [1] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
-        Snoeck, M. (2017). Profit Maximizing Logistic Model for
-        Customer Churn Prediction Using Genetic Algorithms.
-        Swarm and Evolutionary Computation.
-    .. [2] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B. and
-        Snoeck, M. (2015). Profit Maximizing Logistic Regression Modeling for
-        Customer Churn Prediction. IEEE International Conference on
-        Data Science and Advanced Analytics (DSAA) (pp. 1–10). Paris, France.
     """
 
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit

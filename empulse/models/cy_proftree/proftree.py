@@ -26,6 +26,16 @@ class ProfTreeClassifier(CostSensitiveClassifier):
     The fitness of each tree is evaluated using a fitness function,
     which is used to select the best trees for crossover and mutation.
 
+    Read more in the :ref:`User Guide <proftree>`.
+
+    .. seealso::
+
+        :class:`~empulse.models.CSTreeClassifier` : Cost-sensitive decision tree fit by impurity,
+        rather than evolved by a genetic algorithm.
+
+        :class:`~empulse.models.ProfLogitClassifier` : Profit-driven logistic regression fit by
+        the same kind of genetic algorithm.
+
     Parameters
     ----------
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
@@ -37,19 +47,10 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+    tn_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of true negatives. If ``float``, then all true negatives have the same cost.
+        If array-like, then it is the cost of each true negative classification.
+        Is overwritten if another `tn_cost` is passed to the ``fit`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -64,7 +65,16 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : BaseMetric or None
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         Fitness function for the genetic algorithm to maximize.
         If ``None``, the :func:`~empulse.metrics.max_profit_score` is used.
 
@@ -79,9 +89,6 @@ class ProfTreeClassifier(CostSensitiveClassifier):
 
     tolerance : float, default=1e-4
         Minimum relative improvement in fitness required to consider a solution better.
-
-    max_iter : int, default=1000
-        Maximum number of iterations / number of generations the GA is run.
 
     max_depth : int or None, default=10
         Maximum depth of the tree.
@@ -106,6 +113,9 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         - If float, then `min_samples_leaf` is a fraction and
           `ceil(min_samples_leaf * n_samples)` are the minimum
           number of samples for each node.
+
+    max_iter : int, default=1000
+        Maximum number of iterations / number of generations the GA is run.
 
     population_size : int or None, default=None
         Number of decision trees in the population.
@@ -156,6 +166,25 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         To obtain a deterministic behaviour
         during fitting, ``random_state`` has to be fixed to an integer.
         See :term:`Sklearn Glossary <sklearn:random_state>` for details.
+
+    Attributes
+    ----------
+    classes_ : numpy.ndarray
+        Unique classes in the target found during fit.
+
+    n_features_in_ : int
+        Number of features seen during :term:`fit <sklearn:fit>`.
+
+    feature_names_in_ : ndarray of shape (`n_features_in_`,)
+        Names of features seen during :term:`fit <sklearn:fit>`. Defined only when `X`
+        has feature names that are all strings.
+
+    tree_ : EvolutionaryTree
+        The fittest tree found by the genetic algorithm.
+
+    n_iter_ : int
+        Number of generations the genetic algorithm ran for before stopping
+        (by ``max_iter`` or by ``patience``).
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -240,12 +269,13 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         loss : BaseMetric
             Loss to be optimized.
 
-        loss_params : Any
-            Additional parameter to be passed to the loss function.
+        **loss_params : dict
+            Additional parameters passed to the loss function.
 
         Returns
         -------
-            Node: The fitted tree.
+        self : object
+            The fitted estimator.
         """
         n_samples = X.shape[0]
         population_size = 10 * X.shape[1] if self.population_size is None else self.population_size

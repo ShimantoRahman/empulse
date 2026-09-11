@@ -26,6 +26,12 @@ All three methods take ``y_true`` and ``y_proba``, followed by the keyword-only 
 ``optimal_rate(y_true, y_proba, **parameters)``
     Compute the predicted positive rate that minimizes the expected cost.
 
+References
+----------
+.. [1] Verbraken, T., Bravo, C., Weber, R., & Baesens, B. (2014).
+       Development and application of consumer credit scoring models using profit-based
+       classification measures. European Journal of Operational Research, 238(2), 505-513.
+
 Examples
 --------
 .. code-block:: python

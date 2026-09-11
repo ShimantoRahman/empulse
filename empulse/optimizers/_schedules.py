@@ -1,4 +1,5 @@
-"""Parameter schedules for iterative gradient optimizers.
+"""
+Parameter schedules for iterative gradient optimizers.
 
 Schedules map an epoch index (0-based) to a scalar value.  They are used to
 vary the learning rate (:attr:`lr_schedule`) or the gradient-smoothing
@@ -31,14 +32,16 @@ from abc import ABC, abstractmethod
 
 
 class Schedule(ABC):
-    """Abstract base class for parameter schedules.
+    """
+    Abstract base class for parameter schedules.
 
     Subclasses must implement :meth:`__call__`.
     """
 
     @abstractmethod
     def __call__(self, epoch: int) -> float:
-        """Return the scheduled value at *epoch* (0-based).
+        """
+        Return the scheduled value at *epoch* (0-based).
 
         Parameters
         ----------
@@ -57,7 +60,8 @@ class Schedule(ABC):
 
 
 class ConstantSchedule(Schedule):
-    """Constant schedule – always returns *value*.
+    """
+    Constant schedule – always returns *value*.
 
     Parameters
     ----------
@@ -82,7 +86,8 @@ class ConstantSchedule(Schedule):
 
 
 class LinearSchedule(Schedule):
-    """Linear interpolation from *start_value* to *end_value* over *n_steps* epochs.
+    """
+    Linear interpolation from *start_value* to *end_value* over *n_steps* epochs.
 
     After *n_steps* epochs the schedule stays at *end_value*.
 
@@ -123,7 +128,8 @@ class LinearSchedule(Schedule):
 
 
 class ExponentialSchedule(Schedule):
-    r"""Exponential schedule: ``value = start_value * gamma ** epoch``.
+    r"""
+    Exponential schedule: ``value = start_value * gamma ** epoch``.
 
     Optionally clipped from below at *min_value* and/or from above at *max_value*.
 
@@ -187,7 +193,8 @@ class ExponentialSchedule(Schedule):
 
 
 class StepSchedule(Schedule):
-    r"""Step decay: multiply by *gamma* every *step_size* epochs.
+    r"""
+    Step decay: multiply by *gamma* every *step_size* epochs.
 
     .. math::
 
@@ -251,7 +258,8 @@ class StepSchedule(Schedule):
 
 
 class CosineAnnealingSchedule(Schedule):
-    r"""Cosine annealing between *max_value* and *min_value* over *t_max* epochs.
+    r"""
+    Cosine annealing between *max_value* and *min_value* over *t_max* epochs.
 
     .. math::
 
@@ -305,7 +313,8 @@ class CosineAnnealingSchedule(Schedule):
 
 
 class WarmupSchedule(Schedule):
-    """Linear warm-up for *warmup_steps* epochs, then delegates to *after_schedule*.
+    """
+    Linear warm-up for *warmup_steps* epochs, then delegates to *after_schedule*.
 
     Let ``target = after_schedule(0)``. During warm-up (epochs ``0`` to ``warmup_steps - 1``),
     the value increases linearly from ``target / warmup_steps`` at epoch 0 to the full *target*

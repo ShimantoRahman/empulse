@@ -34,7 +34,7 @@ class B2BoostClassifier(CSBoostClassifier):
     and `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__.
     By default, it uses XGBoost classifier with default hyperparameters.
 
-    Read more in the :ref:`User Guide <csboost>`.
+    Read more in the :ref:`User Guide <b2boost>`.
 
     Parameters
     ----------
@@ -84,8 +84,15 @@ class B2BoostClassifier(CSBoostClassifier):
     However, this implementation assumes the standard notation ('churn': 1, 'no churn': 0).
 
     .. seealso::
-        :func:`~empulse.metrics.create_objective_churn` : Creates the instance-dependent cost function
-        for customer churn.
+        :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive boosting for an arbitrary cost matrix.
+
+        :func:`~empulse.metrics.expected_cost_loss_churn` : The same churn economics as an evaluation metric.
+
+    References
+    ----------
+    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+        B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+        Annals of Operations Research, 1-27.
 
     Examples
     --------
@@ -162,12 +169,6 @@ class B2BoostClassifier(CSBoostClassifier):
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
         grid_search.fit(X, y, clv=clv)
-
-    References
-    ----------
-    .. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
-        B2Boost: Instance-dependent profit-driven modelling of B2B churn.
-        Annals of Operations Research, 1-27.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -224,28 +225,30 @@ class B2BoostClassifier(CSBoostClassifier):
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
+            Training data.
 
         y : array-like of shape (n_samples,)
+            Target values.
 
-        accept_rate : float, default=0.3
+        accept_rate : float, default=$UNCHANGED$
             Probability of a customer responding to the retention offer (``0 < accept_rate < 1``).
 
-        clv : float or 1D array-like, shape=(n_samples), default=200
+        clv : float or 1D array-like, shape=(n_samples), default=$UNCHANGED$
             If ``float``: constant customer lifetime value per retained customer (``clv > incentive_cost``).
             If ``array``: individualized customer lifetime value of each customer when retained
             (``mean(clv) > incentive_cost``).
 
-        incentive_fraction : float, default=0.05
+        incentive_fraction : float, default=$UNCHANGED$
             Cost of incentive offered to a customer, as a fraction of customer lifetime value
             (``0 < incentive_fraction < 1``).
 
-        contact_cost : float, default=15
+        contact_cost : float, default=$UNCHANGED$
             Constant cost of contact (``contact_cost > 0``).
 
         fit_params : dict, optional
             Additional parameters to pass to the estimator's fit method.
 
-        loss_params : dict
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function.
 
         Returns

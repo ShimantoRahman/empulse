@@ -40,6 +40,13 @@ However, this implementation assumes the standard notation ('churn': 1, 'no chur
     Compute the predicted positive rate (fraction of the customer base that should be
     targeted) at which the maximum expected profit is achieved.
 
+References
+----------
+.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+    A Novel Profit Maximizing Metric for Measuring Classification
+    Performance of Customer Churn Prediction Models. IEEE Transactions on
+    Knowledge and Data Engineering, 25(5), 961-973.
+
 Examples
 --------
 .. code-block:: python
@@ -49,13 +56,6 @@ Examples
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     empc_score(y_true, y_score, alpha=6, beta=14, clv=200, incentive_cost=10, contact_cost=1)
-
-References
-----------
-.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
-    A Novel Profit Maximizing Metric for Measuring Classification
-    Performance of Customer Churn Prediction Models. IEEE Transactions on
-    Knowledge and Data Engineering, 25(5), 961-973.
 """
 
 empb_score = make_churn_empirical_max_profit_metric()
@@ -87,6 +87,12 @@ See :func:`~empulse.metrics.auepc_score` for the area under the expected profit 
     Compute the predicted positive rate (fraction of the customer base that should be
     targeted) at which the maximum expected profit is achieved.
 
+References
+----------
+.. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
+    B2Boost: Instance-dependent profit-driven modelling of B2B churn.
+    Annals of Operations Research, 1-27.
+
 Examples
 --------
 .. code-block:: python
@@ -97,12 +103,6 @@ Examples
     y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     clv = [100, 200, 150, 300, 120, 250, 180, 220]
     empb_score(y_true, y_score, clv=clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)
-
-References
-----------
-.. [1] Janssens, B., Bogaert, M., Bagué, A., & Van den Poel, D. (2022).
-    B2Boost: Instance-dependent profit-driven modelling of B2B churn.
-    Annals of Operations Research, 1-27.
 """
 
 auepc_score = make_churn_auepc_metric()
@@ -132,6 +132,12 @@ See :func:`~empulse.metrics.empb_score` to instead return the maximum profit.
     Compute the predicted positive rate (fraction of the customer base that should be
     targeted) at which the maximum underlying expected profit is achieved.
 
+References
+----------
+.. [1] Rahman, S., Janssens, B., Bogaert, M. (2025).
+    Profit-Driven Pre-Processing in B2B Customer Churn Modeling using Fairness Techniques.
+    Journal of Business Research.
+
 Examples
 --------
 .. code-block:: python
@@ -142,10 +148,4 @@ Examples
     y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     clv = [100, 200, 150, 300, 120, 250, 180, 220]
     auepc_score(y_true, y_score, clv=clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)
-
-References
-----------
-.. [1] Rahman, S., Janssens, B., Bogaert, M. (2025).
-    Profit-Driven Pre-Processing in B2B Customer Churn Modeling using Fairness Techniques.
-    Journal of Business Research.
 """

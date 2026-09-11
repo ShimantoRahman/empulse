@@ -95,6 +95,52 @@ extensions = [
 numpydoc_show_class_members = False
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
+
+# numpydoc 1.9.0 crashes in ``Validator.name`` on ``property`` objects (no ``__module__``),
+# which autodoc hands it for members like ``Metric.tp_benefit``. Make the accessor defensive
+# so ``numpydoc_validation_checks`` can be used at all. Remove once the upstream fix lands.
+import numpydoc.validate as _npv  # noqa: E402
+
+
+@property  # type: ignore[misc]
+def _safe_validator_name(self):  # noqa: ANN001, ANN202
+    obj = self.obj
+    module = getattr(obj, '__module__', None) or getattr(type(obj), '__module__', '')
+    qualname = getattr(obj, '__qualname__', None) or getattr(obj, '__name__', repr(obj))
+    return f'{module}.{qualname}' if module else qualname
+
+
+_npv.Validator.name = _safe_validator_name
+
+# Docstring validation gate. Only the checks listed here are enforced (build fails under -W).
+# The set is what `python scripts/check_docstrings.py` reports at zero failures; grow it as
+# more docstrings are cleaned up. Deliberately excluded, with reasons:
+#   SA01  - the package documents related objects with `.. seealso::` directives, not the
+#           numpydoc "See Also" section (see CLAUDE.md).
+#   RT02  - the package follows scikit-learn's `self : ClassName` / `name : type` Returns
+#           style, which RT02 rejects; scikit-learn's own docstrings fail it too.
+#   ES01, EX01 - not every method warrants an extended summary or a runnable example.
+#   RT01, PR01 - the strategy classes' abstract `build`/`to_latex` and the prebuilt-metric
+#           instances (documented via a `.. rubric:: Methods` block) do not carry these.
+numpydoc_validation_checks = {
+    'GL02', 'GL03', 'GL05', 'GL06', 'GL07', 'GL09', 'GL10',
+    'PR02', 'PR03', 'PR04', 'PR05', 'PR06', 'PR07', 'PR08', 'PR09', 'PR10',
+    'RT03', 'RT04', 'RT05',
+    'SA02', 'SA03', 'SA04',
+    'SS01', 'SS02', 'SS03', 'SS04', 'SS05', 'SS06',
+    'YD01',
+}
+# Skip validation for names matching these patterns. scikit-learn's inherited methods render
+# on every estimator page via `:inherited-members:`; `__call__` is a special method whose
+# docstring is very often legitimately inherited.
+numpydoc_validation_exclude = {
+    r'\.(get_params|set_params|score|get_metadata_routing|get_feature_names_out|fit_transform|set_output)$',
+    r'\.set_[a-z_]+_request$',
+    r'\.__call__$',
+    # `MixtureComponent` is a NamedTuple; `index`/`count` are inherited from `tuple` and carry
+    # CPython's own (GL02-failing) docstrings, not ours.
+    r'\.MixtureComponent\.(index|count)$',
+}
 autodoc_typehints = "none"
 doctest_test_doctest_blocks = 'default'
 myst_heading_anchors = 3

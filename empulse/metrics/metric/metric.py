@@ -37,22 +37,23 @@ class Metric(BaseMetric):
         The cost matrix defining the costs and benefits associated with each type of prediction outcome.
 
     strategy : MetricStrategy
-        The strategy to use for computing the metric.
+        The strategy to use for computing the metric. Several strategies come as a sign-flipped
+        pair -- one phrased as a profit to maximize, its sibling as a cost to minimize -- that hand
+        an estimator identical values and differ only in what they report.
 
-        - If :class:`~empulse.metrics.MaxProfit`,
-          the metric computes the maximum profit that can be achieved by a classifier.
-          The metric determines the optimal threshold that maximizes the profit.
-          This metric supports the use of stochastic variables.
-        - If :class:`~empulse.metrics.Cost`, the metric computes the expected cost loss of a classifier.
-          This metric supports passing instance-dependent costs in the form of array-likes.
-          Any stochastic variable is reduced to its mean before use; the metric itself is always
-          evaluated deterministically.
-        - If :class:`~empulse.metrics.Savings`,
-          the metric computes the savings that can be achieved by a classifier
-          over a naive classifier which always predicts 0 or 1 (whichever is better).
-          This metric supports passing instance-dependent costs in the form of array-likes.
-          Any stochastic variable is reduced to its mean before use; the metric itself is always
-          evaluated deterministically.
+        - :class:`~empulse.metrics.Cost` / :class:`~empulse.metrics.Profit` compute the expected
+          cost (or its negation, the expected profit) of a classifier. They support instance-dependent
+          costs passed as array-likes. Any stochastic variable is reduced to its mean before use.
+        - :class:`~empulse.metrics.MaxProfit` / :class:`~empulse.metrics.MinCost` compute the profit
+          (or cost) at the profit-maximizing threshold, which the metric locates itself. They support
+          stochastic variables, but reduce per-instance costs to their class means.
+        - :class:`~empulse.metrics.EmpiricalMaxProfit` / :class:`~empulse.metrics.EmpiricalMinCost`
+          do the same from the empirical score distribution rather than a parametric one, and keep
+          per-instance costs.
+        - :class:`~empulse.metrics.Savings` computes the cost relative to a baseline classifier,
+          scaled to ``1`` for a perfect model and ``0`` for the baseline. It has no sibling.
+        - :class:`~empulse.metrics.LogCost` is :class:`~empulse.metrics.Cost` on the log scale.
+        - :class:`~empulse.metrics.AUEPC` is the area under the empirical profit curve.
 
     Attributes
     ----------
@@ -88,7 +89,7 @@ class Metric(BaseMetric):
         The cost of a false negative.
         See :meth:`~empulse.metrics.Metric.add_fn_cost` for more details.
 
-    direction: Direction
+    direction : Direction
         Whether the metric is to be maximized or minimized.
 
     Examples
@@ -386,17 +387,21 @@ class Metric(BaseMetric):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
+            - For the ranking strategies (:class:`~empulse.metrics.MaxProfit`,
+              :class:`~empulse.metrics.MinCost`, :class:`~empulse.metrics.EmpiricalMaxProfit`,
+              :class:`~empulse.metrics.EmpiricalMinCost`, :class:`~empulse.metrics.AUEPC`),
+              ``y_score`` is used only to rank the samples, so any decision score works.
+            - For the probability strategies (:class:`~empulse.metrics.Cost`,
+              :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
+              :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -406,7 +411,7 @@ class Metric(BaseMetric):
 
         Returns
         -------
-        score: float
+        score : float
             The computed metric score or loss.
         """
         y_true = _check_y_true(np.asarray(y_true).reshape(-1), check_variance=False)
@@ -428,17 +433,21 @@ class Metric(BaseMetric):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
+            - For the ranking strategies (:class:`~empulse.metrics.MaxProfit`,
+              :class:`~empulse.metrics.MinCost`, :class:`~empulse.metrics.EmpiricalMaxProfit`,
+              :class:`~empulse.metrics.EmpiricalMinCost`, :class:`~empulse.metrics.AUEPC`),
+              ``y_score`` is used only to rank the samples, so any decision score works.
+            - For the probability strategies (:class:`~empulse.metrics.Cost`,
+              :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
+              :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -448,7 +457,7 @@ class Metric(BaseMetric):
 
         Returns
         -------
-        optimal_threshold: float or NDArray of shape (n_samples,)
+        optimal_threshold : float or NDArray of shape (n_samples,)
             The optimal classification threshold(s).
         """
         y_true = np.asarray(y_true).reshape(-1)
@@ -472,17 +481,21 @@ class Metric(BaseMetric):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-            - If :class:`~empulse.metrics.MaxProfit`, the predicted labels are the decision scores.
-            - If :class:`~empulse.metrics.Cost`, the predicted labels are the (calibrated) probabilities.
-            - If :class:`~empulse.metrics.Savings`, the predicted labels are the (calibrated) probabilities.
+            - For the ranking strategies (:class:`~empulse.metrics.MaxProfit`,
+              :class:`~empulse.metrics.MinCost`, :class:`~empulse.metrics.EmpiricalMaxProfit`,
+              :class:`~empulse.metrics.EmpiricalMinCost`, :class:`~empulse.metrics.AUEPC`),
+              ``y_score`` is used only to rank the samples, so any decision score works.
+            - For the probability strategies (:class:`~empulse.metrics.Cost`,
+              :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
+              :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -492,7 +505,7 @@ class Metric(BaseMetric):
 
         Returns
         -------
-        optimal_rate: float
+        optimal_rate : float
             The optimal predicted positive rate.
         """
         y_true = np.asarray(y_true).reshape(-1)
@@ -533,7 +546,7 @@ class Metric(BaseMetric):
             If ``True``, apply soft-thresholding to the regression coefficients.
         fit_intercept : bool
             Whether the logistic regression model includes an intercept term.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -576,7 +589,7 @@ class Metric(BaseMetric):
             The ground truth labels.
         y_score : NDArray of shape (n_samples,)
             The predicted probabilities or decision scores.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -604,7 +617,7 @@ class Metric(BaseMetric):
         ----------
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -642,7 +655,7 @@ class Metric(BaseMetric):
             they were deterministic. If ``False``, stochastic variables are left as-is and
             evaluating them directly will raise an error.
 
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.

@@ -24,6 +24,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
     Trees are split based on a cost-sensitive impurity measure.
 
+    Read more in the :ref:`User Guide <cstree>`.
+
     .. seealso::
 
         :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression classifier.
@@ -32,21 +34,14 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         :class:`~empulse.models.CSForestClassifier` : Cost-sensitive random forest classifier.
 
+        :class:`~empulse.models.CSBaggingClassifier` : Bags an ensemble of cost-sensitive trees.
+
     Parameters
     ----------
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -70,7 +65,16 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : BaseMetric or None, default=None
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
@@ -165,24 +169,13 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         ``N``, ``N_t``, ``N_t_R`` and ``N_t_L`` all refer to the weighted sum,
         if ``sample_weight`` is passed.
 
-
-    class_weight : dict, list of dict or "balanced", default=None
+    class_weight : dict or "balanced", default=None
         Weights associated with classes in the form ``{class_label: weight}``.
-        If None, all classes are supposed to have weight one. For
-        multi-output problems, a list of dicts can be provided in the same
-        order as the columns of y.
-
-        Note that for multioutput (including multilabel) weights should be
-        defined for each class of every column in its own dict. For example,
-        for four-class multilabel classification weights should be
-        [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}] instead of
-        [{1:1}, {2:5}, {3:1}, {4:1}].
+        If None, both classes are supposed to have weight one.
 
         The "balanced" mode uses the values of y to automatically adjust
         weights inversely proportional to class frequencies in the input data
         as ``n_samples / (n_classes * np.bincount(y))``
-
-        For multi-output, the weights of each column of y will be multiplied.
 
         Note that these weights will be multiplied with sample_weight (passed
         through the fit method) if sample_weight is specified.
@@ -203,10 +196,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         If monotonic_cst is None, no constraints are applied.
 
-        Monotonicity constraints are not supported for:
-          - multiclass classifications (i.e. when `n_classes > 2`),
-          - multioutput classifications (i.e. when `n_outputs_ > 1`),
-          - classifications trained on data with missing values.
+        Monotonicity constraints are not supported for classifications trained on
+        data with missing values.
 
         The constraints hold over the probability of the positive class.
 
@@ -217,16 +208,15 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     estimator_ : :class:`~sklearn.tree.DecisionTreeClassifier`
         The underlying DecisionTreeClassifier estimator.
 
-    classes_ : ndarray of shape (n_classes,) or list of ndarray
-        The classes labels (single output problem),
-        or a list of arrays of class labels (multi-output problem).
+    classes_ : ndarray of shape (2,)
+        The class labels.
 
     feature_importances_ : ndarray of shape (n_features,)
         The impurity-based feature importances.
         The higher, the more important the feature.
         The importance of a feature is computed as the (normalized)
         total reduction of the criterion brought by that feature.  It is also
-        known as the Gini importance [4]_.
+        known as the Gini importance [1]_.
 
         Warning: impurity-based feature importances can be misleading for
         high cardinality features (many unique values). See
@@ -235,10 +225,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     max_features_ : int
         The inferred value of max_features.
 
-    n_classes_ : int or list of int
-        The number of classes (for single output problems),
-        or a list containing the number of classes for each
-        output (for multi-output problems).
+    n_classes_ : int
+        The number of classes.
 
     n_features_in_ : int
         Number of features seen during :term:`fit <sklearn:fit>`.
@@ -248,7 +236,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         has feature names that are all strings.
 
     n_outputs_ : int
-        The number of outputs when ``fit`` is performed.
+        The number of outputs when ``fit`` is performed. Always ``1`` for this
+        binary classifier; kept for scikit-learn compatibility.
 
     tree_ : Tree instance
         The underlying Tree object. Please refer to
@@ -260,7 +249,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     ----------
 
     .. [1] Correa Bahnsen, A., Aouada, D., & Ottersten, B.
-           "Example-Dependent Cost-Sensitive Decision Trees. Expert Systems with Applications",
+           "Example-Dependent Cost-Sensitive Decision Trees",
            Expert Systems with Applications, 42(19), 6609–6619, 2015,
            http://doi.org/10.1016/j.eswa.2015.04.042
     """
@@ -375,10 +364,10 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         y : array-like of shape (n_samples,)
             Ground truth (correct) labels.
 
-        loss: BaseMetric
+        loss : BaseMetric
             Loss to be optimized.
 
-        loss_params : dict
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
 
         Returns

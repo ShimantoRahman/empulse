@@ -42,6 +42,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
 
     def __init__(
         self,
+        *,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,

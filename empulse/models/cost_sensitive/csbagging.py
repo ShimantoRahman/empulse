@@ -41,7 +41,10 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     of the dataset are drawn as random subsets of the features, then the method
     is known as Random Subspaces [3]_. Finally, when base estimators are built
     on subsets of both samples and features, then the method is known as
-    Random Patches [4]_.
+    Random Patches [4]_. The cost-sensitive extension, which aggregates base
+    estimators trained with example-dependent costs, follows Correa Bahnsen et al. [5]_.
+
+    Read more in the :ref:`User Guide <csbagging>`.
 
     .. seealso::
 
@@ -71,15 +74,6 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -98,13 +92,30 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : BaseMetric, default=None
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         The loss function to use in order to evaluate the costs.
         If ``None``, then the costs provided to the constructor or to the ``fit``
         method are used directly.
-        If a :class:``~empulse.metrics.BaseMetric`` is provided, then the costs are computed using the
+        If a :class:`~empulse.metrics.BaseMetric` is provided, then the costs are computed using the
         metric, and any costs provided to the
         constructor or to the ``fit`` method are ignored.
+
+    combination : {'majority_voting', 'weighted_voting'}, default='majority_voting'
+        How the base estimators' predictions are aggregated.
+
+        - If ``'majority_voting'``, each base estimator casts an equal-weight vote.
+        - If ``'weighted_voting'``, base estimators are weighted by their out-of-bag
+          performance, which requires ``bootstrap=True`` and a base estimator that
+          implements ``predict_proba``.
 
     max_samples : int or float, default=1.0
         The number of samples to draw from X to train each base estimator (with
@@ -156,17 +167,22 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     Attributes
     ----------
-    estimator_: estimator
-        The base estimator from which the ensemble is grown.
+    estimator_ : BaggingClassifier
+        The fitted :class:`~sklearn.ensemble.BaggingClassifier` that holds the ensemble.
 
-    estimators_: list of estimators
+    base_estimator_ : estimator
+        The estimator that each ensemble member is a clone of: the ``estimator`` passed
+        to the constructor, or a :class:`~empulse.models.CSTreeClassifier` with a
+        cost-sensitive impurity criterion when ``estimator`` is ``None``.
+
+    estimators_ : list of estimators
         The collection of fitted base estimators.
 
-    estimators_samples_: list of arrays
+    estimators_samples_ : list of arrays
         The subset of drawn samples (i.e., the in-bag samples) for each base
         estimator.
 
-    estimators_features_: list of arrays
+    estimators_features_ : list of arrays
         The subset of drawn features for each base estimator.
 
     References
@@ -298,7 +314,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         loss : BaseMetric
             Loss to be optimized.
 
-        loss_params : dict
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
 
         Returns
@@ -393,7 +409,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         return self
 
     def predict(self, X: FloatArrayLike) -> IntNDArray:
-        """Predict class for X.
+        """
+        Predict class for X.
 
         The predicted class of an input sample is computed as the class with
         the highest mean predicted probability. If base estimators do not
@@ -416,7 +433,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
-        """Predict class probabilities for X.
+        """
+        Predict class probabilities for X.
 
         The predicted class probabilities of an input sample is computed as
         the mean predicted class probabilities of the base estimators in the

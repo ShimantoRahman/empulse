@@ -120,12 +120,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the benefit of classifying a true positive.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -138,12 +139,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the benefit of classifying a true negative.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -156,12 +158,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the benefit of classifying a false positive.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -174,12 +177,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the benefit of classifying a false negative.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -192,12 +196,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the cost of classifying a true positive.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -210,12 +215,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the cost of classifying a true negative.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -228,12 +234,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the cost of classifying a false positive.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -246,12 +253,13 @@ class CostMatrix:
 
         Parameters
         ----------
-        term: sympy.Expr | str
+        term : sympy.Expr | str
             The term to add to the cost of classifying a false negative.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
         """
         if isinstance(term, str):
             term = sympy.sympify(term)
@@ -264,23 +272,30 @@ class CostMatrix:
 
         Parameters
         ----------
-        alias: str | MutableMapping[str, sympy.Symbol | str]
+        alias : str | MutableMapping[str, sympy.Symbol | str]
             The alias to add. If a MutableMapping (e.g., dictionary) is passed,
             the keys are the aliases and the values are the symbols.
-        symbol: sympy.Symbol, optional
-            The symbol to alias to.
+        symbol : sympy.Symbol, optional
+            The symbol to alias to. Required unless ``alias`` is a mapping.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
+
+        Raises
+        ------
+        TypeError
+            If a mapping value is not a ``str`` or :class:`sympy.Symbol`.
+        ValueError
+            If neither a mapping nor both an alias and a symbol are given.
 
         Examples
         --------
-
         .. code-block:: python
 
             import sympy as sp
-            from empulse.metrics import Metric, Cost
+            from empulse.metrics import CostMatrix, Metric, Cost
 
             clv, delta, f, gamma = sp.symbols('clv delta f gamma')
             cost_matrix = (
@@ -317,21 +332,29 @@ class CostMatrix:
 
         Parameters
         ----------
-        defaults: float
+        **defaults : float
             Default values for symbols or their aliases.
             These default values will be used if not provided in __call__.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
+
+        Notes
+        -----
+        If you want to set a default using an alias name, you must call
+        :meth:`alias` **before** calling :meth:`set_default`.  Defaults passed
+        via alias names are immediately resolved to their underlying symbol names
+        during this call; any alias registered afterwards will *not* retroactively
+        match previously stored defaults.
 
         Examples
         --------
-
         .. code-block:: python
 
             import sympy as sp
-            from empulse.metrics import Metric, Cost
+            from empulse.metrics import CostMatrix, Metric, Cost
 
             clv, delta, f, gamma = sp.symbols('clv delta f gamma')
             cost_matrix = (
@@ -347,15 +370,6 @@ class CostMatrix:
             y_true = [1, 0, 1, 0, 1]
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
             cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
-
-        Notes
-        -----
-        If you want to set a default using an alias name, you must call
-        :meth:`alias` **before** calling :meth:`set_default`.  Defaults passed
-        via alias names are immediately resolved to their underlying symbol names
-        during this call; any alias registered afterwards will *not* retroactively
-        match previously stored defaults.
-
         """
         # Convert aliases to symbol names before storing defaults
         converted_defaults = {}
@@ -381,12 +395,18 @@ class CostMatrix:
 
         Parameters
         ----------
-        symbol: str | sympy.Symbol
+        symbol : str | sympy.Symbol
             The symbol to mark as outlier-sensitive.
 
         Returns
         -------
         CostMatrix
+            The cost matrix, to allow method chaining.
+
+        Raises
+        ------
+        TypeError
+            If ``symbol`` is not a ``str`` or :class:`sympy.Symbol`.
 
         Examples
         --------
@@ -394,7 +414,7 @@ class CostMatrix:
 
             import numpy as np
             import sympy as sp
-            from empulse.metrics import Metric, Cost
+            from empulse.metrics import CostMatrix, Metric, Cost
             from empulse.models import CSLogitClassifier, RobustCSClassifier
             from sklearn.datasets import make_classification
 
@@ -402,7 +422,6 @@ class CostMatrix:
             a, b = sp.symbols('a b')
             cost_matrix = CostMatrix().add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a)
             cost_loss = Metric(cost_matrix, Cost())
-            fn_cost = np.random.rand(y.size)
 
             model = RobustCSClassifier(CSLogitClassifier(loss=cost_loss))
             model.fit(X, y, a=np.random.rand(y.size), b=5)

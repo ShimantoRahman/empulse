@@ -239,13 +239,13 @@ class LogCost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted (calibrated) probabilities.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -255,7 +255,7 @@ class LogCost(MetricStrategy):
 
         Returns
         -------
-        score: float
+        score : float
             The expected log cost loss.
         """
         return self._score_function(y_true, y_score, **parameters)
@@ -271,13 +271,13 @@ class LogCost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted (calibrated) probabilities.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -287,7 +287,7 @@ class LogCost(MetricStrategy):
 
         Returns
         -------
-        optimal_threshold: float | FloatNDArray
+        optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
@@ -298,13 +298,13 @@ class LogCost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted (calibrated) probabilities.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -314,7 +314,7 @@ class LogCost(MetricStrategy):
 
         Returns
         -------
-        optimal_rate: float
+        optimal_rate : float
             The optimal predicted positive rate.
         """
         return self._optimal_rate(y_true, y_score, **parameters)
@@ -347,7 +347,7 @@ class LogCost(MetricStrategy):
             Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
 
             - If ``float``, the same value is used for all samples (class-dependent).
@@ -387,13 +387,13 @@ class LogCost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The current (raw, pre-sigmoid) boosting scores.
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.

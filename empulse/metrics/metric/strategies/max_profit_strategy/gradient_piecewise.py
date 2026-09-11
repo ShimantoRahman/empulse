@@ -320,27 +320,25 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
 
         When computing the actual loss (``logit_loss()``) always use a fresh hull.
 
+        Send in a ``weights`` vector to reuse the cached hull (only scores and thresholds are
+        recomputed), or a ``(weights, refresh)`` tuple with ``refresh=True`` to rebuild the hull
+        from the new weights first.
+
         Yields
         ------
         gradient : ndarray
-            Negated, regularized gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.  The cached hull
-            is reused; only scores and thresholds are recomputed.
-        (weights, refresh) : (ndarray, bool)
-            Pass ``refresh=True`` to force the convex hull to be rebuilt from the
-            new *weights* before computing the gradient.
+            Negated, regularized gradient at the weights last sent in.
 
         Examples
         --------
-        >>> gen = objective.logit_gradient_steps()
-        >>> grad = gen.send(theta)  # first time hull is built
-        >>> grad = gen.send(theta)  # hull reused
-        >>> grad = gen.send((new_theta, True))  # hull refreshed
-        >>> gen.close()
+        Driving the generator by hand (``objective`` is a built objective,
+        ``theta`` a coefficient vector)::
+
+            gen = objective.logit_gradient_steps()
+            grad = gen.send(theta)  # first time hull is built
+            grad = gen.send(theta)  # hull reused
+            grad = gen.send((theta, True))  # hull refreshed
+            gen.close()
         """
         weights: FloatNDArray
         cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)

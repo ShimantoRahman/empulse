@@ -93,7 +93,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             )
 
     @property
-    def classes_(self) -> NDArray[Any]:  # noqa: D102
+    def classes_(self) -> NDArray[Any]:
+        """The class labels, taken from the wrapped estimator."""
         if estimator := getattr(self, 'estimator_', None):
             classes: NDArray[Any] = estimator.classes_
             return classes
@@ -376,10 +377,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
 
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
-
         tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
             If array-like, then it is the cost of each true negative classification.
@@ -388,7 +385,11 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
-        loss_params : dict
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
+
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
 
         Returns
@@ -492,7 +493,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         return y_score
 
     def get_metadata_routing(self) -> MetadataRouter:
-        """Get metadata routing of this object.
+        """
+        Get metadata routing of this object.
 
         Please check :ref:`User Guide <sklearn:metadata_routing>` on how the routing
         mechanism works.
@@ -529,6 +531,13 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
 
     By default, the expected cost loss is optimized, but a custom loss function can be passed to the init method.
 
+    Read more in the :ref:`User Guide <csthreshold>`.
+
+    .. seealso::
+
+        :class:`~empulse.models.CSRateClassifier` : Sets a target *rate* of positives to contact,
+        for when capacity (e.g. a call centre) rather than a per-sample threshold is the constraint.
+
     Parameters
     ----------
     estimator : object
@@ -544,7 +553,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         - If an Estimator, then it should have a `fit` and `predict_proba` method.
         - If None, probabilities are assumed to be well-calibrated.
 
-    pos_label : int, str, 'boolean' or None, default=None
+    pos_label : int, str, bool or None, default=None
         The positive label. If None, the positive label is assumed to be 1.
 
     random_state : int or None, default=None
@@ -570,15 +579,6 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` or ``predict`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` or ``predict`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` or ``predict`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -592,6 +592,15 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         Cost of false negatives. If ``float``, then all false negatives have the same cost.
         If array-like, then it is the cost of each false negative classification.
         Is overwritten if another `fn_cost` is passed to the ``fit`` or ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` or ``predict`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` or ``predict`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -717,7 +726,8 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         return y_pred
 
     def get_metadata_routing(self) -> MetadataRouter:
-        """Get metadata routing of this object.
+        """
+        Get metadata routing of this object.
 
         Please check :ref:`User Guide <sklearn:metadata_routing>` on how the routing
         mechanism works.
@@ -756,36 +766,22 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     This classifier classifies the top fraction of samples (by predicted probability)
     as positive, where the fraction is determined by the optimal rate computed during fitting.
 
+    Read more in the :ref:`User Guide <csrate>`.
+
+    .. seealso::
+
+        :class:`~empulse.models.CSThresholdClassifier` : Sets a per-sample decision *threshold*
+        instead of a fixed rate, for when there is no fixed capacity constraint.
+
     Parameters
     ----------
     estimator : object
         A binary classifier that implements `fit` and `predict_proba`.
 
-    pos_label : int, str, 'boolean' or None, default=None
-        The label of the positive class.
-
-    loss : BaseMetric or None, default=None
-        The cost-sensitive metric to optimize.
-
-        - If None, the optimal positive rate is computed based on
-          ``tp_cost``, ``tn_cost``, ``fn_cost``, and ``fp_cost``.
-        - If a :class:`~empulse.metrics.BaseMetric`,
-          the optimal positive rate is computed based on the loss parameters provided to
-          the :meth:`fit` or :meth:`predict` method.
-
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` or ``predict`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` or ``predict`` method.
-
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` or ``predict`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -808,6 +804,27 @@ class CSRateClassifier(CSDecisionRuleClassifier):
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` or ``predict`` method.
+
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` or ``predict`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` or ``predict`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
+        The cost-sensitive metric to optimize.
+
+        - If None, the optimal positive rate is computed based on
+          ``tp_cost``, ``tn_cost``, ``fn_cost``, and ``fp_cost``.
+        - If a :class:`~empulse.metrics.BaseMetric`,
+          the optimal positive rate is computed based on the loss parameters provided to
+          the :meth:`fit` or :meth:`predict` method.
+
+    pos_label : int, str, bool or None, default=None
+        The label of the positive class.
 
     Attributes
     ----------

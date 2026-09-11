@@ -34,8 +34,8 @@ class CostLogitObjective(LogitObjective):
     * ``logit_loss_gradient(weights)`` – returns ``(value, gradient)``
     * ``logit_loss(weights)`` – returns only the scalar loss
     * ``logit_gradient(weights)`` – returns only the gradient vector
-    * ``logit_gradient_steps(initial_weights)`` – generator that yields gradients
-      while reusing the (fixed) precomputed constants across iterations
+    * ``logit_gradient_steps()`` – generator that yields gradients for each weights
+      vector sent in, reusing the (fixed) precomputed constants across iterations
 
     The constants are computed once during construction and do not change, so
     the ``refresh`` signal in ``logit_gradient_steps`` is accepted for API
@@ -172,26 +172,13 @@ class CostLogitObjective(LogitObjective):
         there is no expensive state to reconstruct between steps.  The
         generator accepts the same send-protocol as
         ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API
-        compatibility: passing ``(weights, refresh)`` works but ``refresh``
-        is silently ignored.
-
-        Parameters
-        ----------
-        initial_weights : ndarray
-            Starting coefficient vector.
+        compatibility: send in either a ``weights`` vector or a
+        ``(weights, refresh)`` tuple, where ``refresh`` is silently ignored.
 
         Yields
         ------
         gradient : ndarray
-            Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted but ignored.
-
+            Gradient at the weights last sent in.
         """
         weights: FloatNDArray
 
@@ -219,30 +206,22 @@ class CostLogitObjective(LogitObjective):
         Because the constants are derived from fixed data and parameters,
         there is no expensive state to reconstruct between steps.  The
         generator accepts the same send-protocol as ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API
-        compatibility: passing ``(weights, refresh)`` works but ``refresh`` is silently ignored.
-
-        Parameters
-        ----------
-        initial_weights : ndarray
-            Starting coefficient vector.
+        compatibility. Send in either a ``weights`` vector or a ``(weights, refresh)`` tuple;
+        ``refresh`` is accepted but ignored here.
 
         Yields
         ------
         gradient : ndarray
-            Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted but ignored.
+            Gradient at the weights last sent in.
 
         Examples
         --------
-        >>> gen = objective.logit_gradient_steps()
-        >>> grad = gen.send(theta)
-        >>> gen.close()
+        Driving the generator by hand (``objective`` is a built objective,
+        ``theta`` a coefficient vector)::
+
+            gen = objective.logit_gradient_steps()
+            grad = gen.send(theta)
+            gen.close()
         """
         generator = self._logit_gradient_steps()
         next(generator)
@@ -303,13 +282,13 @@ class Cost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -319,7 +298,7 @@ class Cost(MetricStrategy):
 
         Returns
         -------
-        score: float
+        score : float
             The expected cost loss.
         """
         return self._score_function(y_true, y_score, **parameters)
@@ -336,13 +315,13 @@ class Cost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -352,7 +331,7 @@ class Cost(MetricStrategy):
 
         Returns
         -------
-        optimal_threshold: float | FloatNDArray
+        optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
         return self._optimal_threshold(y_true, y_score, **parameters)
@@ -363,13 +342,13 @@ class Cost(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -379,7 +358,7 @@ class Cost(MetricStrategy):
 
         Returns
         -------
-        optimal_rate: float
+        optimal_rate : float
             The optimal predicted positive rate.
         """
         return self._optimal_rate(y_true, y_score, **parameters)
@@ -412,7 +391,7 @@ class Cost(MetricStrategy):
             Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
 
             - If ``float``, the same value is used for all samples (class-dependent).
@@ -423,7 +402,7 @@ class Cost(MetricStrategy):
         logistic_objective : Callable[[NDArray], tuple[float, NDArray]]
             A function that takes logistic regression weights as input and returns the metric value and its gradient.
             The function signature is:
-            ``logistic_objective(weights) -> (value, gradient)``
+            ``logistic_objective(weights) -> (value, gradient)``.
         """
         tp_val = _safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **parameters)
         fn_val = _safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **parameters)
@@ -450,7 +429,7 @@ class Cost(MetricStrategy):
         ----------
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -500,13 +479,13 @@ class Profit(Cost):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -516,7 +495,7 @@ class Profit(Cost):
 
         Returns
         -------
-        score: float
+        score : float
             The expected profit score.
         """
         return -super().score(y_true, y_score, **parameters)

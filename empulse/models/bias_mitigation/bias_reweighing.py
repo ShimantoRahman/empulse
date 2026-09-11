@@ -53,6 +53,21 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
     transform_feature : Optional[Callable], default=None
         Function which transforms sensitive feature before computing sample weights.
 
+    Attributes
+    ----------
+    classes_ : numpy.ndarray, shape=(n_classes,)
+        Unique classes in the target.
+
+    estimator_ : Estimator instance
+        Fitted base estimator.
+
+    References
+    ----------
+
+    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
+           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
+
     Examples
     --------
     1. Using the `BiasReweighingClassifier` with a logistic regression model:
@@ -136,13 +151,6 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
             ])
             search = GridSearchCV(pipeline, param_grid)
             search.fit(X, y, sensitive_feature=high_clv)
-
-    References
-    ----------
-
-    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
-           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
-           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
     _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {

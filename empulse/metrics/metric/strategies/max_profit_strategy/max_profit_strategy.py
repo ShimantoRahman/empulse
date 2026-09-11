@@ -52,7 +52,7 @@ class MaxProfit(MetricStrategy):
 
     Parameters
     ----------
-    integration_method: {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}, default='auto'
+    integration_method : {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}, default='auto'
         The integration method to use when the metric has stochastic variables.
 
         - If ``'auto'``, the integration method is automatically chosen based on the number of stochastic variables,
@@ -95,19 +95,19 @@ class MaxProfit(MetricStrategy):
             - :class:`sympy.stats.Triangular`
             - :class:`sympy.stats.Uniform`
 
-    n_mc_samples_exp: int
+    n_mc_samples_exp : int, default=16
         ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
-        ``integration_technique'monte-carlo'``.
+        ``integration_method == 'monte-carlo'``.
         Increasing the number of samples improves the accuracy of the metric estimation but slows down the speed.
-        This argument is ignored when the ``integration_technique='quad'``.
+        This argument is ignored when the ``integration_method == 'quad'``.
 
-    random_state: int | np.random.Generator | None, default=None
-        The random state to use when ``integration_technique='monte-carlo'`` or
-        ``integration_technique='quasi-monte-carlo'``.
+    random_state : int | np.random.Generator | None, default=None
+        The random state to use when ``integration_method == 'monte-carlo'`` or
+        ``integration_method == 'quasi-monte-carlo'``.
         Determines the points sampled from the distribution of the stochastic variables.
-        This argument is ignored when ``integration_technique='quad'``.
+        This argument is ignored when ``integration_method == 'quad'``.
 
-    alpha: float, default=1.0
+    alpha : float, default=1.0
         Temperature of the smooth sigmoid approximation used by ``logit_objective`` and
         ``gradient_boost_objective`` to make the (otherwise piecewise-constant) TPR/FPR
         differentiable. Held constant here; to anneal it during logistic-regression training,
@@ -116,14 +116,15 @@ class MaxProfit(MetricStrategy):
         :class:`~empulse.optimizers.ExponentialSchedule` and :class:`~empulse.optimizers.StepSchedule`
         both support a growth factor with a ``max_value`` ceiling.
 
-    .. note::
-        Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`, this
-        strategy does **not** take instance-dependent costs/benefits into account: the EMP
-        framework is defined on the aggregate class priors and the score/rate/threshold it
-        computes are global, classifier-level quantities, not per-instance ones. Any array-like
-        parameter you pass is silently reduced to its **mean** before use - passing an
-        instance-dependent array gives the exact same result as passing that array's mean as a
-        plain ``float``.
+    Notes
+    -----
+    Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`, this
+    strategy does **not** take instance-dependent costs/benefits into account: the EMP
+    framework is defined on the aggregate class priors and the score/rate/threshold it
+    computes are global, classifier-level quantities, not per-instance ones. Any array-like
+    parameter you pass is silently reduced to its **mean** before use - passing an
+    instance-dependent array gives the exact same result as passing that array's mean as a
+    plain ``float``.
     """
 
     INTEGRATION_METHODS: ClassVar[list[Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']]] = [
@@ -261,13 +262,13 @@ class MaxProfit(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -279,7 +280,7 @@ class MaxProfit(MetricStrategy):
 
         Returns
         -------
-        score: float
+        score : float
             The maximum profit score.
         """
         parameters = _aggregate_instance_parameters(parameters)
@@ -297,13 +298,13 @@ class MaxProfit(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -315,7 +316,7 @@ class MaxProfit(MetricStrategy):
 
         Returns
         -------
-        optimal_threshold: float | FloatNDArray
+        optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
         rate = self.optimal_rate(y_true, y_score, **parameters)
@@ -327,13 +328,13 @@ class MaxProfit(MetricStrategy):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -345,7 +346,7 @@ class MaxProfit(MetricStrategy):
 
         Returns
         -------
-        optimal_rate: float
+        optimal_rate : float
             The optimal predicted positive rate.
         """
         parameters = _aggregate_instance_parameters(parameters)
@@ -385,7 +386,7 @@ class MaxProfit(MetricStrategy):
             Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -401,7 +402,7 @@ class MaxProfit(MetricStrategy):
             A function that takes logistic regression weights as input and returns the negated metric value
             and its gradient (negated for minimization).
             The function signature is:
-            ``logistic_objective(weights) -> (value, gradient)``
+            ``logistic_objective(weights) -> (value, gradient)``.
 
         Raises
         ------
@@ -527,10 +528,25 @@ class MinCost(MaxProfit):
     you use is a presentation choice -- models train identically on either, because they optimize
     :meth:`~empulse.metrics.BaseMetric._loss`, which removes the sign difference.
 
-    It takes the same arguments as :class:`MaxProfit`; see there for their meaning.
-
     .. seealso::
         :class:`MaxProfit` : The profit phrasing of the same metric.
+
+    Parameters
+    ----------
+    integration_method : {'auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'}, default='auto'
+        The integration method to use when the metric has stochastic variables.
+        See :class:`MaxProfit` for the meaning of each value.
+
+    n_mc_samples_exp : int, default=16
+        ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use.
+        See :class:`MaxProfit`.
+
+    random_state : int, np.random.Generator or None, default=None
+        The random state used by the Monte Carlo integration methods. See :class:`MaxProfit`.
+
+    alpha : float, default=1.0
+        Temperature of the smooth sigmoid approximation used by the gradient objectives.
+        See :class:`MaxProfit`.
     """
 
     _name: str = 'min cost'
@@ -542,23 +558,25 @@ class MinCost(MaxProfit):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
 
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
+            - If ``float``, the value is used as-is (class-dependent).
+            - If ``array-like``, the **mean** of the values is used: like :class:`MaxProfit`, this
+              strategy does not take instance-dependent costs/benefits into account, so passing an
+              array gives the same result as passing that array's mean directly.
 
         Returns
         -------
-        score: float
+        score : float
             The minimum cost score.
         """
         return -super().score(y_true, y_score, **parameters)

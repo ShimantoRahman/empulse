@@ -28,11 +28,11 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         Method to perform the cost-proportionate sampling,
         either 'RejectionSampling' or 'OverSampling'.
 
-    oversampling_norm: float, default=0.1
+    oversampling_norm : float, default=0.1
         Oversampling norm for the cost.
         The smaller the oversampling_norm, the more samples are generated.
 
-    percentile_threshold: float, default=0.975
+    percentile_threshold : float, default=0.975
         Outlier adjustment for the cost.
         Costs are normalized and cost values above the percentile_threshold'th percentile are set to 1.
 
@@ -57,7 +57,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit_resample`` method.
 
-    loss : :class:`empulse.metrics.Metric`, default=None
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         Loss function which determines the false positive and false negative costs
         used for the cost-proportionate resampling.
 
@@ -79,10 +79,6 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
     .. [2] C. Elkan, "The foundations of Cost-Sensitive Learning",
            in Seventeenth International Joint Conference on Artificial Intelligence,
            973-978, 2001.
-
-    Notes
-    -----
-    code modified from `costcla.sampling.cost_sampling`.
 
     Examples
     --------
@@ -122,7 +118,6 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
 
         sampler = CostSensitiveSampler(method='oversampling', random_state=42, loss=cost_loss)
         X_re, y_re = sampler.fit_resample(X, y, clv=100, incentive_cost=10, contact_cost=1)
-
     """
 
     _sampling_type: ClassVar[str] = 'bypass'
@@ -202,8 +197,10 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
+            Training data.
 
         y : array-like of shape (n_samples,)
+            Target values.
 
         fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
@@ -215,7 +212,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
             If array-like, then it is the cost of each false negative classification.
             Ignored if ``loss`` is a :class:`~empulse.metrics.Metric`.
 
-        loss_params : Any
+        **loss_params : Any
             Additional parameters to be passed to the loss function
             if ``loss`` is a :class:`~empulse.metrics.Metric`.
 

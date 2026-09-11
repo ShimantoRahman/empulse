@@ -63,13 +63,22 @@ class Savings(Cost):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        baseline : {'zero_one', 'zero', 'one', 'prior'} or array-like of shape (n_samples,), default='zero_one'
+            The model that savings are measured against; the score is ``1 - cost / cost_baseline``.
+
+            - If ``'zero_one'``, whichever of "predict all zeros" or "predict all ones" costs less.
+            - If ``'zero'``, predict all zeros.
+            - If ``'one'``, predict all ones.
+            - If ``'prior'``, predict the class prior for every sample.
+            - If ``array-like``, the predicted labels or calibrated probabilities of a reference model.
+
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -79,7 +88,7 @@ class Savings(Cost):
 
         Returns
         -------
-        score: float
+        score : float
             The expected savings score.
         """
         return self._score_function(y_true, y_score, baseline=baseline, **parameters)

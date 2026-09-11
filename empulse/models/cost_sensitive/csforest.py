@@ -28,6 +28,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     A forest of cost-sensitive decision trees.
 
+    Read more in the :ref:`User Guide <csforest>`.
+
     .. seealso::
 
         :class:`~empulse.models.CSTreeClassifier` : Cost-sensitive decision tree classifier.
@@ -35,6 +37,8 @@ class CSForestClassifier(CostSensitiveClassifier):
         :class:`~empulse.models.CSLogitClassifier` : Cost-sensitive logistic regression classifier.
 
         :class:`~empulse.models.CSBoostClassifier` : Cost-sensitive gradient boosting classifier.
+
+        :class:`~empulse.models.CSBaggingClassifier` : Bags an ensemble of cost-sensitive trees.
 
     Parameters
     ----------
@@ -45,15 +49,6 @@ class CSForestClassifier(CostSensitiveClassifier):
         Cost of true positives. If ``float``, then all true positives have the same cost.
         If array-like, then it is the cost of each true positive classification.
         Is overwritten if another `tp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
 
         .. note::
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
@@ -77,7 +72,16 @@ class CSForestClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : BaseMetric or None, default=None
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         The metric to measure the quality of a split.
         If None, the cost impurity is used.
 
@@ -108,9 +112,6 @@ class CSForestClassifier(CostSensitiveClassifier):
         - If float, then `min_samples_split` is a fraction and
           `ceil(min_samples_split * n_samples)` are the minimum
           number of samples for each split.
-
-        .. versionchanged:: 0.18
-           Added float values for fractions.
 
     min_samples_leaf : int or float, default=1
         The minimum number of samples required to be at a leaf node.
@@ -155,8 +156,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         The weighted impurity decrease equation is the following::
 
-            N_t / N * (impurity - N_t_R / N_t * right_impurity
-                                - N_t_L / N_t * left_impurity)
+            N_t / N * (impurity - N_t_R / N_t * right_impurity - N_t_L / N_t * left_impurity)
 
         where ``N`` is the total number of samples, ``N_t`` is the number of
         samples at the current node, ``N_t_L`` is the number of samples in the
@@ -197,18 +197,9 @@ class CSForestClassifier(CostSensitiveClassifier):
         new forest. See :term:`Glossary <sklearn:warm_start>` and
         :ref:`sklearn:tree_ensemble_warm_start` for details.
 
-    class_weight : {"balanced", "balanced_subsample"}, dict or list of dicts, \
-            default=None
+    class_weight : {"balanced", "balanced_subsample"} or dict, default=None
         Weights associated with classes in the form ``{class_label: weight}``.
-        If not given, all classes are supposed to have weight one. For
-        multi-output problems, a list of dicts can be provided in the same
-        order as the columns of y.
-
-        Note that for multioutput (including multilabel) weights should be
-        defined for each class of every column in its own dict. For example,
-        for four-class multilabel classification weights should be
-        [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}] instead of
-        [{1:1}, {2:5}, {3:1}, {4:1}].
+        If not given, both classes are supposed to have weight one.
 
         The "balanced" mode uses the values of y to automatically adjust
         weights inversely proportional to class frequencies in the input data
@@ -217,8 +208,6 @@ class CSForestClassifier(CostSensitiveClassifier):
         The "balanced_subsample" mode is the same as "balanced" except that
         weights are computed based on the bootstrap sample for every tree
         grown.
-
-        For multi-output, the weights of each column of y will be multiplied.
 
         Note that these weights will be multiplied with sample_weight (passed
         through the fit method) if sample_weight is specified.
@@ -248,10 +237,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         If monotonic_cst is None, no constraints are applied.
 
-        Monotonicity constraints are not supported for:
-          - multiclass classifications (i.e. when `n_classes > 2`),
-          - multioutput classifications (i.e. when `n_outputs_ > 1`),
-          - classifications trained on data with missing values.
+        Monotonicity constraints are not supported for classifications trained on
+        data with missing values.
 
         The constraints hold over the probability of the positive class.
 
@@ -265,27 +252,18 @@ class CSForestClassifier(CostSensitiveClassifier):
     estimators_ : list of DecisionTreeClassifier
         The collection of fitted sub-estimators.
 
-    classes_ : ndarray of shape (n_classes,) or a list of such arrays
-        The classes labels (single output problem), or a list of arrays of
-        class labels (multi-output problem).
+    classes_ : ndarray of shape (2,)
+        The class labels.
 
-    n_classes_ : int or list
-        The number of classes (single output problem), or a list containing the
-        number of classes for each output (multi-output problem).
+    n_classes_ : int
+        The number of classes.
 
     n_features_in_ : int
         Number of features seen during :term:`fit <sklearn:fit>`.
 
-        .. versionadded:: 0.24
-
     feature_names_in_ : ndarray of shape (`n_features_in_`,)
         Names of features seen during :term:`fit <sklearn:fit>`. Defined only when `X`
         has feature names that are all strings.
-
-        .. versionadded:: 1.0
-
-    n_outputs_ : int
-        The number of outputs when ``fit`` is performed.
 
     feature_importances_ : ndarray of shape (n_features,)
         The impurity-based feature importances.
@@ -302,8 +280,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         Score of the training dataset obtained using an out-of-bag estimate.
         This attribute exists only when ``oob_score`` is True.
 
-    oob_decision_function_ : ndarray of shape (n_samples, n_classes) or \
-            (n_samples, n_classes, n_outputs)
+    oob_decision_function_ : ndarray of shape (n_samples, n_classes)
         Decision function computed with out-of-bag estimate on the training
         set. If n_estimators is small it might be possible that a data point
         was never left out during the bootstrap. In this case,
@@ -445,7 +422,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         loss : BaseMetric
             Loss to be optimized.
 
-        loss_params : dict
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
 
         Returns

@@ -144,7 +144,7 @@ def cost_loss(
 
     Notes
     -----
-    The cost of each instance :math:`C_i` is calculated as [3]_:
+    The cost of each instance :math:`C_i` is calculated as [1]_:
 
     .. math::
 
@@ -164,16 +164,7 @@ def cost_loss(
 
     References
     ----------
-    .. [1] C. Elkan, "The foundations of Cost-Sensitive Learning",
-           in Seventeenth International Joint Conference on Artificial Intelligence,
-           973-978, 2001.
-
-    .. [2] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,
-           "Improving Credit Card Fraud Detection with Calibrated Probabilities",
-           in Proceedings of the fourteenth SIAM International Conference on Data Mining,
-           677-685, 2014.
-
-    .. [3] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
            Instance-dependent cost-sensitive learning for detecting transfer fraud.
            European Journal of Operational Research, 297(1), 291-300.
 
@@ -222,11 +213,6 @@ strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cos
     :func:`~empulse.metrics.expected_savings_score` : Expected savings of a classifier
     compared to using a baseline.
 
-.. note::
-   This replaces the previous native ``expected_cost_loss`` function, which by default
-   returned the *summed* cost (with an optional ``normalize=True`` argument to switch to the
-   mean). This metric always returns the *mean* cost per instance.
-
 .. rubric:: Methods
 
 ``__call__(y_true, y_proba, *, tp_cost=0.0, tn_cost=0.0, fp_cost=0.0, fn_cost=0.0)``
@@ -267,11 +253,6 @@ log cost is equivalent to the log loss :func:`sklearn:sklearn.metrics.log_loss`.
 .. seealso::
 
     :func:`~empulse.metrics.expected_cost_loss` : Expected cost of a classifier.
-
-.. note::
-   This replaces the previous native ``expected_log_cost_loss`` function, which by default
-   returned the *summed* log cost (with an optional ``normalize=True`` argument to switch to
-   the mean). This metric always returns the *mean* log cost per instance.
 
 .. rubric:: Methods
 
@@ -406,6 +387,17 @@ def savings_score(
 
     Code modified from `costcla.metrics.cost_loss`.
 
+    References
+    ----------
+    .. [1] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,
+           "Improving Credit Card Fraud Detection with Calibrated Probabilities",
+           in Proceedings of the fourteenth SIAM International Conference on Data Mining,
+           677-685, 2014.
+
+    .. [2] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
+
     Examples
     --------
 
@@ -418,17 +410,6 @@ def savings_score(
         fp_cost = np.array([4, 1, 2, 2])
         fn_cost = np.array([1, 3, 3, 1])
         savings_score(y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
-
-    References
-    ----------
-    .. [1] A. Correa Bahnsen, A. Stojanovic, D.Aouada, B, Ottersten,
-           "Improving Credit Card Fraud Detection with Calibrated Probabilities",
-           in Proceedings of the fourteenth SIAM International Conference on Data Mining,
-           677-685, 2014.
-
-    .. [2] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
-           Instance-dependent cost-sensitive learning for detecting transfer fraud.
-           European Journal of Operational Research, 297(1), 291-300.
     """
     y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost = _validate_input(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input

@@ -51,20 +51,19 @@ class LGBMObjective:
 
     def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
         """
-        Create an objective function for the AEC measure.
+        Compute the gradient and hessian of the AEC objective.
 
         Parameters
         ----------
         y_true : np.ndarray
-            Ground truth labels
+            Ground truth labels.
         y_score : np.ndarray
-            Predicted labels
+            Raw model scores.
 
         Returns
         -------
-        gradient  : np.ndarray
+        gradient : np.ndarray
             Gradient of the objective function.
-
         hessian : np.ndarray
             Hessian of the objective function.
         """
@@ -127,15 +126,6 @@ class CSBoostClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    fp_cost : float or array-like, shape=(n_samples,), default=0.0
-        Cost of false positives. If ``float``, then all false positives have the same cost.
-        If array-like, then it is the cost of each false positive classification.
-        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
-
-        .. note::
-            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
-            Instead, pass them to the ``fit`` method.
-
     tn_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true negatives. If ``float``, then all true negatives have the same cost.
         If array-like, then it is the cost of each true negative classification.
@@ -154,9 +144,18 @@ class CSBoostClassifier(CostSensitiveClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` method.
 
-    loss : :class:`empulse.metrics.BaseMetric`, default=None
+    fp_cost : float or array-like, shape=(n_samples,), default=0.0
+        Cost of false positives. If ``float``, then all false positives have the same cost.
+        If array-like, then it is the cost of each false positive classification.
+        Is overwritten if another `fp_cost` is passed to the ``fit`` method.
+
+        .. note::
+            It is not recommended to pass instance-dependent costs to the ``__init__`` method.
+            Instead, pass them to the ``fit`` method.
+
+    loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
         Loss function to optimize. Loss parameters are passed as ``loss_params``
-          to the :meth:`~empulse.models.CSBoostClassifier.fit` method.
+        to the :meth:`~empulse.models.CSBoostClassifier.fit` method.
 
     Attributes
     ----------
@@ -165,6 +164,12 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
     estimator_ : :class:`xgboost:xgboost.XGBClassifier`
         Fitted XGBoost classifier.
+
+    References
+    ----------
+    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
+           Instance-dependent cost-sensitive learning for detecting transfer fraud.
+           European Journal of Operational Research, 297(1), 291-300.
 
     Examples
     --------
@@ -247,12 +252,6 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid, scoring=scorer)
         grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-    References
-    ----------
-    .. [1] Höppner, S., Baesens, B., Verbeke, W., & Verdonck, T. (2022).
-           Instance-dependent cost-sensitive learning for detecting transfer fraud.
-           European Journal of Operational Research, 297(1), 291-300.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -291,16 +290,14 @@ class CSBoostClassifier(CostSensitiveClassifier):
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
+            Training data.
 
         y : array-like of shape (n_samples,)
+            Target values.
 
         tp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true positives. If ``float``, then all true positives have the same cost.
             If array-like, then it is the cost of each true positive classification.
-
-        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
-            Cost of false positives. If ``float``, then all false positives have the same cost.
-            If array-like, then it is the cost of each false positive classification.
 
         tn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of true negatives. If ``float``, then all true negatives have the same cost.
@@ -310,10 +307,14 @@ class CSBoostClassifier(CostSensitiveClassifier):
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
 
+        fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
+            Cost of false positives. If ``float``, then all false positives have the same cost.
+            If array-like, then it is the cost of each false positive classification.
+
         fit_params : dict
             Additional keyword arguments to pass to the estimator's fit method.
 
-        loss_params : dict
+        **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
 
         Returns
@@ -490,6 +491,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         Parameters
         ----------
         X : 2D numpy.ndarray, shape=(n_samples, n_features)
+            The input samples.
 
         Returns
         -------
@@ -541,14 +543,13 @@ class CatBoostObjective:
         targets : indexed container of floats
             Target values you provided with the dataset.
 
-        weights : float, optional (default=None)
-            Instance weight. Here instance weights are used to pass the indices of the instances, not actual weights.
+        weights : ndarray of float
+            Here instance weights are used to pass the indices of the instances, not actual weights.
 
         Returns
         -------
-            der1 : list-like object of float
-            der2 : list-like object of float
-
+        list of (float, float)
+            The first and second derivative of the loss w.r.t. the prediction, per object.
         """
         weights = weights.astype(int)
         predictions = np.array(predictions, dtype=np.float64)
@@ -591,21 +592,21 @@ class CatBoostMetric:
 
         Parameters
         ----------
-        approxes : list of indexed containers (containers with only __len__ and __getitem__ defined) of float
-            Vectors of approx labels.
+        predictions : sequence of float
+            Raw model outputs (logits) for each instance.
 
-        targets : one dimensional indexed container of float
+        targets : sequence of float
             Vectors of true labels.
 
-        weights : one dimensional indexed container of float, optional (default=None)
-            Weight for each instance.
+        weights : ndarray of float
             Here instance weights are used to pass the indices of the instances, not actual weights.
 
         Returns
         -------
-            weighted error : float
-            total weight : float
-
+        weighted_error : float
+            The metric value, reported as a loss to be minimized.
+        total_weight : float
+            Always ``1``; CatBoost divides ``weighted_error`` by this to form the final error.
         """
         weights = weights.astype(int)
         # Use weights as a proxy to index the costs
@@ -631,7 +632,7 @@ class CatBoostMetric:
 
         Returns
         -------
-        metric value : float
-
+        float
+            The final metric value.
         """
         return error

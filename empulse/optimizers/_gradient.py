@@ -33,7 +33,8 @@ def _make_result(
 
 
 class _IterativeGradientOptimizer(Optimizer):
-    """Shared loop logic for iterative gradient-descent optimizers.
+    """
+    Shared loop logic for iterative gradient-descent optimizers.
 
     Subclasses implement :meth:`_init_state` and :meth:`_step`.
 
@@ -75,7 +76,8 @@ class _IterativeGradientOptimizer(Optimizer):
         t: int,
         lr: float,
     ) -> tuple[FloatNDArray, dict[str, Any]]:
-        """Compute the next weight vector and updated state.
+        """
+        Compute the next weight vector and updated state.
 
         Parameters
         ----------
@@ -204,7 +206,8 @@ class _IterativeGradientOptimizer(Optimizer):
 
 
 class SGD(_IterativeGradientOptimizer):
-    """Stochastic Gradient Descent with optional Nesterov momentum.
+    """
+    Stochastic Gradient Descent with optional Nesterov momentum.
 
     Although called "stochastic", this optimizer operates on the full dataset
     (as required by cost-sensitive logit objectives) and is therefore a
@@ -329,7 +332,8 @@ class SGD(_IterativeGradientOptimizer):
 
 
 class RMSProp(_IterativeGradientOptimizer):
-    """RMSProp optimizer.
+    """
+    RMSProp optimizer.
 
     Divides the learning rate by a running average of recent gradient
     magnitudes:
@@ -439,7 +443,8 @@ class RMSProp(_IterativeGradientOptimizer):
 
 
 class Adam(_IterativeGradientOptimizer):
-    """Adam optimizer with optional AMSGrad correction.
+    """
+    Adam optimizer with optional AMSGrad correction.
 
     Combines momentum (first moment) with adaptive per-parameter learning
     rates (second moment):

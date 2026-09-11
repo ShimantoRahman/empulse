@@ -414,7 +414,8 @@ class Generation:
 
 
 class LamarckianGeneration(Generation):
-    """Real-coded GA generation with Lamarckian local gradient search.
+    """
+    Real-coded GA generation with Lamarckian local gradient search.
 
     Before evaluating each individual's fitness the genome is improved in-place
     by ``local_steps`` gradient steps (Lamarckian learning: the refined weights
@@ -431,6 +432,9 @@ class LamarckianGeneration(Generation):
 
     Parameters
     ----------
+    grad_objective : LogitObjective
+        Objective providing the gradient steps for the local search
+        (:meth:`~empulse.metrics.LogitObjective.logit_gradient_steps`).
     local_steps : int, default=5
         Number of gradient steps applied to each individual per generation.
     lr : float, default=0.05
@@ -452,9 +456,6 @@ class LamarckianGeneration(Generation):
         Ignored when ``optimizer="sgd"``.
     grad_clip : float, default=5.0
         Gradient clipping threshold applied element-wise before the update.
-    grad_objective : LogitObjective
-        Objective providing the gradient steps for the local search
-        (:meth:`~empulse.metrics.LogitObjective.logit_gradient_steps`).
     **kwargs
         Forwarded to :class:`Generation`.
     """
@@ -484,7 +485,8 @@ class LamarckianGeneration(Generation):
         self._grad_objective = grad_objective
 
     def _local_search(self, theta: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Run ``local_steps`` gradient steps on *theta*.
+        """
+        Run ``local_steps`` gradient steps on *theta*.
 
         The convex hull is built once from the initial *theta* and then reused
         for all subsequent steps via the ``gradient_steps`` generator.  The
@@ -518,7 +520,8 @@ class LamarckianGeneration(Generation):
         return theta
 
     def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> None:  # type: ignore[override]
-        """Apply Lamarckian local search before scalar evaluation.
+        """
+        Apply Lamarckian local search before scalar evaluation.
 
         Runs sequentially (no joblib) to avoid pickling the gradient objective.
         """

@@ -60,6 +60,13 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
     sample_indices_ : numpy.ndarray
         Indices of the samples that were selected.
 
+    References
+    ----------
+
+    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
+           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
+           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
+
     Examples
     --------
 
@@ -129,13 +136,6 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
 
         grid_search = GridSearchCV(pipeline, param_grid=param_grid)
         grid_search.fit(X, y, sensitive_feature=clv)
-
-    References
-    ----------
-
-    .. [1] Rahman, S., Janssens, B., & Bogaert, M. (2025).
-           Profit-driven pre-processing in B2B customer churn modeling using fairness techniques.
-           Journal of Business Research, 189, 115159. doi:10.1016/j.jbusres.2024.115159
     """
 
     _estimator_type: ClassVar[str] = 'sampler'
@@ -192,7 +192,9 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_features)
+            Training data.
         y : 1D array-like, shape=(n_samples,)
+            Target values.
         sensitive_feature : 1D array-like, shape=(n_samples,)
             Sensitive attribute used to determine which instances to resample.
 
@@ -221,7 +223,9 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
         Parameters
         ----------
         X : 2D array-like, shape=(n_samples, n_features)
+            Training data.
         y : 1D array-like, shape=(n_samples,)
+            Target values.
         sensitive_feature : 1D array-like, shape=(n_samples,)
             Sensitive attribute used to determine which instances to resample.
 

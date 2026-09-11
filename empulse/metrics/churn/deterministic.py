@@ -30,6 +30,13 @@ However, this implementation assumes the standard notation ('churn': 1, 'no chur
     Compute the predicted positive rate (fraction of the customer base that should be
     targeted) at which the maximum profit is achieved.
 
+References
+----------
+.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
+    A Novel Profit Maximizing Metric for Measuring Classification
+    Performance of Customer Churn Prediction Models. IEEE Transactions on
+    Knowledge and Data Engineering, 25(5), 961-973.
+
 Examples
 --------
 .. code-block:: python
@@ -39,11 +46,4 @@ Examples
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
     y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
     mpc_score(y_true, y_score, accept_rate=0.3, clv=200, incentive_cost=10, contact_cost=1)
-
-References
-----------
-.. [1] Verbraken, T., Verbeke, W. and Baesens, B. (2013).
-    A Novel Profit Maximizing Metric for Measuring Classification
-    Performance of Customer Churn Prediction Models. IEEE Transactions on
-    Knowledge and Data Engineering, 25(5), 961-973.
 """

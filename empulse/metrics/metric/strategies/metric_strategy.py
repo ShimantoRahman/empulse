@@ -45,7 +45,8 @@ class LogitObjective(ABC):
         """
 
     def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
-        """Yield gradients for successive weight vectors.
+        """
+        Yield gradients for successive weight vectors.
 
         Because the constants are derived from fixed data and parameters,
         there is no expensive state to reconstruct between steps.  The
@@ -54,18 +55,13 @@ class LogitObjective(ABC):
         compatibility: passing ``(weights, refresh)`` works but ``refresh``
         is silently ignored.
 
+        Send in either a ``weights`` vector or a ``(weights, refresh)`` tuple; ``refresh`` is
+        ignored here.
+
         Yields
         ------
         gradient : ndarray
             Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted but ignored.
-
         """
         weights: FloatNDArray
 
@@ -85,25 +81,24 @@ class LogitObjective(ABC):
         """
         Yield gradients for successive weight vectors.
 
+        Send either a ``weights`` vector or a ``(weights, refresh)`` tuple into the generator;
+        for this objective ``refresh`` is accepted but ignored.
+
         Yields
         ------
         gradient : ndarray
-            Gradient at the current weights.
-
-        Receives (via ``send``)
-        -----------------------
-        weights : ndarray
-            New coefficient vector for the next gradient step.
-        (weights, refresh) : (ndarray, bool)
-            ``refresh`` is accepted but ignored.
+            Gradient at the weights last sent in.
 
         Examples
         --------
-        >>> gen = objective.logit_gradient_steps()
-        >>> grad = gen.send(new_theta)  # first time gradient is computed from scratch
-        >>> grad = gen.send(new_theta)  # gradient computed from cached information
-        >>> grad = gen.send((new_theta, True))  # gradient computed from scratch
-        >>> gen.close()
+        Driving the generator by hand (``objective`` is a built objective,
+        ``theta`` a coefficient vector)::
+
+            gen = objective.logit_gradient_steps()
+            grad = gen.send(theta)  # first time gradient is computed from scratch
+            grad = gen.send(theta)  # gradient computed from cached information
+            grad = gen.send((theta, True))  # gradient computed from scratch
+            gen.close()
         """
         generator = self._logit_gradient_steps()
         next(generator)
@@ -136,7 +131,8 @@ class LogitObjective(ABC):
         return self.logit_loss_gradient(weights)
 
     def set_alpha(self, alpha: float) -> None:  # noqa: B027
-        """Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).
+        """
+        Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).
 
         Gradient optimizers with an ``alpha_schedule`` call this before each gradient
         computation to externally drive the annealing schedule.  Objectives that
@@ -151,7 +147,8 @@ class LogitObjective(ABC):
         # no-op: override in subclasses that support alpha annealing
 
     def with_indices(self, indices: np.ndarray) -> 'LogitObjective':
-        """Return a new objective restricted to the sample subset given by *indices*.
+        """
+        Return a new objective restricted to the sample subset given by *indices*.
 
         Used by gradient optimizers for mini-batch training.  The default
         implementation raises :exc:`NotImplementedError`; concrete objectives
@@ -183,6 +180,22 @@ class MetricStrategy(ABC):
 
     This class defines the interface for metric strategies.
     Metric strategies are used to compute the metric value, gradient, and hessian.
+
+    Parameters
+    ----------
+    name : str
+        Human-readable name of the strategy, surfaced through :attr:`Metric.__name__`.
+
+    direction : Direction
+        Whether the user-facing metric value is to be maximized or minimized.
+
+    Attributes
+    ----------
+    name : str
+        The ``name`` passed to the constructor.
+
+    direction : Direction
+        The ``direction`` passed to the constructor.
     """
 
     def __init__(self, name: str, direction: Direction):
@@ -191,7 +204,8 @@ class MetricStrategy(ABC):
 
     @property
     def requires_dynamic_boost_objective(self) -> bool:
-        """Whether gradients must be recomputed from the metric each boosting round.
+        """
+        Whether gradients must be recomputed from the metric each boosting round.
 
         ``True`` for strategies whose per-sample loss is not linear in the predicted
         probability (e.g. :class:`~empulse.metrics.LogCost`) or that need the current round's
@@ -202,7 +216,8 @@ class MetricStrategy(ABC):
 
     @property
     def _extra_kwargs(self) -> set[str]:
-        """Extra keyword arguments accepted by :meth:`score` beyond the cost-matrix parameters.
+        """
+        Extra keyword arguments accepted by :meth:`score` beyond the cost-matrix parameters.
 
         Subclasses should override this to declare any additional keyword arguments that
         their :meth:`score` implementation accepts (e.g. ``{'baseline'}`` for
@@ -219,7 +234,27 @@ class MetricStrategy(ABC):
         fp_cost: sympy.Expr,
         fn_cost: sympy.Expr,
     ) -> Self:
-        """Build the metric strategy."""
+        """
+        Compile the four cost-matrix expressions into the strategy's scoring functions.
+
+        Called once by :class:`~empulse.metrics.Metric` at construction.
+
+        Parameters
+        ----------
+        tp_benefit : sympy.Expr
+            Benefit of a true positive.
+        tn_benefit : sympy.Expr
+            Benefit of a true negative.
+        fp_cost : sympy.Expr
+            Cost of a false positive.
+        fn_cost : sympy.Expr
+            Cost of a false negative.
+
+        Returns
+        -------
+        MetricStrategy
+            The built strategy, to allow method chaining.
+        """
 
     @abstractmethod
     def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
@@ -228,13 +263,13 @@ class MetricStrategy(ABC):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -244,7 +279,7 @@ class MetricStrategy(ABC):
 
         Returns
         -------
-        score: float
+        score : float
             The computed metric score or loss.
         """
 
@@ -260,13 +295,13 @@ class MetricStrategy(ABC):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -276,7 +311,7 @@ class MetricStrategy(ABC):
 
         Returns
         -------
-        optimal_threshold: float | FloatNDArray
+        optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
         raise NotImplementedError(f'Optimal threshold is not defined for the {self.name} strategy')
@@ -287,13 +322,13 @@ class MetricStrategy(ABC):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -303,7 +338,7 @@ class MetricStrategy(ABC):
 
         Returns
         -------
-        optimal_rate: float
+        optimal_rate : float
             The optimal predicted positive rate.
         """
         raise NotImplementedError(f'Optimal rate is not defined for the {self.name} strategy')
@@ -336,7 +371,7 @@ class MetricStrategy(ABC):
             Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -359,13 +394,13 @@ class MetricStrategy(ABC):
 
         Parameters
         ----------
-        y_true: array-like of shape (n_samples,)
+        y_true : array-like of shape (n_samples,)
             The ground truth labels.
 
-        y_score: array-like of shape (n_samples,)
+        y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        parameters: float or array-like of shape (n_samples,)
+        **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -392,7 +427,7 @@ class MetricStrategy(ABC):
         ----------
         y_true : NDArray of shape (n_samples,)
             The ground truth labels.
-        parameters : float or NDArray of shape (n_samples,)
+        **parameters : float or NDArray of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
             You can set the parameter values for either the symbol names or their aliases.
@@ -417,7 +452,25 @@ class MetricStrategy(ABC):
         fp_cost: sympy.Expr,
         fn_cost: sympy.Expr,
     ) -> str:
-        """Return the LaTeX representation of the metric."""
+        """
+        Return the LaTeX representation of the metric.
+
+        Parameters
+        ----------
+        tp_benefit : sympy.Expr
+            Benefit of a true positive.
+        tn_benefit : sympy.Expr
+            Benefit of a true negative.
+        fp_cost : sympy.Expr
+            Cost of a false positive.
+        fn_cost : sympy.Expr
+            Cost of a false negative.
+
+        Returns
+        -------
+        str
+            The metric's formula as a LaTeX string.
+        """
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(direction={self.direction})'
