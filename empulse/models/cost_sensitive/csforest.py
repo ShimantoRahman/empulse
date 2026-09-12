@@ -599,7 +599,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
             y_pred = self.estimator_._get_oob_predictions(estimator, X[unsampled_indices, :])
             oob_kwargs = subset_loss_params(kwargs, unsampled_indices, n_samples)
-            losses[i] = weight_fn._loss(y[unsampled_indices], y_pred[:, 1, 0], **oob_kwargs)
+            losses[i] = weight_fn._loss(y[unsampled_indices], y_pred[:, 1, 0], validate=False, **oob_kwargs)
 
         weights: FloatNDArray = goodness_weights(losses)
         return weights

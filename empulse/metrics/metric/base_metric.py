@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import Any
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .common import Direction
@@ -96,28 +97,72 @@ class BaseMetric(ABC):
         """
 
     @abstractmethod
-    def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
+    def __call__(
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
+    ) -> float:
         """Compute the metric score or loss."""
 
-    def _loss(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
+    def _validate_parameters(self, **parameters: Any) -> None:
+        """
+        Check parameter values against the domain this metric declares, and raise if they fall outside.
+
+        Called once, where the user's values first arrive -- the public scoring methods do it
+        themselves, and models do it in ``CostSensitiveClassifier.fit``. Training then re-enters the
+        metric with the same values many times over and passes ``validate=False``, because the check
+        reads array data and would otherwise scale with the iteration count.
+
+        Raises
+        ------
+        ValueError
+            If a distribution rejects its shape parameters, a value falls outside bounds declared
+            with :meth:`~empulse.metrics.CostMatrix.constrain`, or a declared predicate fails.
+        """
+        raise NotImplementedError
+
+    def _loss(
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
+    ) -> float:
         """Compute the metric as a value to be minimized, whatever its :attr:`direction`.
 
         Models optimize a loss, while a metric may naturally be a score (:attr:`direction` is
         :attr:`~empulse.metrics.metric.common.Direction.MAXIMIZE`). This is the single place where
         the two conventions are reconciled, so that no model has to negate a metric itself.
+
+        Pass ``validate=False`` when re-entering on a per-iteration training path; see
+        ``Metric._prepare_parameters``.
         """
-        value = self(y_true, y_score, **parameters)
+        value = self(y_true, y_score, validate=validate, **parameters)
         return -value if self.direction is Direction.MAXIMIZE else value
 
     @abstractmethod
     def optimal_rate(
-        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
     ) -> float:
         """Compute the optimal predicted positive rate."""
 
     @abstractmethod
     def optimal_threshold(
-        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
     ) -> FloatNDArray | float:
         """Compute the optimal classification threshold(s)."""
 

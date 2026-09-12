@@ -4,11 +4,10 @@ The shared contract every prebuilt domain metric in ``empulse.metrics`` must sat
 The metric table lives in ``prebuilt_cases.py``, which also documents the two intentional
 package-vs-reference behaviour differences.
 
-Two groups of tests are marked ``xfail``. They encode the contract the reference implementations
-enforced and the current package does not -- see ``test_bad_parameters_are_rejected`` and
-``test_single_class_y_true_is_rejected``. ``xfail_strict`` is on, so if validation is ever
-restored these turn red and the marker has to be removed; they are a self-maintaining record of
-the gap, not dead tests.
+``test_single_class_y_true_is_rejected`` is marked ``xfail``: ``Metric`` passes
+``check_variance=False`` deliberately, because it doubles as a training loss and a CV fold or tree
+node can legitimately hold a single class. ``xfail_strict`` is on, so if that ever changes the test
+turns red and the marker has to go.
 """
 
 import numpy as np
@@ -41,9 +40,15 @@ def _case_params():
             yield pytest.param(case, params, id=f'{case.name}-{params_id(params)}')
 
 
-def _case_bad_params():
+def _case_invalid_params():
     for case in CASES:
-        for params in case.bad_params:
+        for params in case.invalid_params:
+            yield pytest.param(case, params, id=f'{case.name}-{params_id(params)}')
+
+
+def _case_unconstrained_params():
+    for case in CASES:
+        for params in case.unconstrained_params:
             yield pytest.param(case, params, id=f'{case.name}-{params_id(params)}')
 
 
@@ -136,18 +141,32 @@ def test_single_class_y_true_is_rejected(case, label):
         case.call_metric([label, label], [0.25, 0.75])
 
 
-@pytest.mark.xfail(
-    reason=(
-        'Domain validation of the business parameters was lost when these metrics moved from '
-        'hand-written native math to CostMatrix/Metric. The reference implementations rejected '
-        'every one of these with ValueError; the package now returns a number -- sometimes nan, '
-        'sometimes a plausible-looking but meaningless value (e.g. accept_rate=2).'
-    )
-)
-@pytest.mark.parametrize(('case', 'params'), _case_bad_params())
-def test_bad_parameters_are_rejected(case, params):
+@pytest.mark.parametrize(('case', 'params'), _case_invalid_params())
+def test_out_of_domain_parameters_are_rejected(case, params):
+    """
+    A value the cost matrix's domain excludes must raise, not return a meaningless number.
+
+    Two sources of constraint are in play. A ``sympy.stats`` shape parameter is checked by the
+    distribution itself, so ``Beta(alpha=-1)`` is rejected without anything being declared. Values
+    used as probabilities are bounded by ``CostMatrix.constrain`` in ``prebuilt_metrics.py``, since
+    an "expectation" weighted by a number outside [0, 1] is not an expectation.
+    """
     with pytest.raises(ValueError):
         case.call_metric([0, 1], [0.25, 0.75], **params)
+
+
+@pytest.mark.parametrize(('case', 'params'), _case_unconstrained_params())
+def test_unusual_but_valid_parameters_are_accepted(case, params):
+    """
+    Money quantities carry no default bound, and that is deliberate.
+
+    A negative cost is how the package expresses a benefit -- ``max_profit_score`` is documented in
+    exactly those terms -- so the metric cannot assume costs are non-negative. A user who wants the
+    stricter domain declares it themselves with :meth:`~empulse.metrics.CostMatrix.constrain`; see
+    ``test_metric_validation.py`` for that path.
+    """
+    result = case.call_metric([0, 1], [0.25, 0.75], **params)
+    assert isinstance(result, float)
 
 
 # --- Relationships between the stochastic and deterministic members of a family ----------------

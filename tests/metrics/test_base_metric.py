@@ -44,7 +44,7 @@ Y_SCORE = np.array([0.1, 0.9, 0.3, 0.8, 0.4, 0.2, 0.7, 0.6])
 
 CLASS_COSTS = {'fp_cost': 1.0, 'fn_cost': 5.0, 'tp_cost': 0.0, 'tn_cost': 0.0}
 CHURN_PARAMS = {'clv': 200.0, 'incentive_cost': 10.0, 'contact_cost': 1.0}
-CREDIT_PARAMS = {'roi': 0.2644, 'default_rate': 0.5, 'success_rate': 0.55}
+CREDIT_PARAMS = {'roi': 0.2644, 'default_rate': 0.4, 'success_rate': 0.55}
 
 
 @pytest.mark.parametrize(

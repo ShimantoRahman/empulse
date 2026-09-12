@@ -616,7 +616,7 @@ class CatBoostMetric:
         }
 
         y_proba = expit(predictions)
-        return self.metric._loss(targets, y_proba, **loss_params), 1
+        return self.metric._loss(targets, y_proba, validate=False, **loss_params), 1
 
     def get_final_error(self, error: float, weight: float) -> float:
         """

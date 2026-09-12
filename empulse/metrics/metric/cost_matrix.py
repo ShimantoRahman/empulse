@@ -1,7 +1,34 @@
-from collections.abc import MutableMapping
+from collections.abc import Callable, Mapping, MutableMapping
+from dataclasses import dataclass
 from typing import Any, Self
 
 import sympy
+import sympy.stats
+
+
+def _tightest(new: float | None, existing: float | None, tighter: Callable[[float, float], float]) -> float | None:
+    """Combine two optional bounds, keeping whichever is more restrictive."""
+    if new is None:
+        return existing
+    if existing is None:
+        return new
+    return tighter(new, existing)
+
+
+@dataclass(frozen=True)
+class ParameterBounds:
+    """An inclusive numeric range a cost-matrix parameter must lie within."""
+
+    lower: float | None = None
+    upper: float | None = None
+
+
+@dataclass(frozen=True)
+class ParameterPredicate:
+    """An arbitrary condition over several cost-matrix parameters at once."""
+
+    predicate: Callable[[Mapping[str, Any]], bool]
+    message: str
 
 
 class CostMatrix:
@@ -81,6 +108,8 @@ class CostMatrix:
         self._aliases: MutableMapping[str, str | sympy.Symbol] = {}
         self._defaults: dict[str, Any] = {}
         self._outlier_sensitive_symbols: set[sympy.Symbol] = set()
+        self._bounds: dict[str, ParameterBounds] = {}
+        self._predicates: list[ParameterPredicate] = []
 
     @property
     def tp_benefit(self) -> sympy.Expr:  # noqa: D102
@@ -431,6 +460,136 @@ class CostMatrix:
         if not isinstance(symbol, sympy.Symbol):
             raise TypeError('The symbol must be a sympy.Symbol or a string that can be converted to a sympy.Symbol')
         self._outlier_sensitive_symbols.add(symbol)
+        return self
+
+    def constrain(
+        self,
+        target: str | sympy.Symbol | Callable[[Mapping[str, Any]], bool],
+        lower: float | None = None,
+        upper: float | None = None,
+        *,
+        message: str | None = None,
+    ) -> Self:
+        """
+        Restrict the values a parameter is allowed to take.
+
+        Constraints are checked when the metric is called, and when a model fitting on this metric
+        first receives its parameters. A violation raises a :class:`ValueError`.
+
+        Two forms are supported. Passing a symbol (or alias) with `lower` and/or `upper` bounds the
+        values of that one parameter. Passing a callable expresses a condition over several
+        parameters at once.
+
+        Parameters
+        ----------
+        target : str, sympy.Symbol or callable
+            The symbol or alias to bound, or a callable taking the mapping of resolved parameter
+            values and returning whether they are acceptable.
+
+        lower : float, optional
+            Smallest allowed value, inclusive. Only used when `target` is a symbol or alias.
+
+        upper : float, optional
+            Largest allowed value, inclusive. Only used when `target` is a symbol or alias.
+
+        message : str, optional
+            Explanation to report when a callable `target` rejects the parameters.
+            Required when `target` is a callable.
+
+        Returns
+        -------
+        self : CostMatrix
+            The cost matrix with the constraint added.
+
+        Raises
+        ------
+        TypeError
+            If `target` is neither a str, a :class:`sympy.Symbol`, nor a callable.
+
+        ValueError
+            If `target` is a symbol and neither `lower` nor `upper` is given,
+            if `lower` is greater than `upper`,
+            or if `target` is a callable and `message` is not given.
+
+        Notes
+        -----
+        Bounds are stored against the resolved symbol, so call :meth:`alias` *before*
+        :meth:`constrain` if you want to constrain a parameter by its alias.
+
+        A callable receives the parameters keyed by **symbol name**, with aliases already resolved
+        and defaults already applied.
+
+        Distribution parameters are validated automatically and do not need a constraint: the
+        shape of a ``sympy.stats`` random variable is checked by the distribution itself, so
+        ``alpha=-1`` on a Beta-distributed term is rejected without any declaration here.
+
+        Examples
+        --------
+        Bound a probability to the unit interval:
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import CostMatrix, Metric, MaxProfit
+
+            clv, d, f, gamma = sp.symbols('clv d f gamma')
+            cost_matrix = (
+                CostMatrix()
+                .add_tp_benefit(gamma * (clv - d - f))
+                .add_fp_cost(d + f)
+                .alias('accept_rate', gamma)
+                .constrain('accept_rate', 0, 1)
+            )
+            metric = Metric(cost_matrix, MaxProfit())
+
+        Express a condition spanning several parameters:
+
+        .. code-block:: python
+
+            import sympy as sp
+            from empulse.metrics import CostMatrix, Metric, MaxProfit
+
+            clv, d, f, gamma = sp.symbols('clv d f gamma')
+            cost_matrix = (
+                CostMatrix()
+                .add_tp_benefit(gamma * (clv - d - f))
+                .add_fp_cost(d + f)
+                .alias({'incentive_cost': 'd'})
+                .constrain(
+                    lambda params: params['clv'] > params['d'],
+                    message='clv must exceed the incentive cost',
+                )
+            )
+            metric = Metric(cost_matrix, MaxProfit())
+        """
+        if callable(target) and not isinstance(target, sympy.Symbol):
+            if message is None:
+                raise ValueError('A message is required when constraining with a callable.')
+            self._predicates.append(ParameterPredicate(predicate=target, message=message))
+            return self
+
+        if isinstance(target, str):
+            target = sympy.Symbol(target)
+        # A sympy.stats random variable is a RandomSymbol, not a Symbol, but it names a parameter
+        # just the same. Accepting it lets one builder constrain a symbol that is stochastic in one
+        # metric and deterministic in its sibling; the constraint is simply inert in the stochastic
+        # case, where the variable is drawn rather than supplied by the caller.
+        if not isinstance(target, sympy.Symbol | sympy.stats.rv.RandomSymbol):
+            raise TypeError(
+                'The target must be a sympy.Symbol, a string that can be converted to one, or a callable, '
+                f'got {type(target).__name__!r} instead.'
+            )
+        if lower is None and upper is None:
+            raise ValueError(f"Constraining '{target}' requires a lower bound, an upper bound, or both.")
+        if lower is not None and upper is not None and lower > upper:
+            raise ValueError(f"Lower bound {lower} is greater than upper bound {upper} for '{target}'.")
+
+        name = str(self._aliases.get(str(target), target))
+        existing = self._bounds.get(name)
+        if existing is not None:  # tighten rather than replace, so two calls compose
+            lower = _tightest(lower, existing.lower, max)
+            upper = _tightest(upper, existing.upper, min)
+        self._bounds[name] = ParameterBounds(lower=lower, upper=upper)
         return self
 
     def __repr__(self) -> str:

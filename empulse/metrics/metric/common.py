@@ -1,5 +1,6 @@
 from collections.abc import Callable, Iterable, Mapping
 from enum import Enum, auto
+from numbers import Real
 from typing import Any, ParamSpec, Protocol, TypeVar
 
 import numpy as np
@@ -99,8 +100,152 @@ class Direction(Enum):
 # user-defined symbol or alias sharing one of these names would either be silently fused with the
 # internal one, raise a confusing internal TypeError, or (for 'n_samples') actually be captured by
 # _prepare_parameters()'s own n_samples parameter instead of reaching its **kwargs - see
-# Metric.__init__ and _check_reserved_symbol_names().
-RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i', 'n_samples'})
+# Metric.__init__ and _check_reserved_symbol_names(). 'validate' is reserved for the same reason
+# as 'n_samples': it is a keyword-only parameter of _prepare_parameters() and of the public
+# scoring methods, so a symbol of that name would be captured by it rather than reach **kwargs.
+RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i', 'n_samples', 'validate'})
+
+
+def _check_parameter_domains(
+    expressions: Iterable[sympy.Expr],
+    parameters: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    predicates: Iterable[Any],
+    caller_names: Mapping[str, str] | None = None,
+) -> None:
+    """
+    Raise if a supplied parameter value falls outside the domain the cost matrix defines.
+
+    Three sources of constraints are checked, in the order they are declared:
+
+    1. The shape parameters of every ``sympy.stats`` random variable in `expressions`, validated by
+       the distribution's own ``check``. These need no declaration -- a Beta distribution with a
+       negative shape simply does not exist, so ``alpha=-1`` is rejected with sympy's own message.
+    2. Bounds registered with :meth:`~empulse.metrics.CostMatrix.constrain`.
+    3. Predicates registered with :meth:`~empulse.metrics.CostMatrix.constrain`.
+
+    This runs only where user-supplied values first enter the metric, never on a training loop's
+    per-iteration path. See ``Metric._prepare_parameters``.
+
+    Parameters
+    ----------
+    expressions : Iterable[sympy.Expr]
+        The cost-matrix expressions, scanned for random variables.
+
+    parameters : Mapping[str, Any]
+        Parameter values keyed by resolved symbol name, with defaults already applied.
+
+    bounds : Mapping[str, ParameterBounds]
+        Declared bounds, keyed by resolved symbol name.
+
+    predicates : Iterable[ParameterPredicate]
+        Declared cross-parameter conditions.
+
+    caller_names : Mapping[str, str], optional
+        Maps a resolved symbol name back to the keyword the caller actually used, so that an error
+        names the alias they typed rather than the underlying symbol.
+
+    Raises
+    ------
+    ValueError
+        If a distribution rejects its shape parameters, a value falls outside its declared bounds,
+        or a predicate is not satisfied.
+    """
+    names = caller_names or {}
+
+    def display(name: str) -> str:
+        return names.get(name, name)
+
+    _check_distribution_parameters(expressions, parameters, display)
+
+    for name, bound in bounds.items():
+        span = _extremes(parameters.get(name))
+        if span is None:
+            continue
+        low, high = span
+        if bound.lower is not None and low < bound.lower:
+            raise ValueError(_bounds_message(display(name), bound, low))
+        if bound.upper is not None and high > bound.upper:
+            raise ValueError(_bounds_message(display(name), bound, high))
+
+    for constraint in predicates:
+        if not constraint.predicate(parameters):
+            raise ValueError(f'The parameters do not satisfy a constraint on the cost matrix: {constraint.message}')
+
+
+def _extremes(value: Any) -> tuple[float, float] | None:
+    """Return the smallest and largest numeric value in `value`, or None if it is not numeric."""
+    if isinstance(value, np.ndarray):
+        if value.size == 0 or not np.issubdtype(value.dtype, np.number):
+            return None
+        return float(value.min()), float(value.max())
+    if isinstance(value, Real):
+        return float(value), float(value)
+    return None
+
+
+def _bounds_message(name: str, bound: Any, offending: float) -> str:
+    """Phrase a bounds violation the way ``empulse.metrics._validation`` phrases its checks."""
+    if bound.lower is not None and bound.upper is not None:
+        expected = f'lay between {bound.lower} and {bound.upper}'
+    elif bound.lower is not None:
+        expected = f'be at least {bound.lower}'
+    else:
+        expected = f'be at most {bound.upper}'
+    return f'{name} should {expected}, got a value of {offending} instead.'
+
+
+def _check_distribution_parameters(
+    expressions: Iterable[sympy.Expr],
+    parameters: Mapping[str, Any],
+    display: Callable[[str], str],
+) -> None:
+    """Validate each random variable's shape parameters using the distribution's own ``check``."""
+    scalars = {sympy.Symbol(name): value for name, value in parameters.items() if isinstance(value, Real)}
+    for expression in expressions:
+        for random_symbol in expression.atoms(sympy.stats.rv.RandomSymbol):
+            distribution = random_symbol.pspace.distribution
+            arguments = [sympy.sympify(argument).subs(scalars) for argument in distribution.args]
+            if all(getattr(argument, 'is_number', False) for argument in arguments):
+                _run_distribution_check(distribution, arguments, random_symbol)
+            else:
+                # At least one shape parameter is instance-dependent, so the distribution's own
+                # check cannot run on the whole vector. Probe it with that parameter's extremes
+                # instead: if both ends are admissible, so is everything between them for the
+                # interval constraints these distributions actually impose.
+                _check_array_distribution_parameters(distribution, parameters, random_symbol, display)
+
+
+def _run_distribution_check(distribution: Any, arguments: list[Any], random_symbol: Any, suffix: str = '') -> None:
+    try:
+        type(distribution).check(*arguments)
+    except ValueError as error:
+        name = type(distribution).__name__.removesuffix('Distribution')
+        raise ValueError(
+            f'Invalid parameters for the {name} distribution of {random_symbol}: {error}{suffix}'
+        ) from error
+
+
+def _check_array_distribution_parameters(
+    distribution: Any,
+    parameters: Mapping[str, Any],
+    random_symbol: Any,
+    display: Callable[[str], str],
+) -> None:
+    """Check array-valued shape parameters by probing the distribution with their extremes."""
+    for argument in distribution.args:
+        symbol = sympy.sympify(argument)
+        if not isinstance(symbol, sympy.Symbol):
+            continue
+        span = _extremes(parameters.get(str(symbol)))
+        if span is None:
+            continue
+        for candidate in span:
+            probe = [sympy.Float(candidate) if other == symbol else sympy.sympify(other) for other in distribution.args]
+            if all(getattr(value, 'is_number', False) for value in probe):
+                _run_distribution_check(
+                    distribution, probe, random_symbol, suffix=f' (from {display(str(symbol))}={candidate})'
+                )
 
 
 def _check_reserved_symbol_names(*expressions: sympy.Expr, alias_names: Iterable[str] = ()) -> None:

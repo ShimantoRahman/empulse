@@ -159,6 +159,9 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
 
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
+        known = loss._all_parameters
+        loss._validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
+
         return self._fit(X, y, loss=loss, **loss_params)
 
     @abstractmethod

@@ -238,6 +238,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         **loss_params: Any,
     ) -> tuple[NDArray[Any], NDArray[Any]]:
         if isinstance(self.loss, Metric):
+            self.loss._validate_parameters(**loss_params)
             fp_cost, fn_cost, _, _ = self.loss._evaluate_costs(**loss_params)
         else:
             if fp_cost is Parameter.UNCHANGED:

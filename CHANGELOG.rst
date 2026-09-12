@@ -1,6 +1,13 @@
 `Unreleased`_
 =============
 
+- |Feature| Added :meth:`~empulse.metrics.CostMatrix.constrain` and
+  :meth:`~empulse.metrics.MixtureMetric.constrain`, which declare the values a cost-matrix
+  parameter is allowed to take. A parameter can be given inclusive ``lower``/``upper`` bounds, or a
+  callable can express a condition spanning several parameters at once
+  (``constrain(lambda p: p['clv'] > p['incentive_cost'], message=...)``).
+- |API| The prebuilt metrics now reject parameter values that put them outside their mathematical
+  domain, instead of returning a meaningless number.
 - |Feature| Added :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.MinCost` and
   :class:`~empulse.metrics.EmpiricalMinCost`, the sign-flipped siblings of
   :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.MaxProfit` and
@@ -108,7 +115,7 @@
   takes an independent copy of its cost matrix at construction time.
 - |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` at construction time if the
   cost matrix uses a symbol name or alias reserved for internal use (``y``, ``s``, ``F_0``,
-  ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i``). Previously, a colliding symbol name was either
+  ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i``, ``validate``). Previously, a colliding symbol name was either
   silently fused with the identically-named internal variable (e.g. a user symbol named ``F_0`` in
   a :class:`~empulse.metrics.MaxProfit` metric), producing a wrong score with no warning, or raised
   a confusing internal ``TypeError`` only once the metric was called (e.g. a symbol named ``y`` or

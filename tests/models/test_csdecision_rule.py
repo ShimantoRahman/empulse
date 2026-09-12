@@ -21,7 +21,10 @@ def data():
 
 
 class _DummyCostStrategy:
-    pass
+    # Metric._prepare_parameters reads this when deciding which keyword arguments are unknown, and
+    # parameter validation at fit time now reaches that path. MetricStrategy supplies it as an empty
+    # set; this stub is deliberately minimal, so it just mirrors that default.
+    _extra_kwargs: frozenset[str] = frozenset()
 
 
 class _DummyMetric(Metric):

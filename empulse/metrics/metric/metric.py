@@ -2,6 +2,7 @@ import copy
 import warnings
 from collections.abc import Iterable
 from numbers import Real
+from typing import Any
 
 import numpy as np
 import sympy
@@ -12,6 +13,7 @@ from .base_metric import BaseMetric
 from .common import (
     Direction,
     _check_known_alias_and_default_targets,
+    _check_parameter_domains,
     _check_reserved_symbol_names,
     _evaluate_expression,
     replace_random_var_with_mean,
@@ -310,8 +312,25 @@ class Metric(BaseMetric):
         required_symbols = self._all_parameters - set(self.cost_matrix._aliases.keys()) - self._default_parameter_names
         return required_symbols - resolved_supplied
 
+    def _validate_parameters(self, **parameters: Any) -> None:
+        """
+        Check parameter values against the domain this metric declares, and raise if they fall outside.
+
+        Called once, where the user's values first arrive -- the public scoring methods do it
+        themselves, and models do it in ``CostSensitiveClassifier.fit``. Training then re-enters the
+        metric with the same values many times over and passes ``validate=False``, because the check
+        reads array data and would otherwise scale with the iteration count.
+
+        Raises
+        ------
+        ValueError
+            If a distribution rejects its shape parameters, a value falls outside bounds declared
+            with :meth:`~empulse.metrics.CostMatrix.constrain`, or a declared predicate fails.
+        """
+        self._prepare_parameters(**parameters)
+
     def _prepare_parameters(
-        self, *, n_samples: int | None = None, **kwargs: FloatArrayLike | float
+        self, *, n_samples: int | None = None, validate: bool = True, **kwargs: FloatArrayLike | float
     ) -> dict[str, FloatNDArray | float]:
         """
         Swap aliases with the appropriate symbols and convert the values to numpy arrays.
@@ -324,6 +343,17 @@ class Metric(BaseMetric):
             anything else raises a ``ValueError`` naming the offending parameter. When ``None``,
             no length check is performed - callers that don't have an obvious sample count to
             check against (e.g. ``_evaluate_costs``) simply omit it.
+        validate : bool, default=True
+            Whether to check the parameter values against the cost matrix's domain (distribution
+            shape parameters, and any bounds or predicates registered with
+            :meth:`~empulse.metrics.CostMatrix.constrain`).
+
+            Pass ``False`` only where the values have already been validated further up and this
+            method is being re-entered on a training loop's per-iteration path - the boosting
+            objectives and the per-candidate fitness callbacks. Validation touches array data and
+            is therefore O(n_samples), unlike the rest of this method, so running it per iteration
+            would make instance-dependent training measurably slower for no benefit: the values
+            are fixed for the whole fit.
         """
         # Use a separate output dict to avoid dual-purpose mutation of kwargs
         params: dict[str, FloatArrayLike | float] = {}
@@ -379,9 +409,25 @@ class Metric(BaseMetric):
             else:
                 out[key] = value  # type: ignore[assignment]
 
+        if validate:
+            _check_parameter_domains(
+                (self.tp_benefit, self.tn_benefit, self.fp_cost, self.fn_cost),
+                out,
+                self.cost_matrix._bounds,
+                self.cost_matrix._predicates,
+                caller_names=resolved_from,
+            )
+
         return out
 
-    def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float) -> float:
+    def __call__(
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
+    ) -> float:
         """
         Compute the metric score or loss.
 
@@ -401,6 +447,11 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
+        validate : bool, default=True
+            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
+            only when re-entering the metric on a training loop's per-iteration path, where the
+            values have already been validated once at fit time.
+
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
@@ -418,11 +469,16 @@ class Metric(BaseMetric):
         y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
         if y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
-        parameters = self._prepare_parameters(n_samples=y_true.size, **parameters)
+        parameters = self._prepare_parameters(n_samples=y_true.size, validate=validate, **parameters)
         return self.strategy.score(y_true.astype(np.intp), y_score, **parameters)
 
     def optimal_threshold(
-        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
     ) -> FloatNDArray | float:
         """
         Compute the optimal classification threshold(s).
@@ -447,6 +503,11 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
+        validate : bool, default=True
+            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
+            only when re-entering the metric on a training loop's per-iteration path, where the
+            values have already been validated once at fit time.
+
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
@@ -468,11 +529,16 @@ class Metric(BaseMetric):
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         n_samples = y_true.size or y_score.size or None
-        parameters = self._prepare_parameters(n_samples=n_samples, **parameters)
+        parameters = self._prepare_parameters(n_samples=n_samples, validate=validate, **parameters)
         return self.strategy.optimal_threshold(y_true, y_score, **parameters)
 
     def optimal_rate(
-        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: FloatArrayLike | float
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
     ) -> float:
         """
         Compute the optimal predicted positive rate.
@@ -495,6 +561,11 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`,
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
+        validate : bool, default=True
+            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
+            only when re-entering the metric on a training loop's per-iteration path, where the
+            values have already been validated once at fit time.
+
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
             If any parameter is a stochastic variable, you should pass values for their distribution parameters.
@@ -516,7 +587,7 @@ class Metric(BaseMetric):
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         n_samples = y_true.size or y_score.size or None
-        parameters = self._prepare_parameters(n_samples=n_samples, **parameters)
+        parameters = self._prepare_parameters(n_samples=n_samples, validate=validate, **parameters)
         return self.strategy.optimal_rate(y_true, y_score, **parameters)
 
     def _logit_objective(
@@ -559,7 +630,7 @@ class Metric(BaseMetric):
         logistic_objective : LogitObjective
             A class that implements the logit loss and its gradient.
         """
-        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
+        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
 
         if y_true.ndim == 1:
             y_true = np.expand_dims(y_true, axis=1)
@@ -604,7 +675,7 @@ class Metric(BaseMetric):
         hessian : NDArray of shape (n_samples,)
             The hessian of the metric loss with respect to the gradient boosting weights.
         """
-        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
+        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
         y_proba = y_score
         gradient, hessian = self.strategy.gradient_boost_objective(y_true, y_proba, **parameters)
         return gradient, hessian
@@ -630,7 +701,7 @@ class Metric(BaseMetric):
         gradient_const : NDArray of shape (n_samples, n_features)
             The constant term of the gradient.
         """
-        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
+        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
         for key, value in parameters.items():
             if isinstance(value, np.ndarray) and value.ndim == 1:
                 parameters[key] = np.expand_dims(value, axis=1)
@@ -671,7 +742,7 @@ class Metric(BaseMetric):
         tn_cost : float or NDArray of shape (n_samples,)
             The true negative cost(s).
         """
-        parameters = self._prepare_parameters(**parameters)  # type: ignore[arg-type]
+        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
         fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
         if replace_stochastic and self._is_stochastic:
             fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(fp_expr, fn_expr, tp_expr, tn_expr)

@@ -524,7 +524,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
-            losses[i] = weight_fn._loss(y[mask], y_pred, **oob_loss_params)
+            losses[i] = weight_fn._loss(y[mask], y_pred, validate=False, **oob_loss_params)
 
         weights: FloatNDArray = goodness_weights(losses)
         return weights

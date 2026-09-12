@@ -591,3 +591,142 @@ def test_savings_stochastic_result_matches_mean_substitution():
     deterministic_result = deterministic_metric(Y_TRUE, Y_SCORE, clv=100.0, b=1.0)
 
     assert stochastic_result == pytest.approx(deterministic_result)
+
+
+# --- CostMatrix.constrain() ---------------------------------------------------------------------
+
+
+def _bounded_metric(lower=None, upper=None, **kwargs):
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').constrain('a', lower, upper, **kwargs)
+    return Metric(cost_matrix, Cost())
+
+
+@pytest.mark.parametrize('value', [-1.0, 1.5])
+def test_value_outside_declared_bounds_raises(value):
+    metric = _bounded_metric(0, 1)
+    with pytest.raises(ValueError, match=re.escape(f'a should lay between 0 and 1, got a value of {value}')):
+        metric(Y_TRUE, Y_SCORE, a=value, b=1.0)
+
+
+@pytest.mark.parametrize('value', [0.0, 0.5, 1.0])
+def test_value_inside_declared_bounds_is_accepted(value):
+    """The bounds are inclusive, so both endpoints must pass."""
+    assert isinstance(_bounded_metric(0, 1)(Y_TRUE, Y_SCORE, a=value, b=1.0), float)
+
+
+def test_a_lower_bound_alone_is_allowed():
+    metric = _bounded_metric(lower=0)
+    assert isinstance(metric(Y_TRUE, Y_SCORE, a=10.0, b=1.0), float)
+    with pytest.raises(ValueError, match='a should be at least 0'):
+        metric(Y_TRUE, Y_SCORE, a=-0.5, b=1.0)
+
+
+def test_an_upper_bound_alone_is_allowed():
+    metric = _bounded_metric(upper=1)
+    with pytest.raises(ValueError, match='a should be at most 1'):
+        metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
+
+
+def test_instance_dependent_values_are_checked_elementwise():
+    """A single out-of-range entry in a per-sample vector must be caught."""
+    values = np.full(len(Y_TRUE), 0.5)
+    values[2] = 3.0
+    with pytest.raises(ValueError, match='a should lay between 0 and 1'):
+        _bounded_metric(0, 1)(Y_TRUE, Y_SCORE, a=values, b=1.0)
+
+
+def test_the_error_names_the_alias_the_caller_used():
+    """As with the array-length check, the message must use the caller's vocabulary."""
+    cost_matrix = (
+        CostMatrix().add_fp_cost('a').add_fn_cost('b').alias('acceptance_rate', sympy.Symbol('a')).constrain('a', 0, 1)
+    )
+    metric = Metric(cost_matrix, Cost())
+    with pytest.raises(ValueError, match='acceptance_rate should lay between 0 and 1'):
+        metric(Y_TRUE, Y_SCORE, acceptance_rate=2.0, b=1.0)
+
+
+def test_constrain_resolves_an_alias_to_its_symbol():
+    """Constraining by alias must bind to the underlying symbol, so passing either name is checked."""
+    cost_matrix = (
+        CostMatrix()
+        .add_fp_cost('a')
+        .add_fn_cost('b')
+        .alias('acceptance_rate', sympy.Symbol('a'))
+        .constrain('acceptance_rate', 0, 1)
+    )
+    metric = Metric(cost_matrix, Cost())
+    with pytest.raises(ValueError, match='should lay between 0 and 1'):
+        metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
+
+
+def test_two_constraints_on_one_symbol_compose_to_the_tighter_pair():
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').constrain('a', 0, 10).constrain('a', 2, 5)
+    metric = Metric(cost_matrix, Cost())
+    assert isinstance(metric(Y_TRUE, Y_SCORE, a=3.0, b=1.0), float)
+    with pytest.raises(ValueError, match='a should lay between 2 and 5'):
+        metric(Y_TRUE, Y_SCORE, a=7.0, b=1.0)
+
+
+def test_a_predicate_can_span_several_parameters():
+    """The cross-parameter rule the package deliberately does not impose by default."""
+    cost_matrix = (
+        CostMatrix()
+        .add_fp_cost('a')
+        .add_fn_cost('b')
+        .constrain(lambda params: params['a'] > params['b'], message='a must exceed b')
+    )
+    metric = Metric(cost_matrix, Cost())
+    assert isinstance(metric(Y_TRUE, Y_SCORE, a=5.0, b=1.0), float)
+    with pytest.raises(ValueError, match='a must exceed b'):
+        metric(Y_TRUE, Y_SCORE, a=1.0, b=5.0)
+
+
+def test_a_predicate_sees_defaults_that_were_not_passed():
+    cost_matrix = (
+        CostMatrix()
+        .add_fp_cost('a')
+        .add_fn_cost('b')
+        .set_default(b=5.0)
+        .constrain(lambda params: params['a'] > params['b'], message='a must exceed b')
+    )
+    with pytest.raises(ValueError, match='a must exceed b'):
+        Metric(cost_matrix, Cost())(Y_TRUE, Y_SCORE, a=1.0)
+
+
+def test_constrain_rejects_a_symbol_with_no_bounds():
+    with pytest.raises(ValueError, match="Constraining 'a' requires a lower bound, an upper bound, or both"):
+        CostMatrix().add_fp_cost('a').constrain('a')
+
+
+def test_constrain_rejects_inverted_bounds():
+    with pytest.raises(ValueError, match='Lower bound 1 is greater than upper bound 0'):
+        CostMatrix().add_fp_cost('a').constrain('a', 1, 0)
+
+
+def test_constrain_requires_a_message_for_a_predicate():
+    with pytest.raises(ValueError, match='A message is required when constraining with a callable'):
+        CostMatrix().add_fp_cost('a').constrain(lambda params: True)
+
+
+def test_constrain_rejects_a_non_symbol_target():
+    with pytest.raises(TypeError, match=re.escape('The target must be a sympy.Symbol')):
+        CostMatrix().add_fp_cost('a').constrain(5, 0, 1)
+
+
+def test_constraints_survive_the_metrics_deep_copy():
+    """Metric deep-copies its cost matrix, so mutating the original must not change the metric."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').constrain('a', 0, 1)
+    metric = Metric(cost_matrix, Cost())
+    cost_matrix.constrain('b', 0, 1)  # added after the Metric was built
+    assert isinstance(metric(Y_TRUE, Y_SCORE, a=0.5, b=99.0), float)
+    with pytest.raises(ValueError, match='a should lay between 0 and 1'):
+        metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
+
+
+def test_distribution_shape_parameters_are_checked_without_being_declared():
+    """sympy already knows a Beta shape must be positive; the package just has to ask it."""
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), sympy.Symbol('beta'))
+    metric = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost('b'), MaxProfit())
+    assert isinstance(metric(Y_TRUE, Y_SCORE, alpha=6.0, beta=14.0, b=1.0), float)
+    with pytest.raises(ValueError, match='Shape parameter Alpha must be positive'):
+        metric(Y_TRUE, Y_SCORE, alpha=-1.0, beta=14.0, b=1.0)

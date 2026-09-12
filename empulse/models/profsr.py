@@ -160,7 +160,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         def _fitness(y_true: FloatNDArray, y_pred: FloatNDArray, sample_weight: FloatNDArray) -> float:
             y_score = expit(y_pred)
             try:
-                value = loss._loss(y_true, y_score, **loss_params)
+                value = loss._loss(y_true, y_score, validate=False, **loss_params)
             except (ValueError, TypeError):
                 # Raised for example when gplearn validates the fitness function
                 # with dummy arrays that do not match the shape of the cost parameters.

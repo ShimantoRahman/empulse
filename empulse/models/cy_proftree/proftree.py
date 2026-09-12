@@ -343,7 +343,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             # `use_fit_max_profit` is only False when `loss_ is None` is False, i.e. `loss_` is a
             # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
             assert loss_ is not None
-            fitness_fn: Callable[..., float] = partial(loss_._loss, **loss_params)
+            fitness_fn: Callable[..., float] = partial(loss_._loss, validate=False, **loss_params)
 
             y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
             try:  # catch issue with the loss function before it goes into C world

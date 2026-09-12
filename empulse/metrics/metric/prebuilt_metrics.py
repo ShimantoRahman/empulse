@@ -56,6 +56,7 @@ def _churn_cost_matrix_incentive_cost(gamma: sympy.Expr) -> CostMatrix:
         .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept the incentive offer
         .add_fp_cost(d + f)  # when an offer is sent to a non-churner
         .alias({'incentive_cost': 'd', 'contact_cost': 'f'})
+        .constrain(gamma, 0, 1)
     )
 
 
@@ -71,6 +72,8 @@ def _churn_cost_matrix_incentive_fraction(gamma: sympy.Expr) -> CostMatrix:
         .add_tp_benefit((1 - gamma) * -f)  # when churner does not accept the incentive offer
         .add_fp_cost(delta * clv + f)  # when an offer is sent to a non-churner
         .alias({'incentive_fraction': 'delta', 'contact_cost': 'f'})
+        .constrain(gamma, 0, 1)
+        .constrain(delta, 0, 1)
     )
 
 
@@ -137,6 +140,8 @@ def _acquisition_cost_matrix(contribution: sympy.Expr) -> CostMatrix:
             + (1 - direct_selling) * ((1 - commission) * contribution - contact_cost)
         )
         .add_fp_cost(contact_cost)
+        .constrain(direct_selling, 0, 1)
+        .constrain(commission, 0, 1)
     )
 
 
@@ -193,6 +198,7 @@ def make_credit_scoring_max_profit_metric() -> Metric:
         .add_fp_cost(roi)
         .alias({'loan_lost_rate': 'lam'})
         .set_default(loan_lost_rate=0.275, roi=0.2644)
+        .constrain(lam, 0, 1)
     )
     return Metric(cost_matrix, MaxProfit())
 
@@ -216,11 +222,22 @@ def make_credit_scoring_empirical_max_profit_metric() -> MixtureMetric:
     credit_matrix_stoch = CostMatrix().add_tp_benefit(lam_rv).add_fp_cost(roi)
     metric_stoch = Metric(credit_matrix_stoch, MaxProfit())
 
-    return MixtureMetric(
-        [
-            MixtureComponent('success_rate', metric_det, {'lam': 0.0}),
-            MixtureComponent('default_rate', metric_det, {'lam': 1.0}),
-            MixtureComponent(lambda p: 1 - p['success_rate'] - p['default_rate'], metric_stoch, {}),
-        ],
-        defaults={'success_rate': 0.55, 'default_rate': 0.1, 'roi': 0.2644},
+    return (
+        MixtureMetric(
+            [
+                MixtureComponent('success_rate', metric_det, {'lam': 0.0}),
+                MixtureComponent('default_rate', metric_det, {'lam': 1.0}),
+                MixtureComponent(lambda p: 1 - p['success_rate'] - p['default_rate'], metric_stoch, {}),
+            ],
+            defaults={'success_rate': 0.55, 'default_rate': 0.1, 'roi': 0.2644},
+        )
+        # The two spikes are probabilities, and the continuous piece takes whatever mass they leave,
+        # so they must also leave some: without the joint constraint the third weight goes negative
+        # and the mixture stops being a convex combination.
+        .constrain('success_rate', 0, 1)
+        .constrain('default_rate', 0, 1)
+        .constrain(
+            lambda p: p['success_rate'] + p['default_rate'] <= 1,
+            message='success_rate + default_rate must not exceed 1',
+        )
     )

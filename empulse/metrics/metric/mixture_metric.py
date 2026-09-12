@@ -1,12 +1,13 @@
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Self
 
 import numpy as np
 
 from ..._types import FloatArrayLike, FloatNDArray
 from ..common import classification_threshold
 from .base_metric import BaseMetric
-from .common import Direction
+from .common import Direction, _check_parameter_domains
+from .cost_matrix import ParameterBounds, ParameterPredicate
 from .strategies import LogitObjective, MetricStrategy
 
 Weight = float | str | Callable[[dict[str, Any]], float]
@@ -130,10 +131,88 @@ class MixtureMetric(BaseMetric):
         self.components = list(components)
         self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
         self._name_override: str | None = None
+        # Bounds on the mixture's own parameters -- chiefly the weights, which are not symbols of
+        # any component's cost matrix and so are not reached by CostMatrix.constrain().
+        self._bounds: dict[str, ParameterBounds] = {}
+        self._predicates: list[ParameterPredicate] = []
 
-    def _apply_defaults(self, parameters: dict[str, Any]) -> dict[str, Any]:
+    def _validate_parameters(self, **parameters: Any) -> None:
+        """
+        Check parameter values against the domain this metric declares, and raise if they fall outside.
+
+        Called once, where the user's values first arrive -- the public scoring methods do it
+        themselves, and models do it in ``CostSensitiveClassifier.fit``. Training then re-enters the
+        metric with the same values many times over and passes ``validate=False``, because the check
+        reads array data and would otherwise scale with the iteration count.
+
+        Raises
+        ------
+        ValueError
+            If a distribution rejects its shape parameters, a value falls outside bounds declared
+            with :meth:`~empulse.metrics.CostMatrix.constrain`, or a declared predicate fails.
+        """
+        resolved = self._apply_defaults(dict(parameters), validate=True)
+        forwarded = self._forward_parameters(resolved)
+        for component in self.components:
+            component.metric._validate_parameters(**self._component_parameters(component, forwarded))
+
+    def _apply_defaults(self, parameters: dict[str, Any], *, validate: bool = True) -> dict[str, Any]:
         """Fill in missing parameters (including weight parameters) from :attr:`defaults`."""
-        return {**self.defaults, **parameters}
+        resolved = {**self.defaults, **parameters}
+        if validate and (self._bounds or self._predicates):
+            _check_parameter_domains((), resolved, self._bounds, self._predicates)
+        return resolved
+
+    def constrain(
+        self,
+        target: str | Callable[[Mapping[str, Any]], bool],
+        lower: float | None = None,
+        upper: float | None = None,
+        *,
+        message: str | None = None,
+    ) -> Self:
+        """
+        Restrict the values a mixture-level parameter is allowed to take.
+
+        The counterpart of :meth:`~empulse.metrics.CostMatrix.constrain` for parameters that belong
+        to the mixture rather than to any one component's cost matrix -- in particular the weights.
+
+        Parameters
+        ----------
+        target : str or callable
+            The parameter to bound, or a callable taking the mapping of parameter values and
+            returning whether they are acceptable.
+
+        lower : float, optional
+            Smallest allowed value, inclusive.
+
+        upper : float, optional
+            Largest allowed value, inclusive.
+
+        message : str, optional
+            Explanation to report when a callable `target` rejects the parameters.
+            Required when `target` is a callable.
+
+        Returns
+        -------
+        self : MixtureMetric
+            The metric with the constraint added.
+
+        Raises
+        ------
+        ValueError
+            If `target` is a name and neither `lower` nor `upper` is given, or if `target` is a
+            callable and `message` is not given.
+        """
+        if callable(target):
+            if message is None:
+                raise ValueError('A message is required when constraining with a callable.')
+            self._predicates.append(ParameterPredicate(predicate=target, message=message))
+            return self
+        if lower is None and upper is None:
+            raise ValueError(f"Constraining '{target}' requires a lower bound, an upper bound, or both.")
+        self._bounds[target] = ParameterBounds(lower=lower, upper=upper)
+        return self
 
     @property
     def direction(self) -> Direction:
@@ -255,7 +334,9 @@ class MixtureMetric(BaseMetric):
     def _component_parameters(component: MixtureComponent, forwarded: dict[str, Any]) -> dict[str, Any]:
         return {**forwarded, **component.parameters}
 
-    def __call__(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: Any) -> float:
+    def __call__(
+        self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
+    ) -> float:
         """
         Compute the weighted sum of each component's metric score.
 
@@ -274,7 +355,7 @@ class MixtureMetric(BaseMetric):
         score : float
             The mixture's combined score.
         """
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=validate)
         forwarded = self._forward_parameters(parameters)
         total = 0.0
         for component in self.components:
@@ -282,7 +363,9 @@ class MixtureMetric(BaseMetric):
             total += weight * component.metric(y_true, y_score, **self._component_parameters(component, forwarded))
         return float(total)
 
-    def optimal_rate(self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: Any) -> float:
+    def optimal_rate(
+        self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
+    ) -> float:
         """
         Compute the weighted sum of each component's optimal predicted positive rate.
 
@@ -301,7 +384,7 @@ class MixtureMetric(BaseMetric):
         optimal_rate : float
             The mixture's combined optimal predicted positive rate.
         """
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=validate)
         forwarded = self._forward_parameters(parameters)
         total = 0.0
         for component in self.components:
@@ -312,7 +395,7 @@ class MixtureMetric(BaseMetric):
         return float(total)
 
     def optimal_threshold(
-        self, y_true: FloatArrayLike, y_score: FloatArrayLike, **parameters: Any
+        self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
     ) -> float | FloatNDArray:
         """
         Compute the classification threshold that achieves the mixture's combined optimal rate.
@@ -340,12 +423,12 @@ class MixtureMetric(BaseMetric):
         optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=validate)
         rate = self.optimal_rate(y_true, y_score, **parameters)
         return classification_threshold(y_true, y_score, rate)  # type: ignore[return-value]
 
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=False)
         forwarded = self._forward_parameters(parameters)
         total: FloatNDArray | None = None
         for component in self.components:
@@ -360,7 +443,7 @@ class MixtureMetric(BaseMetric):
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any
     ) -> tuple[FloatNDArray, FloatNDArray]:
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=False)
         forwarded = self._forward_parameters(parameters)
         total_gradient: FloatNDArray | None = None
         total_hessian: FloatNDArray | None = None
@@ -387,7 +470,7 @@ class MixtureMetric(BaseMetric):
         fit_intercept: bool,
         **parameters: Any,
     ) -> LogitObjective:
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=False)
         forwarded = self._forward_parameters(parameters)
         weighted_objectives = []
         for component in self.components:
@@ -413,7 +496,7 @@ class MixtureMetric(BaseMetric):
         FloatNDArray | float,
     ]:
         """Compute the weighted sum of each component's (class- or instance-dependent) costs."""
-        parameters = self._apply_defaults(parameters)
+        parameters = self._apply_defaults(parameters, validate=False)
         forwarded = self._forward_parameters(parameters)
         total_fp: FloatNDArray | float = 0.0
         total_fn: FloatNDArray | float = 0.0

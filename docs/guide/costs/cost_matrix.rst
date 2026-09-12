@@ -281,6 +281,108 @@ In a notebook, both :class:`~empulse.metrics.CostMatrix` and :class:`~empulse.me
 as a LaTeX table when they are the last expression in a cell, which is the fastest way to eyeball
 the whole matrix at once.
 
+.. _cost_matrix_constraints:
+
+Constraining parameter values
+=============================
+
+Some parameters only mean something over part of the number line. An accept rate is a probability,
+so it belongs in ``[0, 1]``; a Beta distribution's shape has to be positive or the distribution does
+not exist. Passing a value outside that range does not produce an error on its own -- it produces a
+number, computed from an expression that no longer models anything.
+
+The prebuilt metrics already declare the domains they need, so this is handled for you:
+
+.. code-block:: python
+
+    from empulse.metrics import mpc_score
+
+    y_true = [0, 1, 0, 1, 1, 0]
+    y_score = [0.1, 0.9, 0.2, 0.8, 0.7, 0.3]
+
+    try:
+        mpc_score(y_true, y_score, accept_rate=2)
+    except ValueError as error:
+        print(error)
+
+Distribution parameters need no declaration at all. :mod:`sympy.stats` knows what its own
+distributions require, and the metric asks it:
+
+.. code-block:: python
+
+    from empulse.metrics import empc_score
+
+    y_true = [0, 1, 0, 1, 1, 0]
+    y_score = [0.1, 0.9, 0.2, 0.8, 0.7, 0.3]
+
+    try:
+        empc_score(y_true, y_score, alpha=-1)
+    except ValueError as error:
+        print(error)
+
+For a matrix of your own, declare the domain with
+:meth:`~empulse.metrics.CostMatrix.constrain`. Bounds are inclusive:
+
+.. code-block:: python
+
+    import sympy as sp
+    from empulse.metrics import CostMatrix, MaxProfit, Metric
+
+    clv, d, f, gamma = sp.symbols('clv d f gamma')
+    cost_matrix = (
+        CostMatrix()
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(d + f)
+        .alias({'accept_rate': 'gamma', 'incentive_cost': 'd', 'contact_cost': 'f'})
+        .constrain('accept_rate', 0, 1)
+    )
+    metric = Metric(cost_matrix, MaxProfit())
+
+    try:
+        metric(y_true, y_score, accept_rate=1.5, clv=200, incentive_cost=10, contact_cost=1)
+    except ValueError as error:
+        print(error)
+
+Call :meth:`~empulse.metrics.CostMatrix.alias` before
+:meth:`~empulse.metrics.CostMatrix.constrain`, for the same reason as
+:meth:`~empulse.metrics.CostMatrix.set_default`: the constraint is stored against the symbol the
+alias resolves to. The error message still names whichever spelling you passed.
+
+Conditions that span several parameters are expressed with a callable. This is how you would add
+the rule that the incentive must be worth less than the customer:
+
+.. code-block:: python
+
+    import sympy as sp
+    from empulse.metrics import CostMatrix, MaxProfit, Metric
+
+    clv, d, f, gamma = sp.symbols('clv d f gamma')
+    cost_matrix = (
+        CostMatrix()
+        .add_tp_benefit(gamma * (clv - d - f))
+        .add_fp_cost(d + f)
+        .alias({'accept_rate': 'gamma', 'incentive_cost': 'd', 'contact_cost': 'f'})
+        .constrain(
+            lambda params: params['clv'] > params['d'],
+            message='clv must exceed the incentive cost',
+        )
+    )
+    metric = Metric(cost_matrix, MaxProfit())
+
+    try:
+        metric(y_true, y_score, accept_rate=0.3, clv=5, incentive_cost=10, contact_cost=1)
+    except ValueError as error:
+        print(error)
+
+A callable receives the parameters keyed by **symbol name**, with aliases resolved and defaults
+filled in -- hence ``params['d']`` rather than ``params['incentive_cost']`` above.
+
+Constraints are checked where your values first reach the metric -- when you call it, and once at
+the start of ``fit`` when a model trains on it. Training re-enters the metric many times over, per
+boosting round or per candidate tree, and those paths skip the check, so declaring a constraint
+costs nothing during training.
+
 Where next
 ==========
 

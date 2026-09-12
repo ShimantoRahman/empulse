@@ -67,8 +67,15 @@ class PrebuiltCase:
     """The ``tests/metrics/reference`` implementation used as ground truth."""
     params: Sequence[Mapping[str, Any]]
     """Parameter sets to sweep. The first entry is conventionally ``{}`` (all defaults)."""
-    bad_params: Sequence[Mapping[str, Any]] = ()
-    """Parameter sets that are outside the documented domain of the metric."""
+    invalid_params: Sequence[Mapping[str, Any]] = ()
+    """Parameter sets the metric must reject: outside the domain its cost matrix declares."""
+    unconstrained_params: Sequence[Mapping[str, Any]] = ()
+    """Economically odd but mathematically valid values the metric deliberately accepts.
+
+    A negative cost is how the package expresses a benefit -- ``max_profit_score`` relies on it --
+    so money quantities carry no default bound. A user who wants one adds it with
+    :meth:`~empulse.metrics.CostMatrix.constrain`.
+    """
     base_params: Mapping[str, Any] = field(default_factory=dict)
     """Parameters this metric always needs (``empb``/``auepc`` require a per-customer ``clv``)."""
     to_reference_params: Callable[[dict[str, Any]], dict[str, Any]] | None = None
@@ -129,11 +136,13 @@ CASES: list[PrebuiltCase] = [
             {'contact_cost': 15},
             {'alpha': 10, 'beta': 7, 'clv': 300, 'incentive_cost': 50, 'contact_cost': 25},
         ],
-        bad_params=[
+        invalid_params=[
             {'alpha': -1},
             {'beta': -1},
+        ],
+        unconstrained_params=[
             {'clv': -1},
-            {'clv': 1},  # clv below incentive_cost
+            {'clv': 1},
             {'incentive_cost': -1},
             {'contact_cost': -1},
         ],
@@ -150,9 +159,11 @@ CASES: list[PrebuiltCase] = [
             {'contact_cost': 15},
             {'accept_rate': 0.9, 'clv': 300, 'incentive_cost': 50, 'contact_cost': 25},
         ],
-        bad_params=[
+        invalid_params=[
             {'accept_rate': -1},
             {'accept_rate': 2},
+        ],
+        unconstrained_params=[
             {'clv': -1},
             {'clv': 1},
             {'incentive_cost': -1},
@@ -172,11 +183,13 @@ CASES: list[PrebuiltCase] = [
             {'contact_cost': 15},
             {'alpha': 10, 'beta': 7, 'incentive_fraction': 0.02, 'contact_cost': 25},
         ],
-        bad_params=[
+        invalid_params=[
             {'alpha': -1},
             {'beta': -1},
             {'incentive_fraction': -1},
             {'incentive_fraction': 2},
+        ],
+        unconstrained_params=[
             {'contact_cost': -1},
         ],
         base_params={'clv': CLV_VECTOR},
@@ -194,11 +207,13 @@ CASES: list[PrebuiltCase] = [
             {'contact_cost': 15},
             {'alpha': 10, 'beta': 7, 'incentive_fraction': 0.02, 'contact_cost': 25},
         ],
-        bad_params=[
+        invalid_params=[
             {'alpha': -1},
             {'beta': -1},
             {'incentive_fraction': -1},
             {'incentive_fraction': 2},
+        ],
+        unconstrained_params=[
             {'contact_cost': -1},
         ],
         base_params={'clv': CLV_VECTOR},
@@ -216,11 +231,13 @@ CASES: list[PrebuiltCase] = [
             {'contact_cost': 15},
             {'accept_rate': 0.9, 'clv': 300, 'incentive_fraction': 0.1, 'contact_cost': 25},
         ],
-        bad_params=[
+        invalid_params=[
             {'accept_rate': -1},
             {'accept_rate': 2},
             {'incentive_fraction': -1},
             {'incentive_fraction': 2},
+        ],
+        unconstrained_params=[
             {'contact_cost': -1},
         ],
         reference_returns_rate=False,
@@ -246,15 +263,17 @@ CASES: list[PrebuiltCase] = [
                 'commission': 0.2,
             },
         ],
-        bad_params=[
+        invalid_params=[
             {'alpha': -1},
             {'beta': -1},
-            {'sales_cost': -1},
-            {'contact_cost': -1},
             {'direct_selling': 5},
             {'direct_selling': -1},
             {'commission': 5},
             {'commission': -1},
+        ],
+        unconstrained_params=[
+            {'sales_cost': -1},
+            {'contact_cost': -1},
         ],
         to_reference_params=_empa_to_reference,
     ),
@@ -271,14 +290,16 @@ CASES: list[PrebuiltCase] = [
             {'direct_selling': 0.0, 'commission': 0.5},
             {'contribution': 12000, 'contact_cost': 80, 'sales_cost': 400, 'direct_selling': 0.3, 'commission': 0.2},
         ],
-        bad_params=[
-            {'contribution': -1},
-            {'sales_cost': -1},
-            {'contact_cost': -1},
+        invalid_params=[
             {'direct_selling': 5},
             {'direct_selling': -1},
             {'commission': 5},
             {'commission': -1},
+        ],
+        unconstrained_params=[
+            {'contribution': -1},
+            {'sales_cost': -1},
+            {'contact_cost': -1},
         ],
     ),
     PrebuiltCase(
@@ -294,14 +315,16 @@ CASES: list[PrebuiltCase] = [
             {'direct_selling': 0.0, 'commission': 0.5},
             {'contribution': 12000, 'contact_cost': 80, 'sales_cost': 400, 'direct_selling': 0.3, 'commission': 0.2},
         ],
-        bad_params=[
-            {'contribution': -1},
-            {'sales_cost': -1},
-            {'contact_cost': -1},
+        invalid_params=[
             {'direct_selling': 5},
             {'direct_selling': -1},
             {'commission': 5},
             {'commission': -1},
+        ],
+        unconstrained_params=[
+            {'contribution': -1},
+            {'sales_cost': -1},
+            {'contact_cost': -1},
         ],
         reference_returns_rate=False,
     ),
@@ -316,11 +339,13 @@ CASES: list[PrebuiltCase] = [
             {'roi': 0.1},
             {'success_rate': 0.01, 'default_rate': 0.7, 'roi': 0.7},
         ],
-        bad_params=[
+        invalid_params=[
             {'success_rate': -1},
             {'success_rate': 2},
             {'default_rate': -1},
             {'default_rate': 2},
+        ],
+        unconstrained_params=[
             {'roi': -1},
         ],
     ),
@@ -334,9 +359,11 @@ CASES: list[PrebuiltCase] = [
             {'roi': 0.1},
             {'loan_lost_rate': 0.01, 'roi': 0.7},
         ],
-        bad_params=[
+        invalid_params=[
             {'loan_lost_rate': -1},
             {'loan_lost_rate': 2},
+        ],
+        unconstrained_params=[
             {'roi': -1},
         ],
     ),

@@ -1,0 +1,143 @@
+"""
+Parameter validation must run once per fit, never once per training iteration.
+
+Checking a parameter's domain touches array data, so it is O(n_samples) -- unlike the rest of
+``Metric._prepare_parameters``, which only inspects shapes. Running it inside a training loop would
+make instance-dependent training scale with the iteration count for no benefit: the values are
+assembled once in ``CostSensitiveClassifier.fit`` and never change during the fit.
+
+These tests count validating calls rather than timing them. A count is deterministic, is unaffected
+by machine speed, and names the exact path that regressed -- and the counts below are the ones that
+actually matter, because they are the paths measured to re-enter the metric per iteration:
+
+============================  ==========================================
+path                          calls before the opt-outs were added
+============================  ==========================================
+CSBoost + LogCost/MaxProfit   one per boosting round
+CSBoost + CatBoost            one per evaluation period
+ProfTree + a non-MaxProfit    one per candidate tree per generation
+============================  ==========================================
+"""
+
+from typing import Any
+
+import numpy as np
+import pytest
+
+from empulse.metrics import Cost, CostMatrix, LogCost, MaxProfit, Metric
+from empulse.metrics.metric import metric as metric_module
+from empulse.models import CSBaggingClassifier, CSBoostClassifier, CSForestClassifier, ProfTreeClassifier
+
+pytestmark = pytest.mark.filterwarnings('ignore::UserWarning')
+
+
+@pytest.fixture(scope='module')
+def training_data():
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(n_samples=1500, n_features=8, random_state=0)
+    return X, y, np.random.default_rng(0).uniform(100, 500, 1500)
+
+
+def count_validating_calls(model: Any, X: Any, y: Any, **fit_params: Any) -> int:
+    """Fit `model` and return how many times it validated its parameters."""
+    calls = 0
+    original = metric_module.Metric._prepare_parameters
+
+    def counting(self: Any, *, n_samples: Any = None, validate: bool = True, **kwargs: Any) -> Any:
+        nonlocal calls
+        if validate:
+            calls += 1
+        return original(self, n_samples=n_samples, validate=validate, **kwargs)
+
+    metric_module.Metric._prepare_parameters = counting
+    try:
+        model.fit(X, y, **fit_params)
+    finally:
+        metric_module.Metric._prepare_parameters = original
+    return calls
+
+
+def instance_dependent_metric(strategy: Any) -> Metric:
+    return Metric(CostMatrix().add_tp_benefit('c').add_fp_cost('d'), strategy)
+
+
+@pytest.mark.parametrize('strategy', [LogCost(), MaxProfit()], ids=['LogCost', 'MaxProfit'])
+@pytest.mark.parametrize('n_estimators', [5, 25], ids=['5_rounds', '25_rounds'])
+def test_boosting_validates_once_regardless_of_rounds(training_data, strategy, n_estimators):
+    """
+    These two strategies need a gradient recomputed every round, so they re-enter the metric.
+
+    Parametrising over the round count is the point: if validation were inside the loop the count
+    would track `n_estimators` instead of staying at one.
+    """
+    xgboost = pytest.importorskip('xgboost')
+    X, y, clv = training_data
+    model = CSBoostClassifier(
+        xgboost.XGBClassifier(n_estimators=n_estimators, max_depth=3, n_jobs=1),
+        loss=instance_dependent_metric(strategy),
+    )
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize('n_estimators', [5, 25], ids=['5_rounds', '25_rounds'])
+def test_catboost_validates_once_regardless_of_rounds(training_data, n_estimators):
+    """CatBoost re-slices the cost arrays and re-enters the metric on every evaluation period."""
+    catboost = pytest.importorskip('catboost')
+    X, y, clv = training_data
+    model = CSBoostClassifier(
+        catboost.CatBoostClassifier(n_estimators=n_estimators, depth=3, verbose=False),
+        loss=instance_dependent_metric(Cost()),
+    )
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize(('population_size', 'generations'), [(10, 3), (20, 6)], ids=['small', 'larger'])
+def test_proftree_validates_once_regardless_of_population(training_data, population_size, generations):
+    """
+    With a non-MaxProfit strategy ProfTree scores every candidate through the Python metric.
+
+    With `MaxProfit` it takes a compiled fitness path instead and never reaches the metric at all,
+    which is why this is parametrised on the strategy that does.
+    """
+    X, y, clv = training_data
+    model = ProfTreeClassifier(
+        max_iter=generations,
+        population_size=population_size,
+        random_state=42,
+        loss=instance_dependent_metric(Cost()),
+    )
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize('n_estimators', [3, 6], ids=['3_estimators', '6_estimators'])
+def test_csforest_validates_once_regardless_of_estimator_count(training_data, n_estimators):
+    """The out-of-bag weighting loop scores every tree through the metric, and must not revalidate."""
+    X, y, clv = training_data
+    model = CSForestClassifier(
+        n_estimators=n_estimators, max_depth=2, random_state=42, loss=instance_dependent_metric(Cost())
+    )
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize('n_estimators', [3, 6], ids=['3_estimators', '6_estimators'])
+def test_csbagging_validates_once_per_sub_fit(training_data, n_estimators):
+    """
+    Bagging fits a full cost-sensitive estimator per bag, so each bag is its own boundary.
+
+    One validation for the outer fit plus one per sub-estimator is the correct cost: every sub-fit
+    receives a different subset of the cost arrays. What must not happen is the count tracking
+    anything finer than the number of sub-fits.
+    """
+    X, y, clv = training_data
+    model = CSBaggingClassifier(n_estimators=n_estimators, random_state=42, loss=instance_dependent_metric(Cost()))
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == n_estimators + 1
+
+
+def test_a_constrained_symbol_is_checked_during_fit(training_data):
+    """A user-declared constraint must be enforced when a model fits on the metric."""
+    X, y, _ = training_data
+    cost_matrix = CostMatrix().add_tp_benefit('c').add_fp_cost('d').constrain('d', 0, 1)
+    model = CSBoostClassifier(loss=Metric(cost_matrix, Cost()))
+    with pytest.raises(ValueError, match='d should lay between 0 and 1'):
+        model.fit(X, y, c=np.ones(len(y)), d=5.0)
