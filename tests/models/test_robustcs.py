@@ -6,26 +6,20 @@ from sklearn.linear_model import HuberRegressor
 from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import CSLogitClassifier, RobustCSClassifier
 
+ARRAY_COST_CASES = [
+    ('fn_cost',),
+    ('tp_cost', 'fp_cost'),
+    ('tn_cost', 'fn_cost'),
+    ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'),
+]
+COST_NAMES = ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost')
 
-@pytest.fixture
-def data():
-    from sklearn.datasets import make_classification
 
-    X, y = make_classification(n_samples=100, n_features=20, random_state=42)
-    return X, y
-
-
-@pytest.mark.parametrize(
-    'tp_cost, tn_cost, fn_cost, fp_cost',
-    [
-        (0.0, 0.0, np.random.rand(100), 0.0),
-        (np.random.rand(100), 0.0, 0.0, np.random.rand(100)),
-        (0.0, np.random.rand(100), np.random.rand(100), 0.0),
-        (np.random.rand(100), np.random.rand(100), np.random.rand(100), np.random.rand(100)),
-    ],
-)
-def test_fit(data, tp_cost, tn_cost, fn_cost, fp_cost):
-    X, y = data
+@pytest.mark.parametrize('array_costs', ARRAY_COST_CASES, ids='+'.join)
+def test_fit(classification_data, seeded_rng, array_costs):
+    X, y = classification_data
+    costs = {name: (seeded_rng.random(100) if name in array_costs else 0.0) for name in COST_NAMES}
+    tp_cost, tn_cost, fn_cost, fp_cost = (costs[name] for name in COST_NAMES)
     clf = RobustCSClassifier(CSLogitClassifier(), HuberRegressor(), detect_outliers_for='all')
     clf.fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
     assert hasattr(clf, 'estimator_')
@@ -40,12 +34,9 @@ def test_fit(data, tp_cost, tn_cost, fn_cost, fp_cost):
 
 
 @pytest.mark.parametrize('detect_outliers_for', ['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', ['tp_cost', 'fn_cost']])
-def test_detect_outliers_for(data, detect_outliers_for):
-    X, y = data
-    tp_cost = np.random.rand(100)
-    tn_cost = np.random.rand(100)
-    fn_cost = np.random.rand(100)
-    fp_cost = np.random.rand(100)
+def test_detect_outliers_for(classification_data, seeded_rng, detect_outliers_for):
+    X, y = classification_data
+    tp_cost, tn_cost, fn_cost, fp_cost = (seeded_rng.random(100) for _ in range(4))
     clf = RobustCSClassifier(CSLogitClassifier(), HuberRegressor(), detect_outliers_for=detect_outliers_for)
     clf.fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
     assert hasattr(clf, 'estimator_')
@@ -59,8 +50,8 @@ def test_detect_outliers_for(data, detect_outliers_for):
             assert np.array_equal(clf.costs_[cost_name], original_cost)
 
 
-def test_robustcs_metric_loss(data):
-    X, y = data
+def test_robustcs_metric_loss(classification_data):
+    X, y = classification_data
 
     clv, d, f, gamma = sympy.symbols('clv d f gamma')
     cost_matrix = (

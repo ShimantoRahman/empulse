@@ -16,15 +16,13 @@ from sklearn.utils.estimator_checks import _enforce_estimator_tags_X
 from empulse.samplers import BiasRelabler, CostSensitiveSampler
 
 
-def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, expected_failed_checks=None):
-    """Pytest specific decorator for parametrizing estimator checks.
+def parametrize_with_checks_samplers(estimators, fit_params, *, expected_failed_checks=None):
+    """Pytest specific decorator for parametrizing sampler checks.
 
-    Checks are categorised into the following groups:
-
-    - API checks: a set of checks to ensure API compatibility with scikit-learn.
-      Refer to https://scikit-learn.org/dev/developers/develop.html a requirement of
-      scikit-learn estimators.
-    - legacy: a set of checks which gradually will be grouped into other categories.
+    Adapted from imbalanced-learn's ``parametrize_with_checks``. The one substantive difference is
+    ``fit_params``: imblearn's checks call ``fit_resample(X, y)`` with no extra arguments, whereas
+    empulse's samplers need ``sensitive_feature`` or the cost arrays threaded through, so every
+    check takes a ``fit_params`` mapping as its second positional argument.
 
     The `id` of each check is set to be a pprint version of the estimator
     and the name of the check with its keyword arguments.
@@ -37,18 +35,9 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
     estimators : list of estimators instances
         Estimators to generated checks for.
 
-        .. versionchanged:: 0.24
-           Passing a class was deprecated in version 0.23, and support for
-           classes was removed in 0.24. Pass an instance instead.
-
-        .. versionadded:: 0.24
-
-
-    legacy : bool, default=True
-        Whether to include legacy checks. Over time we remove checks from this category
-        and move them into their specific category.
-
-        .. versionadded:: 1.6
+    fit_params : list of dict
+        Positionally paired with ``estimators``: the keyword arguments to pass to that estimator's
+        ``fit_resample``.
 
     expected_failed_checks : callable, default=None
         A callable that takes an estimator as input and returns a dictionary of the
@@ -59,27 +48,20 @@ def parametrize_with_checks_samplers(estimators, fit_params, *, legacy=True, exp
             }
 
         Where `"check_name"` is the name of the check, and `"my reason"` is why
-        the check fails. These tests will be marked as xfail if the check fails.
-
-
-        .. versionadded:: 1.6
+        the check fails. These checks are marked `xfail`.
 
     Returns
     -------
     decorator : `pytest.mark.parametrize`
 
-    See Also
-    --------
-    check_estimator : Check if estimator adheres to scikit-learn conventions.
-
     Examples
     --------
-    >>> from sklearn.utils.estimator_checks import parametrize_with_checks
-    >>> from sklearn.linear_model import LogisticRegression
-    >>> from sklearn.tree import DecisionTreeRegressor
-
-    >>> @parametrize_with_checks([LogisticRegression(), DecisionTreeRegressor()])
-    ... def test_sklearn_compatible_estimator(estimator, check):
+    >>> from empulse.samplers import BiasResampler
+    >>> @parametrize_with_checks_samplers(
+    ...     [BiasResampler(random_state=42)],
+    ...     [{'sensitive_feature': np.zeros(1000)}],
+    ... )
+    ... def test_sampler(estimator, check):
     ...     check(estimator)
 
     """
@@ -116,32 +98,39 @@ def estimator_checks_generator(estimator, *, fit_params, expected_failed_checks=
     ----------
     estimator : estimator object
         Estimator instance for which to generate checks.
-    legacy : bool, default=True
-        Whether to include legacy checks. Over time we remove checks from this category
-        and move them into their specific category.
+    fit_params : dict
+        Keyword arguments to pass to the estimator's ``fit_resample``.
     expected_failed_checks : dict[str, str], default=None
         Dictionary of the form {check_name: reason} for checks that are expected to
         fail.
-    mark : {"xfail", "skip"} or None, default=None
+    mark : {"xfail"} or None, default=None
         Whether to mark the checks that are expected to fail as
-        xfail(`pytest.mark.xfail`) or skip. Marking a test as "skip" is done via
-        wrapping the check in a function that raises a
-        :class:`~sklearn.exceptions.SkipTest` exception.
+        xfail(`pytest.mark.xfail`).
 
     Returns
     -------
     estimator_checks_generator : generator
-        Generator that yields (estimator, check) tuples.
+        Generator that yields (estimator, check) tuples, or ``pytest.param`` objects
+        carrying an xfail mark for the checks named in `expected_failed_checks`.
     """
-    if mark == 'xfail':
-        import pytest
-    else:
-        pytest = None  # noqa: F841
-
+    expected_failed_checks = expected_failed_checks or {}
     name = type(estimator).__name__
     for check in _yield_sampler_checks(estimator):
         check_with_name = partial(check, name, fit_params)
-        yield estimator, check_with_name
+        reason = expected_failed_checks.get(_check_name(check))
+        if reason is None or mark != 'xfail':
+            yield estimator, check_with_name
+        else:
+            import pytest
+
+            yield pytest.param(estimator, check_with_name, marks=pytest.mark.xfail(reason=reason))
+
+
+def _check_name(check):
+    """The bare name of a check, unwrapping a ``functools.partial`` if there is one."""
+    while isinstance(check, partial):
+        check = check.func
+    return check.__name__
 
 
 def _yield_sampler_checks(sampler):
@@ -393,7 +382,7 @@ def check_samplers_nan(name, fit_params, sampler_orig):
 def check_samplers_one_label(name, fit_params, sampler_orig):
     sampler = clone(sampler_orig)
     error_string_fit = "Sampler can't balance when only one class is present."
-    X = np.random.random((20, 2))
+    X = np.random.default_rng(42).random((20, 2))
     y = np.zeros(20)
     try:
         sampler.fit_resample(X, y, **fit_params)
@@ -429,7 +418,7 @@ def check_samplers_string(name, fit_params, sampler_orig):
 def check_target_type(name, fit_params, estimator_orig):
     estimator = clone(estimator_orig)
     # should raise warning if the target is continuous (we cannot raise error)
-    X = np.random.random((20, 2))
+    X = np.random.default_rng(42).random((20, 2))
     y = np.linspace(0, 1, 20)
     msg = 'Unknown label type:'
     with raises(ValueError, err_msg=msg):

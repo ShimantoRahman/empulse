@@ -18,10 +18,6 @@ from xgboost import XGBClassifier
 from empulse.datasets import fetch_give_me_some_credit
 from empulse.metrics import Cost, CostMatrix, Metric, cost_loss, mpc_score
 from empulse.models import (
-    B2BoostClassifier,
-    BiasRelabelingClassifier,
-    BiasResamplingClassifier,
-    BiasReweighingClassifier,
     CSBaggingClassifier,
     CSBoostClassifier,
     CSForestClassifier,
@@ -30,52 +26,19 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
-    ProfMEMPMClassifier,
-    ProfMPMClassifier,
     ProfSRClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
 from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
 
-try:
-    import gplearn  # noqa: F401
+from .._estimator_common import iter_invalid_params
+from .estimator_inventory import estimator_id, make_estimators
 
-    HAS_GPLEARN = True
-except ImportError:
-    HAS_GPLEARN = False
+# The single source of truth for "every estimator, cheaply configured". Shared with
+# `test_sklearn_integration.py` so the list cannot drift between the two conformance suites.
+ESTIMATORS = tuple(make_estimators())
 
-ESTIMATORS = (
-    BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
-    BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
-    BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
-    B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
-    ProfLogitClassifier(
-        tp_cost=-1, fp_cost=1, optimizer=GeneticAlgorithmOptimizer(max_iter=2, population_size=10, random_state=42)
-    ),
-    ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
-    CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
-    CSLogitClassifier(fp_cost=1, fn_cost=1),
-    CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
-    CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
-    CSBaggingClassifier(
-        estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2)),
-        n_estimators=2,
-        fp_cost=1,
-        fn_cost=1,
-        random_state=42,
-    ),
-    RobustCSClassifier(estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2)), fp_cost=1, fn_cost=1),
-    CSThresholdClassifier(estimator=LogisticRegression(max_iter=2), random_state=42, fp_cost=1, fn_cost=1),
-    CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
-    ProfMPMClassifier(tp_cost=-1, fp_cost=1),
-    ProfMEMPMClassifier(tp_cost=-1, fp_cost=1),
-    *(
-        (ProfSRClassifier(tp_cost=-1, fp_cost=1, generations=2, population_size=20, random_state=42),)
-        if HAS_GPLEARN
-        else ()
-    ),
-)
 METRIC_ESTIMATORS = (
     ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=100, population_size=10, random_state=42)),
     ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
@@ -98,24 +61,13 @@ PREDICT_TIME_ESTIMATORS = (
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 
 
-def estimator_id(estimator):
-    params = estimator.get_params(deep=False)
-    inner = params.get('estimator')
-    if inner is not None:
-        return f'{type(estimator).__name__}({type(inner).__name__})'
-    return type(estimator).__name__
-
-
 def expected_failed_checks(estimator):
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
-    if isinstance(estimator, CSRateClassifier):
-        return {'check_methods_subset_invariance': 'Rate will predict differently on different subsets by design.'}
     if isinstance(
         estimator,
         CSTreeClassifier
         | CSForestClassifier
-        | CSBaggingClassifier
         | CSLogitClassifier
         | RobustCSClassifier
         | ProfTreeClassifier
@@ -189,43 +141,29 @@ def dataset():
     return X, y, fn_cost, fp_cost
 
 
-class InvalidParameter:
-    pass
+def _invalid_param_cases():
+    """One case per (estimator class, constructor parameter), so the id names the parameter."""
+    for estimator_class in sorted(ESTIMATOR_CLASSES, key=lambda c: c.__name__):
+        for name, invalid in iter_invalid_params(estimator_class):
+            yield pytest.param(estimator_class, name, invalid, id=f'{estimator_class.__name__}-{name}')
 
 
-def generate_invalid_params(estimator_class):
-    parameters = inspect.signature(estimator_class.__init__).parameters
-    takes_estimator = 'estimator' in parameters
-    takes_loss = 'loss' in parameters
-    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator, takes_loss
-
-
-@pytest.mark.parametrize('estimator_class', ESTIMATOR_CLASSES)
-def test_invalid_params(estimator_class, dataset):
+@pytest.mark.parametrize(('estimator_class', 'param_name', 'invalid_params'), _invalid_param_cases())
+def test_invalid_params(estimator_class, param_name, invalid_params, dataset):
+    """Every constructor parameter must be rejected by scikit-learn's parameter validation."""
     X, y, _, _ = dataset
-    invalid_params_list, takes_estimator, takes_loss = generate_invalid_params(estimator_class)
-    for invalid_params in invalid_params_list:
-        if (
-            takes_estimator
-            and 'estimator' in invalid_params
-            and isinstance(invalid_params['estimator'], InvalidParameter)
-        ):
-            model = estimator_class(**invalid_params)
-        elif takes_estimator:
-            model = estimator_class(estimator=LogisticRegression(), **invalid_params)
-        elif (
-            takes_loss
-            and 'loss' in invalid_params
-            and isinstance(invalid_params['loss'], InvalidParameter)
-            and estimator_class in {ProfLogitClassifier, ProfTreeClassifier}
-        ):
-            model = estimator_class(**invalid_params)
-        elif takes_loss and estimator_class in {ProfLogitClassifier, ProfTreeClassifier}:
-            model = estimator_class(loss=mpc_score, **invalid_params)
-        else:
-            model = estimator_class(**invalid_params)
-        with pytest.raises(InvalidParameterError):
-            model.fit(X, y)
+    parameters = inspect.signature(estimator_class.__init__).parameters
+    # Supply a valid value for the parameters the estimator cannot be constructed without, unless
+    # that parameter is itself the one under test.
+    defaults = {}
+    if 'estimator' in parameters and param_name != 'estimator':
+        defaults['estimator'] = LogisticRegression()
+    if 'loss' in parameters and param_name != 'loss' and estimator_class in {ProfLogitClassifier, ProfTreeClassifier}:
+        defaults['loss'] = mpc_score
+
+    model = estimator_class(**defaults, **invalid_params)
+    with pytest.raises(InvalidParameterError):
+        model.fit(X, y)
 
 
 def set_metric_loss(estimator, loss):

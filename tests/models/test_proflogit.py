@@ -8,16 +8,6 @@ from empulse.optimizers import GeneticAlgorithmOptimizer
 
 
 @pytest.fixture(scope='module')
-def X():
-    return np.arange(20).reshape(10, 2)
-
-
-@pytest.fixture(scope='module')
-def y():
-    return np.array([0, 1] * 5)
-
-
-@pytest.fixture(scope='module')
 def clf(X, y):
     clf = ProfLogitClassifier(
         tp_cost=-1, fp_cost=1, optimizer=GeneticAlgorithmOptimizer(max_iter=2, population_size=10, random_state=42)

@@ -12,16 +12,6 @@ from empulse.models import B2BoostClassifier
 
 
 @pytest.fixture(scope='module')
-def X():
-    return np.arange(20).reshape(10, 2)
-
-
-@pytest.fixture(scope='module')
-def y():
-    return np.array([0, 1] * 5)
-
-
-@pytest.fixture(scope='module')
 def clf(X, y):
     clf = B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1))
     clf.fit(X, y)
@@ -80,53 +70,6 @@ def test_b2boost_predict(clf, X):
 def test_b2boost_score(clf, X, y):
     score = clf.score(X, y)
     assert isinstance(score, float)
-
-
-def test_cloneable_by_sklearn():
-    from sklearn.base import clone
-
-    clf = B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1))
-    clf_clone = clone(clf)
-    assert isinstance(clf_clone, B2BoostClassifier)
-
-
-def test_works_in_cross_validation(X, y):
-    from sklearn.model_selection import cross_val_score
-
-    clf = B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1))
-    scores = cross_val_score(clf, X, y, cv=2)
-    assert isinstance(scores, np.ndarray)
-    assert scores.shape == (2,)
-    assert np.all(scores.astype(np.float64) == scores)
-
-
-def test_works_in_pipeline(X, y):
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
-
-    clf = B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1))
-    pipe = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
-    pipe.fit(X, y)
-    assert isinstance(pipe.named_steps['scaler'], StandardScaler)
-    assert isinstance(pipe.named_steps['clf'], B2BoostClassifier)
-    assert isinstance(pipe.score(X, y), float)
-    assert isinstance((pred := pipe.predict(X)), np.ndarray)
-    assert np.all(~np.isnan(pred))
-
-
-def test_works_in_ensemble(X, y):
-    from sklearn.ensemble import BaggingClassifier
-
-    clf = B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1))
-    bagging = BaggingClassifier(clf, n_estimators=2, random_state=42)
-    bagging.fit(X, y)
-    assert isinstance(bagging.estimators_[0], B2BoostClassifier)
-    assert isinstance(bagging.score(X, y), float)
-    assert isinstance(bagging.predict(X), np.ndarray)
-
-
-# Define the classifiers to test
-CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
 
 
 @pytest.fixture(scope='module')

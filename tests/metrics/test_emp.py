@@ -1,21 +1,75 @@
+"""
+Cross-checks between prebuilt metrics that should agree by construction.
+
+This file used to compare ``reference.max_profit.max_profit`` against ``reference.churn.mpc`` --
+reference against reference, so it could never catch a regression in the shipped package. Both
+sides now call the public metrics.
+"""
+
 import pytest
 
-from .reference.churn import mpc
-from .reference.max_profit import max_profit
+from empulse.metrics import max_profit_score, mpc_score
 
 
-def test_mpc_replication():
+@pytest.mark.parametrize(
+    ('clv', 'incentive_cost', 'contact_cost', 'accept_rate'),
+    [
+        (200, 10, 1, 0.3),
+        (500, 25, 5, 0.5),
+        (1000, 100, 10, 0.1),
+    ],
+    ids=['default_like', 'mid', 'expensive_incentive'],
+)
+def test_mpc_score_is_max_profit_with_the_churn_cost_matrix(clv, incentive_cost, contact_cost, accept_rate):
+    """
+    MPC is just the generic max-profit measure evaluated on the churn cost matrix.
+
+    A true positive earns the retained CLV, net of the incentive and the contact, but only when the
+    customer accepts; a false positive costs the incentive plus the contact. Deriving those two
+    numbers by hand and feeding them to ``max_profit_score`` must reproduce ``mpc_score`` exactly.
+    """
     y_true = [0, 1, 0, 1, 0, 1, 0, 1]
-    y_pred = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+    y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
 
-    clv = 200
-    d = 10
-    f = 1
-    gamma = 0.3
-    tp_benefit = clv * (gamma * (1 - (d / clv)) - (f / clv))
-    fp_cost = d + f
+    # `max_profit_score` is parameterised in costs, and a benefit is a negative cost.
+    tp_cost = -(clv * (accept_rate * (1 - (incentive_cost / clv)) - (contact_cost / clv)))
+    fp_cost = incentive_cost + contact_cost
 
-    mp_score, mp_threshold = max_profit(y_true, y_pred, tp_benefit=tp_benefit, fp_cost=fp_cost)
-    mpc_score, mpc_threshold = mpc(y_true, y_pred, clv=clv, incentive_cost=d, contact_cost=f, accept_rate=gamma)
-    assert mp_score == pytest.approx(mpc_score)
-    assert mp_threshold == pytest.approx(mpc_threshold)
+    generic = max_profit_score(y_true, y_score, tp_cost=tp_cost, fp_cost=fp_cost)
+    churn = mpc_score(
+        y_true,
+        y_score,
+        clv=clv,
+        incentive_cost=incentive_cost,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    assert generic == pytest.approx(churn)
+
+
+@pytest.mark.parametrize(
+    ('clv', 'incentive_cost', 'contact_cost', 'accept_rate'),
+    [
+        (200, 10, 1, 0.3),
+        (500, 25, 5, 0.5),
+    ],
+    ids=['default_like', 'mid'],
+)
+def test_mpc_optimal_rate_is_max_profit_optimal_rate(clv, incentive_cost, contact_cost, accept_rate):
+    """The same equivalence must hold for the rate at which the maximum is attained."""
+    y_true = [0, 1, 0, 1, 0, 1, 0, 1]
+    y_score = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+
+    tp_cost = -(clv * (accept_rate * (1 - (incentive_cost / clv)) - (contact_cost / clv)))
+    fp_cost = incentive_cost + contact_cost
+
+    generic = max_profit_score.optimal_rate(y_true, y_score, tp_cost=tp_cost, fp_cost=fp_cost)
+    churn = mpc_score.optimal_rate(
+        y_true,
+        y_score,
+        clv=clv,
+        incentive_cost=incentive_cost,
+        contact_cost=contact_cost,
+        accept_rate=accept_rate,
+    )
+    assert generic == pytest.approx(churn)

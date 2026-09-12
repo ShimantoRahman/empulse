@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -8,6 +10,7 @@ from empulse.datasets import (
     Dataset,
     fetch_give_me_some_credit,
     fetch_iranian_churn,
+    get_data_home,
     load_churn_tv_subscriptions,
     load_credit_scoring_pakdd,
     load_upsell_bank_telemarketing,
@@ -243,3 +246,39 @@ def test_remote_cross_backend_shape(tmp_path, loader):
     ds_pl = loader(backend=pl, data_home=tmp_path)
     assert ds_pd.data.shape == ds_pl.data.shape
     assert len(ds_pd.target) == len(ds_pl.target)
+
+
+class TestGetDataHome:
+    """``get_data_home`` was the only name in the public API with no test reference at all."""
+
+    def test_explicit_path_wins_and_is_created(self, tmp_path):
+        target = tmp_path / 'explicit'
+        assert not target.exists()
+        assert get_data_home(target) == target
+        assert target.is_dir()
+
+    def test_environment_variable_is_used_when_no_path_is_given(self, tmp_path, monkeypatch):
+        target = tmp_path / 'from_env'
+        monkeypatch.setenv('EMPULSE_DATA_HOME', str(target))
+        assert get_data_home() == target
+        assert target.is_dir()
+
+    def test_explicit_path_overrides_the_environment_variable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('EMPULSE_DATA_HOME', str(tmp_path / 'from_env'))
+        explicit = tmp_path / 'explicit'
+        assert get_data_home(explicit) == explicit
+
+    def test_defaults_to_home_directory(self, tmp_path, monkeypatch):
+        monkeypatch.delenv('EMPULSE_DATA_HOME', raising=False)
+        monkeypatch.setattr(Path, 'home', classmethod(lambda cls: tmp_path))
+        assert get_data_home() == tmp_path / 'empulse_data'
+
+    def test_is_idempotent_on_an_existing_directory(self, tmp_path):
+        target = tmp_path / 'twice'
+        assert get_data_home(target) == get_data_home(target)
+        assert target.is_dir()
+
+    def test_accepts_a_string_path(self, tmp_path):
+        target = tmp_path / 'as_string'
+        assert get_data_home(str(target)) == target
+        assert target.is_dir()

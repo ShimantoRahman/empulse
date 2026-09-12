@@ -20,7 +20,6 @@ These tests check:
 import numpy as np
 import pytest
 import sympy
-import sympy.stats
 
 from empulse.metrics import AUEPC, CostMatrix, Metric
 from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
@@ -28,35 +27,9 @@ from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
 from .reference.churn import auepc_score
 
 
-@pytest.fixture(scope='module')
-def churn_cost_matrix():
-    gamma = sympy.stats.Beta('gamma', 6, 14)
-    delta, f, clv = sympy.symbols('delta f clv')
-    # The contact cost is incurred whenever a churner is contacted, regardless of whether they
-    # accept the incentive offer, so it must be added as a separate, gamma-independent term
-    # (matching the canonical churn cost matrix documented in CostMatrix and used by B2BoostClassifier).
-    return (
-        CostMatrix()
-        .add_tp_benefit(gamma * ((1 - delta) * clv - f))
-        .add_tp_benefit((1 - gamma) * -f)
-        .add_fp_cost(delta * clv + f),
-        {'delta': delta, 'f': f, 'clv': clv},
-    )
-
-
-@pytest.fixture(scope='module')
-def dataset():
-    rng = np.random.default_rng(0)
-    n = 300
-    y = rng.integers(0, 2, size=n)
-    clv = rng.gamma(2, 100, size=n)
-    y_score = rng.normal(size=n) + y * 1.5
-    return y, y_score, clv
-
-
-def test_auepc_matches_native_function(churn_cost_matrix, dataset):
-    cost_matrix, _ = churn_cost_matrix
-    y, y_score, clv = dataset
+def test_auepc_matches_native_function(empirical_churn_cost_matrix, empirical_churn_dataset):
+    cost_matrix, _ = empirical_churn_cost_matrix
+    y, y_score, clv = empirical_churn_dataset
     incentive_fraction, contact_cost = 0.05, 15
 
     metric = Metric(cost_matrix, AUEPC(normalize=True))
@@ -68,9 +41,9 @@ def test_auepc_matches_native_function(churn_cost_matrix, dataset):
     assert result == pytest.approx(expected, rel=1e-6)
 
 
-def test_auepc_matches_native_function_unnormalized(churn_cost_matrix, dataset):
-    cost_matrix, _ = churn_cost_matrix
-    y, y_score, clv = dataset
+def test_auepc_matches_native_function_unnormalized(empirical_churn_cost_matrix, empirical_churn_dataset):
+    cost_matrix, _ = empirical_churn_cost_matrix
+    y, y_score, clv = empirical_churn_dataset
     incentive_fraction, contact_cost = 0.05, 15
 
     metric = Metric(cost_matrix, AUEPC(normalize=False))
@@ -89,10 +62,10 @@ def test_auepc_matches_native_function_unnormalized(churn_cost_matrix, dataset):
     assert result == pytest.approx(expected, rel=1e-6)
 
 
-def test_auepc_perfect_ranking_scores_one(churn_cost_matrix, dataset):
+def test_auepc_perfect_ranking_scores_one(empirical_churn_cost_matrix, empirical_churn_dataset):
     """A model whose scores match the oracle's profit-maximizing ranking should score ~1.0."""
-    cost_matrix, _syms = churn_cost_matrix
-    y, _, clv = dataset
+    cost_matrix, _syms = empirical_churn_cost_matrix
+    y, _, clv = empirical_churn_dataset
     incentive_fraction, contact_cost = 0.05, 15
     accept_rate = 6 / (6 + 14)
 
@@ -106,9 +79,9 @@ def test_auepc_perfect_ranking_scores_one(churn_cost_matrix, dataset):
     assert result == pytest.approx(1.0, abs=1e-8)
 
 
-def test_auepc_uninformative_ranking_scores_lower(churn_cost_matrix, dataset):
-    cost_matrix, _ = churn_cost_matrix
-    y, y_score, clv = dataset
+def test_auepc_uninformative_ranking_scores_lower(empirical_churn_cost_matrix, empirical_churn_dataset):
+    cost_matrix, _ = empirical_churn_cost_matrix
+    y, y_score, clv = empirical_churn_dataset
     incentive_fraction, contact_cost = 0.05, 15
 
     metric = Metric(cost_matrix, AUEPC(normalize=True))
@@ -121,17 +94,17 @@ def test_auepc_uninformative_ranking_scores_lower(churn_cost_matrix, dataset):
     assert uninformative < informative
 
 
-def test_auepc_direction_is_maximize(churn_cost_matrix):
-    cost_matrix, _ = churn_cost_matrix
+def test_auepc_direction_is_maximize(empirical_churn_cost_matrix):
+    cost_matrix, _ = empirical_churn_cost_matrix
     metric = Metric(cost_matrix, AUEPC())
     from empulse.metrics.metric.common import Direction
 
     assert metric.direction == Direction.MAXIMIZE
 
 
-def test_auepc_score_class_matches_hand_rolled_delta(dataset):
+def test_auepc_score_class_matches_hand_rolled_delta(empirical_churn_dataset):
     """AUEPCScore should match a hand-rolled implementation of the delta-ranking algorithm."""
-    y, y_score, _clv = dataset
+    y, y_score, _clv = empirical_churn_dataset
     tp, fp = sympy.symbols('tp fp')
 
     score_fn = AUEPCScore(tp_benefit=tp, tn_benefit=sympy.Integer(0), fp_cost=fp, fn_cost=sympy.Integer(0))
@@ -151,9 +124,9 @@ def test_auepc_score_class_matches_hand_rolled_delta(dataset):
     assert result == pytest.approx(expected)
 
 
-def test_auepc_instance_dependent_costs(dataset):
+def test_auepc_instance_dependent_costs(empirical_churn_dataset):
     """AUEPC should support instance-dependent (array-like) costs."""
-    y, y_score, clv = dataset
+    y, y_score, clv = empirical_churn_dataset
     fp = sympy.symbols('fp')
     cost_matrix = CostMatrix().add_tp_benefit(50.0).add_fp_cost(fp)
     metric = Metric(cost_matrix, AUEPC())
@@ -164,10 +137,10 @@ def test_auepc_instance_dependent_costs(dataset):
     assert np.isfinite(result)
 
 
-def test_auepc_does_not_support_model_training(churn_cost_matrix, dataset):
+def test_auepc_does_not_support_model_training(empirical_churn_cost_matrix, empirical_churn_dataset):
     """AUEPC evaluates a whole ranking, not a per-sample outcome, so training hooks are unsupported."""
-    cost_matrix, _ = churn_cost_matrix
-    y, y_score, clv = dataset
+    cost_matrix, _ = empirical_churn_cost_matrix
+    y, y_score, clv = empirical_churn_dataset
     metric = Metric(cost_matrix, AUEPC())
 
     with pytest.raises(NotImplementedError):
@@ -192,8 +165,8 @@ def test_auepc_does_not_support_model_training(churn_cost_matrix, dataset):
         metric._prepare_boost_objective(y, clv=clv, delta=0.05, f=15)
 
 
-def test_auepc_repr_and_latex_smoke(churn_cost_matrix):
-    cost_matrix, _ = churn_cost_matrix
+def test_auepc_repr_and_latex_smoke(empirical_churn_cost_matrix):
+    cost_matrix, _ = empirical_churn_cost_matrix
     metric = Metric(cost_matrix, AUEPC())
     assert 'AUEPC' in repr(metric)
     latex = metric._repr_latex_()

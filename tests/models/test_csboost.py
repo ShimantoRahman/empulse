@@ -29,7 +29,7 @@ CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('c
 @pytest.fixture(scope='module')
 def dataset():
     X, y = make_classification(n_samples=50, random_state=42)
-    fn_cost = np.random.rand(y.size)
+    fn_cost = np.random.default_rng(42).random(y.size)
     fp_cost = 5
     return X, y, fn_cost, fp_cost
 

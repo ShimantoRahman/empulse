@@ -6,6 +6,9 @@ on:
     branches: ["main"]
     tags-ignore: ["**"]
   pull_request:
+  schedule:
+    # Monday 04:00 UTC, for the remote-data suite only (see the `remote-test` job).
+    - cron: "0 4 * * 1"
 
 concurrency:
   group: check-${{ github.ref }}
@@ -31,5 +34,40 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
-      - name: Run set suite
-        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow"
+      - name: Run test suite
+        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow and not remote"
+
+  slow-test:
+    # The doc-executing suites (tests/test_user_guide.py and other @pytest.mark.slow tests) run
+    # here, once, rather than per Python version above — they're slow because they run models and
+    # build docs, not because their outcome varies by interpreter version.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Run slow suite
+        run: uvx --with tox-uv tox -e py312-tests -- -m "slow and not remote"
+
+  remote-test:
+    # The dataset fetchers download from third-party hosts, so they are too slow and too flaky to
+    # sit in the PR path. Running them weekly still catches an upstream dataset change within a
+    # week, which is the timescale that actually matters for a schema or URL change.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Run remote-data suite
+        run: uvx --with tox-uv tox -e py312-tests -- -m "remote"

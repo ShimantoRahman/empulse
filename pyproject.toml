@@ -125,8 +125,15 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
+# --strict-markers turns a typo'd or unregistered marker into an error rather than a warning, so a
+# marker can never silently fail to deselect. --strict-config does the same for this table's keys.
+addopts = "--strict-markers --strict-config"
+# An entry in an `expected_failed_checks` map that starts passing is a stale entry, not a bonus:
+# without this an XPASS is reported as green and the map drifts out of date unnoticed.
+xfail_strict = true
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "remote: downloads data over the network (deselect with '-m \"not remote\"')",
 ]
 filterwarnings = [
     "ignore:L-BFGS failed to converge",  # max_iter is set low for speed, so this warning is expected
@@ -136,7 +143,20 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-omit = ["empulse/utils/_sklearn_compat.py"]
+omit = [
+    # Cython pure-Python-mode sources: these are compiled to extension modules, and the compiled
+    # module is what gets imported, so the `.py` never executes and always reports 0%.
+    "empulse/metrics/_loss/*",
+    "empulse/models/cy_proftree/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
 
 [tool.ruff]
 line-length = 120

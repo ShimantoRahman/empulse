@@ -106,7 +106,7 @@ def cost_loss(
     y_pred : 1D array-like, shape=(n_samples,)
         Predicted labels or calibrated probabilities.
         If the predictions are calibrated probabilities,
-        the optimal decision threshold is calculated for each instance as [3]_:
+        the optimal decision threshold is calculated for each instance as [1]_:
 
         .. math:: t^*_i = \\frac{C_i(1|0) - C_i(0|0)}{C_i(1|0) - C_i(0|0) + C_i(0|1) - C_i(1|1)}
 

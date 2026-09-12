@@ -1,19 +1,6 @@
-import numpy as np
-import pytest
-
 from empulse.metrics import CostMatrix, Metric, Savings
 from empulse.models import CSLogitClassifier
 from empulse.optimizers import LBFGSBOptimizer
-
-
-@pytest.fixture(scope='module')
-def X():
-    return np.arange(20).reshape(10, 2)
-
-
-@pytest.fixture(scope='module')
-def y():
-    return np.array([0, 1] * 5)
 
 
 def test_works_with_different_loss(X, y):
