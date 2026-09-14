@@ -21,6 +21,7 @@ jobs:
       fail-fast: true
       matrix:
         env:
+          - "py314t-tests"
           - "py314-tests"
           - "py313-tests"
           - "py312-tests"

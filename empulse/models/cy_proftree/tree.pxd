@@ -1,6 +1,7 @@
 cimport numpy as cnp
 
 from .node cimport Node
+from .random cimport RandState
 
 cdef struct Tree:
     Node* root
@@ -29,14 +30,15 @@ cdef void predict_labels_tree(Tree* tree, float[:, :] X, float[:] probabilities,
 cdef SplitValues* compute_split_values(cnp.ndarray[cnp.float32_t, ndim=2] X) noexcept
 cdef void free_split_values(SplitValues* sv) noexcept nogil
 
-cdef Node* random_subnode(Node* root) noexcept nogil
-cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil
-cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil
-cdef Node* random_subnode_with_leaf_children(Node* root) noexcept nogil
+cdef Node* random_subnode(RandState* rng, Node* root) noexcept nogil
+cdef Node* random_subnode_with_depth(RandState* rng, Node* root, int* out_depth) noexcept nogil
+cdef Node* random_leaf_node(RandState* rng, Node* root, int* out_depth) noexcept nogil
+cdef Node* random_subnode_with_leaf_children(RandState* rng, Node* root) noexcept nogil
 
 cdef void prune(Node* node) noexcept nogil
 cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int min_samples_leaf) noexcept nogil
 cdef void split(
+    RandState* rng,
     Node* node,
     int n_features,
     SplitValues* split_values,

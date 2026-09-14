@@ -126,11 +126,13 @@ class MaxProfitScoreQuasiMonteCarlo:
             self.dist_params = []
 
         else:
-            self.cached_dist_params = {str(arg): arg for arg in self.distribution_args}
             self.scipy_distributions = None
             self.param_grid_needs_recompute = True
             self.param_grid = []
             self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        # Parameters and the grid sampled for them are cached as one tuple, so a concurrent caller
+        # can never pair one call's parameters with another call's samples.
+        self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -141,17 +143,20 @@ class MaxProfitScoreQuasiMonteCarlo:
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         dist_params: dict[str, Any] = {}
+        param_grid = self.param_grid
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-            if self.cached_dist_params != distribution_parameters:
-                self.cached_dist_params = distribution_parameters
+            cached = self._grid_cache
+            if cached is not None and cached[0] == distribution_parameters:
+                param_grid = cached[1]
+            else:
                 scipy_distributions = []
                 for random_var in self.random_symbols:
                     sympy_distribution = pspace(random_var).distribution.__class__
                     scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
                     sympy_dist_params = [
-                        float(arg) for arg in pspace(random_var.subs(self.cached_dist_params)).distribution.args
+                        float(arg) for arg in pspace(random_var.subs(distribution_parameters)).distribution.args
                     ]
                     if sympy_distribution in _sympy_dist_to_scipy_params:
                         scipy_dist_kwargs = _sympy_dist_to_scipy_params[sympy_distribution](*sympy_dist_params)
@@ -159,8 +164,9 @@ class MaxProfitScoreQuasiMonteCarlo:
                     else:
                         scipy_dist_params = sympy_dist_params
                         scipy_distributions.append(scipy_distribution(*scipy_dist_params))
-                self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
-            dist_params = self.cached_dist_params
+                param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
+                self._grid_cache = (distribution_parameters, param_grid)
+            dist_params = distribution_parameters
 
         profit_integrand = _substitute_integrand(
             self.profit_function, kwargs, dist_params, positive_class_prior, negative_class_prior
@@ -177,6 +183,6 @@ class MaxProfitScoreQuasiMonteCarlo:
             true_positive_rates,
             false_positive_rates,
             self.random_symbols,
-            self.param_grid,
+            param_grid,
             self.n_mc_samples,
         )

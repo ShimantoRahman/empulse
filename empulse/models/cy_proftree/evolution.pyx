@@ -9,7 +9,7 @@ from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     fit_tree, predict_proba_tree, split, prune_illegal_nodes)
 from .forest cimport Forest, create_forest, free_forest, choose_different_tree
 from .operators cimport crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
-from .random cimport rand_fraction, set_seed
+from .random cimport RandState, rand_fraction, seed_rand
 from .max_profit cimport max_profit_score
 
 
@@ -24,6 +24,7 @@ cdef Tree* find_best_tree(Forest* population) noexcept:
     return copy_tree(best_tree)
 
 cdef Forest* initialize_population(
+    RandState* rng,
     int pop_size,
     int n_features,
     SplitValues* split_values,
@@ -43,7 +44,7 @@ cdef Forest* initialize_population(
     cdef float[:] predictions_view = predictions
     for i in range(pop_size):
         tree = create_tree()
-        split(tree.root, n_features, split_values, depth=0, max_depth=max_depth)
+        split(rng, tree.root, n_features, split_values, depth=0, max_depth=max_depth)
         fit_tree(tree, X, y, n_samples)
         predict_proba_tree(tree, X, predictions_view, n_samples)
         evaluate(tree, fitness_function, y, predictions, alpha)
@@ -51,6 +52,7 @@ cdef Forest* initialize_population(
     return population
 
 cdef Forest* initialize_population_max_profit(
+    RandState* rng,
     int pop_size,
     int n_features,
     SplitValues* split_values,
@@ -73,7 +75,7 @@ cdef Forest* initialize_population_max_profit(
     cdef float[:] predictions_view = predictions
     for i in range(pop_size):
         tree = create_tree()
-        split(tree.root, n_features, split_values, depth=0, max_depth=max_depth)
+        split(rng, tree.root, n_features, split_values, depth=0, max_depth=max_depth)
         fit_tree(tree, X, y, n_samples)
         predict_proba_tree(tree, X, predictions_view, n_samples)
         evaluate_max_profit(tree, y, predictions, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
@@ -82,6 +84,7 @@ cdef Forest* initialize_population_max_profit(
 
 
 cdef Tree* evolve_tree(
+    RandState* rng,
     Forest* population,
     SplitValues* split_values,
     int n_features,
@@ -92,23 +95,23 @@ cdef Tree* evolve_tree(
     float mutate_split_rate,
     int index,
 ) noexcept nogil:
-    cdef float probability = rand_fraction()
+    cdef float probability = rand_fraction(rng)
     cdef Tree* tree = copy_tree(population.trees[index])
     cdef Tree* partner
     cdef Tree* child
 
     if probability < crossover_rate:
-        partner = choose_different_tree(population, index)
-        tree = crossover(tree, partner, max_depth=max_depth)
+        partner = choose_different_tree(rng, population, index)
+        tree = crossover(rng, tree, partner, max_depth=max_depth)
         free_tree(partner)
     elif probability < grow_rate:
-        grow(tree, split_values=split_values, n_features=n_features, max_depth=max_depth)
+        grow(rng, tree, split_values=split_values, n_features=n_features, max_depth=max_depth)
     elif probability < prune_rate:
-        prune_internal(tree)
+        prune_internal(rng, tree)
     elif probability < mutate_split_rate:
-        mutate_split_feature(tree, n_features=n_features, split_values=split_values)
+        mutate_split_feature(rng, tree, n_features=n_features, split_values=split_values)
     else:
-        mutate_split_value(tree, split_values=split_values)
+        mutate_split_value(rng, tree, split_values=split_values)
 
     return tree
 
@@ -215,7 +218,10 @@ cdef EvolutionResult evolve_forest_stochastic(
     float alpha = 0.0,
     int random_state = -1,
 ):
-    set_seed(random_state)
+    # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
+    # concurrent fits neither interleave draws nor reseed one another.
+    cdef RandState rng
+    seed_rand(&rng, <unsigned int>random_state)
 
     cdef float[:, :] X_view = X
     cdef int[:] y_view = y
@@ -225,6 +231,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     cdef SplitValues* split_values = compute_split_values(X)
 
     cdef Forest* population = initialize_population(
+        &rng,
         pop_size=pop_size,
         n_features=n_features,
         split_values=split_values,
@@ -258,6 +265,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     for generation in range(max_generations):
         for i in range(pop_size):
             offspring.trees[i] = evolve_tree(
+                &rng,
                 population=population,
                 split_values=split_values,
                 n_features=n_features,
@@ -318,7 +326,10 @@ cdef EvolutionResult evolve_forest_deterministic(
     float alpha = 0.0,
     int random_state = -1,
 ):
-    set_seed(random_state)
+    # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
+    # concurrent fits neither interleave draws nor reseed one another.
+    cdef RandState rng
+    seed_rand(&rng, <unsigned int>random_state)
 
     cdef float[:, :] X_view = X
     cdef int[:] y_view = y
@@ -328,6 +339,7 @@ cdef EvolutionResult evolve_forest_deterministic(
     cdef SplitValues* split_values = compute_split_values(X)
 
     cdef Forest* population = initialize_population_max_profit(
+        &rng,
         pop_size=pop_size,
         n_features=n_features,
         split_values=split_values,
@@ -364,6 +376,7 @@ cdef EvolutionResult evolve_forest_deterministic(
     for generation in range(max_generations):
         for i in range(pop_size):
             offspring.trees[i] = evolve_tree(
+                &rng,
                 population=population,
                 split_values=split_values,
                 n_features=n_features,

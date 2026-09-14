@@ -300,10 +300,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         mutate_split_rate = self.mutate_split_rate / total_probability
         mutate_value_rate = self.mutate_value_rate / total_probability
 
-        if isinstance(self.random_state, np.random.RandomState):
-            random_state = int(self.random_state.randint(low=0, high=2**31 - 1))
-        else:
-            random_state = int(self.random_state) if self.random_state is not None else -1
+        random_state = int(check_random_state(self.random_state).randint(low=0, high=2**31 - 1))
 
         self.tree_ = EvolutionaryTree()
         loss_ = self._get_metric_loss()

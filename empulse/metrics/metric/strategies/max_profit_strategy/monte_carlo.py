@@ -44,10 +44,12 @@ class MaxProfitScoreMonteCarlo:
             ]
             self.dist_params = []
         else:
-            self.cached_dist_params = {str(arg): arg for arg in self.distribution_args}
             self.param_grid_needs_recompute = True
             self.param_grid = None
             self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        # Parameters and the grid sampled for them are cached as one tuple, so a concurrent caller
+        # can never pair one call's parameters with another call's samples.
+        self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -58,18 +60,22 @@ class MaxProfitScoreMonteCarlo:
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         dist_params: dict[str, Any] = {}
+        param_grid = self.param_grid
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-            if self.cached_dist_params != distribution_parameters:
-                self.cached_dist_params = distribution_parameters
-                self.param_grid = [
+            cached = self._grid_cache
+            if cached is not None and cached[0] == distribution_parameters:
+                param_grid = cached[1]
+            else:
+                param_grid = [
                     sympy.stats.sample(
-                        random_var.subs(self.cached_dist_params), size=(self.n_mc_samples,), seed=self.rng
+                        random_var.subs(distribution_parameters), size=(self.n_mc_samples,), seed=self.rng
                     )
                     for random_var in self.random_symbols
                 ]
-            dist_params = self.cached_dist_params
+                self._grid_cache = (distribution_parameters, param_grid)
+            dist_params = distribution_parameters
 
         profit_integrand = _substitute_integrand(
             self.profit_function, kwargs, dist_params, positive_class_prior, negative_class_prior
@@ -80,13 +86,13 @@ class MaxProfitScoreMonteCarlo:
             else None
         )
 
-        assert self.param_grid is not None  # populated above whenever param_grid_needs_recompute, else at __init__
+        assert param_grid is not None
         return _evaluate_sampled_integrands(
             profit_integrand,
             rate_integrand,
             true_positive_rates,
             false_positive_rates,
             self.random_symbols,
-            self.param_grid,
+            param_grid,
             self.n_mc_samples,
         )

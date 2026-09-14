@@ -43,6 +43,34 @@ To install everything, use the ``optional`` extra, which pulls in every other ex
 If you use a backend that is not installed, Empulse raises an error telling you exactly what to
 install — nothing fails silently.
 
+Free-threaded Python
+====================
+
+Empulse publishes wheels for the free-threaded build of CPython 3.14 (``cp314t``, the
+:pep:`703` interpreter without a global interpreter lock). Its compiled extensions declare
+themselves free-threading compatible, so importing Empulse leaves the GIL disabled instead of
+silently switching it back on for the whole process.
+
+.. code-block:: bash
+
+    pip install empulse
+
+Each estimator and each :class:`~empulse.metrics.Metric` owns its own state, so fitting or scoring
+several of them on separate threads is safe and gives the same answers as doing it one at a time.
+Sharing a *single* estimator instance between threads while one of them is fitting is not
+supported — that is scikit-learn's contract too.
+
+.. note::
+
+    Two optional dependencies do not publish free-threaded wheels yet, so on 3.14t:
+
+    - ``pip install empulse[boosting]`` fails to resolve, because **CatBoost** has no ``cp314t``
+      wheel. XGBoost and LightGBM do install, so
+      :class:`~empulse.models.CSBoostClassifier` works with those two backends — install them
+      directly rather than through the extra.
+    - **polars** has no ``cp314t`` wheel, so use pandas as the dataframe backend for
+      :mod:`empulse.datasets`.
+
 Dataframe support
 =================
 

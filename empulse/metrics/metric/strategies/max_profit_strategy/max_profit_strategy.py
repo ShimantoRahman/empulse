@@ -155,8 +155,13 @@ class MaxProfit(MetricStrategy):
         if alpha <= 0:
             raise ValueError('alpha must be strictly positive.')
         self.alpha = alpha
-        self._boost_objective: MaxProfitBoostGradientDeterministic | MaxProfitBoostGradientPiecewise | None = None
-        self._boost_signature: tuple[tuple[int, ...], tuple[tuple[str, float], ...]] | None = None
+        self._boost_cache: (
+            tuple[
+                tuple[tuple[int, ...], tuple[tuple[str, float], ...]],
+                MaxProfitBoostGradientDeterministic | MaxProfitBoostGradientPiecewise,
+            ]
+            | None
+        ) = None
         if isinstance(random_state, np.random.Generator):
             self._rng: np.random.Generator = random_state
         else:
@@ -203,8 +208,7 @@ class MaxProfit(MetricStrategy):
         self._tn_benefit = tn_benefit
         self._fp_cost = fp_cost
         self._fn_cost = fn_cost
-        self._boost_objective = None
-        self._boost_signature = None
+        self._boost_cache = None
         return self
 
     def _evaluate_class_costs(self, parameters: dict[str, FloatNDArray | float]) -> tuple[float, float, float, float]:
@@ -468,15 +472,20 @@ class MaxProfit(MetricStrategy):
         param_signature = tuple(sorted((k, float(v)) for k, v in agg_params.items()))
         signature = (y_true_arr.shape, param_signature)
 
-        # Build the objective once and cache it based on the signature
-        if self._boost_objective is None or self._boost_signature != signature:
+        # Build the objective once and cache it under its signature. Read the cache once into a
+        # local, and evaluate that local: another thread may replace it at any point, but this call
+        # then still evaluates the objective its own signature selected.
+        cached = self._boost_cache
+        if cached is not None and cached[0] == signature:
+            objective = cached[1]
+        else:
             # Route: Deterministic Linear EMP
             if isinstance(self._score_function, MaxProfitScoreDeterministic):
-                self._boost_objective = self._prepare_boost_deterministic_objective(y_true_arr, **agg_params)
+                objective = self._prepare_boost_deterministic_objective(y_true_arr, **agg_params)
 
             # Route: Stochastic Piecewise EMP
             elif isinstance(self._score_function, BasePositiveDistribution):
-                self._boost_objective = self._prepare_boost_piecewise_objective(y_true_arr, **agg_params)
+                objective = self._prepare_boost_piecewise_objective(y_true_arr, **agg_params)
 
             else:
                 raise NotImplementedError(
@@ -484,10 +493,10 @@ class MaxProfit(MetricStrategy):
                     'and BasePositiveDistribution stochastic metrics.'
                 )
 
-            self._boost_signature = signature
+            self._boost_cache = (signature, objective)
 
         # Evaluate and return gradient and hessian for GBDT
-        return self._boost_objective(np.asarray(y_score), alpha)
+        return objective(np.asarray(y_score), alpha)
 
     def _prepare_boost_piecewise_objective(
         self, y_true: FloatNDArray, **parameters: FloatNDArray | float

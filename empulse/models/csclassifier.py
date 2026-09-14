@@ -1,3 +1,4 @@
+import copy
 import warnings
 from abc import ABC, abstractmethod
 from numbers import Real
@@ -133,6 +134,14 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
             if len(self.classes_) == 1:
                 raise ValueError("Classifier can't train when only one class is present.")
             y = np.where(y == self.classes_[1], 1, 0)
+
+        # `loss` may be one of the module-level prebuilt metrics (`empc_score` and friends),
+        # which every caller in the process shares. Their strategies memoize per-call state on
+        # themselves - the boosting objective, the Monte Carlo sample grid, the RNG - so two
+        # concurrent fits through one prebuilt metric would read each other's cache. Give this
+        # fit its own copy; `_get_metric_loss()` returns it for the rest of the fit.
+        loss_attr = getattr(self, 'loss', None)
+        self._loss = copy.deepcopy(loss_attr) if isinstance(loss_attr, BaseMetric) else None
 
         loss_ = self._get_metric_loss()
         if loss_ is None:
@@ -345,8 +354,18 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         return params
 
     def _get_metric_loss(self) -> BaseMetric | None:
-        """Get the metric loss function if available."""
-        return getattr(self, 'loss', None)
+        """
+        Get the metric loss function if available.
+
+        During and after ``fit`` this is the per-fit copy taken in :meth:`fit`, so nothing
+        below this point mutates a metric object the caller still holds a reference to.
+        Before the first ``fit`` it is the constructor argument itself.
+        """
+        fit_local_loss: BaseMetric | None = getattr(self, '_loss', None)
+        if fit_local_loss is not None:
+            return fit_local_loss
+        loss: BaseMetric | None = getattr(self, 'loss', None)
+        return loss
 
     def _get_default_loss(self) -> BaseMetric:
         return make_generic_metric(self._default_metric_strategy())

@@ -13,7 +13,7 @@ from .tree cimport (
     random_leaf_node,
     random_subnode_with_leaf_children,
 )
-from .random cimport rand_int
+from .random cimport RandState, rand_int
 
 
 cdef void prune_subtree_at_depth(Node* node, int max_depth) noexcept nogil:
@@ -42,10 +42,10 @@ cdef int count_nodes(Node* node) noexcept nogil:
         return 0
     return 1 + count_nodes(node.left) + count_nodes(node.right)
 
-cdef Tree* crossover(Tree* mother, Tree* father, int max_depth) noexcept nogil:
+cdef Tree* crossover(RandState* rng, Tree* mother, Tree* father, int max_depth) noexcept nogil:
     cdef int mother_depth, father_depth
-    cdef Node* mother_node = random_subnode_with_depth(mother.root, &mother_depth)
-    cdef Node* father_node = random_subnode_with_depth(father.root, &father_depth)
+    cdef Node* mother_node = random_subnode_with_depth(rng, mother.root, &mother_depth)
+    cdef Node* father_node = random_subnode_with_depth(rng, father.root, &father_depth)
 
     cdef Node* parent_node = mother_node.parent
     cdef bint is_left_child = False
@@ -85,32 +85,32 @@ cdef Tree* crossover(Tree* mother, Tree* father, int max_depth) noexcept nogil:
     mother.n_nodes = count_nodes(mother.root)
     return mother
 
-cdef inline void grow(Tree* tree, SplitValues* split_values, int n_features, int max_depth) noexcept nogil:
+cdef inline void grow(RandState* rng, Tree* tree, SplitValues* split_values, int n_features, int max_depth) noexcept nogil:
     """Add a random split rule to a random leaf node."""
     cdef int depth = 0
-    cdef Node* leaf = random_leaf_node(tree.root, &depth)
-    split(leaf, n_features, split_values, depth, max_depth)
+    cdef Node* leaf = random_leaf_node(rng, tree.root, &depth)
+    split(rng, leaf, n_features, split_values, depth, max_depth)
     tree.n_nodes += 2
 
-cdef inline void prune_internal(Tree* tree) noexcept nogil:
+cdef inline void prune_internal(RandState* rng, Tree* tree) noexcept nogil:
     """Prune a random internal node which has two leaf nodes as successors."""
-    cdef Node* node = random_subnode_with_leaf_children(tree.root)
+    cdef Node* node = random_subnode_with_leaf_children(rng, tree.root)
     if node is not NULL and node is not tree.root:
         prune(node)
         tree.n_nodes -= 2
 
 
-cdef inline void mutate_split_feature(Tree* tree, int n_features, SplitValues* split_values) noexcept nogil:
-    cdef Node* node = random_subnode(tree.root)
+cdef inline void mutate_split_feature(RandState* rng, Tree* tree, int n_features, SplitValues* split_values) noexcept nogil:
+    cdef Node* node = random_subnode(rng, tree.root)
     if node is NULL:
         return
-    node.feature_index = rand_int(0, n_features)
-    cdef int idx = rand_int(0, split_values.lengths[node.feature_index])
+    node.feature_index = rand_int(rng, 0, n_features)
+    cdef int idx = rand_int(rng, 0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]
 
-cdef inline void mutate_split_value(Tree* tree, SplitValues* split_values) noexcept nogil:
-    cdef Node* node = random_subnode(tree.root)
+cdef inline void mutate_split_value(RandState* rng, Tree* tree, SplitValues* split_values) noexcept nogil:
+    cdef Node* node = random_subnode(rng, tree.root)
     if node is NULL:
         return
-    cdef int idx = rand_int(0, split_values.lengths[node.feature_index])
+    cdef int idx = rand_int(rng, 0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]

@@ -3,10 +3,12 @@ cimport numpy as cnp
 
 from .tree cimport Tree, SplitValues
 from .forest cimport Forest
+from .random cimport RandState
 
 cdef Tree* find_best_tree(Forest* population) noexcept
 
 cdef Forest* initialize_population(
+    RandState* rng,
     int pop_size,
     int n_features,
     SplitValues* split_values,
@@ -20,6 +22,7 @@ cdef Forest* initialize_population(
 ) noexcept
 
 cdef Tree* evolve_tree(
+    RandState* rng,
     Forest* population,
     SplitValues* split_values,
     int n_features,

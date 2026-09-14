@@ -5,7 +5,7 @@ cimport numpy as cnp
 from libc.stdlib cimport malloc, free
 
 from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, reset_node
-from .random cimport rand_int, rand_bool
+from .random cimport RandState, rand_int, rand_bool
 
 cdef struct Tree:
     Node* root
@@ -167,6 +167,7 @@ cdef void free_split_values(SplitValues* sv) noexcept nogil:
     free(sv)
 
 cdef void split(
+    RandState* rng,
     Node* node,
     int n_features,
     SplitValues* split_values,
@@ -178,8 +179,8 @@ cdef void split(
         max_depth = depth
 
     if depth < max_depth:
-        node.feature_index = rand_int(0, n_features)
-        split_value_index = rand_int(0, split_values.lengths[node.feature_index] - 1)
+        node.feature_index = rand_int(rng, 0, n_features)
+        split_value_index = rand_int(rng, 0, split_values.lengths[node.feature_index] - 1)
         node.split_value = split_values.values[node.feature_index][split_value_index]
         node.left = create_node()
         node.left.parent = node
@@ -234,16 +235,16 @@ cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int
         node.right = NULL
         return
 
-cdef Node* random_subnode(Node* root) noexcept nogil:
+cdef Node* random_subnode(RandState* rng, Node* root) noexcept nogil:
 
     cdef Node* node = root
     while True:
         if is_leaf(node):
             return node.parent
-        if rand_int(0, 3) == 0:
+        if rand_int(rng, 0, 3) == 0:
             return node
         if node.left is not NULL and node.right is not NULL:
-            if rand_bool():
+            if rand_bool(rng):
                 node = node.left
             else:
                 node = node.right
@@ -254,17 +255,17 @@ cdef Node* random_subnode(Node* root) noexcept nogil:
         else:
             return node
 
-cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil:
+cdef Node* random_subnode_with_depth(RandState* rng, Node* root, int* out_depth) noexcept nogil:
 
     cdef Node* node = root
     cdef int depth = 0
     while True:
-        if is_leaf(node) or rand_int(0, 3) == 0:
+        if is_leaf(node) or rand_int(rng, 0, 3) == 0:
             if out_depth is not NULL:
                 out_depth[0] = depth
             return node
         if node.left is not NULL and node.right is not NULL:
-            if rand_bool():
+            if rand_bool(rng):
                 node = node.left
             else:
                 node = node.right
@@ -278,7 +279,7 @@ cdef Node* random_subnode_with_depth(Node* root, int* out_depth) noexcept nogil:
             return node
         depth += 1
 
-cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil:
+cdef Node* random_leaf_node(RandState* rng, Node* root, int* out_depth) noexcept nogil:
     """Select a random leaf node and return its depth."""
     cdef Node* node = root
     cdef int depth = 0
@@ -288,7 +289,7 @@ cdef Node* random_leaf_node(Node* root, int* out_depth) noexcept nogil:
                 out_depth[0] = depth
             return node
         if node.left is not NULL and node.right is not NULL:
-            if rand_bool():
+            if rand_bool(rng):
                 node = node.left
             else:
                 node = node.right
@@ -306,7 +307,7 @@ cdef struct CandidateSearch:
     Node* candidate
     int count
 
-cdef void _find_candidate_helper(Node* n, CandidateSearch* search) noexcept nogil:
+cdef void _find_candidate_helper(RandState* rng, Node* n, CandidateSearch* search) noexcept nogil:
     if n is NULL or is_leaf(n):
         return
 
@@ -315,20 +316,20 @@ cdef void _find_candidate_helper(Node* n, CandidateSearch* search) noexcept nogi
             n.right is not NULL and is_leaf(n.right)):
         search.count += 1
         # Reservoir sampling: select with probability 1/count
-        if rand_int(0, search.count) == 0:
+        if rand_int(rng, 0, search.count) == 0:
             search.candidate = n
 
     # Recurse to children
     if n.left is not NULL:
-        _find_candidate_helper(n.left, search)
+        _find_candidate_helper(rng, n.left, search)
     if n.right is not NULL:
-        _find_candidate_helper(n.right, search)
+        _find_candidate_helper(rng, n.right, search)
 
-cdef Node* random_subnode_with_leaf_children(Node* root) noexcept nogil:
+cdef Node* random_subnode_with_leaf_children(RandState* rng, Node* root) noexcept nogil:
     """Select a random internal node that has two leaf children."""
     cdef CandidateSearch search
     search.candidate = NULL
     search.count = 0
 
-    _find_candidate_helper(root, &search)
+    _find_candidate_helper(rng, root, &search)
     return search.candidate

@@ -94,8 +94,15 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
           CIBW_ARCHS_WINDOWS: "auto64"
-          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
+          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-* cp314t-*"
           CIBW_SKIP: "*-musllinux_*"
+          # cost_impurity.pyx inherits C-level memoryviews from scikit-learn's precompiled
+          # ClassificationCriterion, whose binary layout is not stable across Cython minor
+          # versions. Building against a mismatched one segfaults at runtime rather than failing
+          # here, so check the pin against whichever scikit-learn wheel pip resolved - including
+          # for the free-threaded wheels, which are a separate upstream build matrix.
+          CIBW_BEFORE_BUILD: "python {project}/scripts/check_cython_abi.py"
+          CIBW_TEST_COMMAND: "python {project}/scripts/smoke_test_wheel.py"
 
       - uses: actions/upload-artifact@v4
         with:

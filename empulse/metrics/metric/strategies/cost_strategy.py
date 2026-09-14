@@ -12,6 +12,7 @@ from ..common import (
     BoostGradientConst,
     Direction,
     MetricFn,
+    PicklableLambda,
     RateFn,
     ThresholdFn,
     _check_parameters,
@@ -253,6 +254,11 @@ class Cost(MetricStrategy):
         self._fp_cost: sympy.Expr = fp_cost
         self._fn_cost: sympy.Expr = fn_cost
 
+        self._tp_benefit_fn: PicklableLambda = _safe_lambdify(tp_benefit)
+        self._tn_benefit_fn: PicklableLambda = _safe_lambdify(tn_benefit)
+        self._fp_cost_fn: PicklableLambda = _safe_lambdify(fp_cost)
+        self._fn_cost_fn: PicklableLambda = _safe_lambdify(fn_cost)
+
         self._score_function: MetricFn = CostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
@@ -404,10 +410,10 @@ class Cost(MetricStrategy):
             The function signature is:
             ``logistic_objective(weights) -> (value, gradient)``.
         """
-        tp_val = _safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **parameters)
-        fn_val = _safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **parameters)
-        tn_val = _safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **parameters)
-        fp_val = _safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **parameters)
+        tp_val = _safe_run_lambda(self._tp_benefit_fn, self._tp_benefit, **parameters)
+        fn_val = _safe_run_lambda(self._fn_cost_fn, self._fn_cost, **parameters)
+        tn_val = _safe_run_lambda(self._tn_benefit_fn, self._tn_benefit, **parameters)
+        fp_val = _safe_run_lambda(self._fp_cost_fn, self._fp_cost, **parameters)
         return CostLogitObjective(
             tp_benefit=tp_val,
             tn_benefit=tn_val,

@@ -1,6 +1,22 @@
 `Unreleased`_
 =============
 
+- |MajorFeature| Empulse now supports the free-threaded build of CPython 3.14. ``cp314t`` wheels
+  are published alongside the regular ones, and all eleven Cython extension modules declare the
+  ``freethreading_compatible`` directive, so importing Empulse no longer re-enables the global
+  interpreter lock for the whole process. Fitting or scoring separate estimator and
+  :class:`~empulse.metrics.Metric` instances on separate threads is supported and gives the same
+  results as running them sequentially. Note that ``pip install empulse[boosting]`` does not
+  resolve on 3.14t until CatBoost publishes a free-threaded wheel; XGBoost and LightGBM install
+  fine.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` no longer draws from the C library's
+  process-global ``rand()``/``srand()``. Every fit now owns its generator state, so one fit can no
+  longer reseed another, and ``random_state=None`` no longer derives its seed from a one-second
+  resolution clock (two fits starting in the same second used to share a seed).
+- |API| Because of the generator change above, :class:`~empulse.models.ProfTreeClassifier` and
+  :class:`~empulse.models.ProfSRClassifier` produce a different — equally valid — tree for a given
+  ``random_state`` than they did in earlier releases. Results within this release are reproducible
+  as before.
 - |Enhancement| Every documentation section now introduces its pages with cards carrying a
   one-line description, instead of printing a nested list of page and subsection titles that
   duplicated the sidebar. The tutorial and getting started sections, whose pages are read in order,
