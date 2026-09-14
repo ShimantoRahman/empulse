@@ -194,7 +194,7 @@ def _build_naive_cost_functions(cost_function: sympy.Expr) -> tuple[sympy.Expr, 
 def _savings_score_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from sympy.printing.latex import latex
+    from ..common import _latex
 
     i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # noqa: N806
     savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
@@ -205,6 +205,6 @@ def _savings_score_to_latex(
         if symbol not in {N, c0, c1}:
             savings_function = savings_function.subs(symbol, str(symbol) + '_i')
 
-    output = latex(savings_function, mode='plain', order=None)
+    output = _latex(savings_function)
 
     return f'$\\displaystyle {output}$'

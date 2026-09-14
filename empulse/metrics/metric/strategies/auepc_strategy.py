@@ -179,14 +179,14 @@ class AUEPC(MetricStrategy):
 def _auepc_score_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from sympy.printing.latex import latex
+    from ..common import _latex
 
     delta_equation = _build_delta_equation(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )
     for symbol in delta_equation.free_symbols:
         delta_equation = delta_equation.subs(symbol, str(symbol) + '_i')
-    delta_latex = latex(delta_equation, mode='plain', order=None)
+    delta_latex = _latex(delta_equation)
 
     formula = (
         r'\frac{1}{N}\sum_{k=1}^{N}'

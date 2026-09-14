@@ -5,6 +5,8 @@ from typing import Any, Self
 import sympy
 import sympy.stats
 
+from .common import _latex, _sympify_term
+
 
 def _tightest(new: float | None, existing: float | None, tighter: Callable[[float, float], float]) -> float | None:
     """Combine two optional bounds, keeping whichever is more restrictive."""
@@ -157,8 +159,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._tp_benefit += term
         return self
 
@@ -176,8 +177,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._tn_benefit += term
         return self
 
@@ -195,8 +195,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._fp_cost -= term
         return self
 
@@ -214,8 +213,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._fn_cost -= term
         return self
 
@@ -233,8 +231,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._tp_benefit -= term
         return self
 
@@ -252,8 +249,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._tn_benefit -= term
         return self
 
@@ -271,8 +267,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._fp_cost += term
         return self
 
@@ -290,8 +285,7 @@ class CostMatrix:
         CostMatrix
             The cost matrix, to allow method chaining.
         """
-        if isinstance(term, str):
-            term = sympy.sympify(term)
+        term = _sympify_term(term)
         self._fn_cost += term
         return self
 
@@ -600,21 +594,13 @@ class CostMatrix:
         )
 
     def _repr_latex_(self) -> str:
-        return (  # type: ignore[no-any-return]
-            r"""
-        \begin{array}{c|cc}
-          & y=0 & y=1 \\
-        \hline
-        \hat y=0 & \text{"""
-            + self.tn_cost._repr_latex_()
-            + r"""} & \text{"""
-            + self.fn_cost._repr_latex_()
-            + r"""} \\
-        \hat y=1 & \text{"""
-            + self.fp_cost._repr_latex_()
-            + r"""} & \text{"""
-            + self.tp_cost._repr_latex_()
-            + r"""} \\
-        \end{array}
-        """
+        """Render the cost matrix as a LaTeX array, for Jupyter and other rich-display frontends."""
+        tn, fn = _latex(self.tn_cost), _latex(self.fn_cost)
+        fp, tp = _latex(self.fp_cost), _latex(self.tp_cost)
+        return (
+            r'$\displaystyle \begin{array}{c|cc}'
+            r' & y=0 & y=1 \\ \hline '
+            rf'\hat y=0 & {tn} & {fn} \\ '
+            rf'\hat y=1 & {fp} & {tp} '
+            r'\end{array}$'
         )

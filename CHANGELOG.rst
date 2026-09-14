@@ -17,6 +17,22 @@
   :class:`~empulse.models.ProfSRClassifier` produce a different — equally valid — tree for a given
   ``random_state`` than they did in earlier releases. Results within this release are reproducible
   as before.
+- |Fix| :class:`~empulse.metrics.CostMatrix` now rejects a string term that uses a name SymPy
+  reserves for its own objects, instead of quietly substituting that object. ``add_fp_cost('E')``
+  used to become Euler's number, so the term disappeared from the metric's parameter list and the
+  metric returned a plausible but meaningless score that no caller could influence; ``'I'`` made
+  the cost complex, and ``'gamma'``/``'beta'`` raised a ``TypeError`` about ``FunctionClass`` from
+  inside SymPy.
+- |Fix| :class:`~empulse.metrics.Metric` now raises if the cost matrix contains two distinct
+  symbols that share a name, naming both spellings. ``sympy.Symbol('clv')`` and
+  ``sympy.Symbol('clv', positive=True)`` are different variables to SymPy and do not cancel, and a
+  term given as a string always produces the assumption-free one. Mixing them used to surface as
+  ``SyntaxError: duplicate argument 'clv' in function definition`` pointing at SymPy's generated
+  source.
+- |Enhancement| Multi-letter symbols now render upright in the LaTeX representations of
+  :class:`~empulse.metrics.CostMatrix` and :class:`~empulse.metrics.Metric`, so a product such as
+  ``clv * r`` reads as two variables rather than as one named ``clvr``. Greek names such as
+  ``gamma`` are unaffected.
 - |Enhancement| Every documentation section now introduces its pages with cards carrying a
   one-line description, instead of printing a nested list of page and subsection titles that
   duplicated the sidebar. The tutorial and getting started sections, whose pages are read in order,

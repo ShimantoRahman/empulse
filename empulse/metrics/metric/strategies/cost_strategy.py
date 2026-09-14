@@ -683,7 +683,7 @@ class CostOptimalRate:
 def _cost_loss_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from sympy.printing.latex import latex
+    from ..common import _latex
 
     i, N = sympy.symbols('i N')  # noqa: N806
     cost_function = (1 / N) * sympy.Sum(
@@ -694,6 +694,6 @@ def _cost_loss_to_latex(
         if symbol != N:
             cost_function = cost_function.subs(symbol, str(symbol) + '_i')
 
-    output = latex(cost_function, mode='plain', order=None)
+    output = _latex(cost_function)
 
     return f'$\\displaystyle {output}$'

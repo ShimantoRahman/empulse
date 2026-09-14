@@ -797,7 +797,7 @@ def _max_profit_score_to_latex(
     fn_cost: sympy.Expr,
     phrasing: Literal['profit', 'cost'] = 'profit',
 ) -> str:
-    from sympy.printing.latex import latex
+    from ...common import _latex
 
     # Both builders already apply the sign convention, so the four expressions are passed through
     # as they are. `_build_cost_function` returns the exact negation of `_build_profit_function`,
@@ -821,7 +821,7 @@ def _max_profit_score_to_latex(
             lower_bound, upper_bound = pspace(random_symbol).domain.set.args[:2]
             integral = sympy.Integral(integral, (random_symbol, lower_bound, upper_bound))
 
-        output = latex(integral, mode='plain', order=None)
+        output = _latex(integral)
     else:
-        output = latex(profit_function, mode='plain', order=None)
+        output = _latex(profit_function)
     return f'$\\displaystyle {output}$'

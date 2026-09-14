@@ -299,14 +299,14 @@ def _empirical_max_profit_to_latex(
     fn_cost: sympy.Expr,
     operator: Literal['max', 'min'] = 'max',
 ) -> str:
-    from sympy.printing.latex import latex
+    from ..common import _latex
 
     delta_equation = _build_delta_equation(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )
     for symbol in delta_equation.free_symbols:
         delta_equation = delta_equation.subs(symbol, str(symbol) + '_i')
-    delta_latex = latex(delta_equation, mode='plain', order=None)
+    delta_latex = _latex(delta_equation)
 
     formula = (
         rf'\{operator}_{{k \in \{{0, ..., N\}}}} \sum_{{i=1}}^{{k}} \Delta_{{\pi(i)}}'

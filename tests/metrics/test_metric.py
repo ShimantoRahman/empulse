@@ -548,6 +548,89 @@ def test_matrix_alias_wrong_types(y_true_and_prediction):
         cost_matrix.alias(None)  # type: ignore
 
 
+class TestSympyReservedNamesInStringTerms:
+    """A string term goes through ``sympy.sympify``, which reads some plain names as its own."""
+
+    @pytest.mark.parametrize(
+        ('term', 'culprit'),
+        [
+            ('E', 'E'),  # Euler's number, and a plausible name for "expense"
+            ('pi', 'pi'),
+            ('clv - I', 'I'),  # imaginary unit, and a plausible name for "incentive"
+            ('gamma * clv', 'gamma'),  # the gamma function, not a symbol named gamma
+            ('beta', 'beta'),
+            ('2 * E + d', 'E'),
+        ],
+    )
+    def test_rejects_names_sympy_claims(self, term, culprit):
+        """Silently becoming a constant is the worst outcome here, so it must raise instead.
+
+        Left unchecked, 'E' becomes 2.718..., vanishes from the metric's parameter list, and the
+        metric goes on to return a plausible-looking number that no caller can influence.
+        """
+        with pytest.raises(ValueError, match=f"'{culprit}'"):
+            CostMatrix().add_fp_cost(term)
+
+    @pytest.mark.parametrize(
+        'term',
+        [
+            'clv - d - f',
+            'exp(clv)',  # a function *call* is fine; only bare names are rejected
+            'log(clv) + sqrt(d)',
+            'Min(clv, d)',
+            'clv*r/(1-(1+r)**-n)',
+            '2.5',
+        ],
+    )
+    def test_accepts_ordinary_terms(self, term):
+        assert CostMatrix().add_fp_cost(term).fp_cost is not None
+
+    def test_explicit_sympy_objects_are_trusted(self):
+        """Only strings are policed: an explicitly built expression means what it says."""
+        matrix = CostMatrix().add_fp_cost(2 * sympy.pi)
+        assert matrix.fp_cost == 2 * sympy.pi
+
+    def test_every_add_method_validates(self):
+        adders = [
+            'add_tp_benefit',
+            'add_tn_benefit',
+            'add_fp_benefit',
+            'add_fn_benefit',
+            'add_tp_cost',
+            'add_tn_cost',
+            'add_fp_cost',
+            'add_fn_cost',
+        ]
+        for adder in adders:
+            with pytest.raises(ValueError, match="'E'"):
+                getattr(CostMatrix(), adder)('E')
+
+
+class TestDuplicateSymbolNames:
+    """Two symbols with one name reach ``lambdify`` as two parameters of the same name."""
+
+    def test_mixing_assumptions_raises_at_construction(self):
+        """Without the check this surfaces as `SyntaxError: duplicate argument 'clv'`.
+
+        That error points at sympy's generated source, which a caller cannot connect back to
+        their own cost matrix. A string term always yields an assumption-free symbol, so mixing
+        a string with an explicitly assumed Symbol of the same name is easy to do by accident.
+        """
+        matrix = CostMatrix().add_tp_benefit(sympy.Symbol('clv', positive=True)).add_fp_cost('clv')
+        with pytest.raises(ValueError, match='share a name'):
+            Metric(matrix, Cost())
+
+    def test_error_names_both_spellings(self):
+        matrix = CostMatrix().add_tp_benefit(sympy.Symbol('d', integer=True)).add_fp_cost('d')
+        with pytest.raises(ValueError, match=r"sympy\.Symbol\('d', integer=True\)"):
+            Metric(matrix, Cost())
+
+    def test_consistent_assumptions_are_fine(self):
+        clv = sympy.Symbol('clv', positive=True)
+        matrix = CostMatrix().add_tp_benefit(clv).add_fp_cost(clv)
+        assert Metric(matrix, Cost()) is not None
+
+
 class TestMissingParameters:
     """
     Tests for Metric._missing_parameters, used by CSThresholdClassifier/CSRateClassifier.
@@ -811,10 +894,10 @@ def test_repr_latex_max_profit(uniform_dist_matrix):
     """MaxProfit renders the profit being maximized: the TP benefit less the FP cost."""
     profit_func = Metric(uniform_dist_matrix, MaxProfit())
     assert profit_func._repr_latex_() == (
-        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(- f \\left(1 - '
-        '\\gamma\\right) + \\left(clv - d - f\\right) \\gamma\\right) - F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
-        '+ \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha \\leq \\gamma \\\\0 & \\text{otherwise} '
-        '\\end{cases}\\, d\\gamma$'
+        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(- f '
+        '\\left(1 - \\gamma\\right) + \\left(\\mathrm{clv} - d - f\\right) \\gamma\\right) - F_{1} \\pi_{1} '
+        '\\left(d + f\\right)}{- \\alpha + \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha '
+        '\\leq \\gamma \\\\0 & \\text{otherwise} \\end{cases}\\, d\\gamma$'
     )
 
 
@@ -822,28 +905,29 @@ def test_repr_latex_min_cost(uniform_dist_matrix):
     """MinCost renders the same quantity negated: every outcome's cost, added up."""
     cost_func = Metric(uniform_dist_matrix, MinCost())
     assert cost_func._repr_latex_() == (
-        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(f \\left(1 - '
-        '\\gamma\\right) - \\left(clv - d - f\\right) \\gamma\\right) + F_{1} \\pi_{1} \\left(d + f\\right)}{- \\alpha '
-        '+ \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha \\leq \\gamma \\\\0 & \\text{otherwise} '
-        '\\end{cases}\\, d\\gamma$'
+        '$\\displaystyle \\int\\limits_{\\alpha}^{\\beta} \\begin{cases} \\frac{F_{0} \\pi_{0} \\left(f '
+        '\\left(1 - \\gamma\\right) - \\left(\\mathrm{clv} - d - f\\right) \\gamma\\right) + F_{1} \\pi_{1} '
+        '\\left(d + f\\right)}{- \\alpha + \\beta} & \\text{for}\\: \\beta \\geq \\gamma \\wedge \\alpha '
+        '\\leq \\gamma \\\\0 & \\text{otherwise} \\end{cases}\\, d\\gamma$'
     )
 
 
 def test_repr_latex_savings(churn_cost_matrix):
     savings_func = Metric(churn_cost_matrix, Savings())
     assert savings_func._repr_latex_() == (
-        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - \\gamma_{i}\\right) - '
-        '\\gamma_{i} \\left(clv_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} \\left(1 - y_{i}\\right) \\left(d_{i} + '
-        'f_{i}\\right)\\right)}{N \\min\\left(Cost_{0}, Cost_{1}\\right)}$'
+        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - '
+        '\\gamma_{i}\\right) - \\gamma_{i} \\left(\\mathrm{clv}_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} '
+        '\\left(1 - y_{i}\\right) \\left(d_{i} + f_{i}\\right)\\right)}{N \\min\\left(\\mathrm{Cost}_{0}, '
+        '\\mathrm{Cost}_{1}\\right)}$'
     )
 
 
 def test_repr_latex_cost(churn_cost_matrix):
     cost_func = Metric(churn_cost_matrix, Cost())
     assert cost_func._repr_latex_() == (
-        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - \\gamma_{i}\\right) - '
-        '\\gamma_{i} \\left(clv_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} \\left(1 - y_{i}\\right) \\left(d_{i} + '
-        'f_{i}\\right)\\right)}{N}$'
+        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - '
+        '\\gamma_{i}\\right) - \\gamma_{i} \\left(\\mathrm{clv}_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} '
+        '\\left(1 - y_{i}\\right) \\left(d_{i} + f_{i}\\right)\\right)}{N}$'
     )
 
 

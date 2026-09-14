@@ -12,6 +12,7 @@ from .._validation import _check_y_pred, _check_y_true
 from .base_metric import BaseMetric
 from .common import (
     Direction,
+    _check_duplicate_symbol_names,
     _check_known_alias_and_default_targets,
     _check_parameter_domains,
     _check_reserved_symbol_names,
@@ -156,6 +157,12 @@ class Metric(BaseMetric):
             self.fp_cost,
             self.fn_cost,
             alias_names=self.cost_matrix._aliases.keys(),
+        )
+        _check_duplicate_symbol_names(
+            self.tp_benefit,
+            self.tn_benefit,
+            self.fp_cost,
+            self.fn_cost,
         )
         _check_known_alias_and_default_targets(
             self.tp_benefit,
