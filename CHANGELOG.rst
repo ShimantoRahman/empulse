@@ -1,6 +1,17 @@
 `Unreleased`_
 =============
 
+- |Enhancement| Every documentation section now introduces its pages with cards carrying a
+  one-line description, instead of printing a nested list of page and subsection titles that
+  duplicated the sidebar. The tutorial and getting started sections, whose pages are read in order,
+  use numbered step cards; the user guide sections use the same card grid the guide landing page
+  already used.
+- |Enhancement| The documentation now follows the same design system as the figures it contains.
+  The colour tokens in ``docs/_static/scss/custom.scss`` are the ones ``scripts/figures/palette.py``
+  draws with, so blue still marks what you write down and purple what you do with it, and the prose
+  around a figure can no longer drift away from it. Inter and JetBrains Mono are bundled with the
+  docs rather than fetched from a font CDN, and the link colour is a slightly darker blue than the
+  figures use so that it clears the WCAG AA contrast threshold as body text.
 - |Feature| Added :meth:`~empulse.metrics.CostMatrix.constrain` and
   :meth:`~empulse.metrics.MixtureMetric.constrain`, which declare the values a cost-matrix
   parameter is allowed to take. A parameter can be given inclusive ``lower``/``upper`` bounds, or a

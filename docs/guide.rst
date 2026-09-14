@@ -63,7 +63,7 @@ produced, so reading top to bottom works; so does jumping straight to the stage 
         :link: guide/datasets
         :link-type: doc
 
-        Five real-world cost-sensitive datasets for benchmarking, each shipping the cost matrix of
+        Real-world cost-sensitive datasets for benchmarking, each shipping the cost matrix of
         the business problem it came from.
 
 .. toctree::

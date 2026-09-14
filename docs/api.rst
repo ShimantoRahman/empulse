@@ -17,8 +17,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.metrics``
 
-        Cost matrices, metric strategies, and the prebuilt churn, acquisition
-        and credit scoring metrics.
+        Cost matrices, metric strategies, and the prebuilt churn, acquisition and credit scoring metrics.
 
     .. grid-item-card:: :octicon:`beaker;1.5em;sd-mr-1` Models
         :link: reference/models
@@ -26,8 +25,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.models``
 
-        Cost-sensitive classifiers, threshold meta-estimators, and the bias
-        mitigation wrappers.
+        Cost-sensitive classifiers, threshold meta-estimators, and the bias mitigation wrappers.
 
     .. grid-item-card:: :octicon:`filter;1.5em;sd-mr-1` Samplers
         :link: reference/samplers
@@ -35,8 +33,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.samplers``
 
-        Cost-proportionate and fairness-aware resampling, in the
-        imbalanced-learn style.
+        Cost-proportionate and fairness-aware resampling, in the imbalanced-learn style.
 
     .. grid-item-card:: :octicon:`graph;1.5em;sd-mr-1` Optimizers
         :link: reference/optimizers
@@ -44,8 +41,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.optimizers``
 
-        Solvers and learning-rate schedules driving the logit-family and
-        evolutionary models.
+        Solvers and learning-rate schedules driving the logit-family and evolutionary models.
 
     .. grid-item-card:: :octicon:`database;1.5em;sd-mr-1` Datasets
         :link: reference/datasets
@@ -53,8 +49,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.datasets``
 
-        Loaders for the five real-world cost-sensitive datasets, each shipping
-        its own cost matrix.
+        Loaders for the real-world cost-sensitive datasets, each shipping its own cost matrix.
 
 .. note::
     Empulse has no top-level re-exports. Import from the submodules — ``from empulse.models import

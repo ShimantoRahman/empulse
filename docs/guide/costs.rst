@@ -45,6 +45,7 @@ number.
 
 .. toctree::
     :maxdepth: 2
+    :hidden:
 
     costs/cost_matrix.rst
     costs/specifying_costs.rst

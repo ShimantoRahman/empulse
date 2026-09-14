@@ -111,6 +111,7 @@ of these datasets put to work.
 
 .. toctree::
     :maxdepth: 2
+    :hidden:
 
     datasets/iranian_churn.rst
     datasets/churn_tv_subscriptions.rst

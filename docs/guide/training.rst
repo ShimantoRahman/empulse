@@ -17,11 +17,45 @@ Not sure which to pick? :doc:`../getting_started/overview` has a decision table;
 :doc:`training/csboost` is the strongest default, :doc:`training/linear_models` is the interpretable
 choice, and :doc:`training/tree_models` sits in between.
 
-:doc:`training/robustcs` is a meta-estimator rather than a model in its own right: it wraps a
-cost-sensitive model to guard it against outliers in noisy cost estimates.
+.. grid:: 1 2 2 2
+    :gutter: 3
+
+    .. grid-item-card:: Linear Cost-Sensitive Models
+        :link: cslogit
+        :link-type: ref
+
+        Cost-sensitive logistic regression: the interpretable choice, with a coefficient per
+        feature you can read.
+
+    .. grid-item-card:: Cost-Sensitive Gradient Boosting
+        :link: csboost
+        :link-type: ref
+
+        XGBoost, LightGBM and CatBoost trained on your cost matrix. The strongest default.
+
+    .. grid-item-card:: Tree-Based Cost-Sensitive Models
+        :link: cstree
+        :link-type: ref
+
+        Trees, forests and ProfTree, which split on business value rather than on impurity.
+
+    .. grid-item-card:: Minimax and symbolic models
+        :link: profmpm
+        :link-type: ref
+
+        Models that optimise the worst case over an uncertain class prior, and symbolic
+        alternatives.
+
+    .. grid-item-card:: Robust Cost-Sensitive Classification
+        :link: robustcs
+        :link-type: ref
+
+        A meta-estimator rather than a model: wraps a cost-sensitive model to guard it against
+        outliers in noisy cost estimates.
 
 .. toctree::
     :maxdepth: 2
+    :hidden:
 
     training/linear_models.rst
     training/csboost.rst

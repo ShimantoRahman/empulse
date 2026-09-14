@@ -19,10 +19,26 @@ Empulse lets you write down what each outcome is actually worth, then use that s
 **evaluate** models, **train** them, and **set their decision threshold** — as a normal
 scikit-learn estimator.
 
+Installation
+============
+
+.. code-block:: bash
+
+    pip install empulse
+
+Empulse requires **Python 3.11 or higher**. That gives you every metric, the linear and tree-based
+models, the samplers and the optimizers — everything on this page.
+
+See :ref:`installation` for the optional extras: the XGBoost, LightGBM and CatBoost backends, the
+symbolic models, and dataframe support for the bundled datasets.
+
+A first model
+=============
+
 .. code-block:: python
 
     from empulse.metrics import Cost, CostMatrix, Metric
-    from empulse.models import CSBoostClassifier
+    from empulse.models import CSLogitClassifier
     from sklearn.datasets import make_classification
 
     X, y = make_classification(n_samples=500, random_state=42)
@@ -39,7 +55,7 @@ scikit-learn estimator.
     expected_cost = Metric(cost_matrix, Cost())
 
     # 3. Train a model that optimises it directly
-    model = CSBoostClassifier(loss=expected_cost).fit(X, y)
+    model = CSLogitClassifier(loss=expected_cost).fit(X, y)
 
     cost_per_customer = expected_cost(y, model.predict_proba(X)[:, 1])
 
