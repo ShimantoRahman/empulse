@@ -9,7 +9,7 @@ value as a conventional one. We will use a real telecom churn dataset where each
 own lifetime value.
 
 .. note::
-    Needs ``pip install empulse[optional] pandas``. The dataset is downloaded once and cached
+    Needs ``pip install empulse[boosting] pandas``. The dataset is downloaded once and cached
     under ``~/empulse_data``.
 
 A good model, by the usual standards

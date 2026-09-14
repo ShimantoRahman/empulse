@@ -24,8 +24,8 @@ Two features need extra dependencies, both installable as extras:
     * - Extra
       - Install
       - What it unlocks
-    * - ``optional``
-      - ``pip install empulse[optional]``
+    * - ``boosting``
+      - ``pip install empulse[boosting]``
       - XGBoost, LightGBM and CatBoost, the backends behind
         :class:`~empulse.models.CSBoostClassifier` and
         :class:`~empulse.models.B2BoostClassifier`.
@@ -34,11 +34,11 @@ Two features need extra dependencies, both installable as extras:
       - gplearn, required by :class:`~empulse.models.ProfSRClassifier`
         (genetic-programming symbolic regression).
 
-To install everything:
+To install everything, use the ``optional`` extra, which pulls in every other extra:
 
 .. code-block:: bash
 
-    pip install empulse[optional,symbolic]
+    pip install empulse[optional]
 
 If you use a backend that is not installed, Empulse raises an error telling you exactly what to
 install — nothing fails silently.

@@ -15,7 +15,7 @@ value uncaptured, how to write a cost matrix that captures the campaign's econom
 model on it, and how to choose the threshold and validate the whole thing.
 
 .. note::
-    Needs ``pip install empulse[optional] pandas``. The dataset downloads once and is cached under
+    Needs ``pip install empulse[boosting] pandas``. The dataset downloads once and is cached under
     ``~/empulse_data``.
 
     Each page is self-contained: the first code block re-loads the data, so you can jump in

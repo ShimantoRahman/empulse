@@ -394,7 +394,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if isinstance(XGBClassifier, TypeVar):
             raise ImportError(  # noqa: TRY004
                 f'XGBoost package is required to use {type(self).__name__}. '
-                'Install optional dependencies through `pip install empulse[optional]` or '
+                'Install the boosting backends through `pip install empulse[boosting]` or '
                 '`pip install xgboost`'
             )
         objective = self._get_objective('xgboost', y, loss=loss, **loss_params)

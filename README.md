@@ -32,8 +32,10 @@ pip install empulse
 XGBoost, LightGBM and CatBoost are optional extras needed for the boosting models:
 
 ```bash
-pip install empulse[optional]
+pip install empulse[boosting]
 ```
+
+To pull in every optional dependency at once, use `pip install empulse[optional]`.
 
 ## A model that makes money
 

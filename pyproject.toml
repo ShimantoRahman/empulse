@@ -53,8 +53,7 @@ changelog = "https://empulse.readthedocs.io/en/stable/project/changelog.html"
 [project.optional-dependencies]
 symbolic = ["gplearn>=0.4.3"]
 
-optional = [
-    "empulse",
+boosting = [
     "xgboost>=1.7.4",
     "lightgbm>=4.5.0",
     "catboost>=1.2.7; python_version < '3.13'",
@@ -62,9 +61,13 @@ optional = [
     "catboost>=1.2.9; python_version >= '3.14'",
 ]
 
+# Every optional dependency at once. Add new extras here as well as above, so that
+# `pip install empulse[optional]` keeps meaning "all of them".
+optional = ["empulse[boosting, symbolic]"]
+
 [dependency-groups]
 test = [
-    "empulse[optional, symbolic]",
+    "empulse[optional]",
     "scikit-learn>=1.9.0",
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
@@ -77,7 +80,7 @@ test = [
 ]
 
 docs = [
-    "empulse[optional, symbolic]",
+    "empulse[optional]",
     "sphinx>=7.2.6",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx-copybutton>=0.5.2",

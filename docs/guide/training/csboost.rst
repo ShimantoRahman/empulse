@@ -31,7 +31,7 @@ unified sklearn-compatible interface.  If no estimator is supplied, an
        ``sample_weight`` cannot be used because it is reserved for internal index passing.
 
 .. note::
-    You can install all three backends with ``pip install empulse[optional]``.
+    You can install all three backends with ``pip install empulse[boosting]``.
     If you try to use a backend that isn't installed,
     you'll get an informative error message with installation instructions.
 
@@ -54,7 +54,7 @@ Choosing a Backend
 ==================
 
 Pass any supported estimator to the ``estimator`` argument. All three are installed by
-``pip install empulse[optional]``; the cost-sensitive objective is identical, so the choice is the
+``pip install empulse[boosting]``; the cost-sensitive objective is identical, so the choice is the
 usual one between the libraries themselves.
 
 .. tab-set::
