@@ -1,78 +1,32 @@
 `Unreleased`_
 =============
 
-- |MajorFeature| Empulse now supports the free-threaded build of CPython 3.14. ``cp314t`` wheels
-  are published alongside the regular ones, and all eleven Cython extension modules declare the
-  ``freethreading_compatible`` directive, so importing Empulse no longer re-enables the global
-  interpreter lock for the whole process. Fitting or scoring separate estimator and
-  :class:`~empulse.metrics.Metric` instances on separate threads is supported and gives the same
-  results as running them sequentially. Note that ``pip install empulse[boosting]`` does not
-  resolve on 3.14t until CatBoost publishes a free-threaded wheel; XGBoost and LightGBM install
-  fine.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier` no longer draws from the C library's
-  process-global ``rand()``/``srand()``. Every fit now owns its generator state, so one fit can no
-  longer reseed another, and ``random_state=None`` no longer derives its seed from a one-second
-  resolution clock (two fits starting in the same second used to share a seed).
-- |API| Because of the generator change above, :class:`~empulse.models.ProfTreeClassifier` and
-  :class:`~empulse.models.ProfSRClassifier` produce a different — equally valid — tree for a given
-  ``random_state`` than they did in earlier releases. Results within this release are reproducible
-  as before.
-- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='auto'`` now uses
-  quasi-Monte Carlo for any number of stochastic variables whose distributions can be sampled,
-  rather than only above two. Two stochastic variables used to go to nested quadrature.
-  Pass ``random_state`` for a result reproducible across :class:`~empulse.metrics.Metric` instances;
-  repeated calls on one instance were already identical.
-- |Feature| Quasi-Monte Carlo integration now covers eleven more distributions:
-  :func:`~sympy.stats.BoundedPareto`, :func:`~sympy.stats.Dagum`,
-  :func:`~sympy.stats.ExponentialPower`, :func:`~sympy.stats.Frechet`,
-  :func:`~sympy.stats.Gompertz`, :func:`~sympy.stats.LogLogistic`,
-  :func:`~sympy.stats.RaisedCosine`, :func:`~sympy.stats.Rayleigh`,
-  :func:`~sympy.stats.Reciprocal`, :func:`~sympy.stats.Weibull` and
-  :func:`~sympy.stats.WignerSemicircle`. These previously fell through to plain Monte Carlo, which
-  is around a thousand times less accurate for the same sampling budget.
-- |Fix| :class:`~empulse.metrics.MaxProfit` now returns the correct expected maximum profit when
-  the profit function is a polynomial of degree two or higher in the stochastic variable.
-- |Feature| :class:`~empulse.metrics.MaxProfit` accepts profit functions of any shape in the
-  stochastic variable. Previously a cost matrix using :func:`sympy.exp`, :func:`sympy.log` or a
-  square root raised ``PolynomialError`` from inside SymPy when the :class:`~empulse.metrics.Metric`
-  was constructed.
-- |Feature| :meth:`~empulse.metrics.Metric.optimal_rate` and
-  :meth:`~empulse.metrics.Metric.optimal_threshold` now always compute the exact
-  EMP when one stochastic variable is present.
-- |Fix| :class:`~empulse.metrics.CostMatrix` now rejects a string term that uses a name SymPy
-  reserves for its own objects, instead of quietly substituting that object. ``add_fp_cost('E')``
-  used to become Euler's number, so the term disappeared from the metric's parameter list and the
-  metric returned a plausible but meaningless score that no caller could influence; ``'I'`` made
-  the cost complex, and ``'gamma'``/``'beta'`` raised a ``TypeError`` about ``FunctionClass`` from
-  inside SymPy.
-- |Fix| :class:`~empulse.metrics.Metric` now raises if the cost matrix contains two distinct
-  symbols that share a name, naming both spellings. ``sympy.Symbol('clv')`` and
-  ``sympy.Symbol('clv', positive=True)`` are different variables to SymPy and do not cancel, and a
-  term given as a string always produces the assumption-free one. Mixing them used to surface as
-  ``SyntaxError: duplicate argument 'clv' in function definition`` pointing at SymPy's generated
-  source.
-- |Enhancement| Multi-letter symbols now render upright in the LaTeX representations of
-  :class:`~empulse.metrics.CostMatrix` and :class:`~empulse.metrics.Metric`, so a product such as
-  ``clv * r`` reads as two variables rather than as one named ``clvr``. Greek names such as
-  ``gamma`` are unaffected.
-- |Enhancement| Every documentation section now introduces its pages with cards carrying a
-  one-line description, instead of printing a nested list of page and subsection titles that
-  duplicated the sidebar. The tutorial and getting started sections, whose pages are read in order,
-  use numbered step cards; the user guide sections use the same card grid the guide landing page
-  already used.
-- |Enhancement| The documentation now follows the same design system as the figures it contains.
-  The colour tokens in ``docs/_static/scss/custom.scss`` are the ones ``scripts/figures/palette.py``
-  draws with, so blue still marks what you write down and purple what you do with it, and the prose
-  around a figure can no longer drift away from it. Inter and JetBrains Mono are bundled with the
-  docs rather than fetched from a font CDN, and the link colour is a slightly darker blue than the
-  figures use so that it clears the WCAG AA contrast threshold as body text.
+Metrics
+-------
+
+- |MajorFeature| Added :class:`~empulse.metrics.MixtureMetric` and
+  :class:`~empulse.metrics.MixtureComponent`, which express a weighted linear combination of
+  :class:`~empulse.metrics.BaseMetric` instances. This is exact, by linearity of expectation,
+  and is how :func:`~empulse.metrics.empcs_score` now expresses a distribution that mixes a
+  point mass with a continuous piece — something a single :class:`~empulse.metrics.Metric`
+  cannot express, since SymPy cannot symbolically integrate over such a distribution.
+- |Feature| Added :class:`~empulse.metrics.BaseMetric`, the abstraction every ``loss``
+  parameter throughout the package now accepts. :class:`~empulse.metrics.Metric` and
+  :class:`~empulse.metrics.MixtureMetric` both implement it, so either can be passed
+  interchangeably as a model's training objective.
+- |Feature| Added the :class:`~empulse.metrics.LogCost` strategy for building custom expected
+  log cost (weighted cross-entropy) metrics. :func:`~empulse.metrics.expected_log_cost_loss`
+  is now built from it.
+- |Feature| Metrics built with the :class:`~empulse.metrics.Cost` and
+  :class:`~empulse.metrics.Savings` strategies now accept stochastic (``sympy.stats``) cost
+  parameters, reducing them to their mean. Previously this raised
+  ``NotImplementedError: Random variables are not supported for the savings metric.`` at
+  :class:`~empulse.metrics.Metric` construction time.
 - |Feature| Added :meth:`~empulse.metrics.CostMatrix.constrain` and
   :meth:`~empulse.metrics.MixtureMetric.constrain`, which declare the values a cost-matrix
   parameter is allowed to take. A parameter can be given inclusive ``lower``/``upper`` bounds, or a
   callable can express a condition spanning several parameters at once
   (``constrain(lambda p: p['clv'] > p['incentive_cost'], message=...)``).
-- |API| The prebuilt metrics now reject parameter values that put them outside their mathematical
-  domain, instead of returning a meaningless number.
 - |Feature| Added :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.MinCost` and
   :class:`~empulse.metrics.EmpiricalMinCost`, the sign-flipped siblings of
   :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.MaxProfit` and
@@ -83,6 +37,70 @@
 - |Feature| Added :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC`
   strategies for building custom metrics that compute the empirical (convex-hull-based) maximum
   profit and the area under the empirical profit curve, respectively.
+- |Enhancement| :class:`~empulse.metrics.Metric` now warns (``UserWarning``) at construction
+  when the cost matrix has no terms, or its terms cancel to exactly zero — such a metric always
+  evaluates to ``0.0`` regardless of its parameters.
+- |Enhancement| :class:`~empulse.metrics.Metric` now warns when called with a parameter its
+  cost matrix does not use, instead of silently ignoring it — catching a typo'd keyword
+  argument. ``sample_weight`` and strategy-specific extras (e.g. :class:`~empulse.metrics.Savings`'
+  ``baseline``) are exempt.
+- |Enhancement| Multi-letter symbols now render upright in the LaTeX representations of
+  :class:`~empulse.metrics.CostMatrix` and :class:`~empulse.metrics.Metric`, so a product such as
+  ``clv * r`` reads as two variables rather than as one named ``clvr``. Greek names such as
+  ``gamma`` are unaffected.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='auto'`` now uses
+  quasi-Monte Carlo for any number of stochastic variables whose distributions can be sampled,
+  rather than only above two. Two stochastic variables used to go to nested quadrature.
+  Pass ``random_state`` for a result reproducible across :class:`~empulse.metrics.Metric` instances;
+  repeated calls on one instance were already identical.
+- |Efficiency| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (a profit function
+  polynomial in the stochastic variable) no longer compute the ROC convex hull, and evaluate
+  the profit function vectorized over all operating points instead of in a Python loop.
+- |Feature| Quasi-Monte Carlo integration now covers eleven more distributions:
+  :func:`~sympy.stats.BoundedPareto`, :func:`~sympy.stats.Dagum`,
+  ``ExponentialPower`` (not published in SymPy's own documentation, so no link is possible),
+  :func:`~sympy.stats.Frechet`,
+  :func:`~sympy.stats.Gompertz`, :func:`~sympy.stats.LogLogistic`,
+  :func:`~sympy.stats.RaisedCosine`, :func:`~sympy.stats.Rayleigh`,
+  :func:`~sympy.stats.Reciprocal`, :func:`~sympy.stats.Weibull` and
+  :func:`~sympy.stats.WignerSemicircle`. These previously fell through to plain Monte Carlo, which
+  is around a thousand times less accurate for the same sampling budget.
+- |Feature| :meth:`~empulse.metrics.Metric.optimal_rate` and
+  :meth:`~empulse.metrics.Metric.optimal_threshold` now always compute the exact
+  EMP when one stochastic variable is present.
+- |Feature| :class:`~empulse.metrics.MaxProfit` accepts profit functions of any shape in the
+  stochastic variable. Previously a cost matrix using :func:`sympy.exp`, :func:`sympy.log` or a
+  square root raised ``PolynomialError`` from inside SymPy when the :class:`~empulse.metrics.Metric`
+  was constructed.
+- |API| ``check_input`` has been removed from every prebuilt metric that is now a
+  :class:`~empulse.metrics.Metric`/:class:`~empulse.metrics.MixtureMetric` instance
+  (:func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.mpc_score`,
+  :func:`~empulse.metrics.empb_score`, :func:`~empulse.metrics.auepc_score`,
+  :func:`~empulse.metrics.empa_score`, :func:`~empulse.metrics.mpa_score`,
+  :func:`~empulse.metrics.empcs_score`, :func:`~empulse.metrics.mpcs_score`,
+  :func:`~empulse.metrics.max_profit_score`, :func:`~empulse.metrics.expected_cost_loss`,
+  :func:`~empulse.metrics.expected_log_cost_loss`, :func:`~empulse.metrics.expected_savings_score`,
+  :func:`~empulse.metrics.expected_cost_loss_churn` and
+  :func:`~empulse.metrics.expected_cost_loss_acquisition`; :func:`~empulse.metrics.cost_loss` and
+  :func:`~empulse.metrics.savings_score` are unaffected and keep it). These prebuilt metrics now
+  reject parameter values that put them outside their mathematical domain via
+  :meth:`~empulse.metrics.CostMatrix.constrain`, instead of returning a meaningless number, but
+  the enforced domain is not identical to the one 0.11.1's ``check_input=True`` enforced.
+  :func:`~empulse.metrics.auepc_score` has also lost its ``normalize`` parameter (it defaulted
+  to ``True``, so scores computed with the default are unaffected).
+- |API| :class:`~empulse.metrics.MaxProfit`'s ``alpha_growth`` and ``alpha_max`` constructor
+  parameters have been removed (previous defaults ``1.1`` and ``100.0``); passing either now
+  raises a ``TypeError``. ``alpha`` is now a constant temperature, and the annealing schedule
+  that ``alpha_growth``/``alpha_max`` used to control is now expressed with an ``alpha_schedule``
+  on the optimizer (see *Optimizers* below).
+- |API| The :class:`~empulse.metrics.MetricStrategy` extension API used to write custom
+  strategies has changed, which will break third-party subclasses: ``logit_objective()`` now
+  returns a :class:`~empulse.metrics.LogitObjective` (a new public ABC exposing ``logit_loss``,
+  ``logit_gradient``, ``logit_loss_gradient`` and ``logit_gradient_steps``) instead of a bare
+  tuple; ``prepare_logit_objective()`` and ``build_logit_objective()`` have been removed; and a
+  new ``requires_dynamic_boost_objective`` property controls whether
+  :class:`~empulse.models.CSBoostClassifier` uses the dynamic (per-iteration) or static
+  boosting gradient path for the strategy.
 - |API| ``empc``, ``mpc``, ``empa``, ``mpa``, ``empcs``, ``mpcs``, ``empb``, ``make_objective_churn``,
   ``make_objective_acquisition``, and their supporting ``AECObjectiveChurn``, ``AECMetricChurn``,
   ``AECObjectiveAcquisition``, and ``AECMetricAcquisition`` classes have been removed.
@@ -98,11 +116,6 @@
   Training a boosting model directly on any of these metrics (previously done through
   ``make_objective_churn``/``make_objective_acquisition``) is now done by passing the metric
   as the ``loss`` argument to :class:`~empulse.models.CSBoostClassifier`.
-- |API| When :class:`~empulse.models.CSBoostClassifier` is used with the CatBoost backend and a
-  ``loss`` metric that is maximized (e.g. :func:`~empulse.metrics.empc_score`), the value CatBoost
-  reports for the evaluation metric is now negated, so that lower is better for every metric. This
-  affects CatBoost's training output and ``best_score_`` only; the model that is selected, and
-  early stopping, are unchanged.
 - |API| :func:`~empulse.metrics.expected_cost_loss_churn` and
   :func:`~empulse.metrics.expected_cost_loss_acquisition` now always return the mean cost per
   instance (previously they returned the summed cost by default, with an optional
@@ -138,27 +151,35 @@
   the default (unweighted-``loss``) out-of-bag weighted-voting behavior of
   :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
   which use :func:`~empulse.metrics.expected_cost_loss` as their fallback per-estimator weight.
+- |Fix| :class:`~empulse.metrics.CostMatrix` now rejects a string term that uses a name SymPy
+  reserves for its own objects, instead of quietly substituting that object. ``add_fp_cost('E')``
+  used to become Euler's number, so the term disappeared from the metric's parameter list and the
+  metric returned a plausible but meaningless score that no caller could influence; ``'I'`` made
+  the cost complex, and ``'gamma'``/``'beta'`` raised a ``TypeError`` about ``FunctionClass`` from
+  inside SymPy.
+- |Fix| :class:`~empulse.metrics.Metric` now raises if the cost matrix contains two distinct
+  symbols that share a name, naming both spellings. ``sympy.Symbol('clv')`` and
+  ``sympy.Symbol('clv', positive=True)`` are different variables to SymPy and do not cancel, and a
+  term given as a string always produces the assumption-free one. Mixing them used to surface as
+  ``SyntaxError: duplicate argument 'clv' in function definition`` pointing at SymPy's generated
+  source.
+- |Fix| Lambdified expressions now bind their arguments in a deterministic order. The internal
+  ``PicklableLambda`` used to derive that order from ``list(expression.free_symbols)`` — a set,
+  whose iteration order is process-dependent under Python's hash randomization — and now sorts by
+  symbol name instead. This affects any metric whose expression is lambdified without an
+  explicit variable list.
+- |Fix| :class:`~empulse.metrics.MaxProfit` now returns the correct expected maximum profit when
+  the profit function is a polynomial of degree two or higher in the stochastic variable.
 - |Fix| The LaTeX rendering of a :class:`~empulse.metrics.MaxProfit` metric (shown by
   ``metric._repr_latex_()``, e.g. in a notebook) had the wrong sign on its false-positive and
   false-negative terms: it negated the true-positive and true-negative benefits but left the
   costs untouched, so the rendered formula was neither the profit nor the cost. It now renders
   the profit being maximized. Only the displayed formula was affected; the computed metric
   value was always correct.
-- |Fix| Cost-sensitive models can now be trained with a ``loss`` metric whose cost matrix names one
-  of its symbols (or aliases) ``tp_cost``, ``tn_cost``, ``fp_cost`` or ``fn_cost``. Those names
-  collide with the dedicated ``fit``/``predict`` parameters of the same name, so the value bound to
-  the parameter and was silently discarded instead of reaching the metric, and training failed with
-  ``TypeError: _lambdifygenerated() missing 1 required positional argument``. This affected the cost
-  matrices shipped with :func:`~empulse.datasets.load_churn_tv_subscriptions`,
-  :func:`~empulse.datasets.load_credit_scoring_pakdd` and
-  :func:`~empulse.datasets.fetch_give_me_some_credit`. Such values are now routed to the metric, and
-  a cost argument that the metric does not use raises a warning instead of being dropped silently.
-  Note that ``__init__``-time costs are still not forwarded to a metric loss, since they default to
-  ``0.0`` and would silently zero out a cost matrix term of the same name.
-- |Fix| Fix :class:`~empulse.models.RobustCSClassifier` not properly handling outlier sensitive costs
-  when passing a custom loss function from :class:`~empulse.metrics.Metric`.
-- |Fix| Fix :func:`~empulse.metrics.empb_score` and :func:`~empulse.metrics.auepc_score` not always
-  incurring the contact cost for customers who are not contacted.
+- |Fix| Fix :func:`~empulse.metrics.empb_score` and :func:`~empulse.metrics.auepc_score` only
+  incurring the contact cost for churners who accepted the retention incentive. The contact cost
+  is now incurred for every contacted churner, whether or not they accept; only the retention
+  benefit net of the incentive cost remains contingent on acceptance.
 - |Fix| Fix :func:`~empulse.metrics.expected_savings_score`'s (and the
   :class:`~empulse.metrics.Savings` strategy's) ``baseline='prior'`` option: it previously computed
   the baseline cost by hard-thresholding the constant prior probability (via the same logic as
@@ -180,7 +201,7 @@
   takes an independent copy of its cost matrix at construction time.
 - |Fix| :class:`~empulse.metrics.Metric` now raises a ``ValueError`` at construction time if the
   cost matrix uses a symbol name or alias reserved for internal use (``y``, ``s``, ``F_0``,
-  ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i``, ``validate``). Previously, a colliding symbol name was either
+  ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i``). Previously, a colliding symbol name was either
   silently fused with the identically-named internal variable (e.g. a user symbol named ``F_0`` in
   a :class:`~empulse.metrics.MaxProfit` metric), producing a wrong score with no warning, or raised
   a confusing internal ``TypeError`` only once the metric was called (e.g. a symbol named ``y`` or
@@ -205,6 +226,89 @@
   :meth:`~empulse.metrics.Metric.optimal_rate` now raise a ``ValueError`` when the cost matrix is
   degenerate for the given parameters (``fp_cost + tn_benefit + fn_cost + tp_benefit`` evaluates
   to 0, making the optimal threshold undefined).
+
+Models
+------
+
+- |MajorFeature| Added :class:`~empulse.models.ProfMPMClassifier` and
+  :class:`~empulse.models.ProfMEMPMClassifier`, profit-driven minimax probability machines
+  (Maldonado, López and Vairetti, 2020). Both learn a linear decision boundary that maximizes
+  the worst-case expected profit implied by each class's empirical mean and covariance, via the
+  multivariate Chebyshev-Cantelli inequality; ``ProfMEMPMClassifier`` allows the two classes to
+  have different worst-case accuracy bounds, ``ProfMPMClassifier`` shares one bound taken from
+  the tighter of the two. Their ``loss`` must use the :class:`~empulse.metrics.MaxProfit`
+  strategy; instance-dependent costs are averaged to a scalar and stochastic cost parameters are
+  replaced by their mean before fitting.
+- |MajorFeature| Added :class:`~empulse.models.ProfSRClassifier`, a profit-driven symbolic
+  regression classifier that evolves a population of mathematical expressions with genetic
+  programming to maximize a cost-sensitive metric. Requires the new optional ``gplearn``
+  dependency, installable with ``pip install empulse[symbolic]``.
+- |Feature| :class:`~empulse.models.CSThresholdClassifier.threshold_` and
+  :class:`~empulse.models.CSRateClassifier.rate_` are now real properties returning the fitted
+  decision rule (or ``None`` if it wasn't learned). They were documented as fitted attributes
+  in 0.11.1 but never actually set under those names.
+- |Feature| :class:`~empulse.samplers.CostSensitiveSampler` can now take a
+  :class:`~empulse.metrics.Metric` instance as its ``loss``. When set, ``fit_resample`` accepts
+  the cost matrix's parameters as keyword arguments (routed through scikit-learn's metadata
+  routing, like the cost-sensitive models) and derives ``fp_cost``/``fn_cost`` from the metric,
+  taking precedence over any ``fp_cost``/``fn_cost`` passed directly.
+- |Feature| Every cost-sensitive estimator's ``loss`` now accepts any
+  :class:`~empulse.metrics.BaseMetric`, so a :class:`~empulse.metrics.MixtureMetric` instance
+  (e.g. :func:`~empulse.metrics.empcs_score`) can be passed directly as a model's training
+  objective.
+- |Enhancement| A cost passed to a model as a length-1 array is now broadcast to every sample
+  instead of raising a shape error, and the error message for a genuine length mismatch names
+  the offending parameter and the lengths that would have been accepted.
+- |API| :class:`~empulse.models.CSBaggingClassifier` and :class:`~empulse.models.CSForestClassifier`
+  with ``combination='weighted_voting'`` now require the base estimator to implement
+  ``predict_proba``, and raise at fit time if it doesn't. Previously a base estimator without
+  ``predict_proba`` silently fell back to ``predict()`` for the out-of-bag weighting.
+- |API| ``soft_threshold`` now defaults to ``True`` (previously ``False``) on
+  :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`.
+  With the default ``l1_ratio=1.0`` (a pure L1 penalty) and zero-initialized coefficients, the raw
+  L1 subgradient used when ``soft_threshold=False`` can make L-BFGS-B stall at exactly zero for
+  every coefficient, silently producing a model that predicts a constant probability regardless
+  of the input. Soft-thresholding the coefficients before evaluating the penalty avoids this.
+  Models fitted with default arguments now produce different (properly fit, rather than
+  degenerate) coefficients than in 0.11.1; pass ``soft_threshold=False`` explicitly to restore
+  the previous default.
+- |API| Because :class:`~empulse.models.ProfTreeClassifier` no longer draws from the C library's
+  process-global ``rand()``/``srand()`` (see below), it produces a different — equally valid —
+  tree for a given ``random_state`` than it did in earlier releases. Results within this release
+  are reproducible as before.
+- |API| When :class:`~empulse.models.CSBoostClassifier` is used with the CatBoost backend and a
+  ``loss`` metric that is maximized (e.g. :func:`~empulse.metrics.empc_score`), the value CatBoost
+  reports for the evaluation metric is now negated, so that lower is better for every metric. This
+  affects CatBoost's training output and ``best_score_`` only; the model that is selected, and
+  early stopping, are unchanged.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` no longer draws from the C library's
+  process-global ``rand()``/``srand()``. Every fit now owns its generator state, so one fit can no
+  longer reseed another, and ``random_state=None`` no longer derives its seed from a one-second
+  resolution clock (two fits starting in the same second used to share a seed).
+- |Fix| ``fit`` now deep-copies the ``loss`` metric before use, so two estimators sharing one
+  module-level prebuilt metric (e.g. two models both given ``empc_score`` as ``loss``), or one
+  estimator fit twice from the same ``loss`` instance, no longer read or overwrite each other's
+  memoised strategy state (boosting objective, Monte Carlo grid, RNG).
+- |Fix| Cost-sensitive models can now be trained with a ``loss`` metric whose cost matrix names one
+  of its symbols (or aliases) ``tp_cost``, ``tn_cost``, ``fp_cost`` or ``fn_cost``. Those names
+  collide with the dedicated ``fit``/``predict`` parameters of the same name, so the value bound to
+  the parameter and was silently discarded instead of reaching the metric, and training failed with
+  ``TypeError: _lambdifygenerated() missing 1 required positional argument``. This affected the cost
+  matrices shipped with :func:`~empulse.datasets.load_churn_tv_subscriptions`,
+  :func:`~empulse.datasets.load_credit_scoring_pakdd` and
+  :func:`~empulse.datasets.fetch_give_me_some_credit`. Such values are now routed to the metric, and
+  a cost argument that the metric does not use raises a warning instead of being dropped silently.
+  Note that ``__init__``-time costs are still not forwarded to a metric loss, since they default to
+  ``0.0`` and would silently zero out a cost matrix term of the same name.
+- |Fix| Fix :class:`~empulse.models.RobustCSClassifier` not properly handling outlier sensitive costs
+  when passing a custom loss function from :class:`~empulse.metrics.Metric`.
+- |Fix| :class:`~empulse.models.CSForestClassifier` now offsets negative costs the same way
+  :class:`~empulse.models.CSTreeClassifier` already did, so a forest trained with a benefit
+  (e.g. ``tp_cost=-200``) now trains correctly instead of raising during node-impurity
+  computation (which requires ``node_impurity >= 0``).
+- |Fix| :class:`~empulse.models.CSBoostClassifier`'s ``predict_proba`` raised
+  ``TypeError: isinstance() arg 2 must be a type`` in any environment without LightGBM installed,
+  regardless of which backend was actually in use for the fitted model.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
   no longer silently skip learning a cost-sensitive threshold/rate when fitted with an aliased
   :class:`~empulse.metrics.Metric` with every required parameter supplied through its alias.
@@ -224,6 +328,9 @@
   ``fit_params`` dict in place.
 - |Fix| :class:`~empulse.models.CSTreeClassifier` no longer mutates a user-supplied custom
   ``criterion`` instance in place.
+- |Fix| :class:`~empulse.models.CSTreeClassifier`'s ``predict``/``predict_proba`` now validate
+  their input, so a wrong number of features raises the standard scikit-learn error instead of
+  being forwarded raw to the underlying tree.
 - |Fix| :class:`~empulse.models.CSBoostClassifier`'s LightGBM and CatBoost backends now start
   from the intended probability. The internal base-score nudge was applied as a raw (log-odds)
   score for LightGBM's ``init_score``/CatBoost's ``baseline`` but as a probability for XGBoost's
@@ -235,8 +342,106 @@
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
   no longer mutate a user-supplied ``calibrator`` estimator instance in place; a clone is
   configured and fitted instead, so the constructor argument is safe to reuse or refit.
-- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
-  documented ``soft_threshold`` as defaulting to ``False``; the actual default is ``True``.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` now raises a ``ValueError`` naming both keys
+  instead of silently dropping one of them, when its ``loss`` metric's cost matrix gives two
+  aliases to the same underlying symbol.
+- |Fix| :class:`~empulse.models.RobustCSClassifier`'s ``classes_`` property now raises the
+  standard "not fitted" error via ``check_is_fitted`` instead of an unrelated ``AttributeError``.
+
+Optimizers
+----------
+
+- |MajorFeature| ``empulse.optimizers`` has been substantially expanded, from exporting only
+  :class:`~empulse.optimizers.Generation` to a full set of optimizers and schedules: the
+  :class:`~empulse.optimizers.Optimizer` base class, first-order minibatch optimizers
+  :class:`~empulse.optimizers.SGD`, :class:`~empulse.optimizers.Adam` and
+  :class:`~empulse.optimizers.RMSProp`, :class:`~empulse.optimizers.ScipyOptimizer` (wraps any
+  :func:`scipy.optimize.minimize` method) and :class:`~empulse.optimizers.LBFGSBOptimizer`,
+  evolutionary optimizers :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`,
+  :class:`~empulse.optimizers.MemeticOptimizer` (genetic algorithm with Lamarckian gradient local
+  search) and :class:`~empulse.optimizers.LamarckianGeneration`, and the learning-rate/temperature
+  schedule family :class:`~empulse.optimizers.Schedule`, :class:`~empulse.optimizers.ConstantSchedule`,
+  :class:`~empulse.optimizers.LinearSchedule`, :class:`~empulse.optimizers.ExponentialSchedule`,
+  :class:`~empulse.optimizers.StepSchedule`, :class:`~empulse.optimizers.CosineAnnealingSchedule` and
+  :class:`~empulse.optimizers.WarmupSchedule` (:class:`~empulse.optimizers.ExponentialSchedule` and
+  :class:`~empulse.optimizers.StepSchedule` also gained a ``max_value`` upper-bound parameter).
+- |API| :class:`~empulse.models.ProfLogitClassifier` and :class:`~empulse.models.CSLogitClassifier`
+  no longer take ``optimize_fn``/``optimizer_params`` constructor parameters. Both now take a
+  single ``optimizer`` parameter, an :class:`~empulse.optimizers.Optimizer` instance
+  (defaulting to :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` for
+  ``ProfLogitClassifier`` and :class:`~empulse.optimizers.LBFGSBOptimizer` for
+  ``CSLogitClassifier``, matching each model's previous default behavior). For example,
+  ``ProfLogitClassifier(optimizer_params={'max_iter': 10})`` becomes
+  ``ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=10))``.
+  :class:`~empulse.models.ProfLogitClassifier`'s ``n_jobs`` constructor parameter has moved
+  onto :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` for the same reason.
+
+Datasets
+--------
+
+- |MajorFeature| Dataset loaders are now backend-agnostic via `narwhals
+  <https://narwhals-dev.github.io/narwhals/>`_: every loader takes a required, keyword-only
+  ``backend`` argument — the dataframe *module* itself, e.g. ``backend=pandas`` or
+  ``backend=polars`` — and returns data in that library's native types. A bare
+  ``pip install empulse`` no longer requires any particular dataframe library to be installed;
+  you choose and supply one yourself.
+- |Feature| Added :func:`~empulse.datasets.fetch_iranian_churn`, a churn dataset from the UCI
+  Machine Learning Repository (3,150 customers, 495 churners, 12 features), downloaded on first
+  use and cached locally. It ships a churn-retention cost matrix driven by each customer's
+  value, with overridable economic parameters ``incentive_fraction``, ``contact_cost`` and
+  ``accept_rate``.
+- |Feature| Added :func:`~empulse.datasets.get_data_home`, which resolves and creates the
+  directory downloaded datasets are cached in: an explicit ``data_home`` argument, else the
+  ``EMPULSE_DATA_HOME`` environment variable, else ``~/empulse_data``.
+- |API| :func:`~empulse.datasets.load_give_me_some_credit` has been renamed to
+  :func:`~empulse.datasets.fetch_give_me_some_credit`: rather than being bundled with the
+  package, it is now downloaded from OpenML on first use and cached (subsequent calls read the
+  cache and do not hit the network). It gains ``data_home`` and ``download_if_missing``
+  parameters, matching :func:`~empulse.datasets.fetch_iranian_churn`.
+- |API| The ``as_frame`` and ``return_X_y_costs`` parameters have been removed from every
+  dataset loader — loaders always return a :class:`~empulse.datasets.Dataset`, and there is no
+  longer a plain-numpy return path (call ``.to_numpy()`` on the returned frame if you need one).
+  The per-loader economic keyword arguments (e.g. ``interest_rate``, ``fund_cost``,
+  ``max_credit_line``, ``loss_given_default``, ``term_length_months``, ``loan_to_income_ratio``,
+  ``term_deposit_fraction``, ``contact_cost``) have also been removed from the loaders'
+  signatures. :class:`~empulse.datasets.Dataset` no longer carries fixed
+  ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values; instead it carries a symbolic
+  ``cost_matrix`` (a :class:`~empulse.metrics.CostMatrix`) and an ``instance_costs`` dict of
+  per-sample values. The dataset's economic parameters that used to be set at load time are now
+  passed at metric-call time instead, e.g.::
+
+      # before
+      dataset = load_credit_scoring_pakdd(as_frame=True, loss_given_default=0.6)
+      metric(dataset.target, y_score, ...)
+
+      # now
+      import pandas as pd
+      dataset = load_credit_scoring_pakdd(backend=pd)
+      metric = Metric(dataset.cost_matrix, Cost())
+      metric(dataset.target, y_score, loss_given_default=0.6, **dataset.instance_costs)
+
+Packaging and dependencies
+---------------------------
+
+- |MajorFeature| Empulse now supports the free-threaded build of CPython 3.14. ``cp314t`` wheels
+  are published alongside the regular ones, and all eleven Cython extension modules declare the
+  ``freethreading_compatible`` directive, so importing Empulse no longer re-enables the global
+  interpreter lock for the whole process. Fitting or scoring separate estimator and
+  :class:`~empulse.metrics.Metric` instances on separate threads is supported and gives the same
+  results as running them sequentially. Note that ``pip install empulse[boosting]`` does not
+  resolve on 3.14t until CatBoost publishes a free-threaded wheel; XGBoost and LightGBM install
+  fine.
+- |API| ``pandas`` is no longer a required dependency; ``narwhals`` is used instead. A bare
+  ``pip install empulse`` no longer installs a dataframe library — none of the optional extras
+  supply one either, so using a dataset loader requires installing pandas, polars or another
+  narwhals-supported library yourself and passing it as ``backend=``.
+- |API| The minimum supported scikit-learn version is now 1.9.0 (previously 1.5.2), and the
+  minimum supported imbalanced-learn version is now 0.14.2 (previously 0.13.0).
+- |API| The optional-dependency extras have been reorganized: ``pip install empulse[boosting]``
+  now installs XGBoost, LightGBM and CatBoost (what ``empulse[optional]`` used to install), a new
+  ``pip install empulse[symbolic]`` installs ``gplearn`` (required by
+  :class:`~empulse.models.ProfSRClassifier`), and ``pip install empulse[optional]`` now installs
+  every optional extra.
 
 `0.11.1`_ (08-05-2026)
 ======================
