@@ -40,16 +40,13 @@ To install everything, use the ``optional`` extra, which pulls in every other ex
 
     pip install empulse[optional]
 
-If you use a backend that is not installed, Empulse raises an error telling you exactly what to
-install — nothing fails silently.
+If you use a backend that is not installed, Empulse raises an error telling you exactly what to install.
 
 Free-threaded Python
 ====================
 
 Empulse publishes wheels for the free-threaded build of CPython 3.14 (``cp314t``, the
-:pep:`703` interpreter without a global interpreter lock). Its compiled extensions declare
-themselves free-threading compatible, so importing Empulse leaves the GIL disabled instead of
-silently switching it back on for the whole process.
+:pep:`703` interpreter without a global interpreter lock).
 
 .. code-block:: bash
 
