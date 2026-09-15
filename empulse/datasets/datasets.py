@@ -66,7 +66,7 @@ def load_churn_tv_subscriptions(*, backend: IntoBackend[EagerAllowed]) -> Datase
     -------
     dataset : :class:`~empulse.datasets.Dataset`
         ``instance_costs`` contains the precomputed per-customer costs:
-        ``tp_benefit``, ``fp_cost``, ``tn_benefit``, ``fn_cost``.
+        ``tp_cost``, ``fp_cost``, ``tn_cost``, ``fn_cost``.
 
     Notes
     -----

@@ -52,7 +52,7 @@ class TestProcessChurnTV:
     def test_instance_costs_keys(self):
         df = _from_dict(_churn_tv_raw(), pd)
         _, _, costs = process_churn_tv(df)
-        assert set(costs.keys()) == {'tp_benefit', 'fp_cost', 'tn_benefit', 'fn_cost'}
+        assert set(costs.keys()) == {'tp_cost', 'fp_cost', 'tn_cost', 'fn_cost'}
 
     def test_shapes_consistent(self):
         n = 7
@@ -77,7 +77,7 @@ class TestProcessChurnTV:
     def test_cost_values_correct(self):
         df = _from_dict(_churn_tv_raw(3), pd)
         _, _, costs = process_churn_tv(df)
-        np.testing.assert_array_almost_equal(costs['tp_benefit'], [100.0, 100.0, 100.0])
+        np.testing.assert_array_almost_equal(costs['tp_cost'], [100.0, 100.0, 100.0])
         np.testing.assert_array_almost_equal(costs['fp_cost'], [10.0, 10.0, 10.0])
 
 

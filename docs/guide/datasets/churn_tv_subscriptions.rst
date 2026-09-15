@@ -34,7 +34,7 @@ This returns a :class:`~empulse.datasets.Dataset` object with the following attr
 - ``target``: the target vector
 - ``cost_matrix``: a :class:`~empulse.metrics.CostMatrix` over the four outcome terms
 - ``instance_costs``: a dict of per-instance cost arrays
-  (``'tp_benefit'``, ``'tn_benefit'``, ``'fp_cost'``, ``'fn_cost'``)
+  (``'tp_cost'``, ``'tn_cost'``, ``'fp_cost'``, ``'fn_cost'``)
 - ``feature_names``: the feature names
 - ``target_names``: the target names
 - ``DESCR``: the full description of the dataset
@@ -51,8 +51,8 @@ Pass the module itself — ``backend=pd`` for pandas or ``backend=pl`` for polar
 
 Unlike the other churn datasets, this one ships **precomputed** costs: its cost matrix is not
 built from symbolic business parameters, so each of the four outcome terms is supplied directly
-as an array in ``instance_costs``. That makes it a good fit for the plain cost arguments of the
-models, which take costs rather than benefits — so the two benefit terms are negated:
+as an array in ``instance_costs``. Those arrays are already costs, so they can be passed straight
+through to the plain cost arguments of the models:
 
 .. code-block:: python
 
@@ -73,8 +73,8 @@ models, which take costs rather than benefits — so the two benefit terms are n
     pipeline.fit(
         X,
         y,
-        model__tp_cost=-costs['tp_benefit'],
-        model__tn_cost=-costs['tn_benefit'],
+        model__tp_cost=costs['tp_cost'],
+        model__tn_cost=costs['tn_cost'],
         model__fp_cost=costs['fp_cost'],
         model__fn_cost=costs['fn_cost'],
     )

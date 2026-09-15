@@ -34,9 +34,9 @@ def process_churn_tv(
     feature_cols = all_cols[1:-5]
 
     instance_costs: dict[str, FloatNDArray] = {
-        'tp_benefit': df['C_TP'].cast(nw.Float64).to_numpy(),
+        'tp_cost': df['C_TP'].cast(nw.Float64).to_numpy(),
         'fp_cost': df['C_FP'].cast(nw.Float64).to_numpy(),
-        'tn_benefit': df['C_TN'].cast(nw.Float64).to_numpy(),
+        'tn_cost': df['C_TN'].cast(nw.Float64).to_numpy(),
         'fn_cost': df['C_FN'].cast(nw.Float64).to_numpy(),
     }
     feature_df = df.select(nw.col(feature_cols).cast(nw.Float64))

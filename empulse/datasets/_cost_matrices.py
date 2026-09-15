@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 def churn_precomputed_cost_matrix() -> CostMatrix:
     """Symbolic cost matrix for datasets that store all four costs directly.
 
-    Symbols used: ``tp_benefit``, ``fp_cost``, ``tn_benefit``, ``fn_cost``.
+    Symbols used: ``tp_cost``, ``fp_cost``, ``tn_cost``, ``fn_cost``.
     """
-    tp_b, fp_c, tn_b, fn_c = sp.symbols('tp_benefit fp_cost tn_benefit fn_cost')
-    return CostMatrix().add_tp_benefit(tp_b).add_fp_cost(fp_c).add_tn_benefit(tn_b).add_fn_cost(fn_c)
+    tp_c, fp_c, tn_c, fn_c = sp.symbols('tp_cost fp_cost tn_cost fn_cost')
+    return CostMatrix().add_tp_cost(tp_c).add_fp_cost(fp_c).add_tn_cost(tn_c).add_fn_cost(fn_c)
 
 
 def churn_retention_cost_matrix(
