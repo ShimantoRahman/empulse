@@ -69,31 +69,43 @@ class MaxProfit(MetricStrategy):
           The quasi-monte-carlo simulation is more accurate than monte-carlo but only supports a few distributions
           present in :mod:`sympy:sympy.stats`:
 
-            - :class:`sympy.stats.Arcsin`
-            - :class:`sympy.stats.Beta`
-            - :class:`sympy.stats.BetaPrime`
-            - :class:`sympy.stats.Chi`
-            - :class:`sympy.stats.ChiSquared`
-            - :class:`sympy.stats.Erlang`
-            - :class:`sympy.stats.Exponential`
-            - :class:`sympy.stats.ExGaussian`
-            - :class:`sympy.stats.F`
-            - :class:`sympy.stats.Gamma`
-            - :class:`sympy.stats.GammaInverse`
-            - :class:`sympy.stats.GaussianInverse`
-            - :class:`sympy.stats.Laplace`
-            - :class:`sympy.stats.Logistic`
-            - :class:`sympy.stats.LogNormal`
-            - :class:`sympy.stats.Lomax`
-            - :class:`sympy.stats.Normal`
-            - :class:`sympy.stats.Maxwell`
-            - :class:`sympy.stats.Moyal`
-            - :class:`sympy.stats.Nakagami`
-            - :class:`sympy.stats.PowerFunction`
-            - :class:`sympy.stats.StudentT`
-            - :class:`sympy.stats.Trapezoidal`
-            - :class:`sympy.stats.Triangular`
-            - :class:`sympy.stats.Uniform`
+            - :func:`sympy.stats.Arcsin`
+            - :func:`sympy.stats.Beta`
+            - :func:`sympy.stats.BetaPrime`
+            - :func:`sympy.stats.BoundedPareto`
+            - :func:`sympy.stats.Chi`
+            - :func:`sympy.stats.ChiSquared`
+            - :func:`sympy.stats.Dagum`
+            - :func:`sympy.stats.Erlang`
+            - :func:`sympy.stats.ExGaussian`
+            - :func:`sympy.stats.Exponential`
+            - ``ExponentialPower`` (not published in SymPy's own documentation, so no link is possible)
+            - :func:`sympy.stats.FDistribution`
+            - :func:`sympy.stats.Frechet`
+            - :func:`sympy.stats.Gamma`
+            - :func:`sympy.stats.GammaInverse`
+            - ``GaussianInverse`` (not published in SymPy's own documentation, so no link is possible)
+            - :func:`sympy.stats.Gompertz`
+            - :func:`sympy.stats.Laplace`
+            - :func:`sympy.stats.Logistic`
+            - :func:`sympy.stats.LogLogistic`
+            - :func:`sympy.stats.LogNormal`
+            - :func:`sympy.stats.Lomax`
+            - :func:`sympy.stats.Maxwell`
+            - :func:`sympy.stats.Moyal`
+            - :func:`sympy.stats.Nakagami`
+            - :func:`sympy.stats.Normal`
+            - :func:`sympy.stats.Pareto`
+            - :func:`sympy.stats.PowerFunction`
+            - :func:`sympy.stats.RaisedCosine`
+            - :func:`sympy.stats.Rayleigh`
+            - :func:`sympy.stats.Reciprocal`
+            - :func:`sympy.stats.StudentT`
+            - :func:`sympy.stats.Trapezoidal`
+            - :func:`sympy.stats.Triangular`
+            - :func:`sympy.stats.Uniform`
+            - :func:`sympy.stats.Weibull`
+            - :func:`sympy.stats.WignerSemicircle`
 
     n_mc_samples_exp : int, default=16
         ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
