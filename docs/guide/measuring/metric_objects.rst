@@ -149,62 +149,6 @@ A mixture behaves like a plain metric everywhere else. It satisfies the same
 ``direction`` and ``strategy`` are read from its components — which must agree, or accessing them
 raises.
 
-.. _metric_errors:
-
-When a metric refuses to build or run
-=====================================
-
-A cost matrix can be wrong in ways that would otherwise produce a plausible-looking number rather
-than an error. These all raise instead, so it is worth knowing what each message means.
-
-At construction:
-
-.. list-table::
-    :widths: 40 60
-    :header-rows: 1
-
-    * - Message
-      - Cause
-    * - *symbol name(s) or alias(es) ... reserved for internal use*
-      - The matrix uses ``y``, ``s``, ``F_0``, ``F_1``, ``pi_0``, ``pi_1``, ``N``, ``i`` or
-        ``n_samples``. Rename the symbol.
-    * - *default(s) for [...] which is not a cost matrix symbol or alias*
-      - A :meth:`~empulse.metrics.CostMatrix.set_default` key matches nothing — usually a typo, or
-        an alias registered *after* the default was set.
-    * - *alias target ... does not match any symbol*
-      - :meth:`~empulse.metrics.CostMatrix.alias` points at a symbol the matrix does not use.
-    * - A warning that all costs are zero
-      - Every term evaluates to zero, so the metric cannot distinguish any two models.
-
-At call time:
-
-.. list-table::
-    :widths: 40 60
-    :header-rows: 1
-
-    * - Message
-      - Cause
-    * - *expected a value for X, did not receive it*
-      - A symbol has neither a default nor a supplied value.
-    * - *conflicting values for symbol X*
-      - The same symbol was passed under its own name and under an alias.
-    * - *Parameter X has length N, but expected length M*
-      - An array parameter does not match ``y_true``.
-    * - *the cost matrix is degenerate for the given parameters*
-      - ``fp_cost + tn_benefit + fn_cost + tp_benefit`` evaluates to zero, so there is no
-        break-even point and ``optimal_threshold``/``optimal_rate`` are undefined. Usually means a
-        row has no cost at all — a customer with zero lifetime value, say.
-
-Independence guarantees
-=======================
-
-A :class:`~empulse.metrics.Metric` takes its own copy of both the cost matrix and the strategy when
-it is constructed. Two consequences worth relying on:
-
-- Modifying a :class:`~empulse.metrics.CostMatrix` after building a metric from it does not change
-  the metric. Build a second metric to get the new behaviour.
-- The same strategy instance can safely be passed to several metrics; each gets its own.
-
 Where next
 ==========
 

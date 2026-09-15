@@ -78,12 +78,6 @@ At a glance
       - replaced by the mean
       - tree and evolutionary models only
 
-.. themed-figure:: three_strategies
-    :alt: The same predictions scored three ways: an expected cost in currency, a savings ratio on
-        a nought-to-one gauge, and the peak of a profit curve.
-
-    One set of predictions, three questions. Only the question changes between the panels.
-
 .. warning::
     Nothing checks the "``y_score`` must be" column at runtime. Passing an uncalibrated
     ``predict_proba`` to :class:`~empulse.metrics.Cost` does not raise; it returns a number that is
@@ -350,21 +344,6 @@ beyond that point is never worthwhile.
 
 Use it to compare rankings when the operating point is genuinely unknown or expected to move, and a
 single peak would be a misleading summary.
-
-Three metrics, one curve
-------------------------
-
-:class:`~empulse.metrics.MaxProfit`, :class:`~empulse.metrics.EmpiricalMaxProfit` and
-:class:`~empulse.metrics.AUEPC` all read the same profit curve. They differ in what they take from
-it.
-
-.. themed-figure:: profit_curve
-    :alt: A profit curve against the fraction of the population targeted, with its peak marked,
-        the area beneath it shaded, the convex hull drawn above it, and a perfect ranking for
-        comparison.
-
-    The peak is the maximum profit, the shaded area is the AUEPC, and the convex hull is the
-    frontier the empirical measure walks along.
 
 Costs or profits: the same metric, either way round
 ===================================================
