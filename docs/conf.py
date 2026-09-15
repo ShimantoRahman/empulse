@@ -21,7 +21,7 @@ print(sys.path)
 import empulse  # noqa: E402 F401
 
 project = 'Empulse'
-copyright = f"2024 - {datetime.now().year}, Shimanto Rahman (MIT License)"
+copyright = f"2024 - {datetime.now().year}, Shimanto Rahman (AGPLv3 License)"
 author = 'Shimanto Rahman'
 release = empulse.__version__
 

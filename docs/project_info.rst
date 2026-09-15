@@ -24,7 +24,7 @@ under.
         :link: project/license
         :link-type: doc
 
-        Empulse is distributed under the MIT License. The full text.
+        Empulse is distributed under the AGPLv3 License. The full text.
 
 .. Listed explicitly rather than with :glob:, so that the cards above cannot silently fall out of
    step with the pages: a new page under project/ that nobody adds here is an orphan, which the

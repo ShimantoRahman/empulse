@@ -1,11 +1,11 @@
 [![PyPI Downloads](https://static.pepy.tech/badge/empulse)](https://pepy.tech/projects/empulse)
 [![Python Version](https://img.shields.io/pypi/v/empulse)](https://pypi.org/project/empulse/)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ShimantoRahman/empulse)
+[![GitHub license](https://img.shields.io/badge/license-AGPLv3-blue.svg)](https://github.com/ShimantoRahman/empulse)
 ![](https://img.shields.io/pypi/pyversions/empulse)
 ![Tests](https://github.com/ShimantoRahman/empulse/actions/workflows/tests.yml/badge.svg)
 [![Docs](https://img.shields.io/readthedocs/empulse)](https://empulse.readthedocs.io/en/latest/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![DOI](https://zenodo.org/badge/654945788.svg)](https://zenodo.org/doi/10.5281/zenodo.11185663)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.11185663-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.11185663)
 
 # Empulse
 
@@ -129,4 +129,4 @@ If you use Empulse in your research, please cite it via its
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+AGPLv3 — see [LICENSE](LICENSE).
