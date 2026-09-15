@@ -261,8 +261,9 @@ approximate:
     * - ``integration_method``
       - Behaviour
     * - ``'auto'``
-      - One random variable with a polynomial profit function: exact closed form. Two: numerical
-        quadrature. More: quasi-Monte Carlo.
+      - One random variable: exact closed form solution. More than one: quasi-Monte Carlo, falling back
+        to numerical quadrature (two variables) or plain Monte Carlo when a distribution cannot be
+        sampled.
     * - ``'quad'``
       - Numerical quadrature via :mod:`scipy.integrate`.
     * - ``'monte-carlo'``

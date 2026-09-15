@@ -17,6 +17,28 @@
   :class:`~empulse.models.ProfSRClassifier` produce a different — equally valid — tree for a given
   ``random_state`` than they did in earlier releases. Results within this release are reproducible
   as before.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='auto'`` now uses
+  quasi-Monte Carlo for any number of stochastic variables whose distributions can be sampled,
+  rather than only above two. Two stochastic variables used to go to nested quadrature.
+  Pass ``random_state`` for a result reproducible across :class:`~empulse.metrics.Metric` instances;
+  repeated calls on one instance were already identical.
+- |Feature| Quasi-Monte Carlo integration now covers eleven more distributions:
+  :func:`~sympy.stats.BoundedPareto`, :func:`~sympy.stats.Dagum`,
+  :func:`~sympy.stats.ExponentialPower`, :func:`~sympy.stats.Frechet`,
+  :func:`~sympy.stats.Gompertz`, :func:`~sympy.stats.LogLogistic`,
+  :func:`~sympy.stats.RaisedCosine`, :func:`~sympy.stats.Rayleigh`,
+  :func:`~sympy.stats.Reciprocal`, :func:`~sympy.stats.Weibull` and
+  :func:`~sympy.stats.WignerSemicircle`. These previously fell through to plain Monte Carlo, which
+  is around a thousand times less accurate for the same sampling budget.
+- |Fix| :class:`~empulse.metrics.MaxProfit` now returns the correct expected maximum profit when
+  the profit function is a polynomial of degree two or higher in the stochastic variable.
+- |Feature| :class:`~empulse.metrics.MaxProfit` accepts profit functions of any shape in the
+  stochastic variable. Previously a cost matrix using :func:`sympy.exp`, :func:`sympy.log` or a
+  square root raised ``PolynomialError`` from inside SymPy when the :class:`~empulse.metrics.Metric`
+  was constructed.
+- |Feature| :meth:`~empulse.metrics.Metric.optimal_rate` and
+  :meth:`~empulse.metrics.Metric.optimal_threshold` now always compute the exact
+  EMP when one stochastic variable is present.
 - |Fix| :class:`~empulse.metrics.CostMatrix` now rejects a string term that uses a name SymPy
   reserves for its own objects, instead of quietly substituting that object. ``add_fp_cost('E')``
   used to become Euler's number, so the term disappeared from the metric's parameter list and the

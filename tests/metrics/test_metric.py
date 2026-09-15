@@ -19,7 +19,6 @@ from empulse.metrics import (
     max_profit_score,
 )
 from empulse.metrics._loss import cy_boost_grad_hess
-from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import ComplexRootsError
 
 from .reference.churn import empc, make_objective_churn, mpc
 
@@ -823,7 +822,7 @@ def test_max_profit_alpha_validation():
         MaxProfit(alpha=0.0)
 
 
-def test_max_profit_complex_roots(y_true_and_prediction):
+def test_max_profit_cubic_profit_without_real_crossings(y_true_and_prediction):
     y_true, y_proba = y_true_and_prediction
     clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
     gamma = sympy.stats.Beta('gamma', alpha, beta)
@@ -835,10 +834,10 @@ def test_max_profit_complex_roots(y_true_and_prediction):
         .set_default(clv=100, d=10, f=1)
     )
 
-    loss_exact = Metric(cost_matrix, MaxProfit())
+    exact = Metric(cost_matrix, MaxProfit())(y_true, y_proba, alpha=6, beta=14)
+    numerical = Metric(cost_matrix, MaxProfit(integration_method='quad'))(y_true, y_proba, alpha=6, beta=14)
 
-    with pytest.raises(ComplexRootsError):
-        loss_exact(y_true, y_proba, alpha=6, beta=14)
+    assert exact == pytest.approx(numerical, rel=1e-6)
 
 
 def test_objective_boost_max_profit_deterministic_linear():

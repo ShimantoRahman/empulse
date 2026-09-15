@@ -8,7 +8,6 @@ import scipy.special as sp
 import scipy.stats as st
 import sympy
 from scipy.integrate import IntegrationWarning, quad
-from sympy import solve
 from sympy.stats import density, pspace
 
 from ....._types import FloatNDArray, IntNDArray
@@ -20,17 +19,33 @@ from ...common import (
     _safe_run_lambda,
 )
 from .common import _convex_hull, extract_distribution_parameters
+from .envelope import (
+    CallableEnvelope,
+    Partition,
+    PolynomialEnvelope,
+    ProfitEnvelope,
+    partition_support,
+)
 
 
-class ComplexRootsError(ValueError):
+def _is_polynomial_in(expression: sympy.Expr, symbol: sympy.Symbol) -> bool:
     """
-    Raised when the piecewise integration method encounters complex-valued roots.
+    Test whether *expression* is a polynomial in *symbol*.
 
-    This occurs when the bound equation derived from setting two adjacent profit
-    functions equal has no real solution, which means the piecewise integration
-    method cannot be applied.  Use ``integration_method='quad'`` for the
-    :class:`~empulse.metrics.MaxProfit` instance instead.
+    This is the one place that decides between the two integration regimes: a polynomial profit
+    function gets closed-form partial moments, anything else gets quadrature per region.
+
+    ``sympy.Poly`` is the test rather than ``sympy.factor``, which raises instead of answering
+    ``False`` for exactly the inputs this is asked about -- ``PolynomialError`` on ``exp(x)``,
+    ``log(x)`` or ``sqrt(x)``, and ``TypeError`` from its own internals on some float coefficients.
+    ``Poly`` succeeds only for non-negative integer powers of *symbol*, which is precisely the
+    property that makes the ``a_k`` decomposition exist.
     """
+    try:
+        sympy.Poly(sympy.expand(expression), symbol)
+    except (sympy.polys.polyerrors.PolynomialError, TypeError, ValueError, NotImplementedError):
+        return False
+    return True
 
 
 def _build_max_profit_score_piecewise(
@@ -38,6 +53,11 @@ def _build_max_profit_score_piecewise(
     random_symbol: sympy.Symbol,
     deterministic_symbols: Iterable[sympy.Symbol],
 ) -> MetricFn:
+    if not _is_polynomial_in(profit_function, random_symbol):
+        # No a_k decomposition, so no closed-form partial moments; each region is integrated
+        # numerically instead. The regions themselves are found the same way either way.
+        return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
+
     distribution = pspace(random_symbol).distribution
     if isinstance(distribution, sympy.stats.crv_types.UniformDistribution):
         return MaxProfitScorePiecewiseUniform(profit_function, random_symbol, deterministic_symbols)
@@ -154,177 +174,341 @@ def _build_max_profit_rate_piecewise(
         return MaxProfitRatePiecewise(profit_function, rate_function, random_symbol, deterministic_symbols)
 
 
-def compute_integral_quad(
-    integrand: sympy.Expr,
-    lower_bound: float,
-    upper_bound: float,
-    true_positive_rate: float,
-    false_positive_rate: float,
-    random_var: sympy.Symbol,
-) -> float:
-    """Compute the integral using scipy quadrature for one stochastic variable."""
-    if lower_bound == upper_bound:
-        return 0.0
-    integrand = integrand.subs('F_0', true_positive_rate).subs('F_1', false_positive_rate).evalf()
-    if not integrand.free_symbols:  # if the integrand is constant, no need to call quad
-        if integrand == 0:  # need this separate path since sometimes upper or lower bound can be infinite
-            return 0
-        return float(integrand * (upper_bound - lower_bound))
-    integrand_fn = _safe_lambdify(integrand, [random_var])
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', IntegrationWarning)
-        warnings.simplefilter('ignore', RuntimeWarning)
-        result, _ = quad(integrand_fn, lower_bound, upper_bound)
-    result: float  # type: ignore[no-redef]
-    return result
+class _PreparedIntegrand:
+    """An integrand compiled once per parameter set, ready to be integrated over any region.
+
+    Compiling means substituting everything except the rates and the stochastic variable, then
+    lambdifying over those three. Both steps are kept out of the region loop: doing them per region
+    -- as this code used to -- meant a fresh ``subs`` and a fresh ``lambdify`` for every one of the
+    tens of regions in a partition, which dominated the runtime of the numerical path.
+
+    The substitution has to happen before lambdifying, not be replaced by passing the parameters as
+    extra arguments. A density can name a special function that collides with a symbol: the Chi
+    density is ``... * gamma**(k - 1) / gamma(k/2)``, where the first ``gamma`` is the variable and
+    the second is the gamma function. Substituting ``k`` collapses the call to a number and removes
+    the ambiguity; passing ``k`` as an argument leaves generated source that cannot be read either
+    way, whether or not the arguments are dummified.
+    """
+
+    def __init__(self, integrand: sympy.Expr, random_symbol: sympy.Symbol) -> None:
+        self.integrand = integrand
+        self.random_symbol = random_symbol
+        self.arguments = [*sympy.symbols('F_0 F_1'), random_symbol]
+        self._compiled: tuple[tuple[tuple[str, float], ...], Callable[..., Any]] | None = None
+
+    def _compile(self, parameters: dict[str, Any]) -> Callable[..., Any]:
+        """Return the lambdified integrand for *parameters*, reusing the previous one if unchanged.
+
+        A metric used as a fitness function is called repeatedly with the same business parameters
+        and a different score vector, so in that loop this compiles exactly once. Published as one
+        tuple so a concurrent reader never pairs one call's key with another call's function.
+        """
+        try:
+            key = tuple(sorted((name, float(value)) for name, value in parameters.items()))
+        except (TypeError, ValueError):
+            # A non-scalar parameter cannot key the cache; compile without caching.
+            return _safe_lambdify(self.integrand.subs(parameters), self.arguments)
+        cached = self._compiled
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        function = _safe_lambdify(self.integrand.subs(parameters), self.arguments)
+        self._compiled = (key, function)
+        return function
+
+    def integrate_regions(
+        self,
+        bounds: Sequence[float],
+        true_positive_rates: Sequence[float],
+        false_positive_rates: Sequence[float],
+        parameters: dict[str, Any],
+    ) -> float:
+        """Sum the integral of the prepared integrand over every region."""
+        function = self._compile(parameters)
+        total = 0.0
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', IntegrationWarning)
+            warnings.simplefilter('ignore', RuntimeWarning)
+            for (lower, upper), tpr, fpr in zip(
+                pairwise(bounds), true_positive_rates, false_positive_rates, strict=True
+            ):
+                if lower == upper:
+                    continue
+                total += quad(lambda x, tpr=tpr, fpr=fpr: function(tpr, fpr, x), lower, upper)[0]
+        return total
+
+
+def _resolve_support(
+    random_var_bounds: tuple[float | sympy.Expr, ...],
+    distribution_parameters: dict[str, Any],
+    lower_bound: float | None,
+    upper_bound: float | None,
+) -> tuple[float, float]:
+    """Turn the distribution's symbolic support into a pair of floats, mapping ``oo`` to ``np.inf``."""
+    if upper_bound is None:
+        bound = random_var_bounds[1]
+        if isinstance(bound, sympy.Expr):
+            bound = bound.subs(distribution_parameters)
+            upper_bound = np.inf if bound == sympy.oo else float(bound)
+        else:
+            upper_bound = float(bound)
+    if lower_bound is None:
+        bound = random_var_bounds[0]
+        if isinstance(bound, sympy.Expr):
+            bound = bound.subs(distribution_parameters)
+            lower_bound = -np.inf if bound == -sympy.oo else float(bound)
+        else:
+            lower_bound = float(bound)
+    return float(lower_bound), float(upper_bound)
 
 
 def compute_piecewise_bounds(
-    compute_bounds_fns: Sequence[Callable[..., float]],
+    envelope: ProfitEnvelope,
+    true_positive_rates: FloatNDArray,
+    false_positive_rates: FloatNDArray,
+    random_var_bounds: tuple[float | sympy.Expr, ...],
+    distribution_parameters: dict[str, Any],
+    lower_bound: float | None = None,
+    upper_bound: float | None = None,
+) -> Partition:
+    """
+    Split the stochastic variable's support into the regions where each hull vertex is optimal.
+
+    Parameters
+    ----------
+    envelope : ProfitEnvelope
+        The candidate profit curves, one per ROC convex-hull vertex.
+    true_positive_rates : NDArray of shape (n_vertices,)
+        True positive rates of the ROC convex hull.
+    false_positive_rates : NDArray of shape (n_vertices,)
+        False positive rates of the ROC convex hull.
+    random_var_bounds : tuple
+        The distribution's support, possibly still symbolic.
+    distribution_parameters : dict
+        Values for any free symbols appearing in `random_var_bounds`.
+    lower_bound : float, optional
+        Precomputed lower end of the support, to skip the sympy substitution on a hot path.
+    upper_bound : float, optional
+        Precomputed upper end of the support, to skip the sympy substitution on a hot path.
+
+    Returns
+    -------
+    partition : Partition
+        Region edges together with the optimal hull vertex on each region.
+    """
+    lower, upper = _resolve_support(random_var_bounds, distribution_parameters, lower_bound, upper_bound)
+    return partition_support(envelope, true_positive_rates, false_positive_rates, lower, upper)
+
+
+def _extract_polynomial_coefficients(
+    profit_function: sympy.Expr, random_symbol: sympy.Symbol
+) -> tuple[list[sympy.Expr], list[Callable[..., Any]]]:
+    """
+    Decompose the profit into coefficients in ascending powers of the stochastic variable.
+
+    ``P(t, x) = sum_k a_k(F_0, F_1) x**k`` is what lets each term be integrated against a closed-form
+    partial moment, and what makes the analytic gradient factor into ``grad a_k`` times ``R_k``.
+
+    Parameters
+    ----------
+    profit_function : sympy.Expr
+        The profit function.
+    random_symbol : sympy.Symbol
+        The stochastic variable to collect powers of.
+
+    Returns
+    -------
+    coefficient_eqs : list of sympy.Expr
+        The coefficients ``a_0, ..., a_n``.
+    coefficient_fns : list of callable
+        The same coefficients, lambdified.
+    """
+    expanded_profit = sympy.expand(profit_function)
+    polynomial_degree = sympy.degree(expanded_profit, random_symbol)
+    collected = sympy.collect(expanded_profit, random_symbol, evaluate=False)
+
+    coefficient_eqs = [
+        # random_symbol**0 is 1, which is the key sympy uses for the constant term.
+        collected.get(random_symbol**k if k > 0 else 1, sympy.S.Zero)
+        for k in range(polynomial_degree + 1)
+    ]
+    return coefficient_eqs, [_safe_lambdify(eq) for eq in coefficient_eqs]
+
+
+def _evaluate_coefficient_matrix(
+    coefficient_eqs: Sequence[sympy.Expr],
+    coefficient_fns: Sequence[Callable[..., Any]],
     true_positive_rates: FloatNDArray,
     false_positive_rates: FloatNDArray,
     positive_class_prior: float,
     negative_class_prior: float,
-    random_var_bounds: tuple[float | sympy.Expr, ...],
-    distribution_parameters: dict[str, Any],
-    fix_inf: bool = True,
-    lower_bound: float | None = None,
-    upper_bound: float | None = None,
-    **kwargs: Any,
-) -> tuple[list[float], float, float, list[float], list[float]]:
-    """Compute the consecutive bounds of the stochastic variable for which the expected profit is equal."""
-    # 1. Prepare fully vectorized inputs
-    # F_0, F_1 are the "current" vertices. F_2, F_3 are the "next" vertices.
-    F_0 = true_positive_rates[:-1]  # noqa: N806
-    F_1 = false_positive_rates[:-1]  # noqa: N806
-    F_2 = true_positive_rates[1:]  # noqa: N806
-    F_3 = false_positive_rates[1:]  # noqa: N806
-
-    all_bounds = []
-    all_tprs = []
-    all_fprs = []
-
-    # Bound Computation
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=RuntimeWarning)
-        for compute_bound in compute_bounds_fns:
-            # We pass the full arrays in. NumPy executes this instantly.
-            b_arr = compute_bound(
-                F_0=F_0, F_1=F_1, F_2=F_2, F_3=F_3, pi_0=positive_class_prior, pi_1=negative_class_prior, **kwargs
-            )
-            # Guarantee 1D array even if b_arr returns a scalar for some reason
-            b_arr = np.atleast_1d(b_arr)
-            all_bounds.append(b_arr)
-            all_tprs.append(F_2)
-            all_fprs.append(F_3)
-
-    if all_bounds:
-        bounds_arr = np.concatenate(all_bounds)
-        tprs_arr = np.concatenate(all_tprs)
-        fprs_arr = np.concatenate(all_fprs)
-    else:
-        bounds_arr = np.array([], dtype=float)
-        tprs_arr = np.array([], dtype=float)
-        fprs_arr = np.array([], dtype=float)
-
-    # --- Complex-root guards ---
-    # Guard 1: lambdified I → numpy complex (e.g. 1j * ...).
-    if np.iscomplexobj(bounds_arr) and np.any(np.iscomplex(bounds_arr)):
-        raise ComplexRootsError(
-            'The piecewise integration found complex-valued bounds for the current parameter values, '
-            'indicating that the profit function polynomial has complex roots. '
-            "Use integration_method='quad' for MaxProfit() to avoid this issue."
+    parameters: dict[str, Any],
+) -> FloatNDArray:
+    """Evaluate every polynomial coefficient at every hull vertex, shape (n_vertices, degree + 1)."""
+    columns = []
+    for function, equation in zip(coefficient_fns, coefficient_eqs, strict=True):
+        value = _safe_run_lambda(
+            function,
+            equation,
+            pi_0=positive_class_prior,
+            pi_1=negative_class_prior,
+            F_0=true_positive_rates,
+            F_1=false_positive_rates,
+            **parameters,
         )
-    # Guard 2: sqrt(negative) → nan in numpy.
-    # NaN bounds on *non-degenerate* hull segments (where both TPR **and** FPR change between
-    # adjacent hull vertices) indicate that the bound equation has complex roots for those
-    # parameter values.  Degenerate segments (only TPR or only FPR changes) trivially reduce
-    # to 0 or ±∞ and are handled correctly.
-    # We flag the issue the first time ANY non-degenerate segment yields a NaN bound so the
-    # user gets a clear error rather than a silently-wrong result.
-    nondegenerate_mask = np.concatenate([((F_0 != F_2) & (F_1 != F_3)) for _ in compute_bounds_fns])
-    n_raw_bounds = len(bounds_arr)
-    valid_mask = ~np.isnan(bounds_arr)
-    if n_raw_bounds > 0 and nondegenerate_mask.any():
-        nan_on_nondegenerate = ~valid_mask & nondegenerate_mask
-        if nan_on_nondegenerate.any():
-            raise ComplexRootsError(
-                'Some piecewise integration bounds evaluated to NaN on non-degenerate ROC-hull '
-                'segments, indicating the profit function polynomial has complex roots for these '
-                'parameter values. '
-                "Use integration_method='quad' for MaxProfit() to avoid this issue."
+        # A coefficient that does not involve the rates evaluates to a scalar.
+        columns.append(np.broadcast_to(np.asarray(value, dtype=np.float64), true_positive_rates.shape))
+    return np.stack(columns, axis=-1)
+
+
+def _callable_envelope(
+    profit_eq: sympy.Expr,
+    profit_fn: Callable[..., Any],
+    random_name: str,
+    true_positive_rates: FloatNDArray,
+    false_positive_rates: FloatNDArray,
+    positive_class_prior: float,
+    negative_class_prior: float,
+    parameters: dict[str, Any],
+) -> CallableEnvelope:
+    """Wrap a profit function of any shape as the family of candidate curves over the hull."""
+    # Resolve which arguments the expression needs once: finding the region boundaries evaluates
+    # this for every hull pair over a whole sweep, so re-deriving it per call would dominate.
+    required = {str(symbol) for symbol in profit_eq.free_symbols}
+    static = {
+        name: value
+        for name, value in {'pi_0': positive_class_prior, 'pi_1': negative_class_prior, **parameters}.items()
+        if name in required
+    }
+    needs_tpr = 'F_0' in required
+    needs_fpr = 'F_1' in required
+    needs_random = random_name in required
+
+    def profit_at(tpr: FloatNDArray | float, fpr: FloatNDArray | float, x: FloatNDArray | float) -> Any:
+        arguments = dict(static)
+        if needs_tpr:
+            arguments['F_0'] = tpr
+        if needs_fpr:
+            arguments['F_1'] = fpr
+        if needs_random:
+            arguments[random_name] = x
+        return profit_fn(**arguments)
+
+    return CallableEnvelope(profit_at, true_positive_rates, false_positive_rates)
+
+
+class _PiecewiseBase:
+    """
+    Shared plumbing for the piecewise classes: the support, the parameters and the envelope.
+
+    Subclasses differ only in what they integrate over the regions, not in how the regions are
+    found, so the envelope construction lives here.
+    """
+
+    # None when the profit is not a polynomial in the stochastic variable, in which case the
+    # region boundaries are bracketed numerically through `profit_fn` instead.
+    poly_eqs: list[sympy.Expr] | None
+    poly_fns: list[Callable[..., Any]] | None
+    profit_fn: Callable[..., Any] | None
+
+    def _init_common(self, profit_function: sympy.Expr, random_symbol: sympy.Symbol) -> None:
+        self.random_symbol = random_symbol
+        self.random_var_bounds = pspace(random_symbol).domain.set.args
+        self.distribution_args = pspace(random_symbol).distribution.args
+
+        # Most supports are plain numbers, so resolving them symbolically on every call costs a
+        # sympy substitution for no gain. Resolve once here when nothing in them is symbolic.
+        if not any(isinstance(bound, sympy.Expr) and bound.free_symbols for bound in self.random_var_bounds):
+            self._static_support: tuple[float, float] | None = _resolve_support(self.random_var_bounds, {}, None, None)
+        else:
+            self._static_support = None
+        self._support_cache: tuple[tuple[tuple[str, float], ...], tuple[float, float]] | None = None
+
+        self.profit_eq = profit_function
+        if _is_polynomial_in(profit_function, random_symbol):
+            self.poly_eqs, self.poly_fns = _extract_polynomial_coefficients(profit_function, random_symbol)
+            self.profit_fn = None
+        else:
+            # The region boundaries have to be bracketed numerically rather than read off the
+            # coefficients, and each region integrated by quadrature rather than by moments.
+            self.poly_eqs = None
+            self.poly_fns = None
+            self.profit_fn = _safe_lambdify(profit_function)
+
+        if not any(arg.free_symbols for arg in self.distribution_args):
+            self.dist_params: list[sympy.Expr] = []
+        else:
+            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+
+    def _envelope(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        negative_class_prior: float,
+        parameters: dict[str, Any],
+    ) -> ProfitEnvelope:
+        """Build the candidate profit curves for this call's ROC hull and parameter values."""
+        if self.poly_eqs is not None and self.poly_fns is not None:
+            return PolynomialEnvelope(
+                _evaluate_coefficient_matrix(
+                    self.poly_eqs,
+                    self.poly_fns,
+                    true_positive_rates,
+                    false_positive_rates,
+                    positive_class_prior,
+                    negative_class_prior,
+                    parameters,
+                )
             )
-    bounds_arr = bounds_arr[valid_mask]
-    if n_raw_bounds > 0 and len(bounds_arr) == 0:
-        raise ComplexRootsError(
-            'All piecewise integration bounds evaluated to NaN for the current parameter values, '
-            'indicating the profit function polynomial has complex roots for this ROC hull. '
-            "Use integration_method='quad' for MaxProfit() to avoid this issue."
+        assert self.profit_fn is not None
+        return _callable_envelope(
+            self.profit_eq,
+            self.profit_fn,
+            str(self.random_symbol),
+            true_positive_rates,
+            false_positive_rates,
+            positive_class_prior,
+            negative_class_prior,
+            parameters,
         )
-    tprs_arr = tprs_arr[valid_mask]
-    fprs_arr = fprs_arr[valid_mask]
 
-    if fix_inf:
-        bounds_arr[bounds_arr == -np.inf] = np.inf
-    else:
-        bounds_arr[bounds_arr == np.inf] = -np.inf
+    def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Split the call's parameters into the distribution's own and everything else.
 
-    sort_idx = np.argsort(bounds_arr)
-    bounds_arr = bounds_arr[sort_idx]
-    tprs_arr = tprs_arr[sort_idx]
-    fprs_arr = fprs_arr[sort_idx]
+        When every distribution parameter is a hardcoded numeric literal there are no symbol names
+        to look up, so the values are taken straight from the distribution's arguments instead.
+        """
+        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+        if not distribution_parameters and not self.dist_params:
+            # Every parameter is a hardcoded literal, so there are no names to look up in kwargs.
+            # Only genuinely numeric arguments are taken: a hand-built density carries its own
+            # Lambda and support set here, and neither is a parameter to substitute.
+            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args if arg.is_number}
+        return distribution_parameters, kwargs
 
-    # Resolve Lower and Upper Bounds
-    if upper_bound is None:
-        upper_bound = random_var_bounds[1]
-        if isinstance(upper_bound, sympy.Expr):
-            upper_bound = upper_bound.subs(distribution_parameters)
-            upper_bound = np.inf if upper_bound == sympy.oo else float(upper_bound)
-        else:
-            upper_bound = float(upper_bound)
+    def _support(self, distribution_parameters: dict[str, Any]) -> tuple[float, float]:
+        """Resolve the support, reusing the previous answer when the parameters have not changed.
 
-    if lower_bound is None:
-        lower_bound = random_var_bounds[0]
-        if isinstance(lower_bound, sympy.Expr):
-            lower_bound = lower_bound.subs(distribution_parameters)
-            lower_bound = -np.inf if lower_bound == -sympy.oo else float(lower_bound)
-        else:
-            lower_bound = float(lower_bound)
-
-    bounds_arr = np.clip(bounds_arr, lower_bound, upper_bound)
-    bounds_list = bounds_arr.tolist()
-    tprs_list = tprs_arr.tolist()
-    fprs_list = fprs_arr.tolist()
-
-    bounds_list.append(upper_bound)
-    bounds_list.insert(0, lower_bound)
-
-    # Handle start values
-    if fix_inf:
-        if len(fprs_list) >= 2:
-            start_value = 0.0 if fprs_list[0] < fprs_list[1] else 1.0
-        else:
-            start_value = 0.0 if (len(fprs_list) > 0 and fprs_list[0] == 1.0) else 1.0
-        fprs_list.insert(0, start_value)
-        tprs_list.insert(0, start_value)
-    else:
-        if len(fprs_list) >= 2:
-            start_value = 0.0 if fprs_list[0] > fprs_list[1] else 1.0
-        else:
-            start_value = 0.0 if (len(fprs_list) > 0 and fprs_list[0] == 1.0) else 1.0
-        fprs_list.append(start_value)
-        tprs_list.append(start_value)
-
-    return bounds_list, upper_bound, lower_bound, tprs_list, fprs_list
+        Published as one tuple so a concurrent reader sees a key and a support that belong
+        together, never a key from one parameter set beside a support from another.
+        """
+        if self._static_support is not None:
+            return self._static_support
+        key = tuple(sorted((name, float(value)) for name, value in distribution_parameters.items()))
+        cached = self._support_cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        support = _resolve_support(self.random_var_bounds, distribution_parameters, None, None)
+        self._support_cache = (key, support)
+        return support
 
 
-class MaxProfitRatePiecewise:
+class MaxProfitRatePiecewise(_PiecewiseBase):
     """
     Compute the maximum profit rate for a single stochastic variable using piecewise integration.
 
-    For each convex hull segment, the bounds of the random variable are computed
-    in which that decision threshold is optimal.
-    For each segment, the profit is integrated over the bounds of the random variable.
+    The support is split into the regions where a single ROC convex-hull vertex maximises profit,
+    and the rate is integrated numerically over each one.
     """
 
     def __init__(
@@ -335,23 +519,9 @@ class MaxProfitRatePiecewise:
         deterministic_symbols: Iterable[sympy.Symbol],
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
-        self.random_symbol = random_symbol
-        self.derivative = (
-            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
-        )
-        profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        self.compute_bounds_eq = solve(profit_function - profit_prime, random_symbol)[0]
-        self.compute_bounds = _safe_lambdify(self.compute_bounds_eq, list(self.compute_bounds_eq.free_symbols))
-
-        self.random_var_bounds = pspace(random_symbol).domain.set.args
-        self.distribution_args = pspace(random_symbol).distribution.args
-
+        self._init_common(profit_function, random_symbol)
         self.integrand = rate_function * density(random_symbol).pdf(random_symbol)
-
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        self._prepared = _PreparedIntegrand(self.integrand, random_symbol)
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the optimal rate."""
@@ -361,42 +531,34 @@ class MaxProfitRatePiecewise:
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
-        # distribution parameters of the random variable
-        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 
-        fix_inf = not self.derivative.subs(kwargs).is_negative
-
-        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
-            [self.compute_bounds],
+        partition = compute_piecewise_bounds(
+            self._envelope(
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+            ),
             true_positive_rates,
             false_positive_rates,
-            positive_class_prior,
-            negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
-            fix_inf=fix_inf,
-            **kwargs,
+            *self._support(distribution_parameters),
         )
 
-        integrand_ = (
-            self.integrand
-            .subs(distribution_parameters)
-            .subs('pi_0', positive_class_prior)
-            .subs('pi_1', negative_class_prior)
+        return self._prepared.integrate_regions(
+            partition.bounds,
+            partition.tprs,
+            partition.fprs,
+            {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
         )
-        score = 0.0
-        for (lb, ub), tpr, fpr in zip(pairwise(bounds), tprs, fprs, strict=True):
-            score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
-        return score
 
 
-class ExactMaxProfitRatePiecewise:
+class ExactMaxProfitRatePiecewise(_PiecewiseBase):
     """
-    Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
+    Compute the optimal rate exactly for a single stochastic variable using piecewise integration.
 
-    For each convex hull segment, the bounds of the random variable are computed
-    in which that decision threshold is optimal.
-    For each segment, the profit is integrated over the bounds of the random variable.
+    The rate itself does not depend on the stochastic variable -- only on which vertex is optimal --
+    so the expected rate is the rate on each region weighted by the probability of that region. That
+    is a difference of the distribution's own CDF, whatever the shape of the profit function.
     """
 
     def __init__(
@@ -411,31 +573,10 @@ class ExactMaxProfitRatePiecewise:
         self.cdf_function = cdf_function
         self.sympy_to_scipy_params_fn = sympy_to_scipy_params_fn
         self.deterministic_symbols = deterministic_symbols
-        self.random_symbol = random_symbol
-        self.derivative = (
-            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
-        )
-
-        profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        self.compute_bounds_eqs = []
-        self.compute_bounds_fns = []
-        for root in solve(profit_function - profit_prime, random_symbol):
-            # if not root.has(sympy.I):
-            self.compute_bounds_eqs.append(root)
-            self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
-        if not self.compute_bounds_eqs:
-            raise ValueError('No real roots found for the equation. Please check the profit function.')
-
-        self.random_var_bounds = pspace(random_symbol).domain.set.args
-        self.distribution_args = pspace(random_symbol).distribution.args
+        self._init_common(profit_function, random_symbol)
 
         self.rate_eq = rate_function
         self.rate_fn = _safe_lambdify(self.rate_eq)
-
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit rate."""
@@ -445,45 +586,31 @@ class ExactMaxProfitRatePiecewise:
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
-        # Distribution parameters of the random variable
-        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 
-        # When all distribution parameters are hardcoded numeric literals (no free symbols),
-        # extract_distribution_parameters returns an empty dict because the args have no
-        # symbol names to look up in kwargs. Populate from the literal values so that
-        # _integrate (and compute_piecewise_bounds) can still access them. Mirrors the same
-        # fix in BaseMaxProfitScorePiecewise.__call__ above.
-        if not distribution_parameters and not self.dist_params:
-            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args}
-
-        fix_inf = not self.derivative.subs(kwargs).is_negative
-
-        # We capture upper and lower bounds as the Uniform distribution needs them
-        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
-            self.compute_bounds_fns,
+        partition = compute_piecewise_bounds(
+            self._envelope(
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+            ),
             true_positive_rates,
             false_positive_rates,
-            positive_class_prior,
-            negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
-            fix_inf=fix_inf,
-            **kwargs,
+            *self._support(distribution_parameters),
         )
-        bounds = [float(bound) for bound in bounds]
 
         rate = _safe_run_lambda(
             self.rate_fn,
             self.rate_eq,
             pi_0=positive_class_prior,
             pi_1=negative_class_prior,
-            F_0=np.array(tprs),
-            F_1=np.array(fprs),
+            F_0=np.array(partition.tprs),
+            F_1=np.array(partition.fprs),
             **kwargs,
         )
 
         return self._integrate(
-            bounds=bounds,
+            bounds=[float(bound) for bound in partition.bounds],
             rate=rate,
             distribution_parameters=distribution_parameters,
         )
@@ -502,43 +629,24 @@ class ExactMaxProfitRatePiecewise:
         return float(optimal_rate)
 
 
-class MaxProfitScorePiecewise:
+class MaxProfitScorePiecewise(_PiecewiseBase):
     """
     Compute the maximum profit for a single stochastic variable using piecewise integration.
 
-    For each convex hull segment, the bounds of the random variable are computed
-    in which that decision threshold is optimal.
-    For each segment, the profit is integrated over the bounds of the random variable.
+    The support is split into the regions where a single ROC convex-hull vertex maximises profit,
+    and the profit is integrated numerically over each one. Used when the distribution has no
+    closed-form partial moments, or when the profit function is not a polynomial in the stochastic
+    variable. Splitting first matters: ``max_t P(t, x)`` is non-smooth at every region boundary,
+    which is exactly what makes a single global quadrature slow and inaccurate.
     """
 
     def __init__(
         self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
-        self.random_symbol = random_symbol
-        self.derivative = (
-            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
-        )
-        profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-        root = solve(profit_function - profit_prime, random_symbol)[0]
-        if root.has(sympy.I):
-            raise ComplexRootsError(
-                'The piecewise integration method requires real-valued roots, but the bound equation '
-                'for this profit function has complex roots. '
-                "Use integration_method='quad' for MaxProfit() to avoid this issue."
-            )
-        self.compute_bounds_eq = root
-        self.compute_bounds = _safe_lambdify(self.compute_bounds_eq, list(self.compute_bounds_eq.free_symbols))
-
-        self.random_var_bounds = pspace(random_symbol).domain.set.args
-        self.distribution_args = pspace(random_symbol).distribution.args
-
+        self._init_common(profit_function, random_symbol)
         self.integrand = profit_function * density(random_symbol).pdf(random_symbol)
-
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        self._prepared = _PreparedIntegrand(self.integrand, random_symbol)
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -548,96 +656,51 @@ class MaxProfitScorePiecewise:
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
-        # distribution parameters of the random variable
-        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 
-        fix_inf = not self.derivative.subs(kwargs).is_negative
-
-        bounds, _, _, tprs, fprs = compute_piecewise_bounds(
-            [self.compute_bounds],
+        partition = compute_piecewise_bounds(
+            self._envelope(
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+            ),
             true_positive_rates,
             false_positive_rates,
-            positive_class_prior,
-            negative_class_prior,
             self.random_var_bounds,
             distribution_parameters,
-            fix_inf=fix_inf,
-            **kwargs,
+            *self._support(distribution_parameters),
         )
 
-        integrand_ = (
-            self.integrand
-            .subs(kwargs)
-            .subs(distribution_parameters)
-            .subs('pi_0', positive_class_prior)
-            .subs('pi_1', negative_class_prior)
+        return self._prepared.integrate_regions(
+            partition.bounds,
+            partition.tprs,
+            partition.fprs,
+            {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
         )
-        score = 0.0
-        for (lb, ub), tpr, fpr in zip(pairwise(bounds), tprs, fprs, strict=False):
-            score += compute_integral_quad(integrand_, lb, ub, tpr, fpr, self.random_symbol)
-        return score
 
 
-class BaseMaxProfitScorePiecewise:
+class BaseMaxProfitScorePiecewise(_PiecewiseBase):
     """
     Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
 
-    For each convex hull segment, the bounds of the random variable are computed
-    in which that decision threshold is optimal.
-    For each segment, the profit is integrated over the bounds of the random variable.
+    The support is split into the regions where a single ROC convex-hull vertex maximises profit.
+    On each region the profit is a polynomial in the stochastic variable, so every term integrates
+    to a coefficient times a closed-form partial moment that the subclass supplies.
     """
 
     def __init__(
         self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
-        self.random_symbol = random_symbol
-
-        self.derivative = (
-            sympy.diff(profit_function, random_symbol).subs('F_0', 1).subs('F_1', 1).subs('pi_0', 1).subs('pi_1', 1)
-        )
-        profit_prime = profit_function.subs('F_0', 'F_2').subs('F_1', 'F_3')
-
-        self.compute_bounds_eqs = []
-        self.compute_bounds_fns = []
-        complex_roots = []
-        for root in solve(profit_function - profit_prime, random_symbol):
-            if root.has(sympy.I):
-                complex_roots.append(root)
-            else:
-                self.compute_bounds_eqs.append(root)
-                self.compute_bounds_fns.append(_safe_lambdify(root, list(root.free_symbols)))
-        if complex_roots and not self.compute_bounds_eqs:
-            raise ComplexRootsError(
-                'The piecewise integration method requires real-valued roots, but all roots of the '
-                'bound equation for this profit function are complex. '
-                "Use integration_method='quad' for MaxProfit() to avoid this issue."
+        self._init_common(profit_function, random_symbol)
+        if self.poly_eqs is None or self.poly_fns is None:
+            raise ValueError(
+                'The exact piecewise integration method requires a profit function that is a '
+                f'polynomial in {random_symbol}. Use a MaxProfit() integration method other than '
+                "'auto', or build the metric with a polynomial profit function."
             )
-        if not self.compute_bounds_eqs:
-            raise ValueError('No real roots found for the equation. Please check the profit function.')
-
-        self.random_var_bounds = pspace(random_symbol).domain.set.args
-        self.distribution_args = pspace(random_symbol).distribution.args
-
-        # Dynamically extract polynomial coefficients [a_0, a_1, ..., a_n]
-        expanded_profit = sympy.expand(profit_function)
-        polynomial_degree = sympy.degree(expanded_profit, random_symbol)
-        collected = sympy.collect(expanded_profit, random_symbol, evaluate=False)
-
-        self.coefficient_eqs = []
-        self.coefficient_fns = []
-
-        for k in range(polynomial_degree + 1):
-            # Extract the term for random_symbol**k. (Note: random_symbol**0 is 1)
-            term_key = random_symbol**k if k > 0 else 1
-            eq = collected.get(term_key, sympy.S.Zero)
-            self.coefficient_eqs.append(eq)
-            self.coefficient_fns.append(_safe_lambdify(eq))
-
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        # Republished without the Optional: reaching here proves the decomposition exists, and the
+        # gradient objectives differentiate these directly.
+        self.coefficient_eqs: list[sympy.Expr] = self.poly_eqs
+        self.coefficient_fns: list[Callable[..., Any]] = self.poly_fns
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
@@ -647,55 +710,35 @@ class BaseMaxProfitScorePiecewise:
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
-        # Distribution parameters of the random variable
-        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
+        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 
-        # When all distribution parameters are hardcoded numeric literals (no free symbols),
-        # extract_distribution_parameters returns an empty dict because the args have no
-        # symbol names to look up in kwargs. Populate from the literal values so that
-        # _integrate (and compute_piecewise_bounds) can still access them.
-        if not distribution_parameters and not self.dist_params:
-            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args}
-
-        fix_inf = not self.derivative.subs(kwargs).is_negative
-
-        bounds, upper_bound, lower_bound, tprs, fprs = compute_piecewise_bounds(
-            # bounds, upper_bound, lower_bound = compute_piecewise_bounds(
-            self.compute_bounds_fns,
-            # self.compute_bounds_fns[0],
+        # The coefficients are needed at every hull vertex to build the envelope, and the regions
+        # then select which vertex's coefficients apply where.
+        coefficient_matrix = _evaluate_coefficient_matrix(
+            self.coefficient_eqs,
+            self.coefficient_fns,
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
             negative_class_prior,
+            kwargs,
+        )
+        partition = compute_piecewise_bounds(
+            PolynomialEnvelope(coefficient_matrix),
+            true_positive_rates,
+            false_positive_rates,
             self.random_var_bounds,
             distribution_parameters,
-            fix_inf=fix_inf,
-            **kwargs,
+            *self._support(distribution_parameters),
         )
-        bounds = [float(bound) for bound in bounds]
-
-        # Evaluate all polynomial coefficients dynamically
-        evaluated_coefficients = [
-            _safe_run_lambda(
-                fn,
-                eq,
-                pi_0=positive_class_prior,
-                pi_1=negative_class_prior,
-                F_0=np.array(tprs),
-                F_1=np.array(fprs),
-                # F_0=true_positive_rates,
-                # F_1=false_positive_rates,
-                **kwargs,
-            )
-            for fn, eq in zip(self.coefficient_fns, self.coefficient_eqs, strict=True)
-        ]
+        segment_coefficients = list(coefficient_matrix[partition.vertex_indices].T)
 
         return self._integrate(
-            bounds=bounds,
-            coefficients=evaluated_coefficients,
+            bounds=[float(bound) for bound in partition.bounds],
+            coefficients=segment_coefficients,
             distribution_parameters=distribution_parameters,
-            upper_bound=upper_bound,
-            lower_bound=lower_bound,
+            upper_bound=partition.upper_bound,
+            lower_bound=partition.lower_bound,
         )
 
     def _integrate(

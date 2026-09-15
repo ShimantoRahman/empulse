@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, Literal, Protocol, Self, cast
 
@@ -21,7 +20,6 @@ from .gradient_piecewise import MaxProfitBoostGradientPiecewise, MaxProfitLogitG
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import (
     BasePositiveDistribution,
-    ComplexRootsError,
     _build_max_profit_rate_piecewise,
     _build_max_profit_score_piecewise,
 )
@@ -698,29 +696,6 @@ def _support_all_distributions(random_symbols: Iterable[sympy.Symbol]) -> bool:
     return all(pspace(r).distribution.__class__ in _sympy_dist_to_scipy for r in random_symbols)
 
 
-def is_linear_in(expr: sympy.Expr, x: sympy.Symbol) -> bool:
-    """Test whether the expression is linear in `x`."""
-    expr = sympy.collect(sympy.factor(expr, x), x)
-    try:
-        poly = sympy.Poly(expr, x)
-    except sympy.polys.polyerrors.PolynomialError:
-        return False
-    return poly.degree() <= 1  # type: ignore[no-any-return]
-
-
-def is_polynomial_in(expr: sympy.Expr, x: sympy.Symbol) -> bool:
-    """Test whether the expression is a valid polynomial in `x`."""
-    # Expanding is generally safer than factoring for polynomial construction
-    expr = sympy.collect(sympy.expand(expr), x)
-    try:
-        # If SymPy can construct a Poly, it contains only non-negative integer powers of x
-        sympy.Poly(expr, x)
-    except sympy.polys.polyerrors.PolynomialError:
-        return False
-
-    return True
-
-
 def _build_max_profit_stochastic(
     profit_function: sympy.Expr,
     rate_function: sympy.Expr | None,
@@ -734,48 +709,43 @@ def _build_max_profit_stochastic(
     Compute the maximum profit for one or more stochastic variables.
 
     Builds a score function when *rate_function* is ``None``, or an optimal-rate function
-    otherwise. Every integration backend is shared between the two modes except the
-    single-stochastic-variable piecewise path: the score path handles a (possibly non-linear)
-    polynomial profit function with a quadrature fallback on complex roots, while the rate path
-    requires the profit function to be linear in the stochastic variable.
+    otherwise. Every integration backend is shared between the two modes.
+
+    With a single stochastic variable the piecewise path is always preferred, whatever the shape of
+    the profit function: splitting the support at the points where the optimal operating point
+    changes is worth doing even when each region then has to be integrated numerically, because
+    ``max_t P(t, x)`` is non-smooth exactly at those points. A profit function that is polynomial in
+    the stochastic variable additionally gets closed-form partial moments, when its distribution is
+    one of the supported ones.
     """
     n_random = len(random_symbols)
     if integration_method == 'auto' and n_random == 1:
-        if rate_function is None and is_polynomial_in(profit_function, random_symbols[0]):
-            try:
-                return cast(
-                    '_ScoreFunction',
-                    _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols),
-                )
-            except ComplexRootsError:
-                warnings.warn(
-                    'The profit function polynomial has complex roots for the stochastic variable, '
-                    'making piecewise integration inapplicable. '
-                    'Falling back to numerical quadrature. To suppress this warning, pass '
-                    "integration_method='quad' explicitly to MaxProfit().",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                return MaxProfitScoreQuad(profit_function, None, random_symbols, deterministic_symbols)
-        if rate_function is not None and is_linear_in(profit_function, random_symbols[0]):
+        if rate_function is None:
             return cast(
                 '_ScoreFunction',
-                _build_max_profit_rate_piecewise(
-                    profit_function, rate_function, random_symbols[0], deterministic_symbols
-                ),
+                _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols),
             )
+        return cast(
+            '_ScoreFunction',
+            _build_max_profit_rate_piecewise(profit_function, rate_function, random_symbols[0], deterministic_symbols),
+        )
 
     if integration_method == 'auto':
-        if n_random <= 2:
-            return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
-        elif _support_all_distributions(random_symbols):
+        if _support_all_distributions(random_symbols):
+            # Preferred at any number of variables, not only above two. Nested quadrature has to
+            # resolve the kink that `max` puts in the integrand along every region boundary, and it
+            # subdivides hard to do so: two variables already cost ~19k evaluations and three cost
+            # ~650k, against a fixed sampling budget here for the same accuracy to ~1e-6.
             return MaxProfitScoreQuasiMonteCarlo(
                 profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
             )
-        else:
-            return MaxProfitScoreMonteCarlo(
-                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
-            )
+        if n_random <= 2:
+            # No quantile function to sample from, but few enough variables for quadrature to
+            # stay tractable, and it is more accurate than plain Monte Carlo.
+            return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
+        return MaxProfitScoreMonteCarlo(
+            profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
+        )
     elif integration_method == 'quad':
         return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
     elif integration_method == 'monte-carlo':

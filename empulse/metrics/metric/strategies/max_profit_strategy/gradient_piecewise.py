@@ -13,6 +13,7 @@ from .common import (
     _smooth_step_derivatives,
     extract_distribution_parameters,
 )
+from .envelope import Partition, PolynomialEnvelope
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
 # Type alias for the hull state tuple cached between gradient steps.
@@ -61,6 +62,10 @@ class _PiecewiseDerivativeState:
     boosting piecewise objectives.
     """
 
+    # Set by the concrete objectives before `_init_piecewise_state` runs.
+    pi0: float
+    pi1: float
+
     def _init_piecewise_state(
         self, score_function: BasePositiveDistribution, parameters: dict[str, FloatNDArray | float]
     ) -> None:
@@ -69,7 +74,6 @@ class _PiecewiseDerivativeState:
         self.dist_params, self.kwargs = extract_distribution_parameters(
             parameters, self.score_function.distribution_args
         )
-        self.fix_inf = not self.score_function.derivative.subs(self.kwargs).is_negative
 
         # Precalculate the exact float bounds of the distribution to avoid sympy overhead in loop
         lower_b = self.score_function.random_var_bounds[0]
@@ -105,6 +109,40 @@ class _PiecewiseDerivativeState:
         for k in range(len(self.score_function.coefficient_eqs)):
             self.da0_reqs.append(_parse_lambdify_reqs(self.da_dF0_eqs[k], self.kwargs))
             self.da1_reqs.append(_parse_lambdify_reqs(self.da_dF1_eqs[k], self.kwargs))
+
+        self.a_reqs = [_parse_lambdify_reqs(eq, self.kwargs) for eq in self.score_function.coefficient_eqs]
+
+    def _partition(self, tprs: FloatNDArray, fprs: FloatNDArray) -> Partition:
+        """
+        Split the support into the regions where each hull vertex maximises profit.
+
+        The coefficients are evaluated at every hull vertex rather than at a precomputed set of
+        segments, because which vertex owns which region is what the partition decides.
+        """
+        coefficients = np.stack(
+            [
+                np.broadcast_to(
+                    np.asarray(
+                        self.score_function.coefficient_fns[k](
+                            **_build_lambdify_args(self.a_reqs[k], self.pi0, self.pi1, tprs, fprs)
+                        ),
+                        dtype=np.float64,
+                    ),
+                    tprs.shape,
+                )
+                for k in range(len(self.a_reqs))
+            ],
+            axis=-1,
+        )
+        return compute_piecewise_bounds(
+            PolynomialEnvelope(coefficients),
+            tprs,
+            fprs,
+            self.score_function.random_var_bounds,
+            self.dist_params,
+            lower_bound=self.lower_bound,
+            upper_bound=self.upper_bound,
+        )
 
 
 class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDerivativeState):
@@ -147,7 +185,6 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
             alpha=alpha,
         )
         self._init_piecewise_state(score_function, parameters)
-        self.a_reqs = [_parse_lambdify_reqs(eq, self.kwargs) for eq in self.score_function.coefficient_eqs]
 
     def _compute_hull_state(self, y_score: FloatNDArray) -> _HullCache:
         """Build the ROC convex hull and derive piecewise segment arrays.
@@ -161,22 +198,10 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
             Number of piecewise segments.
         """
         tprs, fprs = _convex_hull(self.y_true, y_score)
-        bounds, _, _, segment_tprs, segment_fprs = compute_piecewise_bounds(
-            self.score_function.compute_bounds_fns,
-            tprs,
-            fprs,
-            self.pi0,
-            self.pi1,
-            self.score_function.random_var_bounds,
-            self.dist_params,
-            fix_inf=self.fix_inf,
-            upper_bound=self.upper_bound,
-            lower_bound=self.lower_bound,
-            **self.kwargs,
-        )
-        bounds = np.asarray(bounds, dtype=np.float64)
-        seg_tprs = np.asarray(segment_tprs, dtype=np.float64)
-        seg_fprs = np.asarray(segment_fprs, dtype=np.float64)
+        partition = self._partition(tprs, fprs)
+        bounds = np.asarray(partition.bounds, dtype=np.float64)
+        seg_tprs = np.asarray(partition.tprs, dtype=np.float64)
+        seg_fprs = np.asarray(partition.fprs, dtype=np.float64)
         M = len(seg_tprs)  # noqa: N806
         return bounds, seg_tprs, seg_fprs, M
 
@@ -444,23 +469,11 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         y_score_arr = expit(np.asarray(y_score, dtype=np.float64).reshape(-1))
 
         tprs, fprs = _convex_hull(self.y_true, y_score_arr)
-        bounds, _, _, segment_tprs, segment_fprs = compute_piecewise_bounds(
-            self.score_function.compute_bounds_fns,
-            tprs,
-            fprs,
-            self.pi0,
-            self.pi1,
-            self.score_function.random_var_bounds,
-            self.dist_params,
-            lower_bound=self.lower_bound,
-            upper_bound=self.upper_bound,
-            fix_inf=self.fix_inf,
-            **self.kwargs,
-        )
+        partition = self._partition(tprs, fprs)
 
-        bounds = np.asarray(bounds, dtype=np.float64)
-        segment_tprs_arr = np.asarray(segment_tprs, dtype=np.float64)
-        segment_fprs_arr = np.asarray(segment_fprs, dtype=np.float64)
+        bounds = np.asarray(partition.bounds, dtype=np.float64)
+        segment_tprs_arr = np.asarray(partition.tprs, dtype=np.float64)
+        segment_fprs_arr = np.asarray(partition.fprs, dtype=np.float64)
         M = len(segment_tprs_arr)  # noqa: N806
 
         # Vectorized Thresholds

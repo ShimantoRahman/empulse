@@ -46,6 +46,17 @@ _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.TriangularDistribution: scipy.stats.triang,
     sympy.stats.crv_types.UniformDistribution: scipy.stats.uniform,
     sympy.stats.crv_types.GaussianInverseDistribution: scipy.stats.invgauss,
+    sympy.stats.crv_types.BoundedParetoDistribution: scipy.stats.truncpareto,
+    sympy.stats.crv_types.DagumDistribution: scipy.stats.mielke,
+    sympy.stats.crv_types.ExponentialPowerDistribution: scipy.stats.gennorm,
+    sympy.stats.crv_types.FrechetDistribution: scipy.stats.invweibull,
+    sympy.stats.crv_types.GompertzDistribution: scipy.stats.gompertz,
+    sympy.stats.crv_types.LogLogisticDistribution: scipy.stats.fisk,
+    sympy.stats.crv_types.RaisedCosineDistribution: scipy.stats.cosine,
+    sympy.stats.crv_types.RayleighDistribution: scipy.stats.rayleigh,
+    sympy.stats.crv_types.ReciprocalDistribution: scipy.stats.loguniform,
+    sympy.stats.crv_types.WeibullDistribution: scipy.stats.weibull_min,
+    sympy.stats.crv_types.WignerSemicircleDistribution: scipy.stats.semicircular,
 }
 
 _sympy_dist_to_scipy_params: dict[
@@ -75,6 +86,25 @@ _sympy_dist_to_scipy_params: dict[
         'scale': std,
         'K': 1 / (std * rate),
     },
+    sympy.stats.crv_types.BoundedParetoDistribution: lambda alpha, left, right: {
+        'b': alpha,
+        'c': right / left,
+        'scale': left,
+    },
+    sympy.stats.crv_types.DagumDistribution: lambda p, a, b: {'k': a * p, 's': a, 'scale': b},
+    sympy.stats.crv_types.ExponentialPowerDistribution: lambda mu, alpha, beta: {
+        'beta': beta,
+        'loc': mu,
+        'scale': alpha,
+    },
+    sympy.stats.crv_types.FrechetDistribution: lambda a, s, m: {'c': a, 'loc': m, 'scale': s},
+    sympy.stats.crv_types.GompertzDistribution: lambda b, eta: {'c': eta, 'scale': 1 / b},
+    sympy.stats.crv_types.LogLogisticDistribution: lambda alpha, beta: {'c': beta, 'scale': alpha},
+    sympy.stats.crv_types.RaisedCosineDistribution: lambda mu, s: {'loc': mu, 'scale': s / np.pi},
+    sympy.stats.crv_types.RayleighDistribution: lambda sigma: {'loc': 0, 'scale': sigma},
+    sympy.stats.crv_types.ReciprocalDistribution: lambda a, b: {'a': a, 'b': b},
+    sympy.stats.crv_types.WeibullDistribution: lambda alpha, beta: {'c': beta, 'scale': alpha},
+    sympy.stats.crv_types.WignerSemicircleDistribution: lambda radius: {'loc': 0, 'scale': radius},
 }
 
 
