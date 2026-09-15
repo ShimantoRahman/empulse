@@ -39,7 +39,7 @@ def _build_lambdify_args(
     seg_fprs: FloatNDArray,
 ) -> dict[str, Any]:
     """Assemble the kwargs a lambdified expression needs, given its requirements from `_parse_lambdify_reqs`."""
-    static_kw, n_p0, n_p1, n_F0, n_F1 = reqs  # noqa: N806
+    static_kw, n_p0, n_p1, n_F0, n_F1 = reqs  # ruff: ignore[non-lowercase-variable-in-function]
     args = static_kw.copy()
     if n_p0:
         args['pi_0'] = pi0
@@ -90,15 +90,15 @@ class _PiecewiseDerivativeState:
         else:
             self.upper_bound = float(upper_b)
 
-        F_0, F_1 = sympy.symbols('F_0 F_1')  # noqa: N806
+        F_0, F_1 = sympy.symbols('F_0 F_1')  # ruff: ignore[non-lowercase-variable-in-function]
         self.da_dF0_eqs = []
         self.da_dF1_eqs = []
         self.da_dF0_fns = []
         self.da_dF1_fns = []
 
         for eq in self.score_function.coefficient_eqs:
-            da_dF0 = sympy.diff(eq, F_0)  # noqa: N806
-            da_dF1 = sympy.diff(eq, F_1)  # noqa: N806
+            da_dF0 = sympy.diff(eq, F_0)  # ruff: ignore[non-lowercase-variable-in-function]
+            da_dF1 = sympy.diff(eq, F_1)  # ruff: ignore[non-lowercase-variable-in-function]
             self.da_dF0_eqs.append(da_dF0)
             self.da_dF1_eqs.append(da_dF1)
             self.da_dF0_fns.append(_safe_lambdify(da_dF0))
@@ -170,9 +170,9 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         alpha: float,
+        objective_scale: float = 1.0,
         parameters: dict[str, FloatNDArray | float],
     ) -> None:
         super().__init__(
@@ -180,9 +180,9 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
             y_true=y_true,
             C=C,
             l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
             fit_intercept=fit_intercept,
             alpha=alpha,
+            objective_scale=objective_scale,
         )
         self._init_piecewise_state(score_function, parameters)
 
@@ -202,7 +202,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         bounds = np.asarray(partition.bounds, dtype=np.float64)
         seg_tprs = np.asarray(partition.tprs, dtype=np.float64)
         seg_fprs = np.asarray(partition.fprs, dtype=np.float64)
-        M = len(seg_tprs)  # noqa: N806
+        M = len(seg_tprs)  # ruff: ignore[non-lowercase-variable-in-function]
         return bounds, seg_tprs, seg_fprs, M
 
     def _compute_thresholds(
@@ -220,19 +220,19 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         bounds: FloatNDArray,
         seg_tprs: FloatNDArray,
         seg_fprs: FloatNDArray,
-        M: int,  # noqa: N803
+        M: int,  # ruff: ignore[invalid-argument-name]
     ) -> float:
         """Sum the piecewise EMP objective value across all segments and polynomial terms."""
         total_value = 0.0
         for k in range(len(self.score_function.coefficient_eqs)):
             k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
+            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
             if not np.any(R_kM):
                 continue
 
             args_a = _build_lambdify_args(self.a_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
             a_k_raw = self.score_function.coefficient_fns[k](**args_a)
-            a_k_M = np.broadcast_to(np.asarray(a_k_raw, dtype=np.float64), (M,))  # noqa: N806
+            a_k_M = np.broadcast_to(np.asarray(a_k_raw, dtype=np.float64), (M,))  # ruff: ignore[non-lowercase-variable-in-function]
             total_value += float(np.sum(a_k_M * R_kM))
         return total_value
 
@@ -240,11 +240,11 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         self,
         w: FloatNDArray,
         y_score: FloatNDArray,
-        T_M: FloatNDArray,  # noqa: N803
+        T_M: FloatNDArray,  # ruff: ignore[invalid-argument-name]
         bounds: FloatNDArray,
         seg_tprs: FloatNDArray,
         seg_fprs: FloatNDArray,
-        M: int,  # noqa: N803
+        M: int,  # ruff: ignore[invalid-argument-name]
         alpha: float,
     ) -> Float64Array:
         """Compute the raw (un-negated, un-regularized) gradient vector."""
@@ -257,26 +257,26 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         _, dsig_neg = _smooth_step_derivatives(np.subtract.outer(s_neg, T_M), alpha, order=1)
 
         # (M, F) feature-gradient matrices for the two ROC axes
-        grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # noqa: N806
-        grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # noqa: N806
+        grad_F0_M = (alpha / self.n_pos) * ((dsig_pos * sd_pos[:, None]).T @ self.X_pos)  # ruff: ignore[non-lowercase-variable-in-function]
+        grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # ruff: ignore[non-lowercase-variable-in-function]
 
         total_gradient: Float64Array = np.zeros(w.shape, dtype=np.float64)
         for k in range(len(self.score_function.coefficient_eqs)):
             k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
+            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
             if not np.any(R_kM):
                 continue
 
             # da/dF_0
             args_da0 = _build_lambdify_args(self.da0_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
-            da_dF0_M = np.broadcast_to(np.asarray(self.da_dF0_fns[k](**args_da0), dtype=np.float64), (M,))  # noqa: N806
+            da_dF0_M = np.broadcast_to(np.asarray(self.da_dF0_fns[k](**args_da0), dtype=np.float64), (M,))  # ruff: ignore[non-lowercase-variable-in-function]
 
             # da/dF_1
             args_da1 = _build_lambdify_args(self.da1_reqs[k], self.pi0, self.pi1, seg_tprs, seg_fprs)
-            da_dF1_M = np.broadcast_to(np.asarray(self.da_dF1_fns[k](**args_da1), dtype=np.float64), (M,))  # noqa: N806
+            da_dF1_M = np.broadcast_to(np.asarray(self.da_dF1_fns[k](**args_da1), dtype=np.float64), (M,))  # ruff: ignore[non-lowercase-variable-in-function]
 
-            weight_F0 = R_kM * da_dF0_M  # noqa: N806
-            weight_F1 = R_kM * da_dF1_M  # noqa: N806
+            weight_F0 = R_kM * da_dF0_M  # ruff: ignore[non-lowercase-variable-in-function]
+            weight_F1 = R_kM * da_dF1_M  # ruff: ignore[non-lowercase-variable-in-function]
             total_gradient += (weight_F0 @ grad_F0_M) + (weight_F1 @ grad_F1_M)
 
         return total_gradient
@@ -297,7 +297,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         float
             Negated EMP loss (suitable for minimization).
         """
-        w = self._apply_soft_threshold(weights)
+        w = np.asarray(weights, dtype=np.float64)
         y_score = self._compute_y_score(w)
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
 
@@ -321,12 +321,12 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         ndarray
             Gradient vector matched in shape to *weights*.
         """
-        w = self._apply_soft_threshold(weights)
+        w = np.asarray(weights, dtype=np.float64)
         alpha = self.alpha
 
         y_score = self._compute_y_score(w)
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
-        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
+        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # ruff: ignore[non-lowercase-variable-in-function]
 
         grad = -self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
         start_coef = self._start_coef
@@ -385,7 +385,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
             else:
                 weights = sent
 
-            w = self._apply_soft_threshold(weights)
+            w = np.asarray(weights, dtype=np.float64)
             alpha = self.alpha
 
             y_score = self._compute_y_score(w)
@@ -420,12 +420,12 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         gradient : ndarray
             Gradient vector matched in shape to *weights*.
         """
-        w = self._apply_soft_threshold(weights)
+        w = np.asarray(weights, dtype=np.float64)
         alpha = self.alpha
 
         y_score = self._compute_y_score(w)
         bounds, seg_tprs, seg_fprs, m = self._compute_hull_state(y_score)
-        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # noqa: N806
+        T_M = self._compute_thresholds(y_score, seg_tprs, seg_fprs)  # ruff: ignore[non-lowercase-variable-in-function]
 
         total_value = self._accumulate_value(bounds, seg_tprs, seg_fprs, m)
         total_gradient = self._accumulate_gradient(w, y_score, T_M, bounds, seg_tprs, seg_fprs, m, alpha)
@@ -474,11 +474,11 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         bounds = np.asarray(partition.bounds, dtype=np.float64)
         segment_tprs_arr = np.asarray(partition.tprs, dtype=np.float64)
         segment_fprs_arr = np.asarray(partition.fprs, dtype=np.float64)
-        M = len(segment_tprs_arr)  # noqa: N806
+        M = len(segment_tprs_arr)  # ruff: ignore[non-lowercase-variable-in-function]
 
         # Vectorized Thresholds
         rates = np.clip(segment_tprs_arr * self.pi0 + segment_fprs_arr * self.pi1, 0.0, 1.0)
-        T_M = np.quantile(y_score_arr, 1.0 - rates)  # noqa: N806
+        T_M = np.quantile(y_score_arr, 1.0 - rates)  # ruff: ignore[non-lowercase-variable-in-function]
 
         # Precompute logistic derivatives for instances
         s_pos = y_score_arr[self.pos_mask]
@@ -493,30 +493,30 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         sig_sec_pos = alpha**2 * factor2_pos
         sig_sec_neg = alpha**2 * factor2_neg
 
-        weight_F0_M = np.zeros(M)  # noqa: N806
-        weight_F1_M = np.zeros(M)  # noqa: N806
+        weight_F0_M = np.zeros(M)  # ruff: ignore[non-lowercase-variable-in-function]
+        weight_F1_M = np.zeros(M)  # ruff: ignore[non-lowercase-variable-in-function]
 
         for k in range(len(self.score_function.coefficient_eqs)):
             k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # noqa: N806
+            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
 
             if not np.any(R_kM):
                 continue
 
             args_da0 = _build_lambdify_args(self.da0_reqs[k], self.pi0, self.pi1, segment_tprs_arr, segment_fprs_arr)
-            da_dF0_raw = self.da_dF0_fns[k](**args_da0)  # noqa: N806
-            da_dF0_M = np.broadcast_to(np.asarray(da_dF0_raw, dtype=np.float64), (M,))  # noqa: N806
+            da_dF0_raw = self.da_dF0_fns[k](**args_da0)  # ruff: ignore[non-lowercase-variable-in-function]
+            da_dF0_M = np.broadcast_to(np.asarray(da_dF0_raw, dtype=np.float64), (M,))  # ruff: ignore[non-lowercase-variable-in-function]
 
             args_da1 = _build_lambdify_args(self.da1_reqs[k], self.pi0, self.pi1, segment_tprs_arr, segment_fprs_arr)
-            da_dF1_raw = self.da_dF1_fns[k](**args_da1)  # noqa: N806
-            da_dF1_M = np.broadcast_to(np.asarray(da_dF1_raw, dtype=np.float64), (M,))  # noqa: N806
+            da_dF1_raw = self.da_dF1_fns[k](**args_da1)  # ruff: ignore[non-lowercase-variable-in-function]
+            da_dF1_M = np.broadcast_to(np.asarray(da_dF1_raw, dtype=np.float64), (M,))  # ruff: ignore[non-lowercase-variable-in-function]
 
-            weight_F0_M += R_kM * da_dF0_M  # noqa: N806
-            weight_F1_M += R_kM * da_dF1_M  # noqa: N806
+            weight_F0_M += R_kM * da_dF0_M  # ruff: ignore[non-lowercase-variable-in-function]
+            weight_F1_M += R_kM * da_dF1_M  # ruff: ignore[non-lowercase-variable-in-function]
 
         # Convert to minimization constants per segment
-        c_pos_M = -weight_F0_M / self.n_pos  # noqa: N806
-        c_neg_M = -weight_F1_M / self.n_neg  # noqa: N806
+        c_pos_M = -weight_F0_M / self.n_pos  # ruff: ignore[non-lowercase-variable-in-function]
+        c_neg_M = -weight_F1_M / self.n_neg  # ruff: ignore[non-lowercase-variable-in-function]
 
         # Matrix Multiply to compute global gradients/hessians per instance
         grad_pos = sig_prime_pos @ c_pos_M

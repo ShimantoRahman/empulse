@@ -30,7 +30,7 @@ class _DummyCostStrategy:
 class _DummyMetric(Metric):
     """Metric stub whose ``_all_symbols`` contains ``'alpha'``."""
 
-    _all_symbols = {'alpha'}  # noqa: RUF012
+    _all_symbols = {'alpha'}  # ruff: ignore[mutable-class-default]
 
     def __init__(self, strategy):
         self._strategy = strategy

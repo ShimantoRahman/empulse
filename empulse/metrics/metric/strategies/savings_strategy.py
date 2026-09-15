@@ -196,7 +196,7 @@ def _savings_score_to_latex(
 ) -> str:
     from ..common import _latex
 
-    i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # noqa: N806
+    i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # ruff: ignore[non-lowercase-variable-in-function]
     savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
         _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
     )

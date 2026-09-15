@@ -1,4 +1,5 @@
 import re
+import warnings
 from collections.abc import Callable, Iterable, Mapping
 from enum import Enum, auto
 from numbers import Real
@@ -35,6 +36,43 @@ _FIXED_MEANS: dict[
         lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
     ),
 }
+
+
+def warn_if_no_training_signal(gradient_constant: FloatNDArray, objective: str) -> None:
+    """Warn when a cost matrix leaves a gradient-based objective with nothing to optimize.
+
+    The expected cost is linear in the predicted probability, so its derivative is the per-sample
+    constant ``y (tp_cost - fn_cost) + (1 - y) (fp_cost - tn_cost)``. When the cost matrix has
+    constant rows -- ``tp_cost == fn_cost`` and ``fp_cost == tn_cost`` -- that constant is zero for
+    every sample: classifying a sample either way costs exactly the same, so there is no signal to
+    descend.
+
+    This is checked here, in the objectives that differentiate the cost matrix, rather than in
+    :meth:`~empulse.models.CostSensitiveClassifier.fit`, because it is not true of every
+    cost-sensitive model. :class:`~empulse.models.CSTreeClassifier` and
+    :class:`~empulse.models.CSForestClassifier` weight their split quality by a class-purity term
+    (``criterion='gini'`` or ``'entropy'``) that does not involve the cost matrix at all, and go on
+    learning perfectly well from a cost matrix that is flat in this sense.
+
+    Parameters
+    ----------
+    gradient_constant : ndarray
+        The per-sample derivative of the objective with respect to the predicted probability.
+    objective : str
+        Name of the objective, used in the message.
+    """
+    values = np.asarray(gradient_constant, dtype=np.float64)
+    if values.size and np.all(values == 0.0):
+        warnings.warn(
+            f'The cost matrix leaves the {objective} objective with no gradient: tp_cost == fn_cost '
+            'and fp_cost == tn_cost, so classifying a sample either way costs the same and the '
+            'derivative with respect to the predicted probability is zero for every sample. This '
+            'model will not learn from these costs. Check the cost matrix and the values passed to '
+            'fit(). Tree-based models with criterion="gini" or "entropy" are not affected, because '
+            'their split quality does not rely on the cost matrix alone.',
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 def _distribution_mean(symbol: sympy.Expr) -> sympy.Expr:
@@ -546,28 +584,28 @@ def _check_known_alias_and_default_targets(
         )
 
 
-class MetricFn(Protocol):  # noqa: D101
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...  # noqa: D102
+class MetricFn(Protocol):  # ruff: ignore[undocumented-public-class]
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...  # ruff: ignore[undocumented-public-method]
 
 
-class LogitConsts(Protocol):  # noqa: D101
-    def prepare(  # noqa: D102
+class LogitConsts(Protocol):  # ruff: ignore[undocumented-public-class]
+    def prepare(  # ruff: ignore[undocumented-public-method]
         self, x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
     ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]: ...
 
 
-class BoostGradientConst(Protocol):  # noqa: D101
-    def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray: ...  # noqa: D102
+class BoostGradientConst(Protocol):  # ruff: ignore[undocumented-public-class]
+    def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray: ...  # ruff: ignore[undocumented-public-method]
 
 
-class ThresholdFn(Protocol):  # noqa: D101
-    def __call__(  # noqa: D102
+class ThresholdFn(Protocol):  # ruff: ignore[undocumented-public-class]
+    def __call__(  # ruff: ignore[undocumented-public-method]
         self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any
     ) -> FloatNDArray | float: ...
 
 
-class RateFn(Protocol):  # noqa: D101
-    def __call__(  # noqa: D102
+class RateFn(Protocol):  # ruff: ignore[undocumented-public-class]
+    def __call__(  # ruff: ignore[undocumented-public-method]
         self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any
     ) -> float: ...
 
@@ -653,7 +691,7 @@ class PicklableLambda:
             variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
             self.func = sympy.lambdify(variables, self.expression)  # type: ignore[assignment]
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D102
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # ruff: ignore[undocumented-public-method]
         return self.func(*args, **kwargs)
 
     def __getstate__(self) -> dict[str, Any]:

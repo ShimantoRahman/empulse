@@ -183,7 +183,6 @@ class BaseMetric(ABC):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> LogitObjective:

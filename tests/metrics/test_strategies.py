@@ -276,7 +276,6 @@ def test_max_profit_logit_gradient_piecewise_is_picklable(dataset):
         y_true=y,
         C=1.0,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=True,
         alpha=1.0,
         parameters={'contact_cost': 1.0},
@@ -307,7 +306,7 @@ class TestPartitionSupport:
     PI_1 = 0.5
     CONTACT_COST = 2.0
     RANDOM_VAR_BOUNDS = (0.0, np.inf)
-    DIST_PARAMS: dict = {}  # noqa: RUF012
+    DIST_PARAMS: dict = {}  # ruff: ignore[mutable-class-default]
 
     def _coefficients(self, degree, sign):
         """Profit ``sign * clv**degree * pi_0 * F_0 - contact_cost * pi_1 * F_1`` per hull vertex."""

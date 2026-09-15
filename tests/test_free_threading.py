@@ -40,7 +40,7 @@ class TestGilStaysDisabled:
     def test_importing_empulse_does_not_reenable_the_gil(self):
         # Importing any extension module built without the directive re-enables the GIL
         # process-wide, which silently destroys free-threading for the whole program.
-        import empulse.samplers  # noqa: F401
+        import empulse.samplers  # ruff: ignore[unused-import]
 
         assert not sys._is_gil_enabled(), 'importing empulse re-enabled the GIL'
 

@@ -771,7 +771,6 @@ def test_objective_max_profit_logit_deterministic():
         y,
         C=1.0,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=True,
         clv=5.0,
     )
@@ -801,7 +800,6 @@ def test_max_profit_logit_alpha_is_constant():
         y,
         C=1.0,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=True,
         clv=5.0,
     )

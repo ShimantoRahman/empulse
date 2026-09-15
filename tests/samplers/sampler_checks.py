@@ -198,7 +198,7 @@ def check_samplers_pandas(name, fit_params, sampler_orig):
     try:
         import pandas as pd
     except ImportError:
-        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # noqa: B904
+        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # ruff: ignore[raise-without-from-inside-except]
     sampler = clone(sampler_orig)
     # Check that the samplers handle pandas dataframe and pandas series
     X, y = sample_dataset_generator()
@@ -320,7 +320,7 @@ def check_sampler_get_feature_names_out_pandas(name, fit_params, sampler_orig):
     try:
         import pandas as pd
     except ImportError:
-        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # noqa: B904
+        raise SkipTest('pandas is not installed: not checking column name consistency for pandas')  # ruff: ignore[raise-without-from-inside-except]
 
     tags = get_tags(sampler_orig)
     two_d_array = tags.input_tags.two_d_array
@@ -388,13 +388,13 @@ def check_samplers_one_label(name, fit_params, sampler_orig):
         sampler.fit_resample(X, y, **fit_params)
     except ValueError as e:
         if 'class' not in repr(e):
-            print(error_string_fit, sampler.__class__.__name__, e)  # noqa: T201
+            print(error_string_fit, sampler.__class__.__name__, e)  # ruff: ignore[print]
             traceback.print_exc(file=sys.stdout)
             raise
         else:
             return
     except Exception as exc:
-        print(error_string_fit, traceback, exc)  # noqa: T201
+        print(error_string_fit, traceback, exc)  # ruff: ignore[print]
         traceback.print_exc(file=sys.stdout)
         raise
     raise AssertionError(error_string_fit)

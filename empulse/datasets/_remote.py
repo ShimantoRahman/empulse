@@ -13,7 +13,7 @@ from ._base import Dataset, get_data_home
 from ._cost_matrices import churn_retention_cost_matrix, credit_scoring_cost_matrix
 from ._io import _fetch_openml, _fetch_uci, load_or_fetch
 from ._process import (
-    _GIVE_ME_SOME_CREDIT_FEATURE_ORDER,  # noqa: F401 (re-exported for tests/compat)
+    _GIVE_ME_SOME_CREDIT_FEATURE_ORDER,  # ruff: ignore[unused-import] (re-exported for tests/compat)
     process_give_me_some_credit,
     process_iranian_churn,
 )

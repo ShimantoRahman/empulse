@@ -97,16 +97,48 @@ Both models use elastic-net regularization, controlled by two parameters:
     # Elastic-net mix
     model = CSLogitClassifier(C=1.0, l1_ratio=0.5)
 
-Soft thresholding
------------------
+The penalty added to the (sample-averaged) training loss is
 
-Setting ``soft_threshold=True`` applies a proximal soft-threshold operator to the
-coefficients at each gradient step, promoting sparsity without changing the
-optimization landscape (useful when using gradient-based optimizers):
+.. math::
+
+    \lambda \left( \rho \sum_j |w_j| + \frac{1 - \rho}{2} \sum_j w_j^2 \right),
+    \qquad \lambda = \frac{\text{objective scale}}{C \cdot n_\text{samples}}
+
+with :math:`\rho` the ``l1_ratio``. The intercept is never penalized.
+
+Dividing by ``n_samples`` is what makes ``C`` mean the same thing it does in scikit-learn, which
+adds an unnormalized penalty to a *summed* loss. The *objective scale* is the mean magnitude of the
+per-sample cost gradient, and it is what keeps ``C`` interpretable when costs are real money: a
+cost matrix in euros and the same matrix in cents produce the same regularization path, so a ``C``
+grid tuned on one dataset transfers to another.
+
+.. versionchanged:: 0.12
+
+    The penalty used to be added unnormalized, which made it roughly ``n_samples`` times stronger
+    than scikit-learn's at the same ``C``. **A given** ``C`` **no longer selects the same model as
+    in earlier releases** — re-tune any hard-coded value or ``C`` grid.
+
+Sparsity
+--------
+
+With ``l1_ratio > 0`` the penalty is not differentiable at zero, so
+:class:`~empulse.optimizers.LBFGSBOptimizer` — the default for
+:class:`~empulse.models.CSLogitClassifier` — minimizes it through a split-variable reformulation
+(:math:`w = u - v` with :math:`u, v \ge 0`), which turns :math:`|w|` into a linear term its box
+constraints handle natively. That is what produces genuinely exact zeros:
 
 .. code-block:: python
 
-    model = CSLogitClassifier(C=0.1, soft_threshold=True)
+    import numpy as np
+
+    sparse_model = CSLogitClassifier(C=0.1, l1_ratio=1.0, fp_cost=1.0, fn_cost=5.0).fit(X, y)
+    print(np.count_nonzero(sparse_model.coef_) <= sparse_model.coef_.size)
+
+.. note::
+
+    :class:`~empulse.optimizers.ScipyOptimizer` does *not* reformulate, so with ``l1_ratio > 0`` it
+    runs plain subgradient descent: it will not produce exact zeros and may stop at the kink. Use
+    :class:`~empulse.optimizers.LBFGSBOptimizer` when you want sparsity.
 
 
 Custom Loss Functions

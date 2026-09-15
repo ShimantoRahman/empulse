@@ -7,12 +7,86 @@ import sympy
 
 from ...._types import FloatNDArray, IntNDArray
 from ..common import Direction
+from ._penalty import ElasticNetPenalty  # ruff: ignore[typing-only-first-party-import]
 
 
-class LogitObjective(ABC):
-    """Class to compute the loss and gradient of a logistic regression objective."""
+class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-method]
+    """Class to compute the loss and gradient of a logistic regression objective.
 
-    @abstractmethod
+    An objective is the sum of a *data term* and an :class:`~empulse.metrics.ElasticNetPenalty`.
+    Concrete objectives implement the data term through :meth:`data_loss` and :meth:`data_gradient`
+    and set :attr:`penalty`; the regularized ``logit_*`` methods are derived from those here.
+
+    Keeping the two separable is what lets a solver treat them differently -- most importantly
+    :class:`~empulse.optimizers.LBFGSBOptimizer`, which reformulates a non-smooth L1 penalty rather
+    than handing its subgradient to a solver that assumes smoothness.
+
+    Overriding ``logit_loss``/``logit_gradient`` directly and leaving :attr:`penalty` as ``None``
+    remains supported: the objective is then opaque to solvers, which fall back to treating it as
+    an arbitrary, possibly non-smooth function.
+    """
+
+    #: Penalty applied on top of the data term. ``None`` means the objective already includes
+    #: whatever penalty it wants inside ``logit_loss``/``logit_gradient``, and solvers must treat
+    #: it as opaque.
+    penalty: 'ElasticNetPenalty | None' = None
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """
+        Compute the unregularized loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Loss of the data term alone.
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not expose its data term separately. '
+            'Override data_loss() to enable solvers that handle the penalty themselves.'
+        )
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """
+        Compute the gradient of the unregularized loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient of the data term alone.
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not expose its data term separately. '
+            'Override data_gradient() to enable solvers that handle the penalty themselves.'
+        )
+
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """
+        Compute the unregularized loss and its gradient for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        loss : float
+            Loss of the data term alone.
+        gradient : ndarray
+            Gradient of the data term alone.
+        """
+        return self.data_loss(weights), self.data_gradient(weights)
+
     def logit_loss(self, weights: FloatNDArray) -> float:
         """
         Compute the loss for minimization.
@@ -27,8 +101,9 @@ class LogitObjective(ABC):
         float
             Regularized loss.
         """
+        loss = self.data_loss(weights)
+        return loss if self.penalty is None else loss + self.penalty.value(weights)
 
-    @abstractmethod
     def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """
         Compute the gradient of the loss for minimization.
@@ -43,6 +118,8 @@ class LogitObjective(ABC):
         ndarray
             Regularized gradient.
         """
+        gradient = self.data_gradient(weights)
+        return gradient if self.penalty is None else gradient + self.penalty.gradient(weights)
 
     def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
         """
@@ -116,11 +193,14 @@ class LogitObjective(ABC):
         Returns
         -------
         loss : float
-            Loss minus regularization.
+            Regularized loss.
         gradient : ndarray
             Regularized gradient.
         """
-        return self.logit_loss(weights), self.logit_gradient(weights)
+        loss, gradient = self.data_loss_gradient(weights)
+        if self.penalty is None:
+            return loss, gradient
+        return self.penalty.add_to(loss, np.asarray(gradient, dtype=np.float64), weights)
 
     def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """
@@ -130,7 +210,7 @@ class LogitObjective(ABC):
         """
         return self.logit_loss_gradient(weights)
 
-    def set_alpha(self, alpha: float) -> None:  # noqa: B027
+    def set_alpha(self, alpha: float) -> None:  # ruff: ignore[empty-method-without-abstract-decorator]
         """
         Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).
 
@@ -153,6 +233,10 @@ class LogitObjective(ABC):
         Used by gradient optimizers for mini-batch training.  The default
         implementation raises :exc:`NotImplementedError`; concrete objectives
         that store their data should override this method.
+
+        Only the data arrays are sliced.  :attr:`penalty` is shared unchanged, because its scale is
+        already an average and mini-batch data gradients are themselves ``1 / batch_size`` means,
+        so the penalty stays consistent across batch sizes.
 
         Parameters
         ----------
@@ -349,7 +433,6 @@ class MetricStrategy(ABC):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> LogitObjective:
@@ -367,8 +450,6 @@ class MetricStrategy(ABC):
         l1_ratio : float
             The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
             l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
-        soft_threshold : bool
-            Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
         **parameters : float or NDArray of shape (n_samples,)

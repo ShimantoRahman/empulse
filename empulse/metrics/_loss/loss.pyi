@@ -7,29 +7,26 @@ def cy_logit_loss_gradient(
     grad_const: npt.NDArray[np.float64],
     loss_const1: npt.NDArray[np.float64],
     loss_const2: npt.NDArray[np.float64],
-    C: float = ...,
-    l1_ratio: float = ...,
-    fit_intercept: bool = ...,
-    soft_threshold: bool = ...,
+    l1_weight: float = ...,
+    l2_weight: float = ...,
+    start_coef: int = ...,
 ) -> tuple[float, npt.NDArray[np.float64]]: ...
 def cy_logit_loss(
     weights: npt.NDArray[np.float64],
     features: npt.NDArray[np.float64],
     loss_const1: npt.NDArray[np.float64],
     loss_const2: npt.NDArray[np.float64],
-    C: float = ...,
-    l1_ratio: float = ...,
-    fit_intercept: bool = ...,
-    soft_threshold: bool = ...,
+    l1_weight: float = ...,
+    l2_weight: float = ...,
+    start_coef: int = ...,
 ) -> float: ...
 def cy_logit_gradient(
     weights: npt.NDArray[np.float64],
     features: npt.NDArray[np.float64],
     grad_const: npt.NDArray[np.float64],
-    C: float = ...,
-    l1_ratio: float = ...,
-    fit_intercept: bool = ...,
-    soft_threshold: bool = ...,
+    l1_weight: float = ...,
+    l2_weight: float = ...,
+    start_coef: int = ...,
 ) -> npt.NDArray[np.float64]: ...
 def cy_boost_grad_hess(
     y_true: npt.NDArray[np.float64],

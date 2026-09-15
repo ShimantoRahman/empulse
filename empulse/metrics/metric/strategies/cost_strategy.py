@@ -20,7 +20,9 @@ from ..common import (
     _safe_run_lambda,
     _safe_run_lambda_array,
     replace_random_var_with_mean,
+    warn_if_no_training_signal,
 )
+from ._penalty import ElasticNetPenalty
 from .metric_strategy import LogitObjective, MetricStrategy
 
 
@@ -28,19 +30,18 @@ class CostLogitObjective(LogitObjective):
     """
     Precomputed cost-metric objective for logistic regression.
 
-    Holds the constants derived from the data and exposes the same API as
-    ``MaxProfitLogitGradientPiecewise``:
+    Holds the constants derived from the data and exposes the
+    :class:`~empulse.metrics.LogitObjective` interface. The expected cost is linear in the
+    predicted probability, so the derivative of the cost with respect to the probability is a
+    per-sample constant that can be folded into ``grad_const`` once and never recomputed.
 
-    * ``__call__(weights)`` – returns ``(value, gradient)``; delegates to :meth:`logit_loss_gradient`.
-    * ``logit_loss_gradient(weights)`` – returns ``(value, gradient)``
-    * ``logit_loss(weights)`` – returns only the scalar loss
-    * ``logit_gradient(weights)`` – returns only the gradient vector
-    * ``logit_gradient_steps()`` – generator that yields gradients for each weights
-      vector sent in, reusing the (fixed) precomputed constants across iterations
-
-    The constants are computed once during construction and do not change, so
-    the ``refresh`` signal in ``logit_gradient_steps`` is accepted for API
-    compatibility but has no effect.
+    The regularized ``logit_*`` methods add the penalty inside the Cython kernel rather than
+    through :class:`~empulse.metrics.ElasticNetPenalty` in numpy. The penalty is only
+    ``O(n_features)`` against the data term at ``O(n_samples * n_features)``, but a numpy round
+    trip costs a fixed ~9 microseconds per evaluation, which is over half of a whole evaluation at
+    moderate sample sizes -- and these objectives are re-entered hundreds of times by L-BFGS-B and
+    thousands of times by the genetic optimizers. The kernel therefore takes the two already-scaled
+    penalty weights, so the scaling policy stays in Python and only the arithmetic is compiled.
     """
 
     def __init__(
@@ -54,31 +55,47 @@ class CostLogitObjective(LogitObjective):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
     ) -> None:
-        grad_const = features * (y_true * (-tp_benefit - fn_cost) + (1 - y_true) * (fp_cost + tn_benefit))
         loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
         loss_const2 = y_true * fn_cost - (1 - y_true) * tn_benefit
+        # Derivative of the expected cost wrt the predicted probability, per sample. This is both
+        # the gradient factor and the magnitude the elastic-net penalty is scaled against.
+        grad_factor = np.asarray(loss_const1 - loss_const2, dtype=np.float64)
+        warn_if_no_training_signal(grad_factor, 'expected cost')
+        grad_const = features * grad_factor
 
-        # Cast to float64 so Cython's double[:] memoryview accepts the arrays without a copy.
+        # Cast to float64 so Cython double[:] memoryviews accept the arrays without a copy.
         self.grad_const: Float64Array = np.asarray(grad_const, dtype=np.float64)
         self.loss_const1: Float64Array = np.asarray(loss_const1, dtype=np.float64).reshape(-1)
         self.loss_const2: Float64Array = np.asarray(loss_const2, dtype=np.float64).reshape(-1)
         self.features: Float64Array = np.asarray(features, dtype=np.float64)
-        self.C = C
-        self.l1_ratio = l1_ratio
-        self.soft_threshold = soft_threshold
         self.fit_intercept = fit_intercept
+        self.penalty = ElasticNetPenalty.from_scale(
+            objective_scale=float(np.mean(np.abs(grad_factor))),
+            C=C,
+            l1_ratio=l1_ratio,
+            fit_intercept=fit_intercept,
+            n_samples=self.features.shape[0],
+        )
+        self._cache_penalty_weights()
 
-    def _common_kwargs(self) -> dict[str, Any]:
-        return {
-            'features': self.features,
-            'C': self.C,
-            'l1_ratio': self.l1_ratio,
-            'soft_threshold': self.soft_threshold,
-            'fit_intercept': self.fit_intercept,
-        }
+    def _cache_penalty_weights(self) -> None:
+        """Resolve the penalty into the three scalars the kernel takes.
+
+        The penalty is fixed for the life of the objective, but these methods are re-entered
+        hundreds of times by L-BFGS-B and thousands of times by the genetic optimizers, so
+        resolving it per call is measurable overhead on small problems.
+        """
+        penalty = self.penalty
+        if penalty is None or not penalty.is_active:
+            self._l1_weight = 0.0
+            self._l2_weight = 0.0
+            self._start_coef = 1 if self.fit_intercept else 0
+        else:
+            self._l1_weight = penalty.l1_weight
+            self._l2_weight = penalty.l2_weight
+            self._start_coef = penalty.start_coef
 
     def with_indices(self, indices: FloatNDArray) -> 'CostLogitObjective':
         """Return a new objective restricted to the sample subset given by *indices*.
@@ -109,18 +126,20 @@ class CostLogitObjective(LogitObjective):
         return self.logit_loss_gradient(weights)
 
     def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
-        """Return ``(loss, gradient)`` for *weights*."""
-        w: Float64Array = np.asarray(weights, dtype=np.float64)
-        return cy_logit_loss_gradient(
-            w,
-            grad_const=self.grad_const,
-            loss_const1=self.loss_const1,
-            loss_const2=self.loss_const2,
-            **self._common_kwargs(),
+        """Return the regularized ``(loss, gradient)`` for *weights*."""
+        return cy_logit_loss_gradient(  # type: ignore[no-any-return]
+            np.asarray(weights, dtype=np.float64),
+            self.features,
+            self.grad_const,
+            self.loss_const1,
+            self.loss_const2,
+            self._l1_weight,
+            self._l2_weight,
+            self._start_coef,
         )
 
     def logit_loss(self, weights: FloatNDArray) -> float:
-        """Return only the scalar loss for *weights*.
+        """Return only the regularized scalar loss for *weights*.
 
         No gradient is computed, so this is cheaper when only the objective
         value is needed (e.g. final fitness evaluation in a memetic algorithm).
@@ -138,14 +157,17 @@ class CostLogitObjective(LogitObjective):
         return float(
             cy_logit_loss(
                 np.asarray(weights, dtype=np.float64),
-                loss_const1=self.loss_const1,
-                loss_const2=self.loss_const2,
-                **self._common_kwargs(),
+                self.features,
+                self.loss_const1,
+                self.loss_const2,
+                self._l1_weight,
+                self._l2_weight,
+                self._start_coef,
             )
         )
 
     def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
-        """Return only the gradient vector for *weights*.
+        """Return only the regularized gradient vector for *weights*.
 
         No loss value is accumulated, so this is cheaper when only the
         gradient is needed (e.g. gradient-descent inner steps).
@@ -162,8 +184,75 @@ class CostLogitObjective(LogitObjective):
         """
         return cy_logit_gradient(  # type: ignore[return-value]
             np.asarray(weights, dtype=np.float64),
-            grad_const=self.grad_const,
-            **self._common_kwargs(),
+            self.features,
+            self.grad_const,
+            self._l1_weight,
+            self._l2_weight,
+            self._start_coef,
+        )
+
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the unpenalized ``(loss, gradient)`` for *weights*.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        loss : float
+            Loss of the data term alone.
+        gradient : ndarray
+            Gradient of the data term alone.
+        """
+        return cy_logit_loss_gradient(  # type: ignore[no-any-return]
+            np.asarray(weights, dtype=np.float64),
+            self.features,
+            self.grad_const,
+            self.loss_const1,
+            self.loss_const2,
+        )
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Return only the unpenalized scalar loss for *weights*.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Loss of the data term alone.
+        """
+        return float(
+            cy_logit_loss(
+                np.asarray(weights, dtype=np.float64),
+                self.features,
+                self.loss_const1,
+                self.loss_const2,
+            )
+        )
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return only the unpenalized gradient vector for *weights*.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient of the data term alone, matched in shape to *weights*.
+        """
+        return cy_logit_gradient(  # type: ignore[return-value]
+            np.asarray(weights, dtype=np.float64),
+            self.features,
+            self.grad_const,
         )
 
     def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
@@ -189,16 +278,11 @@ class CostLogitObjective(LogitObjective):
             if sent is None:
                 return
             if isinstance(sent, tuple):
-                weights, _ = sent  # refresh ignored – constants are fixed
+                weights, _ = sent  # refresh ignored - the constants are fixed
             else:
                 weights = sent
 
-            grad: Float64Array = cy_logit_gradient(  # type: ignore[assignment]
-                np.asarray(weights, dtype=np.float64),
-                grad_const=self.grad_const,
-                **self._common_kwargs(),
-            )
-            sent = yield grad
+            sent = yield self.logit_gradient(weights)
 
     def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
         """
@@ -375,7 +459,6 @@ class Cost(MetricStrategy):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> CostLogitObjective:
@@ -393,8 +476,6 @@ class Cost(MetricStrategy):
         l1_ratio : float
             The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
             l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
-        soft_threshold : bool
-            Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
         **parameters : float or NDArray of shape (n_samples,)
@@ -423,7 +504,6 @@ class Cost(MetricStrategy):
             y_true=y_true,
             C=C,
             l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
             fit_intercept=fit_intercept,
         )
 
@@ -560,6 +640,7 @@ class CostBoostGradientConst:
         gradient_const_value = _safe_run_lambda_array(
             self.gradient_const_fn, self.gradient_const_eq, shape=y_true.shape[0], y=y_true, **kwargs
         )
+        warn_if_no_training_signal(gradient_const_value, 'expected cost')
         return gradient_const_value
 
 
@@ -685,7 +766,7 @@ def _cost_loss_to_latex(
 ) -> str:
     from ..common import _latex
 
-    i, N = sympy.symbols('i N')  # noqa: N806
+    i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
         _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
     )

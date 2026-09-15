@@ -30,7 +30,7 @@ _LOADER_PARAMS = [
 
 # Cartesian product of loaders x backends
 _LOADER_BACKEND_PARAMS = [
-    pytest.param((lp.values[0], bp.values[0]), id=f'{lp.id}-{bp.id}')  # noqa: PD011
+    pytest.param((lp.values[0], bp.values[0]), id=f'{lp.id}-{bp.id}')  # ruff: ignore[pandas-use-of-dot-values]
     for lp in _LOADER_PARAMS
     for bp in _BACKENDS
 ]

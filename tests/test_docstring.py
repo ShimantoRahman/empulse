@@ -112,5 +112,5 @@ def test_code_blocks_in_docstrings(module):
             exec_globals = {}
             try:
                 exec(code, exec_globals)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # ruff: ignore[blind-except]
                 pytest.fail(f'Code block in {_object_label(obj)} docstring failed to execute: {e}')

@@ -34,7 +34,7 @@ def execute_code_blocks(code_blocks):
     for code in code_blocks:
         try:
             exec(code, exec_globals)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff: ignore[blind-except]
             pytest.fail(f'Error executing code block:\n{code}\nError: {e}\n{traceback.format_exc()}')
 
 

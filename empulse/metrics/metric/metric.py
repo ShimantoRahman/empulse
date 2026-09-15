@@ -198,44 +198,44 @@ class Metric(BaseMetric):
     def __name__(self) -> str:
         return self.strategy.name
 
-    @__name__.setter  # noqa: A003
+    @__name__.setter  # ruff: ignore[builtin-attribute-shadowing]
     def __name__(self, value: str) -> None:
         self.strategy.name = value
 
     @property
-    def tp_benefit(self) -> sympy.Expr:  # noqa: D102
+    def tp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.tp_benefit
 
     @property
-    def tn_benefit(self) -> sympy.Expr:  # noqa: D102
+    def tn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.tn_benefit
 
     @property
-    def fp_benefit(self) -> sympy.Expr:  # noqa: D102
+    def fp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.fp_benefit
 
     @property
-    def fn_benefit(self) -> sympy.Expr:  # noqa: D102
+    def fn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.fn_benefit
 
     @property
-    def tp_cost(self) -> sympy.Expr:  # noqa: D102
+    def tp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.tp_cost
 
     @property
-    def tn_cost(self) -> sympy.Expr:  # noqa: D102
+    def tn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.tn_cost
 
     @property
-    def fp_cost(self) -> sympy.Expr:  # noqa: D102
+    def fp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.fp_cost
 
     @property
-    def fn_cost(self) -> sympy.Expr:  # noqa: D102
+    def fn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self.cost_matrix.fn_cost
 
     @property
-    def direction(self) -> Direction:  # noqa: D102
+    def direction(self) -> Direction:  # ruff: ignore[undocumented-public-method]
         return self.strategy.direction
 
     @property
@@ -603,7 +603,6 @@ class Metric(BaseMetric):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> LogitObjective:
@@ -620,8 +619,6 @@ class Metric(BaseMetric):
             The inverse of regularization strength for logistic regression.
         l1_ratio : float
             The mixing parameter for elastic net regularization in logistic regression.
-        soft_threshold : bool
-            If ``True``, apply soft-thresholding to the regression coefficients.
         fit_intercept : bool
             Whether the logistic regression model includes an intercept term.
         **parameters : float or NDArray of shape (n_samples,)
@@ -650,7 +647,6 @@ class Metric(BaseMetric):
             y_true=y_true,
             C=C,
             l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
             fit_intercept=fit_intercept,
             **parameters,
         )

@@ -114,35 +114,35 @@ class CostMatrix:
         self._predicates: list[ParameterPredicate] = []
 
     @property
-    def tp_benefit(self) -> sympy.Expr:  # noqa: D102
+    def tp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self._tp_benefit
 
     @property
-    def tn_benefit(self) -> sympy.Expr:  # noqa: D102
+    def tn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self._tn_benefit
 
     @property
-    def fp_benefit(self) -> sympy.Expr:  # noqa: D102
+    def fp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return -self._fp_cost
 
     @property
-    def fn_benefit(self) -> sympy.Expr:  # noqa: D102
+    def fn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return -self._fn_cost
 
     @property
-    def tp_cost(self) -> sympy.Expr:  # noqa: D102
+    def tp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return -self._tp_benefit
 
     @property
-    def tn_cost(self) -> sympy.Expr:  # noqa: D102
+    def tn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return -self._tn_benefit
 
     @property
-    def fp_cost(self) -> sympy.Expr:  # noqa: D102
+    def fp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self._fp_cost
 
     @property
-    def fn_cost(self) -> sympy.Expr:  # noqa: D102
+    def fn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
         return self._fn_cost
 
     def add_tp_benefit(self, term: sympy.Expr | str) -> Self:

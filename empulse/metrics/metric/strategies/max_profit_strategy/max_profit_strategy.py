@@ -8,7 +8,16 @@ from sympy.stats.rv import is_random
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ...common import Direction, MetricFn, RateFn, _check_parameters, _safe_lambdify, _safe_run_lambda
+from ...common import (
+    Direction,
+    MetricFn,
+    RateFn,
+    _check_parameters,
+    _safe_lambdify,
+    _safe_run_lambda,
+    replace_random_var_with_mean,
+    warn_if_no_training_signal,
+)
 from ..metric_strategy import MetricStrategy
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
@@ -42,6 +51,48 @@ def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]
     Scalar parameters are left unchanged.
     """
     return {key: float(np.mean(value)) if isinstance(value, np.ndarray) else value for key, value in parameters.items()}
+
+
+def _max_profit_objective_scale(
+    y_true: FloatNDArray, tp_benefit: float, tn_benefit: float, fp_cost: float, fn_cost: float
+) -> float:
+    """
+    Return the magnitude of the profit objective, for scaling the elastic-net penalty.
+
+    The profit gradient carries the two coefficients ``(tp_benefit + fn_cost) * pi0`` and
+    ``(tn_benefit + fp_cost) * pi1``, so their combined magnitude is the natural scale here --
+    the same quantity :func:`~empulse.metrics.objective_scale_from_costs` produces for the
+    :class:`~empulse.metrics.Cost` strategy.
+
+    Parameters
+    ----------
+    y_true : ndarray
+        Binary labels, used only for the class priors.
+    tp_benefit : float
+        Benefit of a true positive.
+    tn_benefit : float
+        Benefit of a true negative.
+    fp_cost : float
+        Cost of a false positive.
+    fn_cost : float
+        Cost of a false negative.
+
+    Returns
+    -------
+    scale : float
+        A strictly positive, finite scale; ``1.0`` when the profit does not depend on the
+        prediction at all.
+    """
+    y = np.asarray(y_true, dtype=np.float64).reshape(-1)
+    pi0 = float(np.mean(y))
+    pi1 = 1.0 - pi0
+    coeff_tpr = (tp_benefit + fn_cost) * pi0
+    coeff_fpr = (tn_benefit + fp_cost) * pi1
+    warn_if_no_training_signal(np.array([coeff_tpr, coeff_fpr], dtype=np.float64), 'maximum profit')
+    scale = abs(coeff_tpr) + abs(coeff_fpr)
+    if not np.isfinite(scale) or scale == 0.0:
+        return 1.0
+    return float(scale)
 
 
 class MaxProfit(MetricStrategy):
@@ -374,7 +425,6 @@ class MaxProfit(MetricStrategy):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> MaxProfitLogitGradientDeterministic | MaxProfitLogitGradientPiecewise:
@@ -398,8 +448,6 @@ class MaxProfit(MetricStrategy):
         l1_ratio : float
             The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
             l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
-        soft_threshold : bool
-            Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
         **parameters : float or NDArray of shape (n_samples,)
@@ -440,9 +488,9 @@ class MaxProfit(MetricStrategy):
                 y_true=y_true,
                 C=C,
                 l1_ratio=l1_ratio,
-                soft_threshold=soft_threshold,
                 fit_intercept=fit_intercept,
                 alpha=self.alpha,
+                objective_scale=_max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val),
                 tp_benefit=tp_val,
                 tn_benefit=tn_val,
                 fp_cost=fp_val,
@@ -452,15 +500,30 @@ class MaxProfit(MetricStrategy):
 
         # 2. Stochastic Piecewise Route (e.g., Beta, Gamma, Pareto)
         elif isinstance(self._score_function, BasePositiveDistribution):
+            # The stochastic route integrates over a random variable, so there is no closed-form
+            # gradient magnitude. Substituting each random variable by its mean gives the same
+            # scale the deterministic route would use, which keeps `C` comparable between the two.
+            mean_params: dict[str, FloatNDArray | float] = {
+                name: cast('FloatNDArray | float', replace_random_var_with_mean(value)[0])
+                if isinstance(value, sympy.Basic)
+                else value
+                for name, value in agg_params.items()
+            }
+            try:
+                tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(mean_params)
+                objective_scale = _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
+            except (TypeError, ValueError, KeyError):
+                objective_scale = 1.0
+
             return MaxProfitLogitGradientPiecewise(
                 score_function=self._score_function,
                 features=features,
                 y_true=y_true,
                 C=C,
                 l1_ratio=l1_ratio,
-                soft_threshold=soft_threshold,
                 fit_intercept=fit_intercept,
                 alpha=self.alpha,
+                objective_scale=objective_scale,
                 parameters=agg_params,
             )
         else:

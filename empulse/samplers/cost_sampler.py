@@ -133,7 +133,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
-        def set_fit_resample_request(self, *, fp_cost: bool = False, fn_cost: bool = False) -> Self:  # noqa: D102
+        def set_fit_resample_request(self, *, fp_cost: bool = False, fn_cost: bool = False) -> Self:  # ruff: ignore[undocumented-public-method]
             pass
 
     def __init__(

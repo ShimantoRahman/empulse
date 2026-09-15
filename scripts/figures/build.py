@@ -20,9 +20,9 @@ from xml.etree import ElementTree as ET
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from diagrams import DIAGRAMS  # noqa: E402
-from palette import THEMES  # noqa: E402
-from plots import PLOTS  # noqa: E402
+from diagrams import DIAGRAMS  # ruff: ignore[module-import-not-at-top-of-file]
+from palette import THEMES  # ruff: ignore[module-import-not-at-top-of-file]
+from plots import PLOTS  # ruff: ignore[module-import-not-at-top-of-file]
 
 OUTPUT_DIR = HERE.parents[1] / 'docs' / '_static' / 'assets'
 

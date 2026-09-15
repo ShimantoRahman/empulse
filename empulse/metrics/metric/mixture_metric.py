@@ -9,6 +9,7 @@ from .base_metric import BaseMetric
 from .common import Direction, _check_parameter_domains
 from .cost_matrix import ParameterBounds, ParameterPredicate
 from .strategies import LogitObjective, MetricStrategy
+from .strategies._penalty import ElasticNetPenalty
 
 Weight = float | str | Callable[[dict[str, Any]], float]
 
@@ -232,7 +233,7 @@ class MixtureMetric(BaseMetric):
         names = '+'.join(component.metric.__name__ for component in self.components)
         return f'MixtureMetric({names})'
 
-    @__name__.setter  # noqa: A003
+    @__name__.setter  # ruff: ignore[builtin-attribute-shadowing]
     def __name__(self, value: str) -> None:
         self._name_override = value
 
@@ -466,7 +467,6 @@ class MixtureMetric(BaseMetric):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: Any,
     ) -> LogitObjective:
@@ -480,12 +480,29 @@ class MixtureMetric(BaseMetric):
                 y_true=y_true,
                 C=C,
                 l1_ratio=l1_ratio,
-                soft_threshold=soft_threshold,
                 fit_intercept=fit_intercept,
                 **self._component_parameters(component, forwarded),
             )
             weighted_objectives.append((weight, objective))
-        return _MixtureLogitObjective(weighted_objectives)
+
+        # Each component was built with the same C and l1_ratio, so it carries its own penalty.
+        # Summing them weighted would apply the penalty once per component, scaled by that
+        # component's mixture weight. Strip them and give the mixture a single penalty whose scale
+        # is the weighted sum of the components' scales, matching the weighted data term.
+        objective_scale = 0.0
+        for weight, objective in weighted_objectives:
+            if objective.penalty is not None:
+                objective_scale += weight * objective.penalty.objective_scale
+                objective.penalty = None
+        mixture = _MixtureLogitObjective(weighted_objectives)
+        mixture.penalty = ElasticNetPenalty.from_scale(
+            objective_scale=objective_scale,
+            C=C,
+            l1_ratio=l1_ratio,
+            fit_intercept=fit_intercept,
+            n_samples=features.shape[0],
+        )
+        return mixture
 
     def _evaluate_costs(
         self, *, replace_stochastic: bool = False, **parameters: Any
@@ -523,12 +540,12 @@ class _MixtureLogitObjective(LogitObjective):
     def __init__(self, weighted_objectives: list[tuple[float, LogitObjective]]) -> None:
         self._weighted_objectives = weighted_objectives
 
-    def logit_loss(self, weights: FloatNDArray) -> float:
-        """Compute the weighted sum of each component objective's loss."""
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Compute the weighted sum of each component objective's unpenalized loss."""
         return float(sum(weight * objective.logit_loss(weights) for weight, objective in self._weighted_objectives))
 
-    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
-        """Compute the weighted sum of each component objective's gradient."""
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Compute the weighted sum of each component objective's unpenalized gradient."""
         total: FloatNDArray | None = None
         for weight, objective in self._weighted_objectives:
             contribution = weight * objective.logit_gradient(weights)
@@ -536,8 +553,8 @@ class _MixtureLogitObjective(LogitObjective):
         assert total is not None
         return total
 
-    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
-        """Compute the weighted sum of each component objective's loss and gradient."""
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Compute the weighted sum of each component objective's unpenalized loss and gradient."""
         loss = 0.0
         gradient: FloatNDArray | None = None
         for weight, objective in self._weighted_objectives:
@@ -555,9 +572,11 @@ class _MixtureLogitObjective(LogitObjective):
 
     def with_indices(self, indices: np.ndarray) -> '_MixtureLogitObjective':
         """Return a mixture objective restricted to the sample subset given by *indices*."""
-        return _MixtureLogitObjective([
+        sliced = _MixtureLogitObjective([
             (weight, objective.with_indices(indices)) for weight, objective in self._weighted_objectives
         ])
+        sliced.penalty = self.penalty
+        return sliced
 
     def _logit_gradient_steps(self):  # type: ignore[no-untyped-def]
         generators = [(weight, objective.logit_gradient_steps()) for weight, objective in self._weighted_objectives]
@@ -571,4 +590,8 @@ class _MixtureLogitObjective(LogitObjective):
             for weight, generator in generators:
                 contribution = weight * generator.send(sent)
                 total = contribution if total is None else total + contribution
+            assert total is not None
+            if self.penalty is not None:
+                current = sent[0] if isinstance(sent, tuple) else sent
+                total = total + self.penalty.gradient(current)
             sent = yield total

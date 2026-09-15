@@ -256,6 +256,23 @@ Models
   :class:`~empulse.metrics.BaseMetric`, so a :class:`~empulse.metrics.MixtureMetric` instance
   (e.g. :func:`~empulse.metrics.empcs_score`) can be passed directly as a model's training
   objective.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and
+  :class:`~empulse.models.ProfLogitClassifier` no longer return an all-zero coefficient vector,
+  predicting exactly 0.5 for every sample, at the default ``C=1.0, l1_ratio=1.0``. The
+  elastic-net penalty was added unnormalized to a data loss that had already been averaged over
+  the samples, making it roughly ``n_samples`` times stronger than scikit-learn's at the same
+  ``C``. Since the expected cost is linear in the predicted probability its gradient is bounded,
+  so with modest costs ``w = 0`` genuinely satisfied the L1 optimality condition and L-BFGS-B
+  stopped after zero iterations.
+- |API| ``C`` now scales as ``objective_scale / (C * n_samples)``, where ``objective_scale`` is
+  the mean magnitude of the per-sample cost gradient. Dividing by ``n_samples`` makes ``C`` mean
+  what it means in :class:`~sklearn:sklearn.linear_model.LogisticRegression`, and the objective
+  scale makes the regularization path invariant to rescaling the cost matrix, so a ``C`` grid
+  tuned on costs in euros transfers to the same costs in cents. **A given** ``C`` **no longer
+  selects the same model as in previous releases**; re-tune any hard-coded value or ``C`` grid.
+- |API| Removed the ``soft_threshold`` parameter from
+  :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`.
+  Use ``l1_ratio=1.0`` for sparsity, which now produces exact zeros.
 - |Enhancement| A cost passed to a model as a length-1 array is now broadcast to every sample
   instead of raising a shape error, and the error message for a genuine length mismatch names
   the offending parameter and the lengths that would have been accepted.
@@ -350,6 +367,19 @@ Models
 
 Optimizers
 ----------
+
+- |Fix| :class:`~empulse.optimizers.LBFGSBOptimizer` now minimizes a non-smooth elastic-net
+  objective (``l1_ratio > 0``) exactly, through a split-variable reformulation (``w = u - v``
+  with ``u, v >= 0``) that turns the L1 term into a linear function L-BFGS-B handles natively
+  through its box constraints. Previously it was handed ``sign(w)`` as a subgradient, which made
+  the origin look stationary; it now converges across the whole ``l1_ratio`` range, produces
+  exact zeros, and matches an independent proximal-gradient solver.
+  :class:`~empulse.optimizers.ScipyOptimizer` is deliberately unchanged, so user-supplied
+  ``bounds`` keep working there; it performs plain subgradient descent and will not produce
+  exact zeros.
+- |Enhancement| :class:`~empulse.optimizers.LBFGSBOptimizer`'s ``tolerance`` is now relative to
+  the objective magnitude rather than absolute, so a cost matrix expressed in euros and the same
+  one expressed in cents converge to the same model.
 
 - |MajorFeature| ``empulse.optimizers`` has been substantially expanded, from exporting only
   :class:`~empulse.optimizers.Generation` to a full set of optimizers and schedules: the

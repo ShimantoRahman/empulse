@@ -21,6 +21,14 @@ cdef inline double sign(double x) noexcept nogil:
         return -1.0
 
 
+# The elastic-net penalty arrives already scaled, as the two precomputed weights `l1_weight` and
+# `l2_weight`. `ElasticNetPenalty` derives them once per fit from `C`, `l1_ratio` and the
+# objective's scale, which keeps the scaling policy in Python (where it is easy to change without a
+# rebuild) while the arithmetic stays here, where it costs nothing. Passing them as weights rather
+# than as `C`/`l1_ratio` also removes the per-call branching on `l1_ratio == 0.0 / == 1.0`.
+# Pass 0.0 for both to get the unpenalized data term, which is what the split-variable solver wants.
+
+
 @cython.cdivision(True)  # turn off check zero division error (n_rows is always positive)
 @cython.nonecheck(False)
 @cython.wraparound(False)
@@ -31,21 +39,14 @@ def cy_logit_loss_gradient(
         grad_const: cython.double[:, :],
         loss_const1: cython.double[:],
         loss_const2: cython.double[:],
-        C: cython.double = 1.0,
-        l1_ratio: cython.double = 0.0,
-        fit_intercept: cython.bint = True,
-        soft_threshold: cython.bint = False,
+        l1_weight: cython.double = 0.0,
+        l2_weight: cython.double = 0.0,
+        start_coef: cython.int = 1,
 ):
     i: cython.int
     j: cython.int
     n_rows: cython.int = <int>features.shape[0]
     n_cols: cython.int = <int>features.shape[1]
-
-    start_coef: cython.int  # index of where the coefficients start (not intercept)
-    if fit_intercept:
-        start_coef = 1
-    else:
-        start_coef = 0
 
     loss: cython.double = 0.0
     cdef cnp.ndarray[double, ndim=1] gradient = np.zeros(n_cols, dtype=np.float64)
@@ -58,50 +59,26 @@ def cy_logit_loss_gradient(
             y_score_view[i] += weights[j] * features[i, j]
         y_score_view[i] = expit(y_score_view[i])
 
-    if soft_threshold:
-        weights = weights.copy()
-        for j in range(start_coef, n_cols):
-            absolute_val: cython.double = fabs(weights[j])
-            if (absolute_val - C) > 0:
-                weights[j] = sign(weights[j]) * (absolute_val - C)
-            elif (absolute_val - C) < 0:
-                weights[j] = 0.0
-
     # compute gradient
     for i in range(n_rows):
         s: cython.double = y_score_view[i] * (1 - y_score_view[i])
         for j in range(n_cols):
             gradient_view[j] += s * grad_const[i, j]
-    # apply regularization
-    if l1_ratio == 0.0: # L2 regularization penalty
-        for j in range(start_coef, n_cols):
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += weights[j] / C
-    elif l1_ratio == 1.0: # L1 regularization penalty
-        for j in range(start_coef, n_cols):
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += sign(weights[j]) / C
-    else:
-        for j in range(start_coef, n_cols): # elastic net regularization penalty
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += ((1 - l1_ratio) * weights[j] + l1_ratio * sign(weights[j])) / C
-    if fit_intercept:
-        gradient_view[0] = gradient_view[0] / n_rows  # intercept term is not regularized
+    for j in range(n_cols):
+        gradient_view[j] = gradient_view[j] / n_rows
 
     # compute loss
     for i in range(n_rows):
         loss += y_score[i] * loss_const1[i] + (1 - y_score[i]) * loss_const2[i]
     loss = loss / n_rows
-    # apply regularization
-    if l1_ratio == 0.0: # L2 regularization penalty
+
+    # apply the elastic-net penalty (coefficients only; the intercept is never penalized)
+    if l1_weight != 0.0 or l2_weight != 0.0:
         for j in range(start_coef, n_cols):
-            loss += 0.5 * weights[j]**2 / C
-    elif l1_ratio == 1.0: # L1 regularization penalty
-        for j in range(start_coef, n_cols):
-            loss += fabs(weights[j]) / C
-    else:
-        for j in range(start_coef, n_cols): # elastic net regularization penalty
-            loss += (1 - l1_ratio) * 0.5 * weights[j]**2 / C + l1_ratio * fabs(weights[j]) / C
+            w: cython.double = weights[j]
+            loss += l1_weight * fabs(w) + 0.5 * l2_weight * w * w
+            gradient_view[j] += l1_weight * sign(w) + l2_weight * w
+
     return loss, gradient
 
 
@@ -114,21 +91,14 @@ def cy_logit_loss(
         features: cython.double[:, :],
         loss_const1: cython.double[:],
         loss_const2: cython.double[:],
-        C: cython.double = 1.0,
-        l1_ratio: cython.double = 0.0,
-        fit_intercept: cython.bint = True,
-        soft_threshold: cython.bint = False,
+        l1_weight: cython.double = 0.0,
+        l2_weight: cython.double = 0.0,
+        start_coef: cython.int = 1,
 ):
     i: cython.int
     j: cython.int
     n_rows: cython.int = <int>features.shape[0]
     n_cols: cython.int = <int>features.shape[1]
-
-    start_coef: cython.int
-    if fit_intercept:
-        start_coef = 1
-    else:
-        start_coef = 0
 
     loss: cython.double = 0.0
     cdef cnp.ndarray[double, ndim=1] y_score = np.zeros(n_rows, dtype=np.float64)
@@ -139,29 +109,17 @@ def cy_logit_loss(
             y_score_view[i] += weights[j] * features[i, j]
         y_score_view[i] = expit(y_score_view[i])
 
-    if soft_threshold:
-        weights = weights.copy()
-        for j in range(start_coef, n_cols):
-            absolute_val: cython.double = fabs(weights[j])
-            if (absolute_val - C) > 0:
-                weights[j] = sign(weights[j]) * (absolute_val - C)
-            elif (absolute_val - C) < 0:
-                weights[j] = 0.0
-
     # compute loss
     for i in range(n_rows):
         loss += y_score[i] * loss_const1[i] + (1 - y_score[i]) * loss_const2[i]
     loss = loss / n_rows
-    # apply regularization
-    if l1_ratio == 0.0:  # L2 regularization penalty
+
+    # apply the elastic-net penalty (coefficients only; the intercept is never penalized)
+    if l1_weight != 0.0 or l2_weight != 0.0:
         for j in range(start_coef, n_cols):
-            loss += 0.5 * weights[j]**2 / C
-    elif l1_ratio == 1.0:  # L1 regularization penalty
-        for j in range(start_coef, n_cols):
-            loss += fabs(weights[j]) / C
-    else:  # elastic net regularization penalty
-        for j in range(start_coef, n_cols):
-            loss += (1 - l1_ratio) * 0.5 * weights[j]**2 / C + l1_ratio * fabs(weights[j]) / C
+            w: cython.double = weights[j]
+            loss += l1_weight * fabs(w) + 0.5 * l2_weight * w * w
+
     return loss
 
 
@@ -173,21 +131,14 @@ def cy_logit_gradient(
         weights: cython.double[:],
         features: cython.double[:, :],
         grad_const: cython.double[:, :],
-        C: cython.double = 1.0,
-        l1_ratio: cython.double = 0.0,
-        fit_intercept: cython.bint = True,
-        soft_threshold: cython.bint = False,
+        l1_weight: cython.double = 0.0,
+        l2_weight: cython.double = 0.0,
+        start_coef: cython.int = 1,
 ):
     i: cython.int
     j: cython.int
     n_rows: cython.int = <int>features.shape[0]
     n_cols: cython.int = <int>features.shape[1]
-
-    start_coef: cython.int
-    if fit_intercept:
-        start_coef = 1
-    else:
-        start_coef = 0
 
     cdef cnp.ndarray[double, ndim=1] gradient = np.zeros(n_cols, dtype=np.float64)
     cdef double[:] gradient_view = gradient
@@ -199,35 +150,19 @@ def cy_logit_gradient(
             y_score_view[i] += weights[j] * features[i, j]
         y_score_view[i] = expit(y_score_view[i])
 
-    if soft_threshold:
-        weights = weights.copy()
-        for j in range(start_coef, n_cols):
-            absolute_val: cython.double = fabs(weights[j])
-            if (absolute_val - C) > 0:
-                weights[j] = sign(weights[j]) * (absolute_val - C)
-            elif (absolute_val - C) < 0:
-                weights[j] = 0.0
-
     # compute gradient
     for i in range(n_rows):
         s: cython.double = y_score_view[i] * (1 - y_score_view[i])
         for j in range(n_cols):
             gradient_view[j] += s * grad_const[i, j]
-    # apply regularization
-    if l1_ratio == 0.0:  # L2 regularization penalty
+    for j in range(n_cols):
+        gradient_view[j] = gradient_view[j] / n_rows
+
+    # apply the elastic-net penalty (coefficients only; the intercept is never penalized)
+    if l1_weight != 0.0 or l2_weight != 0.0:
         for j in range(start_coef, n_cols):
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += weights[j] / C
-    elif l1_ratio == 1.0:  # L1 regularization penalty
-        for j in range(start_coef, n_cols):
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += sign(weights[j]) / C
-    else:  # elastic net regularization penalty
-        for j in range(start_coef, n_cols):
-            gradient_view[j] = gradient_view[j] / n_rows
-            gradient_view[j] += ((1 - l1_ratio) * weights[j] + l1_ratio * sign(weights[j])) / C
-    if fit_intercept:
-        gradient_view[0] = gradient_view[0] / n_rows  # intercept term is not regularized
+            w: cython.double = weights[j]
+            gradient_view[j] += l1_weight * sign(w) + l2_weight * w
 
     return gradient
 

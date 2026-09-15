@@ -61,7 +61,7 @@ def main() -> int:
     for fq_name in public_names():
         try:
             result = validate(fq_name)
-        except Exception:  # noqa: BLE001 - properties and C extensions cannot be introspected
+        except Exception:  # ruff: ignore[blind-except] - properties and C extensions cannot be introspected
             skipped.append(fq_name)
             continue
         checked += 1

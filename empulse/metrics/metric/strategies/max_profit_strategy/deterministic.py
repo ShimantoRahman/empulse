@@ -150,9 +150,9 @@ class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         alpha: float,
+        objective_scale: float = 1.0,
         tp_benefit: float,
         tn_benefit: float,
         fp_cost: float,
@@ -164,9 +164,9 @@ class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
             y_true=y_true,
             C=C,
             l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
             fit_intercept=fit_intercept,
             alpha=alpha,
+            objective_scale=objective_scale,
         )
         self.profit_function = profit_function
         self.deterministic_symbols = deterministic_symbols
@@ -180,7 +180,7 @@ class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
     def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the negated max-profit objective and gradient for minimization."""
         start_coef = self._start_coef
-        w = self._apply_soft_threshold(weights)
+        w = np.asarray(weights, dtype=np.float64)
         alpha = self.alpha
 
         y_score = self._compute_y_score(w)

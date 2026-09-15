@@ -18,39 +18,9 @@ from ..common import (
     _safe_run_lambda_array,
     replace_random_var_with_mean,
 )
+from ._penalty import ElasticNetPenalty
 from .cost_strategy import CostOptimalRate, CostOptimalThreshold
 from .metric_strategy import LogitObjective, MetricStrategy
-
-
-def _soft_threshold_weights(weights: Float64Array, C: float, start_coef: int) -> Float64Array:
-    """Apply soft-thresholding to the non-intercept coefficients of *weights*."""
-    thresholded = weights.copy()
-    coef = thresholded[start_coef:]
-    absolute_val = np.abs(coef)
-    thresholded[start_coef:] = np.sign(coef) * np.clip(absolute_val - C, a_min=0.0, a_max=None)
-    return thresholded
-
-
-def _apply_elastic_net_penalty(
-    loss: float,
-    gradient: Float64Array,
-    weights: Float64Array,
-    C: float,
-    l1_ratio: float,
-    start_coef: int,
-) -> tuple[float, Float64Array]:
-    """Add the elastic-net penalty (and its gradient) to *loss* and *gradient* in-place."""
-    penalized = weights[start_coef:]
-    if l1_ratio == 0.0:  # L2 regularization penalty
-        gradient[start_coef:] += penalized / C
-        loss += 0.5 * float(np.sum(penalized**2)) / C
-    elif l1_ratio == 1.0:  # L1 regularization penalty
-        gradient[start_coef:] += np.sign(penalized) / C
-        loss += float(np.sum(np.abs(penalized))) / C
-    else:  # elastic net regularization penalty
-        gradient[start_coef:] += ((1 - l1_ratio) * penalized + l1_ratio * np.sign(penalized)) / C
-        loss += float(np.sum((1 - l1_ratio) * 0.5 * penalized**2 + l1_ratio * np.abs(penalized))) / C
-    return loss, gradient
 
 
 class LogCostLogitObjective(LogitObjective):
@@ -75,7 +45,6 @@ class LogCostLogitObjective(LogitObjective):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
     ) -> None:
         loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
@@ -84,10 +53,16 @@ class LogCostLogitObjective(LogitObjective):
         self.loss_const1: Float64Array = np.asarray(loss_const1, dtype=np.float64).reshape(-1)
         self.loss_const2: Float64Array = np.asarray(loss_const2, dtype=np.float64).reshape(-1)
         self.features: Float64Array = np.asarray(features, dtype=np.float64)
-        self.C = C
-        self.l1_ratio = l1_ratio
-        self.soft_threshold = soft_threshold
         self.fit_intercept = fit_intercept
+        # The per-sample gradient is `c1 (1 - s) - c2 s`, whose magnitude at s = 0.5 is
+        # |c1 - c2| / 2 -- the same scale the Cost strategy uses, up to a constant factor.
+        self.penalty = ElasticNetPenalty.from_scale(
+            objective_scale=float(np.mean(np.abs(self.loss_const1 - self.loss_const2))),
+            C=C,
+            l1_ratio=l1_ratio,
+            fit_intercept=fit_intercept,
+            n_samples=self.features.shape[0],
+        )
 
     def with_indices(self, indices: FloatNDArray) -> 'LogCostLogitObjective':
         """Return a new objective restricted to the sample subset given by *indices*.
@@ -108,12 +83,22 @@ class LogCostLogitObjective(LogitObjective):
         obj.features = self.features[indices]
         return obj
 
-    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
-        """Return ``(loss, gradient)`` for *weights*."""
-        start_coef = 1 if self.fit_intercept else 0
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the unpenalized ``(loss, gradient)`` for *weights*.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        loss : float
+            Loss of the data term alone.
+        gradient : ndarray
+            Gradient of the data term alone.
+        """
         w: Float64Array = np.asarray(weights, dtype=np.float64)
-        if self.soft_threshold:
-            w = _soft_threshold_weights(w, self.C, start_coef)
 
         n_samples = self.features.shape[0]
         logits = self.features @ w
@@ -124,19 +109,37 @@ class LogCostLogitObjective(LogitObjective):
         loss = float(np.mean(np.log(s_clipped) * self.loss_const1 + np.log(1 - s_clipped) * self.loss_const2))
         per_sample_grad = self.loss_const1 * (1 - s) - self.loss_const2 * s
         gradient: Float64Array = (self.features.T @ per_sample_grad) / n_samples
-
-        # note: the intercept term (index 0, when fit_intercept=True) is excluded from `start_coef`
-        # onwards and is therefore left unregularized, matching Cost's cy_logit_loss_gradient kernel.
-        loss, gradient = _apply_elastic_net_penalty(loss, gradient, w, self.C, self.l1_ratio, start_coef)
         return loss, gradient
 
-    def logit_loss(self, weights: FloatNDArray) -> float:
-        """Return only the scalar loss for *weights*."""
-        return self.logit_loss_gradient(weights)[0]
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Return only the unpenalized scalar loss for *weights*.
 
-    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
-        """Return only the gradient vector for *weights*."""
-        return self.logit_loss_gradient(weights)[1]
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Loss of the data term alone.
+        """
+        return self.data_loss_gradient(weights)[0]
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return only the unpenalized gradient vector for *weights*.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient of the data term alone.
+        """
+        return self.data_loss_gradient(weights)[1]
 
 
 class LogCostBoostGradient:
@@ -172,13 +175,42 @@ class LogCostBoostGradient:
 
 
 class LogCost(MetricStrategy):
-    """
+    r"""
     Strategy for the Expected Log Cost metric.
 
     The expected log cost is closely related to (weighted) cross-entropy / log loss: it replaces
     the predicted probability ``s`` in :class:`~empulse.metrics.Cost`'s linear cost function with
-    ``log(s)`` and ``log(1 - s)``. When ``tp_cost = tn_cost = -1`` and ``fp_cost = fn_cost = 0``,
-    the expected log cost reduces to the standard log loss.
+    ``log(s)`` and ``log(1 - s)``, giving the per-sample loss
+
+    .. math::
+
+        y \left( C_{TP} \log s + C_{FN} \log (1 - s) \right)
+        + (1 - y) \left( C_{TN} \log (1 - s) + C_{FP} \log s \right)
+
+    Each cost weights the log of the probability assigned to the outcome it names, so the terms
+    that reproduce log loss are the *correct*-classification ones. Setting
+    ``tp_cost = tn_cost = -1`` (equivalently, a true-positive and true-negative benefit of ``1``)
+    with ``fp_cost = fn_cost = 0`` leaves exactly the standard log loss,
+    :math:`-y \log s - (1 - y) \log (1 - s)`.
+
+    Fitting :class:`~empulse.models.CSLogitClassifier` on that metric with ``l1_ratio=0`` and
+    ``b=1`` reproduces :class:`~sklearn:sklearn.linear_model.LogisticRegression` at the same ``C``,
+    up to solver tolerance.
+
+    .. code-block:: python
+
+        from empulse.metrics import CostMatrix, LogCost, Metric
+
+        log_loss = Metric(CostMatrix().add_tp_benefit('b').add_tn_benefit('b'), LogCost())
+
+    .. warning::
+
+        Weighting the *mis*-classification terms instead, with ``add_fp_cost`` and ``add_fn_cost``,
+        is a different objective rather than a reweighted log loss. It puts the log on the
+        probability assigned to the wrong outcome, so a positive sample contributes
+        :math:`\log (1 - s)`, whose gradient grows without bound as that sample is classified
+        *correctly* instead of flattening out. Weight cross-entropy per class through
+        ``tp_cost``/``tn_cost`` (or their benefits).
 
     .. seealso::
         :func:`~empulse.metrics.expected_log_cost_loss` : the underlying metric function.
@@ -335,7 +367,6 @@ class LogCost(MetricStrategy):
         y_true: FloatNDArray,
         C: float,
         l1_ratio: float,
-        soft_threshold: bool,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
     ) -> LogCostLogitObjective:
@@ -353,8 +384,6 @@ class LogCost(MetricStrategy):
         l1_ratio : float
             The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
             l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
-        soft_threshold : bool
-            Indicator of whether soft thresholding is applied during optimization.
         fit_intercept : bool
             Specifies if an intercept should be included in the model.
         **parameters : float or NDArray of shape (n_samples,)
@@ -381,7 +410,6 @@ class LogCost(MetricStrategy):
             y_true=y_true,
             C=C,
             l1_ratio=l1_ratio,
-            soft_threshold=soft_threshold,
             fit_intercept=fit_intercept,
         )
 
@@ -468,7 +496,7 @@ def _log_cost_loss_to_latex(
 ) -> str:
     from ..common import _latex
 
-    i, N = sympy.symbols('i N')  # noqa: N806
+    i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
         _build_log_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
     )

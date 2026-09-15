@@ -54,7 +54,7 @@ def test_cslogit_accepts_mixture_metric_loss(dataset, two_point_mixture):
     from scipy.optimize import OptimizeResult
 
     X, y = dataset
-    model = CSLogitClassifier(loss=two_point_mixture, C=1e6, l1_ratio=0.0, soft_threshold=False)
+    model = CSLogitClassifier(loss=two_point_mixture, C=1e6, l1_ratio=0.0)
     model.fit(X, y, roi=0.2644)
 
     assert isinstance(model.result_, OptimizeResult)
@@ -77,7 +77,7 @@ def test_cslogit_mixture_metric_matches_weighted_average_gamma(dataset):
     """
     X, y = dataset
     gamma, roi = sympy.symbols('gamma roi')
-    common_kwargs = {'C': 1e6, 'l1_ratio': 0.0, 'soft_threshold': False}
+    common_kwargs = {'C': 1e6, 'l1_ratio': 0.0}
 
     def fit_plain(g):
         metric = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
@@ -110,7 +110,7 @@ def test_cslogit_mixture_metric_weights_are_not_ignored(dataset):
     X, y = dataset
     gamma, roi = sympy.symbols('gamma roi')
     metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
-    common_kwargs = {'C': 1e6, 'l1_ratio': 0.0, 'soft_threshold': False}
+    common_kwargs = {'C': 1e6, 'l1_ratio': 0.0}
 
     mixture_a = MixtureMetric([
         MixtureComponent(0.9, metric_det, {'gamma': 0.0}),

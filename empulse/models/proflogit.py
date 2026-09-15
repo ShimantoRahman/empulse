@@ -61,9 +61,6 @@ class ProfLogitClassifier(BaseLogitClassifier):
     fit_intercept : bool, default=True
         Specifies if a constant (a.k.a. bias or intercept) should be added to the decision function.
 
-    soft_threshold : bool, default=True
-        If ``True``, apply soft-thresholding to the regression coefficients.
-
     l1_ratio : float, default=1.0
         The ElasticNet mixing parameter, with ``0 <= l1_ratio <= 1``.
         For ``l1_ratio = 0`` the penalty is a L2 penalty.

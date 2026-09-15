@@ -114,7 +114,6 @@ def test_log_cost_logit_objective_is_picklable(dataset):
         y_true=y,
         C=1.0,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=True,
     )
     restored = pickle.loads(pickle.dumps(objective))
@@ -160,7 +159,6 @@ def test_log_cost_no_closures_in_objective_state():
         y_true=y,
         C=1.0,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=True,
     )
     for value in vars(objective).values():
@@ -181,7 +179,6 @@ def test_log_cost_logit_gradient_matches_finite_difference(dataset):
         y_true=y,
         C=1e6,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=False,
     )
     weights = rng.normal(scale=0.1, size=X.shape[1])
@@ -210,7 +207,6 @@ def test_log_cost_logit_gradient_reduces_to_logistic_regression_gradient(dataset
         y_true=y,
         C=1e6,
         l1_ratio=0.0,
-        soft_threshold=False,
         fit_intercept=False,
     )
     weights = np.full(X.shape[1], 0.05)
@@ -244,7 +240,7 @@ def test_log_cost_gradient_boost_matches_finite_difference():
     numeric_grad = np.zeros(n)
     numeric_hess = np.zeros(n)
     for i in range(n):
-        f = lambda x: per_sample_loss(y_true[i], x, tp=2.0, tn=1.0, fp=0.5, fn=1.5)  # noqa: B023
+        f = lambda x: per_sample_loss(y_true[i], x, tp=2.0, tn=1.0, fp=0.5, fn=1.5)  # ruff: ignore[function-uses-loop-variable]
         numeric_grad[i] = (f(y_score[i] + eps_grad) - f(y_score[i] - eps_grad)) / (2 * eps_grad)
         numeric_hess[i] = (f(y_score[i] + eps_hess) - 2 * f(y_score[i]) + f(y_score[i] - eps_hess)) / eps_hess**2
 
@@ -305,7 +301,7 @@ def test_cslogit_accepts_log_cost_metric(dataset):
     cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
     metric = Metric(cost_matrix, LogCost())
 
-    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0, soft_threshold=False)
+    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0)
     model.fit(X, y, tp=0.0, fp=1.0)
 
     assert isinstance(model.result_, OptimizeResult)
@@ -326,7 +322,7 @@ def test_cslogit_log_cost_is_picklable_after_fit(dataset):
     cost_matrix = CostMatrix().add_tp_benefit(1.0).add_fp_cost(1.0)
     metric = Metric(cost_matrix, LogCost())
 
-    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0, soft_threshold=False)
+    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0)
     model.fit(X, y)
 
     restored = pickle.loads(pickle.dumps(model))

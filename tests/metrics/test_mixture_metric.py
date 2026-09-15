@@ -351,7 +351,7 @@ def test_logit_objective_matches_manual_combination(credit_scoring_metrics):
     w0, w1, roi = 0.6, 0.4, 0.2644
     mixture = _two_point_mixture(metric_det, w0, w1)
 
-    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'soft_threshold': False, 'fit_intercept': True}
+    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
     objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
     objective0 = metric_det._logit_objective(features=X, y_true=y, gamma=0.0, roi=roi, **common_kwargs)
     objective1 = metric_det._logit_objective(features=X, y_true=y, gamma=1.0, roi=roi, **common_kwargs)
@@ -376,7 +376,7 @@ def test_logit_objective_with_indices_and_set_alpha(credit_scoring_metrics):
     X = _with_intercept(X_raw)
     roi = 0.2644
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
-    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'soft_threshold': False, 'fit_intercept': True}
+    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
     objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
 
     # set_alpha should not raise, even though this cost structure has no annealed component
@@ -398,7 +398,7 @@ def test_logit_gradient_steps_matches_direct_call():
     X = _with_intercept(X_raw)
     roi = 0.2644
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
-    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'soft_threshold': False, 'fit_intercept': True}
+    common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
     objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
 
     weights = np.zeros(X.shape[1], dtype=np.float64)

@@ -93,7 +93,7 @@ docs = [
 ]
 
 lint = [
-    "ruff>=0.15.3",
+    "ruff>=0.16.7",
     "pre-commit>=4.0.1",
     "mypy>=1.19.1",
     "scipy-stubs>=1.15.3.0",
@@ -189,19 +189,19 @@ extend-select = [# find all rules at https://docs.astral.sh/ruff/rules
     "N", # pep8-naming
     "NPY", # numpy-specific rules
     "PD", # pandas-vet
-    "PGH004", # blanket-noqa
+    "blanket-noqa", # blanket-noqa
     "PIE", # flake8-pie
     "PLC", # pylint conventions
     "PLE", # pylint errors
     # pylint refactor
-    "PLR1714",
-    "PLR1716",
-    "PLR1730",
-    "PLR1733",
-    "PLR1736",
-    "PLR2044",
-    "PLR5501",
-    "PLR6201",
+    "repeated-equality-comparison",
+    "boolean-chained-comparison",
+    "if-stmt-min-max",
+    "unnecessary-dict-index-lookup",
+    "unnecessary-list-index-lookup",
+    "empty-comment",
+    "collapsible-else-if",
+    "literal-membership",
     "PLW", # pylint warnings
     "RSE", # flake8-raise
     "RUF", # ruff-specific rules
@@ -211,22 +211,23 @@ extend-select = [# find all rules at https://docs.astral.sh/ruff/rules
     "TC", # flake8-type-checking
 ]
 ignore = [
-    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
-    "E731", # do not assign a `lambda` expression, use a `def`
-    "D100", # Missing docstring in public module
-    "D104", # Missing docstring in public package
-    "D105", # Missing docstring in magic method
-    "D301", # Use r""" if any backslashes in a docstring
-    "PLW2901", # `for` loop variable overwritten by assignment target
-    "PLW3201", # sklearn uses special dunder methods for estimator tags and such
-    "PLC1901", # Comparing empty string with "not" is not very readable
-    "PLC2701", # Private name import {name} from external module {module}
-    "PLC0415", # `import` should be at the top-level of a file
-    "RUF069",
-    "RET504", # Sometimes variable names can improve code quality
-    "TRY300", # else blocks can make code less readable
-    "S102", # exec is used to test docstrings
-    "D420", # Incorrectly suggests that Attributes section must come last.
+    "any-type", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "lambda-assignment", # do not assign a `lambda` expression, use a `def`
+    "undocumented-public-module", # Missing docstring in public module
+    "undocumented-public-package", # Missing docstring in public package
+    "undocumented-magic-method", # Missing docstring in magic method
+    "escape-sequence-in-docstring", # Use r""" if any backslashes in a docstring
+    "redefined-loop-name", # `for` loop variable overwritten by assignment target
+    "bad-dunder-method-name", # sklearn uses special dunder methods for estimator tags and such
+    "compare-to-empty-string", # Comparing empty string with "not" is not very readable
+    "import-private-name", # Private name import {name} from external module {module}
+    "import-outside-top-level", # `import` should be at the top-level of a file
+    "float-equality-comparison",
+    "unnecessary-assign", # Sometimes variable names can improve code quality
+    "try-consider-else", # else blocks can make code less readable
+    "exec-builtin", # exec is used to test docstrings
+    "incorrect-section-order", # Incorrectly suggests that Attributes section must come last.
+    "too-many-statements-in-try-clause", # Sometimes try blocks are long
 ]
 allowed-confusables = ["–"]  # allow en-dash in docstrings (used in APA citation)
 
@@ -235,17 +236,17 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
-    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
-    "E731", # do not assign a `lambda` expression, use a `def`
+    "any-type", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "lambda-assignment", # do not assign a `lambda` expression, use a `def`
     "D", # pydocstyle
-    "NPY002", # Replace legacy `np.random.random` call with `np.random.Generator`
-    "PLW2901", # `for` loop variable overwritten by assignment target
-    "PLC2701", # Private name import {name} from external module {module}
-    "PLC0415", # `import` should be at the top-level of a file
+    "numpy-legacy-random", # Replace legacy `np.random.random` call with `np.random.Generator`
+    "redefined-loop-name", # `for` loop variable overwritten by assignment target
+    "import-private-name", # Private name import {name} from external module {module}
+    "import-outside-top-level", # `import` should be at the top-level of a file
 ]
 "scripts/*" = [
-    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
-    "E731", # do not assign a `lambda` expression, use a `def`
+    "any-type", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "lambda-assignment", # do not assign a `lambda` expression, use a `def`
     "D", # pydocstyle
     "T",
     "S",

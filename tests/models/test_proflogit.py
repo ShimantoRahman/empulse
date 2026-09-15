@@ -22,12 +22,10 @@ def test_proflogit_with_different_parameters():
         fp_cost=1,
         C=0.5,
         fit_intercept=False,
-        soft_threshold=False,
         l1_ratio=0.5,
     )
     assert clf.C == 0.5
     assert clf.fit_intercept is False
-    assert clf.soft_threshold is False
     assert clf.l1_ratio == 0.5
 
 

@@ -155,10 +155,18 @@ class TestScipyOptimizer:
         """ScipyOptimizer with default settings should broadly agree with LBFGSBOptimizer, since
         both ultimately drive the same 'L-BFGS-B' method with the analytic gradient - though exact
         coefficients differ slightly (LBFGSBOptimizer additionally tunes maxls/gtol/ftol).
+
+        Pinned to ``l1_ratio=0.0``: only for a smooth penalty do the two solve the same problem the
+        same way. With ``l1_ratio > 0`` LBFGSBOptimizer reformulates and drives coefficients to
+        exact zeros, where ScipyOptimizer runs plain subgradient descent and does not - so their
+        signs legitimately differ, which is what :meth:`test_split_variable_differs_from_scipy`
+        asserts instead.
         """
         X, y = data
-        clf_generic = CSLogitClassifier(fp_cost=1.0, fn_cost=1.0, optimizer=ScipyOptimizer(max_iter=200))
-        clf_specific = CSLogitClassifier(fp_cost=1.0, fn_cost=1.0, optimizer=LBFGSBOptimizer(max_iter=200))
+        clf_generic = CSLogitClassifier(fp_cost=1.0, fn_cost=1.0, l1_ratio=0.0, optimizer=ScipyOptimizer(max_iter=200))
+        clf_specific = CSLogitClassifier(
+            fp_cost=1.0, fn_cost=1.0, l1_ratio=0.0, optimizer=LBFGSBOptimizer(max_iter=200)
+        )
         clf_generic.fit(X, y)
         clf_specific.fit(X, y)
         # Same sign on every coefficient, and correlated predictions on the training data.

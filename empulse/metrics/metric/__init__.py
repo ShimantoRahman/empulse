@@ -5,6 +5,7 @@ from .mixture_metric import MixtureComponent, MixtureMetric
 from .strategies import (
     AUEPC,
     Cost,
+    ElasticNetPenalty,
     EmpiricalMaxProfit,
     EmpiricalMinCost,
     LogCost,
@@ -14,6 +15,7 @@ from .strategies import (
     MinCost,
     Profit,
     Savings,
+    objective_scale_from_costs,
 )
 
 __all__ = [
@@ -21,6 +23,7 @@ __all__ = [
     'BaseMetric',
     'Cost',
     'CostMatrix',
+    'ElasticNetPenalty',
     'EmpiricalMaxProfit',
     'EmpiricalMinCost',
     'LogCost',
@@ -33,4 +36,5 @@ __all__ = [
     'MixtureMetric',
     'Profit',
     'Savings',
+    'objective_scale_from_costs',
 ]

@@ -392,7 +392,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         **loss_params: Any,
     ) -> None:
         if isinstance(XGBClassifier, TypeVar):
-            raise ImportError(  # noqa: TRY004
+            raise ImportError(  # ruff: ignore[type-check-without-type-error]
                 f'XGBoost package is required to use {type(self).__name__}. '
                 'Install the boosting backends through `pip install empulse[boosting]` or '
                 '`pip install xgboost`'

@@ -33,7 +33,6 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         **CostSensitiveClassifier._parameter_constraints,
         'C': [Interval(Real, 0, None, closed='right')],
         'fit_intercept': ['boolean'],
-        'soft_threshold': ['boolean'],
         'l1_ratio': [Interval(Real, 0, 1, closed='both')],
         'loss': [BaseMetric, None],
         'optimizer': [Optimizer, None],
@@ -49,14 +48,12 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         fp_cost: FloatArrayLike | float = 0.0,
         C: float = 1.0,
         fit_intercept: bool = True,
-        soft_threshold: bool = True,
-        l1_ratio: float = 1.0,
+        l1_ratio: float = 0.0,
         loss: BaseMetric | None = None,
         optimizer: Optimizer | None = None,
     ):
         self.C = C
         self.fit_intercept = fit_intercept
-        self.soft_threshold = soft_threshold
         self.l1_ratio = l1_ratio
         self.optimizer = optimizer
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
@@ -86,7 +83,6 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
             y_true=y,
             C=self.C,
             l1_ratio=self.l1_ratio,
-            soft_threshold=self.soft_threshold,
             fit_intercept=self.fit_intercept,
             **loss_params,
         )

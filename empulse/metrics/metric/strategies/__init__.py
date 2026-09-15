@@ -1,3 +1,4 @@
+from ._penalty import ElasticNetPenalty, objective_scale_from_costs
 from .auepc_strategy import AUEPC
 from .cost_strategy import Cost, Profit
 from .empirical_max_profit_strategy import EmpiricalMaxProfit, EmpiricalMinCost
@@ -9,6 +10,7 @@ from .savings_strategy import Savings
 __all__ = [
     'AUEPC',
     'Cost',
+    'ElasticNetPenalty',
     'EmpiricalMaxProfit',
     'EmpiricalMinCost',
     'LogCost',
@@ -18,4 +20,5 @@ __all__ = [
     'MinCost',
     'Profit',
     'Savings',
+    'objective_scale_from_costs',
 ]

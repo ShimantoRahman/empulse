@@ -153,7 +153,6 @@ def test_auepc_does_not_support_model_training(empirical_churn_cost_matrix, empi
             y_true=y,
             C=1.0,
             l1_ratio=0.0,
-            soft_threshold=False,
             fit_intercept=True,
             clv=clv,
             delta=0.05,

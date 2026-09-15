@@ -126,7 +126,7 @@ def cost_matrix_anatomy(theme: dict[str, str]) -> str:
         by = grid_y + row * cell_h + 13
         c.circle(bx, by, 9, fill='blue-strong')
         # U+2212 MINUS SIGN, not a hyphen: this is a mathematical negation.
-        c.text(bx, by + 1, '−', fill='paper', size=13, weight='700')  # noqa: RUF001
+        c.text(bx, by + 1, '−', fill='paper', size=13, weight='700')  # ruff: ignore[ambiguous-unicode-character-string]
 
     mid = (left_x + cell_w * 2 + right_x) / 2
     c.arrow(
