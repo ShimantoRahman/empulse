@@ -55,10 +55,12 @@ class MaxProfit(MetricStrategy):
 
         - If ``'auto'``, the integration method is automatically chosen based on the number of stochastic variables,
           balancing accuracy with execution speed.
-          For a single stochastic variable, piecewise integration is used. This is the most accurate method.
-          For two stochastic variables, 'quad' is used,
-          and for more than two stochastic variables, 'quasi-monte-carlo' is used if all distribution are supported.
-          Otherwise, 'monte-carlo' is used.
+          For a single stochastic variable, piecewise integration is always used, splitting the support at the
+          points where the optimal operating point changes; this is exact when the profit function is polynomial
+          in the stochastic variable and its distribution supports closed-form partial moments, and numerically
+          integrated otherwise.
+          For two or more stochastic variables, 'quasi-monte-carlo' is used if every distribution is supported,
+          and 'monte-carlo' otherwise.
         - If ``'quad'``, the metric is integrated using the quad function from scipy.
           Be careful, as this can be slow for more than 2 stochastic variables.
         - If ``'monte-carlo'``, the metric is integrated using a Monte Carlo simulation.
