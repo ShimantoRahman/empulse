@@ -30,6 +30,11 @@ PYPROJECT = ROOT / 'pyproject.toml'
 SECTION_START = '# >>> sklearn-compat-start (auto-generated, do not edit manually)\n'
 SECTION_END = '# >>> sklearn-compat-end\n'
 
+# `deps` alone does not hold the pin. tox-uv installs `deps`, then separately installs the built
+# wheel's own `scikit-learn>=X` requirement, and that second install silently replaces the pinned
+# version with the newest release -- so the environment reports a pass for a version it never
+# exercised. `commands_pre` runs after every install phase, so reinstating the pin there is what makes
+# it stick, and asserting it afterwards keeps a future regression loud instead of silent.
 ENV_TEMPLATE = """\
 [testenv:sklearn{tag}-tests]
 runner = uv-venv-runner
@@ -39,6 +44,10 @@ dependency_groups =
     test
 deps =
     scikit-learn=={version}
+    uv
+commands_pre =
+    uv pip install --python {{env_python}} --reinstall-package scikit-learn --prerelease allow scikit-learn=={version}
+    python scripts/assert_sklearn_version.py {version}
 commands =
     python setup.py build_ext --inplace
     pytest --basetemp={{envtmpdir}} -m "not slow" {{posargs}}

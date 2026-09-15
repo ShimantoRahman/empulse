@@ -1,0 +1,253 @@
+name: scikit-learn release watch
+
+# Empulse tracks scikit-learn internals closely -- it subclasses a precompiled Cython criterion and
+# leans on estimator-check and metadata-routing behaviour -- so a scikit-learn release can break it
+# without anything in this repository changing.
+# This workflow is to check daily whether anything broke with new releases.
+
+on:
+  schedule:
+    # Daily 05:00 UTC. scikit-learn's wheels land on PyPI over a few hours, so this sees a release
+    # the following morning at worst.
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "scikit-learn version to test (blank = latest on PyPI, including rc)"
+        required: false
+        type: string
+      force:
+        description: "Test even if this version has been tested before"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: sklearn-watch
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.report.outputs.version }}
+      matrix: ${{ steps.report.outputs.matrix }}
+      sklearn_only: ${{ steps.report.outputs.sklearn_only }}
+      empulse_only: ${{ steps.report.outputs.empulse_only }}
+      cache_key: ${{ steps.report.outputs.cache_key }}
+      should_test: ${{ steps.decide.outputs.should_test }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Inspect the latest scikit-learn release
+        id: report
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_VERSION" ]; then
+            report=$(uv run --no-project scripts/check_sklearn_release.py --version "$INPUT_VERSION")
+          else
+            report=$(uv run --no-project scripts/check_sklearn_release.py)
+          fi
+          echo "$report" | python -m json.tool
+
+          {
+            echo "version=$(echo "$report" | jq -r .version)"
+            echo "matrix=$(echo "$report" | jq -c .matrix)"
+            echo "sklearn_only=$(echo "$report" | jq -r '.sklearn_only | join(", ")')"
+            echo "empulse_only=$(echo "$report" | jq -r '.empulse_only | join(", ")')"
+            echo "cache_key=sklearn-watch-v1-$(echo "$report" | jq -r .version)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Has this version been tested before?
+        id: marker
+        uses: actions/cache/restore@v4
+        with:
+          path: .sklearn-watch-marker
+          key: ${{ steps.report.outputs.cache_key }}
+          # Only the key's presence matters, so skip downloading the (empty) payload.
+          lookup-only: true
+
+      - name: Decide whether to run the matrix
+        id: decide
+        env:
+          CACHE_HIT: ${{ steps.marker.outputs.cache-hit }}
+          FORCE: ${{ inputs.force }}
+          VERSION: ${{ steps.report.outputs.version }}
+          MATRIX: ${{ steps.report.outputs.matrix }}
+        run: |
+          # The cache entry is a marker, not data: its presence means "already tested". The daily
+          # lookup keeps it from ageing out, and losing it anyway is harmless -- it costs one
+          # redundant matrix run, and cannot produce a duplicate notification, because the issue
+          # check in the `report` job dedupes that separately.
+          if [ "$CACHE_HIT" = "true" ] && [ "$FORCE" != "true" ]; then
+            echo "scikit-learn $VERSION has been tested before; nothing to do."
+            echo "should_test=false" >> "$GITHUB_OUTPUT"
+          elif [ "$MATRIX" = "[]" ]; then
+            echo "No interpreter is supported by both projects, so there is nothing to test."
+            echo "should_test=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_test=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    needs: detect
+    if: needs.detect.outputs.should_test == 'true'
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Report every leg rather than stopping at the first: which interpreters and platforms break is
+      # the most useful thing the issue can say.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Run test suite against scikit-learn ${{ needs.detect.outputs.version }}
+        env:
+          SKLEARN_VERSION: ${{ needs.detect.outputs.version }}
+        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow and not remote"
+
+  report:
+    needs: [detect, test]
+    if: always() && needs.detect.outputs.should_test == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.detect.outputs.version }}
+      RESULT: ${{ needs.test.result }}
+      SKLEARN_ONLY: ${{ needs.detect.outputs.sklearn_only }}
+      EMPULSE_ONLY: ${{ needs.detect.outputs.empulse_only }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write the job summary
+        run: |
+          {
+            echo "## scikit-learn $VERSION"
+            echo
+            echo "- test suite: \`$RESULT\`"
+            echo "- interpreters scikit-learn has and we do not claim: ${SKLEARN_ONLY:-none}"
+            echo "- interpreters we claim and scikit-learn does not have: ${EMPULSE_ONLY:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open an issue if there is something to act on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ "$RESULT" = "success" ] && [ -z "$SKLEARN_ONLY" ] && [ -z "$EMPULSE_ONLY" ]; then
+            echo "Tests pass and interpreter support matches; nothing worth an issue."
+            exit 0
+          fi
+
+          # Matching on the trailing colon keeps "scikit-learn 1.9.0:" from matching "1.9.0rc1:".
+          seen=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 200 \
+                   --search 'sklearn-watch in:title' --json title --jq '.[].title' \
+                 | grep -F "scikit-learn $VERSION:" || true)
+          if [ -n "$seen" ]; then
+            echo "Already reported: $seen"
+            exit 0
+          fi
+
+          if [ "$RESULT" = "success" ]; then
+            headline="interpreter support moved"
+          else
+            headline="tests FAIL"
+          fi
+
+          : > body.md
+
+          if [ "$RESULT" != "success" ]; then
+            cat >> body.md <<'MD'
+          The test suite **does not pass** against scikit-learn `__VERSION__` (the matrix result was
+          `__RESULT__`).
+
+          [Workflow run - see which interpreters and platforms failed](__RUN_URL__)
+
+          Worth checking first, in the order these usually bite this package:
+
+          - a segfault or access violation rather than a Python traceback points at the Cython ABI,
+            not at the test: read the `scripts/check_cython_abi.py` output at the top of the job log,
+            and see whether `cython==3.2.5` in `pyproject.toml` still matches what the new
+            scikit-learn wheels were built with
+          - `parametrize_with_checks` failures in `tests/models/test_models.py` usually mean a new or
+            renamed estimator check; `expected_failed_checks` may need an entry, or one may have
+            started passing, which `xfail_strict` also turns red
+          - metadata-routing failures point at `_append_params_to_metadata_routing` in
+            `empulse/models/csclassifier.py`
+
+          If this is a release candidate, there is still time to report it upstream.
+
+          MD
+          else
+            cat >> body.md <<'MD'
+          The test suite passes against scikit-learn `__VERSION__`, but its interpreter support no
+          longer lines up with the classifiers in `pyproject.toml`.
+
+          [Workflow run](__RUN_URL__)
+
+          MD
+          fi
+
+          if [ -n "$SKLEARN_ONLY" ]; then
+            cat >> body.md <<'MD'
+          **scikit-learn ships wheels for __SKLEARN_ONLY__, which we do not claim.** Support we could
+          pick up: add the classifier in `pyproject.toml`, a factor to `envlist` and `[gh-actions]` in
+          `tox.ini`, and a leg to `tests.yml`.
+
+          MD
+          fi
+
+          if [ -n "$EMPULSE_ONLY" ]; then
+            cat >> body.md <<'MD'
+          **We claim __EMPULSE_ONLY__, which scikit-learn no longer ships wheels for.** This is the one
+          to act on: on those interpreters `pip install empulse` now resolves to an older scikit-learn
+          than `pyproject.toml` asks for, or fails outright. Either drop the classifier and the tox
+          factor, or hold the `scikit-learn>=` floor below `__VERSION__`.
+
+          MD
+          fi
+
+          # The bodies are written with placeholders and quoted heredocs so that backticks and `$`
+          # in the prose reach the issue as themselves rather than being run by the shell.
+          python - <<'PY'
+          import os
+          import pathlib
+
+          body = pathlib.Path('body.md')
+          text = body.read_text(encoding='utf-8')
+          for name in ('VERSION', 'RESULT', 'RUN_URL', 'SKLEARN_ONLY', 'EMPULSE_ONLY'):
+              text = text.replace(f'__{name}__', os.environ.get(name, ''))
+          body.write_text(text, encoding='utf-8')
+          print(text)
+          PY
+
+          gh label create sklearn-watch --repo "$GITHUB_REPOSITORY" \
+            --color FFA500 --description "Raised by the scikit-learn release watch" 2>/dev/null || true
+
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "[sklearn-watch] scikit-learn $VERSION: $headline" \
+            --body-file body.md --label sklearn-watch
+
+      - name: Record that this version has been tested
+        # Saved whatever the outcome, so a failing release is reported once rather than every day.
+        # The open issue is the standing reminder from then on.
+        run: touch .sklearn-watch-marker
+      - uses: actions/cache/save@v4
+        with:
+          path: .sklearn-watch-marker
+          key: ${{ needs.detect.outputs.cache_key }}
