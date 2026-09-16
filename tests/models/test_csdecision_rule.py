@@ -341,6 +341,58 @@ class TestPredictTimeCosts:
         assert call_count == 1
 
 
+class _RecordingMetric(Metric):
+    """Metric stub whose ``_all_symbols`` contains ``'alpha'`` and that records which object
+    served each ``optimal_threshold``/``optimal_rate`` call, so a test can tell whether the call
+    was served by the per-fit deep copy (``self._loss``) or by the shared original instance.
+    """
+
+    _all_symbols = {'alpha'}  # ruff: ignore[mutable-class-default]
+
+    def __init__(self, strategy):
+        self._strategy = strategy
+        self.cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
+        self.call_log = []
+
+    def optimal_threshold(self, y_true, y_score, **kwargs):
+        self.call_log.append(self)
+        return 0.5
+
+    def optimal_rate(self, y_true, y_score, **kwargs):
+        self.call_log.append(self)
+        return 0.3
+
+
+class TestPredictLossFitCopyIsolation:
+    """`predict()` must consult the per-fit loss copy (`self._loss`), not the shared
+    `self.loss` object, when recomputing the decision from predict-time loss params.
+
+    Two estimators constructed with the same shared metric instance (as happens with a
+    module-level prebuilt metric such as `empc_score`) must not read or write each other's
+    metric state through predict-time recomputation of the decision.
+    """
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_predict_does_not_touch_shared_loss_instance(self, classifier_type, data):
+        X, y = data
+        shared_loss = _RecordingMetric(_DummyCostStrategy())
+        clf_a = _make_model(classifier_type, loss=shared_loss)
+        clf_b = _make_model(classifier_type, loss=shared_loss)
+        clf_a.fit(X, y, alpha=0.1)
+        clf_b.fit(X, y, alpha=0.1)
+
+        clf_a.predict(X, alpha=0.2)
+        clf_b.predict(X, alpha=0.3)
+
+        assert shared_loss.call_log == [], (
+            'predict() consulted the shared self.loss object instead of the per-fit copy self._loss'
+        )
+        assert len(clf_a._loss.call_log) == 2  # one from fit, one from predict
+        assert all(obj is clf_a._loss for obj in clf_a._loss.call_log)
+        assert len(clf_b._loss.call_log) == 2
+        assert all(obj is clf_b._loss for obj in clf_b._loss.call_log)
+
+
 class TestPredictUsesFittedDecision:
     """When costs were provided at fit time, predict uses the fitted decision."""
 

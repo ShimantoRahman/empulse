@@ -402,7 +402,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
                 raise NotFittedError
             check_is_fitted(self.estimator_)
 
-            loss = self._get_loss_or_default()
+            loss = self._get_metric_loss() or make_generic_cost_metric()
 
             if Capability.COST_ONLY_DECISION not in loss.capabilities:
                 raise ValueError(
