@@ -10,7 +10,7 @@ from sklearn.utils._param_validation import Interval, Real, StrOptions
 from .._common import Parameter
 from .._common._cost_routing import RoutesLossParameters
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
-from ..metrics import Metric
+from ..metrics import BaseMetric
 
 
 class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[misc]
@@ -61,7 +61,8 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         Loss function which determines the false positive and false negative costs
         used for the cost-proportionate resampling.
 
-        - If :class:`~empulse.metrics.Metric`, metric parameters are passed as ``loss_params``
+        - If a :class:`~empulse.metrics.BaseMetric` (e.g. a :class:`~empulse.metrics.Metric` or
+          :class:`~empulse.metrics.MixtureMetric`), its parameters are passed as ``loss_params``
           to the :meth:`~empulse.samplers.CostSensitiveSampler.fit_resample` method,
           and the ``fp_cost``/``fn_cost`` parameters are ignored.
 
@@ -129,7 +130,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         'random_state': ['random_state'],
         'fp_cost': [Real, 'array-like'],
         'fn_cost': [Real, 'array-like'],
-        'loss': [Metric, None],
+        'loss': [BaseMetric, None],
     }
 
     if TYPE_CHECKING:  # pragma: no cover
@@ -146,7 +147,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         random_state: int | np.random.RandomState | None = None,
         fp_cost: float | FloatArrayLike = 0.0,
         fn_cost: float | FloatArrayLike = 0.0,
-        loss: Metric | None = None,
+        loss: BaseMetric | None = None,
     ):
         super().__init__()
         self.method = method
@@ -192,16 +193,16 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         fp_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false positives. If ``float``, then all false positives have the same cost.
             If array-like, then it is the cost of each false positive classification.
-            Ignored if ``loss`` is a :class:`~empulse.metrics.Metric`.
+            Ignored if ``loss`` is a :class:`~empulse.metrics.BaseMetric`.
 
         fn_cost : float or array-like, shape=(n_samples,), default=$UNCHANGED$
             Cost of false negatives. If ``float``, then all false negatives have the same cost.
             If array-like, then it is the cost of each false negative classification.
-            Ignored if ``loss`` is a :class:`~empulse.metrics.Metric`.
+            Ignored if ``loss`` is a :class:`~empulse.metrics.BaseMetric`.
 
         **loss_params : Any
             Additional parameters to be passed to the loss function
-            if ``loss`` is a :class:`~empulse.metrics.Metric`.
+            if ``loss`` is a :class:`~empulse.metrics.BaseMetric`.
 
         Returns
         -------
@@ -224,7 +225,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         fn_cost: float | FloatArrayLike | Parameter = 0.0,
         **loss_params: Any,
     ) -> tuple[NDArray[Any], NDArray[Any]]:
-        if isinstance(self.loss, Metric):
+        if isinstance(self.loss, BaseMetric):
             self.loss._validate_parameters(**loss_params)
             fp_cost, fn_cost, _, _ = self.loss._evaluate_costs(**loss_params)
         else:

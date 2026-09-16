@@ -33,6 +33,7 @@ Metric Strategies
    :template: base.rst
 
    MetricStrategy
+   Capability
    MaxProfit
    MinCost
    EmpiricalMaxProfit

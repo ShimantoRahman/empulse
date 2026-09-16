@@ -8,6 +8,7 @@ from sympy.stats.rv import is_random
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
+from ...capabilities import Capability
 from ...common import (
     Direction,
     MetricFn,
@@ -199,6 +200,10 @@ class MaxProfit(MetricStrategy):
 
     _name: str = 'max profit'
     _direction: Direction = Direction.MAXIMIZE
+    #: Reducible to four class-level scalars (mean-substituted for any stochastic variable).
+    #: `LOGIT_OBJECTIVE`/`BOOST_OBJECTIVE` are added or removed by the `capabilities` override
+    #: below, since they depend on which integration backend `build()` picked.
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.CLASS_COSTS})
 
     def __init__(
         self,
@@ -231,9 +236,21 @@ class MaxProfit(MetricStrategy):
             self._rng = np.random.default_rng(random_state)
 
     @property
-    def requires_dynamic_boost_objective(self) -> bool:
-        """MaxProfit needs the current round's predictions to locate its profit-optimal threshold."""
-        return True
+    def capabilities(self) -> frozenset[Capability]:
+        """
+        The set of :class:`~empulse.metrics.Capability` members this strategy supports.
+
+        ``LOGIT_OBJECTIVE`` and ``BOOST_OBJECTIVE`` are only present once :meth:`build` has run
+        and picked a deterministic or ``BasePositiveDistribution`` stochastic score function --
+        the same condition :meth:`logit_objective` and :meth:`gradient_boost_objective` check
+        before raising ``NotImplementedError``. Before :meth:`build`, or for any other stochastic
+        distribution, neither is present.
+        """
+        caps = super().capabilities
+        score_function = getattr(self, '_score_function', None)
+        if isinstance(score_function, MaxProfitScoreDeterministic | BasePositiveDistribution):
+            return caps | {Capability.LOGIT_OBJECTIVE, Capability.BOOST_OBJECTIVE}
+        return caps - {Capability.LOGIT_OBJECTIVE, Capability.BOOST_OBJECTIVE}
 
     def build(
         self,

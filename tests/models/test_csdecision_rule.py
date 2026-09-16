@@ -5,7 +5,7 @@ from sklearn import config_context
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric
+from empulse.metrics import Capability, Cost, CostMatrix, EmpiricalMaxProfit, MaxProfit, Metric
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
 
 
@@ -25,6 +25,11 @@ class _DummyCostStrategy:
     # parameter validation at fit time now reaches that path. MetricStrategy supplies it as an empty
     # set; this stub is deliberately minimal, so it just mirrors that default.
     _extra_kwargs: frozenset[str] = frozenset()
+
+    # csdecision_rule.py's predict-time gate reads this to decide whether a decision can be
+    # recomputed from cost parameters alone, like Cost's can -- which is exactly what this stub
+    # stands in for (a Cost-like, non-ranking-based strategy).
+    capabilities: frozenset[Capability] = frozenset({Capability.COST_ONLY_DECISION})
 
 
 class _DummyMetric(Metric):
@@ -293,6 +298,23 @@ class TestPredictTimeCosts:
         clf.fit(X, y, alpha=0.1)
         with pytest.raises(ValueError, match='MaxProfit'):
             clf.predict(X, alpha=0.2)
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_empirical_max_profit_predict_raises(self, classifier_type, data):
+        """
+        A ranking-based strategy other than MaxProfit also raises a clear error at predict time.
+
+        Before Capability.COST_ONLY_DECISION existed, only ``isinstance(loss.strategy, MaxProfit)``
+        was checked here, so an EmpiricalMaxProfit (or AUEPC) loss fell through to
+        ``optimal_threshold(np.array([]), np.array([]))`` -- calling a ranking-based computation on
+        empty arrays -- instead of raising.
+        """
+        X, y = data
+        loss = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), EmpiricalMaxProfit())
+        clf = _make_model(classifier_type, 'logreg', loss=loss)
+        clf.fit(X, y, a=5.0, b=1.0)
+        with pytest.raises(ValueError, match='EmpiricalMaxProfit'):
+            clf.predict(X, a=5.0, b=1.0)
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
     def test_predict_scores_estimator_only_once(self, classifier_type, data):

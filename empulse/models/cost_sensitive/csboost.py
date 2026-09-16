@@ -26,7 +26,7 @@ except ImportError:
     CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
 
 from ..._common import Parameter
-from ...metrics import BaseMetric
+from ...metrics import BaseMetric, Capability
 from ...metrics._loss import cy_boost_grad_hess
 from ..csclassifier import CostSensitiveClassifier
 
@@ -456,7 +456,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
         # per-sample loss is non-linear in the predicted probability (unlike Cost/Savings), so both
         # evaluate gradients/hessians directly from the metric each iteration instead of going through
         # a precomputed constant.
-        if loss.strategy.requires_dynamic_boost_objective:
+        capabilities = loss.capabilities
+        if Capability.BOOST_OBJECTIVE in capabilities:
             if framework == 'xgboost':
                 return partial(loss._gradient_boost_objective, **loss_params)
             if framework == 'lightgbm':
@@ -467,6 +468,13 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 for name, param in loss_params.items()
             }
             return CatBoostObjective(loss, **loss_params), CatBoostMetric(loss, **loss_params)
+
+        if Capability.PRECOMPUTED_BOOST_OBJECTIVE not in capabilities:
+            raise ValueError(
+                f'{type(self).__name__} requires a loss whose strategy supports gradient boosting '
+                f"(neither 'boost_objective' nor 'precomputed_boost_objective'; got the "
+                f'{loss.strategy.name!r} strategy).'
+            )
 
         if framework == 'xgboost':
             grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)

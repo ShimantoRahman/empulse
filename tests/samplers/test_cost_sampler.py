@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, Metric
+from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
 from empulse.samplers import CostSensitiveSampler
 
 METHODS = ['rejection sampling', 'oversampling']
@@ -133,3 +133,28 @@ def test_fit_resample_costs_override_constructor_costs(data):
     assert not (
         overridden[0].shape == kept_init_costs[0].shape and np.array_equal(overridden[0], kept_init_costs[0])
     ), 'the fit-time fn_cost did not override the constructor value'
+
+
+def test_mixture_metric_loss_is_used_not_silently_ignored(data):
+    """
+    A ``MixtureMetric`` loss must actually be consulted, not silently fall back to plain costs.
+
+    The loss-or-plain-costs branch used to check ``isinstance(loss, Metric)``, which a
+    ``MixtureMetric`` never satisfies (it implements ``BaseMetric`` directly). A mixture loss
+    therefore fell through to the plain-cost branch, where the unset ``fp_cost``/``fn_cost``
+    constructor defaults (``0.0``) triggered the all-zero-costs fallback -- silently discarding
+    the mixture entirely instead of raising or using it.
+    """
+    X, y = data
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+    mixture = MixtureMetric([MixtureComponent(1.0, Metric(cost_matrix, Cost()), {})])
+    plain = Metric(cost_matrix, Cost())
+
+    from_mixture = CostSensitiveSampler(method='rejection sampling', loss=mixture, random_state=42).fit_resample(
+        X, y, a=1.0, b=5.0
+    )
+    from_plain = CostSensitiveSampler(method='rejection sampling', loss=plain, random_state=42).fit_resample(
+        X, y, a=1.0, b=5.0
+    )
+    assert np.array_equal(from_mixture[0], from_plain[0])
+    assert np.array_equal(from_mixture[1], from_plain[1])

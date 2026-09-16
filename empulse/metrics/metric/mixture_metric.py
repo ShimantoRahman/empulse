@@ -6,6 +6,7 @@ import numpy as np
 from ..._types import FloatArrayLike, FloatNDArray
 from ..common import classification_threshold
 from .base_metric import BaseMetric
+from .capabilities import Capability
 from .common import Direction, _check_parameter_domains
 from .cost_matrix import ParameterBounds, ParameterPredicate
 from .strategies import LogitObjective, MetricStrategy
@@ -257,6 +258,21 @@ class MixtureMetric(BaseMetric):
                 'All components must use the same MetricStrategy type.'
             )
         return strategies[0]
+
+    @property
+    def capabilities(self) -> frozenset[Capability]:
+        """
+        The set of :class:`~empulse.metrics.Capability` members every component supports.
+
+        The *intersection* of each component's own :attr:`~empulse.metrics.BaseMetric.capabilities`,
+        computed directly from the components rather than through :attr:`strategy` -- unlike
+        :attr:`strategy`, this does not require the components to share one
+        :class:`~empulse.metrics.MetricStrategy` type. In practice every bundled
+        :class:`MixtureMetric` (e.g. :func:`~empulse.metrics.empcs_score`) does use one strategy
+        type throughout, so this agrees with routing through :attr:`strategy` for those.
+        """
+        capability_sets = [component.metric.capabilities for component in self.components]
+        return frozenset.intersection(*capability_sets) if capability_sets else frozenset()
 
     @property
     def _all_symbols(self) -> set[str]:

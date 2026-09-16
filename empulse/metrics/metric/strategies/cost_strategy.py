@@ -1,13 +1,14 @@
 import copy
 import warnings
 from collections.abc import Generator
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
 
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from ..._loss import cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
+from ..capabilities import Capability
 from ..common import (
     BoostGradientConst,
     Direction,
@@ -318,6 +319,10 @@ class Cost(MetricStrategy):
 
     _name: str = 'cost'
     _direction: Direction = Direction.MINIMIZE
+    #: `optimal_threshold`/`optimal_rate` are algebraic solves of the cost equation, so they
+    #: depend only on the cost values, not on the actual `y_true`/`y_score`. Inherited by `Profit`
+    #: and `Savings`, for which the same is true.
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.COST_ONLY_DECISION})
 
     def __init__(self) -> None:
         super().__init__(name=self._name, direction=self._direction)

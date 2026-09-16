@@ -7,6 +7,7 @@ from .max_profit import max_profit_score
 from .metric import (
     AUEPC,
     BaseMetric,
+    Capability,
     Cost,
     CostMatrix,
     ElasticNetPenalty,
@@ -35,6 +36,7 @@ from .savings import (
 __all__ = [
     'AUEPC',
     'BaseMetric',
+    'Capability',
     'Cost',
     'CostMatrix',
     'ElasticNetPenalty',

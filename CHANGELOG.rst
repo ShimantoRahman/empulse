@@ -4,6 +4,28 @@
 Metrics
 -------
 
+- |Feature| Added :class:`~empulse.metrics.Capability` and
+  :attr:`MetricStrategy.capabilities <empulse.metrics.MetricStrategy.capabilities>` /
+  :attr:`BaseMetric.capabilities <empulse.metrics.BaseMetric.capabilities>`, so callers can ask a
+  strategy or metric what it supports (e.g. ``Capability.CLASS_COSTS in loss.capabilities``)
+  instead of checking ``isinstance(loss.strategy, SomeConcreteStrategy)``. A strategy's
+  capabilities are inferred from which of the optional
+  :class:`~empulse.metrics.MetricStrategy` methods it overrides, plus a declared
+  ``COST_ONLY_DECISION``/``CLASS_COSTS`` where that cannot be inferred from an override; a
+  third-party strategy needs no changes to pick this up automatically.
+  :attr:`MetricStrategy.requires_dynamic_boost_objective
+  <empulse.metrics.MetricStrategy.requires_dynamic_boost_objective>` is deprecated in favour of
+  ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities``.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  now raise a clear ``ValueError`` at predict time for any loss whose strategy lacks
+  ``Capability.COST_ONLY_DECISION`` (e.g. :class:`~empulse.metrics.EmpiricalMaxProfit` or
+  :class:`~empulse.metrics.AUEPC`), not just :class:`~empulse.metrics.MaxProfit`. Previously such
+  a loss fell through to computing its optimal threshold/rate from empty ``y_true``/``y_score``
+  arrays instead of raising.
+- |Fix| :class:`~empulse.samplers.CostSensitiveSampler` now accepts any
+  :class:`~empulse.metrics.BaseMetric` as ``loss`` (as its own docstring already claimed), not
+  only a :class:`~empulse.metrics.Metric`. A :class:`~empulse.metrics.MixtureMetric` loss
+  previously fell through to the plain ``fp_cost``/``fn_cost`` branch and was silently ignored.
 - |MajorFeature| Added :class:`~empulse.metrics.MixtureMetric` and
   :class:`~empulse.metrics.MixtureComponent`, which express a weighted linear combination of
   :class:`~empulse.metrics.BaseMetric` instances. This is exact, by linearity of expectation,

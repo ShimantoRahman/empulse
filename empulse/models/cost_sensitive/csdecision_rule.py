@@ -18,7 +18,7 @@ from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, MaxProfit
+from ...metrics import BaseMetric, Capability
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from ..csclassifier import CostSensitiveClassifier
 
@@ -404,8 +404,12 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
             loss = self._get_loss_or_default()
 
-            if isinstance(loss.strategy, MaxProfit):
-                raise ValueError(f'Cannot use {loss.strategy.__class__.__name__} at predict time.')
+            if Capability.COST_ONLY_DECISION not in loss.capabilities:
+                raise ValueError(
+                    f'Cannot use {loss.strategy.__class__.__name__} at predict time: its optimal '
+                    'threshold/rate is a function of the observed scores, not of the cost values '
+                    'alone, so it cannot be recomputed from cost parameters passed to predict().'
+                )
 
             loss_params = self._add_standard_costs_to_params(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params

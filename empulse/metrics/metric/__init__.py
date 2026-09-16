@@ -1,4 +1,5 @@
 from .base_metric import BaseMetric
+from .capabilities import Capability
 from .cost_matrix import CostMatrix
 from .metric import Metric
 from .mixture_metric import MixtureComponent, MixtureMetric
@@ -21,6 +22,7 @@ from .strategies import (
 __all__ = [
     'AUEPC',
     'BaseMetric',
+    'Capability',
     'Cost',
     'CostMatrix',
     'ElasticNetPenalty',

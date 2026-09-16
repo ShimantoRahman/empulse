@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from ..._types import FloatArrayLike, FloatNDArray
+from .capabilities import Capability
 from .common import Direction
 from .strategies import LogitObjective, MetricStrategy
 
@@ -53,6 +54,33 @@ class BaseMetric(ABC):
 
         For a composite metric, a representative strategy shared by all of its components.
         """
+
+    @property
+    def capabilities(self) -> frozenset[Capability]:
+        """
+        The set of :class:`~empulse.metrics.Capability` members this metric supports.
+
+        Forwards to :attr:`strategy`'s own :attr:`~empulse.metrics.MetricStrategy.capabilities`.
+        :class:`~empulse.metrics.MixtureMetric` overrides this to the *intersection* of its
+        components' capabilities, since a composite metric can only do what every component can.
+
+        Use this instead of ``isinstance(metric.strategy, SomeConcreteStrategy)`` to check
+        whether a metric supports what a model needs, e.g.
+        ``Capability.CLASS_COSTS in loss.capabilities``.
+        """
+        return self.strategy.capabilities
+
+    def _require(self, capability: Capability, *, requester: str) -> None:
+        """Raise a ``ValueError`` naming *requester* and *capability* if this metric lacks it.
+
+        A small, uniformly-worded alternative to each caller writing its own
+        ``if capability not in loss.capabilities: raise ValueError(...)``.
+        """
+        if capability not in self.capabilities:
+            raise ValueError(
+                f'{requester} only supports losses whose strategy supports {capability.value!r}; '
+                f"the '{self.strategy.name}' strategy of {self!r} does not."
+            )
 
     @property
     @abstractmethod

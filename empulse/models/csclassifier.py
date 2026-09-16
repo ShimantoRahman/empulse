@@ -14,7 +14,7 @@ from sklearn.utils.validation import validate_data
 from .._common import Parameter
 from .._common._cost_routing import RoutesLossParameters
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import BaseMetric, Cost, MaxProfit, MetricStrategy
+from ..metrics import BaseMetric, Capability, Cost, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
 
 
@@ -394,12 +394,8 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
             fn_cost = loss_params.get('fn_cost', 0.0)
             fp_cost = loss_params.get('fp_cost', 0.0)
         elif isinstance(loss_, BaseMetric):
-            if isinstance(loss_.strategy, MaxProfit):
-                fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
-            else:
-                raise ValueError(
-                    f'{self.__class__.__name__} only supports losses built with the MaxProfit strategy, got {loss_}.'
-                )
+            loss_._require(Capability.CLASS_COSTS, requester=self.__class__.__name__)
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
         else:
             raise ValueError(f'Unknown loss function: {loss_}.')
 

@@ -7,7 +7,7 @@ from sklearn.utils._param_validation import Interval, RealNotInt
 from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, MaxProfit
+from ...metrics import BaseMetric, Capability, MaxProfit
 from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
 from .evolutionary_tree import EvolutionaryTree
 
@@ -329,7 +329,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         # `_prepare_class_costs` supports exactly the two cases handled by `fit_max_profit`
         # (no custom loss, or a deterministic MaxProfit metric); a stochastic MaxProfit metric or
         # any other strategy needs the full custom fitness-function path instead.
-        use_fit_max_profit = loss_ is None or (isinstance(loss_.strategy, MaxProfit) and loss_._is_deterministic)
+        use_fit_max_profit = loss_ is None or (Capability.CLASS_COSTS in loss_.capabilities and loss_._is_deterministic)
 
         if use_fit_max_profit:
             tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)

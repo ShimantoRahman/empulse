@@ -8,7 +8,20 @@ import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, LogCost, MaxProfit, Metric, MinCost, Profit, Savings
+from empulse.metrics import (
+    AUEPC,
+    Capability,
+    Cost,
+    CostMatrix,
+    EmpiricalMaxProfit,
+    EmpiricalMinCost,
+    LogCost,
+    MaxProfit,
+    Metric,
+    MinCost,
+    Profit,
+    Savings,
+)
 from empulse.metrics.metric.common import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
@@ -44,6 +57,7 @@ from empulse.metrics.metric.strategies.max_profit_strategy.quasi_monte_carlo imp
     _sympy_dist_to_scipy,
     _sympy_dist_to_scipy_params,
 )
+from empulse.metrics.metric.strategies.metric_strategy import _CAPABILITY_METHOD_NAMES, MetricStrategy
 from empulse.metrics.metric.strategies.savings_strategy import SavingsScore
 
 
@@ -250,6 +264,137 @@ def test_requires_dynamic_boost_objective_survives_rename():
     strategy = MaxProfit()
     strategy.name = 'my_custom_metric'
     assert strategy.requires_dynamic_boost_objective is True
+
+
+class TestCapabilities:
+    """`Capability` replaces `isinstance(strategy, SomeConcreteStrategy)` model-side checks."""
+
+    @pytest.mark.parametrize(
+        'strategy_factory, expected',
+        [
+            pytest.param(
+                Cost,
+                frozenset({
+                    Capability.COST_ONLY_DECISION,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.PRECOMPUTED_BOOST_OBJECTIVE,
+                }),
+                id='Cost',
+            ),
+            pytest.param(
+                Profit,
+                frozenset({
+                    Capability.COST_ONLY_DECISION,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.PRECOMPUTED_BOOST_OBJECTIVE,
+                }),
+                id='Profit',
+            ),
+            pytest.param(
+                Savings,
+                frozenset({
+                    Capability.COST_ONLY_DECISION,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.PRECOMPUTED_BOOST_OBJECTIVE,
+                }),
+                id='Savings',
+            ),
+            pytest.param(
+                LogCost,
+                frozenset({
+                    Capability.COST_ONLY_DECISION,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.BOOST_OBJECTIVE,
+                }),
+                id='LogCost',
+            ),
+            pytest.param(
+                MaxProfit,
+                frozenset({
+                    Capability.CLASS_COSTS,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.BOOST_OBJECTIVE,
+                }),
+                id='MaxProfit-deterministic',
+            ),
+            pytest.param(
+                MinCost,
+                frozenset({
+                    Capability.CLASS_COSTS,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_OBJECTIVE,
+                    Capability.BOOST_OBJECTIVE,
+                }),
+                id='MinCost-deterministic',
+            ),
+            pytest.param(
+                EmpiricalMaxProfit,
+                frozenset({Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                id='EmpiricalMaxProfit',
+            ),
+            pytest.param(
+                EmpiricalMinCost,
+                frozenset({Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                id='EmpiricalMinCost',
+            ),
+            pytest.param(AUEPC, frozenset(), id='AUEPC'),
+        ],
+    )
+    def test_bundled_strategy_capability_sets(self, strategy_factory, expected):
+        """Each bundled strategy's exact capability set, built with a plain deterministic cost matrix."""
+        cost_matrix = CostMatrix().add_tp_benefit('a').add_fp_cost('b')
+        metric = Metric(cost_matrix, strategy_factory())
+        assert metric.strategy.capabilities == expected
+
+    def test_max_profit_drops_logit_and_boost_for_a_non_positive_distribution(self):
+        """MaxProfit's capabilities depend on the built score function, not just the class."""
+        mu, sigma = sympy.symbols('mu sigma')
+        normal = sympy.stats.Normal('normal', mu, sigma)
+        cost_matrix = CostMatrix().add_tp_benefit(normal).add_fp_cost('b')
+        metric = Metric(cost_matrix, MaxProfit())
+        assert Capability.LOGIT_OBJECTIVE not in metric.strategy.capabilities
+        assert Capability.BOOST_OBJECTIVE not in metric.strategy.capabilities
+        assert Capability.CLASS_COSTS in metric.strategy.capabilities
+
+    def test_unbuilt_max_profit_has_no_logit_or_boost_capability(self):
+        """`capabilities` must not crash on an unbuilt strategy (before `Metric.__init__` calls `build`)."""
+        strategy = MaxProfit()
+        assert Capability.LOGIT_OBJECTIVE not in strategy.capabilities
+        assert Capability.BOOST_OBJECTIVE not in strategy.capabilities
+
+    @pytest.mark.parametrize(
+        'strategy_factory',
+        [Cost, Profit, Savings, LogCost, MaxProfit, MinCost, EmpiricalMaxProfit, EmpiricalMinCost, AUEPC],
+    )
+    def test_capability_presence_matches_method_override(self, strategy_factory):
+        """
+        For every bundled strategy, a capability is present iff its method is overridden.
+
+        This is the test that would catch `_capabilities_from_overrides`'s method-name mapping
+        drifting from the actual method names on `MetricStrategy`: if a capability's entry in
+        `_CAPABILITY_METHOD_NAMES` is wrong or stale, this fails even though
+        `test_bundled_strategy_capability_sets` above (built from the same source) would not.
+        """
+        cost_matrix = CostMatrix().add_tp_benefit('a').add_fp_cost('b')
+        metric = Metric(cost_matrix, strategy_factory())
+        strategy = metric.strategy
+        for capability, method_name in _CAPABILITY_METHOD_NAMES.items():
+            overridden = getattr(type(strategy), method_name) is not getattr(MetricStrategy, method_name)
+            assert (capability in strategy.capabilities) is overridden, (
+                f'{strategy_factory.__name__}: {capability} in capabilities is {capability in strategy.capabilities}'
+                f', but {method_name} is {"" if overridden else "not "}overridden'
+            )
 
 
 def test_max_profit_boost_gradient_piecewise_is_picklable(dataset):
