@@ -19,8 +19,8 @@ cost-sensitive model, and point you at the part of the package your problem actu
         :link: quickstart
         :link-type: ref
 
-        From a fresh install to a model that captures twice the business value, in about five
-        minutes.
+        From a fresh install to a model that captures noticeably more business value, in about
+        five minutes.
 
     .. grid-item-card:: Which tool do I need?
         :link: overview

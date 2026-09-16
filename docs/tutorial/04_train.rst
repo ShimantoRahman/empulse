@@ -82,16 +82,16 @@ Read the results carefully
       - 0.926
       - 2.28
     * - CSLogitClassifier
-      - 0.838
-      - 0.918
-      - 2.58
+      - 0.849
+      - 0.907
+      - 3.29
 
-**Accuracy dropped by five points, and that is the model working correctly.**
+**Accuracy dropped by four points, and that is the model working correctly.**
 
 The cost-sensitive model deliberately misclassifies cheap cases in order to get expensive ones
 right. It flags more customers than a log-loss model would, accepting false positives — which cost
 a few percent of a customer's value — to avoid missing churners, which forgoes the whole retained
-value. Profit rose from 2.28 to 2.58.
+value. Profit rose from 2.28 to 3.29.
 
 If you judge a cost-sensitive model by accuracy, it will always look worse. That is the wrong
 yardstick — it is the yardstick we set out to replace.
@@ -129,9 +129,9 @@ CatBoost installed.
       - 0.926
       - 2.28
     * - CSLogitClassifier
-      - 0.838
-      - 0.918
-      - 2.58
+      - 0.849
+      - 0.907
+      - 3.29
     * - CSBoostClassifier
       - **0.960**
       - **0.974**
@@ -148,7 +148,7 @@ split. Only the objective changed.
 .. note::
     Do not read the accuracy column as a rule. Whether a cost-sensitive model gains or loses
     accuracy depends on the model class and the cost matrix — :class:`~empulse.models.CSLogitClassifier`
-    gave up five points here, :class:`~empulse.models.CSBoostClassifier` gained seven. Neither is
+    gave up four points here, :class:`~empulse.models.CSBoostClassifier` gained seven. Neither is
     evidence about profit, which is the column that matters.
 
 Choosing a backend

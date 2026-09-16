@@ -4,13 +4,13 @@
 Quickstart
 ==========
 
-This page takes about five minutes and ends with a model that captures twice as much business
-value as a conventional one. We will use a real telecom churn dataset where each customer has their
-own lifetime value.
+This page takes about five minutes and ends with a model that captures noticeably more business
+value than a conventional one, trained on the same features. We will use a real telecom churn
+dataset where each customer has their own lifetime value.
 
 .. note::
-    Needs ``pip install empulse[boosting] pandas``. The dataset is downloaded once and cached
-    under ``~/empulse_data``.
+    Needs ``pip install empulse pandas``. The dataset is downloaded once and cached under
+    ``~/empulse_data``.
 
 A good model, by the usual standards
 ====================================
@@ -29,7 +29,7 @@ Start with an ordinary logistic regression and judge it the ordinary way.
 
     dataset = fetch_iranian_churn(backend=pd)
     X, y = dataset.data, dataset.target
-    clv = dataset.instance_costs['clv']  # each customer's lifetime value
+    clv = dataset.instance_costs['clv']
 
     X_train, X_test, y_train, y_test, clv_train, clv_test = train_test_split(
         X, y, clv, test_size=0.3, random_state=42, stratify=y
@@ -58,7 +58,6 @@ you retain. Wrap it in a :class:`~empulse.metrics.Metric` with the
 
 .. code-block:: python
 
-    import numpy as np
     from empulse.metrics import Metric, Profit
 
     expected_profit = Metric(dataset.cost_matrix, Profit())
@@ -80,23 +79,30 @@ Train on the cost matrix instead
 ================================
 
 Pass the very same metric to a model as its ``loss``, and hand it the per-customer values at fit
-time.
+time. :class:`~empulse.models.CSLogitClassifier` is a logistic regression, exactly like the
+baseline above, except its objective is the cost matrix instead of log loss — so any difference in
+the numbers below comes purely from what it was trained to optimise, not from a different kind of
+model.
 
 .. code-block:: python
 
-    from empulse.models import CSBoostClassifier
+    from empulse.models import CSLogitClassifier
 
-    model = CSBoostClassifier(loss=expected_profit)
-    model.fit(X_train, y_train, clv=clv_train)
+    model = Pipeline([
+        ('scaler', StandardScaler()),
+        ('model', CSLogitClassifier(loss=expected_profit)),
+    ])
+    model.fit(X_train, y_train, model__clv=clv_train)
 
     y_score = model.predict_proba(X_test)[:, 1]
 
     print(f'accuracy: {accuracy_score(y_test, model.predict(X_test)):.3f}')
     print(f'profit per customer: {expected_profit(y_test, y_score, clv=clv_test):.2f}')
 
-Profit rises to about **4.74** per customer — more than double the baseline, and **88%** of the
-achievable ceiling. Accuracy went *up* too, to 0.960, though that is a side effect rather than the
-goal.
+Profit rises to about **3.29** per customer — up from 42% to **61%** of the achievable ceiling.
+Accuracy drops slightly, to 0.849, and that is fine: the model is deliberately trading cheap
+mistakes for expensive ones it now avoids, exactly as :ref:`the tutorial <tutorial_train>` explains
+in more detail.
 
 That is the whole point. Accuracy could not see the difference; the cost matrix could.
 
@@ -104,48 +110,42 @@ How many customers should you actually target?
 ==============================================
 
 A cost matrix also tells you where to put the decision threshold. Instead of the default 0.5, ask
-the metric for the profit-maximising operating point.
-
-:func:`~empulse.metrics.empc_score` is the Expected Maximum Profit for Customer Churn — it treats
-the offer-acceptance rate as uncertain and reports the profit you can expect at the best cut-off,
-along with the fraction of the customer base to contact.
+the very same ``expected_profit`` metric for the profit-maximising operating point — no separate
+metric or business parameters needed, since ``clv`` already lives in the cost matrix.
 
 .. code-block:: python
 
-    from empulse.metrics import classification_threshold, empc_score
+    rate = expected_profit.optimal_rate(y_test, y_score, clv=clv_test)
 
-    mean_clv = float(clv_test.mean())
+    print(f'contact about {rate:.1%} of customers')
 
-    target_fraction = empc_score.optimal_rate(
-        y_test, y_score, clv=mean_clv, incentive_cost=0.05 * mean_clv
-    )
-    threshold = classification_threshold(y_test, y_score, customer_threshold=target_fraction)
-
-    print(f'contact the top {target_fraction:.1%} of customers (score >= {threshold:.3f})')
-
-This says to contact roughly the top **19%** of customers.
+This says to contact roughly **23.5%** of customers.
 
 .. note::
-    :func:`~empulse.metrics.empc_score` carries its own cost matrix, whose incentive is a fixed
-    amount (``incentive_cost``) rather than a fraction of each customer's value, and whose ``clv``
-    is a single global number. Both are therefore passed as scalars here, with the incentive
-    written as ``0.05 * mean_clv`` to match the 5% fraction this dataset uses. Left at its own
-    defaults it would describe a different campaign.
+    Running this raises a ``UserWarning`` saying the optimal threshold fell outside ``[0, 1]`` and
+    was clipped. Some customers in this dataset have a lifetime value lower than what it costs to
+    contact them, so no predicted probability could ever justify targeting them — the cost matrix
+    implies an always-negative decision for them. That is inherent to this dataset, not a bug, and
+    safe to ignore here.
 
 Putting the threshold to work
 =============================
 
-Apply it to the scores you already have, and check what it earns:
+Because ``clv`` is instance-dependent, the break-even point is too: a high-value customer is worth
+contacting at a much lower churn probability than a low-value one. Asking for the threshold
+therefore returns one per customer, not a single cut-off:
 
 .. code-block:: python
 
+    threshold = expected_profit.optimal_threshold(y_test, y_score, clv=clv_test)
     targeted = (y_score >= threshold).astype(int)
 
     print(f'targeting {targeted.mean():.1%} of customers')
     print(f'profit: {expected_profit(y_test, targeted.astype(float), clv=clv_test):.2f}')
 
-Contacting that 19% earns **4.79** per customer, slightly more than deciding at 0.5 — and the
-tutorial shows how a per-customer threshold does better still, while contacting fewer people.
+Contacting that 23.5% earns **3.37** per customer, more than the 3.29 from scoring everyone — while
+reaching a quarter of the customer base. :ref:`The full tutorial <tutorial_threshold>` covers this
+properly, including cross-validating it.
 
 If you would rather have an estimator that does this for you, wrap the model in
 :class:`~empulse.models.CSThresholdClassifier`, which learns the cost-optimal threshold itself, or
