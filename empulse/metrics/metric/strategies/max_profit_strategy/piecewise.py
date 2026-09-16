@@ -18,6 +18,7 @@ from ...common import (
     _safe_lambdify,
     _safe_run_lambda,
 )
+from ._distributions import ADAPTERS, adapter_for
 from .common import _convex_hull, extract_distribution_parameters
 from .envelope import (
     CallableEnvelope,
@@ -48,6 +49,22 @@ def _is_polynomial_in(expression: sympy.Expr, symbol: sympy.Symbol) -> bool:
     return True
 
 
+def _lookup_by_distribution_type(table: dict[type, Any], distribution: Any) -> Any | None:
+    """Look *distribution* up in *table*, by exact type first, then by ``isinstance``.
+
+    The ``isinstance`` fallback matches a subclass of a registered distribution that
+    ``sympy.stats`` does not register in the table verbatim -- the same thing a plain
+    ``isinstance(distribution, X)`` chain would do, which this replaces at every call site.
+    """
+    match = table.get(type(distribution))
+    if match is not None:
+        return match
+    for distribution_type, candidate in table.items():
+        if isinstance(distribution, distribution_type):
+            return candidate
+    return None
+
+
 def _build_max_profit_score_piecewise(
     profit_function: sympy.Expr,
     random_symbol: sympy.Symbol,
@@ -59,68 +76,8 @@ def _build_max_profit_score_piecewise(
         return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
 
     distribution = pspace(random_symbol).distribution
-    if isinstance(distribution, sympy.stats.crv_types.UniformDistribution):
-        return MaxProfitScorePiecewiseUniform(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.BetaDistribution):
-        return MaxProfitScorePiecewiseBeta(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.NormalDistribution):
-        return MaxProfitScorePiecewiseNormal(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.LogNormalDistribution):
-        return MaxProfitScorePiecewiseLogNormal(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.GammaDistribution):
-        return MaxProfitScorePiecewiseGamma(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.ExponentialDistribution):
-        return MaxProfitScorePiecewiseExponential(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.ChiSquaredDistribution):
-        return MaxProfitScorePiecewiseChi2(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.WeibullDistribution):
-        return MaxProfitScorePiecewiseWeibull(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.ParetoDistribution):
-        return MaxProfitScorePiecewisePareto(profit_function, random_symbol, deterministic_symbols)
-    elif isinstance(distribution, sympy.stats.crv_types.TriangularDistribution):
-        return MaxProfitScorePiecewiseTriangular(profit_function, random_symbol, deterministic_symbols)
-    else:
-        return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
-
-
-def _uniform_params(a: float, b: float) -> dict[str, float]:
-    return {'loc': a, 'scale': b - a}
-
-
-def _beta_params(a: float, b: float) -> dict[str, float]:
-    return {'a': a, 'b': b}
-
-
-def _normal_params(mu: float, sigma: float) -> dict[str, float]:
-    return {'loc': mu, 'scale': sigma}
-
-
-def _lognormal_params(mu: float, sigma: float) -> dict[str, float]:
-    return {'s': sigma, 'scale': float(np.exp(mu))}
-
-
-def _gamma_params(k: float, theta: float) -> dict[str, float]:
-    return {'a': k, 'scale': theta}
-
-
-def _expon_params(rate: float) -> dict[str, float]:
-    return {'loc': 0.0, 'scale': 1.0 / rate}
-
-
-def _chi2_params(df: float) -> dict[str, float]:
-    return {'df': df}
-
-
-def _weibull_params(a: float, b: float) -> dict[str, float]:
-    return {'c': b, 'scale': a}
-
-
-def _pareto_params(a: float, b: float) -> dict[str, float]:
-    return {'b': b, 'scale': a}
-
-
-def _triangular_params(a: float, b: float, c: float) -> dict[str, float]:
-    return {'loc': a, 'scale': b - a, 'c': (c - a) / (b - a)}
+    score_class = _lookup_by_distribution_type(_SCORE_CLASSES, distribution) or MaxProfitScorePiecewise
+    return score_class(profit_function, random_symbol, deterministic_symbols)
 
 
 def _build_max_profit_rate_piecewise(
@@ -129,49 +86,12 @@ def _build_max_profit_rate_piecewise(
     random_symbol: sympy.Symbol,
     deterministic_symbols: Iterable[sympy.Symbol],
 ) -> RateFn:
-    distribution = pspace(random_symbol).distribution
-    if isinstance(distribution, sympy.stats.crv_types.UniformDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.uniform, _uniform_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.BetaDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.beta, _beta_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.NormalDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.norm, _normal_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.LogNormalDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.lognorm, _lognormal_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.GammaDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.gamma, _gamma_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.ExponentialDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.expon, _expon_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.ChiSquaredDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.chi2, _chi2_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.WeibullDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.weibull_min, _weibull_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.ParetoDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.pareto, _pareto_params
-        )
-    elif isinstance(distribution, sympy.stats.crv_types.TriangularDistribution):
-        return ExactMaxProfitRatePiecewise(
-            profit_function, rate_function, random_symbol, deterministic_symbols, st.triang, _triangular_params
-        )
-    else:
+    adapter = adapter_for(random_symbol)
+    if adapter is None:
         return MaxProfitRatePiecewise(profit_function, rate_function, random_symbol, deterministic_symbols)
+    return ExactMaxProfitRatePiecewise(
+        profit_function, rate_function, random_symbol, deterministic_symbols, adapter.scipy_dist, adapter.params
+    )
 
 
 class _PreparedIntegrand:
@@ -1116,3 +1036,24 @@ class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
             kth_moment = (lambda_scale**k) * sp.gamma(gamma_shape)
 
         return kth_moment, shifted_cdf_k_diff
+
+
+#: The score-side counterpart to `_distributions.ADAPTERS`'s rate-side table, keyed by the same
+#: sympy.stats distribution types. Kept here rather than in `_distributions.py` because the
+#: classes it names are defined in this module; `_distributions.py` importing them back would
+#: make the two modules import each other.
+_SCORE_CLASSES: dict[type, type[BaseMaxProfitScorePiecewise]] = {
+    sympy.stats.crv_types.UniformDistribution: MaxProfitScorePiecewiseUniform,
+    sympy.stats.crv_types.BetaDistribution: MaxProfitScorePiecewiseBeta,
+    sympy.stats.crv_types.NormalDistribution: MaxProfitScorePiecewiseNormal,
+    sympy.stats.crv_types.LogNormalDistribution: MaxProfitScorePiecewiseLogNormal,
+    sympy.stats.crv_types.GammaDistribution: MaxProfitScorePiecewiseGamma,
+    sympy.stats.crv_types.ExponentialDistribution: MaxProfitScorePiecewiseExponential,
+    sympy.stats.crv_types.ChiSquaredDistribution: MaxProfitScorePiecewiseChi2,
+    sympy.stats.crv_types.WeibullDistribution: MaxProfitScorePiecewiseWeibull,
+    sympy.stats.crv_types.ParetoDistribution: MaxProfitScorePiecewisePareto,
+    sympy.stats.crv_types.TriangularDistribution: MaxProfitScorePiecewiseTriangular,
+}
+assert _SCORE_CLASSES.keys() == ADAPTERS.keys(), (
+    '_SCORE_CLASSES and _distributions.ADAPTERS must cover exactly the same distributions'
+)

@@ -1,5 +1,7 @@
 import itertools
 import pickle
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 import numpy as np
 import pytest
@@ -395,6 +397,46 @@ class TestCapabilities:
                 f'{strategy_factory.__name__}: {capability} in capabilities is {capability in strategy.capabilities}'
                 f', but {method_name} is {"" if overridden else "not "}overridden'
             )
+
+
+class TestDistributionAdapters:
+    """`_distributions.ADAPTERS`/`adapter_for` replace two 11-branch isinstance chains in
+    piecewise.py (score and rate) with one table -- these round-trip every registered
+    distribution through `adapter_for` and confirm the score-side table agrees with it."""
+
+    _FACTORIES: ClassVar[dict[type, Callable[[], Any]]] = {
+        sympy.stats.crv_types.UniformDistribution: lambda: sympy.stats.Uniform('x', 0, 1),
+        sympy.stats.crv_types.BetaDistribution: lambda: sympy.stats.Beta('x', 2, 3),
+        sympy.stats.crv_types.NormalDistribution: lambda: sympy.stats.Normal('x', 0, 1),
+        sympy.stats.crv_types.LogNormalDistribution: lambda: sympy.stats.LogNormal('x', 0, 1),
+        sympy.stats.crv_types.GammaDistribution: lambda: sympy.stats.Gamma('x', 2, 1),
+        sympy.stats.crv_types.ExponentialDistribution: lambda: sympy.stats.Exponential('x', 1),
+        sympy.stats.crv_types.ChiSquaredDistribution: lambda: sympy.stats.ChiSquared('x', 3),
+        sympy.stats.crv_types.WeibullDistribution: lambda: sympy.stats.Weibull('x', 1, 2),
+        sympy.stats.crv_types.ParetoDistribution: lambda: sympy.stats.Pareto('x', 1, 2),
+        sympy.stats.crv_types.TriangularDistribution: lambda: sympy.stats.Triangular('x', 0, 1, 0.5),
+    }
+
+    def test_every_adapter_round_trips(self):
+        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import ADAPTERS, adapter_for
+
+        assert set(self._FACTORIES) == set(ADAPTERS), 'test factory table is out of sync with ADAPTERS'
+        for distribution_type, factory in self._FACTORIES.items():
+            random_symbol = factory()
+            found = adapter_for(random_symbol)
+            assert found is ADAPTERS[distribution_type], distribution_type
+
+    def test_unregistered_distribution_returns_none(self):
+        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import adapter_for
+
+        random_symbol = sympy.stats.StudentT('x', 5)  # not in ADAPTERS
+        assert adapter_for(random_symbol) is None
+
+    def test_score_classes_and_adapters_cover_the_same_distributions(self):
+        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import ADAPTERS
+        from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import _SCORE_CLASSES
+
+        assert _SCORE_CLASSES.keys() == ADAPTERS.keys()
 
 
 def test_max_profit_boost_gradient_piecewise_is_picklable(dataset):
