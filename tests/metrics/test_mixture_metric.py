@@ -466,3 +466,20 @@ def test_hardcoded_uniform_bounds_optimal_rate_matches_across_methods(y_true_and
     # 'auto' uses the exact scipy-CDF piecewise path while 'quad' numerically integrates;
     # they should agree closely but not to full float precision.
     assert pytest.approx(rate_auto, rel=1e-3) == rate_quad
+
+
+class TestOutlierSensitiveParameters:
+    """`MixtureMetric._outlier_sensitive_parameters` merges each component's own mapping."""
+
+    def test_merges_across_components(self):
+        a, b = sympy.symbols('a b')
+        first = Metric(CostMatrix().add_tp_benefit(a).mark_outlier_sensitive(a), Cost())
+        second = Metric(CostMatrix().add_fp_cost(b).mark_outlier_sensitive(b), Cost())
+        mixture = MixtureMetric([MixtureComponent(0.5, first, {}), MixtureComponent(0.5, second, {})])
+        assert mixture._outlier_sensitive_parameters() == {'a': 'positive', 'b': 'negative'}
+
+    def test_empty_when_no_component_marks_anything(self):
+        a = sympy.symbols('a')
+        metric = Metric(CostMatrix().add_tp_benefit(a), Cost())
+        mixture = MixtureMetric([MixtureComponent(1.0, metric, {})])
+        assert mixture._outlier_sensitive_parameters() == {}

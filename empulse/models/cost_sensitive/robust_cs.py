@@ -1,6 +1,5 @@
-from collections.abc import MutableMapping
 from numbers import Real
-from typing import Any, ClassVar, Literal, Self, TypeVar
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,12 +11,10 @@ from sklearn.utils.validation import _estimator_has, validate_data
 
 from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, Metric
+from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
-K = TypeVar('K')
-V = TypeVar('V')
 CSCLASSIFIER_PARAMS = CostSensitiveClassifier._parameter_constraints.copy()
 CSCLASSIFIER_PARAMS.pop('loss')
 
@@ -44,7 +41,8 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
     estimator : Estimator
         The cost-sensitive classifier to fit.
         The estimator must take tp_cost, tn_cost, fn_cost, and fp_cost as keyword arguments in its fit method
-        or should use :class:`~empulse.metrics.Metric` as their loss/criterion.
+        or should use a :class:`~empulse.metrics.BaseMetric` (e.g. :class:`~empulse.metrics.Metric` or
+        :class:`~empulse.metrics.MixtureMetric`) as their loss/criterion.
 
     outlier_estimator : Estimator, optional
         The outlier estimator to fit to the costs.
@@ -63,10 +61,11 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
         .. note::
             This parameter is ignored if the underlying estimator
-            uses :class:`~empulse.metrics.Metric` as its loss/criterion.
-            Then all costs that are marked as outlier-sensitive in the metric loss
-            are used for outlier detection.
-            This can be done through the :meth:`~empulse.metrics.Metric.mark_outlier_sensitive` method.
+            uses a :class:`~empulse.metrics.BaseMetric` (e.g. :class:`~empulse.metrics.Metric` or
+            :class:`~empulse.metrics.MixtureMetric`) as its loss/criterion.
+            Then all parameters marked outlier-sensitive in the metric loss's cost matrix
+            (or matrices, for a :class:`~empulse.metrics.MixtureMetric`) are used for outlier detection.
+            This can be done through the :meth:`~empulse.metrics.CostMatrix.mark_outlier_sensitive` method.
 
     tp_cost : float or array-like, shape=(n_samples,), default=0.0
         Cost of true positives. If ``float``, then all true positives have the same cost.
@@ -319,13 +318,6 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
         if metric_loss is not None:
-            if not isinstance(metric_loss, Metric):
-                raise NotImplementedError(
-                    f'{self.__class__.__name__} does not support outlier-sensitive cost detection for composite '
-                    f'losses such as {type(metric_loss).__name__}. Its underlying estimator should use a plain '
-                    'Metric loss (built with a single CostMatrix) for outlier detection to be able to identify '
-                    'which cost expressions are outlier-sensitive.'
-                )
             # Work on a copy so we never mutate the caller's dict.
             estimator_params = dict(fit_params)
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(X, y, metric_loss, estimator_params)
@@ -352,25 +344,13 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
 
         return self
 
-    def _resolve_symbol_param_name(self, metric_loss: Metric, symbol: Any, params: dict[str, Any]) -> str:
-        """Return the key in *params* that corresponds to *symbol*, checking aliases."""
-        name = str(symbol)
-        if name in params:
-            return name
-        alias = _invert_dict(metric_loss.cost_matrix._aliases).get(name)
-        if alias is not None and alias in params:
-            return alias
-        raise ValueError(f"Cost '{symbol}' is not provided in fit params.")
-
     def _select_class_samples(
-        self, X: FloatNDArray, y: FloatNDArray, metric_loss: Metric, symbol: Any, target: FloatNDArray
+        self, X: FloatNDArray, y: FloatNDArray, cls: Literal['positive', 'negative', 'both'], target: FloatNDArray
     ) -> tuple[FloatNDArray, FloatNDArray]:
-        """Return the subset of (X, target) relevant for *symbol* based on which class it applies to."""
-        pos_symbols = metric_loss.tp_cost.free_symbols | metric_loss.fn_cost.free_symbols
-        neg_symbols = metric_loss.tn_cost.free_symbols | metric_loss.fp_cost.free_symbols
-        if symbol in pos_symbols and symbol not in neg_symbols:
+        """Return the subset of (X, target) relevant for a parameter classified as *cls*."""
+        if cls == 'positive':
             return X[y > 0], target[y > 0]
-        if symbol in neg_symbols and symbol not in pos_symbols:
+        if cls == 'negative':
             return X[y == 0], target[y == 0]
         return X.copy(), target.copy()
 
@@ -387,7 +367,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         self,
         X: FloatNDArray,
         y: FloatNDArray,
-        metric_loss: Metric,
+        metric_loss: BaseMetric,
         estimator_params: dict[str, Any],
     ) -> tuple[dict[str, FloatNDArray], dict[str, Any]]:
         """Impute outlier-sensitive metric costs and return (imputed_costs, outlier_estimators).
@@ -397,14 +377,15 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         imputed_costs: dict[str, FloatNDArray] = {}
         outlier_estimators: dict[str, Any] = {}
 
-        for symbol in metric_loss.cost_matrix._outlier_sensitive_symbols:
-            param_name = self._resolve_symbol_param_name(metric_loss, symbol, estimator_params)
+        for param_name, cls in metric_loss._outlier_sensitive_parameters().items():
+            if param_name not in estimator_params:
+                raise ValueError(f"Cost '{param_name}' is not provided in fit params.")
             target = estimator_params[param_name]
 
             if not isinstance(target, np.ndarray):
-                raise TypeError(f"Cost '{symbol}' must be an array for outlier detection.")
+                raise TypeError(f"Cost '{param_name}' must be an array for outlier detection.")
 
-            X_fit, target_fit = self._select_class_samples(X, y, metric_loss, symbol, target)
+            X_fit, target_fit = self._select_class_samples(X, y, cls, target)
 
             if X_fit.size > 0:
                 outlier_est = clone(
@@ -516,23 +497,3 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             estimator.classes_ = value
         else:
             raise AttributeError('The underlying estimator is not fitted yet.')
-
-
-def _invert_dict(d: MutableMapping[K, V]) -> dict[V, K]:
-    """Invert a dictionary, swapping keys and values.
-
-    Raises
-    ------
-    ValueError
-        If any value maps to more than one key (i.e. a symbol has multiple aliases),
-        because inversion would silently drop entries.
-    """
-    seen: dict[V, K] = {}
-    for k, v in d.items():
-        if v in seen:
-            raise ValueError(
-                f'Cannot invert mapping: value {v!r} is mapped to by more than one key '
-                f'({seen[v]!r} and {k!r}). Each symbol must have at most one alias.'
-            )
-        seen[v] = k
-    return seen

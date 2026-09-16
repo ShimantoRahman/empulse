@@ -648,29 +648,6 @@ def _filter_parameters(
     return filtered_parameters
 
 
-def _evaluate_expression(expression: sympy.Expr, **parameters: FloatNDArray | float) -> FloatNDArray | float:
-    """
-    Evaluate a sympy expression with the given parameters.
-
-    Parameters
-    ----------
-    expression : sympy.Expr
-        The sympy expression to convert.
-    **parameters : float or NDArray of shape (n_samples,)
-        The parameter values for the costs and benefits defined in the metric.
-        If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-        You can set the parameter values for either the symbol names or their aliases.
-
-    Returns
-    -------
-    function : callable
-        A numpy function that computes the value of the expression with the given parameters.
-    """
-    filtered_parameters = _filter_parameters(expression, parameters)
-    result: float | FloatNDArray = sympy.lambdify(list(expression.free_symbols), expression)(**filtered_parameters)
-    return result
-
-
 class PicklableLambda:
     """A callable wrapper that securely pickles lambdified Sympy functions."""
 

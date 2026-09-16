@@ -288,6 +288,12 @@ class MaxProfit(MetricStrategy):
         self._tn_benefit = tn_benefit
         self._fp_cost = fp_cost
         self._fn_cost = fn_cost
+        # Compiled once here rather than on every _evaluate_class_costs() call -- the same
+        # anti-pattern LogCost's build() already avoids (see log_cost_strategy.py).
+        self._tp_benefit_fn = _safe_lambdify(self._tp_benefit)
+        self._tn_benefit_fn = _safe_lambdify(self._tn_benefit)
+        self._fp_cost_fn = _safe_lambdify(self._fp_cost)
+        self._fn_cost_fn = _safe_lambdify(self._fn_cost)
         self._boost_cache = None
         return self
 
@@ -298,10 +304,10 @@ class MaxProfit(MetricStrategy):
         -------
         tp_benefit, tn_benefit, fp_cost, fn_cost : float
         """
-        tp_val = float(_safe_run_lambda(_safe_lambdify(self._tp_benefit), self._tp_benefit, **parameters))
-        tn_val = float(_safe_run_lambda(_safe_lambdify(self._tn_benefit), self._tn_benefit, **parameters))
-        fp_val = float(_safe_run_lambda(_safe_lambdify(self._fp_cost), self._fp_cost, **parameters))
-        fn_val = float(_safe_run_lambda(_safe_lambdify(self._fn_cost), self._fn_cost, **parameters))
+        tp_val = float(_safe_run_lambda(self._tp_benefit_fn, self._tp_benefit, **parameters))
+        tn_val = float(_safe_run_lambda(self._tn_benefit_fn, self._tn_benefit, **parameters))
+        fp_val = float(_safe_run_lambda(self._fp_cost_fn, self._fp_cost, **parameters))
+        fn_val = float(_safe_run_lambda(self._fn_cost_fn, self._fn_cost, **parameters))
         return tp_val, tn_val, fp_val, fn_val
 
     def _prepare_boost_deterministic_objective(

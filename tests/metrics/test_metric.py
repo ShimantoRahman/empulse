@@ -673,6 +673,65 @@ class TestMissingParameters:
         assert metric._missing_parameters(['d']) == set()
 
 
+class TestOutlierSensitiveParameters:
+    """Tests for Metric._outlier_sensitive_parameters, used by RobustCSClassifier."""
+
+    def test_no_outlier_sensitive_parameters(self):
+        metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), Cost())
+        assert metric._outlier_sensitive_parameters() == {}
+
+    def test_positive_class_parameter(self):
+        """A symbol used only in tp_cost/fn_cost is classified 'positive'."""
+        a = sympy.Symbol('a')
+        metric = Metric(CostMatrix().add_tp_benefit(a).add_fp_cost('b').mark_outlier_sensitive(a), Cost())
+        assert metric._outlier_sensitive_parameters() == {'a': 'positive'}
+
+    def test_negative_class_parameter(self):
+        """A symbol used only in tn_cost/fp_cost is classified 'negative'."""
+        b = sympy.Symbol('b')
+        metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost(b).mark_outlier_sensitive(b), Cost())
+        assert metric._outlier_sensitive_parameters() == {'b': 'negative'}
+
+    def test_both_classes_parameter(self):
+        """A symbol used on both sides is classified 'both'."""
+        a = sympy.Symbol('a')
+        metric = Metric(
+            CostMatrix().add_tp_benefit(a).add_fp_cost(a).mark_outlier_sensitive(a),
+            Cost(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'a': 'both'}
+
+    def test_returned_under_alias_not_raw_symbol_name(self):
+        """The key is the caller-facing spelling (the alias), not the raw sympy symbol name."""
+        d = sympy.Symbol('d')
+        metric = Metric(
+            CostMatrix().add_fp_cost(d).alias({'incentive_cost': 'd'}).mark_outlier_sensitive(d),
+            Cost(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'incentive_cost': 'negative'}
+
+    def test_unaliased_symbol_uses_raw_name(self):
+        clv = sympy.Symbol('clv')
+        metric = Metric(CostMatrix().add_tp_benefit(clv).mark_outlier_sensitive(clv), Cost())
+        assert metric._outlier_sensitive_parameters() == {'clv': 'positive'}
+
+    def test_multiple_outlier_sensitive_parameters(self):
+        clv, d = sympy.symbols('clv d')
+        metric = Metric(
+            CostMatrix().add_tp_benefit(clv).add_fp_cost(d).mark_outlier_sensitive(clv).mark_outlier_sensitive(d),
+            Cost(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'clv': 'positive', 'd': 'negative'}
+
+
+class TestParameterNames:
+    """`parameter_names` is the public alias for `_all_symbols`."""
+
+    def test_matches_all_symbols(self):
+        metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), Cost())
+        assert metric.parameter_names == metric._all_symbols == {'a', 'b'}
+
+
 def test_metric_set_default(y_true_and_prediction, delta_churn_cost_matrix):
     customer_lifetime_value, incentive_fraction, contact_cost, accept_rate = 100, 0.05, 1, 0.3
     y, y_proba = y_true_and_prediction

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal
 
 from ..._types import FloatArrayLike, FloatNDArray
 from .capabilities import Capability
@@ -44,6 +44,34 @@ class BaseMetric(ABC):
     increasing transformation. :class:`~empulse.metrics.Savings` is the standing example -- it is
     maximized, but reuses :class:`~empulse.metrics.Cost`'s objectives, and minimizing expected cost
     is equivalent to maximizing savings because savings is a decreasing affine map of cost.
+
+    **Model-facing contract.** Cost-sensitive models reach past the public API into the following
+    underscore-prefixed members. They stay private rather than becoming part of the public
+    contract, because their exact shapes are still in flux (e.g. :meth:`_evaluate_costs` returns
+    ``(fp, fn, tp, tn)`` while :attr:`capabilities`' ``CLASS_COSTS`` consumers expect
+    ``(tp, tn, fp, fn)``) -- the public extension point for a custom metric is
+    :class:`~empulse.metrics.MetricStrategy`, which is already fully public. A model should reach
+    for :attr:`capabilities` before any of these, and only use a specific member once the
+    corresponding capability confirms it is meaningful to call.
+
+    - :meth:`_evaluate_costs` -- reduces the cost expressions to class- or instance-dependent
+      numeric values, optionally with any stochastic variable replaced by its mean
+      (``replace_stochastic=True``). Meaningful when ``Capability.CLASS_COSTS`` is set.
+    - :meth:`_loss` -- the metric as a value to minimize, whatever its :attr:`direction`; what
+      every model actually optimizes.
+    - :meth:`_logit_objective` -- builds a :class:`~empulse.metrics.LogitObjective` for a
+      logistic-regression-style optimizer. Meaningful when ``Capability.LOGIT_OBJECTIVE`` is set.
+    - :meth:`_gradient_boost_objective` -- gradient and hessian recomputed from the current
+      round's predictions. Meaningful when ``Capability.BOOST_OBJECTIVE`` is set.
+    - :meth:`_prepare_boost_objective` -- the gradient's constant term, computed once before the
+      first boosting round. Meaningful when ``Capability.PRECOMPUTED_BOOST_OBJECTIVE`` is set.
+    - :attr:`_all_parameters`, :attr:`_default_parameter_names`, :meth:`_missing_parameters` --
+      what a caller must, may, and has not yet supplied; see :attr:`parameter_names` for the
+      public "what can I pass" question.
+    - :meth:`_validate_parameters` -- checks parameter values against the domain the metric
+      declares; called once, where a value first arrives, never on a per-iteration re-entry (see
+      ``validate=False`` on the public scoring methods).
+    - :attr:`_is_deterministic` -- whether the metric is free of stochastic (random) variables.
     """
 
     @property
@@ -96,6 +124,16 @@ class BaseMetric(ABC):
     @abstractmethod
     def _all_symbols(self) -> set[str]:
         """The set of all parameter names accepted by the metric, including stochastic variables."""
+
+    @property
+    def parameter_names(self) -> set[str]:
+        """
+        The set of all parameter names this metric accepts, including stochastic variables.
+
+        A public alias for :attr:`_all_symbols`, for a caller that wants to know what to pass to
+        this metric without reaching into a private name.
+        """
+        return self._all_symbols
 
     @property
     @abstractmethod
@@ -226,3 +264,22 @@ class BaseMetric(ABC):
         FloatNDArray | float,
     ]:
         """Evaluate the (class-dependent or instance-dependent) cost expressions."""
+
+    @abstractmethod
+    def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
+        """Map each outlier-sensitive parameter to the class whose rows it describes.
+
+        A parameter is outlier-sensitive when it was declared with
+        :meth:`~empulse.metrics.CostMatrix.mark_outlier_sensitive`. The key is the parameter's
+        caller-facing spelling (its alias, if it has one, else its raw symbol name) --
+        :class:`~empulse.models.RobustCSClassifier` uses this to decide, for a given
+        outlier-sensitive parameter, which rows of ``X``/``y`` to fit an outlier-detecting
+        regressor on: ``'positive'`` restricts to the rows where ``y`` is positive (the parameter
+        appears only in :attr:`Metric.tp_cost <empulse.metrics.Metric.tp_cost>`/
+        :attr:`~empulse.metrics.Metric.fn_cost`), ``'negative'`` to where it is not
+        (:attr:`~empulse.metrics.Metric.tn_cost`/:attr:`~empulse.metrics.Metric.fp_cost` only),
+        and ``'both'`` uses every row (the parameter appears on both sides, or the metric cannot
+        distinguish -- e.g. a mixture of components that disagree).
+
+        Empty for a metric that declares no outlier-sensitive parameters.
+        """

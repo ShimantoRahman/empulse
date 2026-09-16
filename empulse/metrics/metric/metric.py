@@ -1,8 +1,8 @@
 import copy
 import warnings
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableMapping
 from numbers import Real
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import sympy
@@ -12,11 +12,13 @@ from .._validation import _check_y_pred, _check_y_true
 from .base_metric import BaseMetric
 from .common import (
     Direction,
+    PicklableLambda,
     _check_duplicate_symbol_names,
     _check_known_alias_and_default_targets,
     _check_parameter_domains,
     _check_reserved_symbol_names,
-    _evaluate_expression,
+    _safe_lambdify,
+    _safe_run_lambda,
     replace_random_var_with_mean,
 )
 from .cost_matrix import CostMatrix
@@ -188,6 +190,30 @@ class Metric(BaseMetric):
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
+        # Compiled once here rather than on every _evaluate_costs() call, which every ensemble
+        # and tree model calls per fit/OOB-weighting iteration.
+        self._fp_cost_fn = _safe_lambdify(self.fp_cost)
+        self._fn_cost_fn = _safe_lambdify(self.fn_cost)
+        self._tp_cost_fn = _safe_lambdify(self.tp_cost)
+        self._tn_cost_fn = _safe_lambdify(self.tn_cost)
+        # Built lazily on first _evaluate_costs(replace_stochastic=True) call, since most metrics
+        # are deterministic and would never use it. Caches both the mean-substituted expressions
+        # (which _safe_run_lambda needs, to know which parameters each one actually uses) and
+        # their compiled functions, so a second call recomputes neither the sympy substitution nor
+        # the lambdify.
+        self._mean_substituted_costs: (
+            tuple[
+                sympy.Expr,
+                sympy.Expr,
+                sympy.Expr,
+                sympy.Expr,
+                PicklableLambda,
+                PicklableLambda,
+                PicklableLambda,
+                PicklableLambda,
+            ]
+            | None
+        ) = None
 
     @property
     def strategy(self) -> MetricStrategy:
@@ -746,14 +772,52 @@ class Metric(BaseMetric):
             The true negative cost(s).
         """
         parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
-        fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
         if replace_stochastic and self._is_stochastic:
-            fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(fp_expr, fn_expr, tp_expr, tn_expr)
-        fp_cost = _evaluate_expression(fp_expr, **parameters)
-        fn_cost = _evaluate_expression(fn_expr, **parameters)
-        tp_cost = _evaluate_expression(tp_expr, **parameters)
-        tn_cost = _evaluate_expression(tn_expr, **parameters)
+            if self._mean_substituted_costs is None:
+                fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(
+                    self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
+                )
+                self._mean_substituted_costs = (
+                    fp_expr,
+                    fn_expr,
+                    tp_expr,
+                    tn_expr,
+                    _safe_lambdify(fp_expr),
+                    _safe_lambdify(fn_expr),
+                    _safe_lambdify(tp_expr),
+                    _safe_lambdify(tn_expr),
+                )
+            fp_expr, fn_expr, tp_expr, tn_expr, fp_fn, fn_fn, tp_fn, tn_fn = self._mean_substituted_costs
+        else:
+            fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
+            fp_fn, fn_fn, tp_fn, tn_fn = self._fp_cost_fn, self._fn_cost_fn, self._tp_cost_fn, self._tn_cost_fn
+        fp_cost = _safe_run_lambda(fp_fn, fp_expr, **parameters)
+        fn_cost = _safe_run_lambda(fn_fn, fn_expr, **parameters)
+        tp_cost = _safe_run_lambda(tp_fn, tp_expr, **parameters)
+        tn_cost = _safe_run_lambda(tn_fn, tn_expr, **parameters)
         return fp_cost, fn_cost, tp_cost, tn_cost
+
+    def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
+        """Map each outlier-sensitive parameter to the class whose rows it describes.
+
+        See :meth:`BaseMetric._outlier_sensitive_parameters`.
+        """
+        if not self.cost_matrix._outlier_sensitive_symbols:
+            return {}
+        alias_of = _invert_alias_map(self.cost_matrix._aliases)
+        pos_symbols = self.tp_cost.free_symbols | self.fn_cost.free_symbols
+        neg_symbols = self.tn_cost.free_symbols | self.fp_cost.free_symbols
+        result: dict[str, Literal['positive', 'negative', 'both']] = {}
+        for symbol in self.cost_matrix._outlier_sensitive_symbols:
+            name = alias_of.get(str(symbol), str(symbol))
+            in_pos, in_neg = symbol in pos_symbols, symbol in neg_symbols
+            if in_pos and not in_neg:
+                result[name] = 'positive'
+            elif in_neg and not in_pos:
+                result[name] = 'negative'
+            else:
+                result[name] = 'both'
+        return result
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(cost_matrix={self.cost_matrix}, strategy={self.strategy})'
@@ -762,3 +826,25 @@ class Metric(BaseMetric):
         return self.strategy.to_latex(
             tp_benefit=self.tp_benefit, tn_benefit=self.tn_benefit, fp_cost=self.fp_cost, fn_cost=self.fn_cost
         )
+
+
+def _invert_alias_map(aliases: MutableMapping[str, str | sympy.Symbol]) -> dict[str, str]:
+    """Invert a ``{alias: symbol_name}`` mapping to ``{symbol_name: alias}``.
+
+    Raises
+    ------
+    ValueError
+        If any symbol name is aliased by more than one key, because inversion would silently
+        drop one of them.
+    """
+    symbol_to_alias: dict[str, str] = {}
+    for alias, symbol_name in aliases.items():
+        symbol_name = str(symbol_name)
+        if symbol_name in symbol_to_alias:
+            raise ValueError(
+                f'Cannot invert alias mapping: symbol {symbol_name!r} is aliased by more than one '
+                f'key ({symbol_to_alias[symbol_name]!r} and {alias!r}). Each symbol must have at '
+                f'most one alias.'
+            )
+        symbol_to_alias[symbol_name] = alias
+    return symbol_to_alias

@@ -3,7 +3,7 @@ import pytest
 import sympy
 from sklearn.linear_model import HuberRegressor
 
-from empulse.metrics import Cost, CostMatrix, Metric
+from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
 from empulse.models import CSLogitClassifier, RobustCSClassifier
 
 ARRAY_COST_CASES = [
@@ -75,3 +75,27 @@ def test_robustcs_metric_loss(classification_data):
     assert hasattr(model, 'outlier_estimators_')
     assert not np.array_equal(model.costs_['clv'], clv_val)
     assert not np.array_equal(model.costs_['incentive_cost'], d_val)
+
+
+def test_robustcs_mixture_metric_loss(classification_data):
+    """
+    A ``MixtureMetric`` loss is imputed, not rejected.
+
+    Previously ``RobustCSClassifier.fit`` raised ``NotImplementedError`` for any loss that
+    wasn't a plain ``Metric``, since it could only walk a single ``CostMatrix``'s sympy
+    expressions directly. ``BaseMetric._outlier_sensitive_parameters()`` now answers the same
+    question uniformly, so a ``MixtureMetric`` (here, trivially, one component) works too.
+    """
+    X, y = classification_data
+
+    clv = sympy.symbols('clv')
+    cost_matrix = CostMatrix().add_tp_benefit(clv).add_fp_cost('b').mark_outlier_sensitive(clv)
+    mixture = MixtureMetric([MixtureComponent(1.0, Metric(cost_matrix, Cost()), {})])
+
+    rng = np.random.default_rng(42)
+    clv_val = rng.uniform(100, 200, size=X.shape[0])
+    model = RobustCSClassifier(CSLogitClassifier(loss=mixture))
+    model.fit(X, y, clv=clv_val, b=1.0)
+    assert hasattr(model, 'estimator_')
+    assert hasattr(model, 'outlier_estimators_')
+    assert not np.array_equal(model.costs_['clv'], clv_val)

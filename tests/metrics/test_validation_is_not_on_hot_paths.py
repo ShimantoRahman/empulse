@@ -20,9 +20,11 @@ ProfTree + a non-MaxProfit    one per candidate tree per generation
 """
 
 from typing import Any
+from unittest import mock
 
 import numpy as np
 import pytest
+import sympy
 
 from empulse.metrics import Cost, CostMatrix, LogCost, MaxProfit, Metric
 from empulse.metrics.metric import metric as metric_module
@@ -141,3 +143,45 @@ def test_a_constrained_symbol_is_checked_during_fit(training_data):
     model = CSBoostClassifier(loss=Metric(cost_matrix, Cost()))
     with pytest.raises(ValueError, match='d should lay between 0 and 1'):
         model.fit(X, y, c=np.ones(len(y)), d=5.0)
+
+
+class TestCompilationIsNotOnHotPaths:
+    """
+    Compiling a cost expression to a numpy function (``sympy.lambdify``) is also O(expression
+    size), not free, and used to happen on every ``Metric._evaluate_costs``/``MaxProfit.
+    _evaluate_class_costs`` call rather than once at ``build()``/``__init__`` time -- the same
+    shape of regression the validation tests above guard against, just for compilation instead
+    of validation. These count calls to ``sympy.lambdify`` directly across repeated calls on the
+    *same* metric/strategy instance, rather than through a specific model's training loop: the
+    compiled functions are cached on the instance, so the count that matters is calls per
+    instance, independent of which model (or how many times) ends up calling into it.
+    """
+
+    def test_metric_evaluate_costs_compiles_once(self):
+        metric = instance_dependent_metric(Cost())
+        with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
+            for _ in range(10):
+                metric._evaluate_costs(c=1.0, d=2.0)
+        assert spy.call_count == 0  # already compiled by Metric.__init__
+
+    def test_metric_evaluate_costs_replace_stochastic_compiles_once(self):
+        alpha, beta = sympy.symbols('alpha beta')
+        gamma = sympy.stats.Beta('gamma', alpha, beta)
+        metric = Metric(CostMatrix().add_tp_benefit(gamma * 10).add_fp_cost('d'), Cost())
+        # The first replace_stochastic=True call builds and caches the mean-substituted
+        # expressions' compiled functions (PicklableLambda's constant-expression fast path skips
+        # sympy.lambdify entirely for tn_cost/fn_cost here, since neither has a term -- so the
+        # exact count from this first call is an implementation detail, not what's under test).
+        metric._evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
+        with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
+            for _ in range(10):
+                metric._evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
+        assert spy.call_count == 0  # cached by the first call above, not recompiled since
+
+    def test_max_profit_evaluate_class_costs_compiles_once(self):
+        metric = instance_dependent_metric(MaxProfit())
+        parameters = {'c': 1.0, 'd': 2.0}
+        with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
+            for _ in range(10):
+                metric.strategy._evaluate_class_costs(parameters)
+        assert spy.call_count == 0  # already compiled by MaxProfit.build()

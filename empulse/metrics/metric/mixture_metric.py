@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any, NamedTuple, Self
+from typing import Any, Literal, NamedTuple, Self
 
 import numpy as np
 
@@ -545,6 +545,19 @@ class MixtureMetric(BaseMetric):
             total_tp = total_tp + weight * tp_cost
             total_tn = total_tn + weight * tn_cost
         return total_fp, total_fn, total_tp, total_tn
+
+    def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
+        """Merge each component's outlier-sensitive parameters.
+
+        See :meth:`BaseMetric._outlier_sensitive_parameters`. A parameter name that more than one
+        component marks outlier-sensitive takes the last component's classification, the same
+        left-to-right precedence :attr:`_all_symbols` and :attr:`_all_parameters` use for the
+        union across components.
+        """
+        result: dict[str, Literal['positive', 'negative', 'both']] = {}
+        for component in self.components:
+            result.update(component.metric._outlier_sensitive_parameters())
+        return result
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(components={self.components!r})'
