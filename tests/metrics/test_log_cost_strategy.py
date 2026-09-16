@@ -336,9 +336,11 @@ def test_csboost_dispatches_log_cost_through_dynamic_gradient_boost_objective(da
     generic ``cy_boost_grad_hess`` kernel that Cost/Savings rely on (that kernel assumes a single
     precomputed constant gradient, which only holds for a loss that is linear in the score). This
     does not require xgboost/lightgbm/catboost to be installed: it inspects what callable
-    ``_get_objective`` builds for the 'xgboost' framework.
+    ``_get_objective`` builds for the xgboost backend.
     """
     from functools import partial
+
+    from empulse.models.boosting._backends import BoostingBackend
 
     _X, y = dataset
     tp, fp = sympy.symbols('tp fp')
@@ -346,7 +348,8 @@ def test_csboost_dispatches_log_cost_through_dynamic_gradient_boost_objective(da
     metric = Metric(cost_matrix, LogCost())
 
     model = CSBoostClassifier(loss=metric)
-    objective = model._get_objective('xgboost', y=y, loss=metric, tp=0.0, fp=1.0)
+    xgboost_backend = BoostingBackend(name='xgboost', classifier=None)
+    objective = model._get_objective(xgboost_backend, y=y, loss=metric, tp=0.0, fp=1.0)
 
     assert isinstance(objective, partial)
     assert objective.func == metric._gradient_boost_objective

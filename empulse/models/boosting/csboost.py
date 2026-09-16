@@ -1,11 +1,9 @@
 import warnings
-from collections.abc import Callable, Sequence
-from functools import partial
-from typing import Any, ClassVar, Literal, Self, TypeVar, overload
+from typing import Any, ClassVar, Self, TypeVar
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.special import expit, logit
+from scipy.special import expit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted, validate_data
@@ -27,68 +25,18 @@ except ImportError:
 
 from ..._common import Parameter
 from ...metrics import BaseMetric, Capability
-from ...metrics._loss import cy_boost_grad_hess
 from .._base.cost_sensitive import CostSensitiveClassifier
-
-# Hessian is 0 at score 0.5 because the AEC objective's hessian evaluates to p*(1-p),
-# which is exactly 0 when p=0.5. A nudge of 1e-2 is large enough to produce a non-zero
-# hessian at initialization (kick-starting the optimizer) yet small enough not to meaningfully
-# bias the starting point away from 0.5.
-#
-# XGBoost's `base_score` is a probability, but LightGBM's `init_score` and CatBoost's `baseline`
-# are raw (log-odds) scores - the same literal nudge does not mean "start at ~51% probability" in
-# both spaces (expit(0.51) != 0.51). Two separate constants keep the *actual* starting probability
-# consistent across backends.
-_BASE_SCORE_PROBA = 0.5 + 1e-2
-_BASE_SCORE_RAW = float(logit(_BASE_SCORE_PROBA))
+from ._backends import (  # ruff: ignore[unused-import] (re-exported for tests/models/test_csboost.py)
+    _BASE_SCORE_PROBA,
+    _BASE_SCORE_RAW,
+    BoostingBackend,
+    backend_for,
+)
 
 
-class LGBMObjective:
-    """AEC objective for lightgbm."""
-
-    def __init__(self, gradient_const: FloatNDArray):
-        self.gradient_const = gradient_const
-
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
-        """
-        Compute the gradient and hessian of the AEC objective.
-
-        Parameters
-        ----------
-        y_true : np.ndarray
-            Ground truth labels.
-        y_score : np.ndarray
-            Raw model scores.
-
-        Returns
-        -------
-        gradient : np.ndarray
-            Gradient of the objective function.
-        hessian : np.ndarray
-            Hessian of the objective function.
-        """
-        gradient: FloatNDArray
-        hessian: FloatNDArray
-        # cy_boost_grad_hess (Cython) requires float64 memoryviews
-        gradient, hessian = cy_boost_grad_hess(
-            np.asarray(y_true, dtype=np.float64),
-            np.asarray(y_score, dtype=np.float64),
-            np.asarray(self.gradient_const, dtype=np.float64),
-        )
-        return gradient, hessian
-
-
-class LGBMMetricObjective:
-    """Metric objective wrapper for lightgbm using dynamic gradient/hessian evaluation."""
-
-    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
-        self.metric = metric
-        self.loss_params = loss_params
-
-    def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
-        """Compute the gradient and hessian of the metric objective."""
-        gradient, hessian = self.metric._gradient_boost_objective(y_true, y_score, **self.loss_params)
-        return gradient, hessian
+def _backend_for_estimator(estimator: Any) -> BoostingBackend | None:
+    """:func:`backend_for`, threading through this module's own (patchable) classifier names."""
+    return backend_for(estimator, xgb_cls=XGBClassifier, lgbm_cls=LGBMClassifier, catboost_cls=CatBoostClassifier)
 
 
 class CSBoostClassifier(CostSensitiveClassifier):
@@ -254,6 +202,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
         grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
     """
 
+    estimator_: XGBClassifier | LGBMClassifier | CatBoostClassifier
+
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
         **CostSensitiveClassifier._parameter_constraints,
@@ -348,41 +298,23 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
-        # CatBoost uses sample_weight internally as an index proxy,
-        if (
-            'sample_weight' in fit_params
-            and not isinstance(CatBoostClassifier, TypeVar)
-            and (self.estimator is not None and isinstance(self.estimator, CatBoostClassifier))
-        ):
-            raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
+        # Checked against `self.estimator` (not yet cloned/fitted), before any estimator is
+        # built, so this raises before any of `self`'s state changes -- matching what a
+        # constructor-supplied backend rejects, e.g. CatBoost banning `sample_weight`.
+        if self.estimator is not None:
+            early_backend = _backend_for_estimator(self.estimator)
+            if early_backend is not None:
+                early_backend.check_fit_params(fit_params)
 
         if self.estimator is None:
-            self._initialize_default_estimator(y=y, loss=loss, **loss_params)
+            backend = self._initialize_default_estimator(y=y, loss=loss, **loss_params)
         else:
-            self._initialize_custom_estimator(y=y, loss=loss, **loss_params)
+            backend = self._initialize_custom_estimator(y=y, loss=loss, **loss_params)
 
-        if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator_, XGBClassifier):
-            self.estimator_.fit(X, y, **fit_params)
-        elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
-            self.estimator_.fit(X, y, init_score=np.full(y.shape, _BASE_SCORE_RAW), **fit_params)
-        elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
-            indices = np.arange(X.shape[0])
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    'ignore',
-                    message='Can\'t optimize method "calc_ders_range" because self argument is used',
-                    category=UserWarning,
-                )
-                warnings.filterwarnings(
-                    'ignore',
-                    message='Can\'t optimize method "evaluate" because self argument is used',
-                    category=UserWarning,
-                )
-                self.estimator_.fit(
-                    X, y, sample_weight=indices, baseline=np.full(y.shape, _BASE_SCORE_RAW), **fit_params
-                )
-        else:
-            raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
+        with warnings.catch_warnings():
+            for message, category in backend.warning_filters:
+                warnings.filterwarnings('ignore', message=message, category=category)
+            self.estimator_.fit(X, y, **backend.fit_kwargs(X, y), **fit_params)
         return self
 
     def _initialize_default_estimator(
@@ -390,84 +322,46 @@ class CSBoostClassifier(CostSensitiveClassifier):
         y: FloatNDArray,
         loss: BaseMetric,
         **loss_params: Any,
-    ) -> None:
-        if isinstance(XGBClassifier, TypeVar):
-            raise ImportError(  # ruff: ignore[type-check-without-type-error]
+    ) -> BoostingBackend:
+        xgb_cls = None if isinstance(XGBClassifier, TypeVar) else XGBClassifier
+        backend = BoostingBackend(name='xgboost', classifier=xgb_cls)
+        if backend.classifier is None:
+            raise ImportError(
                 f'XGBoost package is required to use {type(self).__name__}. '
                 'Install the boosting backends through `pip install empulse[boosting]` or '
                 '`pip install xgboost`'
             )
-        objective = self._get_objective('xgboost', y, loss=loss, **loss_params)
-        self.estimator_ = XGBClassifier(objective=objective, base_score=_BASE_SCORE_PROBA)
+        objective = self._get_objective(backend, y, loss=loss, **loss_params)
+        self.estimator_ = backend.build_default(objective)
+        return backend
 
     def _initialize_custom_estimator(
         self,
         y: FloatNDArray,
         loss: BaseMetric,
         **loss_params: Any,
-    ) -> None:
-        if not isinstance(XGBClassifier, TypeVar) and isinstance(self.estimator, XGBClassifier):
-            objective = self._get_objective('xgboost', y=y, loss=loss, **loss_params)
-            self.estimator_ = clone(self.estimator).set_params(objective=objective, base_score=_BASE_SCORE_PROBA)
-        elif not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator, LGBMClassifier):
-            objective = self._get_objective('lightgbm', y=y, loss=loss, **loss_params)
-            self.estimator_ = clone(self.estimator).set_params(objective=objective)
-        elif not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator, CatBoostClassifier):
-            loss_function, eval_metric = self._get_objective('catboost', y=y, loss=loss, **loss_params)
-            self.estimator_ = clone(self.estimator).set_params(loss_function=loss_function, eval_metric=eval_metric)
-        else:
+    ) -> BoostingBackend:
+        backend = _backend_for_estimator(self.estimator)
+        if backend is None:
             raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
-
-    @overload
-    def _get_objective(
-        self,
-        framework: Literal['xgboost'],
-        y: FloatNDArray,
-        loss: BaseMetric,
-        **loss_params: Any,
-    ) -> Callable[..., Any]: ...
-
-    @overload
-    def _get_objective(
-        self,
-        framework: Literal['lightgbm'],
-        y: FloatNDArray,
-        loss: BaseMetric,
-        **loss_params: Any,
-    ) -> LGBMObjective | LGBMMetricObjective: ...
-
-    @overload
-    def _get_objective(
-        self,
-        framework: Literal['catboost'],
-        y: FloatNDArray,
-        loss: BaseMetric,
-        **loss_params: Any,
-    ) -> tuple['CatBoostObjective', 'CatBoostMetric']: ...
+        objective = self._get_objective(backend, y=y, loss=loss, **loss_params)
+        self.estimator_ = backend.apply_objective(clone(self.estimator), objective)
+        return backend
 
     def _get_objective(
         self,
-        framework: Literal['xgboost', 'lightgbm', 'catboost'],
+        backend: BoostingBackend,
         y: FloatNDArray,
         loss: BaseMetric,
         **loss_params: Any,
-    ) -> Callable[..., Any] | LGBMObjective | LGBMMetricObjective | tuple['CatBoostObjective', 'CatBoostMetric']:
+    ) -> Any:
         # MaxProfit requires dynamic thresholding from current round predictions, and LogCost's
         # per-sample loss is non-linear in the predicted probability (unlike Cost/Savings), so both
         # evaluate gradients/hessians directly from the metric each iteration instead of going through
         # a precomputed constant.
         capabilities = loss.capabilities
         if Capability.BOOST_OBJECTIVE in capabilities:
-            if framework == 'xgboost':
-                return partial(loss._gradient_boost_objective, **loss_params)
-            if framework == 'lightgbm':
-                return LGBMMetricObjective(loss, **loss_params)
-
-            loss_params = {
-                name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
-                for name, param in loss_params.items()
-            }
-            return CatBoostObjective(loss, **loss_params), CatBoostMetric(loss, **loss_params)
+            return backend.wrap_objective(loss, y, loss_params, precomputed=False)
 
         if Capability.PRECOMPUTED_BOOST_OBJECTIVE not in capabilities:
             raise ValueError(
@@ -475,22 +369,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 f"(neither 'boost_objective' nor 'precomputed_boost_objective'; got the "
                 f'{loss.strategy.name!r} strategy).'
             )
-
-        if framework == 'xgboost':
-            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
-            # cy_boost_grad_hess (Cython) requires a float64 memoryview.
-            return partial(cy_boost_grad_hess, grad_const=np.asarray(grad_const, dtype=np.float64))
-        elif framework == 'lightgbm':
-            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
-            return LGBMObjective(grad_const)
-        else:
-            grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
-            # normalize the shape of all loss params to be (n_samples,)
-            loss_params = {
-                name: np.full(y.shape, param) if np.isscalar(param) else param.reshape(-1)
-                for name, param in loss_params.items()
-            }
-            return CatBoostObjective(grad_const), CatBoostMetric(loss, **loss_params)
+        return backend.wrap_objective(loss, y, loss_params, precomputed=True)
 
     def predict_proba(self, X: ArrayLike) -> FloatNDArray:
         """
@@ -509,138 +388,12 @@ class CSBoostClassifier(CostSensitiveClassifier):
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
 
-        # LightGBM's `init_score` and CatBoost's `baseline` (both set to _BASE_SCORE_RAW in `_fit`)
-        # bias training gradients only - neither library persists them into the saved model, so the
-        # raw score returned by predict() must have that same offset added back manually before
-        # converting to a probability. XGBoost's `base_score` has no such issue: it is a genuine
-        # model parameter that base_score-aware predict_proba() already accounts for.
         y_proba: FloatNDArray
-        if not isinstance(LGBMClassifier, TypeVar) and isinstance(self.estimator_, LGBMClassifier):
-            raw_score: FloatNDArray = self.estimator_.predict_proba(X, raw_score=True)
-            y_proba = expit(raw_score + _BASE_SCORE_RAW)
-            return np.column_stack([1 - y_proba, y_proba])
-
-        if not isinstance(CatBoostClassifier, TypeVar) and isinstance(self.estimator_, CatBoostClassifier):
-            raw_score = self.estimator_.predict(X, prediction_type='RawFormulaVal')
+        backend = _backend_for_estimator(self.estimator_)
+        raw_score = backend.raw_score(self.estimator_, X) if backend is not None else None
+        if raw_score is not None:
             y_proba = expit(raw_score + _BASE_SCORE_RAW)
             return np.column_stack([1 - y_proba, y_proba])
 
         y_proba = self.estimator_.predict_proba(X)
         return y_proba
-
-
-class CatBoostObjective:
-    """AEC objective for catboost."""
-
-    def __init__(self, metric_or_gradient_const: BaseMetric | FloatNDArray, **loss_params: FloatNDArray | float):
-        self.metric = metric_or_gradient_const if isinstance(metric_or_gradient_const, BaseMetric) else None
-        self.gradient_const = metric_or_gradient_const if isinstance(metric_or_gradient_const, np.ndarray) else None
-        self.loss_params = loss_params
-
-    def calc_ders_range(
-        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
-    ) -> list[tuple[float, float]]:
-        """
-        Compute first and second derivative of the loss function with respect to the predicted value for each object.
-
-        Parameters
-        ----------
-        predictions : indexed container of floats
-            Current predictions for each object.
-
-        targets : indexed container of floats
-            Target values you provided with the dataset.
-
-        weights : ndarray of float
-            Here instance weights are used to pass the indices of the instances, not actual weights.
-
-        Returns
-        -------
-        list of (float, float)
-            The first and second derivative of the loss w.r.t. the prediction, per object.
-        """
-        weights = weights.astype(int)
-        predictions = np.array(predictions, dtype=np.float64)
-
-        if self.metric is not None:
-            # Use weights as a proxy to index instance-dependent parameters.
-            loss_params = {
-                name: value[weights] if isinstance(value, np.ndarray) else value
-                for (name, value) in self.loss_params.items()
-            }
-            gradient, hessian = self.metric._gradient_boost_objective(targets, predictions, **loss_params)
-        else:
-            gradient_const = self.gradient_const[weights]  # type: ignore[index]
-            # cy_boost_grad_hess (Cython) requires a float64 memoryview; targets is typed as the
-            # broader FloatNDArray to match catboost's own callback convention.
-            gradient, hessian = cy_boost_grad_hess(np.asarray(targets, dtype=np.float64), predictions, gradient_const)
-        # convert from two arrays to one list of tuples
-        gradient_f = np.asarray(gradient, dtype=np.float32)
-        hessian_f = np.asarray(hessian, dtype=np.float32)
-        return list(zip(-gradient_f, -hessian_f, strict=False))
-
-
-class CatBoostMetric:
-    """AEC metric for catboost."""
-
-    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
-        self.metric = metric
-        self.loss_params = loss_params
-
-    def is_max_optimal(self) -> bool:
-        """Return whether greater values of metric are better."""
-        # `evaluate` reports `BaseMetric._loss`, which is minimized whatever the metric's direction.
-        return False
-
-    def evaluate(
-        self, predictions: Sequence[float], targets: Sequence[float], weights: FloatNDArray
-    ) -> tuple[float, float]:
-        """
-        Evaluate metric value.
-
-        Parameters
-        ----------
-        predictions : sequence of float
-            Raw model outputs (logits) for each instance.
-
-        targets : sequence of float
-            Vectors of true labels.
-
-        weights : ndarray of float
-            Here instance weights are used to pass the indices of the instances, not actual weights.
-
-        Returns
-        -------
-        weighted_error : float
-            The metric value, reported as a loss to be minimized.
-        total_weight : float
-            Always ``1``; CatBoost divides ``weighted_error`` by this to form the final error.
-        """
-        weights = weights.astype(int)
-        # Use weights as a proxy to index the costs
-        loss_params = {
-            name: value[weights] if isinstance(value, np.ndarray) else value
-            for (name, value) in self.loss_params.items()
-        }
-
-        y_proba = expit(predictions)
-        return self.metric._loss(targets, y_proba, validate=False, **loss_params), 1
-
-    def get_final_error(self, error: float, weight: float) -> float:
-        """
-        Return final value of metric based on error and weight.
-
-        Parameters
-        ----------
-        error : float
-            Sum of errors in all instances.
-
-        weight : float
-            Sum of weights of all instances.
-
-        Returns
-        -------
-        float
-            The final metric value.
-        """
-        return error
