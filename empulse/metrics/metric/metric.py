@@ -188,17 +188,12 @@ class Metric(BaseMetric):
             fp_cost=self.fp_cost,
             fn_cost=self.fn_cost,
         )
-        # Compiled once here rather than on every _evaluate_costs() call, which every ensemble
-        # and tree model calls per fit/OOB-weighting iteration.
         self._fp_cost_fn = _safe_lambdify(self.fp_cost)
         self._fn_cost_fn = _safe_lambdify(self.fn_cost)
         self._tp_cost_fn = _safe_lambdify(self.tp_cost)
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
-        # Built lazily on first _evaluate_costs(replace_stochastic=True) call, since most metrics
-        # are deterministic and would never use it. Caches both the mean-substituted expressions
-        # (which _safe_run_lambda needs, to know which parameters each one actually uses) and
-        # their compiled functions, so a second call recomputes neither the sympy substitution nor
-        # the lambdify.
+        # Built lazily on first _evaluate_costs(replace_stochastic=True) call,
+        # since most metrics are deterministic and would never use it.
         self._mean_substituted_costs: (
             tuple[
                 sympy.Expr,
@@ -796,7 +791,8 @@ class Metric(BaseMetric):
         return fp_cost, fn_cost, tp_cost, tn_cost
 
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
-        """Map each outlier-sensitive parameter to the class whose rows it describes.
+        """
+        Map each outlier-sensitive parameter to the class whose rows it describes.
 
         See :meth:`BaseMetric._outlier_sensitive_parameters`.
         """

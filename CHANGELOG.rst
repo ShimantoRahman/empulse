@@ -4,24 +4,6 @@
 Metrics
 -------
 
-- |Feature| Added :attr:`BaseMetric.parameter_names <empulse.metrics.BaseMetric.parameter_names>`,
-  a public alias for the previously private ``_all_symbols``, answering "what can I pass to this
-  metric?" without reaching into a private name.
-- |Enhancement| :class:`~empulse.models.RobustCSClassifier` now accepts a
-  :class:`~empulse.metrics.MixtureMetric` loss for outlier-sensitive cost detection, not only a
-  plain :class:`~empulse.metrics.Metric`. It previously raised ``NotImplementedError`` for any
-  composite loss, because it could only walk a single :class:`~empulse.metrics.CostMatrix`'s sympy
-  expressions directly to find which parameters were marked
-  :meth:`~empulse.metrics.CostMatrix.mark_outlier_sensitive`; that question is now answered
-  uniformly by every :class:`~empulse.metrics.BaseMetric`.
-- |Efficiency| :class:`~empulse.metrics.Metric` now compiles its cost expressions to numpy
-  functions once, at construction (and once more, lazily, for the mean-substituted variants used
-  by ``replace_stochastic=True``), instead of on every :meth:`~empulse.metrics.Metric._evaluate_costs`
-  call -- which every tree, forest, bagging and minimax model calls at least once per fit, and
-  which the bagging/forest out-of-bag weighting loop calls once per estimator.
-  :class:`~empulse.metrics.MaxProfit` similarly now compiles its four class-dependent cost
-  expressions once in :meth:`~empulse.metrics.MetricStrategy.build`, matching what
-  :class:`~empulse.metrics.LogCost` already did.
 - |MajorFeature| Added :class:`~empulse.metrics.MixtureMetric` and
   :class:`~empulse.metrics.MixtureComponent`, which express a weighted linear combination of
   :class:`~empulse.metrics.BaseMetric` instances. This is exact, by linearity of expectation,

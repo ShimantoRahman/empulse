@@ -547,7 +547,8 @@ class MixtureMetric(BaseMetric):
         return total_fp, total_fn, total_tp, total_tn
 
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
-        """Merge each component's outlier-sensitive parameters.
+        """
+        Merge each component's outlier-sensitive parameters.
 
         See :meth:`BaseMetric._outlier_sensitive_parameters`. A parameter name that more than one
         component marks outlier-sensitive takes the last component's classification, the same
