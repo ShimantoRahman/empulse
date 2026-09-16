@@ -37,7 +37,7 @@ from empulse.metrics import (
     mpc_score,
     mpcs_score,
 )
-from empulse.metrics.metric.common import Direction
+from empulse.metrics.metric._direction import Direction
 
 Y_TRUE = np.array([0, 1, 0, 1, 1, 0, 1, 0])
 Y_SCORE = np.array([0.1, 0.9, 0.3, 0.8, 0.4, 0.2, 0.7, 0.6])

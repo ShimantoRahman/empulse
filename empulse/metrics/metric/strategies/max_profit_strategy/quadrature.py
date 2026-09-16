@@ -9,7 +9,7 @@ from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import _check_parameters
+from ..._parameter_domain import _check_parameters
 from .common import _convex_hull, _substitute_integrand, extract_distribution_parameters
 
 

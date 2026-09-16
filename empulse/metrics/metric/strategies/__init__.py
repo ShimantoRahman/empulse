@@ -1,10 +1,10 @@
-from ._penalty import ElasticNetPenalty, objective_scale_from_costs
+from ...._common._objective import ElasticNetPenalty, LogitObjective, objective_scale_from_costs
 from .auepc_strategy import AUEPC
 from .cost_strategy import Cost, Profit
 from .empirical_max_profit_strategy import EmpiricalMaxProfit, EmpiricalMinCost
 from .log_cost_strategy import LogCost
 from .max_profit_strategy import MaxProfit, MinCost
-from .metric_strategy import LogitObjective, MetricStrategy
+from .metric_strategy import MetricStrategy
 from .savings_strategy import Savings
 
 __all__ = [

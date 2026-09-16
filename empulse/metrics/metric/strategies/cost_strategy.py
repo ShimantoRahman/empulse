@@ -6,25 +6,26 @@ from typing import Any, ClassVar, Self
 import numpy as np
 import sympy
 
+from ...._common._objective import ElasticNetPenalty, LogitObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from ..._loss import cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
-from ..capabilities import Capability
-from ..common import (
+from .._compile import (
     BoostGradientConst,
-    Direction,
     MetricFn,
     PicklableLambda,
     RateFn,
     ThresholdFn,
-    _check_parameters,
     _safe_lambdify,
     _safe_run_lambda,
     _safe_run_lambda_array,
-    replace_random_var_with_mean,
-    warn_if_no_training_signal,
 )
-from ._penalty import ElasticNetPenalty
-from .metric_strategy import LogitObjective, MetricStrategy
+from .._direction import Direction
+from .._parameter_domain import _check_parameters
+from .._stochastic import replace_random_var_with_mean
+from .._symbolic import _latex
+from ..capabilities import Capability
+from ._training_signal import warn_if_no_training_signal
+from .metric_strategy import MetricStrategy
 
 
 class CostLogitObjective(LogitObjective):
@@ -769,8 +770,6 @@ class CostOptimalRate:
 def _cost_loss_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from ..common import _latex
-
     i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
         _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)

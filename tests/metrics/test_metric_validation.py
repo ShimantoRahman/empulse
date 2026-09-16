@@ -24,7 +24,7 @@ from empulse.metrics import (
     cost_loss,
     expected_cost_loss,
 )
-from empulse.metrics.metric.common import RESERVED_SYMBOL_NAMES
+from empulse.metrics.metric.cost_matrix import RESERVED_SYMBOL_NAMES
 
 Y_TRUE = np.array([1, 0, 1, 0, 1])
 Y_SCORE = np.array([0.9, 0.1, 0.8, 0.2, 0.7])

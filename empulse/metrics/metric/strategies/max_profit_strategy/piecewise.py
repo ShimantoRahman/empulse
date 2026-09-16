@@ -11,13 +11,8 @@ from scipy.integrate import IntegrationWarning, quad
 from sympy.stats import density, pspace
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import (
-    MetricFn,
-    RateFn,
-    _check_parameters,
-    _safe_lambdify,
-    _safe_run_lambda,
-)
+from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ..._parameter_domain import _check_parameters
 from ._distributions import ADAPTERS, adapter_for
 from .common import _convex_hull, extract_distribution_parameters
 from .envelope import (

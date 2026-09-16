@@ -5,8 +5,10 @@ import numpy as np
 import sympy
 
 from ....._types import FloatNDArray, IntNDArray
-from ....common import _compute_confusion_matrix, classification_threshold
-from ...common import _check_parameters, _safe_lambdify, _safe_run_lambda
+from ....common import classification_threshold
+from ..._compile import _safe_lambdify, _safe_run_lambda
+from ..._confusion import _compute_confusion_matrix
+from ..._parameter_domain import _check_parameters
 from .common import _BaseMaxProfitLogitObjective, _smooth_step_derivatives
 
 

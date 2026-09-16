@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
-from ..metrics.metric.common import Direction
+from ..metrics.metric._direction import Direction
 
 if TYPE_CHECKING:
     from ..metrics import LogitObjective

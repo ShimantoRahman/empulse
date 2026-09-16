@@ -5,12 +5,12 @@ import numpy as np
 
 from ..._types import FloatArrayLike, FloatNDArray
 from ..common import classification_threshold
+from ._direction import Direction
+from ._parameter_domain import _check_parameter_domains
 from .base_metric import BaseMetric
 from .capabilities import Capability
-from .common import Direction, _check_parameter_domains
 from .cost_matrix import ParameterBounds, ParameterPredicate
-from .strategies import LogitObjective, MetricStrategy
-from .strategies._penalty import ElasticNetPenalty
+from .strategies import ElasticNetPenalty, LogitObjective, MetricStrategy
 
 Weight = float | str | Callable[[dict[str, Any]], float]
 

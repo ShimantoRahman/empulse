@@ -141,7 +141,7 @@ def test_empirical_max_profit_score_class_matches_hand_rolled_delta(empirical_ch
 def test_empirical_max_profit_direction_is_maximize(empirical_churn_cost_matrix):
     cost_matrix, _ = empirical_churn_cost_matrix
     metric = Metric(cost_matrix, EmpiricalMaxProfit())
-    from empulse.metrics.metric.common import Direction
+    from empulse.metrics.metric._direction import Direction
 
     assert metric.direction == Direction.MAXIMIZE
 

@@ -97,7 +97,7 @@ def test_auepc_uninformative_ranking_scores_lower(empirical_churn_cost_matrix, e
 def test_auepc_direction_is_maximize(empirical_churn_cost_matrix):
     cost_matrix, _ = empirical_churn_cost_matrix
     metric = Metric(cost_matrix, AUEPC())
-    from empulse.metrics.metric.common import Direction
+    from empulse.metrics.metric._direction import Direction
 
     assert metric.direction == Direction.MAXIMIZE
 

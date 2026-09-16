@@ -5,16 +5,11 @@ import sympy
 
 from ...._types import FloatNDArray, IntNDArray
 from ...common import classification_threshold
-from ..common import (
-    Direction,
-    MetricFn,
-    RateFn,
-    ThresholdFn,
-    _check_parameters,
-    _safe_lambdify,
-    _safe_run_lambda_array,
-    replace_random_var_with_mean,
-)
+from .._compile import MetricFn, RateFn, ThresholdFn, _safe_lambdify, _safe_run_lambda_array
+from .._direction import Direction
+from .._parameter_domain import _check_parameters
+from .._stochastic import replace_random_var_with_mean
+from .._symbolic import _latex
 from .auepc_strategy import _build_delta_equation
 from .metric_strategy import MetricStrategy
 
@@ -299,8 +294,6 @@ def _empirical_max_profit_to_latex(
     fn_cost: sympy.Expr,
     operator: Literal['max', 'min'] = 'max',
 ) -> str:
-    from ..common import _latex
-
     delta_equation = _build_delta_equation(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )

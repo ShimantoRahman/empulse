@@ -8,17 +8,13 @@ from sympy.stats.rv import is_random
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
+from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ..._direction import Direction
+from ..._parameter_domain import _check_parameters
+from ..._stochastic import replace_random_var_with_mean
+from ..._symbolic import _latex
 from ...capabilities import Capability
-from ...common import (
-    Direction,
-    MetricFn,
-    RateFn,
-    _check_parameters,
-    _safe_lambdify,
-    _safe_run_lambda,
-    replace_random_var_with_mean,
-    warn_if_no_training_signal,
-)
+from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
@@ -867,8 +863,6 @@ def _max_profit_score_to_latex(
     fn_cost: sympy.Expr,
     phrasing: Literal['profit', 'cost'] = 'profit',
 ) -> str:
-    from ...common import _latex
-
     # Both builders already apply the sign convention, so the four expressions are passed through
     # as they are. `_build_cost_function` returns the exact negation of `_build_profit_function`,
     # which is what MinCost reports.

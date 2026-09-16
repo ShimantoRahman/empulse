@@ -4,13 +4,10 @@ import numpy as np
 import sympy
 
 from ...._types import FloatNDArray, IntNDArray
-from ..common import (
-    Direction,
-    MetricFn,
-    _check_parameters,
-    _safe_lambdify,
-    _safe_run_lambda,
-)
+from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda
+from .._direction import Direction
+from .._parameter_domain import _check_parameters
+from .._symbolic import _latex
 from .cost_strategy import (
     Cost,
     _build_cost_equation,
@@ -194,8 +191,6 @@ def _build_naive_cost_functions(cost_function: sympy.Expr) -> tuple[sympy.Expr, 
 def _savings_score_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from ..common import _latex
-
     i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # ruff: ignore[non-lowercase-variable-in-function]
     savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
         _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)

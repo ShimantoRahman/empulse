@@ -7,10 +7,9 @@ import sympy
 from scipy.special import expit
 from sympy.utilities import lambdify
 
+from ....._common._objective import ElasticNetPenalty, LogitObjective
 from ....._types import Float64Array, FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull
-from .._penalty import ElasticNetPenalty
-from ..metric_strategy import LogitObjective
 
 
 def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[IntNDArray, FloatNDArray]:

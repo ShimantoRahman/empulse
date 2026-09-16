@@ -1,15 +1,10 @@
-"""Elastic-net penalty shared by every logit objective.
-
-The penalty previously existed in four copies -- three inline in the Cython kernel, one in each of
-:mod:`log_cost_strategy` and :mod:`max_profit_strategy.common` -- and they had drifted apart.
-Keeping one implementation is what makes the three strategies agree on what they are minimizing.
-"""
-
+from abc import ABC
+from collections.abc import Generator
 from dataclasses import dataclass, replace
 
 import numpy as np
 
-from ...._types import Float64Array, FloatNDArray
+from .._types import Float64Array, FloatNDArray
 
 
 def objective_scale_from_costs(
@@ -52,8 +47,8 @@ def objective_scale_from_costs(
     scale : float
         A strictly positive, finite scale. Falls back to ``1.0`` when the cost matrix carries no
         training signal at all, so that the penalty never collapses to zero or ``NaN``;
-        :func:`~empulse.metrics.metric.common.warn_if_no_training_signal` is what reports that case,
-        from the objectives that actually differentiate the cost matrix.
+        ``empulse.metrics.metric.strategies._training_signal.warn_if_no_training_signal`` is what
+        reports that case, from the objectives that actually differentiate the cost matrix.
     """
     y = np.asarray(y_true, dtype=np.float64).reshape(-1)
     # np.asarray keeps scalars as 0-d arrays, which broadcast against `y` exactly as a float would.
@@ -412,3 +407,252 @@ class ElasticNetPenalty:
 
 #: A penalty that contributes nothing, for objectives fitted without regularization.
 NO_PENALTY = ElasticNetPenalty(C=np.inf, l1_ratio=0.0, objective_scale=0.0, n_samples=1, start_coef=0)
+
+
+class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-method]
+    """
+    Class to compute the loss and gradient of a logistic regression objective.
+
+    An objective is the sum of a *data term* and an :class:`~empulse.metrics.ElasticNetPenalty`.
+    Concrete objectives implement the data term through :meth:`data_loss` and :meth:`data_gradient`
+    and set :attr:`penalty`; the regularized ``logit_*`` methods are derived from those here.
+
+    Keeping the two separable is what lets a solver treat them differently -- most importantly
+    :class:`~empulse.optimizers.LBFGSBOptimizer`, which reformulates a non-smooth L1 penalty rather
+    than handing its subgradient to a solver that assumes smoothness.
+
+    Overriding ``logit_loss``/``logit_gradient`` directly and leaving :attr:`penalty` as ``None``
+    remains supported: the objective is then opaque to solvers, which fall back to treating it as
+    an arbitrary, possibly non-smooth function.
+    """
+
+    #: Penalty applied on top of the data term. ``None`` means the objective already includes
+    #: whatever penalty it wants inside ``logit_loss``/``logit_gradient``, and solvers must treat
+    #: it as opaque.
+    penalty: 'ElasticNetPenalty | None' = None
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """
+        Compute the unregularized loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Loss of the data term alone.
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not expose its data term separately. '
+            'Override data_loss() to enable solvers that handle the penalty themselves.'
+        )
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """
+        Compute the gradient of the unregularized loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Gradient of the data term alone.
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not expose its data term separately. '
+            'Override data_gradient() to enable solvers that handle the penalty themselves.'
+        )
+
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """
+        Compute the unregularized loss and its gradient for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        loss : float
+            Loss of the data term alone.
+        gradient : ndarray
+            Gradient of the data term alone.
+        """
+        return self.data_loss(weights), self.data_gradient(weights)
+
+    def logit_loss(self, weights: FloatNDArray) -> float:
+        """
+        Compute the loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        float
+            Regularized loss.
+        """
+        loss = self.data_loss(weights)
+        return loss if self.penalty is None else loss + self.penalty.value(weights)
+
+    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """
+        Compute the gradient of the loss for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        ndarray
+            Regularized gradient.
+        """
+        gradient = self.data_gradient(weights)
+        return gradient if self.penalty is None else gradient + self.penalty.gradient(weights)
+
+    def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """
+        Yield gradients for successive weight vectors.
+
+        Because the constants are derived from fixed data and parameters,
+        there is no expensive state to reconstruct between steps.  The
+        generator accepts the same send-protocol as
+        ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API
+        compatibility: passing ``(weights, refresh)`` works but ``refresh``
+        is silently ignored.
+
+        Send in either a ``weights`` vector or a ``(weights, refresh)`` tuple; ``refresh`` is
+        ignored here.
+
+        Yields
+        ------
+        gradient : ndarray
+            Gradient at the current weights.
+        """
+        weights: FloatNDArray
+
+        sent = yield  # type: ignore[misc]
+
+        while True:
+            if sent is None:
+                return
+            if isinstance(sent, tuple):
+                weights, _ = sent
+            else:
+                weights = sent
+
+            sent = yield self.logit_gradient(weights)
+
+    def logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:
+        """
+        Yield gradients for successive weight vectors.
+
+        Send either a ``weights`` vector or a ``(weights, refresh)`` tuple into the generator;
+        for this objective ``refresh`` is accepted but ignored.
+
+        Yields
+        ------
+        gradient : ndarray
+            Gradient at the weights last sent in.
+
+        Examples
+        --------
+        Driving the generator by hand (``objective`` is a built objective,
+        ``theta`` a coefficient vector)::
+
+            gen = objective.logit_gradient_steps()
+            grad = gen.send(theta)  # first time gradient is computed from scratch
+            grad = gen.send(theta)  # gradient computed from cached information
+            grad = gen.send((theta, True))  # gradient computed from scratch
+            gen.close()
+        """
+        generator = self._logit_gradient_steps()
+        next(generator)
+        return generator
+
+    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """
+        Compute the loss and its gradient for minimization.
+
+        Parameters
+        ----------
+        weights : ndarray
+            Coefficient vector.
+
+        Returns
+        -------
+        loss : float
+            Regularized loss.
+        gradient : ndarray
+            Regularized gradient.
+        """
+        loss, gradient = self.data_loss_gradient(weights)
+        if self.penalty is None:
+            return loss, gradient
+        return self.penalty.add_to(loss, np.asarray(gradient, dtype=np.float64), weights)
+
+    def __call__(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """
+        Compute the loss and its gradient for minimization.
+
+        Here for backward compatibility.  Delegates to ``logit_loss_gradient``.
+        """
+        return self.logit_loss_gradient(weights)
+
+    def set_alpha(self, alpha: float) -> None:  # ruff: ignore[empty-method-without-abstract-decorator]
+        """
+        Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).
+
+        Gradient optimizers with an ``alpha_schedule`` call this before each gradient
+        computation to externally drive the annealing schedule.  Objectives that
+        implement alpha annealing (e.g. :class:`MaxProfitLogitGradientPiecewise`)
+        override this method; all others silently ignore the call.
+
+        Parameters
+        ----------
+        alpha : float
+            New alpha value to use for the next gradient computation.
+        """
+        # no-op: override in subclasses that support alpha annealing
+
+    def with_indices(self, indices: np.ndarray) -> 'LogitObjective':
+        """
+        Return a new objective restricted to the sample subset given by *indices*.
+
+        Used by gradient optimizers for mini-batch training.  The default
+        implementation raises :exc:`NotImplementedError`; concrete objectives
+        that store their data should override this method.
+
+        Only the data arrays are sliced.  :attr:`penalty` is shared unchanged, because its scale is
+        already an average and mini-batch data gradients are themselves ``1 / batch_size`` means,
+        so the penalty stays consistent across batch sizes.
+
+        Parameters
+        ----------
+        indices : ndarray of int
+            Row indices into the full training set.
+
+        Returns
+        -------
+        LogitObjective
+            A new objective for the selected samples.
+
+        Raises
+        ------
+        NotImplementedError
+            If this objective does not support mini-batch slicing.
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not support mini-batch training. Override with_indices() to enable it.'
+        )

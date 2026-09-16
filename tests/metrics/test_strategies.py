@@ -24,7 +24,7 @@ from empulse.metrics import (
     Profit,
     Savings,
 )
-from empulse.metrics.metric.common import PicklableLambda
+from empulse.metrics.metric._compile import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
     CostLoss,

@@ -1,11 +1,11 @@
-from collections.abc import Callable, Mapping, MutableMapping
+from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Self
 
 import sympy
 import sympy.stats
 
-from .common import _latex, _sympify_term
+from ._symbolic import _latex, _sympify_term
 
 
 def _tightest(new: float | None, existing: float | None, tighter: Callable[[float, float], float]) -> float | None:
@@ -603,4 +603,191 @@ class CostMatrix:
             rf'\hat y=0 & {tn} & {fn} \\ '
             rf'\hat y=1 & {fp} & {tp} '
             r'\end{array}$'
+        )
+
+
+# Symbol names used internally by Metric and its strategies to inject data (labels, scores,
+# true/false positive rates, class priors) into the lambdified cost-matrix expressions, or used
+# by to_latex() rendering, or as a keyword-only parameter of Metric._prepare_parameters(). A
+# user-defined symbol or alias sharing one of these names would either be silently fused with the
+# internal one, raise a confusing internal TypeError, or (for 'n_samples') actually be captured by
+# _prepare_parameters()'s own n_samples parameter instead of reaching its **kwargs - see
+# Metric.__init__ and _check_reserved_symbol_names(). 'validate' is reserved for the same reason
+# as 'n_samples': it is a keyword-only parameter of _prepare_parameters() and of the public
+# scoring methods, so a symbol of that name would be captured by it rather than reach **kwargs.
+RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i', 'n_samples', 'validate'})
+
+
+def _check_reserved_symbol_names(*expressions: sympy.Expr, alias_names: Iterable[str] = ()) -> None:
+    """
+    Raise if a cost matrix uses a symbol name (or alias) reserved for internal use.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        The cost-matrix expressions (e.g. ``tp_benefit``, ``tn_benefit``, ``fp_cost``,
+        ``fn_cost``) to check for reserved free symbol names.
+    alias_names : Iterable[str], default=()
+        The alias names registered on the cost matrix, checked alongside the expressions' own
+        free symbol names.
+
+    Raises
+    ------
+    ValueError
+        If any free symbol name or alias collides with a name in :data:`RESERVED_SYMBOL_NAMES`.
+    """
+    symbol_names = {str(symbol) for expression in expressions for symbol in expression.free_symbols}
+    reserved_in_use = (symbol_names | set(alias_names)) & RESERVED_SYMBOL_NAMES
+    if reserved_in_use:
+        raise ValueError(
+            f'The cost matrix uses symbol name(s) or alias(es) {sorted(reserved_in_use)} that are reserved '
+            f'for internal use by Metric and its strategies. Reserved names: {sorted(RESERVED_SYMBOL_NAMES)}. '
+            'Please rename the corresponding symbol(s) or alias(es).'
+        )
+
+
+def _declared_assumptions(symbol: sympy.Symbol) -> dict[str, Any]:
+    """Return the assumptions a symbol was declared with, minus the implicit ``commutative``."""
+    declared = dict(symbol._assumptions.generator)
+    declared.pop('commutative', None)
+    return declared
+
+
+def _describe_symbol(symbol: sympy.Symbol) -> str:
+    """Spell a symbol the way the caller would have constructed it, for use in error messages."""
+    declared = _declared_assumptions(symbol)
+    if not declared:
+        return f'sympy.Symbol({str(symbol)!r})'
+    keywords = ', '.join(f'{key}={value!r}' for key, value in sorted(declared.items()))
+    return f'sympy.Symbol({str(symbol)!r}, {keywords})'
+
+
+def _check_duplicate_symbol_names(*expressions: sympy.Expr) -> None:
+    """
+    Raise if two distinct symbols in the cost matrix share a name.
+
+    ``sympy.Symbol('clv')`` and ``sympy.Symbol('clv', positive=True)`` are different objects that
+    are not equal and do not cancel, yet both print as ``clv``. Mixing them is easy, because a term
+    given as a string always produces assumption-free symbols. Left alone, the pair survives all
+    the way into ``sympy.lambdify``, which emits a function with two parameters of the same name
+    and fails with ``SyntaxError: duplicate argument 'clv' in function definition`` pointing at
+    generated source that the caller has no way to connect back to their cost matrix.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        The cost-matrix expressions to check.
+
+    Raises
+    ------
+    ValueError
+        If any two distinct symbols share a name.
+    """
+    by_name: dict[str, set[sympy.Symbol]] = {}
+    for expression in expressions:
+        for symbol in expression.free_symbols:
+            by_name.setdefault(str(symbol), set()).add(symbol)
+
+    duplicates = {name: symbols for name, symbols in by_name.items() if len(symbols) > 1}
+    if not duplicates:
+        return
+
+    details = [
+        ' and '.join(
+            _describe_symbol(symbol)
+            for symbol in sorted(symbols, key=lambda symbol: str(_declared_assumptions(symbol)))
+        )
+        for _, symbols in sorted(duplicates.items())
+    ]
+    raise ValueError(
+        'The cost matrix contains distinct symbols that share a name, which sympy treats as '
+        f'different variables: {"; ".join(details)}. This usually happens when the same name is '
+        'introduced both as a string term (which creates a symbol with no assumptions) and as an '
+        'explicitly constructed sympy.Symbol carrying assumptions. Use one spelling throughout.'
+    )
+
+
+def _collect_known_symbol_names(*expressions: sympy.Expr) -> set[str]:
+    """
+    Collect the names of every symbol a cost matrix's expressions can be evaluated with.
+
+    This includes each expression's own free symbols (deterministic symbols and, for a
+    stochastic expression, the random variable's own symbol, e.g. ``gamma`` for
+    ``sympy.stats.Beta('gamma', alpha, beta)``) as well as any random variable's distribution
+    parameters (e.g. ``alpha``/``beta`` above), since those are what a caller actually supplies
+    a value for at call time.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        The cost-matrix expressions (e.g. ``tp_benefit``, ``tn_benefit``, ``fp_cost``,
+        ``fn_cost``) to collect symbol names from.
+
+    Returns
+    -------
+    set of str
+        The names of every symbol found.
+    """
+    free_symbols: set[sympy.Expr] = set()
+    for expression in expressions:
+        free_symbols |= expression.free_symbols
+
+    stochastic_params: set[sympy.Expr] = set()
+    for expression in expressions:
+        for atom in expression.atoms(sympy.stats.rv.RandomSymbol):
+            pspace = atom.pspace
+            if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
+                for arg in pspace.distribution.args:
+                    stochastic_params.update(arg.free_symbols)
+
+    return {str(symbol) for symbol in free_symbols | stochastic_params}
+
+
+def _check_known_alias_and_default_targets(
+    *expressions: sympy.Expr, aliases: Mapping[str, str | sympy.Symbol], default_names: Iterable[str]
+) -> None:
+    """
+    Raise if an alias's target, or a default's parameter name, matches no symbol in the cost matrix.
+
+    ``CostMatrix`` is built incrementally, so ``alias()`` and ``set_default()`` cannot validate
+    their arguments against the cost matrix's symbols at the time they are called. ``Metric``
+    can, once the cost matrix is complete, and does so here - turning a typo'd alias target, or a
+    ``set_default()`` call for an alias that had not been registered yet (see the ordering note
+    in :meth:`~empulse.metrics.CostMatrix.set_default`), into one clear error at construction
+    time instead of a confusing "did not receive it" error only once the metric is called.
+
+    Parameters
+    ----------
+    *expressions : sympy.Expr
+        The cost-matrix expressions (e.g. ``tp_benefit``, ``tn_benefit``, ``fp_cost``,
+        ``fn_cost``) whose symbols are considered valid alias targets / default names.
+    aliases : Mapping[str, str]
+        The cost matrix's registered aliases, mapping alias name to target symbol name.
+    default_names : Iterable[str]
+        The cost matrix's registered default parameter names (already resolved to symbol names,
+        for aliases registered before the corresponding ``set_default()`` call).
+
+    Raises
+    ------
+    ValueError
+        If any alias target or default name does not match a known symbol name.
+    """
+    known_names = _collect_known_symbol_names(*expressions)
+
+    unknown_alias_targets = {
+        f'{alias!r} -> {str(target)!r}' for alias, target in aliases.items() if str(target) not in known_names
+    }
+    unknown_defaults = {name for name in default_names if name not in known_names}
+
+    if unknown_alias_targets or unknown_defaults:
+        messages = []
+        if unknown_alias_targets:
+            messages.append(f'alias(es) {sorted(unknown_alias_targets)} whose target is not a cost matrix symbol')
+        if unknown_defaults:
+            messages.append(f'default(s) for {sorted(unknown_defaults)}, which is not a cost matrix symbol or alias')
+        raise ValueError(
+            f'The cost matrix has {" and ".join(messages)}. Known symbol names: {sorted(known_names)}. '
+            'This is usually a typo, or set_default() was called with an alias name before that alias '
+            'was registered with alias() - aliases must be registered before set_default() can resolve '
+            'them (see the CostMatrix.set_default() docstring).'
         )

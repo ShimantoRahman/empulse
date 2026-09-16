@@ -4,14 +4,11 @@ import numpy as np
 import sympy
 
 from ...._types import Float64Array, FloatNDArray, IntNDArray
-from ..common import (
-    Direction,
-    MetricFn,
-    _check_parameters,
-    _safe_lambdify,
-    _safe_run_lambda_array,
-    replace_random_var_with_mean,
-)
+from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
+from .._direction import Direction
+from .._parameter_domain import _check_parameters
+from .._stochastic import replace_random_var_with_mean
+from .._symbolic import _latex
 from .metric_strategy import MetricStrategy
 
 
@@ -179,8 +176,6 @@ class AUEPC(MetricStrategy):
 def _auepc_score_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from ..common import _latex
-
     delta_equation = _build_delta_equation(
         tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
     )

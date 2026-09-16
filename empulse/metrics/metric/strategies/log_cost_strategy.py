@@ -5,23 +5,24 @@ import numpy as np
 import sympy
 from scipy.special import expit
 
+from ...._common._objective import ElasticNetPenalty, LogitObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
-from ..capabilities import Capability
-from ..common import (
-    Direction,
+from .._compile import (
     MetricFn,
     PicklableLambda,
     RateFn,
     ThresholdFn,
-    _check_parameters,
     _safe_lambdify,
     _safe_run_lambda,
     _safe_run_lambda_array,
-    replace_random_var_with_mean,
 )
-from ._penalty import ElasticNetPenalty
+from .._direction import Direction
+from .._parameter_domain import _check_parameters
+from .._stochastic import replace_random_var_with_mean
+from .._symbolic import _latex
+from ..capabilities import Capability
 from .cost_strategy import CostOptimalRate, CostOptimalThreshold
-from .metric_strategy import LogitObjective, MetricStrategy
+from .metric_strategy import MetricStrategy
 
 
 class LogCostLogitObjective(LogitObjective):
@@ -492,8 +493,6 @@ def _build_log_cost_equation(
 def _log_cost_loss_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
-    from ..common import _latex
-
     i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
         _build_log_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)

@@ -8,7 +8,7 @@ from scipy.stats._qmc import Sobol
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray, IntNDArray
-from ...common import _check_parameters
+from ..._parameter_domain import _check_parameters
 from .common import _convex_hull, _evaluate_sampled_integrands, _substitute_integrand, extract_distribution_parameters
 
 FrozenScipyDist = (

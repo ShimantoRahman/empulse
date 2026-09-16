@@ -3,8 +3,8 @@ from collections.abc import Iterable
 from typing import Any, Literal
 
 from ..._types import FloatArrayLike, FloatNDArray
+from ._direction import Direction
 from .capabilities import Capability
-from .common import Direction
 from .strategies import LogitObjective, MetricStrategy
 
 

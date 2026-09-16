@@ -6,7 +6,7 @@ import sympy
 from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
-from ...common import _safe_lambdify
+from ..._compile import _safe_lambdify
 from .common import (
     _BaseMaxProfitLogitObjective,
     _convex_hull,
