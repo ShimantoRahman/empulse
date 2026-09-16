@@ -1,4 +1,3 @@
-import warnings
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
@@ -123,6 +122,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
 
     _sampling_type: ClassVar[str] = 'bypass'
     _routed_methods: ClassVar[tuple[str, ...]] = ('fit_resample',)
+    _cost_names: ClassVar[tuple[str, ...]] = ('fp_cost', 'fn_cost')
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
@@ -225,28 +225,18 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         fn_cost: float | FloatArrayLike | Parameter = 0.0,
         **loss_params: Any,
     ) -> tuple[NDArray[Any], NDArray[Any]]:
-        if isinstance(self.loss, BaseMetric):
-            self.loss._validate_parameters(**loss_params)
-            fp_cost, fn_cost, _, _ = self.loss._evaluate_costs(**loss_params)
-        else:
-            if fp_cost is Parameter.UNCHANGED:
-                fp_cost = self.fp_cost
-            if fn_cost is Parameter.UNCHANGED:
-                fn_cost = self.fn_cost
+        self._take_fit_local_loss()
+        loss_ = self._get_metric_loss()
 
-            if (
-                all(isinstance(cost, Real) for cost in (fp_cost, fn_cost))
-                and sum(abs(cost) for cost in (fp_cost, fn_cost)) == 0.0  # type: ignore[misc, arg-type]
-            ):
-                warnings.warn(
-                    'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
-                    f'To avoid this warning, set costs explicitly '
-                    f'in the {self.__class__.__name__}.fit_resample() method.',
-                    UserWarning,
-                    stacklevel=2,
-                )
-                fp_cost = 1
-                fn_cost = 1
+        if loss_ is not None:
+            loss_params = self._route_costs_to_loss(
+                loss_, loss_params, fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample'
+            )
+            loss_._validate_parameters(**loss_params)
+            fp_cost, fn_cost, _, _ = loss_._evaluate_costs(**loss_params)
+        else:
+            resolved = self._check_costs(fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample')
+            fp_cost, fn_cost = resolved['fp_cost'], resolved['fn_cost']
 
         fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.array(fp_cost)
         fn_cost = np.full_like(y, fn_cost) if isinstance(fn_cost, Real) else np.asarray(fn_cost)

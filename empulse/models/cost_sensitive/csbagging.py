@@ -13,9 +13,8 @@ from sklearn.utils._mask import indices_to_mask
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.validation import _estimator_has, check_is_fitted, validate_data
 
-from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, expected_cost_loss
+from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
 from ._ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import CostImpurity
@@ -325,15 +324,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         if self.combination == 'weighted_voting' and not self.bootstrap:
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
-        if isinstance(self.loss, BaseMetric):
-            fp_cost, fn_cost, tp_cost, tn_cost = self.loss._evaluate_costs(**loss_params)
-        else:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=loss_params.get('tp_cost', Parameter.UNCHANGED),
-                tn_cost=loss_params.get('tn_cost', Parameter.UNCHANGED),
-                fn_cost=loss_params.get('fn_cost', Parameter.UNCHANGED),
-                fp_cost=loss_params.get('fp_cost', Parameter.UNCHANGED),
-            )
+        fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
 
         n_samples = X.shape[0]
         for name, cost in zip(
@@ -395,17 +386,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             self.estimator_.fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
 
         if self.combination == 'weighted_voting':
-            if self.loss is None:
-                self.estimator_weights_ = self._get_oob_weights(
-                    X,
-                    y,
-                    tp_cost=tp_cost,
-                    tn_cost=tn_cost,
-                    fn_cost=fn_cost,
-                    fp_cost=fp_cost,
-                )
-            else:
-                self.estimator_weights_ = self._get_oob_weights(X, y, **loss_params)
+            self.estimator_weights_ = self._get_oob_weights(loss, X, y, **loss_params)
         return self
 
     def predict(self, X: FloatArrayLike) -> IntNDArray:
@@ -511,9 +492,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         decisions: FloatNDArray = self.estimator_.decision_function(X)
         return decisions
 
-    def _get_oob_weights(self, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> FloatNDArray:
+    def _get_oob_weights(self, loss: BaseMetric, X: FloatNDArray, y: IntNDArray, **loss_params: Any) -> FloatNDArray:
         n_samples = y.shape[0]
-        weight_fn = self.loss if self.loss is not None else expected_cost_loss
 
         losses = np.empty(self.n_estimators, dtype=np.float64)
         for i, estimator, samples, features in zip(
@@ -524,7 +504,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
-            losses[i] = weight_fn._loss(y[mask], y_pred, validate=False, **oob_loss_params)
+            losses[i] = loss._loss(y[mask], y_pred, validate=False, **oob_loss_params)
 
         weights: FloatNDArray = goodness_weights(losses)
         return weights

@@ -3,14 +3,16 @@ from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from sklearn.base import MetaEstimatorMixin, _fit_context, check_is_fitted, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
+from sklearn.utils import Tags
 from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.validation import _estimator_has, validate_data
 
 from ..._common import Parameter
-from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ..._common._cost_routing import RoutesLossParameters
+from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from ..csclassifier import CostSensitiveClassifier
 
@@ -19,7 +21,7 @@ CSCLASSIFIER_PARAMS = CostSensitiveClassifier._parameter_constraints.copy()
 CSCLASSIFIER_PARAMS.pop('loss')
 
 
-class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: ignore[misc]
+class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """
     Cost-sensitive classifier that is robust to outliers in the instance-dependent costs.
 
@@ -244,6 +246,18 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         'detect_outliers_for': [StrOptions({'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}), list],
     }
 
+    def _more_tags(self) -> dict[str, bool]:
+        return {
+            'binary_only': True,
+            'poor_score': True,
+        }
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.classifier_tags.multi_class = False
+        tags.classifier_tags.poor_score = True
+        return tags
+
     def _get_metric_loss(self) -> BaseMetric | None:
         """Get the metric loss function if available."""
         return self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
@@ -264,7 +278,11 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         self.outlier_estimator = outlier_estimator
         self.outlier_threshold = outlier_threshold
         self.detect_outliers_for = detect_outliers_for
-        super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=None)
+        self.tp_cost = tp_cost
+        self.tn_cost = tn_cost
+        self.fn_cost = fn_cost
+        self.fp_cost = fp_cost
+        super().__init__()
 
     @_fit_context(prefer_skip_nested_validation=False)  # type: ignore[misc]
     def fit(
@@ -322,15 +340,7 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
             estimator_params = dict(fit_params)
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(X, y, metric_loss, estimator_params)
         else:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
-            )
-            self.costs_ = {
-                'tp_cost': tp_cost if isinstance(tp_cost, int | float) else np.array(tp_cost),  # type: ignore[dict-item]
-                'tn_cost': tn_cost if isinstance(tn_cost, int | float) else np.array(tn_cost),  # type: ignore[dict-item]
-                'fn_cost': fn_cost if isinstance(fn_cost, int | float) else np.array(fn_cost),  # type: ignore[dict-item]
-                'fp_cost': fp_cost if isinstance(fp_cost, int | float) else np.array(fp_cost),  # type: ignore[dict-item]
-            }
+            self.costs_ = self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
             should_fit = self._determine_outlier_costs()
             self._fit_outlier_estimators(X, y, should_fit)
             estimator_params = {**self.costs_}
@@ -459,9 +469,6 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
                     self.outlier_estimators_[cost_name] = None
             else:
                 self.outlier_estimators_[cost_name] = None
-
-    def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:  # type: ignore[empty-body]
-        pass
 
     @available_if(_estimator_has('predict'))  # type: ignore[misc]
     def predict(self, X: FloatArrayLike) -> FloatNDArray:

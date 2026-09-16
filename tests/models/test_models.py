@@ -185,7 +185,8 @@ def set_metric_loss(estimator, loss):
 def test_metric_api_consistency(estimator, dataset):
     """Test that the metric API is consistent with the cost matrix API."""
     X, y, _, _ = dataset
-    kind = estimator._default_metric_strategy()
+    strategy_source = estimator.estimator if isinstance(estimator, RobustCSClassifier) else estimator
+    kind = strategy_source._default_metric_strategy()
 
     loss = Metric(CostMatrix().add_fn_cost('a').add_fp_cost('b'), kind)
     model_metric = set_metric_loss(clone(estimator), loss)

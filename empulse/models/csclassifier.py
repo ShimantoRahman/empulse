@@ -1,5 +1,3 @@
-import copy
-import warnings
 from abc import ABC, abstractmethod
 from numbers import Real
 from typing import Any, ClassVar, Protocol, Self
@@ -36,7 +34,6 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         'loss': [BaseMetric, None],
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = Cost
-    _set_default_costs: ClassVar[bool] = True
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -125,26 +122,17 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
                 raise ValueError("Classifier can't train when only one class is present.")
             y = np.where(y == self.classes_[1], 1, 0)
 
-        # `loss` may be one of the module-level prebuilt metrics (`empc_score` and friends),
-        # which every caller in the process shares. Their strategies memoize per-call state on
-        # themselves - the boosting objective, the Monte Carlo sample grid, the RNG - so two
-        # concurrent fits through one prebuilt metric would read each other's cache. Give this
-        # fit its own copy; `_get_metric_loss()` returns it for the rest of the fit.
-        loss_attr = getattr(self, 'loss', None)
-        self._loss = copy.deepcopy(loss_attr) if isinstance(loss_attr, BaseMetric) else None
-
+        self._take_fit_local_loss()
         loss_ = self._get_metric_loss()
         if loss_ is None:
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                fp_cost=fp_cost,
+            loss_params.update(
+                self._check_costs(
+                    tp_cost=tp_cost,
+                    tn_cost=tn_cost,
+                    fn_cost=fn_cost,
+                    fp_cost=fp_cost,
+                )
             )
-            loss_params['tp_cost'] = tp_cost
-            loss_params['tn_cost'] = tn_cost
-            loss_params['fn_cost'] = fn_cost
-            loss_params['fp_cost'] = fp_cost
         else:
             loss_params = self._route_costs_to_loss(
                 loss_,
@@ -196,123 +184,6 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
                 loss_params[key] = value.reshape(-1)
         return loss_params
 
-    def _check_costs(
-        self,
-        *,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        caller: str = 'fit',
-    ) -> tuple[
-        FloatNDArray | float,
-        FloatNDArray | float,
-        FloatNDArray | float,
-        FloatNDArray | float,
-    ]:
-        """
-        Check if costs are set and return them.
-
-        Also convert them to numpy arrays if they are array-like.
-        Overwrite costs set in constructor if they are set in the fit/predict method.
-        """
-        if tp_cost is Parameter.UNCHANGED:
-            tp_cost = self.tp_cost  # type: ignore[attr-defined]
-        if tn_cost is Parameter.UNCHANGED:
-            tn_cost = self.tn_cost  # type: ignore[attr-defined]
-        if fn_cost is Parameter.UNCHANGED:
-            fn_cost = self.fn_cost  # type: ignore[attr-defined]
-        if fp_cost is Parameter.UNCHANGED:
-            fp_cost = self.fp_cost  # type: ignore[attr-defined]
-
-        if self._set_default_costs and _all_costs_zero(tp_cost, tn_cost, fn_cost, fp_cost):
-            warnings.warn(
-                'All costs are zero. Setting fp_cost=1 and fn_cost=1. '
-                f'To avoid this warning, set costs explicitly in the {self.__class__.__name__}.{caller}() method.',
-                UserWarning,
-                stacklevel=2,
-            )
-            fp_cost = 1
-            fn_cost = 1
-
-        if not isinstance(tp_cost, Real):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(tn_cost, Real):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, Real):
-            fn_cost = np.asarray(fn_cost)
-        if not isinstance(fp_cost, Real):
-            fp_cost = np.asarray(fp_cost)
-
-        return tp_cost, tn_cost, fn_cost, fp_cost  # type: ignore[return-value]
-
-    def _route_costs_to_loss(
-        self,
-        loss: BaseMetric,
-        params: dict[str, Any],
-        *,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        caller: str = 'fit',
-    ) -> dict[str, Any]:
-        """
-        Route explicitly passed cost arguments through to a :class:`~empulse.metrics.BaseMetric` loss.
-
-        A cost matrix may legitimately name one of its symbols (or aliases) ``tp_cost``, ``tn_cost``,
-        ``fn_cost`` or ``fp_cost`` -- several of the bundled datasets do. Those names collide with this
-        method's own keyword parameters, so the value binds to the parameter instead of landing in
-        ``**loss_params`` and would otherwise never reach the metric. Any such value that names a symbol
-        of ``loss`` is forwarded here.
-
-        Only values passed explicitly by the caller are forwarded. The ``__init__``-time cost attributes
-        are deliberately *not* consulted: they describe plain costs and default to ``0.0``, so falling
-        back to them would silently override a cost matrix default with zero.
-
-        Parameters
-        ----------
-        loss : BaseMetric
-            The metric loss the costs should be routed to.
-        params : dict[str, Any]
-            Loss parameters collected so far. Not mutated; an updated copy is returned.
-        tp_cost, tn_cost, fn_cost, fp_cost : float or array-like or Parameter
-            The cost arguments as passed by the caller. ``Parameter.UNCHANGED`` means "not passed".
-        caller : str, default='fit'
-            Name of the calling method, used in the warning message.
-
-        Returns
-        -------
-        params : dict[str, Any]
-            The loss parameters, extended with any cost argument that names a symbol of ``loss``.
-        """
-        params = dict(params)
-        symbols = loss._all_symbols
-        ignored = []
-        for name, value in (
-            ('tp_cost', tp_cost),
-            ('tn_cost', tn_cost),
-            ('fn_cost', fn_cost),
-            ('fp_cost', fp_cost),
-        ):
-            if value is Parameter.UNCHANGED:
-                continue
-            if name in symbols:
-                params[name] = value
-            else:
-                ignored.append(name)
-
-        if ignored:
-            warnings.warn(
-                f'{", ".join(ignored)} passed to {self.__class__.__name__}.{caller}() '
-                f'{"is" if len(ignored) == 1 else "are"} ignored because a `loss` metric is set '
-                f'and the metric does not use {"that name" if len(ignored) == 1 else "those names"}. '
-                f'Pass the parameters its cost matrix expects instead: {sorted(symbols)}.',
-                UserWarning,
-                stacklevel=3,
-            )
-        return params
-
     def _add_standard_costs_to_params(
         self,
         tp_cost: FloatArrayLike | float | Parameter,
@@ -323,14 +194,10 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
     ) -> dict[str, Any]:
         loss = self._get_metric_loss()
         if not isinstance(loss, BaseMetric):
-            tp_cost, tn_cost, fn_cost, fp_cost = self._check_costs(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            params = dict(params)
+            params.update(
+                self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict')
             )
-
-            params['tp_cost'] = tp_cost
-            params['tn_cost'] = tn_cost
-            params['fn_cost'] = fn_cost
-            params['fp_cost'] = fp_cost
         else:
             params = self._route_costs_to_loss(
                 loss,
@@ -342,20 +209,6 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
                 caller='predict',
             )
         return params
-
-    def _get_metric_loss(self) -> BaseMetric | None:
-        """
-        Get the metric loss function if available.
-
-        During and after ``fit`` this is the per-fit copy taken in :meth:`fit`, so nothing
-        below this point mutates a metric object the caller still holds a reference to.
-        Before the first ``fit`` it is the constructor argument itself.
-        """
-        fit_local_loss: BaseMetric | None = getattr(self, '_loss', None)
-        if fit_local_loss is not None:
-            return fit_local_loss
-        loss: BaseMetric | None = getattr(self, 'loss', None)
-        return loss
 
     def _get_default_loss(self) -> BaseMetric:
         return make_generic_metric(self._default_metric_strategy())
@@ -406,19 +259,3 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         fp_cost = float(np.mean(fp_cost))
         fn_cost = float(np.mean(fn_cost))
         return tp_benefit, tn_benefit, fp_cost, fn_cost
-
-
-def _all_float(*arrays: ArrayLike | float | Parameter) -> bool:
-    return all(isinstance(array, Real) and not isinstance(array, Parameter) for array in arrays)
-
-
-def _all_costs_zero(
-    tp_cost: FloatArrayLike | float | Parameter,
-    tn_cost: FloatArrayLike | float | Parameter,
-    fn_cost: FloatArrayLike | float | Parameter,
-    fp_cost: FloatArrayLike | float | Parameter,
-) -> bool:
-    return (
-        _all_float(tp_cost, tn_cost, fn_cost, fp_cost)
-        and sum(abs(cost) for cost in (tp_cost, tn_cost, fn_cost, fp_cost)) == 0.0  # type: ignore[misc, arg-type]
-    )

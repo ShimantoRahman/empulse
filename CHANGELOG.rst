@@ -374,6 +374,10 @@ Models
   ``TypeError``, because ``b``'s construction had overwritten the class-level accepted keys.
   Accepted keys are now computed from each instance's own ``loss``, so unrelated estimators (and a
   loss swapped in later via ``set_params``) no longer interfere with each other.
+- |Fix| :class:`~empulse.samplers.CostSensitiveSampler` now takes a per-fit deep copy of its
+  ``loss`` metric before ``fit_resample``, matching every cost-sensitive model, so a shared
+  module-level prebuilt metric (e.g. :func:`~empulse.metrics.empc_score`) no longer leaks
+  memoized strategy state between two samplers, or two calls, that use it.
 
 Optimizers
 ----------
