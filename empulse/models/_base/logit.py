@@ -48,7 +48,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         fp_cost: FloatArrayLike | float = 0.0,
         C: float = 1.0,
         fit_intercept: bool = True,
-        l1_ratio: float = 0.0,
+        l1_ratio: float = 1.0,
         loss: BaseMetric | None = None,
         optimizer: Optimizer | None = None,
     ):
