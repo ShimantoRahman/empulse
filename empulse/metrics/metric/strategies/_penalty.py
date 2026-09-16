@@ -86,6 +86,10 @@ class ElasticNetPenalty:
     ``1 / (C * n_samples)`` to a *mean* one. Multiplying by ``objective_scale`` additionally makes
     the regularization path invariant to rescaling the cost matrix.
 
+    .. seealso::
+
+        :func:`objective_scale_from_costs` : Computes the ``objective_scale`` term.
+
     Parameters
     ----------
     C : float
@@ -100,10 +104,6 @@ class ElasticNetPenalty:
     start_coef : int
         Index at which the penalized coefficients begin. ``1`` when an intercept is fitted, since
         the intercept is never penalized.
-
-    .. seealso::
-
-        :func:`objective_scale_from_costs` : Computes the ``objective_scale`` term.
     """
 
     C: float

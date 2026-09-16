@@ -70,10 +70,7 @@ from empulse.metrics import Cost, CostMatrix, Metric
 
 # A spam filter: a legitimate email marked as spam is 5x worse than spam getting through
 cost_matrix = (
-    CostMatrix()
-    .add_fp_cost('missed_email')
-    .add_fn_cost('wasted_time')
-    .set_default(missed_email=5, wasted_time=1)
+    CostMatrix().add_fp_cost('missed_email').add_fn_cost('wasted_time').set_default(missed_email=5, wasted_time=1)
 )
 expected_cost = Metric(cost_matrix, Cost())
 ```

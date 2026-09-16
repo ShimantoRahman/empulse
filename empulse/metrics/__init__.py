@@ -22,6 +22,7 @@ from .metric import (
     MixtureMetric,
     Profit,
     Savings,
+    objective_scale_from_costs,
 )
 from .savings import (
     cost_loss,
@@ -66,5 +67,6 @@ __all__ = [
     'mpa_score',
     'mpc_score',
     'mpcs_score',
+    'objective_scale_from_costs',
     'savings_score',
 ]

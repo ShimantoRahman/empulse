@@ -68,6 +68,8 @@ never need these.
    :template: base.rst
 
    LogitObjective
+   ElasticNetPenalty
+   objective_scale_from_costs
 
 General Metrics
 ---------------

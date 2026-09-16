@@ -50,10 +50,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
     * :meth:`_compute_decision` — compute the decision attribute from the loss.
     * :meth:`_apply_decision` — apply the learned decision to produce class labels.
-
-    And define:
-
-    * ``_decision_attr_name`` — the name of the fitted attribute (e.g. ``'threshold_'``).
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -62,8 +58,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         'pos_label': [Real, str, 'boolean', None],
     }
 
-    #: Name of the fitted decision attribute (e.g. ``'threshold_'``, ``'rate_'``).
-    _decision_attr_name: ClassVar[str]
     _set_default_costs: ClassVar[bool] = False
 
     def __init__(
@@ -632,8 +626,6 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         'random_state': ['random_state'],
     }
 
-    _decision_attr_name: ClassVar[str] = 'threshold_'
-
     def __init__(
         self,
         estimator: Any,
@@ -837,8 +829,6 @@ class CSRateClassifier(CSDecisionRuleClassifier):
     rate_ : float
         The optimal positive rate determined during fitting.
     """
-
-    _decision_attr_name: ClassVar[str] = 'rate_'
 
     @property
     def rate_(self) -> float | None:

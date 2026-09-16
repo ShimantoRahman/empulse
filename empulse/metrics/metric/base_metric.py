@@ -107,6 +107,7 @@ class BaseMetric(ABC):
     ) -> float:
         """Compute the metric score or loss."""
 
+    @abstractmethod
     def _validate_parameters(self, **parameters: Any) -> None:
         """
         Check parameter values against the domain this metric declares, and raise if they fall outside.
@@ -122,7 +123,6 @@ class BaseMetric(ABC):
             If a distribution rejects its shape parameters, a value falls outside bounds declared
             with :meth:`~empulse.metrics.CostMatrix.constrain`, or a declared predicate fails.
         """
-        raise NotImplementedError
 
     def _loss(
         self,

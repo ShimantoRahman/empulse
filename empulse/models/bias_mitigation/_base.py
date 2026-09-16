@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, ClassVar, Self
 
@@ -20,7 +20,7 @@ from ...samplers._strategies import Strategy
 AnyStrategyFn = Callable[[NDArray[Any], NDArray[Any]], Any]
 
 
-class BaseBiasMitigationClassifier(ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """Shared fit/predict scaffolding for the fairness meta-estimator classifiers.
 
     :class:`~empulse.models.BiasRelabelingClassifier`, :class:`~empulse.models.BiasResamplingClassifier`,

@@ -704,7 +704,6 @@ class PicklableLambda:
         self._compile()
 
 
-# 3. Your Factory Function (What your classes actually use)
 def _safe_lambdify(expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None) -> PicklableLambda:
     """Safely lambdify a sympy expression and return a picklable callable."""
     return PicklableLambda(expression, variables)

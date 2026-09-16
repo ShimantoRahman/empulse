@@ -7,7 +7,6 @@ from numpy.typing import ArrayLike, NDArray
 from sklearn.base import MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils._available_if import available_if
-from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.validation import _estimator_has, validate_data
 
@@ -267,16 +266,6 @@ class RobustCSClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: 
         self.outlier_threshold = outlier_threshold
         self.detect_outliers_for = detect_outliers_for
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=None)
-
-    def __post_init__(self) -> None:
-        # Allow passing costs accepted by the metric loss through metadata routing
-        if isinstance(self._get_metric_loss(), BaseMetric):
-            self.__class__.set_fit_request = RequestMethod(
-                'fit',
-                sorted(
-                    self.get_metadata_routing().fit.requests.keys() | self._get_metric_loss()._all_symbols  # type: ignore[union-attr]
-                ),
-            )
 
     @_fit_context(prefer_skip_nested_validation=False)  # type: ignore[misc]
     def fit(
