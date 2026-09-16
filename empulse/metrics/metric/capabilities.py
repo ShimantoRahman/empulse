@@ -1,4 +1,5 @@
-"""What a :class:`~empulse.metrics.MetricStrategy` supports, so callers can ask instead of guess.
+"""
+What a :class:`~empulse.metrics.MetricStrategy` supports, so callers can ask instead of guess.
 
 :class:`MetricStrategy` declares eleven members (see its docstring), of which only three --
 :meth:`~empulse.metrics.MetricStrategy.build`, :meth:`~empulse.metrics.MetricStrategy.score` and

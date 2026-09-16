@@ -99,7 +99,8 @@ class BaseMetric(ABC):
         return self.strategy.capabilities
 
     def _require(self, capability: Capability, *, requester: str) -> None:
-        """Raise a ``ValueError`` naming *requester* and *capability* if this metric lacks it.
+        """
+        Raise a ``ValueError`` naming *requester* and *capability* if this metric lacks it.
 
         A small, uniformly-worded alternative to each caller writing its own
         ``if capability not in loss.capabilities: raise ValueError(...)``.

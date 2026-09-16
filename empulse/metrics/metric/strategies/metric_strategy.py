@@ -67,10 +67,6 @@ class MetricStrategy(ABC):
         The ``direction`` passed to the constructor.
     """
 
-    #: Capabilities this strategy has regardless of the cost matrix it was built from. A strategy
-    #: whose support depends on the built matrix (e.g. :class:`~empulse.metrics.MaxProfit`, whose
-    #: ``logit_objective``/``gradient_boost_objective`` support depends on which integration
-    #: backend :meth:`build` picked) overrides :attr:`capabilities` itself instead of setting this.
     _capabilities: ClassVar[frozenset[Capability]] = frozenset()
 
     def __init__(self, name: str, direction: Direction):
