@@ -6,9 +6,9 @@ from scipy.special import expit
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import BaseMetric, MaxProfit
-from .csclassifier import CostSensitiveClassifier, MetricStrategyFactory
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ...metrics import BaseMetric, MaxProfit
+from .._base import CostSensitiveClassifier, MetricStrategyFactory
 
 
 class ProfSRClassifier(CostSensitiveClassifier):

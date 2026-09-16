@@ -10,8 +10,8 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted, validate_data
 
+from ..._common._strategies import Strategy
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...samplers._strategies import Strategy
 
 # Each subclass's `strategy` callable has a different, more specific contract (documented on the
 # subclass itself): BiasRelabelingClassifier's returns an int (a pair count), BiasResamplingClassifier's

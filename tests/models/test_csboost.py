@@ -20,7 +20,7 @@ from empulse.metrics import (
     mpc_score,
 )
 from empulse.models import CSBoostClassifier
-from empulse.models.cost_sensitive.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
+from empulse.models.boosting.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
 
 # Define the classifiers to test
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
@@ -53,7 +53,7 @@ def test_csboost_different_classifiers(library, classifier_name, dataset):
 
 def test_csboost_when_xgboost_is_missing(dataset):
     X, y, fn_cost, fp_cost = dataset
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
+    with mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
         model = CSBoostClassifier()
         with pytest.raises(ImportError, match=r'XGBoost package is required to use CSBoostClassifier.'):
             model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
@@ -64,7 +64,7 @@ def test_csboost_when_lightgbm_is_missing_with_lgbm_estimator(dataset):
     X, y, fn_cost, fp_cost = dataset
 
     # Mock LGBMClassifier to be TypeVar (simulating it's not installed)
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'LGBMClassifier', TypeVar('LGBMClassifier')):
+    with mock.patch.object(empulse.models.boosting.csboost, 'LGBMClassifier', TypeVar('LGBMClassifier')):
         # Create a mock estimator that would fail the isinstance check
         mock_estimator = mock.Mock()
         model = CSBoostClassifier(estimator=mock_estimator)
@@ -80,7 +80,7 @@ def test_csboost_when_catboost_is_missing_with_catboost_estimator(dataset):
     X, y, fn_cost, fp_cost = dataset
 
     # Mock CatBoostClassifier to be TypeVar (simulating it's not installed)
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'CatBoostClassifier', TypeVar('CatBoostClassifier')):
+    with mock.patch.object(empulse.models.boosting.csboost, 'CatBoostClassifier', TypeVar('CatBoostClassifier')):
         # Create a mock estimator that would fail the isinstance check
         mock_estimator = mock.Mock()
         model = CSBoostClassifier(estimator=mock_estimator)
@@ -181,9 +181,9 @@ def test_csboost_when_all_libraries_missing(dataset):
     X, y, fn_cost, fp_cost = dataset
 
     with (
-        mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', TypeVar('XGBClassifier')),
-        mock.patch.object(empulse.models.cost_sensitive.csboost, 'LGBMClassifier', TypeVar('LGBMClassifier')),
-        mock.patch.object(empulse.models.cost_sensitive.csboost, 'CatBoostClassifier', TypeVar('CatBoostClassifier')),
+        mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')),
+        mock.patch.object(empulse.models.boosting.csboost, 'LGBMClassifier', TypeVar('LGBMClassifier')),
+        mock.patch.object(empulse.models.boosting.csboost, 'CatBoostClassifier', TypeVar('CatBoostClassifier')),
     ):
         model = CSBoostClassifier()
         with pytest.raises(ImportError, match=r'XGBoost package is required to use CSBoostClassifier.'):
@@ -202,7 +202,7 @@ def test_csboost_import_error_message_quality(dataset, missing_library, library_
     """Test that import error messages are informative and include installation instructions."""
     X, y, fn_cost, fp_cost = dataset
 
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, missing_library, TypeVar(missing_library)):
+    with mock.patch.object(empulse.models.boosting.csboost, missing_library, TypeVar(missing_library)):
         if missing_library == 'XGBClassifier':
             model = CSBoostClassifier()
             with pytest.raises(ImportError) as exc_info:

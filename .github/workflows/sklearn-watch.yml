@@ -187,8 +187,8 @@ jobs:
           - `parametrize_with_checks` failures in `tests/models/test_models.py` usually mean a new or
             renamed estimator check; `expected_failed_checks` may need an entry, or one may have
             started passing, which `xfail_strict` also turns red
-          - metadata-routing failures point at `_append_params_to_metadata_routing` in
-            `empulse/models/csclassifier.py`
+          - metadata-routing failures point at `RoutesLossParameters` in
+            `empulse/_common/_cost_routing.py`
 
           If this is a release candidate, there is still time to report it upstream.
 

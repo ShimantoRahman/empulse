@@ -6,7 +6,7 @@ from sklearn.datasets import make_classification
 
 from empulse.metrics import CostMatrix, MaxProfit, Metric
 from empulse.models import CSTreeClassifier
-from empulse.models.cost_sensitive._impurity import CostImpurity, GiniCostImpurity
+from empulse.models.tree._impurity import CostImpurity, GiniCostImpurity
 
 
 @pytest.fixture

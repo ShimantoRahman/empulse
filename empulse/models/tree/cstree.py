@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from ..csclassifier import CostSensitiveClassifier
+from .._base.cost_sensitive import CostSensitiveClassifier
 from ._impurity import CostImpurity, build_cost_criterion
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()

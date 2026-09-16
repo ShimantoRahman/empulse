@@ -4,7 +4,7 @@ from sklearn.base import clone
 
 from ..._types import FloatNDArray, IntNDArray
 from ...samplers import BiasResampler
-from ._base import BaseBiasMitigationClassifier
+from .._base.bias import BaseBiasMitigationClassifier
 
 
 class BiasResamplingClassifier(BaseBiasMitigationClassifier):

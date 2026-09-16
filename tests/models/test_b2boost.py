@@ -80,7 +80,7 @@ def dataset():
 
 def test_b2boost_when_xgboost_is_missing(dataset):
     X, y = dataset
-    with mock.patch.object(empulse.models.cost_sensitive.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
+    with mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
         model = B2BoostClassifier()
         with pytest.raises(ImportError, match=r'XGBoost package is required to use B2BoostClassifier.'):
             model.fit(X, y)

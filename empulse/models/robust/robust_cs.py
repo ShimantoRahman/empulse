@@ -14,7 +14,7 @@ from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from ..csclassifier import CostSensitiveClassifier
+from .._base.cost_sensitive import CostSensitiveClassifier
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 CSCLASSIFIER_PARAMS = CostSensitiveClassifier._parameter_constraints.copy()

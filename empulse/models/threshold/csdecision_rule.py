@@ -20,7 +20,7 @@ from ..._common import Parameter
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
-from ..csclassifier import CostSensitiveClassifier
+from .._base.cost_sensitive import CostSensitiveClassifier
 
 sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 

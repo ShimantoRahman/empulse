@@ -3,7 +3,7 @@ import threading
 import numpy as np
 import pytest
 
-from empulse.models.cost_sensitive._ensemble_weighting import (
+from empulse.models._base.ensemble_weighting import (
     accumulate_weighted_prediction,
     goodness_weights,
     subset_loss_params,

@@ -72,7 +72,7 @@ cov: _cov
 # Run doctests
 [group('test')]
 doctest:
-    uv run pytest --doctest-modules empulse/ --ignore=empulse/metrics/_loss --ignore=empulse/metrics/_cy_convex_hull --ignore=empulse/models/cost_sensitive/_impurity --ignore=empulse/models/cy_proftree
+    uv run pytest --doctest-modules empulse/ --ignore=empulse/metrics/_loss --ignore=empulse/metrics/_cy_convex_hull --ignore=empulse/models/tree/_impurity --ignore=empulse/models/tree/_cy_proftree
 
 # Run tox tests
 [group('test')]

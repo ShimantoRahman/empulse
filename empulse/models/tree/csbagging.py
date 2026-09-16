@@ -15,8 +15,8 @@ from sklearn.utils.validation import _estimator_has, check_is_fitted, validate_d
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from ..csclassifier import CostSensitiveClassifier
-from ._ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
+from .._base.cost_sensitive import CostSensitiveClassifier
+from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
 

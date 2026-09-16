@@ -3,7 +3,7 @@ Check that the installed Cython matches the Cython scikit-learn's compiled exten
 
 Background
 ----------
-`empulse/models/cost_sensitive/_impurity/cost_impurity.pyx` cimports
+`empulse/models/tree/_impurity/cost_impurity.pyx` cimports
 `sklearn.tree._criterion.ClassificationCriterion` and subclasses it, inheriting several
 C-level typed-memoryview attributes (e.g. ``n_classes``) directly from scikit-learn's precompiled
 extension. Cython's binary representation for typed memoryviews is not guaranteed to be ABI-stable

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from sklearn.tree import DecisionTreeClassifier
 
-from empulse.models.cost_sensitive._impurity import (
+from empulse.models.tree._impurity import (
     CostImpurity,
     EntropyCostImpurity,
     GiniCostImpurity,

@@ -12,7 +12,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, LogitObjective
 from ...optimizers import Optimizer
-from ..csclassifier import CostSensitiveClassifier
+from .cost_sensitive import CostSensitiveClassifier
 
 
 class OptimizeFnKwargs(Protocol):

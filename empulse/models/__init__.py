@@ -1,20 +1,9 @@
 from .bias_mitigation import BiasRelabelingClassifier, BiasResamplingClassifier, BiasReweighingClassifier
-from .cost_sensitive import (
-    B2BoostClassifier,
-    CSBaggingClassifier,
-    CSBoostClassifier,
-    CSForestClassifier,
-    CSLogitClassifier,
-    CSRateClassifier,
-    CSThresholdClassifier,
-    CSTreeClassifier,
-    RobustCSClassifier,
-)
-from .cy_proftree import ProfTreeClassifier
-from .proflogit import ProfLogitClassifier
-from .profmempm import ProfMEMPMClassifier
-from .profmpm import ProfMPMClassifier
-from .profsr import ProfSRClassifier
+from .boosting import B2BoostClassifier, CSBoostClassifier
+from .linear import CSLogitClassifier, ProfLogitClassifier, ProfMEMPMClassifier, ProfMPMClassifier, ProfSRClassifier
+from .robust import RobustCSClassifier
+from .threshold import CSRateClassifier, CSThresholdClassifier
+from .tree import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier, ProfTreeClassifier
 
 __all__ = [
     'B2BoostClassifier',

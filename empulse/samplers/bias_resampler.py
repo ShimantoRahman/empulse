@@ -11,8 +11,8 @@ from sklearn.utils import ClassifierTags, Tags, _safe_indexing, check_random_sta
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.multiclass import type_of_target
 
+from .._common._strategies import Strategy, StrategyFn, _independent_weights
 from .._types import IntNDArray, ParameterConstraint
-from ._strategies import Strategy, StrategyFn, _independent_weights
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd

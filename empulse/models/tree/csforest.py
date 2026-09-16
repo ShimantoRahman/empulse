@@ -14,8 +14,8 @@ from sklearn.utils.validation import check_is_fitted, check_random_state, valida
 
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from ..csclassifier import CostSensitiveClassifier
-from ._ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
+from .._base.cost_sensitive import CostSensitiveClassifier
+from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import build_cost_criterion
 
 RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()

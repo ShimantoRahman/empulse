@@ -9,11 +9,11 @@ from sklearn.utils import Tags
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data
 
-from .._common import Parameter
-from .._common._cost_routing import RoutesLossParameters
-from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ..metrics import BaseMetric, Capability, Cost, MetricStrategy
-from ..metrics.metric.prebuilt_metrics import make_generic_metric
+from ..._common import Parameter
+from ..._common._cost_routing import RoutesLossParameters
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
+from ...metrics import BaseMetric, Capability, Cost, MetricStrategy
+from ...metrics.metric.prebuilt_metrics import make_generic_metric
 
 
 class MetricStrategyFactory(Protocol):

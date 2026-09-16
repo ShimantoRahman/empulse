@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from empulse.samplers._strategies import _independent_weights
+from empulse._common._strategies import _independent_weights
 
 
 def test_independent_weights():

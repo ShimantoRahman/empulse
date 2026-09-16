@@ -28,7 +28,7 @@ except ImportError:
 from ..._common import Parameter
 from ...metrics import BaseMetric, Capability
 from ...metrics._loss import cy_boost_grad_hess
-from ..csclassifier import CostSensitiveClassifier
+from .._base.cost_sensitive import CostSensitiveClassifier
 
 # Hessian is 0 at score 0.5 because the AEC objective's hessian evaluates to p*(1-p),
 # which is exactly 0 when p=0.5. A nudge of 1e-2 is large enough to produce a non-zero

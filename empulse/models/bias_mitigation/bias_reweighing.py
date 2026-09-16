@@ -4,9 +4,9 @@ from typing import Any, ClassVar
 import numpy as np
 from sklearn.base import clone
 
+from ..._common._strategies import StrategyFn, _independent_weights
 from ..._types import FloatNDArray, IntNDArray
-from ...samplers._strategies import StrategyFn, _independent_weights
-from ._base import BaseBiasMitigationClassifier
+from .._base.bias import BaseBiasMitigationClassifier
 
 
 def _to_sample_weights(

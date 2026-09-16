@@ -10,7 +10,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
-from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
+from .cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 
 
 class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):

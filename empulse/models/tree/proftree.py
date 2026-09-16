@@ -8,8 +8,8 @@ from sklearn.utils.validation import check_is_fitted, check_random_state, valida
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
-from ..csclassifier import CostSensitiveClassifier, MetricStrategyFactory
-from .evolutionary_tree import EvolutionaryTree
+from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
+from ._cy_proftree.evolutionary_tree import EvolutionaryTree
 
 if TYPE_CHECKING:
     from collections.abc import Callable
