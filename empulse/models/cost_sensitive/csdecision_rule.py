@@ -10,7 +10,6 @@ from sklearn.base import BaseEstimator, MetaEstimatorMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
-from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
@@ -59,6 +58,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
     }
 
     _set_default_costs: ClassVar[bool] = False
+    _routed_methods: ClassVar[tuple[str, ...]] = ('fit', 'predict')
 
     def __init__(
         self,
@@ -74,17 +74,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         self.estimator = estimator
         self.pos_label = pos_label
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
-
-    def _append_params_to_metadata_routing(self) -> None:
-        if isinstance(self._get_metric_loss(), BaseMetric):
-            self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
-                'fit',
-                sorted(self.get_metadata_routing()._self_request.fit.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
-            )
-            self.__class__.set_predict_request = RequestMethod(  # type: ignore[attr-defined]
-                'predict',
-                sorted(self.get_metadata_routing()._self_request.predict.requests.keys() | self.loss._all_symbols),  # type: ignore[attr-defined, union-attr]
-            )
 
     @property
     def classes_(self) -> NDArray[Any]:

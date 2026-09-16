@@ -364,6 +364,16 @@ Models
   aliases to the same underlying symbol.
 - |Fix| :class:`~empulse.models.RobustCSClassifier`'s ``classes_`` property now raises the
   standard "not fitted" error via ``check_is_fitted`` instead of an unrelated ``AttributeError``.
+- |Fix| Metadata routing (``set_fit_request``/``set_predict_request``/``set_fit_resample_request``)
+  for a ``loss``'s cost-matrix parameter names is now resolved per instance instead of being
+  installed on the class. Every cost-sensitive estimator and :class:`~empulse.samplers.CostSensitiveSampler`
+  used to rewrite a class-level descriptor from ``__init__``, so constructing a second instance of
+  the same class with a different ``loss`` silently changed which parameter names *every earlier
+  instance* of that class accepted -- e.g. ``a = CSBoostClassifier(loss=empc_score)`` followed by
+  ``b = CSBoostClassifier(loss=mpcs_score)`` made ``a.set_fit_request(clv=True)`` raise
+  ``TypeError``, because ``b``'s construction had overwritten the class-level accepted keys.
+  Accepted keys are now computed from each instance's own ``loss``, so unrelated estimators (and a
+  loss swapped in later via ``set_params``) no longer interfere with each other.
 
 Optimizers
 ----------

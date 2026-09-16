@@ -8,11 +8,11 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
 from sklearn.utils import Tags
-from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import validate_data
 
 from .._common import Parameter
+from .._common._cost_routing import RoutesLossParameters
 from .._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ..metrics import BaseMetric, Cost, MaxProfit, MetricStrategy
 from ..metrics.metric.prebuilt_metrics import make_generic_metric
@@ -25,7 +25,7 @@ class MetricStrategyFactory(Protocol):
         """Instantiate a MetricStrategy object."""
 
 
-class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
+class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEstimator):
     """Base class for cost-sensitive classifiers."""
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -64,17 +64,7 @@ class CostSensitiveClassifier(ABC, ClassifierMixin, BaseEstimator):
         self.fn_cost = fn_cost
         self.fp_cost = fp_cost
         self.loss = loss
-        self._append_params_to_metadata_routing()
         super().__init__()
-
-    def _append_params_to_metadata_routing(self) -> None:
-        # Allow passing costs accepted by the metric loss through metadata routing
-        loss = self._get_metric_loss()
-        if isinstance(loss, BaseMetric):
-            self.__class__.set_fit_request = RequestMethod(  # type: ignore[attr-defined]
-                'fit',
-                sorted(self.get_metadata_routing().fit.requests.keys() | loss._all_symbols),  # type: ignore[attr-defined]
-            )
 
     @_fit_context(prefer_skip_nested_validation=True)  # type: ignore[misc]
     def fit(

@@ -5,15 +5,15 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
 from sklearn.utils import ClassifierTags, Tags, check_random_state
-from sklearn.utils._metadata_requests import RequestMethod
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
+from .._common._cost_routing import RoutesLossParameters
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
 from ..metrics import Metric
 
 
-class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
+class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[misc]
     """
     Sampler which performs cost-proportionate resampling.
 
@@ -121,6 +121,7 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
     """
 
     _sampling_type: ClassVar[str] = 'bypass'
+    _routed_methods: ClassVar[tuple[str, ...]] = ('fit_resample',)
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
         'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
@@ -155,20 +156,6 @@ class CostSensitiveSampler(BaseSampler):  # type: ignore[misc]
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
         self.loss = loss
-        self._append_params_to_metadata_routing()
-
-    def _get_metric_loss(self) -> Metric | None:
-        """Get the metric loss function if available."""
-        return self.loss
-
-    def _append_params_to_metadata_routing(self) -> None:
-        # Allow passing costs accepted by the metric loss through metadata routing
-        loss = self._get_metric_loss()
-        if isinstance(loss, Metric):
-            self.__class__.set_fit_resample_request = RequestMethod(  # type: ignore[method-assign]
-                'fit_resample',
-                sorted(self.get_metadata_routing().fit_resample.requests.keys() | loss._all_symbols),  # type: ignore[attr-defined]
-            )
 
     def _more_tags(self) -> dict[str, bool]:
         return {
