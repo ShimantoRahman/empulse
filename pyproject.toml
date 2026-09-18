@@ -99,13 +99,18 @@ lint = [
     "scipy-stubs>=1.15.3.0",
 ]
 
+profile = [
+    "scalene>=2.3.0",
+    "line-profiler>=5.0.0"
+]
+
 dev = [
     { include-group = "test" },
     { include-group = "docs" },
     { include-group = "lint" },
+    { include-group = "profile" },
     "twine>=4.0.2",
     "jupyter>=1.1.1",
-    "line-profiler>=5.0.0",
 ]
 
 [tool.uv]
@@ -248,6 +253,16 @@ convention = "numpy"
     "any-type", # Dynamically typed expressions (typing.Any) are disallowed in {name}
     "lambda-assignment", # do not assign a `lambda` expression, use a `def`
     "D", # pydocstyle
+    "T",
+    "S",
+    "INP",
+    "PERF",
+]
+"research/*" = [
+    "any-type", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+    "lambda-assignment", # do not assign a `lambda` expression, use a `def`
+    "D", # pydocstyle
+    "ANN", # flake8-annotations
     "T",
     "S",
     "INP",
