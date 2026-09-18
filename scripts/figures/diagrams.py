@@ -213,14 +213,14 @@ def churn_cost_benefit(theme: dict[str, str]) -> str:
     for offset, label in enumerate(('+ clv', '− d', '− f')):  # ruff: ignore[ambiguous-unicode-character-string]
         c.text(
             base_x + base_w + 10,
-            arrow_y - 20 + offset * 13,
+            arrow_y + 10 + offset * 13,
             label,
             fill='ink-muted',
             size=10,
             mono=True,
             anchor='start',
         )
-    c.text((bar_x + bar_w + outflow_x) / 2, arrow_y - 14, '− f', fill='ink-muted', size=10, mono=True)  # ruff: ignore[ambiguous-unicode-character-string]
+    c.text((bar_x + bar_w + outflow_x) / 2, arrow_y + 10, '− f', fill='ink-muted', size=10, mono=True)  # ruff: ignore[ambiguous-unicode-character-string]
 
     # --- loyal customers: contacted anyway, stay regardless ------------------------------------
     loyal_y = churner_y + bar_h + 40
@@ -233,7 +233,7 @@ def churn_cost_benefit(theme: dict[str, str]) -> str:
     for offset, label in enumerate(('− d', '− f')):  # ruff: ignore[ambiguous-unicode-character-string]
         c.text(
             base_x + base_w + 10,
-            loyal_arrow_y - 7 + offset * 13,
+            loyal_arrow_y + 10 + offset * 13,
             label,
             fill='ink-muted',
             size=10,

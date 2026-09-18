@@ -57,15 +57,14 @@ A company contacts customers it believes will churn and offers them an incentive
 - **False negative** — a churner is not contacted and leaves. No action, so no campaign cost.
 - **True negative** — a loyal customer is not contacted. No action, so no campaign cost.
 
-.. image:: ../../_static/assets/churn_cost_benefit.png
-    :alt: Cost-Benefit Matrix for Customer Churn
-    :width: 720
-    :align: center
+.. themed-figure:: churn_cost_benefit
+    :alt: A flow diagram. A contacted real churner splits into a share that accepts the incentive
+        and returns to the customer base, and a share that leaves anyway and flows to outflow. A
+        contacted loyal customer always returns to the customer base, at cost. Customers who are
+        not contacted are unaffected either way.
 
-.. role:: raw-html(raw)
-    :format: html
-
-:raw-html:`<br/>`
+    Contacting a churner only pays off for the share that accepts; contacting a loyal customer
+    never pays off.
 
 Written with :mod:`sympy` symbols and named for readability:
 
