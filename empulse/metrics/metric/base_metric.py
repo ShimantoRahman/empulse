@@ -146,6 +146,17 @@ class BaseMetric(ABC):
     ) -> float:
         """Compute the metric score or loss."""
 
+    def score(
+        self,
+        y_true: FloatArrayLike,
+        y_score: FloatArrayLike,
+        *,
+        validate: bool = True,
+        **parameters: FloatArrayLike | float,
+    ) -> float:
+        """Compute the metric score or loss (see :meth:`__call__`)."""
+        return self(y_true, y_score, validate=validate, **parameters)
+
     @abstractmethod
     def _validate_parameters(self, **parameters: Any) -> None:
         """
