@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 320" width="100%" role="img">
+  <rect x="40" y="144" width="52" height="52" rx="4" ry="4" fill="#1D3A50" stroke="#37ABDF" stroke-width="1.5"/>
+  <line x1="66" y1="144" x2="66" y2="196" stroke="#37ABDF" stroke-width="1" stroke-linecap="round"/>
+  <line x1="40" y1="170" x2="92" y2="170" stroke="#37ABDF" stroke-width="1" stroke-linecap="round"/>
+  <text x="66" y="216" fill="#37ABDF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="600">CostMatrix</text>
+  <text x="66" y="234" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle">what an outcome is worth</text>
+  <text x="132" y="170" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" text-anchor="middle" dominant-baseline="middle">+</text>
+  <rect x="168" y="150" width="118" height="40" rx="20" ry="20" fill="#1D3A50" stroke="#37ABDF" stroke-width="1.5"/>
+  <text x="227.0" y="170.0" fill="#37ABDF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="600">Strategy</text>
+  <text x="227.0" y="234" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle">how it becomes a number</text>
+  <line x1="298" y1="170" x2="344.0" y2="170.0" stroke="#37ABDF" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="350,170 344.52,172.45 344.52,167.55" fill="#37ABDF"/>
+  <rect x="356" y="146" width="104" height="48" rx="6" ry="6" fill="#37ABDF" stroke="#37ABDF" stroke-width="1.5"/>
+  <text x="408.0" y="170.0" fill="#14181E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="600">Metric</text>
+  <path d="M 470 170.0 H 523.0 A 8 8 0 0 0 531.0 162.0 V 73.0 A 8 8 0 0 1 539.0 65.0 H 585" fill="none" stroke="#A173DE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="592,65.0 586.52,67.45 586.52,62.55" fill="#A173DE"/>
+  <rect x="604" y="42" width="172" height="46" rx="6" ry="6" fill="#332748" stroke="#A173DE" stroke-width="1.5"/>
+  <text x="620" y="59" fill="#A173DE" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="start" dominant-baseline="middle" font-weight="600">Evaluate</text>
+  <text x="620" y="75" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" dominant-baseline="middle">score a model in money</text>
+  <circle cx="758" cy="65.0" r="10" fill="#A173DE"/>
+  <text x="758" y="66.0" fill="#14181E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="600">2</text>
+  <path d="M 470 170.0 H 523.0 A 8 8 0 0 0 531.0 162.0 V 143.0 A 8 8 0 0 1 539.0 135.0 H 585" fill="none" stroke="#A173DE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="592,135.0 586.52,137.45 586.52,132.55" fill="#A173DE"/>
+  <rect x="604" y="112" width="172" height="46" rx="6" ry="6" fill="#332748" stroke="#A173DE" stroke-width="1.5"/>
+  <text x="620" y="129" fill="#A173DE" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="start" dominant-baseline="middle" font-weight="600">Train</text>
+  <text x="620" y="145" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" dominant-baseline="middle">optimise it directly</text>
+  <circle cx="758" cy="135.0" r="10" fill="#A173DE"/>
+  <text x="758" y="136.0" fill="#14181E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="600">3</text>
+  <path d="M 470 170.0 H 523.0 A 8 8 0 0 1 531.0 178.0 V 197.0 A 8 8 0 0 0 539.0 205.0 H 585" fill="none" stroke="#A173DE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="592,205.0 586.52,207.45 586.52,202.55" fill="#A173DE"/>
+  <rect x="604" y="182" width="172" height="46" rx="6" ry="6" fill="#332748" stroke="#A173DE" stroke-width="1.5"/>
+  <text x="620" y="199" fill="#A173DE" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="start" dominant-baseline="middle" font-weight="600">Decide</text>
+  <text x="620" y="215" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" dominant-baseline="middle">pick the cut-off</text>
+  <circle cx="758" cy="205.0" r="10" fill="#A173DE"/>
+  <text x="758" y="206.0" fill="#14181E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="600">4</text>
+  <path d="M 470 170.0 H 523.0 A 8 8 0 0 1 531.0 178.0 V 267.0 A 8 8 0 0 0 539.0 275.0 H 585" fill="none" stroke="#A173DE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="592,275.0 586.52,277.45 586.52,272.55" fill="#A173DE"/>
+  <rect x="604" y="252" width="172" height="46" rx="6" ry="6" fill="#332748" stroke="#A173DE" stroke-width="1.5"/>
+  <text x="620" y="269" fill="#A173DE" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" text-anchor="start" dominant-baseline="middle" font-weight="600">Preprocess</text>
+  <text x="620" y="285" fill="#9AA9BC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="start" dominant-baseline="middle">rebalance the data</text>
+  <circle cx="758" cy="275.0" r="10" fill="#A173DE"/>
+  <text x="758" y="276.0" fill="#14181E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" dominant-baseline="middle" font-weight="600">5</text>
+  <text x="240" y="18" fill="#37ABDF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="700">define once</text>
+  <text x="679.0" y="18" fill="#A173DE" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="700">reuse everywhere</text>
+  <line x1="40" y1="32" x2="460" y2="32" stroke="#37ABDF" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
+  <line x1="478" y1="32" x2="880" y2="32" stroke="#A173DE" stroke-width="1" stroke-linecap="round" stroke-dasharray="3 4"/>
+</svg>

@@ -1,0 +1,1231 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse._common._objective &#8212; Empulse 0.12.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=c8a9ccb9" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=61ccb1f1"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/_common/_objective';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse._common._objective</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse._common._objective</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">Float64Array</span><span class="p">,</span> <span class="n">FloatNDArray</span>
+
+
+<div class="viewcode-block" id="objective_scale_from_costs">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.objective_scale_from_costs.html#empulse.metrics.objective_scale_from_costs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">objective_scale_from_costs</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+    <span class="n">tp_benefit</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">tn_benefit</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the natural magnitude of a cost matrix&#39;s per-sample training signal.</span>
+
+<span class="sd">    This is the mean absolute derivative of the expected cost with respect to the predicted</span>
+<span class="sd">    probability, ``mean_i |c1_i - c2_i|``, where ``c1`` is the cost of predicting positive and</span>
+<span class="sd">    ``c2`` the cost of predicting negative. It is what the elastic-net penalty is scaled against,</span>
+<span class="sd">    so that a given ``C`` selects the same model whether costs are expressed in euros or in cents.</span>
+
+<span class="sd">    The same quantity is the right scale for all three logit strategies: it is exactly</span>
+<span class="sd">    :class:`~empulse.metrics.Cost`&#39;s per-sample gradient factor, it is</span>
+<span class="sd">    :class:`~empulse.metrics.LogCost`&#39;s gradient magnitude at ``s = 0.5`` up to a factor of two</span>
+<span class="sd">    (and equals ``1.0`` for plain log loss, so ``C`` then means what it means in scikit-learn&#39;s</span>
+<span class="sd">    :class:`~sklearn:sklearn.linear_model.LogisticRegression`), and for</span>
+<span class="sd">    :class:`~empulse.metrics.MaxProfit` it equals ``|coeff_tpr| + |coeff_fpr|``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y_true : ndarray</span>
+<span class="sd">        Binary labels, recoded to 0/1.</span>
+<span class="sd">    tp_benefit : float or ndarray</span>
+<span class="sd">        Benefit of true positives (the negation of their cost).</span>
+<span class="sd">    tn_benefit : float or ndarray</span>
+<span class="sd">        Benefit of true negatives (the negation of their cost).</span>
+<span class="sd">    fp_cost : float or ndarray</span>
+<span class="sd">        Cost of false positives.</span>
+<span class="sd">    fn_cost : float or ndarray</span>
+<span class="sd">        Cost of false negatives.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    scale : float</span>
+<span class="sd">        A strictly positive, finite scale. Falls back to ``1.0`` when the cost matrix carries no</span>
+<span class="sd">        training signal at all, so that the penalty never collapses to zero or ``NaN``;</span>
+<span class="sd">        ``empulse.metrics.metric.strategies._training_signal.warn_if_no_training_signal`` is what</span>
+<span class="sd">        reports that case, from the objectives that actually differentiate the cost matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># np.asarray keeps scalars as 0-d arrays, which broadcast against `y` exactly as a float would.</span>
+    <span class="n">tp_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp_benefit</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">tn_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn_benefit</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">fp_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fp_cost</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">fn_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fn_cost</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">per_sample</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="p">(</span><span class="n">tp_b</span> <span class="o">+</span> <span class="n">fn_c</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">fp_c</span> <span class="o">+</span> <span class="n">tn_b</span><span class="p">)</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">per_sample</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span> <span class="ow">or</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="n">scale</span></div>
+
+
+
+<div class="viewcode-block" id="ElasticNetPenalty">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ElasticNetPenalty</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Elastic-net penalty on the non-intercept coefficients of a logit objective.</span>
+
+<span class="sd">    The penalty added to the (sample-averaged) data loss is</span>
+
+<span class="sd">    .. math:: \lambda \left( \rho \sum_j |w_j| + \frac{1 - \rho}{2} \sum_j w_j^2 \right)</span>
+
+<span class="sd">    with :math:`\rho` the ``l1_ratio`` and</span>
+<span class="sd">    :math:`\lambda = \mathrm{objective\_scale} / (C \cdot n\_samples)`.</span>
+
+<span class="sd">    Dividing by ``n_samples`` is what puts ``C`` on scikit-learn&#39;s footing: scikit-learn adds an</span>
+<span class="sd">    unnormalized penalty to a *summed* data loss, which is the same thing as adding</span>
+<span class="sd">    ``1 / (C * n_samples)`` to a *mean* one. Multiplying by ``objective_scale`` additionally makes</span>
+<span class="sd">    the regularization path invariant to rescaling the cost matrix.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        :func:`objective_scale_from_costs` : Computes the ``objective_scale`` term.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    C : float</span>
+<span class="sd">        Inverse regularization strength; smaller means stronger regularization.</span>
+<span class="sd">    l1_ratio : float</span>
+<span class="sd">        Elastic-net mixing parameter in ``[0, 1]``. ``0`` is pure L2, ``1`` is pure L1.</span>
+<span class="sd">    objective_scale : float</span>
+<span class="sd">        Magnitude of the objective&#39;s per-sample training signal, from</span>
+<span class="sd">        :func:`objective_scale_from_costs`.</span>
+<span class="sd">    n_samples : int</span>
+<span class="sd">        Number of training samples the data loss is averaged over.</span>
+<span class="sd">    start_coef : int</span>
+<span class="sd">        Index at which the penalized coefficients begin. ``1`` when an intercept is fitted, since</span>
+<span class="sd">        the intercept is never penalized.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">C</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">objective_scale</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">start_coef</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">lambda_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Overall penalty weight, ``objective_scale / (C * n_samples)``.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">&lt;=</span> <span class="mf">0.0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_scale</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_active</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the penalty contributes anything to the objective.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">&gt;</span> <span class="mf">0.0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_nonsmooth</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the penalty has a kink at zero, which a smooth solver cannot minimize.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_active</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span> <span class="o">&gt;</span> <span class="mf">0.0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">l1_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Weight of the L1 term, ``lambda_ * l1_ratio``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">l2_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Weight of the L2 term, ``lambda_ * (1 - l1_ratio)``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ElasticNetPenalty.with_n_samples">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.with_n_samples">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">with_n_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ElasticNetPenalty&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a copy of this penalty rescaled to a different sample count.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_samples : int</span>
+<span class="sd">            The new number of samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        penalty : ElasticNetPenalty</span>
+<span class="sd">            A new penalty; this one is left untouched.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="n">n_samples</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.value">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the penalty&#39;s contribution to the objective.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Full coefficient vector, intercept included.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            Penalty value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_active</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="n">coef</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float64Array</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the penalty&#39;s contribution to the gradient.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Full coefficient vector, intercept included.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gradient : ndarray of numpy.float64</span>
+<span class="sd">            Same shape as *weights*, zero in the unpenalized intercept slots. For ``l1_ratio &gt; 0``</span>
+<span class="sd">            this is a subgradient: it is zero at ``w_j = 0``, where the penalty is not</span>
+<span class="sd">            differentiable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">gradient</span><span class="p">:</span> <span class="n">Float64Array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_active</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">gradient</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">w</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span><span class="p">:</span>
+            <span class="n">gradient</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="n">gradient</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="n">coef</span>
+        <span class="k">return</span> <span class="n">gradient</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.add_to">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.add_to">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">gradient</span><span class="p">:</span> <span class="n">Float64Array</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Float64Array</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the penalty to a data loss and its gradient in one pass.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">            Data loss.</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Data gradient; modified in place.</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Full coefficient vector, intercept included.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">            Penalized loss.</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Penalized gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_active</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef</span><span class="p">)))</span>
+            <span class="n">gradient</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="n">coef</span><span class="p">))</span>
+            <span class="n">gradient</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="n">coef</span>
+        <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.l2_value">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.l2_value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">l2_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coef</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the smooth (L2) half of the penalty for already-sliced coefficients.</span>
+
+<span class="sd">        Used by the split-variable solver, which handles the L1 half separately as a linear term.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coef : ndarray</span>
+<span class="sd">            Penalized coefficients only, i.e. ``weights[start_coef:]``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            L2 contribution.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="n">coef_f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">coef_f</span><span class="p">,</span> <span class="n">coef_f</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.l2_gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.l2_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">l2_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coef</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float64Array</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient of the smooth (L2) half for already-sliced coefficients.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coef : ndarray</span>
+<span class="sd">            Penalized coefficients only, i.e. ``weights[start_coef:]``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gradient : ndarray of numpy.float64</span>
+<span class="sd">            L2 contribution, same shape as *coef*.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coef_f</span><span class="p">:</span> <span class="n">Float64Array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">coef_f</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span> <span class="o">*</span> <span class="n">coef_f</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.prox">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.prox">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float64Array</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply the proximal operator of the penalty to *weights*.</span>
+
+<span class="sd">        Soft-thresholds by ``step * l1_weight`` and then shrinks by</span>
+<span class="sd">        ``1 / (1 + step * l2_weight)``. This is the exact proximal step of a proximal-gradient</span>
+<span class="sd">        method, and it is what makes such a method produce exact zeros.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Full coefficient vector, intercept included.</span>
+<span class="sd">        step : float</span>
+<span class="sd">            Step size of the gradient step this prox follows.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        weights : ndarray of numpy.float64</span>
+<span class="sd">            A new array; *weights* is left untouched. The intercept is passed through unchanged.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">w</span><span class="p">:</span> <span class="n">Float64Array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_active</span> <span class="ow">or</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">w</span>
+        <span class="n">coef</span> <span class="o">=</span> <span class="n">w</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span><span class="p">:</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span> <span class="o">-</span> <span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_weight</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">:</span>
+            <span class="n">coef</span> <span class="o">=</span> <span class="n">coef</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">l2_weight</span><span class="p">)</span>
+        <span class="n">w</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">coef</span>
+        <span class="k">return</span> <span class="n">w</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.from_costs">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.from_costs">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_costs</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">y_true</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">,</span>
+        <span class="n">tp_benefit</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">tn_benefit</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">fp_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">fn_cost</span><span class="p">:</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">C</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">fit_intercept</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ElasticNetPenalty&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build a penalty whose scale is derived from a cost matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_true : ndarray</span>
+<span class="sd">            Binary labels, recoded to 0/1.</span>
+<span class="sd">        tp_benefit : float or ndarray</span>
+<span class="sd">            Benefit of true positives.</span>
+<span class="sd">        tn_benefit : float or ndarray</span>
+<span class="sd">            Benefit of true negatives.</span>
+<span class="sd">        fp_cost : float or ndarray</span>
+<span class="sd">            Cost of false positives.</span>
+<span class="sd">        fn_cost : float or ndarray</span>
+<span class="sd">            Cost of false negatives.</span>
+<span class="sd">        C : float</span>
+<span class="sd">            Inverse regularization strength.</span>
+<span class="sd">        l1_ratio : float</span>
+<span class="sd">            Elastic-net mixing parameter.</span>
+<span class="sd">        fit_intercept : bool</span>
+<span class="sd">            Whether an (unpenalized) intercept is fitted.</span>
+<span class="sd">        n_samples : int</span>
+<span class="sd">            Number of training samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        penalty : ElasticNetPenalty</span>
+<span class="sd">            The configured penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_scale</span><span class="p">(</span>
+            <span class="n">objective_scale</span><span class="o">=</span><span class="n">objective_scale_from_costs</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">tp_benefit</span><span class="p">,</span> <span class="n">tn_benefit</span><span class="p">,</span> <span class="n">fp_cost</span><span class="p">,</span> <span class="n">fn_cost</span><span class="p">),</span>
+            <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="o">=</span><span class="n">l1_ratio</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="n">fit_intercept</span><span class="p">,</span>
+            <span class="n">n_samples</span><span class="o">=</span><span class="n">n_samples</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ElasticNetPenalty.from_scale">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.ElasticNetPenalty.html#empulse.metrics.ElasticNetPenalty.from_scale">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_scale</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">objective_scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">C</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">fit_intercept</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ElasticNetPenalty&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build a penalty from an already-computed objective scale.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        objective_scale : float</span>
+<span class="sd">            Magnitude of the objective&#39;s per-sample training signal.</span>
+<span class="sd">        C : float</span>
+<span class="sd">            Inverse regularization strength.</span>
+<span class="sd">        l1_ratio : float</span>
+<span class="sd">            Elastic-net mixing parameter.</span>
+<span class="sd">        fit_intercept : bool</span>
+<span class="sd">            Whether an (unpenalized) intercept is fitted.</span>
+<span class="sd">        n_samples : int</span>
+<span class="sd">            Number of training samples.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        penalty : ElasticNetPenalty</span>
+<span class="sd">            The configured penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">objective_scale</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">objective_scale</span><span class="p">)</span> <span class="ow">and</span> <span class="n">objective_scale</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">l1_ratio</span><span class="o">=</span><span class="n">l1_ratio</span><span class="p">,</span>
+            <span class="n">objective_scale</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">scale</span><span class="p">),</span>
+            <span class="n">n_samples</span><span class="o">=</span><span class="n">n_samples</span><span class="p">,</span>
+            <span class="n">start_coef</span><span class="o">=</span><span class="mi">1</span> <span class="k">if</span> <span class="n">fit_intercept</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compare two penalties field by field.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">ElasticNetPenalty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">C</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">l1_ratio</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_scale</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">objective_scale</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">n_samples</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">start_coef</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash the penalty by its fields, matching :meth:`__eq__`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l1_ratio</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_scale</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_coef</span><span class="p">))</span></div>
+
+
+
+<span class="c1">#: A penalty that contributes nothing, for objectives fitted without regularization.</span>
+<span class="n">NO_PENALTY</span> <span class="o">=</span> <span class="n">ElasticNetPenalty</span><span class="p">(</span><span class="n">C</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">l1_ratio</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">objective_scale</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">start_coef</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="LogitObjective">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LogitObjective</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># ruff: ignore[abstract-base-class-without-abstract-method]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to compute the loss and gradient of a logistic regression objective.</span>
+
+<span class="sd">    An objective is the sum of a *data term* and an :class:`~empulse.metrics.ElasticNetPenalty`.</span>
+<span class="sd">    Concrete objectives implement the data term through :meth:`data_loss` and :meth:`data_gradient`</span>
+<span class="sd">    and set :attr:`penalty`; the regularized ``logit_*`` methods are derived from those here.</span>
+
+<span class="sd">    Keeping the two separable is what lets a solver treat them differently -- most importantly</span>
+<span class="sd">    :class:`~empulse.optimizers.LBFGSBOptimizer`, which reformulates a non-smooth L1 penalty rather</span>
+<span class="sd">    than handing its subgradient to a solver that assumes smoothness.</span>
+
+<span class="sd">    Overriding ``logit_loss``/``logit_gradient`` directly and leaving :attr:`penalty` as ``None``</span>
+<span class="sd">    remains supported: the objective is then opaque to solvers, which fall back to treating it as</span>
+<span class="sd">    an arbitrary, possibly non-smooth function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#: Penalty applied on top of the data term. ``None`` means the objective already includes</span>
+    <span class="c1">#: whatever penalty it wants inside ``logit_loss``/``logit_gradient``, and solvers must treat</span>
+    <span class="c1">#: it as opaque.</span>
+    <span class="n">penalty</span><span class="p">:</span> <span class="s1">&#39;ElasticNetPenalty | None&#39;</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="LogitObjective.data_loss">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.data_loss">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the unregularized loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Loss of the data term alone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> does not expose its data term separately. &#39;</span>
+            <span class="s1">&#39;Override data_loss() to enable solvers that handle the penalty themselves.&#39;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.data_gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.data_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient of the unregularized loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Gradient of the data term alone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> does not expose its data term separately. &#39;</span>
+            <span class="s1">&#39;Override data_gradient() to enable solvers that handle the penalty themselves.&#39;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.data_loss_gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.data_loss_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_loss_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the unregularized loss and its gradient for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">            Loss of the data term alone.</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Gradient of the data term alone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_loss</span><span class="p">(</span><span class="n">weights</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.logit_loss">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.logit_loss">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Regularized loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_loss</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">loss</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.logit_gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.logit_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatNDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the gradient of the loss for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Regularized gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gradient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gradient</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">gradient</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_logit_gradient_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Yield gradients for successive weight vectors.</span>
+
+<span class="sd">        Because the constants are derived from fixed data and parameters,</span>
+<span class="sd">        there is no expensive state to reconstruct between steps.  The</span>
+<span class="sd">        generator accepts the same send-protocol as</span>
+<span class="sd">        ``MaxProfitLogitGradientPiecewise.logit_gradient_steps`` for API</span>
+<span class="sd">        compatibility: passing ``(weights, refresh)`` works but ``refresh``</span>
+<span class="sd">        is silently ignored.</span>
+
+<span class="sd">        Send in either a ``weights`` vector or a ``(weights, refresh)`` tuple; ``refresh`` is</span>
+<span class="sd">        ignored here.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Gradient at the current weights.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span>
+
+        <span class="n">sent</span> <span class="o">=</span> <span class="k">yield</span>  <span class="c1"># type: ignore[misc]</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sent</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">weights</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sent</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">weights</span> <span class="o">=</span> <span class="n">sent</span>
+
+            <span class="n">sent</span> <span class="o">=</span> <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LogitObjective.logit_gradient_steps">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.logit_gradient_steps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_gradient_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="n">FloatNDArray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FloatNDArray</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Yield gradients for successive weight vectors.</span>
+
+<span class="sd">        Send either a ``weights`` vector or a ``(weights, refresh)`` tuple into the generator;</span>
+<span class="sd">        for this objective ``refresh`` is accepted but ignored.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Gradient at the weights last sent in.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        Driving the generator by hand (``objective`` is a built objective,</span>
+<span class="sd">        ``theta`` a coefficient vector)::</span>
+
+<span class="sd">            gen = objective.logit_gradient_steps()</span>
+<span class="sd">            grad = gen.send(theta)  # first time gradient is computed from scratch</span>
+<span class="sd">            grad = gen.send(theta)  # gradient computed from cached information</span>
+<span class="sd">            grad = gen.send((theta, True))  # gradient computed from scratch</span>
+<span class="sd">            gen.close()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">generator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logit_gradient_steps</span><span class="p">()</span>
+        <span class="nb">next</span><span class="p">(</span><span class="n">generator</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">generator</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.logit_loss_gradient">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.logit_loss_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logit_loss_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss and its gradient for minimization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights : ndarray</span>
+<span class="sd">            Coefficient vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : float</span>
+<span class="sd">            Regularized loss.</span>
+<span class="sd">        gradient : ndarray</span>
+<span class="sd">            Regularized gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_loss_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">gradient</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gradient</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">weights</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.__call__">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">FloatNDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">FloatNDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the loss and its gradient for minimization.</span>
+
+<span class="sd">        Here for backward compatibility.  Delegates to ``logit_loss_gradient``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logit_loss_gradient</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LogitObjective.set_alpha">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.set_alpha">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_alpha</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># ruff: ignore[empty-method-without-abstract-decorator]</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Override the smoothing parameter *alpha* (no-op for objectives without alpha annealing).</span>
+
+<span class="sd">        Gradient optimizers with an ``alpha_schedule`` call this before each gradient</span>
+<span class="sd">        computation to externally drive the annealing schedule.  Objectives that</span>
+<span class="sd">        implement alpha annealing (e.g. :class:`MaxProfitLogitGradientPiecewise`)</span>
+<span class="sd">        override this method; all others silently ignore the call.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        alpha : float</span>
+<span class="sd">            New alpha value to use for the next gradient computation.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+        <span class="c1"># no-op: override in subclasses that support alpha annealing</span>
+
+<div class="viewcode-block" id="LogitObjective.with_indices">
+<a class="viewcode-back" href="../../../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective.with_indices">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">with_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;LogitObjective&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a new objective restricted to the sample subset given by *indices*.</span>
+
+<span class="sd">        Used by gradient optimizers for mini-batch training.  The default</span>
+<span class="sd">        implementation raises :exc:`NotImplementedError`; concrete objectives</span>
+<span class="sd">        that store their data should override this method.</span>
+
+<span class="sd">        Only the data arrays are sliced.  :attr:`penalty` is shared unchanged, because its scale is</span>
+<span class="sd">        already an average and mini-batch data gradients are themselves ``1 / batch_size`` means,</span>
+<span class="sd">        so the penalty stays consistent across batch sizes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : ndarray of int</span>
+<span class="sd">            Row indices into the full training set.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LogitObjective</span>
+<span class="sd">            A new objective for the selected samples.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            If this objective does not support mini-batch slicing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> does not support mini-batch training. Override with_indices() to enable it.&#39;</span>
+        <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

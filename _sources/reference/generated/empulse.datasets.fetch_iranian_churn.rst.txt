@@ -1,0 +1,6 @@
+﻿fetch\_iranian\_churn
+=====================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_iranian_churn

@@ -1,0 +1,9 @@
+﻿Schedule
+========
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: Schedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

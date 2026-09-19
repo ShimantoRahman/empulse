@@ -1,0 +1,9 @@
+﻿Cost
+====
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: Cost
+   :members:
+   :inherited-members:
+   :special-members: __call__

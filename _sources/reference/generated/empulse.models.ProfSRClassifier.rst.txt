@@ -1,0 +1,9 @@
+﻿ProfSRClassifier
+================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: ProfSRClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

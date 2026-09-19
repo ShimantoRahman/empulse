@@ -1,0 +1,988 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta content="Empulse is a scikit-learn based Python package for cost-sensitive and value-driven (also known as profit-driven) machine learning. Solve your imbalanced data and other cost-sensitive learning data science problems with a sklearn compatible library." lang="en" name="description" xml:lang="en" />
+
+    <title>Empulse &#8212; Empulse 0.12.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=c8a9ccb9" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=61ccb1f1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting Started" href="getting_started.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+  <link rel="stylesheet" type="text/css" href="_static/css/homepage.css" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/empulse_logo_light.png" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="_static/empulse_logo_dark.png" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+<div class="eds-home">
+
+  
+  <section class="eds-hero eds-wrap">
+    <div class="eds-hero__copy">
+      <p class="eds-eyebrow">Cost-sensitive machine learning for scikit-learn</p>
+      <h1 class="eds-hero__motto">Not every mistake costs the same.</h1>
+      <p class="eds-hero__lead">Accuracy, F1 and AUC price a false positive and a false negative the same. Your business does not. Empulse lets you write down what each outcome is actually worth, then <strong>evaluate</strong>, <strong>train</strong> and <strong>threshold</strong> your models as scikit-learn estimators.</p>
+
+      <div class="eds-hero__actions">
+        <a class="eds-btn eds-btn--primary" href="getting_started.html">
+          Get started
+          <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="eds-btn eds-btn--ghost" href="tutorial.html">Work through the tutorial</a>
+      </div>
+
+      <div class="eds-install">
+        <span class="eds-install__prompt" aria-hidden="true">$</span>
+        <code class="eds-install__command">pip install empulse</code>
+        <button type="button"
+                class="eds-install__copy"
+                data-copy="pip install empulse"
+                aria-label="Copy the install command">
+          <span class="eds-install__copy-idle" aria-hidden="true"><i class="fa-regular fa-copy"></i></span>
+          <span class="eds-install__copy-done" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+        </button>
+      </div>
+      <p class="eds-install__note">Python 3.11 or higher. <a href="getting_started/installation.html">Optional extras</a> add additional functionalities for boosting and symbolic regression models.</p>
+      <ul class="eds-stats">
+        <li class="eds-stat">
+          <a href="https://pepy.tech/projects/empulse">
+            <span class="eds-stat__value">54k</span>
+            <span class="eds-stat__label">downloads</span>
+          </a>
+        </li>
+        <li class="eds-stat">
+          <a href="https://github.com/ShimantoRahman/empulse">
+            <span class="eds-stat__value">33</span>
+            <span class="eds-stat__label">GitHub stars</span>
+          </a>
+        </li>
+        <li class="eds-stat">
+          <a href="https://pypi.org/project/empulse/">
+            <span class="eds-stat__value">v0.12.0</span>
+            <span class="eds-stat__label">latest release</span>
+          </a>
+        </li>
+        <li class="eds-stat">
+          <a href="https://pypi.org/project/empulse/">
+            <span class="eds-stat__value">3.11+</span>
+            <span class="eds-stat__label">Python</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    
+    <figure class="eds-chart" data-eds-chart>
+      <div class="eds-chart__head">
+        <span class="eds-chart__title">Expected cost by decision threshold</span>
+        <span class="eds-chart__source" data-eds-chart-source></span>
+      </div>
+      <div class="eds-chart__plot">
+        <svg class="eds-chart__svg" viewBox="0 0 440 260" role="img" data-eds-chart-svg
+             aria-label="Expected cost per customer against decision threshold. The lowest cost occurs at threshold 0.048 instead of the default 0.5."></svg>
+        
+        <div class="eds-chart__readout" data-eds-chart-readout aria-hidden="true" hidden></div>
+        <script type="application/json" data-eds-chart-data>{
+  "costs": [
+    1.0,
+    1.0,
+    1.0,
+    0.9997,
+    0.9917,
+    0.9637,
+    0.8561,
+    0.7897,
+    0.7992,
+    0.7778,
+    0.794,
+    0.8015,
+    0.8018,
+    0.8217,
+    0.8302,
+    0.8583,
+    0.8795,
+    0.8979,
+    0.9245,
+    0.943,
+    0.9501,
+    0.9563,
+    0.9747,
+    0.9873,
+    1.0014,
+    1.0102,
+    1.0254,
+    1.0398,
+    1.0591,
+    1.0638,
+    1.0704,
+    1.0848,
+    1.1059,
+    1.1139,
+    1.1407,
+    1.1506,
+    1.1677,
+    1.183,
+    1.1926,
+    1.2079,
+    1.2237,
+    1.2335,
+    1.2433,
+    1.2505,
+    1.2585,
+    1.2947,
+    1.3048,
+    1.3098,
+    1.3136,
+    1.3182,
+    1.3255,
+    1.3326,
+    1.3378,
+    1.3442,
+    1.3457,
+    1.3475,
+    1.3494,
+    1.3543,
+    1.3584,
+    1.3593,
+    1.3626,
+    1.3686,
+    1.3827,
+    1.3912,
+    1.4055,
+    1.4082,
+    1.4234,
+    1.4324,
+    1.44,
+    1.4634,
+    1.47,
+    1.4918,
+    1.5061,
+    1.5236,
+    1.5413,
+    1.5575,
+    1.5612,
+    1.5615,
+    1.5643,
+    1.5666,
+    1.5682,
+    1.5686,
+    1.5689,
+    1.5689,
+    1.5696,
+    1.5696,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699,
+    1.5699
+  ],
+  "dataset": "Bank Telemarketing",
+  "default": {
+    "cost": 1.326,
+    "threshold": 0.5
+  },
+  "optimal": {
+    "cost": 0.778,
+    "threshold": 0.09
+  },
+  "reduction": 0.4132,
+  "samples": 15173,
+  "thresholds": [
+    0.0,
+    0.01,
+    0.02,
+    0.03,
+    0.04,
+    0.05,
+    0.06,
+    0.07,
+    0.08,
+    0.09,
+    0.1,
+    0.11,
+    0.12,
+    0.13,
+    0.14,
+    0.15,
+    0.16,
+    0.17,
+    0.18,
+    0.19,
+    0.2,
+    0.21,
+    0.22,
+    0.23,
+    0.24,
+    0.25,
+    0.26,
+    0.27,
+    0.28,
+    0.29,
+    0.3,
+    0.31,
+    0.32,
+    0.33,
+    0.34,
+    0.35,
+    0.36,
+    0.37,
+    0.38,
+    0.39,
+    0.4,
+    0.41,
+    0.42,
+    0.43,
+    0.44,
+    0.45,
+    0.46,
+    0.47,
+    0.48,
+    0.49,
+    0.5,
+    0.51,
+    0.52,
+    0.53,
+    0.54,
+    0.55,
+    0.56,
+    0.57,
+    0.58,
+    0.59,
+    0.6,
+    0.61,
+    0.62,
+    0.63,
+    0.64,
+    0.65,
+    0.66,
+    0.67,
+    0.68,
+    0.69,
+    0.7,
+    0.71,
+    0.72,
+    0.73,
+    0.74,
+    0.75,
+    0.76,
+    0.77,
+    0.78,
+    0.79,
+    0.8,
+    0.81,
+    0.82,
+    0.83,
+    0.84,
+    0.85,
+    0.86,
+    0.87,
+    0.88,
+    0.89,
+    0.9,
+    0.91,
+    0.92,
+    0.93,
+    0.94,
+    0.95,
+    0.96,
+    0.97,
+    0.98,
+    0.99,
+    1.0
+  ],
+  "unit": "cost per customer"
+}</script>
+      </div>
+      <figcaption class="eds-chart__caption" data-eds-chart-caption>
+        Expected cost across decision thresholds for a single model.
+      </figcaption>
+    </figure>
+  </section>
+
+  
+  <section class="eds-band">
+    <div class="eds-wrap">
+      <header class="eds-section-head">
+        <h2>Evaluate, train, and decide with cost matrices</h2>
+        <p>Use a single cost matrix across evaluation metrics, model training, and threshold tuning.</p>
+      </header>
+      <ul class="eds-pillars">
+        <li class="eds-pillar">
+          <p class="eds-pillar__kicker"><span class="eds-pillar__index">1</span>Measure</p>
+          <h3 class="eds-pillar__title">Score models by value</h3>
+          <p class="eds-pillar__body">Evaluate expected cost, savings, or profit. Use prebuilt metrics for churn, customer acquisition, and credit scoring, or define a custom cost matrix.</p>
+          <a class="eds-pillar__link" href="guide/measuring.html#measuring">Measuring a model
+            <span aria-hidden="true">&rarr;</span></a>
+        </li>
+        <li class="eds-pillar">
+          <p class="eds-pillar__kicker"><span class="eds-pillar__index">2</span>Train</p>
+          <h3 class="eds-pillar__title">Optimise the cost matrix directly</h3>
+          <p class="eds-pillar__body">Train logistic regression, gradient boosting, and trees to minimise cost instead of log-loss. Costs can vary per customer.</p>
+          <a class="eds-pillar__link" href="guide/training.html#training">Training a model
+            <span aria-hidden="true">&rarr;</span></a>
+        </li>
+        <li class="eds-pillar">
+          <p class="eds-pillar__kicker"><span class="eds-pillar__index">3</span>Decide</p>
+          <h3 class="eds-pillar__title">Tune decision thresholds</h3>
+          <p class="eds-pillar__body">Find the probability threshold or population fraction that minimizes total cost, then wrap any classifier to apply it.</p>
+          <a class="eds-pillar__link" href="guide/deciding.html#deciding">Making a decision
+            <span aria-hidden="true">&rarr;</span></a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  
+  <section class="eds-wrap eds-tour" data-eds-tour>
+    <header class="eds-section-head">
+      <h2>A minute with Empulse</h2>
+      <p>Four steps from a business question to a value-driven decision.</p>
+    </header>
+
+    <div class="eds-tour__tabs" role="tablist" aria-label="Code walkthrough">
+      <button type="button"
+              class="eds-tab"
+              role="tab"
+              id="eds-tab-1"
+              aria-controls="eds-panel-1"
+              aria-selected="true"
+              tabindex="0"
+              data-eds-tab="0">
+        <span class="eds-tab__index">1</span>
+        <span class="eds-tab__label">Define</span>
+        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
+      </button>
+      <button type="button"
+              class="eds-tab"
+              role="tab"
+              id="eds-tab-2"
+              aria-controls="eds-panel-2"
+              aria-selected="false"
+              tabindex="-1"
+              data-eds-tab="1">
+        <span class="eds-tab__index">2</span>
+        <span class="eds-tab__label">Measure</span>
+        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
+      </button>
+      <button type="button"
+              class="eds-tab"
+              role="tab"
+              id="eds-tab-3"
+              aria-controls="eds-panel-3"
+              aria-selected="false"
+              tabindex="-1"
+              data-eds-tab="2">
+        <span class="eds-tab__index">3</span>
+        <span class="eds-tab__label">Train</span>
+        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
+      </button>
+      <button type="button"
+              class="eds-tab"
+              role="tab"
+              id="eds-tab-4"
+              aria-controls="eds-panel-4"
+              aria-selected="false"
+              tabindex="-1"
+              data-eds-tab="3">
+        <span class="eds-tab__index">4</span>
+        <span class="eds-tab__label">Decide</span>
+        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
+      </button>
+    </div>
+
+    <div class="eds-tour__stage">
+      <div class="eds-panel is-active"
+           role="tabpanel"
+           id="eds-panel-1"
+           aria-labelledby="eds-tab-1"
+           data-eds-panel="0"
+           >
+        <div class="eds-panel__code">
+          <div class="highlight eds-code"><pre data-eds-code><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostMatrix</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="c1"># Assign costs using business variables.</span></span>
+<span class="eds-line" style="--eds-line-index: 3"><span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span></span>
+<span class="eds-line" style="--eds-line-index: 4">    <span class="n">CostMatrix</span><span class="p">()</span></span>
+<span class="eds-line" style="--eds-line-index: 5">    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">&#39;incentive&#39;</span><span class="p">)</span>  <span class="c1"># a wasted discount</span></span>
+<span class="eds-line" style="--eds-line-index: 6">    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">&#39;clv&#39;</span><span class="p">)</span>        <span class="c1"># a lost customer</span></span>
+<span class="eds-line" style="--eds-line-index: 7">    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">incentive</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 8"><span class="p">)</span></span></pre></div>
+        </div>
+        <aside class="eds-panel__aside">
+          <h3 class="eds-panel__title">Define the cost matrix</h3>
+          <p class="eds-panel__blurb">Assign costs to false positives and false negatives using named variables or fixed amounts.</p>
+          <div class="eds-result" data-eds-result>
+            <p class="eds-result__label">Evaluates to</p>
+            <p class="eds-result__value"><code>CostMatrix(tp_cost=0, tn_cost=0, fp_cost=incentive, fn_cost=clv)</code></p>
+            <p class="eds-result__note">Named symbols allow costs to vary per customer.</p>
+          </div>
+          <a class="eds-panel__link" href="guide/costs.html#defining-costs">Defining costs
+            <span aria-hidden="true">&rarr;</span></a>
+        </aside>
+      </div>
+      <div class="eds-panel"
+           role="tabpanel"
+           id="eds-panel-2"
+           aria-labelledby="eds-tab-2"
+           data-eds-panel="1"
+           hidden>
+        <div class="eds-panel__code">
+          <div class="highlight eds-code"><pre data-eds-code><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cost</span><span class="p">,</span> <span class="n">Metric</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">expected_cost</span> <span class="o">=</span> <span class="n">Metric</span><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <span class="n">Cost</span><span class="p">())</span></span>
+<span class="eds-line" style="--eds-line-index: 3"></span>
+<span class="eds-line" style="--eds-line-index: 4"><span class="n">y_score</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span></span>
+<span class="eds-line" style="--eds-line-index: 5"><span class="n">expected_cost</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">)</span></span></pre></div>
+        </div>
+        <aside class="eds-panel__aside">
+          <h3 class="eds-panel__title">Turn it into a metric</h3>
+          <p class="eds-panel__blurb">A Metric wraps the cost matrix into a scikit-learn scoring function for cross-validation and grid search.</p>
+          <div class="eds-result" data-eds-result>
+            <p class="eds-result__label">Evaluates to</p>
+            <p class="eds-result__value"><code>10.22</code></p>
+            <p class="eds-result__note">Expected cost in euros per customer for the baseline model.</p>
+          </div>
+          <a class="eds-panel__link" href="guide/measuring.html#measuring">Measuring a model
+            <span aria-hidden="true">&rarr;</span></a>
+        </aside>
+      </div>
+      <div class="eds-panel"
+           role="tabpanel"
+           id="eds-panel-3"
+           aria-labelledby="eds-tab-3"
+           data-eds-panel="2"
+           hidden>
+        <div class="eds-panel__code">
+          <div class="highlight eds-code"><pre data-eds-code><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 3"></span>
+<span class="eds-line" style="--eds-line-index: 4"><span class="n">expected_cost</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">])</span></span></pre></div>
+        </div>
+        <aside class="eds-panel__aside">
+          <h3 class="eds-panel__title">Train on the cost metric</h3>
+          <p class="eds-panel__blurb">Pass the metric directly as the training loss function.</p>
+          <div class="eds-result" data-eds-result>
+            <p class="eds-result__label">Evaluates to</p>
+            <p class="eds-result__value"><code>9.37</code></p>
+            <p class="eds-result__note">Expected cost drops to 9.37 euros per customer, an 8% reduction over the baseline on the same test data.</p>
+          </div>
+          <a class="eds-panel__link" href="guide/training.html#training">Training a model
+            <span aria-hidden="true">&rarr;</span></a>
+        </aside>
+      </div>
+      <div class="eds-panel"
+           role="tabpanel"
+           id="eds-panel-4"
+           aria-labelledby="eds-tab-4"
+           data-eds-panel="3"
+           hidden>
+        <div class="eds-panel__code">
+          <div class="highlight eds-code"><pre data-eds-code><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSThresholdClassifier</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">decider</span> <span class="o">=</span> <span class="n">CSThresholdClassifier</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 3"><span class="n">decider</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 4"></span>
+<span class="eds-line" style="--eds-line-index: 5"><span class="n">decider</span><span class="o">.</span><span class="n">threshold_</span></span></pre></div>
+        </div>
+        <aside class="eds-panel__aside">
+          <h3 class="eds-panel__title">Find the optimal threshold</h3>
+          <p class="eds-panel__blurb">Find the decision threshold that minimizes expected cost for the trained model.</p>
+          <div class="eds-result" data-eds-result>
+            <p class="eds-result__label">Evaluates to</p>
+            <p class="eds-result__value"><code>0.048</code></p>
+            <p class="eds-result__note">The cost-optimal decision threshold is 0.048 instead of the default 0.5.</p>
+          </div>
+          <a class="eds-panel__link" href="guide/deciding.html#deciding">Making a decision
+            <span aria-hidden="true">&rarr;</span></a>
+        </aside>
+      </div>
+    </div>
+
+    <p class="eds-tour__foot">Picking up after an ordinary <code>train_test_split</code>, with <code>baseline</code> a plain scikit-learn <code>LogisticRegression</code> on a TV-subscription churn dataset.</p>
+  </section>
+
+  
+  <section class="eds-band eds-band--last">
+    <div class="eds-wrap">
+      <header class="eds-section-head">
+        <h2>Where to go next</h2>
+        <p>Empulse estimators follow scikit-learn conventions and work directly with
+          <code>Pipeline</code>, <code>GridSearchCV</code>, and <code>cross_val_score</code>.</p>
+      </header>
+      <ul class="eds-destinations">
+        <li class="eds-destination">
+          <a href="getting_started.html">
+            <span class="eds-destination__icon" aria-hidden="true"><i class="fa-solid fa-rocket"></i></span>
+            <span class="eds-destination__title">Getting Started</span>
+            <span class="eds-destination__body">Install Empulse and get a working cost-sensitive model in five minutes.</span>
+          </a>
+        </li>
+        <li class="eds-destination">
+          <a href="tutorial.html">
+            <span class="eds-destination__icon" aria-hidden="true"><i class="fa-solid fa-book-open"></i></span>
+            <span class="eds-destination__title">Tutorial</span>
+            <span class="eds-destination__body">A step-by-step churn example comparing baseline models and cost-sensitive pipelines.</span>
+          </a>
+        </li>
+        <li class="eds-destination">
+          <a href="guide.html">
+            <span class="eds-destination__icon" aria-hidden="true"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+            <span class="eds-destination__title">User Guide</span>
+            <span class="eds-destination__body">Detailed guides for models, metrics, samplers, and datasets.</span>
+          </a>
+        </li>
+        <li class="eds-destination">
+          <a href="api.html">
+            <span class="eds-destination__icon" aria-hidden="true"><i class="fa-solid fa-code"></i></span>
+            <span class="eds-destination__title">API Reference</span>
+            <span class="eds-destination__body">The full class and function reference, with every parameter documented.</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script src="_static/js/homepage.js" defer></script>
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

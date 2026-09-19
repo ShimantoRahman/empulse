@@ -1,0 +1,7 @@
+﻿empcs\_score
+============
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: empcs_score
+   :no-value:

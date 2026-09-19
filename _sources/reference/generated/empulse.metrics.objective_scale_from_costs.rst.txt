@@ -1,0 +1,6 @@
+﻿objective\_scale\_from\_costs
+=============================
+
+.. currentmodule:: empulse.metrics
+
+.. autofunction:: objective_scale_from_costs

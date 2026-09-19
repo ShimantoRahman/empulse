@@ -1,0 +1,382 @@
+/**
+ * Empulse documentation theme.
+ *
+ * This file is compiled into css/custom.css by sphinxcontrib.sass, see:
+ * https://sass-lang.com/guide/
+ *
+ * It implements the Empulse design system on top of pydata-sphinx-theme. The colour tokens below
+ * are the same ones `scripts/figures/palette.py` uses to draw the documentation figures, spelled
+ * with the same names, so that a figure and the page around it cannot drift apart. Colour carries
+ * meaning and is not decorative:
+ *
+ *   * blue   marks what you *write down* - cost matrices, strategies, metrics, parameters;
+ *   * purple marks what you *do with it* - evaluating, training, deciding, resampling.
+ *
+ * Styling is applied by overriding the theme's own custom properties wherever one exists, and only
+ * falling back to element selectors where it does not. Variables survive theme upgrades; the
+ * theme's `.bd-*` class names do not.
+ */
+
+/* Fonts ------------------------------------------------------------------------------------- */
+
+// Self-hosted so the docs render identically offline and behind a firewall, and so that no reader
+// is announced to a third-party font CDN. Licences sit beside the files in _static/fonts/.
+
+@font-face {
+  font-family: 'Inter Variable';
+  src: url('../fonts/inter-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  src: url('../fonts/jetbrains-mono-variable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Design tokens ----------------------------------------------------------------------------- */
+
+html[data-theme='light'] {
+  --eds-paper: #ffffff;
+  --eds-surface: #f4f7f9;
+  --eds-ink: #244876;
+  --eds-ink-muted: #5c6b80;
+  --eds-blue-strong: #1b7dbf;
+  // Link text only. `blue-strong` scores 4.44:1 on paper and 4.12:1 on surface, which clears the
+  // 3:1 bar for graphics it was picked for but misses the 4.5:1 one for body text. This is the
+  // same hue and saturation at 2.5% less lightness, which reaches 4.89:1 and 4.55:1. Surfaces,
+  // borders and accents keep `blue-strong` so the figures and the prose stay in step.
+  --eds-blue-link: #1976b4;
+  --eds-blue-soft: #d3e7f6;
+  --eds-purple-strong: #7f4acf;
+  --eds-purple-soft: #e4d9f7;
+  --eds-rule: #c4d0de;
+
+  // Depth stays subtle and functional; the shadow is tinted with ink rather than pure black. This
+  // is a *colour*, not a shadow list: the theme composes it into its own offsets and blurs.
+  --eds-shadow-color: rgba(36, 72, 118, 0.1);
+}
+
+html[data-theme='dark'] {
+  --eds-paper: #14181e;
+  --eds-surface: #222832;
+  --eds-ink: #e8eef4;
+  --eds-ink-muted: #9aa9bc;
+  --eds-blue-strong: #37abdf;
+  --eds-blue-link: #37abdf; // Already 6.83:1 on paper-dark, so no adjustment is needed here.
+  --eds-blue-soft: #1d3a50;
+  --eds-purple-strong: #a173de;
+  --eds-purple-soft: #332748;
+  --eds-rule: #3a444f;
+
+  // On dark, separation comes from surface and rule rather than from large black shadows.
+  --eds-shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Token to theme-variable mapping ----------------------------------------------------------- */
+
+html[data-theme='light'],
+html[data-theme='dark'] {
+  // Surfaces. `on-background` is the theme's chrome surface - header and card bodies. It is mapped
+  // to paper in both themes so that surfaces stay flat and separation comes from `rule`.
+  --pst-color-background: var(--eds-paper);
+  --pst-color-on-background: var(--eds-paper);
+  --pst-color-surface: var(--eds-surface);
+  --pst-color-on-surface: var(--eds-ink);
+
+  // Text.
+  --pst-color-text-base: var(--eds-ink);
+  --pst-color-text-muted: var(--eds-ink-muted);
+  --pst-color-heading: var(--eds-ink);
+
+  // Blue is primary: actions, links, the main analytical emphasis.
+  --pst-color-primary: var(--eds-blue-strong);
+  --pst-color-primary-bg: var(--eds-blue-soft);
+  --pst-color-link: var(--eds-blue-link);
+  // Hover resolves to ink, the design system's pressed state, rather than to the purple the theme
+  // uses by default - purple carries its own meaning here and is not a link state.
+  --pst-color-link-hover: var(--eds-ink);
+
+  // Purple is secondary: comparisons, alternative strategies, pointers to related material.
+  --pst-color-secondary: var(--eds-purple-strong);
+  --pst-color-secondary-bg: var(--eds-purple-soft);
+  --pst-color-accent: var(--eds-purple-strong);
+  --pst-color-accent-bg: var(--eds-purple-soft);
+
+  // Structure.
+  --pst-color-border: var(--eds-rule);
+  --pst-color-border-muted: var(--eds-rule);
+  --pst-color-blockquote-notch: var(--eds-rule);
+  --pst-color-shadow: var(--eds-shadow-color);
+  --pst-color-target: var(--eds-blue-soft);
+
+  // Admonitions. note/important carry definitions (blue); tip/hint/seealso point at related
+  // material (purple). warning/caution/danger/error keep the theme's amber and red: the design
+  // system defines no caution colour, and recolouring them would leave a genuine warning
+  // indistinguishable from a tip.
+  --pst-color-info: var(--eds-blue-strong);
+  --pst-color-info-bg: var(--eds-blue-soft);
+  --pst-color-success: var(--eds-purple-strong);
+  --pst-color-success-bg: var(--eds-purple-soft);
+
+  // Tables.
+  --pst-color-table: var(--eds-ink);
+  --pst-color-table-heading-bg: var(--eds-surface);
+  --pst-color-table-inner-border: var(--eds-rule);
+  --pst-color-table-outer-border: var(--eds-rule);
+  --pst-color-table-row-hover-bg: var(--eds-blue-soft);
+  --pst-color-table-row-zebra-low-bg: var(--eds-paper);
+  --pst-color-table-row-zebra-high-bg: var(--eds-surface);
+
+  // Inline code reads as ink on a soft-blue chip, so the tint stays a surface and never the text.
+  --pst-color-inline-code: var(--eds-ink);
+  --pst-color-inline-code-links: var(--eds-blue-link);
+}
+
+/* Typography -------------------------------------------------------------------------------- */
+
+html {
+  --pst-font-family-base: 'Inter Variable', 'Inter', var(--pst-font-family-base-system);
+  --pst-font-family-heading: 'Inter Variable', 'Inter', var(--pst-font-family-base-system);
+  --pst-font-family-monospace: 'JetBrains Mono Variable', 'JetBrains Mono',
+    var(--pst-font-family-monospace-system);
+
+  // Inter carries the whole hierarchy, so no second display face is needed. h3-h6 already match
+  // the theme's scale; only the two largest steps move.
+  --pst-font-size-h1: 2.75rem; // 44px - page title
+  --pst-font-size-h2: 2.25rem; // 36px - section title
+  --pst-font-size-h3: 1.75rem; // 28px - major component / API group
+  --pst-font-size-h4: 1.5rem; // 24px - subsection
+  --pst-font-size-h5: 1.25rem; // 20px - card or subsection heading
+  --pst-font-size-h6: 1rem; // 16px - small section label
+  --pst-font-size-milli: 0.875rem; // 14px - captions and metadata
+  --pst-font-weight-caption: 450;
+}
+
+body {
+  font-synthesis-weight: none; // Use Inter's real weights, never a synthesised light.
+  line-height: 1.5;
+}
+
+/* Shape ------------------------------------------------------------------------------------- */
+
+// The theme routes most of its radii through Bootstrap's scale, so setting it here reaches
+// buttons, inputs, cards, dropdowns and admonitions at once. These must be declared on `:root`
+// rather than on `html`: Bootstrap declares them on `:root,[data-bs-theme=light]`, and a bare
+// type selector loses to that on specificity no matter how late it is loaded.
+:root {
+  --bs-border-radius: 0.5rem; // 8px - buttons, inputs, code blocks
+  --bs-border-radius-sm: 0.3125rem; // 5px - compact controls, inline code
+  --bs-border-radius-lg: 0.75rem; // 12px - cards and chart frames
+}
+
+/* Article content --------------------------------------------------------------------------- */
+
+.bd-article {
+  // Tracking tightens as size grows, which keeps Inter compact at display sizes.
+  h1 {
+    font-weight: 350;
+    line-height: 1.12;
+    letter-spacing: -0.7px;
+    margin-bottom: 2rem;
+  }
+
+  h2 {
+    font-weight: 400;
+    line-height: 1.16;
+    letter-spacing: -0.45px;
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+  }
+
+  h4 {
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.2px;
+  }
+
+  h5 {
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
+  }
+
+  h6 {
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: 0.4px;
+  }
+
+  // A readable measure, for prose only. Scoped to top-level paragraphs so that parameter
+  // descriptions, admonitions, table cells, figures and code keep the full column width.
+  > section > p {
+    max-width: 78ch;
+  }
+
+  // The paragraph that opens a page reads as a lead.
+  > section > h1 + p {
+    font-size: 1.125rem;
+    font-weight: 450;
+    line-height: 1.6;
+  }
+
+  // Avoid changing the aspect ratio of images; add some padding so that at least
+  // there is some space between image and background in dark mode
+  img {
+    height: unset !important;
+    padding: 1%;
+  }
+}
+
+/* Code -------------------------------------------------------------------------------------- */
+
+code,
+pre,
+.highlight {
+  font-size: 0.875rem; // 14px
+  letter-spacing: -0.1px;
+}
+
+// Inline literals read as a chip. Cross-references are excluded: they are already links carrying
+// the primary colour, and chipping every :class: reference in the prose turns a page into confetti.
+code.literal:not(.xref) {
+  background-color: var(--eds-blue-soft);
+  border: none;
+  border-radius: var(--bs-border-radius-sm);
+  color: var(--pst-color-inline-code);
+  padding: 2px 6px;
+}
+
+code.literal.xref {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+div.highlight,
+div.literal-block-wrapper,
+div[class*='highlight-'] {
+  border-radius: var(--bs-border-radius);
+}
+
+// Pygments paints its own background from the highlight style; the design system wants the code
+// region on `surface` in both themes. Swapping the syntax palette itself is a separate change.
+html[data-theme='light'] .highlight,
+html[data-theme='dark'] .highlight {
+  background-color: var(--eds-surface);
+}
+
+div.highlight pre {
+  padding: 1rem;
+}
+
+/* Tables ------------------------------------------------------------------------------------ */
+
+table.table,
+table.docutils {
+  // Numeric columns line up when the digits share a width.
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+
+  th {
+    font-weight: 600;
+  }
+}
+
+/* Cards ------------------------------------------------------------------------------------- */
+
+// The card's elevation is left to the theme, which already paints `sd-shadow-*` from
+// `--pst-color-shadow` under an `html[data-theme=...] .sd-shadow-sm` rule that is `!important` and
+// more specific than anything sensible written here. Tinting the token is enough.
+.sd-card {
+  border-radius: var(--bs-border-radius-lg);
+  transition: border-color 150ms ease;
+
+  .sd-card-title {
+    font-weight: 600;
+    letter-spacing: -0.1px;
+  }
+}
+
+// Only cards that are themselves links respond to the pointer.
+.sd-card:has(.sd-stretched-link):hover {
+  border-color: var(--eds-blue-strong);
+}
+
+// Step cards: a numbered sequence of pages, used where the children are read in order rather than
+// picked from. The number comes from a CSS counter rather than being typed into each title, so
+// inserting or reordering a step cannot leave the sequence misnumbered.
+.step-cards {
+  counter-reset: step;
+}
+
+.step-cards .sd-card {
+  counter-increment: step;
+}
+
+.step-cards .sd-card-body {
+  padding-left: 4rem;
+  position: relative;
+}
+
+.step-cards .sd-card-body::before {
+  align-items: center;
+  background-color: var(--eds-blue-soft);
+  border-radius: var(--bs-border-radius-pill);
+  color: var(--eds-ink);
+  content: counter(step);
+  display: flex;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  height: 1.75rem;
+  justify-content: center;
+  left: 1.25rem;
+  position: absolute;
+  top: 1.15rem;
+  width: 1.75rem;
+}
+
+/* Admonitions ------------------------------------------------------------------------------- */
+
+.admonition,
+div.admonition {
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: none; // Structure comes from the notch and the tinted title, not from elevation.
+
+  > .admonition-title {
+    font-weight: 600;
+  }
+}
+
+/* Chrome ------------------------------------------------------------------------------------ */
+
+// The header shares the page background, so it needs a rule to separate it once the page scrolls.
+.bd-header {
+  border-bottom: 1px solid var(--eds-rule);
+  box-shadow: none;
+}
+
+.bd-footer {
+  background-color: var(--eds-surface);
+  border-top: 1px solid var(--eds-rule);
+  color: var(--eds-ink-muted);
+  font-size: var(--pst-font-size-milli);
+}
+
+/* Primary Sidebar */
+
+.bd-sidebar-primary {
+  width: 22.5%;
+  min-width: 16rem;
+}

@@ -1,0 +1,741 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>1.1. The cost matrix — Empulse 0.12.0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=c8a9ccb9" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=61ccb1f1"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script src="../../_static/design-tabs.js?v=f930bc37"></script>
+<script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/costs/cost_matrix';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="specifying_costs.html" rel="next" title="1.2. Handing costs to an estimator"/>
+<link href="../costs.html" rel="prev" title="1. Defining costs"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../costs.html">1. Defining costs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">1.1. The cost matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="specifying_costs.html">1.2. Handing costs to an estimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata_routing.html">1.3. Costs that differ per row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="recipes.html">1.4. Worked cost matrices</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../measuring.html">2. Measuring in money</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/strategies.html">2.1. Choosing a strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/metric_objects.html">2.2. Working with metric objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/churn.html">2.3. Customer Churn Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/acquisition.html">2.4. Customer Acquisition Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/credit_scoring.html">2.5. Credit Scoring Metrics</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../training.html">3. Training on costs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../training/linear_models.html">3.1. Linear Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/csboost.html">3.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/tree_models.html">3.3. Tree-Based Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/minimax_models.html">3.4. Minimax and symbolic models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/robustcs.html">3.5. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../deciding.html">4. Deciding who to act on</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../deciding/calibration.html">4.1. Scores, probabilities and calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../deciding/thresholds.html">4.2. Threshold Tuning</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../preprocessing.html">5. Changing the data instead</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/imbalance.html">5.1. Cost sensitivity and class imbalance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/cost_sampling.html">5.2. Cost-Proportionate Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/bias_mitigation.html">5.3. Bias Mitigation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets.html">6. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/iranian_churn.html">6.3.1. Iranian Churn Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">6.3.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">6.3.3. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">6.3.4. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">6.3.5. 2011 Kaggle competition Give Me Some Credit</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../costs.html"><span class="section-number">1. </span>Defining costs</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">1.1. </span>The cost matrix</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="the-cost-matrix">
+<span id="cost-matrix"></span><h1><span class="section-number">1.1. </span>The cost matrix<a class="headerlink" href="#the-cost-matrix" title="Link to this heading">#</a></h1>
+<p>Value-driven and cost-sensitive learning both start from the same object: a table saying what each
+of the four classification outcomes is worth. Empulse calls it a
+<a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a>, and everything else in the package consumes one — metrics
+score with it, models train on it, samplers resample by it, and the bundled datasets ship one.</p>
+<p>This page covers the formalism and the builder API. <a class="reference internal" href="recipes.html#user-defined-value-metric"><span class="std std-ref">Worked cost matrices</span></a> works through
+complete examples; <a class="reference internal" href="specifying_costs.html#specifying-costs"><span class="std std-ref">Handing costs to an estimator</span></a> covers handing the result to an estimator.</p>
+<section id="the-four-outcomes">
+<h2><span class="section-number">1.1.1. </span>The four outcomes<a class="headerlink" href="#the-four-outcomes" title="Link to this heading">#</a></h2>
+<p>The <strong>cost matrix</strong> is a square matrix whose rows are the predicted class and whose columns are the
+true class. Each entry is the cost of that pair.</p>
+<div class="pst-scrollable-table-container"><table class="table" id="id1">
+<caption><span class="caption-text">Cost matrix</span><a class="headerlink" href="#id1" title="Link to this table">#</a></caption>
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(1|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(1|0)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(0|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C(0|0)\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Empulse names these <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> and <code class="docutils literal notranslate"><span class="pre">tn_cost</span></code>. So to say that a false
+positive is five times worse than a false negative:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tp_cost</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">fp_cost</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">fn_cost</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">tn_cost</span> <span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<figure class="only-light align-center" id="id2">
+<img alt="The four cells of a cost matrix, the same matrix written as costs and as benefits with the diagonal negated, and the difference between a scalar and an array cost." class="only-light" src="../../_images/cost_matrix_anatomy_light.svg"/>
+<figcaption>
+<p><span class="caption-text">The two spellings hold the same four numbers; only the diagonal changes sign. A scalar applies
+one matrix to every row, an array gives every row its own.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<figure class="only-dark align-center" id="id3">
+<img alt="The four cells of a cost matrix, the same matrix written as costs and as benefits with the diagonal negated, and the difference between a scalar and an array cost." class="only-dark" src="../../_images/cost_matrix_anatomy_dark.svg"/>
+<figcaption>
+<p><span class="caption-text">The two spellings hold the same four numbers; only the diagonal changes sign. A scalar applies
+one matrix to every row, an array gives every row its own.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<section id="costs-and-benefits-are-the-same-number">
+<h3><span class="section-number">1.1.1.1. </span>Costs and benefits are the same number<a class="headerlink" href="#costs-and-benefits-are-the-same-number" title="Link to this heading">#</a></h3>
+<p>Correct classifications usually <em>earn</em> rather than cost, so the value-driven literature writes the
+same table as a <strong>cost-benefit matrix</strong>, negating the diagonal:</p>
+<div class="pst-scrollable-table-container"><table class="table" id="id4">
+<caption><span class="caption-text">Cost-benefit matrix</span><a class="headerlink" href="#id4" title="Link to this table">#</a></caption>
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Actual positive <span class="math notranslate nohighlight">\(y_i = 1\)</span></p></td>
+<td><p>Actual negative <span class="math notranslate nohighlight">\(y_i = 0\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>Predicted positive <span class="math notranslate nohighlight">\(\hat{y}_i = 1\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(b_0 = -C(1|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(c_0 = C(1|0)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>Predicted negative <span class="math notranslate nohighlight">\(\hat{y}_i = 0\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(c_1 = C(0|1)\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(b_1 = -C(0|0)\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Empulse supports both spellings. <code class="docutils literal notranslate"><span class="pre">add_tp_benefit(x)</span></code> and <code class="docutils literal notranslate"><span class="pre">add_tp_cost(-x)</span></code> are the same
+statement, and so are the other three pairs. Internally only one form is stored, which is why the
+read-back properties mirror each other:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a>
+
+<span class="n">matrix</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span><span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">)</span>  <span class="c1"># 50</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">tp_cost</span><span class="p">)</span>     <span class="c1"># -50</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">)</span>     <span class="c1"># 5</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">fp_benefit</span><span class="p">)</span>  <span class="c1"># -5</span>
+</pre></div>
+</div>
+<p>Pick whichever spelling makes the business statement read naturally and stay with it. Mixing them
+inside one matrix is legal but invites sign errors, and a sign error here is silent — see
+<a class="reference internal" href="#cost-matrix-sanity-check"><span class="std std-ref">Checking your matrix</span></a>.</p>
+</section>
+<section id="class-dependent-and-instance-dependent-costs">
+<h3><span class="section-number">1.1.1.2. </span>Class-dependent and instance-dependent costs<a class="headerlink" href="#class-dependent-and-instance-dependent-costs" title="Link to this heading">#</a></h3>
+<p>So far every cost has been a single number that applies to every row. In practice the cost of a
+mistake often differs per instance: misclassifying a high-value churner costs more than
+misclassifying a low-value one.</p>
+<p>Empulse makes no distinction at build time. A term becomes instance-dependent simply by supplying
+an <strong>array</strong> instead of a scalar when the metric is called or the model is fitted:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a>
+
+<span class="n">matrix</span> <span class="o">=</span> <span class="n">CostMatrix</span><span class="p">()</span><span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">'clv'</span><span class="p">)</span><span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">'contact_cost'</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">())</span>
+
+<span class="n">y_true</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.array.html#numpy.array" title="numpy.array"><span class="n">np</span><span class="o">.</span><span class="n">array</span></a><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">y_score</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.array.html#numpy.array" title="numpy.array"><span class="n">np</span><span class="o">.</span><span class="n">array</span></a><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">])</span>
+
+<span class="c1"># class-dependent: one lifetime value for everyone</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+
+<span class="c1"># instance-dependent: one lifetime value per customer</span>
+<span class="n">clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/generated/numpy.array.html#numpy.array" title="numpy.array"><span class="n">np</span><span class="o">.</span><span class="n">array</span></a><span class="p">([</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">200.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">400.0</span><span class="p">])</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Scalars broadcast; arrays must have one value per sample. A length mismatch raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>
+naming the offending parameter.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Not every strategy honours instance-dependent costs.
+<a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> reduces array parameters to their mean, because it is a
+population-level measure defined over the ROC curve. <a class="reference internal" href="../measuring/strategies.html#choosing-metric"><span class="std std-ref">Choosing a strategy</span></a> has the full table.</p>
+</div>
+</section>
+</section>
+<section id="building-a-cost-matrix">
+<h2><span class="section-number">1.1.2. </span>Building a cost matrix<a class="headerlink" href="#building-a-cost-matrix" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> is a builder: every method returns the matrix, so calls chain.
+Terms passed to the same <code class="docutils literal notranslate"><span class="pre">add_*</span></code> method <strong>accumulate</strong>, which lets you write one clause of the
+business logic at a time.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">spam_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">CostMatrix</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">'missed_email'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">'wasted_time'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">missed_email</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">wasted_time</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Terms can be plain strings, as above — they are parsed with <code class="xref py py-func docutils literal notranslate"><span class="pre">sympy.sympify</span></code>, so <code class="docutils literal notranslate"><span class="pre">'d</span> <span class="pre">+</span> <span class="pre">f'</span></code>
+and <code class="docutils literal notranslate"><span class="pre">'gamma</span> <span class="pre">*</span> <span class="pre">(clv</span> <span class="pre">-</span> <span class="pre">d)'</span></code> work too. For anything beyond a couple of terms it is clearer to
+declare the symbols first with <code class="xref py py-func docutils literal notranslate"><span class="pre">sympy.symbols</span></code> and build expressions from them:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a>
+
+<span class="n">clv</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">gamma</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span><span class="s1">'clv d f gamma'</span><span class="p">)</span>
+
+<span class="n">churn_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">CostMatrix</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">gamma</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">d</span> <span class="o">-</span> <span class="n">f</span><span class="p">))</span>   <span class="c1"># churner accepts the offer</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">f</span><span class="p">)</span>        <span class="c1"># churner declines, contact cost is sunk</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span>                      <span class="c1"># loyal customer takes the offer anyway</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> and <code class="docutils literal notranslate"><span class="pre">tn_benefit</span></code> are left at their default of <code class="docutils literal notranslate"><span class="pre">0</span></code> here: the company takes no action,
+so it incurs no campaign cost.</p>
+<section id="naming-parameters">
+<h3><span class="section-number">1.1.2.1. </span>Naming parameters<a class="headerlink" href="#naming-parameters" title="Link to this heading">#</a></h3>
+<p>Raw symbols like <code class="docutils literal notranslate"><span class="pre">d</span></code> and <code class="docutils literal notranslate"><span class="pre">f</span></code> make for unreadable call sites. <code class="docutils literal notranslate"><span class="pre">alias</span></code> gives them business
+names, either as a mapping or one at a time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">churn_matrix</span> <span class="o">=</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">alias</span><span class="p">({</span>
+    <span class="s1">'incentive_cost'</span><span class="p">:</span> <span class="s1">'d'</span><span class="p">,</span>
+    <span class="s1">'contact_cost'</span><span class="p">:</span> <span class="s1">'f'</span><span class="p">,</span>
+    <span class="s1">'accept_rate'</span><span class="p">:</span> <span class="s1">'gamma'</span><span class="p">,</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+<p>Either the symbol name or its alias can be used when calling the metric — but not both at once,
+which raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> rather than silently letting one win.</p>
+</section>
+<section id="default-values">
+<h3><span class="section-number">1.1.2.2. </span>Default values<a class="headerlink" href="#default-values" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">set_default</span></code> fixes parameters that rarely change, so they can be omitted at call time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">churn_matrix</span> <span class="o">=</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">set_default</span><span class="p">(</span>
+    <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>Register aliases before setting defaults.</strong> <code class="docutils literal notranslate"><span class="pre">set_default</span></code> keys are resolved against the
+aliases known at that moment, so a default keyed by an alias that has not been registered yet
+cannot be matched. Empulse raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming the unmatched key when the metric is
+built.</p>
+</div>
+</section>
+<section id="reserved-names">
+<h3><span class="section-number">1.1.2.3. </span>Reserved names<a class="headerlink" href="#reserved-names" title="Link to this heading">#</a></h3>
+<p>A handful of names are used internally by <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> and its strategies and
+cannot appear as a symbol or alias:</p>
+<p><code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code>, <code class="docutils literal notranslate"><span class="pre">F_0</span></code>, <code class="docutils literal notranslate"><span class="pre">F_1</span></code>, <code class="docutils literal notranslate"><span class="pre">pi_0</span></code>, <code class="docutils literal notranslate"><span class="pre">pi_1</span></code>, <code class="docutils literal notranslate"><span class="pre">N</span></code>, <code class="docutils literal notranslate"><span class="pre">i</span></code>, <code class="docutils literal notranslate"><span class="pre">n_samples</span></code></p>
+<p>Using one raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when the metric is built.</p>
+</section>
+</section>
+<section id="uncertain-parameters">
+<h2><span class="section-number">1.1.3. </span>Uncertain parameters<a class="headerlink" href="#uncertain-parameters" title="Link to this heading">#</a></h2>
+<p>A business parameter is often an estimate rather than a fact. The acceptance rate of a retention
+offer is not known in advance; it has a distribution. Any term may therefore be a
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#module-sympy.stats" title="(in SymPy v1.14.0)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">sympy.stats</span></code></a> random variable instead of a symbol:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/stats.html#module-sympy.stats" title="sympy.stats"><span class="nn">sympy.stats</span></a>
+
+<span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sympy</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span><span class="s1">'alpha beta'</span><span class="p">)</span>
+<span class="n">gamma_rv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Beta" title="sympy.stats.Beta"><span class="n">sympy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">Beta</span></a><span class="p">(</span><span class="s1">'gamma'</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+
+<span class="n">stochastic_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">CostMatrix</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">gamma_rv</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">d</span> <span class="o">-</span> <span class="n">f</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">gamma_rv</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">f</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">({</span><span class="s1">'incentive_cost'</span><span class="p">:</span> <span class="s1">'d'</span><span class="p">,</span> <span class="s1">'contact_cost'</span><span class="p">:</span> <span class="s1">'f'</span><span class="p">})</span>
+    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note what changed and what did not: the distribution’s <em>parameters</em> (<code class="docutils literal notranslate"><span class="pre">alpha</span></code>, <code class="docutils literal notranslate"><span class="pre">beta</span></code>) become
+call-time parameters, while <code class="docutils literal notranslate"><span class="pre">gamma</span></code> itself no longer is.</p>
+<p>How the uncertainty is handled depends on the strategy you pair the matrix with.
+<a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> integrates over the distribution — that is what turns a maximum
+profit measure into an <em>expected</em> maximum profit measure. <a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> and
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> substitute the distribution’s mean. See <a class="reference internal" href="../measuring/strategies.html#choosing-metric"><span class="std std-ref">Choosing a strategy</span></a>.</p>
+<p>Multiple random variables are assumed <strong>independent</strong>.</p>
+</section>
+<section id="marking-costs-as-noisy">
+<h2><span class="section-number">1.1.4. </span>Marking costs as noisy<a class="headerlink" href="#marking-costs-as-noisy" title="Link to this heading">#</a></h2>
+<p>If an instance-dependent cost is itself an estimate — a modelled lifetime value rather than a
+measured one — it may contain outliers that distort training.
+<a class="reference internal" href="../../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> corrects for this, and <code class="docutils literal notranslate"><span class="pre">mark_outlier_sensitive</span></code> tells
+it which symbols to correct:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">robust_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">CostMatrix</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">'clv'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">'contact_cost'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">mark_outlier_sensitive</span><span class="p">(</span><span class="s1">'clv'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The mark is inert everywhere else; only <a class="reference internal" href="../../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> reads it. See
+<a class="reference internal" href="../training/robustcs.html#robustcs-metric"><span class="std std-ref">Custom Metric with mark_outlier_sensitive</span></a> for what it does with it.</p>
+</section>
+<section id="checking-your-matrix">
+<span id="cost-matrix-sanity-check"></span><h2><span class="section-number">1.1.5. </span>Checking your matrix<a class="headerlink" href="#checking-your-matrix" title="Link to this heading">#</a></h2>
+<p>A wrong cost matrix produces a plausible-looking number, and no test will catch it. Before trusting
+one, read the four terms back:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="s1">'tp benefit:'</span><span class="p">,</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">tp_benefit</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="s1">'tn benefit:'</span><span class="p">,</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">tn_benefit</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="s1">'fp cost   :'</span><span class="p">,</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">fp_cost</span><span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="s1">'fn cost   :'</span><span class="p">,</span> <span class="n">churn_matrix</span><span class="o">.</span><span class="n">fn_cost</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Two checks are worth making every time:</p>
+<ul class="simple">
+<li><p><strong>Signs.</strong> A benefit should be positive for an outcome you want. If <code class="docutils literal notranslate"><span class="pre">tp_benefit</span></code> comes out
+negative at realistic parameter values, a cost and a benefit have been swapped.</p></li>
+<li><p><strong>Magnitudes.</strong> Substitute plausible numbers and compare the two error terms. If <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> is
+not meaningfully larger than <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> in a churn problem, the matrix is not encoding the
+asymmetry that motivated the exercise.</p></li>
+</ul>
+<p>In a notebook, both <a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> and <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> render
+as a LaTeX table when they are the last expression in a cell, which is the fastest way to eyeball
+the whole matrix at once.</p>
+</section>
+<section id="constraining-parameter-values">
+<span id="cost-matrix-constraints"></span><h2><span class="section-number">1.1.6. </span>Constraining parameter values<a class="headerlink" href="#constraining-parameter-values" title="Link to this heading">#</a></h2>
+<p>Some parameters only mean something over part of the number line. An accept rate is a probability,
+so it belongs in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>; a Beta distribution’s shape has to be positive or the distribution does
+not exist. Passing a value outside that range does not produce an error on its own – it produces a
+number, computed from an expression that no longer models anything.</p>
+<p>The prebuilt metrics already declare the domains they need, so this is handled for you:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a>
+
+<span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">y_score</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><span class="n">mpc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">except</span> <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="ValueError"><span class="ne">ValueError</span></a> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Distribution parameters need no declaration at all. <a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#module-sympy.stats" title="(in SymPy v1.14.0)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">sympy.stats</span></code></a> knows what its own
+distributions require, and the metric asks it:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a>
+
+<span class="n">y_true</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">y_score</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><span class="n">empc_score</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">except</span> <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="ValueError"><span class="ne">ValueError</span></a> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a matrix of your own, declare the domain with
+<a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.constrain" title="empulse.metrics.CostMatrix.constrain"><code class="xref py py-meth docutils literal notranslate"><span class="pre">constrain</span></code></a>. Bounds are inclusive:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a>
+
+<span class="n">clv</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">gamma</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sp</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span><span class="s1">'clv d f gamma'</span><span class="p">)</span>
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">gamma</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">d</span> <span class="o">-</span> <span class="n">f</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="o">-</span><span class="n">f</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">({</span><span class="s1">'accept_rate'</span><span class="p">:</span> <span class="s1">'gamma'</span><span class="p">,</span> <span class="s1">'incentive_cost'</span><span class="p">:</span> <span class="s1">'d'</span><span class="p">,</span> <span class="s1">'contact_cost'</span><span class="p">:</span> <span class="s1">'f'</span><span class="p">})</span>
+    <span class="o">.</span><span class="n">constrain</span><span class="p">(</span><span class="s1">'accept_rate'</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">())</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">metric</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">except</span> <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="ValueError"><span class="ne">ValueError</span></a> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Call <a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.alias" title="empulse.metrics.CostMatrix.alias"><code class="xref py py-meth docutils literal notranslate"><span class="pre">alias</span></code></a> before
+<a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.constrain" title="empulse.metrics.CostMatrix.constrain"><code class="xref py py-meth docutils literal notranslate"><span class="pre">constrain</span></code></a>, for the same reason as
+<a class="reference internal" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.set_default" title="empulse.metrics.CostMatrix.set_default"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_default</span></code></a>: the constraint is stored against the symbol the
+alias resolves to. The error message still names whichever spelling you passed.</p>
+<p>Conditions that span several parameters are expressed with a callable. This is how you would add
+the rule that the incentive must be worth less than the customer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/index.html#module-sympy" title="sympy"><span class="nn">sympy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a>
+
+<span class="n">clv</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">gamma</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://docs.sympy.org/latest/modules/core.html#sympy.core.symbol.symbols" title="sympy.core.symbol.symbols"><span class="n">sp</span><span class="o">.</span><span class="n">symbols</span></a><span class="p">(</span><span class="s1">'clv d f gamma'</span><span class="p">)</span>
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_tp_benefit</span><span class="p">(</span><span class="n">gamma</span> <span class="o">*</span> <span class="p">(</span><span class="n">clv</span> <span class="o">-</span> <span class="n">d</span> <span class="o">-</span> <span class="n">f</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="n">f</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">({</span><span class="s1">'accept_rate'</span><span class="p">:</span> <span class="s1">'gamma'</span><span class="p">,</span> <span class="s1">'incentive_cost'</span><span class="p">:</span> <span class="s1">'d'</span><span class="p">,</span> <span class="s1">'contact_cost'</span><span class="p">:</span> <span class="s1">'f'</span><span class="p">})</span>
+    <span class="o">.</span><span class="n">constrain</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">params</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s1">'clv'</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">params</span><span class="p">[</span><span class="s1">'d'</span><span class="p">],</span>
+        <span class="n">message</span><span class="o">=</span><span class="s1">'clv must exceed the incentive cost'</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">metric</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy.MaxProfit"><span class="n">MaxProfit</span></a><span class="p">())</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">metric</span></a><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">incentive_cost</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">except</span> <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="ValueError"><span class="ne">ValueError</span></a> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+    <a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A callable receives the parameters keyed by <strong>symbol name</strong>, with aliases resolved and defaults
+filled in – hence <code class="docutils literal notranslate"><span class="pre">params['d']</span></code> rather than <code class="docutils literal notranslate"><span class="pre">params['incentive_cost']</span></code> above.</p>
+<p>Constraints are checked where your values first reach the metric – when you call it, and once at
+the start of <code class="docutils literal notranslate"><span class="pre">fit</span></code> when a model trains on it. Training re-enters the metric many times over, per
+boosting round or per candidate tree, and those paths skip the check, so declaring a constraint
+costs nothing during training.</p>
+</section>
+<section id="where-next">
+<h2><span class="section-number">1.1.7. </span>Where next<a class="headerlink" href="#where-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="specifying_costs.html#specifying-costs"><span class="std std-ref">Handing costs to an estimator</span></a> — handing the matrix to an estimator.</p></li>
+<li><p><a class="reference internal" href="../measuring/strategies.html#choosing-metric"><span class="std std-ref">Choosing a strategy</span></a> — turning it into a number.</p></li>
+<li><p><a class="reference internal" href="recipes.html#user-defined-value-metric"><span class="std std-ref">Worked cost matrices</span></a> — complete worked matrices, including mixtures.</p></li>
+<li><p><a class="reference internal" href="../datasets.html#datasets"><span class="std std-ref">Datasets</span></a> — the cost matrices that ship with the bundled datasets.</p></li>
+</ul>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="../costs.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">1. </span>Defining costs</p>
+</div>
+</a>
+<a class="right-next" href="specifying_costs.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">1.2. </span>Handing costs to an estimator</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-outcomes">1.1.1. The four outcomes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#costs-and-benefits-are-the-same-number">1.1.1.1. Costs and benefits are the same number</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#class-dependent-and-instance-dependent-costs">1.1.1.2. Class-dependent and instance-dependent costs</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-a-cost-matrix">1.1.2. Building a cost matrix</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#naming-parameters">1.1.2.1. Naming parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#default-values">1.1.2.2. Default values</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reserved-names">1.1.2.3. Reserved names</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#uncertain-parameters">1.1.3. Uncertain parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#marking-costs-as-noisy">1.1.4. Marking costs as noisy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-your-matrix">1.1.5. Checking your matrix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#constraining-parameter-values">1.1.6. Constraining parameter values</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-next">1.1.7. Where next</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

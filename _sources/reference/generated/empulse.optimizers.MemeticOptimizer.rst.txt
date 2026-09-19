@@ -1,0 +1,9 @@
+﻿MemeticOptimizer
+================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: MemeticOptimizer
+   :members:
+   :inherited-members:
+   :special-members: __call__

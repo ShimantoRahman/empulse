@@ -1,0 +1,7 @@
+﻿mpa\_score
+==========
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: mpa_score
+   :no-value:

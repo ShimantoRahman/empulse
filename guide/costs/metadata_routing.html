@@ -1,0 +1,606 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>1.3. Costs that differ per row — Empulse 0.12.0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../../_static/css/custom.css?v=c8a9ccb9" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../../_static/documentation_options.js?v=61ccb1f1"></script>
+<script src="../../_static/doctools.js?v=9bcbadda"></script>
+<script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../../_static/copybutton.js?v=f281be69"></script>
+<script src="../../_static/design-tabs.js?v=f930bc37"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'guide/costs/metadata_routing';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../../_static/favicon.ico" rel="icon"/>
+<link href="../../genindex.html" rel="index" title="Index"/>
+<link href="../../search.html" rel="search" title="Search"/>
+<link href="recipes.html" rel="next" title="1.4. Worked cost matrices"/>
+<link href="specifying_costs.html" rel="prev" title="1.2. Handing costs to an estimator"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../costs.html">1. Defining costs</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cost_matrix.html">1.1. The cost matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="specifying_costs.html">1.2. Handing costs to an estimator</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">1.3. Costs that differ per row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="recipes.html">1.4. Worked cost matrices</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../measuring.html">2. Measuring in money</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/strategies.html">2.1. Choosing a strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/metric_objects.html">2.2. Working with metric objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/churn.html">2.3. Customer Churn Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/acquisition.html">2.4. Customer Acquisition Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measuring/credit_scoring.html">2.5. Credit Scoring Metrics</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../training.html">3. Training on costs</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../training/linear_models.html">3.1. Linear Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/csboost.html">3.2. Cost-Sensitive Gradient Boosting (CSBoost &amp; B2Boost)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/tree_models.html">3.3. Tree-Based Cost-Sensitive Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/minimax_models.html">3.4. Minimax and symbolic models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../training/robustcs.html">3.5. Robust Cost-Sensitive Classification (RobustCS)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../deciding.html">4. Deciding who to act on</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../deciding/calibration.html">4.1. Scores, probabilities and calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../deciding/thresholds.html">4.2. Threshold Tuning</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../preprocessing.html">5. Changing the data instead</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/imbalance.html">5.1. Cost sensitivity and class imbalance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/cost_sampling.html">5.2. Cost-Proportionate Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../preprocessing/bias_mitigation.html">5.3. Bias Mitigation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../datasets.html">6. Datasets</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/iranian_churn.html">6.3.1. Iranian Churn Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/churn_tv_subscriptions.html">6.3.2. Churn in a TV Subscription Company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/bank_telemarketing.html">6.3.3. Bank Telemarketing Upsell Campaign</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/credit_scoring_pakdd.html">6.3.4. Credit Risk Assessment on a Private Label Credit Card Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../datasets/give_me_some_credit.html">6.3.5. 2011 Kaggle competition Give Me Some Credit</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../../guide.html">User Guide</a></li>
+<li class="breadcrumb-item"><a class="nav-link" href="../costs.html"><span class="section-number">1. </span>Defining costs</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis"><span class="section-number">1.3. </span>Costs that differ per row</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="costs-that-differ-per-row">
+<span id="instance-based-cv"></span><h1><span class="section-number">1.3. </span>Costs that differ per row<a class="headerlink" href="#costs-that-differ-per-row" title="Link to this heading">#</a></h1>
+<p>When every row carries its own cost — a customer’s lifetime value, an applicant’s credit line — a
+simple train/test split is easy: pass the array to <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code> or the metric and you
+are done. Cross-validation is not, because each fold needs its own slice of that array, aligned
+with the rows in the fold. Passing the full array to a folded estimator silently misaligns costs
+and rows, and produces a plausible number that is wrong.</p>
+<p>scikit-learn solves this with <strong>metadata routing</strong>: you declare which methods want which extra
+arrays, and the cross-validator slices and delivers them.</p>
+<p><a class="reference internal" href="../../tutorial/06_pipeline.html"><span class="doc">Validating the Whole Thing</span></a> walks through the whole mechanism on a real dataset. This page is
+the reference: what to declare, on what, and the Empulse-specific parts.</p>
+<section id="enabling-routing">
+<h2><span class="section-number">1.3.1. </span>Enabling routing<a class="headerlink" href="#enabling-routing" title="Link to this heading">#</a></h2>
+<p>Metadata routing is an experimental scikit-learn feature and is off by default. Turn it on globally:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a>
+
+<a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.set_config.html#sklearn.set_config" title="sklearn.set_config"><span class="n">set_config</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or scope it to the block that needs it, so you do not change global state for the rest of the
+process:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a>
+
+<span class="k">with</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Not every cross-validation utility supports routing; scikit-learn keeps a
+<a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html#metadata-routing-models">list of the ones that do</a>.</p>
+</section>
+<section id="the-vocabulary">
+<h2><span class="section-number">1.3.2. </span>The vocabulary<a class="headerlink" href="#the-vocabulary" title="Link to this heading">#</a></h2>
+<p>A full explanation is in scikit-learn’s
+<a class="reference external" href="https://scikit-learn.org/stable/metadata_routing.html">user guide</a>, but the short version is
+enough to use Empulse:</p>
+<ul class="simple">
+<li><p>A <strong>requester</strong> is anything with a <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code>, <code class="docutils literal notranslate"><span class="pre">score</span></code> or <code class="docutils literal notranslate"><span class="pre">predict</span></code> method that
+can ask for extra arrays. It asks by calling a <code class="docutils literal notranslate"><span class="pre">set_*_request</span></code> method.</p></li>
+<li><p>A <strong>router</strong> is something like <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">cross_val_score</span></code></a> or
+<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">GridSearchCV</span></code></a> that receives arrays at the top level, splits them
+per fold, and hands each requester what it asked for.</p></li>
+</ul>
+<p>You declare requests once, then pass the arrays to the router’s <code class="docutils literal notranslate"><span class="pre">params</span></code> argument.</p>
+</section>
+<section id="what-can-be-requested">
+<h2><span class="section-number">1.3.3. </span>What can be requested<a class="headerlink" href="#what-can-be-requested" title="Link to this heading">#</a></h2>
+<p>The four cost names are always available:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.linear.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a>
+
+<span class="n">model</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.linear.cslogit.CSLogitClassifier"><span class="n">CSLogitClassifier</span></a><span class="p">()</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Business symbols are available too.</strong> This is the part that is easy to miss. When a model is
+built with a <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> as its <code class="docutils literal notranslate"><span class="pre">loss</span></code>, Empulse extends the model’s request
+signature at construction time with every symbol and alias that the metric’s cost matrix uses. A
+metric parameterised by <code class="docutils literal notranslate"><span class="pre">clv</span></code> and <code class="docutils literal notranslate"><span class="pre">accept_rate</span></code> therefore yields a model that can request
+exactly those:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a>
+
+<span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.metric.cost_matrix.CostMatrix"><span class="n">CostMatrix</span></a><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">'clv'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">'contact_cost'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+<a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">Metric</span></a><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.metric.strategies.cost_strategy.Cost"><span class="n">Cost</span></a><span class="p">())</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.metric.metric.Metric"><span class="n">expected_cost</span></a><span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is what makes it possible to cross-validate a model whose costs are derived from business
+parameters, rather than only one whose costs are four flat arrays.</p>
+</section>
+<section id="the-three-kinds-of-requester">
+<h2><span class="section-number">1.3.4. </span>The three kinds of requester<a class="headerlink" href="#the-three-kinds-of-requester" title="Link to this heading">#</a></h2>
+<p><strong>Models</strong> request on <code class="docutils literal notranslate"><span class="pre">fit</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Samplers</strong> request on <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/samplers.html#module-empulse.samplers" title="empulse.samplers"><span class="nn">empulse.samplers</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.cost_sampler.CostSensitiveSampler"><span class="n">CostSensitiveSampler</span></a>
+
+<span class="n">sampler</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.cost_sampler.CostSensitiveSampler"><span class="n">CostSensitiveSampler</span></a><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">set_fit_resample_request</span><span class="p">(</span>
+    <span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A sampler inside a pipeline needs imbalanced-learn’s
+<a class="reference external" href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html#imblearn.pipeline.Pipeline" title="(in imbalanced-learn v0.14.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>, not scikit-learn’s — the latter has no sampler step and
+will not pass the parameters through.</p>
+</div>
+<p><strong>Scorers</strong> request on <code class="docutils literal notranslate"><span class="pre">score</span></code>. A <a class="reference internal" href="../../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> is itself callable, so it can
+be wrapped directly with <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_scorer</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.metrics.html#module-sklearn.metrics" title="sklearn.metrics"><span class="nn">sklearn.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><span class="nn">empulse.metrics</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.metric.strategies.savings_strategy.Savings"><span class="n">Savings</span></a>
+
+<span class="n">savings</span> <span class="o">=</span> <span class="n">Metric</span><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.metric.strategies.savings_strategy.Savings"><span class="n">Savings</span></a><span class="p">())</span>
+
+<span class="n">scorer</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html#sklearn.metrics.make_scorer" title="sklearn.metrics.make_scorer"><span class="n">make_scorer</span></a><span class="p">(</span>
+    <span class="n">savings</span><span class="p">,</span>
+    <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span>
+    <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Set <code class="docutils literal notranslate"><span class="pre">greater_is_better</span></code> to match the strategy’s direction: <code class="docutils literal notranslate"><span class="pre">True</span></code> for
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> and the <a class="reference internal" href="../../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> family, <code class="docutils literal notranslate"><span class="pre">False</span></code> for
+<a class="reference internal" href="../../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> and <a class="reference internal" href="../../reference/generated/empulse.metrics.LogCost.html#empulse.metrics.LogCost" title="empulse.metrics.LogCost"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogCost</span></code></a>. Every metric exposes this as
+<code class="docutils literal notranslate"><span class="pre">metric.direction</span></code> if you would rather not hard-code it.</p>
+</section>
+<section id="putting-it-together">
+<h2><span class="section-number">1.3.5. </span>Putting it together<a class="headerlink" href="#putting-it-together" title="Link to this heading">#</a></h2>
+<p>With the requests declared, hand the arrays to the router once and it does the slicing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/index.html#module-numpy" title="numpy"><span class="nn">numpy</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.html#module-sklearn" title="sklearn"><span class="nn">sklearn</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.datasets.html#module-sklearn.datasets" title="sklearn.datasets"><span class="nn">sklearn.datasets</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.pipeline.html#module-sklearn.pipeline" title="sklearn.pipeline"><span class="nn">sklearn.pipeline</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a>
+<span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.preprocessing.html#module-sklearn.preprocessing" title="sklearn.preprocessing"><span class="nn">sklearn.preprocessing</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification" title="sklearn.datasets.make_classification"><span class="n">make_classification</span></a><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">clv</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://numpy.org/doc/stable/reference/random/generator.html#numpy.random.default_rng" title="numpy.random.default_rng"><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span></a><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#len" title="len"><span class="nb">len</span></a><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<span class="k">with</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="sklearn.config_context"><span class="n">config_context</span></a><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+        <span class="n">savings</span><span class="p">,</span> <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span> <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipeline</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">Pipeline</span></a><span class="p">([(</span><span class="s1">'scaler'</span><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html#sklearn.preprocessing.StandardScaler" title="sklearn.preprocessing._data.StandardScaler"><span class="n">StandardScaler</span></a><span class="p">()),</span> <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <span class="n">model</span><span class="p">)])</span>
+    <span class="n">scores</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score" title="sklearn.model_selection.cross_val_score"><span class="n">cross_val_score</span></a><span class="p">(</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline" title="sklearn.pipeline.Pipeline"><span class="n">pipeline</span></a><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s1">'clv'</span><span class="p">:</span> <span class="n">clv</span><span class="p">},</span> <span class="n">cv</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">clv</span></code> now reaches both the model’s <code class="docutils literal notranslate"><span class="pre">fit</span></code> and the scorer’s <code class="docutils literal notranslate"><span class="pre">score</span></code>, sliced to each fold.</p>
+<p>Hyperparameter search works the same way:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/api/sklearn.model_selection.html#module-sklearn.model_selection" title="sklearn.model_selection"><span class="nn">sklearn.model_selection</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">,</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">StratifiedKFold</span></a>
+
+<span class="k">with</span> <span class="n">config_context</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">scorer</span> <span class="o">=</span> <span class="n">make_scorer</span><span class="p">(</span>
+        <span class="n">savings</span><span class="p">,</span> <span class="n">response_method</span><span class="o">=</span><span class="s1">'predict_proba'</span><span class="p">,</span> <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">set_score_request</span><span class="p">(</span><span class="n">clv</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s1">'scaler'</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span> <span class="p">(</span><span class="s1">'model'</span><span class="p">,</span> <span class="n">model</span><span class="p">)])</span>
+    <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">search</span></a> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV" title="sklearn.model_selection._search.GridSearchCV"><span class="n">GridSearchCV</span></a><span class="p">(</span>
+        <span class="n">pipeline</span><span class="p">,</span>
+        <span class="p">{</span><span class="s1">'model__C'</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]},</span>
+        <span class="n">scoring</span><span class="o">=</span><span class="n">scorer</span><span class="p">,</span>
+        <span class="n">cv</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold" title="sklearn.model_selection._split.StratifiedKFold"><span class="n">StratifiedKFold</span></a><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="n">clv</span><span class="p">)</span>
+
+<a class="sphinx-codeautolink-a" href="https://docs.python.org/3/builtins/functions.html#print" title="print"><span class="nb">print</span></a><span class="p">(</span><span class="n">search</span><span class="o">.</span><span class="n">best_params_</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Because the business parameters are ordinary routed metadata, they can be swept like any other
+value — see <a class="reference internal" href="../../tutorial/06_pipeline.html"><span class="doc">Validating the Whole Thing</span></a> for why that is a sensitivity analysis rather than an
+optimisation.</p>
+</section>
+<section id="aliased-metrics">
+<h2><span class="section-number">1.3.6. </span>Aliased metrics<a class="headerlink" href="#aliased-metrics" title="Link to this heading">#</a></h2>
+<p>If the cost matrix registers aliases, request the <strong>alias</strong>, not the underlying symbol — that is
+the name the metric will look for:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">aliased_matrix</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">CostMatrix</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">'v'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">'c'</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">({</span><span class="s1">'lifetime_value'</span><span class="p">:</span> <span class="s1">'v'</span><span class="p">,</span> <span class="s1">'contact_cost'</span><span class="p">:</span> <span class="s1">'c'</span><span class="p">})</span>
+    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">aliased_metric</span> <span class="o">=</span> <span class="n">Metric</span><span class="p">(</span><span class="n">aliased_matrix</span><span class="p">,</span> <span class="n">Cost</span><span class="p">())</span>
+
+<span class="k">with</span> <span class="n">config_context</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">aliased_metric</span><span class="p">)</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span><span class="n">lifetime_value</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Requesting both a symbol and one of its aliases raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> rather than letting one
+silently win. Meta-estimators that wrap another estimator keep the two apart, so a parameter
+requested by the outer metric does not leak into the inner estimator’s <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+</section>
+<section id="costs-at-predict-time">
+<h2><span class="section-number">1.3.7. </span>Costs at predict time<a class="headerlink" href="#costs-at-predict-time" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> and <a class="reference internal" href="../../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a> are
+unusual in that they can take costs at <code class="docutils literal notranslate"><span class="pre">predict</span></code> as well as at <code class="docutils literal notranslate"><span class="pre">fit</span></code>. The threshold is then
+recomputed from the new costs without refitting, which lets one fitted model serve several cost
+scenarios:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="../../reference/models.html#module-empulse.models" title="empulse.models"><span class="nn">empulse.models</span></a><span class="w"> </span><span class="kn">import</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.threshold.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a>
+
+<span class="n">inner</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">()</span><span class="o">.</span><span class="n">set_fit_request</span><span class="p">(</span>
+    <span class="n">tp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tn_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">decider</span> <span class="o">=</span> <a class="sphinx-codeautolink-a" href="../../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.threshold.csdecision_rule.CSThresholdClassifier"><span class="n">CSThresholdClassifier</span></a><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">inner</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="n">balanced</span> <span class="o">=</span> <span class="n">decider</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="n">cautious</span> <span class="o">=</span> <span class="n">decider</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">fp_cost</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fn_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that all four cost names are declared on the inner estimator, not just the two actually
+passed. Requests are per-name, and a name that is neither requested nor explicitly refused raises
+<code class="docutils literal notranslate"><span class="pre">UnsetMetadataPassedError</span></code> as soon as a router tries to deliver it.</p>
+<p>Inside a router this is <code class="docutils literal notranslate"><span class="pre">set_predict_request</span></code>, mirroring the <code class="docutils literal notranslate"><span class="pre">fit</span></code> case. See
+<a class="reference internal" href="../deciding/thresholds.html#threshold-tuning"><span class="std std-ref">Threshold Tuning</span></a> for what the two classifiers do with the costs.</p>
+</section>
+<section id="parallelism">
+<h2><span class="section-number">1.3.8. </span>Parallelism<a class="headerlink" href="#parallelism" title="Link to this heading">#</a></h2>
+<p>Metric objects — including ones built from symbolic cost matrices and stochastic parameters — are
+picklable, so <code class="docutils literal notranslate"><span class="pre">n_jobs</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> on a pipeline, a grid search or an ensemble works normally. There is
+no need to rebuild the metric inside each worker.</p>
+</section>
+<section id="turning-routing-off-again">
+<h2><span class="section-number">1.3.9. </span>Turning routing off again<a class="headerlink" href="#turning-routing-off-again" title="Link to this heading">#</a></h2>
+<p>If you enabled routing globally rather than with <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.config_context.html#sklearn.config_context" title="(in scikit-learn v1.9)"><code class="xref py py-func docutils literal notranslate"><span class="pre">config_context</span></code></a>, turn it off when
+you are done. It is process-wide state, and leaving it on changes how unrelated estimators
+interpret extra <code class="docutils literal notranslate"><span class="pre">fit</span></code> arguments:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">set_config</span><span class="p">(</span><span class="n">enable_metadata_routing</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="where-next">
+<h2><span class="section-number">1.3.10. </span>Where next<a class="headerlink" href="#where-next" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../tutorial/06_pipeline.html"><span class="doc">Validating the Whole Thing</span></a> — the same mechanism worked through on a real dataset.</p></li>
+<li><p><a class="reference internal" href="specifying_costs.html#specifying-costs"><span class="std std-ref">Handing costs to an estimator</span></a> — the rules for costs outside a cross-validation loop.</p></li>
+<li><p><a class="reference internal" href="../preprocessing/cost_sampling.html#cost-sampling"><span class="std std-ref">Cost-Proportionate Sampling</span></a> — the sampler side in more detail.</p></li>
+</ul>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="specifying_costs.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title"><span class="section-number">1.2. </span>Handing costs to an estimator</p>
+</div>
+</a>
+<a class="right-next" href="recipes.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title"><span class="section-number">1.4. </span>Worked cost matrices</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#enabling-routing">1.3.1. Enabling routing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-vocabulary">1.3.2. The vocabulary</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-can-be-requested">1.3.3. What can be requested</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-three-kinds-of-requester">1.3.4. The three kinds of requester</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#putting-it-together">1.3.5. Putting it together</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aliased-metrics">1.3.6. Aliased metrics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#costs-at-predict-time">1.3.7. Costs at predict time</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parallelism">1.3.8. Parallelism</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#turning-routing-off-again">1.3.9. Turning routing off again</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-next">1.3.10. Where next</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

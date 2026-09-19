@@ -1,0 +1,1087 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Changelog — Empulse 0.12.0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet"/>
+<link href="../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/custom.css?v=c8a9ccb9" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<link as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" rel="preload"/>
+<script src="../_static/documentation_options.js?v=61ccb1f1"></script>
+<script src="../_static/doctools.js?v=9bcbadda"></script>
+<script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+<script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../_static/copybutton.js?v=f281be69"></script>
+<script src="../_static/design-tabs.js?v=f930bc37"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'project/changelog';</script>
+<script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.12.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+<script src="../_static/js/custom-icon.js?v=d6c5daaf"></script>
+<link href="../_static/favicon.ico" rel="icon"/>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="contributing.html" rel="next" title="Contributing"/>
+<link href="../project_info.html" rel="prev" title="Project Information"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="" name="docsearch:version"/>
+</head>
+<body data-bs-root-margin="0px 0px -60%" data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-default-mode="" data-offset="180">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../index.html">
+<img alt="empulse homepage" class="logo__image only-light" src="../_static/empulse_logo_light.png"/>
+<img alt="empulse homepage" class="logo__image only-dark pst-js-only" src="../_static/empulse_logo_dark.png"/>
+</a></div>
+</div>
+<div class="navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-2" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-2" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-2" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-2" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../tutorial.html">
+    Tutorial
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../guide.html">
+    User Guide
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="../project_info.html">
+    Project Information
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" data-bs-placement="bottom" data-bs-title="Color mode" data-bs-toggle="tooltip">
+<i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+</button></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ShimantoRahman/empulse" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i>
+<span class="sr-only">GitHub</span></a>
+</li>
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://pypi.org/project/empulse/" rel="noopener" target="_blank" title="PyPI"><i aria-hidden="true" class="fa-custom fa-pypi fa-lg"></i>
+<span class="sr-only">PyPI</span></a>
+</li>
+</ul></div>
+<div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+<button aria-controls="pst-version-switcher-list-3" aria-haspopup="listbox" aria-label="Version switcher list" class="version-switcher__button btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" id="pst-version-switcher-button-3" type="button">
+    Choose version  <!-- this text may get changed later by javascript -->
+<span class="caret"></span>
+</button>
+<div aria-labelledby="pst-version-switcher-button-3" class="version-switcher__menu dropdown-menu list-group-flush py-0" id="pst-version-switcher-list-3" role="listbox">
+<!-- dropdown will be populated by javascript on page load -->
+</div>
+</div></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="../project_info.html">Project Information</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis">Changelog</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<section id="unreleased">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/compare/0.12.0...main">Unreleased</a><a class="headerlink" href="#unreleased" title="Link to this heading">#</a></h2>
+</section>
+<section id="id1">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.12.0">0.12.0</a> (19-09-2026)<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<section id="metrics">
+<h3>Metrics<a class="headerlink" href="#metrics" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric" title="empulse.metrics.MixtureMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureMetric</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.MixtureComponent.html#empulse.metrics.MixtureComponent" title="empulse.metrics.MixtureComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureComponent</span></code></a>, which express a weighted linear combination of
+<a class="reference internal" href="../reference/generated/empulse.metrics.BaseMetric.html#empulse.metrics.BaseMetric" title="empulse.metrics.BaseMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseMetric</span></code></a> instances. This is exact, by linearity of expectation,
+and is how <a class="reference internal" href="../reference/generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empcs_score</span></code></a> now expresses a distribution that mixes a
+point mass with a continuous piece — something a single <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>
+cannot express, since SymPy cannot symbolically integrate over such a distribution.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.BaseMetric.html#empulse.metrics.BaseMetric" title="empulse.metrics.BaseMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseMetric</span></code></a>, the abstraction every <code class="docutils literal notranslate"><span class="pre">loss</span></code>
+parameter throughout the package now accepts. <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric" title="empulse.metrics.MixtureMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureMetric</span></code></a> both implement it, so either can be passed
+interchangeably as a model’s training objective.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added the <a class="reference internal" href="../reference/generated/empulse.metrics.LogCost.html#empulse.metrics.LogCost" title="empulse.metrics.LogCost"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogCost</span></code></a> strategy for building custom expected
+log cost (weighted cross-entropy) metrics. <a class="reference internal" href="../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a>
+is now built from it.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Metrics built with the <a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> strategies now accept stochastic (<code class="docutils literal notranslate"><span class="pre">sympy.stats</span></code>) cost
+parameters, reducing them to their mean. Previously this raised
+<code class="docutils literal notranslate"><span class="pre">NotImplementedError:</span> <span class="pre">Random</span> <span class="pre">variables</span> <span class="pre">are</span> <span class="pre">not</span> <span class="pre">supported</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">savings</span> <span class="pre">metric.</span></code> at
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> construction time.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.constrain" title="empulse.metrics.CostMatrix.constrain"><code class="xref py py-meth docutils literal notranslate"><span class="pre">constrain</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric.constrain" title="empulse.metrics.MixtureMetric.constrain"><code class="xref py py-meth docutils literal notranslate"><span class="pre">constrain</span></code></a>, which declare the values a cost-matrix
+parameter is allowed to take. A parameter can be given inclusive <code class="docutils literal notranslate"><span class="pre">lower</span></code>/<code class="docutils literal notranslate"><span class="pre">upper</span></code> bounds, or a
+callable can express a condition spanning several parameters at once
+(<code class="docutils literal notranslate"><span class="pre">constrain(lambda</span> <span class="pre">p:</span> <span class="pre">p['clv']</span> <span class="pre">&gt;</span> <span class="pre">p['incentive_cost'],</span> <span class="pre">message=...)</span></code>).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.Profit.html#empulse.metrics.Profit" title="empulse.metrics.Profit"><code class="xref py py-class docutils literal notranslate"><span class="pre">Profit</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.MinCost.html#empulse.metrics.MinCost" title="empulse.metrics.MinCost"><code class="xref py py-class docutils literal notranslate"><span class="pre">MinCost</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.EmpiricalMinCost.html#empulse.metrics.EmpiricalMinCost" title="empulse.metrics.EmpiricalMinCost"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmpiricalMinCost</span></code></a>, the sign-flipped siblings of
+<a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.EmpiricalMaxProfit.html#empulse.metrics.EmpiricalMaxProfit" title="empulse.metrics.EmpiricalMaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmpiricalMaxProfit</span></code></a>. Each computes the same quantity as its partner
+and reports it with the opposite sign, so a cost matrix can be read as costs to minimize or
+as profits to maximize. The choice is presentational: the optimal threshold and rate are
+unchanged, and models fit identically on either member of a pair.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.EmpiricalMaxProfit.html#empulse.metrics.EmpiricalMaxProfit" title="empulse.metrics.EmpiricalMaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmpiricalMaxProfit</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.AUEPC.html#empulse.metrics.AUEPC" title="empulse.metrics.AUEPC"><code class="xref py py-class docutils literal notranslate"><span class="pre">AUEPC</span></code></a>
+strategies for building custom metrics that compute the empirical (convex-hull-based) maximum
+profit and the area under the empirical profit curve, respectively.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now warns (<code class="docutils literal notranslate"><span class="pre">UserWarning</span></code>) at construction
+when the cost matrix has no terms, or its terms cancel to exactly zero — such a metric always
+evaluates to <code class="docutils literal notranslate"><span class="pre">0.0</span></code> regardless of its parameters.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now warns when called with a parameter its
+cost matrix does not use, instead of silently ignoring it — catching a typo’d keyword
+argument. <code class="docutils literal notranslate"><span class="pre">sample_weight</span></code> and strategy-specific extras (e.g. <a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a>’
+<code class="docutils literal notranslate"><span class="pre">baseline</span></code>) are exempt.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Multi-letter symbols now render upright in the LaTeX representations of
+<a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>, so a product such as
+<code class="docutils literal notranslate"><span class="pre">clv</span> <span class="pre">*</span> <span class="pre">r</span></code> reads as two variables rather than as one named <code class="docutils literal notranslate"><span class="pre">clvr</span></code>. Greek names such as
+<code class="docutils literal notranslate"><span class="pre">gamma</span></code> are unaffected.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Efficiency</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> with <code class="docutils literal notranslate"><span class="pre">integration_method='auto'</span></code> now uses
+quasi-Monte Carlo for any number of stochastic variables whose distributions can be sampled,
+rather than only above two. Two stochastic variables used to go to nested quadrature.
+Pass <code class="docutils literal notranslate"><span class="pre">random_state</span></code> for a result reproducible across <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instances;
+repeated calls on one instance were already identical.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Efficiency</span></span>  Deterministic <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> metrics (a profit function
+polynomial in the stochastic variable) no longer compute the ROC convex hull, and evaluate
+the profit function vectorized over all operating points instead of in a Python loop.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Quasi-Monte Carlo integration now covers eleven more distributions:
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.BoundedPareto" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">BoundedPareto</span></code></a>, <a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Dagum" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Dagum</span></code></a>,
+<code class="docutils literal notranslate"><span class="pre">ExponentialPower</span></code> (not published in SymPy’s own documentation, so no link is possible),
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Frechet" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Frechet</span></code></a>,
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Gompertz" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Gompertz</span></code></a>, <a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.LogLogistic" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">LogLogistic</span></code></a>,
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.RaisedCosine" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">RaisedCosine</span></code></a>, <a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Rayleigh" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Rayleigh</span></code></a>,
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Reciprocal" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Reciprocal</span></code></a>, <a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.Weibull" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">Weibull</span></code></a> and
+<a class="reference external" href="https://docs.sympy.org/latest/modules/stats.html#sympy.stats.WignerSemicircle" title="(in SymPy v1.14.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">WignerSemicircle</span></code></a>. These previously fell through to plain Monte Carlo, which
+is around a thousand times less accurate for the same sampling budget.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_rate" title="empulse.metrics.Metric.optimal_rate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_rate</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_threshold" title="empulse.metrics.Metric.optimal_threshold"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_threshold</span></code></a> now always compute the exact
+EMP when one stochastic variable is present.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> accepts profit functions of any shape in the
+stochastic variable. Previously a cost matrix using <code class="xref py py-func docutils literal notranslate"><span class="pre">sympy.exp</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">sympy.log</span></code> or a
+square root raised <code class="docutils literal notranslate"><span class="pre">PolynomialError</span></code> from inside SymPy when the <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>
+was constructed.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="docutils literal notranslate"><span class="pre">check_input</span></code> has been removed from every prebuilt metric that is now a
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>/<a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric" title="empulse.metrics.MixtureMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureMetric</span></code></a> instance
+(<a class="reference internal" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.empa_score.html#empulse.metrics.empa_score" title="empulse.metrics.empa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.mpa_score.html#empulse.metrics.mpa_score" title="empulse.metrics.mpa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpa_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empcs_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.mpcs_score.html#empulse.metrics.mpcs_score" title="empulse.metrics.mpcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpcs_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.max_profit_score.html#empulse.metrics.max_profit_score" title="empulse.metrics.max_profit_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">max_profit_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_churn</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss_acquisition.html#empulse.metrics.expected_cost_loss_acquisition" title="empulse.metrics.expected_cost_loss_acquisition"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_acquisition</span></code></a>; <a class="reference internal" href="../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss" title="empulse.metrics.cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">cost_loss</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a> are unaffected and keep it). These prebuilt metrics now
+reject parameter values that put them outside their mathematical domain via
+<a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.constrain" title="empulse.metrics.CostMatrix.constrain"><code class="xref py py-meth docutils literal notranslate"><span class="pre">constrain</span></code></a>, instead of returning a meaningless number, but
+the enforced domain is not identical to the one 0.11.1’s <code class="docutils literal notranslate"><span class="pre">check_input=True</span></code> enforced.
+<a class="reference internal" href="../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a> has also lost its <code class="docutils literal notranslate"><span class="pre">normalize</span></code> parameter (it defaulted
+to <code class="docutils literal notranslate"><span class="pre">True</span></code>, so scores computed with the default are unaffected).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">alpha_growth</span></code> and <code class="docutils literal notranslate"><span class="pre">alpha_max</span></code> constructor
+parameters have been removed (previous defaults <code class="docutils literal notranslate"><span class="pre">1.1</span></code> and <code class="docutils literal notranslate"><span class="pre">100.0</span></code>); passing either now
+raises a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>. <code class="docutils literal notranslate"><span class="pre">alpha</span></code> is now a constant temperature, and the annealing schedule
+that <code class="docutils literal notranslate"><span class="pre">alpha_growth</span></code>/<code class="docutils literal notranslate"><span class="pre">alpha_max</span></code> used to control is now expressed with an <code class="docutils literal notranslate"><span class="pre">alpha_schedule</span></code>
+on the optimizer (see <em>Optimizers</em> below).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  The <a class="reference internal" href="../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy" title="empulse.metrics.MetricStrategy"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetricStrategy</span></code></a> extension API used to write custom
+strategies has changed, which will break third-party subclasses: <code class="docutils literal notranslate"><span class="pre">logit_objective()</span></code> now
+returns a <a class="reference internal" href="../reference/generated/empulse.metrics.LogitObjective.html#empulse.metrics.LogitObjective" title="empulse.metrics.LogitObjective"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogitObjective</span></code></a> (a new public ABC exposing <code class="docutils literal notranslate"><span class="pre">logit_loss</span></code>,
+<code class="docutils literal notranslate"><span class="pre">logit_gradient</span></code>, <code class="docutils literal notranslate"><span class="pre">logit_loss_gradient</span></code> and <code class="docutils literal notranslate"><span class="pre">logit_gradient_steps</span></code>) instead of a bare
+tuple; <code class="docutils literal notranslate"><span class="pre">prepare_logit_objective()</span></code> and <code class="docutils literal notranslate"><span class="pre">build_logit_objective()</span></code> have been removed; and a
+new <code class="docutils literal notranslate"><span class="pre">requires_dynamic_boost_objective</span></code> property controls whether
+<a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> uses the dynamic (per-iteration) or static
+boosting gradient path for the strategy.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="docutils literal notranslate"><span class="pre">empc</span></code>, <code class="docutils literal notranslate"><span class="pre">mpc</span></code>, <code class="docutils literal notranslate"><span class="pre">empa</span></code>, <code class="docutils literal notranslate"><span class="pre">mpa</span></code>, <code class="docutils literal notranslate"><span class="pre">empcs</span></code>, <code class="docutils literal notranslate"><span class="pre">mpcs</span></code>, <code class="docutils literal notranslate"><span class="pre">empb</span></code>, <code class="docutils literal notranslate"><span class="pre">make_objective_churn</span></code>,
+<code class="docutils literal notranslate"><span class="pre">make_objective_acquisition</span></code>, and their supporting <code class="docutils literal notranslate"><span class="pre">AECObjectiveChurn</span></code>, <code class="docutils literal notranslate"><span class="pre">AECMetricChurn</span></code>,
+<code class="docutils literal notranslate"><span class="pre">AECObjectiveAcquisition</span></code>, and <code class="docutils literal notranslate"><span class="pre">AECMetricAcquisition</span></code> classes have been removed.
+<a class="reference internal" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score" title="empulse.metrics.mpc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpc_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.empa_score.html#empulse.metrics.empa_score" title="empulse.metrics.empa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.mpa_score.html#empulse.metrics.mpa_score" title="empulse.metrics.mpa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpa_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empcs_score</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.mpcs_score.html#empulse.metrics.mpcs_score" title="empulse.metrics.mpcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">mpcs_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a>, and
+<a class="reference internal" href="../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a> are now prebuilt <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>/
+<a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric" title="empulse.metrics.MixtureMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureMetric</span></code></a> instances instead of hand-written functions.
+The decision threshold (previously returned alongside the score by the removed
+<code class="docutils literal notranslate"><span class="pre">empc</span></code>/<code class="docutils literal notranslate"><span class="pre">mpc</span></code>/<code class="docutils literal notranslate"><span class="pre">empa</span></code>/<code class="docutils literal notranslate"><span class="pre">mpa</span></code>/<code class="docutils literal notranslate"><span class="pre">empcs</span></code>/<code class="docutils literal notranslate"><span class="pre">mpcs</span></code>/<code class="docutils literal notranslate"><span class="pre">empb</span></code> functions) can still be obtained
+with the <code class="docutils literal notranslate"><span class="pre">.optimal_rate(...)</span></code> method on the corresponding <code class="docutils literal notranslate"><span class="pre">*_score</span></code> instance.
+Training a boosting model directly on any of these metrics (previously done through
+<code class="docutils literal notranslate"><span class="pre">make_objective_churn</span></code>/<code class="docutils literal notranslate"><span class="pre">make_objective_acquisition</span></code>) is now done by passing the metric
+as the <code class="docutils literal notranslate"><span class="pre">loss</span></code> argument to <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss_churn.html#empulse.metrics.expected_cost_loss_churn" title="empulse.metrics.expected_cost_loss_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_churn</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss_acquisition.html#empulse.metrics.expected_cost_loss_acquisition" title="empulse.metrics.expected_cost_loss_acquisition"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss_acquisition</span></code></a> now always return the mean cost per
+instance (previously they returned the summed cost by default, with an optional
+<code class="docutils literal notranslate"><span class="pre">normalize=True</span></code> argument to switch to the mean).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.empa_score.html#empulse.metrics.empa_score" title="empulse.metrics.empa_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empa_score</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">beta</span></code> parameter now represents the <em>scale</em> of the
+Gamma-distributed contribution (mean = <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">*</span> <span class="pre">beta</span></code>), instead of the <em>rate</em>
+(mean = <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">/</span> <span class="pre">beta</span></code>) used by the previous <code class="docutils literal notranslate"><span class="pre">empa</span></code>/<code class="docutils literal notranslate"><span class="pre">empa_score</span></code> functions. The default
+value has been adjusted accordingly, so calls that rely on the default are unaffected; only
+explicit non-default <code class="docutils literal notranslate"><span class="pre">beta=</span></code> overrides behave differently.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  The generic (domain-agnostic) native functions <code class="docutils literal notranslate"><span class="pre">max_profit</span></code>, <code class="docutils literal notranslate"><span class="pre">make_objective_aec</span></code>, and
+the supporting <code class="docutils literal notranslate"><span class="pre">AECObjective</span></code> and <code class="docutils literal notranslate"><span class="pre">AECMetric</span></code> classes have been removed.
+<a class="reference internal" href="../reference/generated/empulse.metrics.max_profit_score.html#empulse.metrics.max_profit_score" title="empulse.metrics.max_profit_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">max_profit_score</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a>, and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>
+are now prebuilt <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instances instead of hand-written functions
+(<a class="reference internal" href="../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss" title="empulse.metrics.cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">cost_loss</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a>, the hard-label
+variants that auto-threshold continuous scores, are unaffected and remain plain functions, since
+there is no <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>/<a class="reference internal" href="../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy" title="empulse.metrics.MetricStrategy"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetricStrategy</span></code></a> equivalent
+for that behavior). The decision threshold (previously returned alongside the score by the
+removed <code class="docutils literal notranslate"><span class="pre">max_profit</span></code> function) can still be obtained with the <code class="docutils literal notranslate"><span class="pre">.optimal_rate(...)</span></code> method on
+<a class="reference internal" href="../reference/generated/empulse.metrics.max_profit_score.html#empulse.metrics.max_profit_score" title="empulse.metrics.max_profit_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">max_profit_score</span></code></a>. Training a boosting or logistic-regression model
+directly on any of these metrics (previously done through <code class="docutils literal notranslate"><span class="pre">make_objective_aec</span></code>) is now done by
+passing the metric as the <code class="docutils literal notranslate"><span class="pre">loss</span></code> argument to a cost-sensitive model, e.g.
+<a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> or <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.max_profit_score.html#empulse.metrics.max_profit_score" title="empulse.metrics.max_profit_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">max_profit_score</span></code></a> now takes <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">tn_cost</span></code> parameters
+(costs) instead of the previous native <code class="docutils literal notranslate"><span class="pre">max_profit</span></code>/<code class="docutils literal notranslate"><span class="pre">max_profit_score</span></code> functions’
+<code class="docutils literal notranslate"><span class="pre">tp_benefit</span></code>/<code class="docutils literal notranslate"><span class="pre">tn_benefit</span></code> parameters (benefits): <code class="docutils literal notranslate"><span class="pre">tp_cost</span> <span class="pre">=</span> <span class="pre">-tp_benefit</span></code> and
+<code class="docutils literal notranslate"><span class="pre">tn_cost</span> <span class="pre">=</span> <span class="pre">-tn_benefit</span></code>. <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> are unchanged. This matches the parameter
+naming already used throughout the rest of the package (e.g. the cost-sensitive models’ default
+loss).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a>
+now always return the mean cost per instance (previously they returned the summed cost by
+default, with an optional <code class="docutils literal notranslate"><span class="pre">normalize=True</span></code> argument to switch to the mean). This also affects
+the default (unweighted-<code class="docutils literal notranslate"><span class="pre">loss</span></code>) out-of-bag weighted-voting behavior of
+<a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a>,
+which use <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a> as their fallback per-estimator weight.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> now rejects a string term that uses a name SymPy
+reserves for its own objects, instead of quietly substituting that object. <code class="docutils literal notranslate"><span class="pre">add_fp_cost('E')</span></code>
+used to become Euler’s number, so the term disappeared from the metric’s parameter list and the
+metric returned a plausible but meaningless score that no caller could influence; <code class="docutils literal notranslate"><span class="pre">'I'</span></code> made
+the cost complex, and <code class="docutils literal notranslate"><span class="pre">'gamma'</span></code>/<code class="docutils literal notranslate"><span class="pre">'beta'</span></code> raised a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> about <code class="docutils literal notranslate"><span class="pre">FunctionClass</span></code> from
+inside SymPy.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now raises if the cost matrix contains two distinct
+symbols that share a name, naming both spellings. <code class="docutils literal notranslate"><span class="pre">sympy.Symbol('clv')</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sympy.Symbol('clv',</span> <span class="pre">positive=True)</span></code> are different variables to SymPy and do not cancel, and a
+term given as a string always produces the assumption-free one. Mixing them used to surface as
+<code class="docutils literal notranslate"><span class="pre">SyntaxError:</span> <span class="pre">duplicate</span> <span class="pre">argument</span> <span class="pre">'clv'</span> <span class="pre">in</span> <span class="pre">function</span> <span class="pre">definition</span></code> pointing at SymPy’s generated
+source.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Lambdified expressions now bind their arguments in a deterministic order. The internal
+<code class="docutils literal notranslate"><span class="pre">PicklableLambda</span></code> used to derive that order from <code class="docutils literal notranslate"><span class="pre">list(expression.free_symbols)</span></code> — a set,
+whose iteration order is process-dependent under Python’s hash randomization — and now sorts by
+symbol name instead. This affects any metric whose expression is lambdified without an
+explicit variable list.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> now returns the correct expected maximum profit when
+the profit function is a polynomial of degree two or higher in the stochastic variable.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  The LaTeX rendering of a <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> metric (shown by
+<code class="docutils literal notranslate"><span class="pre">metric._repr_latex_()</span></code>, e.g. in a notebook) had the wrong sign on its false-positive and
+false-negative terms: it negated the true-positive and true-negative benefits but left the
+costs untouched, so the rendered formula was neither the profit nor the cost. It now renders
+the profit being maximized. Only the displayed formula was affected; the computed metric
+value was always correct.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score" title="empulse.metrics.empb_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empb_score</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score" title="empulse.metrics.auepc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">auepc_score</span></code></a> only
+incurring the contact cost for churners who accepted the retention incentive. The contact cost
+is now incurred for every contacted churner, whether or not they accept; only the retention
+benefit net of the incentive cost remains contingent on acceptance.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>’s (and the
+<a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> strategy’s) <code class="docutils literal notranslate"><span class="pre">baseline='prior'</span></code> option: it previously computed
+the baseline cost by hard-thresholding the constant prior probability (via the same logic as
+<a class="reference internal" href="../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss" title="empulse.metrics.cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">cost_loss</span></code></a>), which usually made it silently degenerate to the same result
+as <code class="docutils literal notranslate"><span class="pre">baseline='zero_one'</span></code>/<code class="docutils literal notranslate"><span class="pre">'one'</span></code>. It now correctly evaluates the expected cost of predicting
+the prior probability of the majority or minority class, whichever is cheaper, as documented.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> no longer shares mutable strategy state when the same
+<a class="reference internal" href="../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy" title="empulse.metrics.MetricStrategy"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetricStrategy</span></code></a> instance (e.g. a configured
+<a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a>) is passed to more than one <code class="docutils literal notranslate"><span class="pre">Metric</span></code>. Previously, building
+a second <code class="docutils literal notranslate"><span class="pre">Metric</span></code> from an already-used strategy instance silently rebuilt that strategy in
+place, so the first <code class="docutils literal notranslate"><span class="pre">Metric</span></code> would start returning values computed from the second metric’s
+cost matrix instead of its own. Each <code class="docutils literal notranslate"><span class="pre">Metric</span></code> now builds and owns an independent copy of the
+strategy it is given.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> no longer stays linked to the mutable
+<a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> it was constructed from. Previously, modifying the
+<code class="docutils literal notranslate"><span class="pre">CostMatrix</span></code> object after building a <code class="docutils literal notranslate"><span class="pre">Metric</span></code> from it silently desynchronized the metric’s
+advertised cost expressions (e.g. <code class="docutils literal notranslate"><span class="pre">metric.fn_cost</span></code>) from what it actually computed, so a
+parameter the metric claimed to depend on could be silently ignored when scoring. <code class="docutils literal notranslate"><span class="pre">Metric</span></code> now
+takes an independent copy of its cost matrix at construction time.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> at construction time if the
+cost matrix uses a symbol name or alias reserved for internal use (<code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code>, <code class="docutils literal notranslate"><span class="pre">F_0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">F_1</span></code>, <code class="docutils literal notranslate"><span class="pre">pi_0</span></code>, <code class="docutils literal notranslate"><span class="pre">pi_1</span></code>, <code class="docutils literal notranslate"><span class="pre">N</span></code>, <code class="docutils literal notranslate"><span class="pre">i</span></code>). Previously, a colliding symbol name was either
+silently fused with the identically-named internal variable (e.g. a user symbol named <code class="docutils literal notranslate"><span class="pre">F_0</span></code> in
+a <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> metric), producing a wrong score with no warning, or raised
+a confusing internal <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> only once the metric was called (e.g. a symbol named <code class="docutils literal notranslate"><span class="pre">y</span></code> or
+<code class="docutils literal notranslate"><span class="pre">s</span></code>).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when called with both a
+symbol’s own name and one of its aliases (or with two different aliases for the same symbol).
+Previously, whichever keyword argument was seen last silently won, so the computed score
+depended on the order the keyword arguments happened to be passed in.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> at construction time if an
+alias’s target, or a <a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.set_default" title="empulse.metrics.CostMatrix.set_default"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_default</span></code></a> parameter name, does not
+match any symbol used in the cost matrix. This also catches the ordering footgun documented on
+<a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix.set_default" title="empulse.metrics.CostMatrix.set_default"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_default</span></code></a>, where a default keyed by an alias name that was
+set <em>before</em> the alias was registered used to be silently stored under that raw (untranslated)
+name and then silently ignored, instead of ever being applied.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now validates <code class="docutils literal notranslate"><span class="pre">y_true</span></code>/<code class="docutils literal notranslate"><span class="pre">y_score</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> now raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming the offending
+parameter when an instance-dependent (array-like) <code class="docutils literal notranslate"><span class="pre">cost_matrix</span></code> parameter’s length doesn’t
+match <code class="docutils literal notranslate"><span class="pre">y_true</span></code>/<code class="docutils literal notranslate"><span class="pre">y_score</span></code> and isn’t a single value broadcastable to every sample. Previously
+a length mismatch surfaced as an unrelated numpy broadcasting error, e.g. <code class="docutils literal notranslate"><span class="pre">operands</span> <span class="pre">could</span> <span class="pre">not</span>
+<span class="pre">be</span> <span class="pre">broadcast</span> <span class="pre">together</span> <span class="pre">with</span> <span class="pre">shapes</span> <span class="pre">(3,)</span> <span class="pre">(5,)</span></code>, that didn’t say which parameter was wrong.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_threshold" title="empulse.metrics.Metric.optimal_threshold"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Metric.optimal_threshold()</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_rate" title="empulse.metrics.Metric.optimal_rate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_rate</span></code></a> now raise a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when the cost matrix is
+degenerate for the given parameters (<code class="docutils literal notranslate"><span class="pre">fp_cost</span> <span class="pre">+</span> <span class="pre">tn_benefit</span> <span class="pre">+</span> <span class="pre">fn_cost</span> <span class="pre">+</span> <span class="pre">tp_benefit</span></code> evaluates
+to 0, making the optimal threshold undefined).</p></li>
+</ul>
+</section>
+<section id="models">
+<h3>Models<a class="headerlink" href="#models" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.models.ProfMPMClassifier.html#empulse.models.ProfMPMClassifier" title="empulse.models.ProfMPMClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfMPMClassifier</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.ProfMEMPMClassifier.html#empulse.models.ProfMEMPMClassifier" title="empulse.models.ProfMEMPMClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfMEMPMClassifier</span></code></a>, profit-driven minimax probability machines
+(Maldonado, López and Vairetti, 2020). Both learn a linear decision boundary that maximizes
+the worst-case expected profit implied by each class’s empirical mean and covariance, via the
+multivariate Chebyshev-Cantelli inequality; <code class="docutils literal notranslate"><span class="pre">ProfMEMPMClassifier</span></code> allows the two classes to
+have different worst-case accuracy bounds, <code class="docutils literal notranslate"><span class="pre">ProfMPMClassifier</span></code> shares one bound taken from
+the tighter of the two. Their <code class="docutils literal notranslate"><span class="pre">loss</span></code> must use the <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a>
+strategy; instance-dependent costs are averaged to a scalar and stochastic cost parameters are
+replaced by their mean before fitting.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.models.ProfSRClassifier.html#empulse.models.ProfSRClassifier" title="empulse.models.ProfSRClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfSRClassifier</span></code></a>, a profit-driven symbolic
+regression classifier that evolves a population of mathematical expressions with genetic
+programming to maximize a cost-sensitive metric. Requires the new optional <code class="docutils literal notranslate"><span class="pre">gplearn</span></code>
+dependency, installable with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[symbolic]</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier.threshold_" title="empulse.models.CSThresholdClassifier.threshold_"><code class="xref py py-class docutils literal notranslate"><span class="pre">threshold_</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier.rate_" title="empulse.models.CSRateClassifier.rate_"><code class="xref py py-class docutils literal notranslate"><span class="pre">rate_</span></code></a> are now real properties returning the fitted
+decision rule (or <code class="docutils literal notranslate"><span class="pre">None</span></code> if it wasn’t learned). They were documented as fitted attributes
+in 0.11.1 but never actually set under those names.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.CostSensitiveSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostSensitiveSampler</span></code></a> can now take a
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as its <code class="docutils literal notranslate"><span class="pre">loss</span></code>. When set, <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code> accepts
+the cost matrix’s parameters as keyword arguments (routed through scikit-learn’s metadata
+routing, like the cost-sensitive models) and derives <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> from the metric,
+taking precedence over any <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> passed directly.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Every cost-sensitive estimator’s <code class="docutils literal notranslate"><span class="pre">loss</span></code> now accepts any
+<a class="reference internal" href="../reference/generated/empulse.metrics.BaseMetric.html#empulse.metrics.BaseMetric" title="empulse.metrics.BaseMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseMetric</span></code></a>, so a <a class="reference internal" href="../reference/generated/empulse.metrics.MixtureMetric.html#empulse.metrics.MixtureMetric" title="empulse.metrics.MixtureMetric"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureMetric</span></code></a> instance
+(e.g. <a class="reference internal" href="../reference/generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score" title="empulse.metrics.empcs_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empcs_score</span></code></a>) can be passed directly as a model’s training
+objective.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a> no longer return an all-zero coefficient vector,
+predicting exactly 0.5 for every sample, at the default <code class="docutils literal notranslate"><span class="pre">C=1.0,</span> <span class="pre">l1_ratio=1.0</span></code>. The
+elastic-net penalty was added unnormalized to a data loss that had already been averaged over
+the samples, making it roughly <code class="docutils literal notranslate"><span class="pre">n_samples</span></code> times stronger than scikit-learn’s at the same
+<code class="docutils literal notranslate"><span class="pre">C</span></code>. Since the expected cost is linear in the predicted probability its gradient is bounded,
+so with modest costs <code class="docutils literal notranslate"><span class="pre">w</span> <span class="pre">=</span> <span class="pre">0</span></code> genuinely satisfied the L1 optimality condition and L-BFGS-B
+stopped after zero iterations.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="docutils literal notranslate"><span class="pre">C</span></code> now scales as <code class="docutils literal notranslate"><span class="pre">objective_scale</span> <span class="pre">/</span> <span class="pre">(C</span> <span class="pre">*</span> <span class="pre">n_samples)</span></code>, where <code class="docutils literal notranslate"><span class="pre">objective_scale</span></code> is
+the mean magnitude of the per-sample cost gradient. Dividing by <code class="docutils literal notranslate"><span class="pre">n_samples</span></code> makes <code class="docutils literal notranslate"><span class="pre">C</span></code> mean
+what it means in <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogisticRegression</span></code></a>, and the objective
+scale makes the regularization path invariant to rescaling the cost matrix, so a <code class="docutils literal notranslate"><span class="pre">C</span></code> grid
+tuned on costs in euros transfers to the same costs in cents. <strong>A given</strong> <code class="docutils literal notranslate"><span class="pre">C</span></code> <strong>no longer
+selects the same model as in previous releases</strong>; re-tune any hard-coded value or <code class="docutils literal notranslate"><span class="pre">C</span></code> grid.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Removed the <code class="docutils literal notranslate"><span class="pre">soft_threshold</span></code> parameter from
+<a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a>.
+Use <code class="docutils literal notranslate"><span class="pre">l1_ratio=1.0</span></code> for sparsity, which now produces exact zeros.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  A cost passed to a model as a length-1 array is now broadcast to every sample
+instead of raising a shape error, and the error message for a genuine length mismatch names
+the offending parameter and the lengths that would have been accepted.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>
+with <code class="docutils literal notranslate"><span class="pre">combination='weighted_voting'</span></code> now require the base estimator to implement
+<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code>, and raise at fit time if it doesn’t. Previously a base estimator without
+<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> silently fell back to <code class="docutils literal notranslate"><span class="pre">predict()</span></code> for the out-of-bag weighting.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="docutils literal notranslate"><span class="pre">soft_threshold</span></code> now defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code> (previously <code class="docutils literal notranslate"><span class="pre">False</span></code>) on
+<a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a>.
+With the default <code class="docutils literal notranslate"><span class="pre">l1_ratio=1.0</span></code> (a pure L1 penalty) and zero-initialized coefficients, the raw
+L1 subgradient used when <code class="docutils literal notranslate"><span class="pre">soft_threshold=False</span></code> can make L-BFGS-B stall at exactly zero for
+every coefficient, silently producing a model that predicts a constant probability regardless
+of the input. Soft-thresholding the coefficients before evaluating the penalty avoids this.
+Models fitted with default arguments now produce different (properly fit, rather than
+degenerate) coefficients than in 0.11.1; pass <code class="docutils literal notranslate"><span class="pre">soft_threshold=False</span></code> explicitly to restore
+the previous default.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Because <a class="reference internal" href="../reference/generated/empulse.models.ProfTreeClassifier.html#empulse.models.ProfTreeClassifier" title="empulse.models.ProfTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfTreeClassifier</span></code></a> no longer draws from the C library’s
+process-global <code class="docutils literal notranslate"><span class="pre">rand()</span></code>/<code class="docutils literal notranslate"><span class="pre">srand()</span></code> (see below), it produces a different — equally valid —
+tree for a given <code class="docutils literal notranslate"><span class="pre">random_state</span></code> than it did in earlier releases. Results within this release
+are reproducible as before.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  When <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> is used with the CatBoost backend and a
+<code class="docutils literal notranslate"><span class="pre">loss</span></code> metric that is maximized (e.g. <a class="reference internal" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a>), the value CatBoost
+reports for the evaluation metric is now negated, so that lower is better for every metric. This
+affects CatBoost’s training output and <code class="docutils literal notranslate"><span class="pre">best_score_</span></code> only; the model that is selected, and
+early stopping, are unchanged.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.ProfTreeClassifier.html#empulse.models.ProfTreeClassifier" title="empulse.models.ProfTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfTreeClassifier</span></code></a> no longer draws from the C library’s
+process-global <code class="docutils literal notranslate"><span class="pre">rand()</span></code>/<code class="docutils literal notranslate"><span class="pre">srand()</span></code>. Every fit now owns its generator state, so one fit can no
+longer reseed another, and <code class="docutils literal notranslate"><span class="pre">random_state=None</span></code> no longer derives its seed from a one-second
+resolution clock (two fits starting in the same second used to share a seed).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <code class="docutils literal notranslate"><span class="pre">fit</span></code> now deep-copies the <code class="docutils literal notranslate"><span class="pre">loss</span></code> metric before use, so two estimators sharing one
+module-level prebuilt metric (e.g. two models both given <code class="docutils literal notranslate"><span class="pre">empc_score</span></code> as <code class="docutils literal notranslate"><span class="pre">loss</span></code>), or one
+estimator fit twice from the same <code class="docutils literal notranslate"><span class="pre">loss</span></code> instance, no longer read or overwrite each other’s
+memoised strategy state (boosting objective, Monte Carlo grid, RNG).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Cost-sensitive models can now be trained with a <code class="docutils literal notranslate"><span class="pre">loss</span></code> metric whose cost matrix names one
+of its symbols (or aliases) <code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">tn_cost</span></code>, <code class="docutils literal notranslate"><span class="pre">fp_cost</span></code> or <code class="docutils literal notranslate"><span class="pre">fn_cost</span></code>. Those names
+collide with the dedicated <code class="docutils literal notranslate"><span class="pre">fit</span></code>/<code class="docutils literal notranslate"><span class="pre">predict</span></code> parameters of the same name, so the value bound to
+the parameter and was silently discarded instead of reaching the metric, and training failed with
+<code class="docutils literal notranslate"><span class="pre">TypeError:</span> <span class="pre">_lambdifygenerated()</span> <span class="pre">missing</span> <span class="pre">1</span> <span class="pre">required</span> <span class="pre">positional</span> <span class="pre">argument</span></code>. This affected the cost
+matrices shipped with <a class="reference internal" href="../reference/generated/empulse.datasets.load_churn_tv_subscriptions.html#empulse.datasets.load_churn_tv_subscriptions" title="empulse.datasets.load_churn_tv_subscriptions"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_churn_tv_subscriptions</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.datasets.load_credit_scoring_pakdd.html#empulse.datasets.load_credit_scoring_pakdd" title="empulse.datasets.load_credit_scoring_pakdd"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_credit_scoring_pakdd</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.datasets.fetch_give_me_some_credit.html#empulse.datasets.fetch_give_me_some_credit" title="empulse.datasets.fetch_give_me_some_credit"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch_give_me_some_credit</span></code></a>. Such values are now routed to the metric, and
+a cost argument that the metric does not use raises a warning instead of being dropped silently.
+Note that <code class="docutils literal notranslate"><span class="pre">__init__</span></code>-time costs are still not forwarded to a metric loss, since they default to
+<code class="docutils literal notranslate"><span class="pre">0.0</span></code> and would silently zero out a cost matrix term of the same name.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> not properly handling outlier sensitive costs
+when passing a custom loss function from <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a> now offsets negative costs the same way
+<a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a> already did, so a forest trained with a benefit
+(e.g. <code class="docutils literal notranslate"><span class="pre">tp_cost=-200</span></code>) now trains correctly instead of raising during node-impurity
+computation (which requires <code class="docutils literal notranslate"><span class="pre">node_impurity</span> <span class="pre">&gt;=</span> <span class="pre">0</span></code>).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> raised
+<code class="docutils literal notranslate"><span class="pre">TypeError:</span> <span class="pre">isinstance()</span> <span class="pre">arg</span> <span class="pre">2</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">type</span></code> in any environment without LightGBM installed,
+regardless of which backend was actually in use for the fitted model.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a>
+no longer silently skip learning a cost-sensitive threshold/rate when fitted with an aliased
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> with every required parameter supplied through its alias.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> with <code class="docutils literal notranslate"><span class="pre">combination='weighted_voting'</span></code> no
+longer raises a shape error when a sub-estimator draws a feature subset (<code class="docutils literal notranslate"><span class="pre">max_features</span> <span class="pre">&lt;</span> <span class="pre">1.0</span></code>
+or <code class="docutils literal notranslate"><span class="pre">bootstrap_features=True</span></code>).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a> with <code class="docutils literal notranslate"><span class="pre">combination='weighted_voting'</span></code> no
+longer produces <code class="docutils literal notranslate"><span class="pre">NaN</span></code> out-of-bag estimator weights when <code class="docutils literal notranslate"><span class="pre">max_samples</span></code> is an <code class="docutils literal notranslate"><span class="pre">int</span></code>.
+<code class="docutils literal notranslate"><span class="pre">numbers.Integral</span></code> is a subclass of <code class="docutils literal notranslate"><span class="pre">numbers.Real</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Out-of-bag weighted voting (<a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> with <code class="docutils literal notranslate"><span class="pre">combination='weighted_voting'</span></code>) no longer
+gives <em>more</em> weight to <em>worse</em> estimators, and no longer raises when instance-dependent
+(array-like) costs are used together with weighted voting.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a> and  <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>
+no longer raises when fitted with a metric strategy containing a stochastic (<code class="docutils literal notranslate"><span class="pre">sympy.stats</span></code>) variable.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> no longer mutates a caller-supplied
+<code class="docutils literal notranslate"><span class="pre">fit_params</span></code> dict in place.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a> no longer mutates a user-supplied custom
+<code class="docutils literal notranslate"><span class="pre">criterion</span></code> instance in place.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">predict</span></code>/<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> now validate
+their input, so a wrong number of features raises the standard scikit-learn error instead of
+being forwarded raw to the underlying tree.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>’s LightGBM and CatBoost backends now start
+from the intended probability. The internal base-score nudge was applied as a raw (log-odds)
+score for LightGBM’s <code class="docutils literal notranslate"><span class="pre">init_score</span></code>/CatBoost’s <code class="docutils literal notranslate"><span class="pre">baseline</span></code> but as a probability for XGBoost’s
+<code class="docutils literal notranslate"><span class="pre">base_score</span></code>, and neither LightGBM nor CatBoost persist that offset into the saved model, so
+<code class="docutils literal notranslate"><span class="pre">predict_proba</span></code> now adds it back manually before converting to a probability.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.BiasRelabelingClassifier.html#empulse.models.BiasRelabelingClassifier" title="empulse.models.BiasRelabelingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasRelabelingClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier" title="empulse.models.BiasResamplingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasResamplingClassifier</span></code></a>,
+and <a class="reference internal" href="../reference/generated/empulse.models.BiasReweighingClassifier.html#empulse.models.BiasReweighingClassifier" title="empulse.models.BiasReweighingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">BiasReweighingClassifier</span></code></a> now raise a clear <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when
+<code class="docutils literal notranslate"><span class="pre">sensitive_feature</span></code> does not have the same length as <code class="docutils literal notranslate"><span class="pre">y</span></code>, instead of silently proceeding.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a>
+no longer mutate a user-supplied <code class="docutils literal notranslate"><span class="pre">calibrator</span></code> estimator instance in place; a clone is
+configured and fitted instead, so the constructor argument is safe to reuse or refit.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> now raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming both keys
+instead of silently dropping one of them, when its <code class="docutils literal notranslate"><span class="pre">loss</span></code> metric’s cost matrix gives two
+aliases to the same underlying symbol.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">classes_</span></code> property now raises the
+standard “not fitted” error via <code class="docutils literal notranslate"><span class="pre">check_is_fitted</span></code> instead of an unrelated <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Metadata routing (<code class="docutils literal notranslate"><span class="pre">set_fit_request</span></code>/<code class="docutils literal notranslate"><span class="pre">set_predict_request</span></code>/<code class="docutils literal notranslate"><span class="pre">set_fit_resample_request</span></code>)
+for a <code class="docutils literal notranslate"><span class="pre">loss</span></code>’s cost-matrix parameter names is now resolved per instance instead of being
+installed on the class. Every cost-sensitive estimator and <a class="reference internal" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.CostSensitiveSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostSensitiveSampler</span></code></a>
+used to rewrite a class-level descriptor from <code class="docutils literal notranslate"><span class="pre">__init__</span></code>, so constructing a second instance of
+the same class with a different <code class="docutils literal notranslate"><span class="pre">loss</span></code> silently changed which parameter names <em>every earlier
+instance</em> of that class accepted – e.g. <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">CSBoostClassifier(loss=empc_score)</span></code> followed by
+<code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">=</span> <span class="pre">CSBoostClassifier(loss=mpcs_score)</span></code> made <code class="docutils literal notranslate"><span class="pre">a.set_fit_request(clv=True)</span></code> raise
+<code class="docutils literal notranslate"><span class="pre">TypeError</span></code>, because <code class="docutils literal notranslate"><span class="pre">b</span></code>’s construction had overwritten the class-level accepted keys.
+Accepted keys are now computed from each instance’s own <code class="docutils literal notranslate"><span class="pre">loss</span></code>, so unrelated estimators (and a
+loss swapped in later via <code class="docutils literal notranslate"><span class="pre">set_params</span></code>) no longer interfere with each other.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.CostSensitiveSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostSensitiveSampler</span></code></a> now takes a per-fit deep copy of its
+<code class="docutils literal notranslate"><span class="pre">loss</span></code> metric before <code class="docutils literal notranslate"><span class="pre">fit_resample</span></code>, matching every cost-sensitive model, so a shared
+module-level prebuilt metric (e.g. <a class="reference internal" href="../reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score" title="empulse.metrics.empc_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">empc_score</span></code></a>) no longer leaks
+memoized strategy state between two samplers, or two calls, that use it.</p></li>
+</ul>
+</section>
+<section id="optimizers">
+<h3>Optimizers<a class="headerlink" href="#optimizers" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span> <a class="reference internal" href="../reference/generated/empulse.optimizers.LBFGSBOptimizer.html#empulse.optimizers.LBFGSBOptimizer" title="empulse.optimizers.LBFGSBOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">LBFGSBOptimizer</span></code></a> now minimizes a non-smooth elastic-net
+objective (<code class="docutils literal notranslate"><span class="pre">l1_ratio</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>) exactly, through a split-variable reformulation (<code class="docutils literal notranslate"><span class="pre">w</span> <span class="pre">=</span> <span class="pre">u</span> <span class="pre">-</span> <span class="pre">v</span></code>
+with <code class="docutils literal notranslate"><span class="pre">u,</span> <span class="pre">v</span> <span class="pre">&gt;=</span> <span class="pre">0</span></code>) that turns the L1 term into a linear function L-BFGS-B handles natively
+through its box constraints. Previously it was handed <code class="docutils literal notranslate"><span class="pre">sign(w)</span></code> as a subgradient, which made
+the origin look stationary; it now converges across the whole <code class="docutils literal notranslate"><span class="pre">l1_ratio</span></code> range, produces
+exact zeros, and matches an independent proximal-gradient solver.
+<a class="reference internal" href="../reference/generated/empulse.optimizers.ScipyOptimizer.html#empulse.optimizers.ScipyOptimizer" title="empulse.optimizers.ScipyOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScipyOptimizer</span></code></a> is deliberately unchanged, so user-supplied
+<code class="docutils literal notranslate"><span class="pre">bounds</span></code> keep working there; it performs plain subgradient descent and will not produce
+exact zeros.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span> <a class="reference internal" href="../reference/generated/empulse.optimizers.LBFGSBOptimizer.html#empulse.optimizers.LBFGSBOptimizer" title="empulse.optimizers.LBFGSBOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">LBFGSBOptimizer</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">tolerance</span></code> is now relative to
+the objective magnitude rather than absolute, so a cost matrix expressed in euros and the same
+one expressed in cents converge to the same model.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span> <code class="docutils literal notranslate"><span class="pre">empulse.optimizers</span></code> has been substantially expanded, from exporting only
+<a class="reference internal" href="../reference/generated/empulse.optimizers.Generation.html#empulse.optimizers.Generation" title="empulse.optimizers.Generation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generation</span></code></a> to a full set of optimizers and schedules: the
+<a class="reference internal" href="../reference/generated/empulse.optimizers.Optimizer.html#empulse.optimizers.Optimizer" title="empulse.optimizers.Optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Optimizer</span></code></a> base class, first-order minibatch optimizers
+<a class="reference internal" href="../reference/generated/empulse.optimizers.SGD.html#empulse.optimizers.SGD" title="empulse.optimizers.SGD"><code class="xref py py-class docutils literal notranslate"><span class="pre">SGD</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.optimizers.Adam.html#empulse.optimizers.Adam" title="empulse.optimizers.Adam"><code class="xref py py-class docutils literal notranslate"><span class="pre">Adam</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.optimizers.RMSProp.html#empulse.optimizers.RMSProp" title="empulse.optimizers.RMSProp"><code class="xref py py-class docutils literal notranslate"><span class="pre">RMSProp</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.optimizers.ScipyOptimizer.html#empulse.optimizers.ScipyOptimizer" title="empulse.optimizers.ScipyOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScipyOptimizer</span></code></a> (wraps any
+<a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.optimize.minimize</span></code></a> method) and <a class="reference internal" href="../reference/generated/empulse.optimizers.LBFGSBOptimizer.html#empulse.optimizers.LBFGSBOptimizer" title="empulse.optimizers.LBFGSBOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">LBFGSBOptimizer</span></code></a>,
+evolutionary optimizers <a class="reference internal" href="../reference/generated/empulse.optimizers.GeneticAlgorithmOptimizer.html#empulse.optimizers.GeneticAlgorithmOptimizer" title="empulse.optimizers.GeneticAlgorithmOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneticAlgorithmOptimizer</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.optimizers.MemeticOptimizer.html#empulse.optimizers.MemeticOptimizer" title="empulse.optimizers.MemeticOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MemeticOptimizer</span></code></a> (genetic algorithm with Lamarckian gradient local
+search) and <a class="reference internal" href="../reference/generated/empulse.optimizers.LamarckianGeneration.html#empulse.optimizers.LamarckianGeneration" title="empulse.optimizers.LamarckianGeneration"><code class="xref py py-class docutils literal notranslate"><span class="pre">LamarckianGeneration</span></code></a>, and the learning-rate/temperature
+schedule family <a class="reference internal" href="../reference/generated/empulse.optimizers.Schedule.html#empulse.optimizers.Schedule" title="empulse.optimizers.Schedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">Schedule</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.optimizers.ConstantSchedule.html#empulse.optimizers.ConstantSchedule" title="empulse.optimizers.ConstantSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConstantSchedule</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.optimizers.LinearSchedule.html#empulse.optimizers.LinearSchedule" title="empulse.optimizers.LinearSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSchedule</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.optimizers.ExponentialSchedule.html#empulse.optimizers.ExponentialSchedule" title="empulse.optimizers.ExponentialSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExponentialSchedule</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.optimizers.StepSchedule.html#empulse.optimizers.StepSchedule" title="empulse.optimizers.StepSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">StepSchedule</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.optimizers.CosineAnnealingSchedule.html#empulse.optimizers.CosineAnnealingSchedule" title="empulse.optimizers.CosineAnnealingSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">CosineAnnealingSchedule</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.optimizers.WarmupSchedule.html#empulse.optimizers.WarmupSchedule" title="empulse.optimizers.WarmupSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupSchedule</span></code></a> (<a class="reference internal" href="../reference/generated/empulse.optimizers.ExponentialSchedule.html#empulse.optimizers.ExponentialSchedule" title="empulse.optimizers.ExponentialSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExponentialSchedule</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.optimizers.StepSchedule.html#empulse.optimizers.StepSchedule" title="empulse.optimizers.StepSchedule"><code class="xref py py-class docutils literal notranslate"><span class="pre">StepSchedule</span></code></a> also gained a <code class="docutils literal notranslate"><span class="pre">max_value</span></code> upper-bound parameter).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>
+no longer take <code class="docutils literal notranslate"><span class="pre">optimize_fn</span></code>/<code class="docutils literal notranslate"><span class="pre">optimizer_params</span></code> constructor parameters. Both now take a
+single <code class="docutils literal notranslate"><span class="pre">optimizer</span></code> parameter, an <a class="reference internal" href="../reference/generated/empulse.optimizers.Optimizer.html#empulse.optimizers.Optimizer" title="empulse.optimizers.Optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Optimizer</span></code></a> instance
+(defaulting to <a class="reference internal" href="../reference/generated/empulse.optimizers.GeneticAlgorithmOptimizer.html#empulse.optimizers.GeneticAlgorithmOptimizer" title="empulse.optimizers.GeneticAlgorithmOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneticAlgorithmOptimizer</span></code></a> for
+<code class="docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code> and <a class="reference internal" href="../reference/generated/empulse.optimizers.LBFGSBOptimizer.html#empulse.optimizers.LBFGSBOptimizer" title="empulse.optimizers.LBFGSBOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">LBFGSBOptimizer</span></code></a> for
+<code class="docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code>, matching each model’s previous default behavior). For example,
+<code class="docutils literal notranslate"><span class="pre">ProfLogitClassifier(optimizer_params={'max_iter':</span> <span class="pre">10})</span></code> becomes
+<code class="docutils literal notranslate"><span class="pre">ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=10))</span></code>.
+<a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">n_jobs</span></code> constructor parameter has moved
+onto <a class="reference internal" href="../reference/generated/empulse.optimizers.GeneticAlgorithmOptimizer.html#empulse.optimizers.GeneticAlgorithmOptimizer" title="empulse.optimizers.GeneticAlgorithmOptimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneticAlgorithmOptimizer</span></code></a> for the same reason.</p></li>
+</ul>
+</section>
+<section id="datasets">
+<h3>Datasets<a class="headerlink" href="#datasets" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Dataset loaders are now backend-agnostic via <a class="reference external" href="https://narwhals-dev.github.io/narwhals/">narwhals</a>: every loader takes a required, keyword-only
+<code class="docutils literal notranslate"><span class="pre">backend</span></code> argument — the dataframe <em>module</em> itself, e.g. <code class="docutils literal notranslate"><span class="pre">backend=pandas</span></code> or
+<code class="docutils literal notranslate"><span class="pre">backend=polars</span></code> — and returns data in that library’s native types. A bare
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse</span></code> no longer requires any particular dataframe library to be installed;
+you choose and supply one yourself.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.datasets.fetch_iranian_churn.html#empulse.datasets.fetch_iranian_churn" title="empulse.datasets.fetch_iranian_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch_iranian_churn</span></code></a>, a churn dataset from the UCI
+Machine Learning Repository (3,150 customers, 495 churners, 12 features), downloaded on first
+use and cached locally. It ships a churn-retention cost matrix driven by each customer’s
+value, with overridable economic parameters <code class="docutils literal notranslate"><span class="pre">incentive_fraction</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost</span></code> and
+<code class="docutils literal notranslate"><span class="pre">accept_rate</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.datasets.get_data_home.html#empulse.datasets.get_data_home" title="empulse.datasets.get_data_home"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_data_home</span></code></a>, which resolves and creates the
+directory downloaded datasets are cached in: an explicit <code class="docutils literal notranslate"><span class="pre">data_home</span></code> argument, else the
+<code class="docutils literal notranslate"><span class="pre">EMPULSE_DATA_HOME</span></code> environment variable, else <code class="docutils literal notranslate"><span class="pre">~/empulse_data</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="xref py py-func docutils literal notranslate"><span class="pre">load_give_me_some_credit</span></code> has been renamed to
+<a class="reference internal" href="../reference/generated/empulse.datasets.fetch_give_me_some_credit.html#empulse.datasets.fetch_give_me_some_credit" title="empulse.datasets.fetch_give_me_some_credit"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch_give_me_some_credit</span></code></a>: rather than being bundled with the
+package, it is now downloaded from OpenML on first use and cached (subsequent calls read the
+cache and do not hit the network). It gains <code class="docutils literal notranslate"><span class="pre">data_home</span></code> and <code class="docutils literal notranslate"><span class="pre">download_if_missing</span></code>
+parameters, matching <a class="reference internal" href="../reference/generated/empulse.datasets.fetch_iranian_churn.html#empulse.datasets.fetch_iranian_churn" title="empulse.datasets.fetch_iranian_churn"><code class="xref py py-func docutils literal notranslate"><span class="pre">fetch_iranian_churn</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  The <code class="docutils literal notranslate"><span class="pre">as_frame</span></code> and <code class="docutils literal notranslate"><span class="pre">return_X_y_costs</span></code> parameters have been removed from every
+dataset loader — loaders always return a <a class="reference internal" href="../reference/generated/empulse.datasets.Dataset.html#empulse.datasets.Dataset" title="empulse.datasets.Dataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a>, and there is no
+longer a plain-numpy return path (call <code class="docutils literal notranslate"><span class="pre">.to_numpy()</span></code> on the returned frame if you need one).
+The per-loader economic keyword arguments (e.g. <code class="docutils literal notranslate"><span class="pre">interest_rate</span></code>, <code class="docutils literal notranslate"><span class="pre">fund_cost</span></code>,
+<code class="docutils literal notranslate"><span class="pre">max_credit_line</span></code>, <code class="docutils literal notranslate"><span class="pre">loss_given_default</span></code>, <code class="docutils literal notranslate"><span class="pre">term_length_months</span></code>, <code class="docutils literal notranslate"><span class="pre">loan_to_income_ratio</span></code>,
+<code class="docutils literal notranslate"><span class="pre">term_deposit_fraction</span></code>, <code class="docutils literal notranslate"><span class="pre">contact_cost</span></code>) have also been removed from the loaders’
+signatures. <a class="reference internal" href="../reference/generated/empulse.datasets.Dataset.html#empulse.datasets.Dataset" title="empulse.datasets.Dataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a> no longer carries fixed
+<code class="docutils literal notranslate"><span class="pre">tp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">tn_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">fp_cost</span></code>/<code class="docutils literal notranslate"><span class="pre">fn_cost</span></code> values; instead it carries a symbolic
+<code class="docutils literal notranslate"><span class="pre">cost_matrix</span></code> (a <a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a>) and an <code class="docutils literal notranslate"><span class="pre">instance_costs</span></code> dict of
+per-sample values. The dataset’s economic parameters that used to be set at load time are now
+passed at metric-call time instead, e.g.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># before</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_credit_scoring_pakdd</span><span class="p">(</span><span class="n">as_frame</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+<span class="n">metric</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
+<span class="c1"># now</span>
+<span class="kn">import</span><span class="w"> </span><a class="sphinx-codeautolink-a" href="https://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="pandas"><span class="nn">pandas</span></a><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_credit_scoring_pakdd</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><a class="sphinx-codeautolink-a" href="https://pandas.pydata.org/pandas-docs/stable/index.html#module-pandas" title="pandas"><span class="n">pd</span></a><span class="p">)</span>
+<span class="n">metric</span> <span class="o">=</span> <span class="n">Metric</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">cost_matrix</span><span class="p">,</span> <span class="n">Cost</span><span class="p">())</span>
+<span class="n">metric</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">y_score</span><span class="p">,</span> <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="o">**</span><span class="n">dataset</span><span class="o">.</span><span class="n">instance_costs</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="packaging-and-dependencies">
+<h3>Packaging and dependencies<a class="headerlink" href="#packaging-and-dependencies" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Empulse now supports the free-threaded build of CPython 3.14. <code class="docutils literal notranslate"><span class="pre">cp314t</span></code> wheels
+are published alongside the regular ones, and all eleven Cython extension modules declare the
+<code class="docutils literal notranslate"><span class="pre">freethreading_compatible</span></code> directive, so importing Empulse no longer re-enables the global
+interpreter lock for the whole process. Fitting or scoring separate estimator and
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instances on separate threads is supported and gives the same
+results as running them sequentially. Note that <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[boosting]</span></code> does not
+resolve on 3.14t until CatBoost publishes a free-threaded wheel; XGBoost and LightGBM install
+fine.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="docutils literal notranslate"><span class="pre">pandas</span></code> is no longer a required dependency; <code class="docutils literal notranslate"><span class="pre">narwhals</span></code> is used instead. A bare
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse</span></code> no longer installs a dataframe library — none of the optional extras
+supply one either, so using a dataset loader requires installing pandas, polars or another
+narwhals-supported library yourself and passing it as <code class="docutils literal notranslate"><span class="pre">backend=</span></code>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  The minimum supported scikit-learn version is now 1.9.0 (previously 1.5.2), and the
+minimum supported imbalanced-learn version is now 0.14.2 (previously 0.13.0).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  The optional-dependency extras have been reorganized: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[boosting]</span></code>
+now installs XGBoost, LightGBM and CatBoost (what <code class="docutils literal notranslate"><span class="pre">empulse[optional]</span></code> used to install), a new
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[symbolic]</span></code> installs <code class="docutils literal notranslate"><span class="pre">gplearn</span></code> (required by
+<a class="reference internal" href="../reference/generated/empulse.models.ProfSRClassifier.html#empulse.models.ProfSRClassifier" title="empulse.models.ProfSRClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfSRClassifier</span></code></a>), and <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[optional]</span></code> now installs
+every optional extra.</p></li>
+</ul>
+</section>
+</section>
+<section id="id2">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.11.1">0.11.1</a> (08-05-2026)<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix empulse not running properly on scikit-learn versions lower than 1.6.</p></li>
+</ul>
+</section>
+<section id="id3">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.11.0">0.11.0</a> (08-05-2026)<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.models.ProfTreeClassifier.html#empulse.models.ProfTreeClassifier" title="empulse.models.ProfTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfTreeClassifier</span></code></a> to optimize a cost-sensitive metric
+using evolutionary trees (similar to <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a>).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.models.CSRateClassifier.html#empulse.models.CSRateClassifier" title="empulse.models.CSRateClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSRateClassifier</span></code></a> to optimize for a specific predicted positive rate.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Allow <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> to optimize the decision threshold at training time.
+Users can now either specify the decision threshold to use at prediction time or
+let the model choose the optimal threshold during training.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  (Experimental)
+When using the <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy, only one stochastic variable is present,
+and the cost/profit function is a polynomials of the stochastic variable:
+the metric will now be computed exactly instead of using numerical integration.
+This is currently supported for stochastic variables following
+the Normal, Log Normal, Uniform, Beta, Gamma, Chi Squared, Exponential, Weibull, Pareto, and Triangular distributions.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  (Experimental) Added support for the MaxProfit strategy metrics to be optimized
+through gradient descent methods in
+<a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>.
+This is currently an experimental feature and is not recommended for use in production.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Updated the <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a> interface to be more consistent
+with other models in the package. By default optimizes the maximum profit metric.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> no longer takes a string argument for the loss function
+to be more consistent with other models in the package. Default value for the loss is None.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> now takes a numpy Generator instead of a RandomState instance.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Metrics built with the <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a>
+strategy can now handle instance-dependent costs. They will automatically be averaged over the instances.
+Mathematically this is equivalent to recomputing the EMP score for each instance and then averaging the scores.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Metrics built with the <a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a>
+strategies can now handle stochastic cost parameters. If the distribution allows it, the mean cost will be computed.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>
+not properly training when costs were negative.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix integration bounds inconsistently being calculated
+when the <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy was chosen.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> throwing errors
+when one or two of the Boosting libraries were not installed (XGBoost, LGBM &amp; Catboost).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Add __name__ attribute to <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> class to fix issues with scikit-learn compatibility.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix metadata routing not working for scikit-learn&gt;=1.8.0</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy not calculating Log Normal distributed variables correctly
+when using quasi monte carlo.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix some models not properly being able to be pickled when using a custom metric as the loss function.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix some distributions not correctly computing the expected maximum profit score when using the
+<a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy when using monte carlo or quasi monte carlo method.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.10.4">0.10.4</a> (20-09-2025)<a class="headerlink" href="#id4" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-info">Efficiency</span></span>  Changed to Cython implementation for the loss functions and impurity measures of
+<a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>,
+<a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>, and <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>.
+This improves the training time and memory efficiency of these models significantly.
+Training time speedups observed were
+up to 300x for <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>,
+30x for <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>, and 1.5x for <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>
+depending on the dataset size and parameters.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Changed arguments to <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>, and
+<a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> to be in line with scikit-learn’s decision tree and ensemble models.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>, and <a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a>
+no longer support stacking combination method. Use <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.StackingClassifier.html#sklearn.ensemble.StackingClassifier" title="(in scikit-learn v1.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackingClassifier</span></code></a> instead for stacking.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Extracted the construction of the cost matrix into a separate class
+<a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-func docutils literal notranslate"><span class="pre">CostMatrix</span></code></a> away from <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>
+to allow reusing the cost matrix in custom metrics.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a> no longer uses the EMPC metric by default.
+Users now need to explicitely pass a loss to the model.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> no longer accepts any callable as loss function.
+Users now need to pass a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance for a custom loss function.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>
+now accept two more baseline options <cite>‘one’</cite> and <cite>‘zero’</cite>
+to always predict the positive and negative class, respectively.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Metrics with with the <a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> strategy now also accepts baseline options like
+<a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Models which use a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as their loss function
+with the <a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> or <a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a>
+strategy as their loss function now are pickleable.
+The <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy will be updated to be pickleable in a future release.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Models which use a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as their loss function
+can now request arguments necessary for the metric to be passed during the fit method through Metadata Routing.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> not properly calculating gradient penalty.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix default values not being properly when using aliases in <a class="reference internal" href="../reference/generated/empulse.metrics.CostMatrix.html#empulse.metrics.CostMatrix" title="empulse.metrics.CostMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostMatrix</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> throwing errors when certain terms cancelled out.</p></li>
+</ul>
+</section>
+<section id="id5">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.9.0">0.9.0</a> (15-06-2025)<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<ul>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_threshold" title="empulse.metrics.Metric.optimal_threshold"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_threshold</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric.optimal_rate" title="empulse.metrics.Metric.optimal_rate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">optimal_rate</span></code></a> methods to calculate the optimal threshold(s)
+and optimal predicted positive rate for a given metric.
+This is useful for determining the best decision threshold and predicted positive rate
+for a cost-sensitive or value-driven model.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>, and
+<a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> can now take
+a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as their criterion to optimize.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a> can now take
+a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance to choose the optimal decision threshold.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> can now take estimators with a
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as the loss function or criterion.
+<a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> will treat any cost marked as outlier sensitive.
+This can be done by using the <code class="xref py py-meth docutils literal notranslate"><span class="pre">mark_outlier_sensitive</span></code> method.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Allow savings metrics to be used in <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> as the objective function.
+Internally, the expected cost loss is used to train the model,
+since the expected savings score is just a transformation of the expected cost loss.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <cite>kind</cite> argument to <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> has been replaced by <cite>strategy</cite>.
+The <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> class now takes a <a class="reference internal" href="../reference/generated/empulse.metrics.MetricStrategy.html#empulse.metrics.MetricStrategy" title="empulse.metrics.MetricStrategy"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetricStrategy</span></code></a> instance.
+This change allows for more flexibility in defining the metric strategy.
+The currently available strategies are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> for the expected maximum profit score</p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.Cost.html#empulse.metrics.Cost" title="empulse.metrics.Cost"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cost</span></code></a> for the expected cost loss</p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.Savings.html#empulse.metrics.Savings" title="empulse.metrics.Savings"><code class="xref py py-class docutils literal notranslate"><span class="pre">Savings</span></code></a> for the expected savings score</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix error when importing Empulse without any optional dependencies installed.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> not properly using the gradient
+when using a custom loss function from <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix models throwing errors when differently shaped costs are passed to the fit or predict method.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix sympy distribution parameters not being properly translated to scipy distribution parameters when
+using the <a class="reference internal" href="../reference/generated/empulse.metrics.MaxProfit.html#empulse.metrics.MaxProfit" title="empulse.metrics.MaxProfit"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaxProfit</span></code></a> strategy (formerly <cite>kind=’max profit’</cite>)
+with the quasi monte-carlo integration method.</p></li>
+</ul>
+</section>
+<section id="id6">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.8.0">0.8.0</a> (01-06-2025)<a class="headerlink" href="#id6" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a>, and
+<a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a> can now take
+a <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> instance as their loss function.
+Internally, the metric instance is converted to the appropriate loss function for the model.
+For more information, read the <a class="reference internal" href="../guide/measuring/strategies.html#metric-class-in-model"><span class="std std-ref">User Guide</span></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Type hints are now available for all functions and classes.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Add support for more than one stochastic variable when building maximum profit metrics with
+<a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Allow <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> to be used as a context manager.
+This ensures the metric is always built after defining the cost-benefit elements.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix datasets not properly being packaged together with the package</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a> when array-like parameters are passed to fit method.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix boosting models being biased towards the positive class.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.7.0">0.7.0</a> (05-02-2025)<a class="headerlink" href="#id7" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Add <a class="reference internal" href="../reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier" title="empulse.models.CSTreeClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSTreeClassifier</span></code></a>, <a class="reference internal" href="../reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier" title="empulse.models.CSForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSForestClassifier</span></code></a>,
+and <a class="reference internal" href="../reference/generated/empulse.models.CSBaggingClassifier.html#empulse.models.CSBaggingClassifier" title="empulse.models.CSBaggingClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBaggingClassifier</span></code></a> to support cost-sensitive decision tree and ensemble models</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Add support for scikit-learn 1.5.2 (previously Empulse only supported scikit-learn 1.6.0 and above).</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Removed the <code class="docutils literal notranslate"><span class="pre">emp_score</span></code> and <code class="docutils literal notranslate"><span class="pre">emp</span></code> functions from the <a class="reference internal" href="../reference/metrics.html#module-empulse.metrics" title="empulse.metrics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">metrics</span></code></a> module.
+Use the <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-func docutils literal notranslate"><span class="pre">Metric</span></code></a> class instead to define custom expected maximum profit measures.
+For more information, read the <a class="reference internal" href="../guide/costs/recipes.html#user-defined-value-metric"><span class="std std-ref">User Guide</span></a>.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Removed numba as a dependency for Empulse. This will reduce the installation time and the size of the package.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-func docutils literal notranslate"><span class="pre">Metric</span></code></a> when defining stochastic variable with fixed values.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-func docutils literal notranslate"><span class="pre">Metric</span></code></a> when stochastic variable has infinite bounds.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix <a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-func docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a>
+when costs of predicting positive and negative classes are equal.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fix documentation linking issues to sklearn</p></li>
+</ul>
+</section>
+<section id="id8">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.6.0">0.6.0</a> (28-01-2025)<a class="headerlink" href="#id8" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Add <a class="reference internal" href="../reference/generated/empulse.metrics.Metric.html#empulse.metrics.Metric" title="empulse.metrics.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a> to easily build your own value-driven and cost-sensitive metrics</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Add support for LightGBM and Catboost models in <a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a> and
+<a class="reference internal" href="../reference/generated/empulse.models.B2BoostClassifier.html#empulse.models.B2BoostClassifier" title="empulse.models.B2BoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">B2BoostClassifier</span></code></a></p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <code class="xref py py-func docutils literal notranslate"><span class="pre">make_objective_churn</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">make_objective_acquisition</span></code>
+now take a <code class="docutils literal notranslate"><span class="pre">model</span></code> argument to calculate the objective for either XGBoost, LightGBM or Catboost models.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  XGBoost is now an optional dependency together with LightGBM and Catboost. To install the package with
+XGBoost, LightGBM and Catboost support, use the following command: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">empulse[optional]</span></code></p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Renamed <code class="docutils literal notranslate"><span class="pre">y_pred_baseline</span></code> and <code class="docutils literal notranslate"><span class="pre">y_proba_baseline</span></code> to <code class="docutils literal notranslate"><span class="pre">baseline</span></code> in <a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a>
+and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>. It now accepts the following arguments:</p>
+<ul>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">'zero_one'</span></code>, the baseline model is a naive model that predicts all zeros or all ones
+depending on which is better.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">'prior'</span></code>, the baseline model is a model that predicts the prior probability of
+the majority or minority class depending on which is better (not available for savings score).</p></li>
+<li><p>If array-like, target probabilities of the baseline model.</p></li>
+</ul>
+</li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Add parameter validation for all models and samplers</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Make all arguments of dataset loaders keyword-only</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Update the descriptions attached to each dataset to match information found in the user guide</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Improve type hints for functions and classes</p></li>
+</ul>
+</section>
+<section id="id9">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.5.2">0.5.2</a> (12-01-2025)<a class="headerlink" href="#id9" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Allow <a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a>
+to calculate the savings score over the baseline model instead of a naive model,
+by setting the <code class="docutils literal notranslate"><span class="pre">y_pred_baseline</span></code> and <code class="docutils literal notranslate"><span class="pre">y_proba_baseline</span></code> parameters, respectively.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Reworked the user guide documentation to better explain the usage of value-driven
+and cost-sensitive models, samplers and metrics</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span> <a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a> and <a class="reference internal" href="../reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier" title="empulse.models.ProfLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProfLogitClassifier</span></code></a>
+by default do not perform soft-thresholding on the regression coefficients.
+This can be enabled by setting the <code class="docutils literal notranslate"><span class="pre">soft_threshold</span></code> parameter to True.</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Prevent division by zero errors in <a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a></p></li>
+</ul>
+</section>
+<section id="id10">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.5.1">0.5.1</a> (05-01-2025)<a class="headerlink" href="#id10" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-danger">Fix</span></span>  Fixed documentation build issue</p></li>
+</ul>
+</section>
+<section id="id11">
+<h2><a class="reference external" href="https://github.com/ShimantoRahman/empulse/releases/tag/0.5.0">0.5.0</a> (05-01-2025)<a class="headerlink" href="#id11" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added supported for python 3.13</p></li>
+<li><dl class="simple">
+<dt><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added cost-sensitive models</dt><dd><ul>
+<li><p><a class="reference internal" href="../reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier" title="empulse.models.CSLogitClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSLogitClassifier</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier" title="empulse.models.CSBoostClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSBoostClassifier</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.models.RobustCSClassifier.html#empulse.models.RobustCSClassifier" title="empulse.models.RobustCSClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RobustCSClassifier</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier" title="empulse.models.CSThresholdClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSThresholdClassifier</span></code></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added cost-sensitive metrics</dt><dd><ul>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.cost_loss.html#empulse.metrics.cost_loss" title="empulse.metrics.cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">cost_loss</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.expected_cost_loss.html#empulse.metrics.expected_cost_loss" title="empulse.metrics.expected_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_cost_loss</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.expected_log_cost_loss.html#empulse.metrics.expected_log_cost_loss" title="empulse.metrics.expected_log_cost_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_log_cost_loss</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.savings_score.html#empulse.metrics.savings_score" title="empulse.metrics.savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">savings_score</span></code></a></p></li>
+<li><p><a class="reference internal" href="../reference/generated/empulse.metrics.expected_savings_score.html#empulse.metrics.expected_savings_score" title="empulse.metrics.expected_savings_score"><code class="xref py py-func docutils literal notranslate"><span class="pre">expected_savings_score</span></code></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Major Feature</span></span>  Added <a class="reference internal" href="../reference/datasets.html#module-empulse.datasets" title="empulse.datasets"><code class="xref py py-mod docutils literal notranslate"><span class="pre">empulse.datasets</span></code></a> module</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-success">Feature</span></span>  Added <a class="reference internal" href="../reference/generated/empulse.samplers.CostSensitiveSampler.html#empulse.samplers.CostSensitiveSampler" title="empulse.samplers.CostSensitiveSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostSensitiveSampler</span></code></a></p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-info">Enhancement</span></span>  Allow all cost-sensitive models and samplers to accept cost parameters during initialization</p></li>
+<li><p><span class="raw-html"><span class="badge text-bg-warning">API Change</span></span>  Renamed metric arguments which expect target score from y_pred to y_score and
+target probabilities from y_pred to y_proba</p></li>
+</ul>
+</section>
+</section>
+</article>
+<footer class="bd-footer-article">
+<div class="footer-article-items footer-article__inner">
+<div class="footer-article-item">
+<div class="prev-next-area">
+<a class="left-prev" href="../project_info.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title">Project Information</p>
+</div>
+</a>
+<a class="right-next" href="contributing.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title">Contributing</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div></div>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="bd-toc-nav page-toc">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unreleased">Unreleased</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">0.12.0 (19-09-2026)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#metrics">Metrics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#models">Models</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optimizers">Optimizers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#datasets">Datasets</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#packaging-and-dependencies">Packaging and dependencies</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">0.11.1 (08-05-2026)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">0.11.0 (08-05-2026)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">0.10.4 (20-09-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">0.9.0 (15-06-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">0.8.0 (01-06-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">0.7.0 (05-02-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">0.6.0 (28-01-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">0.5.2 (12-01-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">0.5.1 (05-01-2025)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">0.5.0 (05-01-2025)</a></li>
+</ul>
+</nav></div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer="" src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+</p>
+</div>
+</div>
+</div>
+</footer>
+</body>
+</html>

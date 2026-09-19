@@ -1,0 +1,9 @@
+﻿CSLogitClassifier
+=================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSLogitClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

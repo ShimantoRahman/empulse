@@ -1,0 +1,9 @@
+﻿ProfMPMClassifier
+=================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: ProfMPMClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

@@ -1,0 +1,7 @@
+﻿expected\_cost\_loss
+====================
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: expected_cost_loss
+   :no-value:

@@ -1,0 +1,9 @@
+﻿CSRateClassifier
+================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSRateClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

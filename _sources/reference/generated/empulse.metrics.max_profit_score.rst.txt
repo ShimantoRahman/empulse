@@ -1,0 +1,7 @@
+﻿max\_profit\_score
+==================
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: max_profit_score
+   :no-value:

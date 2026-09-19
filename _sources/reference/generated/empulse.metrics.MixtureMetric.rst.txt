@@ -1,0 +1,9 @@
+﻿MixtureMetric
+=============
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: MixtureMetric
+   :members:
+   :inherited-members:
+   :special-members: __call__

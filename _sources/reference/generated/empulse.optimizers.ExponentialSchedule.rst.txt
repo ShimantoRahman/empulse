@@ -1,0 +1,9 @@
+﻿ExponentialSchedule
+===================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: ExponentialSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

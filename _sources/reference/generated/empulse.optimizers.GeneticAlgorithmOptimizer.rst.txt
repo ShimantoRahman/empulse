@@ -1,0 +1,9 @@
+﻿GeneticAlgorithmOptimizer
+=========================
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: GeneticAlgorithmOptimizer
+   :members:
+   :inherited-members:
+   :special-members: __call__

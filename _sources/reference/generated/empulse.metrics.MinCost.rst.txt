@@ -1,0 +1,9 @@
+﻿MinCost
+=======
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: MinCost
+   :members:
+   :inherited-members:
+   :special-members: __call__

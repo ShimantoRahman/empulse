@@ -1,0 +1,7 @@
+﻿mpc\_score
+==========
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: mpc_score
+   :no-value:
