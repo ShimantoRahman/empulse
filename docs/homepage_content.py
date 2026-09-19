@@ -29,7 +29,7 @@ LEAD: Final[str] = (
     'Accuracy, F1 and AUC price a false positive and a false negative the same. Your business '
     'does not. Empulse lets you write down what each outcome is actually worth, then '
     '<strong>evaluate</strong>, <strong>train</strong> and <strong>threshold</strong> your models '
-    'against that definition — as ordinary scikit-learn estimators.'
+    'as scikit-learn estimators.'
 )
 
 INSTALL_COMMAND: Final[str] = 'pip install empulse'
@@ -50,11 +50,10 @@ class Pillar(NamedTuple):
 PILLARS: Final[tuple[Pillar, ...]] = (
     Pillar(
         kicker='Measure',
-        title='Score models in value',
+        title='Score models by value',
         body=(
-            'Expected cost, savings and profit, with ready-made metrics for churn, customer '
-            'acquisition and credit scoring — or a cost matrix of your own, built from named '
-            'business quantities.'
+            'Evaluate expected cost, savings, or profit. Use prebuilt metrics for churn, customer '
+            'acquisition, and credit scoring, or define a custom cost matrix.'
         ),
         link_text='Measuring a model',
         link_ref='measuring',
@@ -63,18 +62,18 @@ PILLARS: Final[tuple[Pillar, ...]] = (
         kicker='Train',
         title='Optimise the cost matrix directly',
         body=(
-            'Logistic regression, gradient boosting, trees and ensembles that minimise what a '
-            'mistake costs instead of log-loss — including costs that differ per customer.'
+            'Train logistic regression, gradient boosting, and trees to minimise cost instead of '
+            'log-loss. Costs can vary per customer.'
         ),
         link_text='Training a model',
         link_ref='training',
     ),
     Pillar(
         kicker='Decide',
-        title='Cut off where the value is',
+        title='Tune decision thresholds',
         body=(
-            'The default 0.5 is a guess. Compute the threshold — or the fraction of the '
-            'population — that actually maximises value, and wrap any classifier to use it.'
+            'Find the probability threshold or population fraction that minimizes total cost, then '
+            'wrap any classifier to apply it.'
         ),
         link_text='Making a decision',
         link_ref='deciding',
@@ -130,11 +129,11 @@ class Step(NamedTuple):
 STEPS: Final[tuple[Step, ...]] = (
     Step(
         label='Define',
-        title='Write the cost matrix down',
-        blurb='Four numbers, named after the business quantities they come from. You write them once.',
+        title='Define the cost matrix',
+        blurb='Assign costs to false positives and false negatives using named variables or fixed amounts.',
         code="""from empulse.metrics import CostMatrix
 
-# What each mistake is worth, named after where the number comes from.
+# Assign costs using business variables.
 cost_matrix = (
     CostMatrix()
     .add_fp_cost('incentive')  # a wasted discount
@@ -144,14 +143,14 @@ cost_matrix = (
 """,
         result_of='cost_matrix',
         result='CostMatrix(tp_cost=0, tn_cost=0, fp_cost=incentive, fn_cost=clv)',
-        result_note='Symbols, not constants — so the same matrix takes a different value per customer.',
+        result_note='Named symbols allow costs to vary per customer.',
         link_text='Defining costs',
         link_ref='defining_costs',
     ),
     Step(
         label='Measure',
         title='Turn it into a metric',
-        blurb='A metric is a scoring function, so it drops into cross-validation and grid search unchanged.',
+        blurb='A Metric wraps the cost matrix into a scikit-learn scoring function for cross-validation and grid search.',
         code="""from empulse.metrics import Cost, Metric
 
 expected_cost = Metric(cost_matrix, Cost())
@@ -161,14 +160,14 @@ expected_cost(y_test, y_score)
 """,
         result_of='expected_cost(y_test, y_score)',
         result='10.22',
-        result_note='Euros lost per customer by a model tuned for accuracy.',
+        result_note='Expected cost in euros per customer for the baseline model.',
         link_text='Measuring a model',
         link_ref='measuring',
     ),
     Step(
         label='Train',
-        title='Optimise it directly',
-        blurb='The same metric becomes the training objective. No wrapper, no custom loop.',
+        title='Train on the cost metric',
+        blurb='Pass the metric directly as the training loss function.',
         code="""from empulse.models import CSLogitClassifier
 
 model = CSLogitClassifier(loss=expected_cost).fit(X_train, y_train)
@@ -177,14 +176,14 @@ expected_cost(y_test, model.predict_proba(X_test)[:, 1])
 """,
         result_of='expected_cost(y_test, model.predict_proba(X_test)[:, 1])',
         result='9.37',
-        result_note='Same data, same features, 8% cheaper — because the model now knows the price.',
+        result_note='Expected cost drops to 9.37 euros per customer, an 8% reduction over the baseline on the same test data.',
         link_text='Training a model',
         link_ref='training',
     ),
     Step(
         label='Decide',
-        title='Then pick the cut-off',
-        blurb='The threshold that maximises value is almost never the 0.5 every classifier defaults to.',
+        title='Find the optimal threshold',
+        blurb='Find the decision threshold that minimizes expected cost for the trained model.',
         code="""from empulse.models import CSThresholdClassifier
 
 decider = CSThresholdClassifier(estimator=model, loss=expected_cost)
@@ -194,7 +193,7 @@ decider.threshold_
 """,
         result_of='decider.threshold_',
         result='0.048',
-        result_note='Act on everyone the model scores above it — not above 0.5.',
+        result_note='The cost-optimal decision threshold is 0.048 instead of the default 0.5.',
         link_text='Making a decision',
         link_ref='deciding',
     ),
@@ -225,13 +224,13 @@ DESTINATIONS: Final[tuple[Destination, ...]] = (
     Destination(
         icon='fa-solid fa-book-open',
         title='Tutorial',
-        body='A worked example on a real churn dataset, from a cost-blind baseline to a deployed pipeline.',
+        body='A step-by-step churn example comparing baseline models and cost-sensitive pipelines.',
         ref='tutorial',
     ),
     Destination(
         icon='fa-solid fa-screwdriver-wrench',
         title='User Guide',
-        body='Task-oriented guides for every model, metric, sampler and dataset.',
+        body='Detailed guides for models, metrics, samplers, and datasets.',
         ref='guide',
     ),
     Destination(

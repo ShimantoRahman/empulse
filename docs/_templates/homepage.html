@@ -46,7 +46,7 @@
           <span class="eds-install__copy-done" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
         </button>
       </div>
-      <p class="eds-install__note">Python 3.11 or higher. <a href="{{ url_installation }}">Optional extras</a> add the XGBoost, LightGBM and CatBoost backends.</p>
+      <p class="eds-install__note">Python 3.11 or higher. <a href="{{ url_installation }}">Optional extras</a> add additional functionalities for boosting and symbolic regression models.</p>
 
       {%- if stats %}
       <ul class="eds-stats">
@@ -66,12 +66,12 @@
        `sphinxext/homepage.py` inlines the numbers `scripts/figures/homepage_data.py` computed. #}
     <figure class="eds-chart" data-eds-chart>
       <div class="eds-chart__head">
-        <span class="eds-chart__title">What the cut-off is worth</span>
+        <span class="eds-chart__title">Expected cost by decision threshold</span>
         <span class="eds-chart__source" data-eds-chart-source></span>
       </div>
       <div class="eds-chart__plot">
         <svg class="eds-chart__svg" viewBox="0 0 440 260" role="img" data-eds-chart-svg
-             aria-label="Expected cost per customer against the decision threshold. The curve bottoms out far to the left of the default cut-off of 0.5."></svg>
+             aria-label="Expected cost per customer against decision threshold. The lowest cost occurs at threshold 0.048 instead of the default 0.5."></svg>
         {# `aria-hidden` because this only repeats, for the pointer, a value the curve already
            carries — and an announced live region would fire on every mouse move. #}
         <div class="eds-chart__readout" data-eds-chart-readout aria-hidden="true" hidden></div>
@@ -80,7 +80,7 @@
         {%- endif %}
       </div>
       <figcaption class="eds-chart__caption" data-eds-chart-caption>
-        One fixed model, scored once. Only the cut-off applied to its predictions moves.
+        Expected cost across decision thresholds for a single model.
       </figcaption>
     </figure>
   </section>
@@ -89,8 +89,8 @@
   <section class="eds-band">
     <div class="eds-wrap">
       <header class="eds-section-head">
-        <h2>Write the cost matrix once. Reuse it everywhere.</h2>
-        <p>One definition of what an outcome is worth, carried through the whole workflow.</p>
+        <h2>Evaluate, train, and decide with cost matrices</h2>
+        <p>Use a single cost matrix across evaluation metrics, model training, and threshold tuning.</p>
       </header>
       <ul class="eds-pillars">
         {%- for pillar in pillars %}
@@ -110,7 +110,7 @@
   <section class="eds-wrap eds-tour" data-eds-tour>
     <header class="eds-section-head">
       <h2>A minute with Empulse</h2>
-      <p>Four steps from a business question to a model that answers it in value.</p>
+      <p>Four steps from a business question to a value-driven decision.</p>
     </header>
 
     <div class="eds-tour__tabs" role="tablist" aria-label="Code walkthrough">
@@ -164,8 +164,8 @@
     <div class="eds-wrap">
       <header class="eds-section-head">
         <h2>Where to go next</h2>
-        <p>Everything follows scikit-learn conventions, so Empulse estimators drop into a
-          <code>Pipeline</code>, <code>GridSearchCV</code> or <code>cross_val_score</code> unchanged.</p>
+        <p>Empulse estimators follow scikit-learn conventions and work directly with
+          <code>Pipeline</code>, <code>GridSearchCV</code>, and <code>cross_val_score</code>.</p>
       </header>
       <ul class="eds-destinations">
         {%- for destination in destinations %}

@@ -139,7 +139,7 @@
       dy: 14,
       anchor: 'start',
     });
-    marker(data.default, 'default', 'the usual 0.5', { dx: 0, dy: -26, anchor: 'middle' });
+    marker(data.default, 'default', 'default 0.5', { dx: 0, dy: -26, anchor: 'middle' });
     svg.appendChild(markers);
 
     // The pointer read-out, hidden until the reader actually moves over the plot.
@@ -158,10 +158,10 @@
     }
     if (caption && typeof data.reduction === 'number') {
       caption.innerHTML =
-        `Moving the cut-off from 0.5 to ${data.optimal.threshold} takes ${money(data.default.cost)} ` +
-        `down to <strong>${money(data.optimal.cost)}</strong> per customer — ` +
-        `<strong>${Math.round(data.reduction * 100)}% less</strong>, on the same model and the same predictions. ` +
-        `Drag across the chart to read any cut-off.`;
+        `Moving the decision threshold from 0.5 to ${data.optimal.threshold} reduces expected cost from ${money(data.default.cost)} ` +
+        `to <strong>${money(data.optimal.cost)}</strong> per customer, a ` +
+        `<strong>${Math.round(data.reduction * 100)}% reduction</strong> on the same test predictions. ` +
+        `Drag across the chart to inspect any threshold.`;
     }
 
     if (!reduceMotion.matches) {

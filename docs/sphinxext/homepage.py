@@ -78,6 +78,13 @@ def _github_stars() -> str | None:
     return _format_count(int(response.json()['stargazers_count']))
 
 
+def _latest_release() -> str | None:
+    """The newest release tag published on GitHub."""
+    response = requests.get(f'{GITHUB_API}/releases/latest', timeout=TIMEOUT)
+    response.raise_for_status()
+    return str(response.json()['tag_name'])
+
+
 def _pypi_downloads() -> str | None:
     """The total download count, read out of pepy's badge.
 
@@ -94,14 +101,27 @@ def _pypi_downloads() -> str | None:
 
 
 def _fetch_stats(release: str) -> list[dict[str, str]]:
-    """The social-proof row: whatever of it could be looked up, plus what is known locally."""
+    """The social-proof row: whatever of it could be looked up, plus what is known locally.
+
+    ``release`` is the version of the checkout being built, which on the development branch is
+    ahead of anything a reader can install. The row advertises the *latest release*, so on a dev
+    build the number has to be looked up rather than taken from here — the same distinction
+    ``generate_versions_json`` draws in ``conf.py``. If that lookup cannot be made, the stat is
+    left off instead of printing a version nobody can ``pip install``.
+    """
     stats: list[dict[str, str]] = []
+    pypi = 'https://pypi.org/project/empulse/'
+
+    lookups = [
+        ('downloads', 'https://pepy.tech/projects/empulse', _pypi_downloads),
+        ('GitHub stars', f'https://github.com/{GITHUB_REPO}', _github_stars),
+    ]
+    # A tagged build is itself the latest release, so it needs no lookup. Only a dev build does.
+    if 'dev' in release:
+        lookups.append(('latest release', pypi, _latest_release))
 
     if os.environ.get('EMPULSE_DOCS_OFFLINE') != '1':
-        for label, url, lookup in (
-            ('downloads', 'https://pepy.tech/projects/empulse', _pypi_downloads),
-            ('GitHub stars', f'https://github.com/{GITHUB_REPO}', _github_stars),
-        ):
+        for label, url, lookup in lookups:
             try:
                 value = lookup()
             except Exception as error:  # noqa: BLE001 - a missing stat must not fail a docs build
@@ -110,12 +130,15 @@ def _fetch_stats(release: str) -> list[dict[str, str]]:
             if value:
                 stats.append({'value': value, 'label': label, 'url': url})
 
-    stats.append({
-        'value': f'v{release.split("+")[0]}',
-        'label': 'latest release',
-        'url': 'https://pypi.org/project/empulse/',
-    })
-    stats.append({'value': '3.11+', 'label': 'Python', 'url': 'https://pypi.org/project/empulse/'})
+    if 'dev' not in release:
+        stats.append({'value': release.split('+')[0], 'label': 'latest release', 'url': pypi})
+
+    # Tags are published both with and without a leading `v`; the page prints one of them.
+    for stat in stats:
+        if stat['label'] == 'latest release':
+            stat['value'] = f'v{stat["value"].lstrip("v")}'
+
+    stats.append({'value': '3.11+', 'label': 'Python', 'url': pypi})
     return stats
 
 

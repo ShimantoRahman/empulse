@@ -10,7 +10,8 @@
  * belonging to this marketing surface only:
  *
  *   * the two display sizes above the 44px page title, which the rest of the site has no use for;
- *   * a button component, since the homepage is the first surface that needed one.
+ *   * a button component, since the homepage is the first surface that needed one;
+ *   * the ambient light behind each section, the one place the system allows a gradient.
  *
  * **Everything below is nested inside `.eds-home`, and that nesting is load-bearing.** Both
  * stylesheets under this one set margins on bare elements, at specificities that a selector of one
@@ -45,6 +46,63 @@
   max-width: none;
 }
 
+/* Ambient light -------------------------------------------------------------------------------- */
+
+// Two very soft lobes of the palette's accents, laid on the canvas behind a section so the page
+// reads as lit rather than as a flat sheet. The documentation pages have nothing like it, and
+// DESIGN.md records it as belonging to this surface only.
+//
+// It still follows the palette's rule rather than decorating freely: the definition colour leads
+// from the left, on the side where you write the cost matrix down, and the use colour trails to
+// the right, where you decide what to do with it. Both fade to nothing well inside their box, so
+// no section ends on a hard edge.
+//
+// `$strength` scales both lobes at once — the hero carries the full amount and every section after
+// it about half, so the top of the page stays the brightest thing on it. `$definition` and `$use`
+// are each a radial-gradient geometry ("<size> at <position>"), given per section so that no two
+// stretches of the page are lit identically.
+//
+// `color-mix` keeps the tint derived from the same two tokens as everything else rather than
+// restating them as rgba. Where it is unsupported the declaration is simply invalid and the canvas
+// stays flat, which is the pre-existing look.
+
+// How a lobe fades, as (distance from its centre, share of its peak) pairs.
+//
+// A gradient written with two stops ramps its alpha linearly, and the eye reads the kink at each
+// end of that ramp as an edge — which is what makes a soft glow show a distinct circular outline.
+// These stops trace an ease-out curve instead: the falloff has no corner in it, so there is
+// nothing for the eye to catch, and it reaches zero exactly at the edge of the ellipse rather than
+// stopping short of it.
+$eds-falloff: (0 1, 18 0.94, 32 0.84, 45 0.7, 57 0.54, 68 0.38, 78 0.24, 87 0.12, 94 0.05, 100 0);
+
+// The colour stops of one lobe: `$colour` mixed down to nothing along `$eds-falloff`, with every
+// step scaled by the section's `$strength`, so a section's light is one number to tune.
+@function eds-lobe($colour, $peak, $strength) {
+  $stops: '';
+  @each $stop in $eds-falloff {
+    $share: $strength * nth($stop, 2);
+    $stops: $stops + ', color-mix(in srgb, var(' + $colour + ') calc(var(' + $peak + ') * ' + $share +
+      '), transparent) ' + nth($stop, 1) + '%';
+  }
+  @return $stops;
+}
+
+@mixin eds-ambient($strength, $definition, $use) {
+  background-image:
+    #{'radial-gradient(' + $definition + eds-lobe('--eds-blue-strong', '--eds-glow-definition', $strength) + ')'},
+    #{'radial-gradient(' + $use + eds-lobe('--eds-purple-strong', '--eds-glow-use', $strength) + ')'};
+}
+
+// A section whose light has to be painted behind it rather than on it, because it has no
+// background of its own. Full-bleed, and clipped by `.eds-home` rather than widening the page.
+@mixin eds-ambient-layer($inset) {
+  content: '';
+  inset: $inset;
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
 /* The page ------------------------------------------------------------------------------------ */
 
 .eds-home {
@@ -58,7 +116,19 @@
   --eds-gutter: 1.5rem;
   --eds-measure: 78rem;
 
+  // How much of each accent colour reaches the canvas at the centre of a lobe. Everything else is
+  // derived from these two: `$eds-falloff` shapes the fade and each section scales it.
+  --eds-glow-definition: 12%;
+  --eds-glow-use: 9%;
+
   color: var(--eds-ink);
+  // A stacking context of its own, so the glow's negative `z-index` stays behind this page's
+  // content instead of falling behind the page background and disappearing.
+  isolation: isolate;
+  // The glow is sized in `vw`, which counts the scrollbar; `clip` keeps that overshoot from
+  // becoming a horizontal scrollbar. `clip` rather than `hidden` so no scroll container is
+  // created and nothing above the page loses its stickiness.
+  overflow-x: clip;
   width: 100%;
 
   // Element-level reset: vertical rhythm comes from the component rules below, one at a time, so
@@ -79,6 +149,13 @@
     text-decoration: none;
   }
 
+  // The same tint over a near-black canvas reads as almost nothing, so dark mode carries more of
+  // it. Over paper these values are already at the limit of what stays calm.
+  html[data-theme='dark'] & {
+    --eds-glow-definition: 20%;
+    --eds-glow-use: 15%;
+  }
+
   .eds-wrap {
     margin-inline: auto;
     max-width: var(--eds-measure);
@@ -88,7 +165,13 @@
 
   // A full-width band. Surfaces are flat and separated by a rule, never by a shadow, so a band is
   // a change of fill plus a hairline — the same device the header and footer already use.
+  //
+  // A band has a fill of its own, so its light is painted straight onto it and needs no layer
+  // behind it. The two bands are lit differently — the first leads with the definition lobe high
+  // on the left, the last sits lower and wider — so that the page does not repeat itself.
   .eds-band {
+    @include eds-ambient(0.55, '62rem 36rem at 12% 18%', '52rem 34rem at 90% 82%');
+
     background-color: var(--eds-surface);
     border-block: 1px solid var(--eds-rule);
     margin-top: 5rem;
@@ -106,6 +189,8 @@
   }
 
   .eds-band--last {
+    @include eds-ambient(0.55, '66rem 34rem at 24% 80%', '56rem 32rem at 84% 16%');
+
     border-bottom: none;
     margin-bottom: -1px; // Sit flush against the site footer's own top rule.
   }
@@ -137,6 +222,13 @@
     gap: 3.5rem;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
     padding-block: 4.5rem 1rem;
+    position: relative;
+
+    // The brightest light on the page, and the only section that carries the full strength.
+    &::before {
+      @include eds-ambient(1, '70rem 44rem at 16% 14%', '58rem 40rem at 86% 56%');
+      @include eds-ambient-layer(-6rem calc(50% - 50vw) -14rem);
+    }
   }
 
   // A kicker belongs to the headline under it, so it sits close enough to read as one unit.
@@ -638,6 +730,13 @@
 
   .eds-tour {
     margin-top: 5rem;
+    position: relative;
+
+    // The one long stretch of the page that sits on bare canvas between two tinted bands.
+    &::before {
+      @include eds-ambient(0.5, '52rem 34rem at 20% 38%', '44rem 32rem at 82% 62%');
+      @include eds-ambient-layer(-4rem calc(50% - 50vw));
+    }
   }
 
   .eds-tour__tabs {
