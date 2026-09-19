@@ -4,6 +4,11 @@ Each figure is written twice: ``<name>_light.svg`` and ``<name>_dark.svg``. Both
 one definition, so they cannot drift apart. The ``.. themed-figure::`` directive picks the right one
 at read time based on the reader's theme.
 
+The homepage hero is drawn by the browser rather than by this script, so its numbers are written to
+``docs/_static/data/<name>.json`` instead of to a pair of SVGs. Everything else about it is the
+same: the data is recomputed by Empulse here, so the chart cannot disagree with the claim beside
+it.
+
 Run with::
 
     just figures
@@ -13,6 +18,7 @@ The output is deterministic: running twice leaves the working tree clean.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -21,10 +27,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from diagrams import DIAGRAMS  # ruff: ignore[module-import-not-at-top-of-file]
+from homepage_data import DATA  # ruff: ignore[module-import-not-at-top-of-file]
 from palette import THEMES  # ruff: ignore[module-import-not-at-top-of-file]
 from plots import PLOTS  # ruff: ignore[module-import-not-at-top-of-file]
 
 OUTPUT_DIR = HERE.parents[1] / 'docs' / '_static' / 'assets'
+DATA_DIR = HERE.parents[1] / 'docs' / '_static' / 'data'
 
 FIGURES = {**DIAGRAMS, **PLOTS}
 
@@ -64,7 +72,21 @@ def main() -> int:
             written += 1
             print(f'wrote {target.relative_to(OUTPUT_DIR.parents[2])}')
 
-    print(f'\n{written} written, {unchanged} unchanged ({len(FIGURES)} figures x 2 themes)')
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    for name, compute in DATA.items():
+        target = DATA_DIR / f'{name}.json'
+        # Sorted keys and a trailing newline keep the file byte-identical between runs, so a
+        # regeneration that changed nothing leaves the working tree clean.
+        content = json.dumps(compute(), indent=2, sort_keys=True) + '\n'
+        previous = target.read_text(encoding='utf-8') if target.exists() else None
+        if previous == content:
+            unchanged += 1
+            continue
+        target.write_text(content, encoding='utf-8')
+        written += 1
+        print(f'wrote {target.relative_to(DATA_DIR.parents[2])}')
+
+    print(f'\n{written} written, {unchanged} unchanged ({len(FIGURES)} figures x 2 themes, {len(DATA)} data files)')
     return 0
 
 

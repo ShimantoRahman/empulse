@@ -16,6 +16,8 @@ import requests
 sys.path.insert(0, os.path.abspath("../empulse"))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("sphinxext"))
+# The homepage extension imports `homepage_content`, which sits beside this file.
+sys.path.insert(0, os.path.abspath("."))
 
 print(sys.path)
 import empulse  # noqa: E402 F401
@@ -90,6 +92,7 @@ extensions = [
     # see sphinxext folder for custom extensions
     "override_pst_pagetoc",
     "themed_figure",
+    "homepage",
 ]
 
 numpydoc_show_class_members = False
@@ -242,6 +245,8 @@ html_theme_options = {
     # Use :html_theme.sidebar_secondary.remove: for file-wide removal
     "secondary_sidebar_items": {
         "**": ["page-toc"],
+        # The landing page has no sections to list, and needs the width.
+        "index": [],
     },
     "show_version_warning_banner": True,
     "announcement": None,
@@ -255,8 +260,15 @@ html_css_files = ["css/custom.css"]
 sass_src_dir = "_static/scss"
 sass_out_dir = "_static/css"
 sass_targets = {
-    "custom.scss": "custom.css"
+    "custom.scss": "custom.css",
+    # Loaded only by _templates/homepage.html, so it is deliberately absent from html_css_files.
+    "homepage.scss": "homepage.css",
 }
 html_js_files = [
     "js/custom-icon.js",
 ]
+# The landing page is rendered by sphinxext/homepage.py from _templates/homepage.html, which needs
+# the whole window: no navigation sidebar, and no "on this page" column for a page with no sections.
+html_sidebars = {
+    "index": [],
+}

@@ -1,0 +1,187 @@
+{#-
+  The documentation landing page.
+
+  Everything except the article column comes from pydata-sphinx-theme: the header and its
+  navigation, the search dialog, the theme switcher, the version switcher and the footer. Only
+  `docs_main` is replaced, so the homepage reads as part of the same site while being laid out for
+  a first-time visitor rather than for reading prose.
+
+  The content itself comes from `docs/homepage_content.py` by way of `sphinxext/homepage.py`,
+  which also resolves the links and highlights the code. Nothing on this page is written twice.
+-#}
+{% extends "layout.html" %}
+
+{%- block extrahead %}
+  {{ super() }}
+  {# Loaded here rather than through `html_css_files` so the other pages do not pay for it. #}
+  <link rel="stylesheet" type="text/css" href="{{ pathto('_static/css/homepage.css', 1) }}" />
+{%- endblock extrahead %}
+
+{%- block docs_main %}
+<div class="eds-home">
+
+  {# --- Hero ------------------------------------------------------------------------------ #}
+  <section class="eds-hero eds-wrap">
+    <div class="eds-hero__copy">
+      <p class="eds-eyebrow">{{ hero_eyebrow }}</p>
+      <h1 class="eds-hero__motto">{{ hero_motto }}</h1>
+      <p class="eds-hero__lead">{{ hero_lead }}</p>
+
+      <div class="eds-hero__actions">
+        <a class="eds-btn eds-btn--primary" href="{{ url_getting_started }}">
+          Get started
+          <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="eds-btn eds-btn--ghost" href="{{ url_tutorial }}">Work through the tutorial</a>
+      </div>
+
+      <div class="eds-install">
+        <span class="eds-install__prompt" aria-hidden="true">$</span>
+        <code class="eds-install__command">{{ install_command }}</code>
+        <button type="button"
+                class="eds-install__copy"
+                data-copy="{{ install_command }}"
+                aria-label="Copy the install command">
+          <span class="eds-install__copy-idle" aria-hidden="true"><i class="fa-regular fa-copy"></i></span>
+          <span class="eds-install__copy-done" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+        </button>
+      </div>
+      <p class="eds-install__note">Python 3.11 or higher. <a href="{{ url_installation }}">Optional extras</a> add the XGBoost, LightGBM and CatBoost backends.</p>
+
+      {%- if stats %}
+      <ul class="eds-stats">
+        {%- for stat in stats %}
+        <li class="eds-stat">
+          <a href="{{ stat.url }}">
+            <span class="eds-stat__value">{{ stat.value }}</span>
+            <span class="eds-stat__label">{{ stat.label }}</span>
+          </a>
+        </li>
+        {%- endfor %}
+      </ul>
+      {%- endif %}
+    </div>
+
+    {# The counterweight: not decoration, but the claim above it, measured.
+       `sphinxext/homepage.py` inlines the numbers `scripts/figures/homepage_data.py` computed. #}
+    <figure class="eds-chart" data-eds-chart>
+      <div class="eds-chart__head">
+        <span class="eds-chart__title">What the cut-off is worth</span>
+        <span class="eds-chart__source" data-eds-chart-source></span>
+      </div>
+      <div class="eds-chart__plot">
+        <svg class="eds-chart__svg" viewBox="0 0 440 260" role="img" data-eds-chart-svg
+             aria-label="Expected cost per customer against the decision threshold. The curve bottoms out far to the left of the default cut-off of 0.5."></svg>
+        {# `aria-hidden` because this only repeats, for the pointer, a value the curve already
+           carries — and an announced live region would fire on every mouse move. #}
+        <div class="eds-chart__readout" data-eds-chart-readout aria-hidden="true" hidden></div>
+        {%- if hero_data %}
+        <script type="application/json" data-eds-chart-data>{{ hero_data }}</script>
+        {%- endif %}
+      </div>
+      <figcaption class="eds-chart__caption" data-eds-chart-caption>
+        One fixed model, scored once. Only the cut-off applied to its predictions moves.
+      </figcaption>
+    </figure>
+  </section>
+
+  {# --- The three claims -------------------------------------------------------------------- #}
+  <section class="eds-band">
+    <div class="eds-wrap">
+      <header class="eds-section-head">
+        <h2>Write the cost matrix once. Reuse it everywhere.</h2>
+        <p>One definition of what an outcome is worth, carried through the whole workflow.</p>
+      </header>
+      <ul class="eds-pillars">
+        {%- for pillar in pillars %}
+        <li class="eds-pillar">
+          <p class="eds-pillar__kicker"><span class="eds-pillar__index">{{ loop.index }}</span>{{ pillar.kicker }}</p>
+          <h3 class="eds-pillar__title">{{ pillar.title }}</h3>
+          <p class="eds-pillar__body">{{ pillar.body }}</p>
+          <a class="eds-pillar__link" href="{{ pillar.url }}">{{ pillar.link_text }}
+            <span aria-hidden="true">&rarr;</span></a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </section>
+
+  {# --- The code walkthrough ---------------------------------------------------------------- #}
+  <section class="eds-wrap eds-tour" data-eds-tour>
+    <header class="eds-section-head">
+      <h2>A minute with Empulse</h2>
+      <p>Four steps from a business question to a model that answers it in value.</p>
+    </header>
+
+    <div class="eds-tour__tabs" role="tablist" aria-label="Code walkthrough">
+      {%- for step in steps %}
+      <button type="button"
+              class="eds-tab"
+              role="tab"
+              id="eds-tab-{{ loop.index }}"
+              aria-controls="eds-panel-{{ loop.index }}"
+              aria-selected="{{ 'true' if loop.first else 'false' }}"
+              tabindex="{{ '0' if loop.first else '-1' }}"
+              data-eds-tab="{{ loop.index0 }}">
+        <span class="eds-tab__index">{{ loop.index }}</span>
+        <span class="eds-tab__label">{{ step.label }}</span>
+        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
+      </button>
+      {%- endfor %}
+    </div>
+
+    <div class="eds-tour__stage">
+      {%- for step in steps %}
+      <div class="eds-panel{{ ' is-active' if loop.first }}"
+           role="tabpanel"
+           id="eds-panel-{{ loop.index }}"
+           aria-labelledby="eds-tab-{{ loop.index }}"
+           data-eds-panel="{{ loop.index0 }}"
+           {% if not loop.first %}hidden{% endif %}>
+        <div class="eds-panel__code">
+          <div class="highlight eds-code"><pre data-eds-code>{{ step.html }}</pre></div>
+        </div>
+        <aside class="eds-panel__aside">
+          <h3 class="eds-panel__title">{{ step.title }}</h3>
+          <p class="eds-panel__blurb">{{ step.blurb }}</p>
+          <div class="eds-result" data-eds-result>
+            <p class="eds-result__label">Evaluates to</p>
+            <p class="eds-result__value"><code>{{ step.result }}</code></p>
+            <p class="eds-result__note">{{ step.result_note }}</p>
+          </div>
+          <a class="eds-panel__link" href="{{ step.url }}">{{ step.link_text }}
+            <span aria-hidden="true">&rarr;</span></a>
+        </aside>
+      </div>
+      {%- endfor %}
+    </div>
+
+    <p class="eds-tour__foot">{{ setup_caption }}</p>
+  </section>
+
+  {# --- Where to go next -------------------------------------------------------------------- #}
+  <section class="eds-band eds-band--last">
+    <div class="eds-wrap">
+      <header class="eds-section-head">
+        <h2>Where to go next</h2>
+        <p>Everything follows scikit-learn conventions, so Empulse estimators drop into a
+          <code>Pipeline</code>, <code>GridSearchCV</code> or <code>cross_val_score</code> unchanged.</p>
+      </header>
+      <ul class="eds-destinations">
+        {%- for destination in destinations %}
+        <li class="eds-destination">
+          <a href="{{ destination.url }}">
+            <span class="eds-destination__icon" aria-hidden="true"><i class="{{ destination.icon }}"></i></span>
+            <span class="eds-destination__title">{{ destination.title }}</span>
+            <span class="eds-destination__body">{{ destination.body }}</span>
+          </a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script src="{{ pathto('_static/js/homepage.js', 1) }}" defer></script>
+{%- endblock docs_main %}
