@@ -29,25 +29,23 @@ Empulse requires Python 3.11 or higher.
 pip install empulse
 ```
 
-XGBoost, LightGBM and CatBoost are optional extras needed for the boosting models:
+To pull in every optional dependency at once:
 
 ```bash
-pip install empulse[boosting]
+pip install empulse[optional]
 ```
-
-To pull in every optional dependency at once, use `pip install empulse[optional]`.
 
 ## A model that makes money
 
 On a real telecom churn dataset, an ordinary logistic regression reaches **0.93 ROC AUC** and
-**89% accuracy** — and *loses 7.20 per customer* once the retention campaign is priced in. Training
-the same data against the cost matrix turns that into a **profit of 2.78 per customer**.
+**89% accuracy** — and *earns 2.28 per customer* once the retention campaign is priced in. Training
+the same data against the cost matrix turns that into a **profit of 3.29 per customer**.
 
 ```python
 import pandas as pd
 from empulse.datasets import fetch_iranian_churn
 from empulse.metrics import Cost, Metric
-from empulse.models import CSBoostClassifier
+from empulse.models import CSLogitClassifier
 
 dataset = fetch_iranian_churn(backend=pd)
 X, y = dataset.data, dataset.target
@@ -57,7 +55,7 @@ clv = dataset.instance_costs['clv']  # each customer's lifetime value
 expected_cost = Metric(dataset.cost_matrix, Cost())
 
 # Train a model that optimises it directly
-model = CSBoostClassifier(loss=expected_cost)
+model = CSLogitClassifier(loss=expected_cost)
 model.fit(X, y, clv=clv)
 
 print(expected_cost(y, model.predict_proba(X)[:, 1], clv=clv))
@@ -89,7 +87,7 @@ or the [full tutorial](https://empulse.readthedocs.io/en/stable/tutorial.html).
 | **[Robustness](https://empulse.readthedocs.io/en/stable/guide/models/robustcs.html)** | `RobustCSClassifier` detects and imputes outliers in noisy instance-dependent costs. |
 | **[Samplers](https://empulse.readthedocs.io/en/stable/reference/samplers.html)** | Cost-proportionate resampling and bias mitigation to make any estimator cost-sensitive. |
 | **[Optimizers](https://empulse.readthedocs.io/en/stable/reference/optimizers.html)** | L-BFGS-B, SGD/Adam/RMSProp with learning-rate schedules, and genetic/memetic algorithms for non-smooth objectives. |
-| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets_guide.html)** | Five real-world cost-sensitive datasets, each shipping its own cost matrix. |
+| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets_guide.html)** | Real-world cost-sensitive datasets, each shipping its own cost matrix. |
 
 ## Works with scikit-learn
 
