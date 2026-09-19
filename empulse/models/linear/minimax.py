@@ -1,7 +1,6 @@
-from typing import Any
+from scipy.optimize import OptimizeResult
 
-import numpy as np
-
+from ..._types import FloatNDArray
 from .._base import BaseMinimaxProbabilityMachine
 
 
@@ -152,9 +151,22 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
         alpha = (k_min**2 / (1 + k_min**2)) if k_min > 0 else 0.0
         return alpha, alpha
 
+    def _fit_minimax(
+        self,
+        mu_1: FloatNDArray,
+        mu_0: FloatNDArray,
+        sigma_1: FloatNDArray,
+        sigma_0: FloatNDArray,
+        c1: float,
+        c0: float,
+    ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
+        if self.lambda_reg == 0.0:
+            return self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        return self._solve_regularized_mpm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)
+
 
 class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
-    """
+    r"""
     Profit-driven minimax probability machine classifier.
 
     Learns a linear decision boundary that maximizes the worst-case (distribution-free)
@@ -162,12 +174,13 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     through the multivariate Chebyshev-Cantelli inequality.
 
     Setting ``lambda_reg=0`` (default) reproduces the original Profit Maximizing Minimax
-    Probability Machine (MEMPM): the weight vector is constrained to unit norm (``||w||=1``)
-    and no additional regularization is applied.
+    Probability Machine (MEMPM): the weight vector is scaled by the canonical constraint
+    :math:`w^T(\mu_1 - \mu_0) = 1` and no additional regularization is applied.
 
     Setting ``lambda_reg>0`` switches to the Lp-regularized variant (Lp-ProfMEMPM):
-    the unit-norm constraint is dropped and an L1 or L2 penalty (controlled by ``penalty``)
-    on the weight vector is added to the objective instead, controlling the scale of ``w``.
+    the canonical scale constraint is dropped and an L1 or L2 penalty (controlled by
+    ``penalty``) on the weight vector is added to the objective instead, controlling the
+    scale of ``w``.
 
     Read more in the :ref:`User Guide <profmempm>`.
 
@@ -250,10 +263,11 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     lambda_reg : float, default=0.0
         Regularization strength of the ``penalty`` term. Must be non-negative.
 
-        If ``0.0``, no regularization is applied and ``w`` is instead constrained
-        to unit norm, reproducing the original (non-regularized) MEMPM formulation.
+        If ``0.0``, no regularization is applied and ``w`` is instead scaled by the
+        canonical constraint :math:`w^T(\mu_1 - \mu_0) = 1`, reproducing the original
+        (non-regularized) MEMPM formulation.
 
-        If greater than ``0.0``, the unit-norm constraint is dropped and ``w`` is
+        If greater than ``0.0``, the canonical scale constraint is dropped and ``w`` is
         regularized instead, reproducing the Lp-ProfMEMPM formulation.
 
     ridge_penalty : float, default=1e-6
@@ -300,8 +314,15 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
         alpha_0 = (k_0**2 / (1 + k_0**2)) if k_0 > 0 else 0.0
         return alpha_1, alpha_0
 
-    def _build_constraints(self, *, regularized: bool) -> dict[str, Any] | tuple[()]:
-        if regularized:
-            return ()
-        # Fix the scale invariance by constraining the L2 norm of the weight vector to 1.
-        return {'type': 'eq', 'fun': lambda params: np.linalg.norm(params[:-1]) - 1.0}
+    def _fit_minimax(
+        self,
+        mu_1: FloatNDArray,
+        mu_0: FloatNDArray,
+        sigma_1: FloatNDArray,
+        sigma_0: FloatNDArray,
+        c1: float,
+        c0: float,
+    ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
+        if self.lambda_reg == 0.0:
+            return self._solve_unregularized_mempm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)
+        return self._solve_regularized_mempm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)

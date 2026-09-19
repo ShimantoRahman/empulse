@@ -87,12 +87,12 @@ penalty" — it changes the constraint set.
     * - ``lambda_reg``
       - Formulation
     * - ``0`` (default)
-      - The original published models. :class:`~empulse.models.ProfMEMPMClassifier` constrains the
-        weight vector to unit norm; :class:`~empulse.models.ProfMPMClassifier` leaves it
-        unconstrained. No penalty term.
+      - The unregularized published models. Both :class:`~empulse.models.ProfMEMPMClassifier`
+        and :class:`~empulse.models.ProfMPMClassifier` fix scale invariance using the
+        canonical constraint :math:`w^T(\mu_1 - \mu_0) = 1`. No penalty term.
     * - ``> 0``
-      - The Lp-regularised variants. The unit-norm constraint is dropped and an L1 or L2 penalty on
-        the weights is added to the objective instead, controlling the scale of ``w``.
+      - The Lp-regularised variants. Solved using coordinate descent with an L1 or L2 penalty
+        on the weights added to the objective.
 
 ``penalty`` chooses between ``'l1'`` and ``'l2'`` for the regularised form, and ``ridge_penalty``
 adds a small amount to the diagonal of the covariance estimates. Raise it when the covariance

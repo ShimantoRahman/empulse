@@ -26,6 +26,8 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
+    ProfMEMPMClassifier,
+    ProfMPMClassifier,
     ProfSRClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
@@ -72,7 +74,9 @@ def expected_failed_checks(estimator):
         | RobustCSClassifier
         | ProfTreeClassifier
         | ProfLogitClassifier
-        | ProfSRClassifier,
+        | ProfSRClassifier
+        | ProfMPMClassifier
+        | ProfMEMPMClassifier,
     ):
         return {
             'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'

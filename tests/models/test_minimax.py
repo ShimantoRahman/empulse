@@ -62,8 +62,10 @@ def test_instance_dependent_costs_are_aggregated_to_mean(model_cls, data):
 class TestWorstCaseAccuracies:
     """Regression tests for the shared-vs-per-class worst-case accuracy bound distinction.
 
-    This is the one real behavioral difference between ProfMPMClassifier and
-    ProfMEMPMClassifier that survived extracting their shared BaseMinimaxProbabilityMachine base.
+    ``_worst_case_accuracies`` is the one real behavioral difference between ProfMPMClassifier
+    and ProfMEMPMClassifier that survived extracting their shared BaseMinimaxProbabilityMachine
+    base, and every ``_solve_*`` method on that base defers to it for its final
+    ``(alpha_1, alpha_0)``.
     """
 
     def test_profmpm_shares_one_alpha_across_classes(self):
@@ -90,31 +92,61 @@ class TestWorstCaseAccuracies:
         if min(k_1, k_0) <= 0:
             assert mpm_alpha_1 == mpm_alpha_0 == 0.0
 
+    def test_unregularized_mempm_beta_max_uses_true_kappa_supremum(self, seeded_rng):
+        """The search bound for alpha_0 must be the true supremum of kappa_0 over the feasible
+        set (sqrt(delta_mu^T Sigma_0^-1 delta_mu)), not kappa_0 at the unrelated MPM solution.
+
+        With anisotropic, differently-shaped covariances, the MPM solution direction is a poor
+        proxy for the direction that maximizes kappa_0, so bounding the search by it leaves most
+        of the feasible (0, 1) range for alpha_0 unexplored and can cost double-digit percentages
+        of worst-case profit.
+        """
+        n = 2000
+        sigma_1 = np.array([[4.0, 0.0], [0.0, 0.05]])
+        sigma_0 = np.array([[0.05, 0.0], [0.0, 4.0]])
+        X_pos = seeded_rng.multivariate_normal([1.0, 1.0], sigma_1, size=n)
+        X_neg = seeded_rng.multivariate_normal([0.0, 0.0], sigma_0, size=n)
+        X = np.vstack([X_pos, X_neg])
+        y = np.r_[np.ones(n, dtype=int), np.zeros(n, dtype=int)]
+
+        # Heavily favors specificity, so the optimum sits where alpha_0 is large.
+        model = ProfMEMPMClassifier().fit(X, y, tp_cost=-1.0, fp_cost=1000.0)
+
+        # The bug capped alpha_0 near 0.59 on data shaped like this; the true achievable
+        # bound is close to 0.95.
+        assert model.alpha_0_ > 0.8
+
 
 class TestConstraints:
-    """Regression tests for the unit-norm-vs-unconstrained distinction between the two models.
+    """Tests for scale constraints and boundary conditions from Maldonado et al. (2020)."""
 
-    ProfMEMPMClassifier constrains ||w||=1 when unregularized (dropped when lambda_reg > 0);
-    ProfMPMClassifier has never applied any constraint (see MODELS_OPTIMIZERS_REVIEW.md item 14 -
-    intentionally preserved as-is by this refactor, not fixed here).
-    """
-
-    def test_profmpm_has_no_constraints(self):
-        model = ProfMPMClassifier()
-        assert model._build_constraints(regularized=False) == ()
-        assert model._build_constraints(regularized=True) == ()
-
-    def test_profmempm_constrains_unit_norm_when_unregularized(self):
-        model = ProfMEMPMClassifier()
-        constraints = model._build_constraints(regularized=False)
-        assert constraints != ()
-        assert constraints['type'] == 'eq'
-
-    def test_profmempm_drops_constraint_when_regularized(self):
-        model = ProfMEMPMClassifier()
-        assert model._build_constraints(regularized=True) == ()
-
-    def test_profmempm_unregularized_coef_has_unit_norm(self, data):
+    @pytest.mark.parametrize('model_cls', MODEL_CLASSES)
+    def test_unregularized_scale_constraint(self, model_cls, data):
+        """Unregularized models satisfy w^T(mu_1 - mu_0) = 1 (Eq. 7 and Eq. 14)."""
         X, y = data
-        model = ProfMEMPMClassifier(lambda_reg=0.0).fit(X, y, tp_cost=-200, fp_cost=10)
-        assert np.linalg.norm(model.coef_) == pytest.approx(1.0, abs=1e-4)
+        model = model_cls(lambda_reg=0.0).fit(X, y, tp_cost=-200, fp_cost=10)
+        mu_1 = np.mean(X[y == 1], axis=0)
+        mu_0 = np.mean(X[y == 0], axis=0)
+        assert float(model.coef_ @ (mu_1 - mu_0)) == pytest.approx(1.0, abs=1e-4)
+
+    @pytest.mark.parametrize('model_cls', MODEL_CLASSES)
+    def test_unregularized_intercept_boundary_condition(self, model_cls, data):
+        """Intercept b* satisfies tight boundary condition (Eq. 28 and Eq. 29)."""
+        X, y = data
+        model = model_cls(lambda_reg=0.0).fit(X, y, tp_cost=-200, fp_cost=10)
+        mu_1 = np.mean(X[y == 1], axis=0)
+        mu_0 = np.mean(X[y == 0], axis=0)
+        ridge = np.eye(X.shape[1]) * model.ridge_penalty
+        sigma_1 = np.cov(X[y == 1], rowvar=False) + ridge
+        sigma_0 = np.cov(X[y == 0], rowvar=False) + ridge
+
+        w = model.coef_
+        d1 = float(np.sqrt(w @ sigma_1 @ w))
+        d0 = float(np.sqrt(w @ sigma_0 @ w))
+        k1 = np.sqrt(model.alpha_1_ / (1.0 - model.alpha_1_))
+        k0 = np.sqrt(model.alpha_0_ / (1.0 - model.alpha_0_))
+
+        b1 = -float(w @ mu_1) + k1 * d1
+        b0 = -float(w @ mu_0) - k0 * d0
+        assert b1 == pytest.approx(b0, abs=1e-3)
+        assert model.intercept_ == pytest.approx(b1, abs=1e-3)
