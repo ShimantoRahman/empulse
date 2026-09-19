@@ -15,6 +15,7 @@ __pycache__/
 .claude/
 code_reviews/
 notebooks/
+research/
 TODO.md
 DESIGN.md
 CLAUDE.md
@@ -95,6 +96,7 @@ docs/_build/
 docs/reference/generated/
 # compiled by sphinxcontrib.sass from _static/scss/
 docs/_static/css/custom.css
+docs/_static/css/homepage.css
 
 # PyBuilder
 target/
