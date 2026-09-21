@@ -82,12 +82,12 @@ or the [full tutorial](https://empulse.readthedocs.io/en/stable/tutorial.html).
 |---|---|
 | **[Profit-driven metrics](https://empulse.readthedocs.io/en/stable/reference/metrics.html)** | Ready-made metrics for [churn](https://empulse.readthedocs.io/en/stable/guide/metrics/prebuilt_churn_metrics.html), [acquisition](https://empulse.readthedocs.io/en/stable/guide/metrics/prebuilt_acquisition_metrics.html) and [credit scoring](https://empulse.readthedocs.io/en/stable/guide/metrics/prebuilt_credit_scoring_metrics.html), or [build your own](https://empulse.readthedocs.io/en/stable/guide/metrics/user_defined_value_metric.html) from a symbolic cost matrix. |
 | **[Cost-sensitive models](https://empulse.readthedocs.io/en/stable/reference/models.html)** | Logistic regression, gradient boosting, trees, forests, bagging, minimax probability machines and evolutionary trees — all trained on your cost matrix. |
-| **[Threshold tuning](https://empulse.readthedocs.io/en/stable/guide/models/threshold_tuning.html)** | Pick the cut-off that maximises profit instead of defaulting to 0.5, or classify the top-k% by score. |
-| **[Instance-dependent costs](https://empulse.readthedocs.io/en/stable/guide/instance_based_cv.html)** | Costs that differ per row are routed through pipelines and cross-validation automatically via scikit-learn metadata routing. |
+| **[Threshold tuning](https://empulse.readthedocs.io/en/stable/guide/deciding/thresholds.html)** | Pick the cut-off that maximises profit instead of defaulting to 0.5, or classify the top-k% by score. |
+| **[Instance-dependent costs](https://empulse.readthedocs.io/en/stable/guide/costs/metadata_routing.html#instance-based-cv)** | Costs that differ per row are routed through pipelines and cross-validation automatically via scikit-learn metadata routing. |
 | **[Robustness](https://empulse.readthedocs.io/en/stable/guide/models/robustcs.html)** | `RobustCSClassifier` detects and imputes outliers in noisy instance-dependent costs. |
 | **[Samplers](https://empulse.readthedocs.io/en/stable/reference/samplers.html)** | Cost-proportionate resampling and bias mitigation to make any estimator cost-sensitive. |
 | **[Optimizers](https://empulse.readthedocs.io/en/stable/reference/optimizers.html)** | L-BFGS-B, SGD/Adam/RMSProp with learning-rate schedules, and genetic/memetic algorithms for non-smooth objectives. |
-| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets_guide.html)** | Real-world cost-sensitive datasets, each shipping its own cost matrix. |
+| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets.html)** | Real-world cost-sensitive datasets, each shipping its own cost matrix. |
 
 ## Works with scikit-learn
 
