@@ -12,6 +12,7 @@ from ._base import Dataset
 from ._cost_matrices import (
     churn_precomputed_cost_matrix,
     credit_scoring_cost_matrix,
+    credit_scoring_known_cl_cost_matrix,
     upsell_bank_cost_matrix,
 )
 from ._io import _read_csv_gz
@@ -19,6 +20,7 @@ from ._process import (
     process_bank_telemarketing,
     process_churn_tv,
     process_credit_scoring_pakdd,
+    process_vub_credit_scoring,
 )
 
 if TYPE_CHECKING:
@@ -348,4 +350,128 @@ def load_credit_scoring_pakdd(*, backend: IntoBackend[EagerAllowed]) -> Dataset[
         target_names=['no default', 'default'],
         name='Credit Scoring PAKDD 2009',
         DESCR=_read_description('creditscoring2.rst'),
+    )
+
+
+def load_vub_credit_scoring(*, backend: IntoBackend[EagerAllowed]) -> Dataset[Any, Any]:
+    """
+    Load the VUB Credit Scoring dataset (binary classification).
+
+    The goal is to predict whether a borrower will experience 45+ days of payment
+    delay (default).
+    The target variable is whether the borrower defaulted, 1 = default, 0 = no default.
+
+    This dataset is from a Romanian non-banking financial institution (NBFI) provided
+    by the VUB Data Analytics Laboratory (Petrides et al., 2020).
+
+    For additional information about the dataset,
+    consult the :ref:`User Guide <vub_credit_scoring>`.
+
+    =================   ==============
+    Classes                          2
+    Defaulters                    3206
+    Non-defaulters               15711
+    Samples                      18917
+    Features                        16
+    =================   ==============
+
+    Parameters
+    ----------
+    backend : module
+        Dataframe library to use for ``data`` and ``target``.
+        Pass the library module directly, e.g. ``backend=polars`` or
+        ``backend=pandas``.
+
+    Returns
+    -------
+    dataset : :class:`~empulse.datasets.Dataset`
+        ``instance_costs`` contains:
+
+        - ``'cl'``: shifted loan amount per borrower.
+        - ``'fp_cost'``: precomputed FP cost per borrower following Bahnsen et al. (2014).
+
+    Notes
+    -----
+    Cost matrix (Bahnsen et al. 2014, Petrides et al. 2020, Vanderschueren et al. 2022):
+
+    .. list-table::
+
+        * -
+          - Actual positive :math:`y_i = 1`
+          - Actual negative :math:`y_i = 0`
+        * - Predicted positive :math:`\\hat{y}_i = 1`
+          - ``tp_cost`` :math:`= 0`
+          - ``fp_cost`` (precomputed per borrower)
+        * - Predicted negative :math:`\\hat{y}_i = 0`
+          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`
+          - ``tn_cost`` :math:`= 0`
+
+    The cost matrix uses symbolic parameters with the following defaults:
+
+    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75
+
+    The false positive cost is precomputed with an annual interest rate of 4.79%,
+    an annual cost of funds of 2.94% and a 24-month term.
+
+    The published data is anonymised: every monetary column, including the loan
+    amount, is standardised to zero mean and unit variance. The original costs of
+    Petrides et al. (2020) therefore cannot be recovered. Following
+    Vanderschueren et al. (2022), the loan amount is shifted to be strictly positive
+    (:math:`Cl_i = Loan\\_amount_i - \\min_j Loan\\_amount_j + 10^{-9}`) and used as the
+    credit line of the Bahnsen et al. (2014) cost matrix. The costs are therefore in
+    arbitrary units: only their relative size is meaningful.
+
+    References
+    ----------
+    .. [1] Petrides, G., Moldovan, D., Coenen, L., Guns, T., & Verbeke, W. (2020).
+           Cost-sensitive learning for profit-driven credit scoring.
+           Journal of the Operational Research Society, 1–13.
+    .. [2] Vanderschueren, T., Verdonck, T., Baesens, B., & Verbeke, W. (2022).
+           Predict-then-optimize or predict-and-optimize? An empirical evaluation
+           of cost-sensitive learning strategies. Information Sciences, 594, 400–415.
+    .. [3] Bahnsen, A. C., Aouada, D., & Ottersten, B. (2014). Example-dependent
+           cost-sensitive logistic regression for credit scoring. In 2014 13th International
+           Conference on Machine Learning and Applications (pp. 263–269).
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        import pandas as pd
+        from empulse.datasets import load_vub_credit_scoring
+        from empulse.metrics import Metric, Cost
+
+        dataset = load_vub_credit_scoring(backend=pd)
+
+        # replace with your own model's predicted probabilities
+        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))
+
+        metric = Metric(dataset.cost_matrix, Cost())
+        score = metric(dataset.target, y_score, **dataset.instance_costs)
+    """
+    raw = _read_csv_gz(_DATA_DIR / 'vub_credit_scoring.csv.gz')
+    df = nw.from_dict(raw, backend=backend)
+    feature_df, target_series, amounts = process_vub_credit_scoring(df)
+    target_np = target_series.to_numpy()
+
+    cost_matrix, instance_costs = credit_scoring_known_cl_cost_matrix(
+        amounts,
+        target_np,
+        interest_rate=0.0479,
+        fund_cost=0.0294,
+        loss_given_default=0.75,
+        term_length_months=24,
+    )
+
+    return Dataset(
+        data=nw.to_native(feature_df),
+        target=nw.to_native(target_series),
+        cost_matrix=cost_matrix,
+        instance_costs=instance_costs,
+        feature_names=feature_df.columns,
+        target_names=['no default', 'default'],
+        name='VUB Credit Scoring',
+        DESCR=_read_description('vub_credit_scoring.rst'),
     )

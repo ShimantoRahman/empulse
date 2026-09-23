@@ -19,12 +19,35 @@ if os.getcwd().endswith('tests'):
 EXCLUDED_DIRS = {'_build', '_static', '_templates', 'sphinxext', 'generated'}
 
 
+# Pages whose examples download datasets too large to fetch on every run (hundreds of megabytes for
+# the fraud datasets). They are deselected with the other `remote` tests.
+REMOTE_PAGES = frozenset({
+    'cell2cell.rst',
+    'credit_card_fraud.rst',
+    'default_credit_card_clients.rst',
+    'home_equity.rst',
+    'ieee_fraud_detection.rst',
+    'kdd98.rst',
+    'kddcup09_churn.rst',
+    'south_german_credit.rst',
+    'telco_customer_churn.rst',
+})
+
+
 def _iter_doc_files():
     for root, dirs, files in os.walk(DOCS_DIR):
         dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
         for file in files:
             if file.endswith('.rst'):
                 yield os.path.join(root, file)
+
+
+def _doc_file_params():
+    for file_path in sorted(_iter_doc_files()):
+        remote = os.path.basename(os.path.dirname(file_path)) == 'datasets' and (
+            os.path.basename(file_path) in REMOTE_PAGES
+        )
+        yield pytest.param(file_path, id=file_path, marks=[pytest.mark.remote] if remote else [])
 
 
 def execute_code_blocks(code_blocks):
@@ -39,7 +62,7 @@ def execute_code_blocks(code_blocks):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('file_path', sorted(_iter_doc_files()))
+@pytest.mark.parametrize('file_path', _doc_file_params())
 def test_code_blocks_in_user_guides(file_path):
     """Test that code blocks in user guide files execute without errors."""
     with open(file_path, encoding='utf-8') as f:

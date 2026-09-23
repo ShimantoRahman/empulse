@@ -12,10 +12,11 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+import zipfile
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
 import numpy as np
@@ -63,6 +64,33 @@ def _sanitize_column_name(name: str, *, strip_accents: bool = True) -> str:
     name = _MULTI_UNDERSCORE_RE.sub('_', name)
     name = name.strip('_')
     return name
+
+
+#: A lowercase letter or digit followed by an uppercase letter: ``monthlyRevenue``, ``id2Card``.
+_CAMEL_BOUNDARY_RE = re.compile(r'([a-z0-9])([A-Z])')
+#: The end of an acronym followed by a capitalised word: ``RVOwner``, ``USTravel``.
+_ACRONYM_BOUNDARY_RE = re.compile(r'([A-Z]+)([A-Z][a-z])')
+
+
+def _snake_case_column_name(name: str) -> str:
+    """Normalize a CamelCase column name into snake_case.
+
+    Like :func:`_sanitize_column_name`, but word boundaries marked only by capitalisation are
+    turned into underscores first: ``PaymentMethod`` → ``payment_method``, ``StreamingTV`` →
+    ``streaming_tv``, ``NonUSTravel`` → ``non_us_travel``, ``AgeHH1`` → ``age_hh1``.
+
+    Parameters
+    ----------
+    name : str
+        Raw column name.
+
+    Returns
+    -------
+    str
+        Clean snake_case column name.
+    """
+    name = _ACRONYM_BOUNDARY_RE.sub(r'\1_\2', _CAMEL_BOUNDARY_RE.sub(r'\1_\2', name.strip()))
+    return _sanitize_column_name(name)
 
 
 def _read_csv_gz(
@@ -288,6 +316,126 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
     return features, targets
 
 
+def _fetch_csv_url(
+    urls: str | list[str],
+    *,
+    timeout: int = 60,
+) -> dict[str, list[str | None]]:
+    """
+    Download a CSV from one or more URLs and return a column dict.
+
+    Parameters
+    ----------
+    urls : str or list of str
+        Candidate URLs to try in order.
+    timeout : int, default=60
+        Request timeout in seconds.
+
+    Returns
+    -------
+    dict[str, list[str | None]]
+        Column-oriented dictionary of raw string values.
+    """
+    url_list = [urls] if isinstance(urls, str) else urls
+    last_exc: Exception | None = None
+    ctx = ssl.create_default_context()
+    for url in url_list:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
+            with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
+                raw_bytes = resp.read()
+            try:
+                with gzip.open(io.BytesIO(raw_bytes), 'rt', encoding='utf-8') as gz:
+                    content = gz.read()
+            except OSError:
+                content = raw_bytes.decode('utf-8')
+            reader = csv.DictReader(io.StringIO(content))
+            rows = list(reader)
+            if not rows:
+                continue
+            cols = list(rows[0].keys())
+            return {col: [row[col] for row in rows] for col in cols}
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+            last_exc = exc
+            continue
+    raise OSError(f'Failed to download CSV from {url_list}. Original error: {last_exc}')
+
+
+def _fetch_url_bytes(url: str, *, timeout: int = 120) -> bytes:
+    """
+    Download *url* and return the raw response body.
+
+    Parameters
+    ----------
+    url : str
+        URL to download.
+    timeout : int, default=120
+        Request timeout in seconds.
+
+    Returns
+    -------
+    bytes
+        The undecoded response body.
+    """
+    ctx = ssl.create_default_context()
+    req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
+            body: bytes = resp.read()
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+        raise OSError(f'Failed to download {url}. Original error: {exc}') from exc
+    return body
+
+
+def _read_csv_columns(
+    raw_bytes: bytes,
+    columns: Sequence[str],
+    *,
+    encoding: str = 'latin-1',
+) -> dict[str, list[str]]:
+    """
+    Read selected columns from a CSV, optionally wrapped in a single-member zip archive.
+
+    Only the requested columns are kept, so wide files (hundreds of columns) can be read
+    without materialising every cell.
+
+    Parameters
+    ----------
+    raw_bytes : bytes
+        Contents of a CSV file, or of a zip archive whose first member is a CSV file.
+    columns : sequence of str
+        Header names of the columns to keep.
+    encoding : str, default='latin-1'
+        Text encoding of the CSV.
+
+    Returns
+    -------
+    dict[str, list[str]]
+        Column-oriented mapping: header → list of raw string values.
+
+    Raises
+    ------
+    KeyError
+        When a requested column is not in the header.
+    """
+    if zipfile.is_zipfile(io.BytesIO(raw_bytes)):
+        with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+            raw_bytes = archive.read(archive.namelist()[0])
+    reader = csv.reader(io.StringIO(raw_bytes.decode(encoding)))
+    header = [name.strip() for name in next(reader)]
+    missing = [col for col in columns if col not in header]
+    if missing:
+        raise KeyError(f'Columns {missing} not found. Available columns: {header}')
+    indices = [header.index(col) for col in columns]
+    result: dict[str, list[str]] = {col: [] for col in columns}
+    for row in reader:
+        if not row:
+            continue
+        for col, idx in zip(columns, indices, strict=True):
+            result[col].append(row[idx])
+    return result
+
+
 _OPENML_API_BASE = 'https://api.openml.org/api/v1/json'
 _OPENML_SEARCH_NAME = _OPENML_API_BASE + '/data/list/data_name/{}/limit/2'
 _OPENML_DATA_INFO = _OPENML_API_BASE + '/data/{}'
@@ -376,32 +524,32 @@ def _parse_arff(content: str) -> dict[str, list[str]]:
         Column-oriented mapping: attribute name → list of raw string values.
     """
     attributes: list[str] = []
-    data_rows: list[list[str]] = []
-    in_data = False
+    lines_iter = iter(content.splitlines())
 
-    for line in content.splitlines():
+    for line in lines_iter:
         stripped = line.strip()
         if not stripped or stripped.startswith('%'):
             continue
         lower = stripped.lower()
         if lower.startswith('@data'):
-            in_data = True
-        elif lower.startswith('@attribute'):
+            break
+        if lower.startswith('@attribute'):
             # @ATTRIBUTE <name> <type>   — name may be quoted
             parts = stripped.split(None, 2)
             if len(parts) >= 2:
                 attributes.append(parts[1].strip('\'"'))
-        elif in_data:
-            reader = csv.reader([stripped])
-            data_rows.append([v.strip() for v in next(reader)])
-
-    if not data_rows:
-        return {name: [] for name in attributes}
 
     result: dict[str, list[str]] = {name: [] for name in attributes}
-    for row in data_rows:
+    if not attributes:
+        return result
+
+    data_lines = (line for line in lines_iter if line.strip() and not line.strip().startswith('%'))
+    # ARFF quotes values with single quotes and escapes with a backslash (``'Fiber optic'``,
+    # ``'O\'Brien'``); the csv module's defaults would keep the quotes as part of the value.
+    reader = csv.reader(data_lines, quotechar="'", escapechar='\\', skipinitialspace=True)
+    for row in reader:
         for i, name in enumerate(attributes):
-            result[name].append(row[i] if i < len(row) else '')
+            result[name].append(row[i].strip() if i < len(row) else '')
     return result
 
 

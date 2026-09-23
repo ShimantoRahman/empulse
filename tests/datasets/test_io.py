@@ -10,6 +10,7 @@ import pytest
 
 from empulse.datasets._io import (
     _find_column,
+    _parse_arff,
     _read_csv_gz,
     _sanitize_column_name,
     _write_csv_gz,
@@ -184,3 +185,25 @@ class TestLoadOrFetch:
         load_or_fetch(cache_file, lambda: raw)
         result = load_or_fetch(cache_file, dict)
         assert result['col'][1] is None
+
+
+class TestParseArff:
+    def test_single_quoted_values_lose_their_quotes(self):
+        content = (
+            '@RELATION telco\n'
+            "@ATTRIBUTE Contract {Month-to-month,'One year'}\n"
+            '@ATTRIBUTE MonthlyCharges NUMERIC\n'
+            '@ATTRIBUTE Churn {No,Yes}\n'
+            '@DATA\n'
+            'Month-to-month,29.85,No\n'
+            "'One year',56.95,Yes\n"
+        )
+        assert _parse_arff(content) == {
+            'Contract': ['Month-to-month', 'One year'],
+            'MonthlyCharges': ['29.85', '56.95'],
+            'Churn': ['No', 'Yes'],
+        }
+
+    def test_quoted_value_may_contain_a_comma_and_an_escaped_quote(self):
+        content = "@ATTRIBUTE name STRING\n@ATTRIBUTE n NUMERIC\n@DATA\n'O\\'Brien, Jr.',1\n?,2\n"
+        assert _parse_arff(content) == {'name': ["O'Brien, Jr.", '?'], 'n': ['1', '2']}

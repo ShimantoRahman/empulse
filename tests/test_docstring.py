@@ -94,8 +94,18 @@ def iter_modules(module_name):
             yield importlib.import_module(submodule_name)
 
 
+# The examples in these modules download datasets, so they are also deselected with the `remote` tests.
+_REMOTE_MODULES = frozenset({'empulse.datasets._remote'})
+
+
+def _module_params():
+    for module in iter_modules(TOP_MODULE):
+        marks = [pytest.mark.remote] if module.__name__ in _REMOTE_MODULES else []
+        yield pytest.param(module, id=module.__name__, marks=marks)
+
+
 @pytest.mark.slow
-@pytest.mark.parametrize('module', iter_modules(TOP_MODULE), ids=lambda m: m.__name__)
+@pytest.mark.parametrize('module', _module_params())
 def test_code_blocks_in_docstrings(module):
     """Test that code blocks in docstrings execute without errors."""
     functions_and_classes = get_all_functions_and_classes(module)

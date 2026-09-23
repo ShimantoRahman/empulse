@@ -5,9 +5,9 @@ Datasets
 ========
 
 Everything in the previous stages needs a cost matrix. Writing one for your own problem is the
-subject of :ref:`cost_matrix`; these five datasets come with theirs already written.
+subject of :ref:`cost_matrix`; these datasets come with theirs already written.
 
-Empulse bundles five real-world cost-sensitive datasets for benchmarking and for the examples
+Empulse ships loaders for cost-sensitive datasets, for benchmarking and for the examples
 throughout this documentation. Each one ships not just features and a target, but a
 :class:`~empulse.metrics.CostMatrix` encoding the business problem it came from — which is what
 makes them useful for value-driven work, where a plain feature matrix is not enough. They are also
@@ -84,6 +84,66 @@ Choosing a dataset
       - 6.7%
       - Downloaded
       - Symbolic, per-applicant credit line
+    * - :ref:`Telco customer churn <telco_customer_churn>`
+      - 7,032
+      - 19
+      - 26.6%
+      - Downloaded
+      - Symbolic, per-customer monthly charge
+    * - :ref:`Cell2Cell churn <cell2cell>`
+      - 50,891
+      - 56
+      - 28.8%
+      - Downloaded
+      - Symbolic, CLV from monthly revenue
+    * - :ref:`KDD Cup 2009 churn <kddcup09_churn>`
+      - 50,000
+      - 230
+      - 7.3%
+      - Downloaded
+      - Symbolic, constant CLV
+    * - :ref:`KDD Cup 1998 direct mailing <kdd98>`
+      - 191,779
+      - 22
+      - 5.1%
+      - Downloaded
+      - Symbolic, per-donor donation
+    * - :ref:`Credit card fraud <credit_card_fraud>`
+      - 282,982
+      - 29
+      - 0.16%
+      - Downloaded
+      - Symbolic, per-transaction amount
+    * - :ref:`IEEE-CIS fraud detection <ieee_fraud_detection>`
+      - 590,540
+      - 431
+      - 3.5%
+      - Downloaded
+      - Symbolic, per-transaction amount
+    * - :ref:`VUB credit scoring <vub_credit_scoring>`
+      - 18,917
+      - 16
+      - 16.9%
+      - Bundled
+      - Symbolic, per-applicant loan amount
+    * - :ref:`Home equity (HMEQ) <home_equity>`
+      - 5,960
+      - 12
+      - 19.9%
+      - Downloaded
+      - Symbolic, per-applicant loan amount
+    * - :ref:`South German credit <south_german_credit>`
+      - 1,000
+      - 20
+      - 30.0%
+      - Downloaded
+      - Symbolic, per-applicant loan amount
+    * - :ref:`Default of credit card clients <default_credit_card_clients>`
+      - 30,000
+      - 23
+      - 22.1%
+      - Downloaded
+      - Symbolic, per-client credit limit
 
 **Bundled** datasets ship inside the package and work offline. **Downloaded** datasets are fetched
 on first use and cached under ``~/empulse_data`` (override with ``$EMPULSE_DATA_HOME`` or the
@@ -118,3 +178,13 @@ of these datasets put to work.
     datasets/bank_telemarketing.rst
     datasets/credit_scoring_pakdd.rst
     datasets/give_me_some_credit.rst
+    datasets/vub_credit_scoring.rst
+    datasets/telco_customer_churn.rst
+    datasets/cell2cell.rst
+    datasets/kddcup09_churn.rst
+    datasets/kdd98.rst
+    datasets/credit_card_fraud.rst
+    datasets/ieee_fraud_detection.rst
+    datasets/home_equity.rst
+    datasets/south_german_credit.rst
+    datasets/default_credit_card_clients.rst

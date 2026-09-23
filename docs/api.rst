@@ -49,7 +49,7 @@ signatures alone rarely convey when you should reach for something.
 
         ``empulse.datasets``
 
-        Loaders for the real-world cost-sensitive datasets, each shipping its own cost matrix.
+        Loaders for cost-sensitive datasets, each shipping its own cost matrix.
 
 .. note::
     Empulse has no top-level re-exports. Import from the submodules — ``from empulse.models import

@@ -1,6 +1,24 @@
 `Unreleased`_
 =============
 
+Datasets
+--------
+
+- |Feature| Added ten dataset loaders from the cost-sensitive learning literature, each shipping
+  the cost matrix its source papers use:
+
+  - :func:`~empulse.datasets.fetch_credit_card_fraud` and
+    :func:`~empulse.datasets.fetch_ieee_fraud_detection` for fraud detection;
+  - :func:`~empulse.datasets.fetch_kdd98` for direct marketing;
+  - :func:`~empulse.datasets.fetch_telco_customer_churn`, :func:`~empulse.datasets.fetch_cell2cell`
+    and :func:`~empulse.datasets.fetch_kddcup09_churn` for customer churn;
+  - :func:`~empulse.datasets.load_vub_credit_scoring`, :func:`~empulse.datasets.fetch_home_equity`,
+    :func:`~empulse.datasets.fetch_south_german_credit` and
+    :func:`~empulse.datasets.fetch_default_credit_card_clients` for credit scoring.
+
+  :func:`~empulse.datasets.load_vub_credit_scoring` is bundled with the package; the others are
+  downloaded on first use and cached.
+
 `0.12.0`_ (19-09-2026)
 ======================
 

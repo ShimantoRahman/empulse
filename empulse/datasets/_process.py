@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import narwhals as nw
 
-from ._io import _find_column, _sanitize_column_name
+from ._io import _find_column, _sanitize_column_name, _snake_case_column_name
 
 if TYPE_CHECKING:
     from .._types import FloatNDArray
@@ -430,3 +430,707 @@ def process_give_me_some_credit(
     ])
 
     return feat, target_series, monthly_income_np, debt_ratio_np, target_np
+
+
+def process_telco_customer_churn(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the Kaggle Telco Customer Churn raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='churn', dtype Int8)
+    monthly_charges : numpy array
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    # Filter out empty/blank TotalCharges (dropping 11 rows with missing charges, matching the paper's N=7032)
+    df = df.filter(~nw.col('TotalCharges').is_null() & ~nw.col('TotalCharges').is_in(['', ' ']))
+
+    # Target
+    target_series = df.select(
+        nw
+        .when(nw.col('Churn').is_in(['Yes', 'yes', '1', '1.0']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('churn')
+    )['churn']
+
+    monthly_charges: FloatNDArray = df['MonthlyCharges'].cast(nw.Float64).to_numpy()
+
+    # Drop customerID and Churn from features
+    feature_cols = [c for c in df.columns if c not in {'customerID', 'CustomerID', 'customer_id', 'Churn', 'churn'}]
+
+    numeric_cols = {'tenure', 'MonthlyCharges', 'TotalCharges', 'SeniorCitizen'}
+    feat = df.select([
+        nw
+        .when(nw.col(c).is_in(['?', 'NA', '', ' ']) | nw.col(c).is_null())
+        .then(nw.lit(None))
+        .otherwise(nw.col(c))
+        .cast(nw.Float64)
+        .alias(_snake_case_column_name(c))
+        if c in numeric_cols
+        else nw.col(c).alias(_snake_case_column_name(c))
+        for c in feature_cols
+    ])
+
+    return feat, target_series, monthly_charges
+
+
+_DEFAULT_CREDIT_CARD_MAP: dict[str, str] = {
+    'x1': 'limit_bal',
+    'x2': 'sex',
+    'x3': 'education',
+    'x4': 'marriage',
+    'x5': 'age',
+    'x6': 'pay_0',
+    'x7': 'pay_2',
+    'x8': 'pay_3',
+    'x9': 'pay_4',
+    'x10': 'pay_5',
+    'x11': 'pay_6',
+    'x12': 'bill_amt1',
+    'x13': 'bill_amt2',
+    'x14': 'bill_amt3',
+    'x15': 'bill_amt4',
+    'x16': 'bill_amt5',
+    'x17': 'bill_amt6',
+    'x18': 'pay_amt1',
+    'x19': 'pay_amt2',
+    'x20': 'pay_amt3',
+    'x21': 'pay_amt4',
+    'x22': 'pay_amt5',
+    'x23': 'pay_amt6',
+}
+
+
+def process_default_credit_card_clients(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray]:
+    """Process the UCI Default of Credit Card Clients raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='default', dtype Int8)
+    credit_line : numpy array (LIMIT_BAL)
+    target_np : numpy array
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    # Map column names if present
+    col_map = {}
+    for c in df.columns:
+        c_low = c.lower().strip()
+        if c_low in _DEFAULT_CREDIT_CARD_MAP:
+            col_map[c] = _DEFAULT_CREDIT_CARD_MAP[c_low]
+        elif c_low in {'y', 'default payment next month'}:
+            col_map[c] = 'target'
+        else:
+            col_map[c] = _sanitize_column_name(c)
+
+    df = df.rename(col_map)
+
+    target_col = 'target' if 'target' in df.columns else _find_column(dict.fromkeys(df.columns), ('y', 'default'))
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('default')
+    )['default']
+    target_np: FloatNDArray = target_series.to_numpy()
+
+    cl_col = (
+        'limit_bal'
+        if 'limit_bal' in df.columns
+        else _find_column(dict.fromkeys(df.columns), ('limit_bal', 'x1', 'LIMIT_BAL'))
+    )
+    credit_line: FloatNDArray = df[cl_col].cast(nw.Float64).to_numpy()
+
+    drop_cols = {target_col, 'id', 'ID'}
+    feature_cols = [c for c in df.columns if c not in drop_cols]
+    feat = df.select([nw.col(c).cast(nw.Float64).alias(c) for c in feature_cols])
+
+    return feat, target_series, credit_line, target_np
+
+
+#: The categorical IEEE-CIS attributes, as listed by the competition host and used by
+#: Vanderschueren et al. (2022). Several are numeric codes (``card1``, ``addr1``, ``id_13``, ...).
+IEEE_FRAUD_CATEGORICAL_ATTRIBUTES: frozenset[str] = frozenset({
+    'ProductCD',
+    *(f'card{i}' for i in range(1, 7)),
+    'addr1',
+    'addr2',
+    'P_emaildomain',
+    'R_emaildomain',
+    *(f'M{i}' for i in range(1, 10)),
+    'DeviceType',
+    'DeviceInfo',
+    *(f'id_{i}' for i in range(12, 39)),
+})
+
+
+def _ieee_column_name(name: str) -> str:
+    # `emaildomain` is two words the CamelCase split cannot see
+    return _snake_case_column_name(name).replace('emaildomain', 'email_domain')
+
+
+def process_ieee_fraud_detection(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the Kaggle IEEE-CIS Fraud Detection raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='fraud', dtype Int8)
+    amount : numpy array (TransactionAmt)
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    target_col = _find_column(dict.fromkeys(df.columns), ('isFraud', 'isfraud', 'class', 'Class'))
+    amt_col = _find_column(dict.fromkeys(df.columns), ('TransactionAmt', 'transactionamt', 'amount', 'Amount'))
+
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('fraud')
+    )['fraud']
+
+    amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
+
+    drop_cols = {target_col, 'TransactionID', 'transactionid', 'TransactionDT', 'transactiondt'}
+    # The OpenML copy adds the Kaggle test set's hyphenated identity columns (id-01, ...), which are
+    # empty for these training transactions; the underscore versions (id_01, ...) hold the data.
+    feature_cols = [c for c in df.columns if c not in drop_cols and not c.startswith('id-')]
+
+    def _missing_to_null(c: str) -> nw.Expr:
+        return nw.when(nw.col(c).is_in(['?', ''])).then(nw.lit(None)).otherwise(nw.col(c))
+
+    feat = df.select([
+        _missing_to_null(c).alias(_ieee_column_name(c))
+        if c in IEEE_FRAUD_CATEGORICAL_ATTRIBUTES
+        else _missing_to_null(c).cast(nw.Float64).alias(_ieee_column_name(c))
+        for c in feature_cols
+    ])
+    return feat, target_series, amount
+
+
+def process_credit_card_fraud(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the Kaggle Credit Card Fraud (ULB MLG) raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='fraud', dtype Int8)
+    amount : numpy array (transaction amount)
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    target_col = _find_column(dict.fromkeys(df.columns), ('Class', 'class', 'target', 'fraud'))
+    amt_col = _find_column(dict.fromkeys(df.columns), ('Amount', 'amount', 'transactionamt'))
+
+    # Filter out zero/negative amount transactions (following Hoppner et al., 2022 and Vanderschueren et al., 2022)
+    amt_expr = nw.col(amt_col).cast(nw.Float64)
+    df = df.filter(~amt_expr.is_null() & (amt_expr > 0))
+
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('fraud')
+    )['fraud']
+
+    amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
+
+    # Drop non-predictive sequential Time index and target Class
+    drop_cols = {target_col, 'Time', 'time'}
+    feature_cols = [c for c in df.columns if c not in drop_cols]
+
+    feat = df.select([nw.col(c).cast(nw.Float64).alias(_sanitize_column_name(c)) for c in feature_cols])
+    return feat, target_series, amount
+
+
+#: The 22 KDD Cup 1998 attributes selected by Petrides & Verbeke (2021) and Vanderschueren et al. (2022),
+#: mapped to descriptive snake_case names following the competition's data dictionary.
+KDD98_ATTRIBUTES: dict[str, str] = {
+    'MAILCODE': 'mail_code',
+    'NOEXCH': 'no_exchange',
+    'AGE': 'age',
+    'HOMEOWNR': 'home_owner',
+    'NUMCHLD': 'n_children',
+    'INCOME': 'income',
+    'GENDER': 'gender',
+    'WEALTH1': 'wealth_rating',
+    'COLLECT1': 'collectables',
+    'CARDPROM': 'n_card_promotions',
+    'MAXADATE': 'last_promotion_date',
+    'CARDGIFT': 'n_card_gifts',
+    'MINRAMNT': 'min_gift_amount',
+    'MINRDATE': 'min_gift_date',
+    'MAXRAMNT': 'max_gift_amount',
+    'MAXRDATE': 'max_gift_date',
+    'LASTGIFT': 'last_gift_amount',
+    'LASTDATE': 'last_gift_date',
+    'FISTDATE': 'first_gift_date',
+    'NEXTDATE': 'second_gift_date',
+    'TIMELAG': 'months_first_to_second_gift',
+    'AVGGIFT': 'avg_gift_amount',
+}
+#: Flags and YYMM date codes, treated as categorical following Vanderschueren et al. (2022).
+KDD98_CATEGORICAL_ATTRIBUTES: frozenset[str] = frozenset({
+    'MAILCODE',
+    'NOEXCH',
+    'HOMEOWNR',
+    'GENDER',
+    'COLLECT1',
+    'MAXADATE',
+    'MINRDATE',
+    'MAXRDATE',
+    'LASTDATE',
+    'FISTDATE',
+    'NEXTDATE',
+})
+
+
+def process_kdd98(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the KDD Cup 1998 Direct Mailing raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='donated', dtype Int8)
+    amount : numpy array (``TARGET_D``, the donation amount; 0 for non-donors)
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    target_series = df.select(nw.col('TARGET_B').cast(nw.Float64).cast(nw.Int8).alias('donated'))['donated']
+    amount: FloatNDArray = df['TARGET_D'].cast(nw.Float64).to_numpy()
+
+    # The raw files mark missing values with blanks, which survive the CSV cache as whitespace.
+    def _blank_to_null(c: str) -> nw.Expr:
+        return nw.when(nw.col(c).str.strip_chars() == '').then(nw.lit(None)).otherwise(nw.col(c).str.strip_chars())
+
+    feat = df.select([
+        _blank_to_null(c).alias(KDD98_ATTRIBUTES[c])
+        if c in KDD98_CATEGORICAL_ATTRIBUTES
+        else _blank_to_null(c).cast(nw.Float64).alias(KDD98_ATTRIBUTES[c])
+        for c in KDD98_ATTRIBUTES
+    ])
+
+    return feat, target_series, amount
+
+
+def process_vub_credit_scoring(
+    df: nw.DataFrame[Any],
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the VUB Credit Scoring dataset.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='default', dtype Int8)
+    amounts : numpy array — shifted positive loan amounts for credit line computation
+    """
+    target_series = df.select(nw.col('Default_45').cast(nw.Float64).cast(nw.Int8).alias('default'))['default']
+
+    loan_amt_s = df['Loan_amount'].cast(nw.Float64)
+    min_amt = float(loan_amt_s.to_numpy().min())
+    amounts: FloatNDArray = (loan_amt_s - min_amt + 1e-9).to_numpy()
+
+    drop_cols = {
+        'ID',
+        'id',
+        'Test_set1',
+        'Test_set2',
+        'Test_set3',
+        'Default_45',
+        'Days_late',
+        'Expected_loss',
+        'Expected_profit',
+    }
+    feature_cols = [c for c in df.columns if c not in drop_cols]
+
+    numeric_cols = {
+        'Loan_amount',
+        'Monthly_income',
+        'Age',
+        'Gearing_coefficient',
+        'Max_gearing_ratio',
+    }
+
+    exprs = []
+    for c in feature_cols:
+        c_clean = _sanitize_column_name(c)
+        if c == 'FICO_Score':
+            exprs.append(
+                nw
+                .when(nw.col(c).is_null() | nw.col(c).is_in(['', ' ']))
+                .then(nw.lit(0.0))
+                .otherwise(nw.col(c))
+                .cast(nw.Float64)
+                .alias(c_clean)
+            )
+        elif c == 'Has_FICO':
+            exprs.append(nw.col(c).cast(nw.UInt8).alias(c_clean))
+        elif c in numeric_cols:
+            exprs.append(nw.col(c).cast(nw.Float64).alias(c_clean))
+        else:
+            # Nominal / categorical features: V1-V8, Business_channel
+            exprs.append(nw.col(c).alias(c_clean))
+
+    feat = df.select(exprs)
+    return feat, target_series, amounts
+
+
+#: HMEQ's abbreviated column names mapped to descriptive snake_case names.
+HOME_EQUITY_COLUMNS: dict[str, str] = {
+    'loan': 'loan_amount',
+    'mortdue': 'mortgage_due',
+    'value': 'property_value',
+    'reason': 'reason',
+    'job': 'job',
+    'yoj': 'years_at_job',
+    'derog': 'n_derogatory_reports',
+    'delinq': 'n_delinquent_credit_lines',
+    'clage': 'oldest_credit_line_age',
+    'ninq': 'n_recent_credit_inquiries',
+    'clno': 'n_credit_lines',
+    'debtinc': 'debt_to_income',
+}
+
+
+def process_home_equity(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray]:
+    """Process the Home Equity (HMEQ) raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='default', dtype Int8)
+    loan_amount : numpy array
+    target_np : numpy array
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    target_col = _find_column(dict.fromkeys(df.columns), ('BAD', 'bad', 'target', 'default'))
+    amt_col = _find_column(dict.fromkeys(df.columns), ('LOAN', 'loan', 'amount', 'Amount'))
+
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('default')
+    )['default']
+    target_np: FloatNDArray = target_series.to_numpy()
+
+    loan_amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
+
+    categorical_cols = {'reason', 'job'}
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    def _name(c: str) -> str:
+        name = _sanitize_column_name(c)
+        return HOME_EQUITY_COLUMNS.get(name, name)
+
+    feat = df.select([
+        nw
+        .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
+        .then(nw.lit(None))
+        .otherwise(nw.col(c))
+        .alias(_name(c))
+        if _sanitize_column_name(c) in categorical_cols
+        else (
+            nw
+            .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
+            .then(nw.lit(None))
+            .otherwise(nw.col(c))
+            .cast(nw.Float64)
+            .alias(_name(c))
+        )
+        for c in feature_cols
+    ])
+
+    return feat, target_series, loan_amount, target_np
+
+
+#: German column names of the South German Credit data mapped to the English names of Grömping (2019).
+SOUTH_GERMAN_CREDIT_COLUMNS: dict[str, str] = {
+    'laufkont': 'status',
+    'laufzeit': 'duration',
+    'moral': 'credit_history',
+    'verw': 'purpose',
+    'hoehe': 'amount',
+    'sparkont': 'savings',
+    'beszeit': 'employment_duration',
+    'rate': 'installment_rate',
+    'famges': 'personal_status_sex',
+    'buerge': 'other_debtors',
+    'wohnzeit': 'present_residence',
+    'verm': 'property',
+    'alter': 'age',
+    'weitkred': 'other_installment_plans',
+    'wohn': 'housing',
+    'bishkred': 'number_credits',
+    'beruf': 'job',
+    'pers': 'people_liable',
+    'telef': 'telephone',
+    'gastarb': 'foreign_worker',
+    'kredit': 'credit_risk',
+}
+_SOUTH_GERMAN_CREDIT_NUMERIC = frozenset({'duration', 'amount', 'age'})
+
+
+def process_south_german_credit(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray]:
+    """Process the South German Credit raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values with the original German column names
+        (from cache or the UCI archive).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+        Features with the English names of Grömping (2019). Every feature except
+        ``duration``, ``amount`` and ``age`` is an integer category code.
+    target_series : narwhals Series (name='default', dtype Int8)
+        1 = bad credit risk, 0 = good credit risk.
+    credit_amount : numpy array
+    target_np : numpy array
+    """
+    df = nw.from_dict(raw, backend=backend).rename(SOUTH_GERMAN_CREDIT_COLUMNS)
+
+    # `kredit` / credit_risk is coded 1 = good, 0 = bad; the positive class is the bad risk.
+    target_series = df.select((1 - nw.col('credit_risk').cast(nw.Float64)).cast(nw.Int8).alias('default'))['default']
+    target_np: FloatNDArray = target_series.to_numpy()
+
+    credit_amount: FloatNDArray = df['amount'].cast(nw.Float64).to_numpy()
+
+    feat = df.select([
+        nw.col(c).cast(nw.Float64) if c in _SOUTH_GERMAN_CREDIT_NUMERIC else nw.col(c).cast(nw.Float64).cast(nw.UInt8)
+        for c in df.columns
+        if c != 'credit_risk'
+    ])
+
+    return feat, target_series, credit_amount, target_np
+
+
+def process_kddcup09_churn(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any]]:
+    """Process the KDD Cup 2009 / Orange Churn raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or OpenML).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='churn', dtype Int8)
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    target_col = _find_column(
+        dict.fromkeys(df.columns),
+        ('CHURN', 'churn', 'target', 'class'),
+    )
+
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes', 'True', 'true']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('churn')
+    )['churn']
+
+    # Var191 to Var229 are nominal; OpenML types the all-missing Var209 as numeric, which makes no difference
+    nominal_set = {f'var{i}' for i in range(191, 230)}
+
+    feature_cols = [c for c in df.columns if c != target_col]
+    feat = df.select([
+        nw
+        .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
+        .then(nw.lit(None))
+        .otherwise(nw.col(c))
+        .alias(_sanitize_column_name(c))
+        if _sanitize_column_name(c) in nominal_set
+        else (
+            nw
+            .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
+            .then(nw.lit(None))
+            .otherwise(nw.col(c))
+            .cast(nw.Float64)
+            .alias(_sanitize_column_name(c))
+        )
+        for c in feature_cols
+    ])
+
+    return feat, target_series
+
+
+def process_cell2cell(
+    raw: dict[str, list[Any]],
+    backend: Any,
+) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
+    """Process the Cell2Cell Customer Churn raw dict.
+
+    Parameters
+    ----------
+    raw : dict
+        Column-oriented dict of raw string values (from cache or remote).
+    backend : module
+        Narwhals-compatible dataframe backend.
+
+    Returns
+    -------
+    feature_df : narwhals DataFrame
+    target_series : narwhals Series (name='churn', dtype Int8)
+    monthly_revenue : numpy array
+    """
+    df = nw.from_dict(raw, backend=backend)
+
+    # Filter out rows with missing MonthlyRevenue (156 rows, 0.31%), matching standard practice
+    rev_col = _find_column(dict.fromkeys(df.columns), ('MonthlyRevenue', 'monthly_revenue', 'monthlyrevenue'))
+    df = df.filter(~nw.col(rev_col).is_null() & ~nw.col(rev_col).is_in(['', 'NA', '?', 'None']))
+
+    target_col = _find_column(dict.fromkeys(df.columns), ('Churn', 'churn', 'target', 'class'))
+    target_series = df.select(
+        nw
+        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes', 'True', 'true']))
+        .then(nw.lit(1))
+        .otherwise(nw.lit(0))
+        .cast(nw.Int8)
+        .alias('churn')
+    )['churn']
+
+    monthly_revenue: FloatNDArray = df[rev_col].cast(nw.Float64).to_numpy()
+
+    # Drop ID and target columns
+    id_cols = {'CustomerID', 'customerid', 'customer_id'}
+    feature_cols = [c for c in df.columns if c != target_col and c not in id_cols]
+
+    # Categorical features in Cell2Cell
+    categorical_cols = {
+        _snake_case_column_name(col)
+        for col in (
+            'ServiceArea',
+            'ChildrenInHH',
+            'HandsetRefurbished',
+            'HandsetWebCapable',
+            'TruckOwner',
+            'RVOwner',
+            'Homeownership',
+            'BuysViaMailOrder',
+            'RespondsToMailOffers',
+            'OptOutMailings',
+            'NonUSTravel',
+            'OwnsComputer',
+            'HasCreditCard',
+            'NewCellphoneUser',
+            'NotNewCellphoneUser',
+            'OwnsMotorcycle',
+            'HandsetPrice',
+            'MadeCallToRetentionTeam',
+            'CreditRating',
+            'PrizmCode',
+            'Occupation',
+            'MaritalStatus',
+        )
+    }
+
+    feat = df.select([
+        nw
+        .when(nw.col(c).is_in(['?', 'NA', '', 'None', 'null']) | nw.col(c).is_null())
+        .then(nw.lit(None))
+        .otherwise(nw.col(c))
+        .alias(_snake_case_column_name(c))
+        if _snake_case_column_name(c) in categorical_cols
+        else (
+            nw
+            .when(nw.col(c).is_in(['?', 'NA', '', 'None', 'null', 'Unknown']) | nw.col(c).is_null())
+            .then(nw.lit(None))
+            .otherwise(nw.col(c))
+            .cast(nw.Float64)
+            .alias(_snake_case_column_name(c))
+        )
+        for c in feature_cols
+    ])
+
+    return feat, target_series, monthly_revenue

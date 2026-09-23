@@ -87,7 +87,7 @@ or the [full tutorial](https://empulse.readthedocs.io/en/stable/tutorial.html).
 | **[Robustness](https://empulse.readthedocs.io/en/stable/guide/models/robustcs.html)** | `RobustCSClassifier` detects and imputes outliers in noisy instance-dependent costs. |
 | **[Samplers](https://empulse.readthedocs.io/en/stable/reference/samplers.html)** | Cost-proportionate resampling and bias mitigation to make any estimator cost-sensitive. |
 | **[Optimizers](https://empulse.readthedocs.io/en/stable/reference/optimizers.html)** | L-BFGS-B, SGD/Adam/RMSProp with learning-rate schedules, and genetic/memetic algorithms for non-smooth objectives. |
-| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets.html)** | Real-world cost-sensitive datasets, each shipping its own cost matrix. |
+| **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets.html)** | Cost-sensitive datasets, each shipping its own cost matrix. |
 
 ## Works with scikit-learn
 
