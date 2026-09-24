@@ -99,6 +99,26 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         """Return the configured loss or a generic cost metric."""
         return self.loss if self.loss is not None else make_generic_cost_metric()
 
+    def _positive_class_index(self) -> int:
+        """Return the index in :attr:`classes_` of the positive class: ``pos_label``, or ``classes_[1]``."""
+        if self.pos_label is None:
+            return 1
+        matches = np.flatnonzero(self.classes_ == self.pos_label)
+        if matches.size == 0:
+            raise ValueError(f'pos_label={self.pos_label!r} is not one of the classes {list(self.classes_)}.')
+        return int(matches[0])
+
+    def _positive_score(self, X: FloatArrayLike) -> FloatNDArray:
+        """Return the predicted probability of the positive class for each sample of `X`."""
+        y_score: FloatNDArray = self.predict_proba(X)[:, self._positive_class_index()]
+        return y_score
+
+    def _labels_for(self, is_positive: NDArray[np.bool_]) -> NDArray[Any]:
+        """Map a boolean "predicted positive" array to the corresponding class labels."""
+        positive_index = self._positive_class_index()
+        y_pred: NDArray[Any] = np.where(is_positive, self.classes_[positive_index], self.classes_[1 - positive_index])
+        return y_pred
+
     def _all_init_costs_zero(self) -> bool:
         """Check if all init costs are zero/default."""
         return all((
@@ -201,8 +221,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         -------
         estimator_ : Estimator
             The fitted estimator.
-        y_score : ndarray of shape (n_samples,)
-            Predicted probabilities for the positive class.
+        y_proba : ndarray of shape (n_samples, n_classes)
+            Predicted probabilities of each class.
         loss_params : dict
             Parameters extracted for the loss function.
         """
@@ -214,8 +234,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         routed_params = process_routing(self, 'fit', **routing_params)
         estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
 
-        y_score: FloatNDArray = estimator_.predict_proba(X)[:, 1]
-        return estimator_, y_score, loss_params
+        y_proba: FloatNDArray = estimator_.predict_proba(X)
+        return estimator_, y_proba, loss_params
 
     @abstractmethod
     def _compute_decision(
@@ -328,8 +348,12 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             estimator_params = {k: v for k, v in params.items() if k not in loss_param_names}
             self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
         else:
-            self.estimator_, y_score, loss_params = self._fit_estimator(X, y, **params)
-            y_binary = np.where(np.asarray(y) == self.classes_[1], 1, 0)
+            self.estimator_, y_proba, loss_params = self._fit_estimator(X, y, **params)
+            # Costs are defined against the positive class, so both the target and the score the
+            # decision is computed from are those of `pos_label` (by default `classes_[1]`).
+            positive_index = self._positive_class_index()
+            y_binary = np.where(np.asarray(y) == self.classes_[positive_index], 1, 0)
+            y_score = y_proba[:, positive_index]
             self.decision_ = self._compute_decision(loss, y_binary, y_score, loss_params)
 
         if hasattr(self.estimator_, 'n_features_in_'):
@@ -396,7 +420,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
                 estimator: Any = getattr(self, 'estimator_', self.estimator)
                 y_pred: NDArray[Any] = estimator.predict(X)
                 return y_pred
-            y_score = self.predict_proba(X)[:, 1]
+            y_score = self._positive_score(X)
         else:
             if getattr(self, 'estimator_', None) is None:
                 raise NotFittedError
@@ -414,7 +438,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             loss_params = self._add_standard_costs_to_params(
                 tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params
             )
-            y_score = self.predict_proba(X)[:, 1]
+            y_score = self._positive_score(X)
             decision = self._compute_decision_at_predict(y_score, loss, loss_params)
 
         return self._apply_decision(y_score, decision)
@@ -541,7 +565,8 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         - If None, probabilities are assumed to be well-calibrated.
 
     pos_label : int, str, bool or None, default=None
-        The positive label. If None, the positive label is assumed to be 1.
+        The label of the positive class, which the costs refer to.
+        If None, the greater of the two classes (``classes_[1]``) is the positive class.
 
     random_state : int or None, default=None
         Random state for the calibrator. Ignored when `calibrator` is an Estimator.
@@ -671,8 +696,8 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         else:
             estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
 
-        y_score: FloatNDArray = estimator_.predict_proba(X)[:, 1]
-        return estimator_, y_score, loss_params
+        y_proba: FloatNDArray = estimator_.predict_proba(X)
+        return estimator_, y_proba, loss_params
 
     @property
     def threshold_(self) -> float | None:
@@ -700,15 +725,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         return loss.optimal_threshold(np.array([]), np.array([]), **loss_params)
 
     def _apply_decision(self, y_score: FloatNDArray, decision: Any) -> NDArray[Any]:
-        if self.pos_label is None:
-            map_thresholded_score_to_label = np.array([0, 1])
-        else:
-            pos_label_idx = np.flatnonzero(self.classes_ == self.pos_label)[0]
-            neg_label_idx = np.flatnonzero(self.classes_ != self.pos_label)[0]
-            map_thresholded_score_to_label = np.array([neg_label_idx, pos_label_idx])
-
-        y_pred: NDArray[Any] = self.classes_[map_thresholded_score_to_label[(y_score >= decision).astype(int)]]
-        return y_pred
+        return self._labels_for(y_score >= decision)
 
     def get_metadata_routing(self) -> MetadataRouter:
         """
@@ -809,7 +826,8 @@ class CSRateClassifier(CSDecisionRuleClassifier):
           the :meth:`fit` or :meth:`predict` method.
 
     pos_label : int, str, bool or None, default=None
-        The label of the positive class.
+        The label of the positive class, which the costs refer to.
+        If None, the greater of the two classes (``classes_[1]``) is the positive class.
 
     Attributes
     ----------
@@ -849,16 +867,16 @@ class CSRateClassifier(CSDecisionRuleClassifier):
         n_samples = len(y_score)
 
         if np.isnan(decision):
-            return np.full(n_samples, self.classes_[0])
+            return self._labels_for(np.zeros(n_samples, dtype=bool))
 
         n_positive = int(np.ceil(decision * n_samples))
 
         if n_positive == 0:
-            return np.full(n_samples, self.classes_[0])
+            return self._labels_for(np.zeros(n_samples, dtype=bool))
         if n_positive >= n_samples:
-            return np.full(n_samples, self.classes_[1])
+            return self._labels_for(np.ones(n_samples, dtype=bool))
 
         threshold_idx = np.argsort(y_score)[-n_positive]
         threshold = y_score[threshold_idx]
 
-        return np.where(y_score >= threshold, self.classes_[1], self.classes_[0])
+        return self._labels_for(y_score >= threshold)

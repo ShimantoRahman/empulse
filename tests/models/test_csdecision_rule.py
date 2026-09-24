@@ -517,3 +517,56 @@ class TestAliasedMetric:
         clf.fit(X, y, clv=100.0)
         assert hasattr(clf, 'estimator_')
         assert not hasattr(clf, 'decision_')
+
+
+# ---------------------------------------------------------------------------
+# pos_label
+# ---------------------------------------------------------------------------
+
+DECISION_RULE_FACTORIES = [
+    pytest.param(lambda **kw: CSThresholdClassifier(LogisticRegression(), calibrator=None, **kw), id='threshold'),
+    pytest.param(lambda **kw: CSRateClassifier(LogisticRegression(), **kw), id='rate'),
+]
+
+
+class TestPosLabel:
+    """Regression tests: ``pos_label`` did not make its class the positive one.
+
+    The decision was computed treating ``classes_[1]`` as positive, from ``classes_[1]``'s
+    probabilities, but ``CSThresholdClassifier`` then gave scores above the threshold the
+    ``pos_label`` class, so ``pos_label=classes_[0]`` inverted every prediction.
+    ``CSRateClassifier`` ignored ``pos_label`` altogether.
+    """
+
+    @pytest.mark.parametrize('make_model', DECISION_RULE_FACTORIES)
+    def test_pos_label_matches_flipping_the_labels(self, data, make_model):
+        X, y = data
+        with_pos_label = make_model(pos_label=0).fit(X, y, fn_cost=5.0, fp_cost=1.0)
+        flipped = make_model().fit(X, 1 - y, fn_cost=5.0, fp_cost=1.0)
+
+        np.testing.assert_array_equal(with_pos_label.predict(X), 1 - flipped.predict(X))
+
+    @pytest.mark.parametrize('make_model', DECISION_RULE_FACTORIES)
+    def test_pos_label_matches_flipping_the_labels_with_predict_time_costs(self, data, make_model):
+        X, y = data
+        with_pos_label = make_model(pos_label=0).fit(X, y)
+        flipped = make_model().fit(X, 1 - y)
+
+        np.testing.assert_array_equal(
+            with_pos_label.predict(X, fn_cost=5.0, fp_cost=1.0), 1 - flipped.predict(X, fn_cost=5.0, fp_cost=1.0)
+        )
+
+    @pytest.mark.parametrize('make_model', DECISION_RULE_FACTORIES)
+    def test_pos_label_with_string_labels(self, data, make_model):
+        X, y = data
+        labels = np.where(y == 1, 'yes', 'no')
+        with_pos_label = make_model(pos_label='no').fit(X, labels, fn_cost=5.0, fp_cost=1.0)
+        flipped = make_model(pos_label='yes').fit(X, np.where(y == 1, 'no', 'yes'), fn_cost=5.0, fp_cost=1.0)
+
+        np.testing.assert_array_equal(with_pos_label.predict(X), np.where(flipped.predict(X) == 'yes', 'no', 'yes'))
+
+    def test_unknown_pos_label_raises(self, data):
+        X, y = data
+        model = CSThresholdClassifier(LogisticRegression(), calibrator=None, pos_label=2)
+        with pytest.raises(ValueError, match='pos_label=2 is not one of the classes'):
+            model.fit(X, y, fn_cost=5.0, fp_cost=1.0)
