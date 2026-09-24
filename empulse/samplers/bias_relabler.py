@@ -277,10 +277,10 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         probas_non_sensitive = y_pred[non_sensitive]
         probas_sensitive = y_pred[sensitive_indices]
 
-        demotion_candidates = _get_demotion_candidates(probas_non_sensitive, _safe_indexing(y, non_sensitive), n_pairs)
-        promotion_candidates = _get_promotion_candidates(
-            probas_sensitive, _safe_indexing(y, sensitive_indices), n_pairs
-        )
+        # Candidates are chosen on the 0/1-encoded target, and relabelled with the original labels.
+        demotion_candidates = _get_demotion_candidates(probas_non_sensitive, y_binarized[non_sensitive], n_pairs)
+        promotion_candidates = _get_promotion_candidates(probas_sensitive, y_binarized[sensitive_indices], n_pairs)
+        negative_label, positive_label = self.classes_
 
         # map promotion and demotion candidates to original indices
         indices = np.arange(len(y))
@@ -296,11 +296,11 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
             relabeled_y = np.copy(y)
 
         if hasattr(relabeled_y, 'loc'):
-            relabeled_y.loc[demotion_candidates] = 0
-            relabeled_y.loc[promotion_candidates] = 1
+            relabeled_y.loc[demotion_candidates] = negative_label
+            relabeled_y.loc[promotion_candidates] = positive_label
         else:
-            relabeled_y[demotion_candidates] = 0
-            relabeled_y[promotion_candidates] = 1
+            relabeled_y[demotion_candidates] = negative_label
+            relabeled_y[promotion_candidates] = positive_label
 
         return X, relabeled_y
 

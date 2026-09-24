@@ -97,6 +97,14 @@ Models
   inverted every prediction of :class:`~empulse.models.CSThresholdClassifier`, and
   :class:`~empulse.models.CSRateClassifier` ignored ``pos_label``. A ``pos_label`` that is not one of
   the classes now raises a ``ValueError``.
+- |Fix| :class:`~empulse.models.BiasRelabelingClassifier` (and :class:`~empulse.samplers.BiasRelabler`)
+  and :class:`~empulse.models.BiasReweighingClassifier` now work with labels other than ``0``/``1``.
+  The relabeler chose which samples to relabel by comparing the labels to ``0`` and ``1`` and
+  relabelled them with those literal values, so ``-1``/``1`` labels gained a third class ``0`` and
+  ``predict`` raised an ``IndexError``. The reweighing classifier computed its weights from the raw
+  labels, so ``-1``/``1`` labels got different weights and string labels raised a ``TypeError``.
+  Both now work on the 0/1 encoding of the target, with ``classes_[1]`` as the positive class; a
+  custom reweighing ``strategy`` now receives that encoding too.
 
 Datasets
 --------
