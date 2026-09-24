@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 import numpy as np
 import sympy
+from numpy.typing import NDArray
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray
 from .._validation import _check_y_pred, _check_y_true
@@ -21,6 +22,29 @@ from .cost_matrix import (
     _check_reserved_symbol_names,
 )
 from .strategies import LogitObjective, MetricStrategy
+
+
+def _check_labels_and_scores(
+    y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool
+) -> tuple[NDArray[Any], FloatNDArray]:
+    """
+    Flatten the labels and scores, and check them.
+
+    With ``validate=False`` the labels are trusted: training loops re-enter the metric many times
+    with labels the model already checked, and the checks (binary, numeric, finite) cost more than
+    scoring a small sample. The scores change on every call, so they are still checked to be
+    finite, which is cheap, raising the same errors. ``y_true`` may be empty, for the methods that
+    do not need labels.
+    """
+    y_true = np.asarray(y_true).reshape(-1)
+    y_score = np.asarray(y_score).reshape(-1)
+    if validate:
+        if y_true.size > 0:
+            y_true = _check_y_true(y_true, check_variance=False)
+        return y_true, _check_y_pred(y_score)
+    if not np.isfinite(y_score).all():
+        _check_y_pred(y_score)  # raises, naming what is not finite
+    return y_true, y_score
 
 
 class Metric(BaseMetric):
@@ -504,9 +528,10 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
         validate : bool, default=True
-            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
-            only when re-entering the metric on a training loop's per-iteration path, where the
-            values have already been validated once at fit time.
+            Whether to check the labels, and the parameter values against the cost matrix's domain.
+            Pass ``False`` only when re-entering the metric on a training loop's per-iteration path,
+            where the labels and values have already been validated once at fit time. The scores
+            are then only checked to be finite.
 
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -521,8 +546,7 @@ class Metric(BaseMetric):
         score : float
             The computed metric score or loss.
         """
-        y_true = _check_y_true(np.asarray(y_true).reshape(-1), check_variance=False)
-        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
+        y_true, y_score = _check_labels_and_scores(y_true, y_score, validate=validate)
         if y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         parameters = self._prepare_parameters(n_samples=y_true.size, validate=validate, **parameters)
@@ -574,9 +598,10 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
         validate : bool, default=True
-            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
-            only when re-entering the metric on a training loop's per-iteration path, where the
-            values have already been validated once at fit time.
+            Whether to check the labels, and the parameter values against the cost matrix's domain.
+            Pass ``False`` only when re-entering the metric on a training loop's per-iteration path,
+            where the labels and values have already been validated once at fit time. The scores
+            are then only checked to be finite.
 
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -591,11 +616,7 @@ class Metric(BaseMetric):
         optimal_threshold : float or NDArray of shape (n_samples,)
             The optimal classification threshold(s).
         """
-        y_true = np.asarray(y_true).reshape(-1)
-        # y_true may be empty when optimal_threshold/optimal_rate don't need labels
-        if y_true.size > 0:
-            y_true = _check_y_true(y_true, check_variance=False)
-        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
+        y_true, y_score = _check_labels_and_scores(y_true, y_score, validate=validate)
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         n_samples = y_true.size or y_score.size or None
@@ -632,9 +653,10 @@ class Metric(BaseMetric):
               :class:`~empulse.metrics.LogCost`), ``y_score`` must be a calibrated probability.
 
         validate : bool, default=True
-            Whether to check the parameter values against the cost matrix's domain. Pass ``False``
-            only when re-entering the metric on a training loop's per-iteration path, where the
-            values have already been validated once at fit time.
+            Whether to check the labels, and the parameter values against the cost matrix's domain.
+            Pass ``False`` only when re-entering the metric on a training loop's per-iteration path,
+            where the labels and values have already been validated once at fit time. The scores
+            are then only checked to be finite.
 
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -649,11 +671,7 @@ class Metric(BaseMetric):
         optimal_rate : float
             The optimal predicted positive rate.
         """
-        y_true = np.asarray(y_true).reshape(-1)
-        # y_true may be empty when optimal_rate doesn't need labels (threshold-only path)
-        if y_true.size > 0:
-            y_true = _check_y_true(y_true, check_variance=False)
-        y_score = _check_y_pred(np.asarray(y_score).reshape(-1))
+        y_true, y_score = _check_labels_and_scores(y_true, y_score, validate=validate)
         if y_true.size > 0 and y_true.size != y_score.size:
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         n_samples = y_true.size or y_score.size or None
