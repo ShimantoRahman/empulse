@@ -80,6 +80,14 @@ Metrics
   large datasets and up to a fifth of each gradient boosting round of
   :class:`~empulse.models.CSBoostClassifier` with them; a
   :class:`~empulse.models.ProfTreeClassifier` generation with them is about 5% faster.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` with one stochastic variable (and so
+  :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
+  :func:`~empulse.metrics.empcs_score`) scores a ROC convex hull 10-25x faster, in about 15 us
+  instead of 150-400 us for a hull of 20 points. Splitting the variable's support into the regions
+  where one threshold is optimal and integrating the profit over each now runs in C++, for the ten
+  distributions with closed-form partial moments and profits up to quadratic in the variable; other
+  profits and distributions are scored as before. Scoring the hull took most of the time of fitting
+  a :class:`~empulse.models.ProfTreeClassifier` with such a metric, which is now about 3x faster.
 
 Models
 ------

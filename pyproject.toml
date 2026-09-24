@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80.9.0", "wheel", "Cython==3.2.5", "numpy", "scikit-learn"]
+requires = ["setuptools>=80.9.0", "wheel", "Cython==3.2.5", "numpy", "scipy>=1.15.3", "scikit-learn"]
 build-backend = "setuptools.build_meta"
 
 [project]

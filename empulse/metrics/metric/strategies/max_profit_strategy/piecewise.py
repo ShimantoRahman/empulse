@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from itertools import pairwise
-from typing import Any
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import scipy.special as sp
@@ -11,6 +11,7 @@ from scipy.integrate import IntegrationWarning, quad
 from sympy.stats import density, pspace
 
 from ....._types import FloatNDArray, IntNDArray
+from ...._cy_max_profit import Distribution, expected_max_profit
 from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ._distributions import ADAPTERS, adapter_for
@@ -309,6 +310,50 @@ def _callable_envelope(
         return profit_fn(**arguments)
 
     return CallableEnvelope(profit_at, true_positive_rates, false_positive_rates)
+
+
+class _AffineCoefficients:
+    """
+    The profit's polynomial coefficients as affine functions of the rates, compiled to one call.
+
+    Each coefficient is split as ``a_k = constant_k + tpr_slope_k * F_0 + fpr_slope_k * F_1``,
+    where the three parts depend only on the class priors and the other parameters. Evaluating the
+    parts once per call replaces evaluating every coefficient at every hull vertex, and is what the
+    compiled :func:`~empulse.metrics._cy_max_profit.expected_max_profit` takes.
+    """
+
+    def __init__(self, parts: Sequence[sympy.Expr], n_powers: int) -> None:
+        self.n_powers = n_powers
+        expression = sympy.Tuple(*parts)
+        variables = sorted(expression.free_symbols, key=str)
+        self.names = [str(variable) for variable in variables]
+        self.function = _safe_lambdify(expression, variables) if variables else None
+        self.constant_parts = None if variables else np.array([float(part) for part in parts]).reshape(3, n_powers)
+
+    @classmethod
+    def from_coefficients(cls, coefficient_eqs: Sequence[sympy.Expr]) -> Self | None:
+        """Split every coefficient, or return None if one of them is not affine in the rates."""
+        tpr, fpr = sympy.symbols('F_0 F_1')
+        constants, tpr_slopes, fpr_slopes = [], [], []
+        for equation in coefficient_eqs:
+            tpr_slope = sympy.diff(equation, tpr)
+            fpr_slope = sympy.diff(equation, fpr)
+            if tpr_slope.has(tpr, fpr) or fpr_slope.has(tpr, fpr):
+                return None
+            constants.append(equation.subs({tpr: 0, fpr: 0}))
+            tpr_slopes.append(tpr_slope)
+            fpr_slopes.append(fpr_slope)
+        return cls([*constants, *tpr_slopes, *fpr_slopes], len(coefficient_eqs))
+
+    def __call__(
+        self, positive_class_prior: float, negative_class_prior: float, parameters: dict[str, Any]
+    ) -> FloatNDArray:
+        """Return the constants, TPR slopes and FPR slopes as the rows of a (3, n_powers) array."""
+        if self.function is None:
+            return self.constant_parts  # type: ignore[return-value]
+        values = {'pi_0': positive_class_prior, 'pi_1': negative_class_prior, **parameters}
+        parts = self.function(*[values[name] for name in self.names])
+        return np.asarray(parts, dtype=np.float64).reshape(3, self.n_powers)
 
 
 class _PiecewiseBase:
@@ -623,7 +668,15 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
     The support is split into the regions where a single ROC convex-hull vertex maximises profit.
     On each region the profit is a polynomial in the stochastic variable, so every term integrates
     to a coefficient times a closed-form partial moment that the subclass supplies.
+
+    Subclasses that name their distribution in ``_compiled_distribution`` are scored by the compiled
+    :func:`~empulse.metrics._cy_max_profit.expected_max_profit` instead, for profits up to degree two
+    in the stochastic variable; their ``_integrate`` remains the reference it is tested against.
     """
+
+    #: The name of the distribution in :class:`~empulse.metrics._cy_max_profit.Distribution`, if the
+    #: compiled score covers it.
+    _compiled_distribution: ClassVar[str | None] = None
 
     def __init__(
         self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
@@ -641,6 +694,12 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         self.coefficient_eqs: list[sympy.Expr] = self.poly_eqs
         self.coefficient_fns: list[Callable[..., Any]] = self.poly_fns
 
+        self._compiled: tuple[_AffineCoefficients, int] | None = None
+        if expected_max_profit is not None and self._compiled_distribution is not None and len(self.poly_eqs) <= 3:
+            affine = _AffineCoefficients.from_coefficients(self.poly_eqs)
+            if affine is not None:
+                self._compiled = (affine, int(getattr(Distribution, self._compiled_distribution)))
+
     def _score_hull(
         self,
         true_positive_rates: FloatNDArray,
@@ -652,6 +711,22 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         negative_class_prior = 1 - positive_class_prior
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+
+        if self._compiled is not None:
+            affine, distribution = self._compiled
+            constant, tpr_slope, fpr_slope = affine(positive_class_prior, negative_class_prior, kwargs)
+            return float(
+                expected_max_profit(  # type: ignore[misc]
+                    np.asarray(true_positive_rates, dtype=np.float64),
+                    np.asarray(false_positive_rates, dtype=np.float64),
+                    constant,
+                    tpr_slope,
+                    fpr_slope,
+                    *self._support(distribution_parameters),
+                    distribution,
+                    np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64),
+                )
+            )
 
         # The coefficients are needed at every hull vertex to build the envelope, and the regions
         # then select which vertex's coefficients apply where.
@@ -696,6 +771,8 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
 
 class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
     """Compute the maximum profit for a single uniform distributed variable using piecewise polynomial integration."""
+
+    _compiled_distribution = 'UNIFORM'
 
     def _integrate(
         self,
@@ -744,6 +821,8 @@ def _safe_pow_phi(x: np.ndarray, exp: int, phi: float | np.ndarray) -> np.ndarra
 
 class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
     """Compute the maximum profit for a single normal distributed variable using piecewise polynomial integration."""
+
+    _compiled_distribution = 'NORMAL'
 
     def _integrate(
         self,
@@ -836,6 +915,8 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
 class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
     """Compute the maximum profit for a single gamma distributed variable using piecewise integration."""
 
+    _compiled_distribution = 'GAMMA'
+
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
@@ -851,6 +932,8 @@ class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
 
 class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
     """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
+
+    _compiled_distribution = 'PARETO'
 
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
@@ -876,6 +959,8 @@ class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
 
 class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
     """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
+
+    _compiled_distribution = 'TRIANGULAR'
 
     def _integrate(
         self,
@@ -953,6 +1038,8 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
 class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
     """Compute the maximum profit for a single exponential distributed variable using piecewise integration."""
 
+    _compiled_distribution = 'EXPONENTIAL'
+
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
@@ -975,6 +1062,8 @@ class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
 class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
     """Compute the maximum profit for a single chi-squared distributed variable using piecewise integration."""
 
+    _compiled_distribution = 'CHI_SQUARED'
+
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
@@ -991,6 +1080,8 @@ class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
 
 class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
     """Compute the maximum profit for a single log normal distributed variable using piecewise integration."""
+
+    _compiled_distribution = 'LOG_NORMAL'
 
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
@@ -1010,6 +1101,8 @@ class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
 
 class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
     """Compute the maximum profit for a single beta distributed variable using piecewise integration."""
+
+    _compiled_distribution = 'BETA'
 
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
@@ -1033,6 +1126,8 @@ class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
 
 class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
     """Compute the maximum profit for a single weibull distributed variable using piecewise polynomial integration."""
+
+    _compiled_distribution = 'WEIBULL'
 
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
