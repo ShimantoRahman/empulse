@@ -77,6 +77,10 @@ Models
   :class:`~empulse.metrics.MaxProfit` metric, including stochastic MaxProfit metrics such as
   :func:`~empulse.metrics.empc_score`. With an expected-cost loss, the fitted tree used to be a
   single leaf predicting the class prior, costing more than predicting 0.5 for every sample.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` no longer crashes the Python process when a
+  feature has a single distinct value. Drawing a split for such a feature took a random integer
+  modulo zero, which raised a floating-point exception (SIGFPE) in C. Splits are now drawn from the
+  features with at least two distinct values; if there are none, the tree is a single leaf.
 
 `0.12.0`_ (19-09-2026)
 ======================
