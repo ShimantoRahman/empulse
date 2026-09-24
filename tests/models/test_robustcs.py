@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import sympy
+from sklearn.datasets import make_classification
 from sklearn.linear_model import HuberRegressor
 
 from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
@@ -99,3 +100,52 @@ def test_robustcs_mixture_metric_loss(classification_data):
     assert hasattr(model, 'estimator_')
     assert hasattr(model, 'outlier_estimators_')
     assert not np.array_equal(model.costs_['clv'], clv_val)
+
+
+@pytest.mark.parametrize(
+    'labels',
+    [np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 5])],
+    ids=['minus_one_one', 'strings', 'two_five'],
+)
+def test_outlier_detection_does_not_depend_on_label_encoding(labels):
+    """Regression test: the classes were selected with ``y > 0`` and ``y == 0``.
+
+    With labels other than 0/1, no sample matched ``y == 0``, so the negative-class costs
+    (``fp_cost``, ``tn_cost``) were silently never cleaned; with labels such as 2/5 every sample
+    counted as positive.
+    """
+    X, y = make_classification(n_samples=300, random_state=0)
+    fp_cost = np.random.default_rng(0).random(300)
+    fp_cost[:5] = 1000.0  # outliers
+    fn_cost = np.random.default_rng(1).random(300)
+    fn_cost[5:10] = 1000.0
+
+    reference = RobustCSClassifier(CSLogitClassifier()).fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+    model = RobustCSClassifier(CSLogitClassifier()).fit(X, labels[y], fn_cost=fn_cost, fp_cost=fp_cost)
+
+    for cost_name in ('fp_cost', 'fn_cost'):
+        assert model.outlier_estimators_[cost_name] is not None
+        np.testing.assert_allclose(model.costs_[cost_name], reference.costs_[cost_name])
+    assert model.costs_['fp_cost'].max() < 1000.0
+
+
+@pytest.mark.parametrize(
+    'labels',
+    [np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 5])],
+    ids=['minus_one_one', 'strings', 'two_five'],
+)
+def test_metric_outlier_detection_does_not_depend_on_label_encoding(labels):
+    """The metric-loss path selected each parameter's class the same way, with ``y > 0``/``y == 0``."""
+    X, y = make_classification(n_samples=300, random_state=0)
+    fn, fp = sympy.symbols('fn fp')
+    # `fp` only appears in the false-positive cost, so its outliers are detected on the negatives.
+    loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp).mark_outlier_sensitive(fp), Cost())
+    fp_cost = np.random.default_rng(0).random(300)
+    fp_cost[:5] = 1000.0
+
+    reference = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, y, fn=1.0, fp=fp_cost)
+    model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, labels[y], fn=1.0, fp=fp_cost)
+
+    assert 'fp' in model.outlier_estimators_
+    np.testing.assert_allclose(model.costs_['fp'], reference.costs_['fp'])
+    assert model.costs_['fp'].max() < 1000.0

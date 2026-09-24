@@ -105,6 +105,12 @@ Models
   labels, so ``-1``/``1`` labels got different weights and string labels raised a ``TypeError``.
   Both now work on the 0/1 encoding of the target, with ``classes_[1]`` as the positive class; a
   custom reweighing ``strategy`` now receives that encoding too.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` now detects outliers in the costs of both
+  classes whatever the labels are. It selected the positive samples with ``y > 0`` and the negative
+  ones with ``y == 0``, so with labels such as ``-1``/``1`` or ``'no'``/``'yes'`` the costs of the
+  negative class (``fp_cost``, ``tn_cost``, and metric parameters that only affect them) were
+  silently never cleaned, and with labels such as ``2``/``5`` every sample counted as positive. The
+  greater of the two labels is now the positive class, as in the cost-sensitive models it wraps.
 
 `0.12.0`_ (19-09-2026)
 ======================
