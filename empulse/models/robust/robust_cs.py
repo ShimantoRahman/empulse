@@ -332,17 +332,22 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             Fitted RobustCSClassifier model.
         """
         X, y = validate_data(self, X, y)
+        # Costs refer to the positive class, the greater of the two labels (the wrapped
+        # cost-sensitive estimators' `classes_[1]`), whatever the labels are.
+        is_positive = y == np.unique(y)[-1]
 
         metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
         if metric_loss is not None:
             # Work on a copy so we never mutate the caller's dict.
             estimator_params = dict(fit_params)
-            self.costs_, self.outlier_estimators_ = self._impute_metric_costs(X, y, metric_loss, estimator_params)
+            self.costs_, self.outlier_estimators_ = self._impute_metric_costs(
+                X, is_positive, metric_loss, estimator_params
+            )
         else:
             self.costs_ = self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
             should_fit = self._determine_outlier_costs()
-            self._fit_outlier_estimators(X, y, should_fit)
+            self._fit_outlier_estimators(X, is_positive, should_fit)
             estimator_params = {**self.costs_}
 
         self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
@@ -355,13 +360,17 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         return self
 
     def _select_class_samples(
-        self, X: FloatNDArray, y: FloatNDArray, cls: Literal['positive', 'negative', 'both'], target: FloatNDArray
+        self,
+        X: FloatNDArray,
+        is_positive: NDArray[np.bool_],
+        cls: Literal['positive', 'negative', 'both'],
+        target: FloatNDArray,
     ) -> tuple[FloatNDArray, FloatNDArray]:
         """Return the subset of (X, target) relevant for a parameter classified as *cls*."""
         if cls == 'positive':
-            return X[y > 0], target[y > 0]
+            return X[is_positive], target[is_positive]
         if cls == 'negative':
-            return X[y == 0], target[y == 0]
+            return X[~is_positive], target[~is_positive]
         return X.copy(), target.copy()
 
     def _impute_outliers(self, outlier_estimator: Any, X: FloatNDArray, target: FloatNDArray) -> FloatNDArray:
@@ -376,7 +385,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
     def _impute_metric_costs(
         self,
         X: FloatNDArray,
-        y: FloatNDArray,
+        is_positive: NDArray[np.bool_],
         metric_loss: BaseMetric,
         estimator_params: dict[str, Any],
     ) -> tuple[dict[str, FloatNDArray], dict[str, Any]]:
@@ -395,7 +404,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             if not isinstance(target, np.ndarray):
                 raise TypeError(f"Cost '{param_name}' must be an array for outlier detection.")
 
-            X_fit, target_fit = self._select_class_samples(X, y, cls, target)
+            X_fit, target_fit = self._select_class_samples(X, is_positive, cls, target)
 
             if X_fit.size > 0:
                 outlier_est = clone(
@@ -447,7 +456,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
 
         return should_fit
 
-    def _fit_outlier_estimators(self, X: FloatNDArray, y: FloatNDArray, should_fit: list[str]) -> None:
+    def _fit_outlier_estimators(self, X: FloatNDArray, is_positive: NDArray[np.bool_], should_fit: list[str]) -> None:
         self.outlier_estimators_ = {}
         for cost_name in self.costs_:
             if cost_name in should_fit:
@@ -455,9 +464,9 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
                 if not isinstance(target, np.ndarray):
                     raise TypeError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
                 if cost_name in {'tp_cost', 'fn_cost'}:
-                    X_fit, target_fit = X[y > 0], target[y > 0]
+                    X_fit, target_fit = X[is_positive], target[is_positive]
                 else:
-                    X_fit, target_fit = X[y == 0], target[y == 0]
+                    X_fit, target_fit = X[~is_positive], target[~is_positive]
 
                 if X_fit.size > 0:
                     outlier_est = clone(
