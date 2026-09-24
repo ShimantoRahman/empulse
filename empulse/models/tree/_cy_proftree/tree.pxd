@@ -7,6 +7,8 @@ cdef struct Tree:
     Node* root
     float fitness
     int n_nodes
+    # Root of the only subtree whose sample counts may be out of date, or NULL if all are current.
+    Node* stale
 
 cdef struct SplitValues:
     float **values
@@ -25,6 +27,14 @@ cdef Tree* deserialize_tree(object tree_data) noexcept
 cdef Node* get_leaf(Node* start_node, const float* x) noexcept nogil
 
 cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samples) noexcept nogil
+cdef void refit_tree(
+    Tree* tree,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+) noexcept nogil
 
 cdef void predict_proba_tree(Tree* tree, const float[:, ::1] X, float[:] probabilities, int n_samples) noexcept nogil
 cdef void predict_labels_tree(Tree* tree, const float[:, ::1] X, float[:] probabilities, int n_samples)

@@ -8,7 +8,7 @@ from cython.parallel cimport prange
 
 from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     compute_split_values, free_split_values, reset_tree,
-                    fit_tree, predict_proba_tree, split, prune_illegal_nodes)
+                    fit_tree, refit_tree, predict_proba_tree, split, prune_illegal_nodes)
 from .forest cimport Forest, create_forest, free_forest, choose_different_tree
 from .operators cimport count_nodes, crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
 from .random cimport RandState, rand_fraction, seed_rand
@@ -157,9 +157,7 @@ cdef inline void refit(
     int min_samples_split,
     int min_samples_leaf,
 ) noexcept nogil:
-    reset_tree(tree)
-    fit_tree(tree, X, y, n_samples)
-    prune_illegal_nodes(tree, tree.root, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
+    refit_tree(tree, X, y, n_samples, min_samples_split, min_samples_leaf)
 
 
 cdef inline void evaluate(

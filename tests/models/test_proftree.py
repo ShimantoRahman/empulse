@@ -313,3 +313,63 @@ class TestNJobs:
         X, y = data
         with pytest.raises(ValueError, match='n_jobs'):
             ProfTreeClassifier(n_jobs=0).fit(X, y, fn_cost=1.0, fp_cost=1.0)
+
+
+class TestIncrementalRefit:
+    """After a variation operator, only the samples reaching the changed subtree are routed again.
+
+    The counts left in the fitted tree must still be those of routing every training sample through
+    it from scratch, whichever operators produced it.
+    """
+
+    @staticmethod
+    def _assert_counts_match_routing(node, X, y, min_samples_split, min_samples_leaf, is_root=True):
+        assert node['n_samples'] == len(y)
+        assert node['n_positive_samples'] == y.sum()
+        if node['left'] is None:
+            return
+        if not is_root:  # the root is never pruned
+            assert node['n_samples'] >= min_samples_split
+        goes_left = X[:, node['feature_index']] <= node['split_value']
+        for child, mask in ((node['left'], goes_left), (node['right'], ~goes_left)):
+            if not is_root:
+                assert child['n_samples'] >= min_samples_leaf
+            TestIncrementalRefit._assert_counts_match_routing(
+                child, X[mask], y[mask], min_samples_split, min_samples_leaf, is_root=False
+            )
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize(
+        'operators',
+        [
+            {'grow_rate': 1.0},
+            {'grow_rate': 0.5, 'crossover_rate': 0.5},
+            {'grow_rate': 0.5, 'prune_rate': 0.5},
+            {'grow_rate': 0.5, 'mutate_split_rate': 0.5},
+            {'grow_rate': 0.5, 'mutate_value_rate': 0.5},
+            {},
+        ],
+        ids=['grow', 'crossover', 'prune', 'mutate_split', 'mutate_value', 'all'],
+    )
+    @pytest.mark.parametrize('custom_loss', [False, True], ids=['max_profit', 'custom_loss'])
+    def test_counts_match_routing_every_sample(self, operators, custom_loss):
+        X, y = make_classification(n_samples=800, n_features=6, random_state=0)
+        fn, fp = sympy.symbols('fn fp')
+        loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()) if custom_loss else None
+        fit_params = {'fn': 5.0, 'fp': 1.0} if custom_loss else {'fn_cost': 5.0, 'fp_cost': 1.0}
+        rates = {'crossover_rate': 0.0, 'grow_rate': 0.0, 'prune_rate': 0.0} if operators else {}
+        rates |= {'mutate_split_rate': 0.0, 'mutate_value_rate': 0.0} if operators else {}
+        model = ProfTreeClassifier(
+            loss=loss,
+            max_depth=6,
+            min_samples_split=20,
+            min_samples_leaf=7,
+            max_iter=60,
+            patience=60,
+            population_size=20,
+            random_state=0,
+            **(rates | operators),
+        ).fit(X, y, **fit_params)
+
+        tree = model.tree_._serialize_tree()
+        self._assert_counts_match_routing(tree['root'], X.astype(np.float32), y, 20, 7)

@@ -83,6 +83,7 @@ cdef Tree* crossover(RandState* rng, Tree* mother, Tree* father, int max_depth) 
 
     mother.fitness = NAN
     mother.n_nodes = count_nodes(mother.root)
+    mother.stale = new_subtree  # carries the father's counts
     return mother
 
 cdef inline void grow(RandState* rng, Tree* tree, SplitValues* split_values, int n_features, int max_depth) noexcept nogil:
@@ -90,11 +91,13 @@ cdef inline void grow(RandState* rng, Tree* tree, SplitValues* split_values, int
     cdef int depth = 0
     cdef Node* leaf = random_leaf_node(rng, tree.root, &depth)
     split(rng, leaf, n_features, split_values, depth, max_depth)
+    tree.stale = leaf
 
 cdef inline void prune_internal(RandState* rng, Tree* tree) noexcept nogil:
     """Prune a random internal node which has two leaf nodes as successors."""
     cdef Node* node = random_subnode_with_leaf_children(rng, tree.root)
     if node is not NULL and node is not tree.root:
+        # The pruned node keeps its counts and becomes a leaf: nothing needs refitting.
         prune(node)
 
 
@@ -105,6 +108,7 @@ cdef inline void mutate_split_feature(RandState* rng, Tree* tree, int n_features
     node.feature_index = rand_int(rng, 0, n_features)
     cdef int idx = rand_int(rng, 0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]
+    tree.stale = node
 
 cdef inline void mutate_split_value(RandState* rng, Tree* tree, SplitValues* split_values) noexcept nogil:
     cdef Node* node = random_subnode(rng, tree.root)
@@ -112,3 +116,4 @@ cdef inline void mutate_split_value(RandState* rng, Tree* tree, SplitValues* spl
         return
     cdef int idx = rand_int(rng, 0, split_values.lengths[node.feature_index])
     node.split_value = split_values.values[node.feature_index][idx]
+    tree.stale = node
