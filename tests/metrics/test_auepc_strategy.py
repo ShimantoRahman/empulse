@@ -17,6 +17,8 @@ These tests check:
   a per-sample outcome.
 """
 
+import itertools
+
 import numpy as np
 import pytest
 import sympy
@@ -213,3 +215,44 @@ def test_auepc_no_profitable_sample_scores_zero():
     result = _auepc_score_function()(y, y_score, tp=0.0, fp=5.0)
     assert result == 0.0
     assert not np.signbit(result)
+
+
+class TestTiedScores:
+    """Within a group of tied scores the curve is the expected profit under random tie-breaking.
+
+    The curve used to be accumulated one sample at a time in whatever order the tied samples
+    happened to be in, so the same data scored 1.0 or -0.66 depending on its row order.
+    """
+
+    Y_TRUE = np.array([1, 0, 1, 0, 0, 1, 0, 1])
+    Y_SCORE = np.array([0.9, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.1])
+
+    def _per_sample_auepc(self, y, y_score, tp, fp):
+        """The old algorithm: one sample at a time, in the order given (stable within ties)."""
+        delta = np.where(y == 1, tp, -fp)
+        perfect_profits = np.cumsum(np.sort(delta)[::-1])
+        profits = np.cumsum(delta[np.argsort(-y_score, kind='stable')])
+        n = y.size
+        stop_index = int(np.argmax(perfect_profits <= 0)) if np.any(perfect_profits <= 0) else n
+        score = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n))
+        return score / ((stop_index - 1) / n)
+
+    def test_equals_the_average_over_every_tie_breaking_order(self):
+        """AUEPC is linear in the curve, so scoring the expected curve is the expected score."""
+        tp, fp = 100.0, 20.0
+        groups = [np.flatnonzero(score == self.Y_SCORE) for score in np.unique(self.Y_SCORE)]
+        scores = []
+        for orders in itertools.product(*(itertools.permutations(group) for group in groups)):
+            order = np.concatenate(orders)
+            scores.append(self._per_sample_auepc(self.Y_TRUE[order], self.Y_SCORE[order], tp, fp))
+
+        result = _auepc_score_function()(self.Y_TRUE, self.Y_SCORE, tp=tp, fp=fp)
+        assert result == pytest.approx(np.mean(scores))
+
+    def test_result_does_not_depend_on_row_order(self):
+        score_fn = _auepc_score_function()
+        results = []
+        for seed in range(20):
+            order = np.random.default_rng(seed).permutation(self.Y_TRUE.size)
+            results.append(score_fn(self.Y_TRUE[order], self.Y_SCORE[order], tp=100.0, fp=20.0))
+        assert results == pytest.approx([results[0]] * len(results))

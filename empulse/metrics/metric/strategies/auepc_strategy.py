@@ -30,6 +30,28 @@ def _build_delta_equation(
     return y * (tp_benefit + fn_cost) - (1 - y) * (fp_cost + tn_benefit)
 
 
+def _ranked_profit_curve(delta: FloatNDArray, y_score: FloatNDArray) -> tuple[IntNDArray, FloatNDArray]:
+    """Cumulative profit of targeting the top-ranked samples, at every point a threshold can reach.
+
+    Samples with equal scores cannot be separated by any threshold, so each group of tied scores is
+    targeted all at once: the curve only has points at the edges of those groups. Taking a fraction
+    of a group, e.g. by random tie-breaking, earns in expectation the straight line between its two
+    edges, which is how a caller needing the curve at every sample should fill it in.
+
+    Returns
+    -------
+    n_targeted : NDArray of shape (n_points,)
+        Number of samples targeted at each point, ascending, from 0 (nobody) to ``n_samples``.
+    profits : NDArray of shape (n_points,)
+        Cumulative profit at each point.
+    """
+    order = np.argsort(y_score)[::-1]
+    cumulative = np.concatenate([[0.0], np.cumsum(delta[order])])
+    group_ends = np.flatnonzero(np.diff(y_score[order]) != 0) + 1
+    n_targeted = np.concatenate([[0], group_ends, [y_score.size]])
+    return n_targeted, cumulative[n_targeted]
+
+
 class AUEPCScore:
     """Class to compute the Area Under the Expected Profit Curve (AUEPC) for binary classification."""
 
@@ -65,9 +87,11 @@ class AUEPCScore:
         perfect_order = np.argsort(delta)[::-1]
         perfect_profits = np.cumsum(delta[perfect_order])
 
-        # The classifier's own ranking.
-        model_order = np.argsort(y_score)[::-1]
-        profits = np.cumsum(delta[model_order])
+        # The classifier's own ranking, after targeting 1, ..., n samples. Within a group of tied
+        # scores the curve is the expected profit under random tie-breaking, so the result does not
+        # depend on the order the samples happen to be in.
+        n_targeted, curve = _ranked_profit_curve(delta, y_score)
+        profits = np.interp(np.arange(1, n_samples + 1), n_targeted, curve)
 
         # Stop at the point where the oracle's cumulative profit is no longer positive: beyond this
         # point, even the best possible policy is losing money by targeting further samples. The
