@@ -4,10 +4,12 @@ Reading and rendering the sympy expressions a cost matrix is built from.
 Turning a string term into a sympy expression while rejecting sympy's own reserved names
 (:func:`_sympify_term`), and rendering an expression as LaTeX with multi-letter symbols set
 upright (:func:`_latex`) -- both ends of the same job, translating between what a user writes and
-what sympy actually holds.
+what sympy actually holds. :func:`_subs_by_name` substitutes values given by name, the way callers
+pass them, into an expression.
 """
 
 import re
+from collections.abc import Mapping
 from typing import Any
 
 import sympy
@@ -132,3 +134,18 @@ def _latex(expression: sympy.Expr) -> str:
         if (upright := _upright_symbol_name(symbol)) is not None:
             symbol_names[symbol] = upright
     return str(sympy.latex(expression, mode='plain', order=None, symbol_names=symbol_names))
+
+
+def _subs_by_name(expression: Any, values: Mapping[str, Any]) -> Any:
+    """
+    Substitute values, keyed by symbol name, for the symbols of *expression* with those names.
+
+    ``expression.subs({'a': 1})`` is not the same: sympy turns the name into ``Symbol('a')``, which
+    is not equal to a symbol created with assumptions, such as ``Symbol('a', positive=True)``, so
+    such symbols were silently left in place. This matches every symbol by its name instead,
+    including the parameters of a random variable's distribution.
+    """
+    replacements = {
+        symbol: values[symbol.name] for symbol in sympy.sympify(expression).atoms(sympy.Symbol) if symbol.name in values
+    }
+    return expression.subs(replacements) if replacements else expression

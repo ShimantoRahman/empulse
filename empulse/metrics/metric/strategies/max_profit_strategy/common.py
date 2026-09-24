@@ -12,6 +12,7 @@ from ....._types import Float64Array, FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull, convex_hull_from_counts
 from ..._compile import CountScoreFn
 from ..._parameter_domain import _check_parameters
+from ..._symbolic import _subs_by_name
 
 
 def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
@@ -126,7 +127,7 @@ def _substitute_integrand(
     are fixed numeric literals" and "distribution parameters were just resolved from kwargs" cases
     used by the Monte-Carlo, Quasi-Monte-Carlo, and quadrature integration backends.
     """
-    return expr.subs(kwargs).subs(dist_params).subs('pi_0', pi0).subs('pi_1', pi1)
+    return _subs_by_name(expr, {**kwargs, **dist_params, 'pi_0': pi0, 'pi_1': pi1})
 
 
 def _evaluate_sampled_integrands(

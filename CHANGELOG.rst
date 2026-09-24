@@ -4,6 +4,15 @@
 Metrics
 -------
 
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now works when the metric's
+  symbols were declared with assumptions, e.g. ``sympy.symbols('a b', positive=True)``. Parameter
+  values were substituted into the expressions by name, which sympy turns into symbols without
+  assumptions that do not match the metric's own, so they were left in place. Depending on the
+  integration method, this raised a ``TypeError`` for a distribution whose support depends on its
+  parameters (such as a uniform one), for the ``'quad'``, ``'monte-carlo'`` and
+  ``'quasi-monte-carlo'`` integration methods, and for profits that are not polynomial in the
+  stochastic variable. Distribution parameters with assumptions also skipped part of their
+  validation.
 - |Fix| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
   :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score`,
   :func:`~empulse.metrics.mpcs_score` and :func:`~empulse.metrics.empcs_score`) no longer return

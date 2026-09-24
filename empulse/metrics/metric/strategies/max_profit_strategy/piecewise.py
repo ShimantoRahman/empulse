@@ -14,6 +14,7 @@ from ....._types import FloatNDArray, IntNDArray
 from ...._cy_max_profit import Distribution, expected_max_profit
 from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
+from ..._symbolic import _subs_by_name
 from ._distributions import ADAPTERS, adapter_for
 from .common import _convex_hull, _HullScoreFunction
 from .envelope import (
@@ -123,11 +124,11 @@ class _PreparedIntegrand:
             key = tuple(sorted((name, float(value)) for name, value in parameters.items()))
         except (TypeError, ValueError):
             # A non-scalar parameter cannot key the cache; compile without caching.
-            return _safe_lambdify(self.integrand.subs(parameters), self.arguments)
+            return _safe_lambdify(_subs_by_name(self.integrand, parameters), self.arguments)
         cached = self._compiled
         if cached is not None and cached[0] == key:
             return cached[1]
-        function = _safe_lambdify(self.integrand.subs(parameters), self.arguments)
+        function = _safe_lambdify(_subs_by_name(self.integrand, parameters), self.arguments)
         self._compiled = (key, function)
         return function
 
@@ -163,14 +164,14 @@ def _resolve_support(
     if upper_bound is None:
         bound = random_var_bounds[1]
         if isinstance(bound, sympy.Expr):
-            bound = bound.subs(distribution_parameters)
+            bound = _subs_by_name(bound, distribution_parameters)
             upper_bound = np.inf if bound == sympy.oo else float(bound)
         else:
             upper_bound = float(bound)
     if lower_bound is None:
         bound = random_var_bounds[0]
         if isinstance(bound, sympy.Expr):
-            bound = bound.subs(distribution_parameters)
+            bound = _subs_by_name(bound, distribution_parameters)
             lower_bound = -np.inf if bound == -sympy.oo else float(bound)
         else:
             lower_bound = float(bound)
@@ -463,7 +464,7 @@ class _PiecewiseBase:
             elif isinstance(source, str):
                 values.append(float(distribution_parameters[source]))
             else:
-                values.append(float(source.subs(distribution_parameters)))
+                values.append(float(_subs_by_name(source, distribution_parameters)))
         return values
 
     def _support(self, distribution_parameters: dict[str, Any]) -> tuple[float, float]:
