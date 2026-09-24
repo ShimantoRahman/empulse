@@ -72,6 +72,11 @@ Models
   with ``criterion='entropy'`` or ``criterion='log_loss'`` now grow past a single split. The criterion's child impurities were
   missing a minus sign and came out negative, and scikit-learn stops splitting any node whose
   impurity is not positive, so every tree stopped at depth 1 whatever ``max_depth`` was.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` now minimizes a custom ``loss`` instead of
+  maximizing it. This affected every loss other than a deterministic
+  :class:`~empulse.metrics.MaxProfit` metric, including stochastic MaxProfit metrics such as
+  :func:`~empulse.metrics.empc_score`. With an expected-cost loss, the fitted tree used to be a
+  single leaf predicting the class prior, costing more than predicting 0.5 for every sample.
 
 Datasets
 --------

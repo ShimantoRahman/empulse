@@ -103,3 +103,23 @@ class TestPreflightSmokeTestReproducibility:
                 except ValueError:
                     results.append('raised')
         assert len(set(results)) == 1, f'Smoke test outcome was not reproducible across runs: {results}'
+
+
+class TestCustomLossDirection:
+    """Regression test: the custom-loss path handed the evolutionary search ``BaseMetric._loss``.
+
+    The search keeps the fittest trees, i.e. it maximizes, while ``_loss`` is a value to minimize,
+    so ProfTree searched for the costliest tree: with an expected-cost loss it settled on a single
+    leaf, which predicts the class prior for every sample.
+    """
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    def test_custom_cost_loss_is_minimized(self):
+        X, y = make_classification(n_samples=600, random_state=0, weights=[0.7])
+        fn, fp = sympy.symbols('fn fp')
+        metric = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost())
+        model = ProfTreeClassifier(loss=metric, max_iter=60, patience=60, population_size=40, random_state=0)
+        y_proba = model.fit(X, y, fn=5.0, fp=1.0).predict_proba(X)[:, 1]
+
+        single_leaf_cost = metric(y, np.full(y.size, y.mean()), fn=5.0, fp=1.0)
+        assert metric(y, y_proba, fn=5.0, fp=1.0) < 0.5 * single_leaf_cost

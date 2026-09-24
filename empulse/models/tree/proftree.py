@@ -17,6 +17,11 @@ if TYPE_CHECKING:
 MAX_INT = 2147483647
 
 
+def _negated_loss(loss: BaseMetric, y_true: IntNDArray, y_score: FloatNDArray, **loss_params: Any) -> float:
+    """Return the negated loss of *y_score*, as a fitness to maximize."""
+    return -loss._loss(y_true, y_score, validate=False, **loss_params)
+
+
 class ProfTreeClassifier(CostSensitiveClassifier):
     """
     Profit-driven evolutionary decision tree classifier.
@@ -340,7 +345,8 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             # `use_fit_max_profit` is only False when `loss_ is None` is False, i.e. `loss_` is a
             # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
             assert loss_ is not None
-            fitness_fn: Callable[..., float] = partial(loss_._loss, validate=False, **loss_params)
+            # The evolutionary search maximizes fitness, while `_loss` is a value to minimize.
+            fitness_fn: Callable[..., float] = partial(_negated_loss, loss_, **loss_params)
 
             y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
             try:  # catch issue with the loss function before it goes into C world
