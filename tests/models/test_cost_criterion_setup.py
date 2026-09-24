@@ -77,7 +77,7 @@ def test_criterion_usable_with_array_valued_costs():
     assert y_pred.shape == y.shape
 
 
-@pytest.mark.parametrize('criterion_name', ['cost', 'gini'])
+@pytest.mark.parametrize('criterion_name', ['cost', 'gini', 'entropy'])
 @pytest.mark.parametrize('instance_dependent', [False, True], ids=['class_dependent', 'instance_dependent'])
 def test_sample_weights_act_like_repeated_rows(criterion_name, instance_dependent):
     """Regression test: the node cost totals ignored sample weights, but the child sums did not.
@@ -109,3 +109,20 @@ def test_sample_weights_act_like_repeated_rows(criterion_name, instance_dependen
     # compared loosely; before the fix they agreed on about 20% of samples.
     np.testing.assert_allclose(weighted.tree_.impurity, materialised.tree_.impurity)
     assert np.mean(weighted.predict(X) == materialised.predict(X)) > 0.95
+
+
+@pytest.mark.parametrize('criterion_name', ['entropy', 'log_loss'])
+def test_entropy_criterion_grows_beyond_a_stump(criterion_name):
+    """Regression test: the entropy criterion's child impurities were missing their minus sign.
+
+    They came out negative, and sklearn makes any node with impurity <= 0 a leaf, so every tree
+    stopped at depth 1 whatever ``max_depth`` was.
+    """
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(n_samples=500, random_state=0)
+    criterion = build_cost_criterion(criterion_name, tp_cost=0.0, tn_cost=0.0, fn_cost=5.0, fp_cost=1.0, n_samples=500)
+    tree = DecisionTreeClassifier(criterion=criterion, max_depth=6, random_state=0).fit(X, y)
+
+    assert tree.get_depth() > 1
+    assert np.all(tree.tree_.impurity >= 0)

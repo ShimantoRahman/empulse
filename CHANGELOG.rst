@@ -68,6 +68,10 @@ Models
   but not when splitting it, so the right child's costs were wrong. Forests pass their bootstrap
   draws as sample weights, so every bootstrapped tree was affected: a tree fitted on a bootstrap
   sample disagreed with one fitted on the same rows written out on 80% of its predictions.
+- |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
+  with ``criterion='entropy'`` or ``criterion='log_loss'`` now grow past a single split. The criterion's child impurities were
+  missing a minus sign and came out negative, and scikit-learn stops splitting any node whose
+  impurity is not positive, so every tree stopped at depth 1 whatever ``max_depth`` was.
 
 `0.12.0`_ (19-09-2026)
 ======================
