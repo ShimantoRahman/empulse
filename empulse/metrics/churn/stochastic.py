@@ -124,13 +124,9 @@ See :func:`~empulse.metrics.empb_score` to instead return the maximum profit.
 ``__call__(y_true, y_score, *, clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)``
     Compute the area under the expected profit curve.
 
-``optimal_threshold(y_true, y_score, *, clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)``
-    Compute the classification threshold that maximizes the underlying expected profit
-    (see :func:`~empulse.metrics.empb_score`).
-
-``optimal_rate(y_true, y_score, *, clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)``
-    Compute the predicted positive rate (fraction of the customer base that should be
-    targeted) at which the maximum underlying expected profit is achieved.
+AUEPC scores a whole ranking rather than a single decision, so it has no ``optimal_threshold`` or
+``optimal_rate``. Use :func:`~empulse.metrics.empb_score`'s methods, which share its definition of
+profit, to find the threshold or targeted fraction that maximizes the expected profit.
 
 References
 ----------

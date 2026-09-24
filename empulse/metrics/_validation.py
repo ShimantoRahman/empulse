@@ -88,11 +88,6 @@ def _check_positive(var: float | Real, var_name: str) -> None:
         raise ValueError(f'{var_name} should be positive, got a value of {var} instead.')
 
 
-def _check_gt_one(var: float, var_name: str) -> None:
-    if var < 0:
-        raise ValueError(f'{var_name} should be greater than 1, got a value of {var} instead.')
-
-
 def _check_fraction(var: float, var_name: str) -> None:
     if not (0 <= var <= 1):
         raise ValueError(f'{var_name} should lay between 0 and 1, got a value of {var} instead.')

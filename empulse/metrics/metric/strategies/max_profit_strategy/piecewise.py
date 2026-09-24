@@ -390,16 +390,27 @@ class _PiecewiseBase:
     def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Split the call's parameters into the distribution's own and everything else.
 
-        When every distribution parameter is a hardcoded numeric literal there are no symbol names
-        to look up, so the values are taken straight from the distribution's arguments instead.
+        Only the parameters named by a symbol are passed in by the caller; hardcoded numeric ones
+        are read from the distribution itself by :meth:`_distribution_values`.
         """
-        distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
-        if not distribution_parameters and not self.dist_params:
-            # Every parameter is a hardcoded literal, so there are no names to look up in kwargs.
-            # Only genuinely numeric arguments are taken: a hand-built density carries its own
-            # Lambda and support set here, and neither is a parameter to substitute.
-            distribution_parameters = {str(arg): float(arg) for arg in self.distribution_args if arg.is_number}
-        return distribution_parameters, kwargs
+        return extract_distribution_parameters(kwargs, self.distribution_args)
+
+    def _distribution_values(self, distribution_parameters: dict[str, Any]) -> list[float]:
+        """Every parameter of the distribution, in the order its constructor takes them.
+
+        The closed-form integrals read the parameters by position. Reading them off the caller's
+        values instead would drop the hardcoded ones (``Beta('g', 6, b)`` would see only ``b``), or
+        merge equal ones (``Beta('g', 6, 6)``), so each argument is resolved on its own.
+        """
+        values = []
+        for argument in self.distribution_args:
+            if argument.is_number:
+                values.append(float(argument))
+            elif isinstance(argument, sympy.Symbol):
+                values.append(float(distribution_parameters[str(argument)]))
+            else:
+                values.append(float(argument.subs(distribution_parameters)))
+        return values
 
     def _support(self, distribution_parameters: dict[str, Any]) -> tuple[float, float]:
         """Resolve the support, reusing the previous answer when the parameters have not changed.
@@ -538,7 +549,9 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
     ) -> float:
         """Integrate distribution-specific piecewise math."""
         cdf_diff = np.diff(
-            self.cdf_function.cdf(bounds, **self.sympy_to_scipy_params_fn(*distribution_parameters.values()))
+            self.cdf_function.cdf(
+                bounds, **self.sympy_to_scipy_params_fn(*self._distribution_values(distribution_parameters))
+            )
         )
         optimal_rate = (rate * cdf_diff).sum()
         return float(optimal_rate)
@@ -727,7 +740,7 @@ class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
         upper_bound: float,
         lower_bound: float,
     ) -> float:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         mu = float(dist_params_list[0])
         sigma = float(dist_params_list[1])
 
@@ -813,7 +826,7 @@ class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         alpha = float(dist_params_list[0])
         lambda_rate = float(dist_params_list[1])
 
@@ -829,7 +842,7 @@ class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         x_m = float(dist_params_list[0])  # Scale
         alpha = float(dist_params_list[1])  # Shape
 
@@ -859,7 +872,7 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
         upper_bound: float,
         lower_bound: float,
     ) -> float:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
 
         a = float(dist_params_list[0])
         b = float(dist_params_list[1])
@@ -930,7 +943,7 @@ class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         lambda_rate = float(dist_params_list[0])
         scale = 1.0 / lambda_rate
 
@@ -952,7 +965,7 @@ class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         df = float(dist_params_list[0])
 
         # Shifted CDF: adding 2*k to degrees of freedom
@@ -969,7 +982,7 @@ class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         mu = float(dist_params_list[0])
         sigma = float(dist_params_list[1])
 
@@ -988,7 +1001,7 @@ class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         alpha = float(dist_params_list[0])
         beta = float(dist_params_list[1])
 
@@ -1011,7 +1024,7 @@ class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
     def _get_kth_integration_components(
         self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
     ) -> tuple[Any, np.ndarray]:
-        dist_params_list = list(distribution_parameters.values())
+        dist_params_list = self._distribution_values(distribution_parameters)
         lambda_scale = float(dist_params_list[0])
         k_shape = float(dist_params_list[1])
         bounds_arr = np.asarray(bounds)

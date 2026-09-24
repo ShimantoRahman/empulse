@@ -25,7 +25,6 @@ from empulse._types import FloatArrayLike, FloatNDArray
 from empulse.metrics._cy_convex_hull import convex_hull
 from empulse.metrics._validation import (
     _check_fraction,
-    _check_gt_one,
     _check_positive,
     _check_shape,
     _check_y_pred,
@@ -71,8 +70,8 @@ def _validate_input_emp(
     d: float,
     f: float,
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray | float]:
-    _check_gt_one(alpha, 'alpha')
-    _check_gt_one(beta, 'beta')
+    _check_positive(alpha, 'alpha')
+    _check_positive(beta, 'beta')
     return _validate_input(y_true, y_pred, clv, d, f)
 
 

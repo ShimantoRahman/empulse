@@ -63,6 +63,10 @@ _sympy_dist_to_scipy_params: dict[
     sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
     Callable[..., dict[str, float]],
 ] = {
+    # Arcsin and PowerFunction are bounded on [a, b], while SciPy's `scale` is the *width* of the
+    # support, so passing b straight through would stretch it to [a, a + b].
+    sympy.stats.crv_types.ArcsinDistribution: lambda a, b: {'loc': a, 'scale': b - a},
+    sympy.stats.crv_types.PowerFunctionDistribution: lambda alpha, a, b: {'a': alpha, 'loc': a, 'scale': b - a},
     sympy.stats.crv_types.ExponentialDistribution: lambda rate: {'loc': 0, 'scale': 1 / rate},
     sympy.stats.crv_types.GammaDistribution: lambda k, theta: {'a': k, 'scale': theta},
     sympy.stats.crv_types.GammaInverseDistribution: lambda a, b: {'a': a, 'scale': b},
@@ -108,6 +112,16 @@ _sympy_dist_to_scipy_params: dict[
 }
 
 
+def _scipy_distribution(random_var: sympy.Expr) -> FrozenScipyDist:
+    """Freeze the SciPy distribution matching *random_var*, whose parameters must all be numeric."""
+    sympy_distribution = pspace(random_var).distribution
+    scipy_distribution = _sympy_dist_to_scipy[type(sympy_distribution)]
+    sympy_dist_params = [float(arg) for arg in sympy_distribution.args]
+    if type(sympy_distribution) in _sympy_dist_to_scipy_params:
+        return scipy_distribution(**_sympy_dist_to_scipy_params[type(sympy_distribution)](*sympy_dist_params))
+    return scipy_distribution(*sympy_dist_params)
+
+
 class MaxProfitScoreQuasiMonteCarlo:
     """
     Compute the maximum profit for one or more stochastic variables using Quasi Monte Carlo (QMC) integration.
@@ -141,17 +155,9 @@ class MaxProfitScoreQuasiMonteCarlo:
             # If all distribution parameters are fixed, then the param grid can be pre-computed.
             self.param_grid_needs_recompute = False
             # convert to scipy distributions
-            self.scipy_distributions: list[FrozenScipyDist] | None = []
-            for random_var in random_symbols:
-                sympy_distribution = pspace(random_var).distribution.__class__
-                scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
-                sympy_dist_params = [float(arg) for arg in pspace(random_var).distribution.args]
-                if sympy_distribution in _sympy_dist_to_scipy_params:
-                    scipy_dist_kwargs = _sympy_dist_to_scipy_params[sympy_distribution](*sympy_dist_params)
-                    self.scipy_distributions.append(scipy_distribution(**scipy_dist_kwargs))
-                else:
-                    scipy_dist_params = sympy_dist_params
-                    self.scipy_distributions.append(scipy_distribution(*scipy_dist_params))
+            self.scipy_distributions: list[FrozenScipyDist] | None = [
+                _scipy_distribution(random_var) for random_var in random_symbols
+            ]
             self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(self.scipy_distributions)]
             self.dist_params = []
 
@@ -181,19 +187,9 @@ class MaxProfitScoreQuasiMonteCarlo:
             if cached is not None and cached[0] == distribution_parameters:
                 param_grid = cached[1]
             else:
-                scipy_distributions = []
-                for random_var in self.random_symbols:
-                    sympy_distribution = pspace(random_var).distribution.__class__
-                    scipy_distribution = _sympy_dist_to_scipy[sympy_distribution]
-                    sympy_dist_params = [
-                        float(arg) for arg in pspace(random_var.subs(distribution_parameters)).distribution.args
-                    ]
-                    if sympy_distribution in _sympy_dist_to_scipy_params:
-                        scipy_dist_kwargs = _sympy_dist_to_scipy_params[sympy_distribution](*sympy_dist_params)
-                        scipy_distributions.append(scipy_distribution(**scipy_dist_kwargs))
-                    else:
-                        scipy_dist_params = sympy_dist_params
-                        scipy_distributions.append(scipy_distribution(*scipy_dist_params))
+                scipy_distributions = [
+                    _scipy_distribution(random_var.subs(distribution_parameters)) for random_var in self.random_symbols
+                ]
                 param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
                 self._grid_cache = (distribution_parameters, param_grid)
             dist_params = distribution_parameters

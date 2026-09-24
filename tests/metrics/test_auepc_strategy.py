@@ -171,3 +171,45 @@ def test_auepc_repr_and_latex_smoke(empirical_churn_cost_matrix):
     latex = metric._repr_latex_()
     assert isinstance(latex, str)
     assert latex.startswith('$')
+
+
+def _auepc_score_function(normalize=True):
+    tp, fp = sympy.symbols('tp fp')
+    return AUEPCScore(
+        tp_benefit=tp, tn_benefit=sympy.Integer(0), fp_cost=fp, fn_cost=sympy.Integer(0), normalize=normalize
+    )
+
+
+@pytest.mark.parametrize(('normalize', 'expected'), [(True, -10.0), (False, 0.0)])
+def test_auepc_single_profitable_point(normalize, expected):
+    """The oracle curve turns negative right after its first point, so there is no area to average over.
+
+    Normalizing used to divide by ``(stop_index - 1) / n == 0``. With a single point, the mean ratio
+    is that point's own ratio: the model's top sample is a negative (-1000) where the oracle's is a
+    positive (+100).
+    """
+    y = np.array([1, 0, 0, 0])
+    y_score = np.array([0.6, 0.9, 0.8, 0.7])
+    result = _auepc_score_function(normalize)(y, y_score, tp=100.0, fp=1000.0)
+    assert result == pytest.approx(expected)
+
+
+def test_auepc_stops_where_oracle_profit_reaches_exactly_zero():
+    """An oracle curve that returns exactly to zero must stop there, not divide by that zero.
+
+    Deltas are [10, 10, -20, -20], so the oracle curve is [10, 20, 0, -20]. The model's curve is
+    [10, -10, ...], giving ratios [1, -0.5] over the profitable range and a mean (trapezoid) of 0.25.
+    """
+    y = np.array([1, 1, 0, 0])
+    y_score = np.array([0.9, 0.7, 0.8, 0.6])
+    result = _auepc_score_function()(y, y_score, tp=10.0, fp=20.0)
+    assert result == pytest.approx(0.25)
+
+
+def test_auepc_no_profitable_sample_scores_zero():
+    """When even the oracle cannot make a profit, there is no curve to integrate."""
+    y = np.array([0, 0, 1])
+    y_score = np.array([0.9, 0.8, 0.7])
+    result = _auepc_score_function()(y, y_score, tp=0.0, fp=5.0)
+    assert result == 0.0
+    assert not np.signbit(result)
