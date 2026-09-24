@@ -66,6 +66,15 @@ Metrics
   time it is evaluated; they are computed once per expression. This matters where the rest of an
   evaluation is cheap, such as scoring a :class:`~empulse.models.ProfTreeClassifier` tree from its
   leaves with a stochastic :class:`~empulse.metrics.MaxProfit` metric (about 10% faster).
+- |Efficiency| The ROC convex hull behind :class:`~empulse.metrics.MaxProfit` with stochastic
+  variables (and so :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
+  :func:`~empulse.metrics.empcs_score`) is computed 8-16x faster: in about 3 ms instead of 27 ms on
+  100,000 samples, and in about 1.5 us instead of 22 us on 20. It no longer sorts the curve's points
+  a second and third time, sorts the samples with an unstable sort, and runs in C++ without calling
+  back into NumPy except to sort large inputs. The hull took nearly all the time of these scores on
+  large datasets and up to a fifth of each gradient boosting round of
+  :class:`~empulse.models.CSBoostClassifier` with them; a
+  :class:`~empulse.models.ProfTreeClassifier` generation with them is about 5% faster.
 
 Models
 ------

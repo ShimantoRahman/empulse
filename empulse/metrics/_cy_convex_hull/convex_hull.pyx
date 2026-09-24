@@ -1,13 +1,34 @@
 # distutils: language = c++
+"""
+The ROC convex hull, the part of the convex hull of a ROC curve on or above its diagonal.
 
-import cython
+Everything between the inputs and the two output arrays runs in C++ without the GIL: sorting the
+samples, accumulating the ROC curve and building its hull. Only large inputs call back into NumPy,
+for its faster sort.
+"""
+
 import numpy as np
-from cython.cimports import numpy as cnp  # noqa: F401
-from cython.cimports.libcpp.vector import vector  # noqa: F401
+
+cimport numpy as cnp
+from libc.math cimport isnan
+from libcpp.algorithm cimport sort as cpp_sort
+from libcpp.vector cimport vector
+
+cnp.import_array()
+
+# Below this many samples, sorting them in C++ beats the overhead of calling NumPy's (faster) sort.
+cdef Py_ssize_t _MAX_SAMPLES_SORTED_IN_CPP = 256
+
 
 cdef struct Point:
     long long n_negative  # samples ranked at or above a threshold that are negative
     long long n_positive  # ... and positive
+
+
+cdef struct Group:
+    double score
+    long long n_positive
+    long long n_negative
 
 
 cdef inline long long _cross(const Point& o, const Point& a, const Point& b) noexcept nogil:
@@ -23,74 +44,88 @@ cdef inline long long _cross(const Point& o, const Point& a, const Point& b) noe
     )
 
 
-cdef tuple _compute_roc_curve(  # noqa: F401
-        cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score  # noqa: F401
-):
+cdef inline void _add_to_hull(vector[Point]& hull, long long n_negative, long long n_positive) noexcept nogil:
     """
-    Compute the ROC curve of the samples, as the negatives and positives ranked at each distinct score.
+    Extend the upper hull with the next point of the ROC curve.
 
-    Returns cumulative counts: element i holds the numbers of negative and positive samples scored at
-    or above the i-th highest distinct score.
+    The ROC curve rises in both coordinates from (0, 0) to (1, 1), so its points come already
+    sorted, and the part of its convex hull on or above the diagonal is the upper hull between
+    those two corners. A monotone chain builds it in a single pass: walking the curve from left to
+    right, a point is kept only while the hull turns right (clockwise) at it. Points on a straight
+    line between two others add nothing and are dropped. The turns are computed exactly on the
+    integer counts, so no point of the hull is lost to rounding, however close together the points
+    of a large sample lie.
     """
-    # Sort by score descending while preserving stability on ties
-    cdef cnp.ndarray[cnp.int32_t, ndim=1] desc_idx = np.argsort(y_score, kind="mergesort")[::-1].astype(np.int32)  # noqa: F401
-
-    n_rows = cython.declare(cython.int, y_true.shape[0])
-    cdef int i
-    cdef double last_value = y_score[desc_idx[0]]
-    threshold_idxs_vector: vector[cython.int]
-    threshold_idxs_vector.reserve(n_rows)
-
-    # Distinct thresholds (where score changes)
-    for i in range(1, desc_idx.size):
-        if y_score[desc_idx[i]] != last_value:
-            threshold_idxs_vector.push_back(i - 1)
-            last_value = y_score[desc_idx[i]]
-    threshold_idxs_vector.push_back(n_rows - 1)
-
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] threshold_idxs = np.empty(threshold_idxs_vector.size(), dtype=np.int64)  # noqa: F401
-    for i in range(threshold_idxs_vector.size()):
-        threshold_idxs[i] = threshold_idxs_vector[i]
-
-    # Accumulate the samples and positives at each threshold
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_positive = np.cumsum(y_true[desc_idx], dtype=np.int64)[threshold_idxs]  # noqa: F401
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_negative = threshold_idxs + 1 - n_ranked_positive  # noqa: F401
-    return n_ranked_negative, n_ranked_positive
+    cdef Point point = Point(n_negative, n_positive)
+    while hull.size() >= 2 and _cross(hull[hull.size() - 2], hull[hull.size() - 1], point) >= 0:
+        hull.pop_back()
+    hull.push_back(point)
 
 
-cdef tuple _compute_roc_curve_from_counts(  # noqa: F401
-        cnp.ndarray[cnp.float64_t, ndim=1] y_score,  # noqa: F401
-        cnp.ndarray[cnp.int64_t, ndim=1] n_positive,  # noqa: F401
-        cnp.ndarray[cnp.int64_t, ndim=1] n_negative,  # noqa: F401
-):
-    """Compute the ROC curve of samples grouped by score, like :func:`_compute_roc_curve`."""
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] desc_idx = np.argsort(y_score, kind="mergesort")[::-1]  # noqa: F401
-    cdef int n_groups = y_score.shape[0]
-    n_ranked_negative_vector: vector[cython.longlong]
-    n_ranked_positive_vector: vector[cython.longlong]
-    n_ranked_negative_vector.reserve(n_groups)
-    n_ranked_positive_vector.reserve(n_groups)
-
-    # Scores that tie form a single threshold, like tied samples do.
-    cdef long long ranked_negative = 0, ranked_positive = 0
-    cdef int i, j
-    for i in range(n_groups):
-        j = desc_idx[i]
-        ranked_negative += n_negative[j]
-        ranked_positive += n_positive[j]
-        if i == n_groups - 1 or y_score[desc_idx[i + 1]] != y_score[j]:
-            n_ranked_negative_vector.push_back(ranked_negative)
-            n_ranked_positive_vector.push_back(ranked_positive)
-
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_negative = np.empty(n_ranked_negative_vector.size(), dtype=np.int64)  # noqa: F401
-    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_positive = np.empty(n_ranked_negative_vector.size(), dtype=np.int64)  # noqa: F401
-    for i in range(n_ranked_negative_vector.size()):
-        n_ranked_negative[i] = n_ranked_negative_vector[i]
-        n_ranked_positive[i] = n_ranked_positive_vector[i]
-    return n_ranked_negative, n_ranked_positive
+cdef inline bint _ranks_higher(const Group& a, const Group& b) noexcept nogil:
+    """Order by descending score, with NaN (which NumPy sorts last) ranked first."""
+    return a.score > b.score or (isnan(a.score) and not isnan(b.score))
 
 
-def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score) -> tuple[np.ndarray, np.ndarray]:  # noqa: F401
+cdef void _add_groups_to_hull(vector[Group]& groups, vector[Point]& hull) noexcept nogil:
+    """Rank the groups by score and add the ROC curve they give to the hull, one point per distinct score."""
+    cpp_sort(groups.begin(), groups.end(), _ranks_higher)
+    cdef long long n_negative = 0, n_positive = 0
+    cdef size_t i
+    for i in range(groups.size()):
+        n_negative += groups[i].n_negative
+        n_positive += groups[i].n_positive
+        # Scores that tie form a single threshold: only the last of them is a point of the curve.
+        if i + 1 == groups.size() or groups[i + 1].score != groups[i].score:
+            _add_to_hull(hull, n_negative, n_positive)
+
+
+cdef void _add_sorted_samples_to_hull(
+    const int[:] y_true, const double[:] y_score, const cnp.intp_t[::1] ascending, vector[Point]& hull
+) noexcept nogil:
+    """Add the ROC curve of the samples to the hull, given the order that sorts their scores ascending."""
+    cdef Py_ssize_t n_samples = ascending.shape[0], i, sample
+    cdef long long n_positive = 0
+    for i in range(n_samples - 1, -1, -1):
+        sample = ascending[i]
+        n_positive += y_true[sample]
+        # Scores that tie form a single threshold: only the last of them is a point of the curve.
+        if i == 0 or y_score[ascending[i - 1]] != y_score[sample]:
+            _add_to_hull(hull, n_samples - i - n_positive, n_positive)
+
+
+cdef tuple _rates(const vector[Point]& hull):
+    """Turn the counts at the vertices of the hull into (TPR, FPR) arrays."""
+    cdef long long n_negatives = hull.back().n_negative
+    cdef long long n_positives = hull.back().n_positive
+    cdef cnp.npy_intp n_vertices = hull.size()
+    cdef cnp.ndarray tpr_array, fpr_array
+    cdef double* tpr
+    cdef double* fpr
+    cdef Py_ssize_t i
+
+    if n_negatives == 0 or n_positives == 0:
+        # Without positives (or without negatives) the true (false) positive rate is undefined, but
+        # it is also irrelevant, as it is weighted by a class prior of zero. The profit is then
+        # linear in the one rate that matters, so it is highest either when no one or when everyone
+        # is targeted: the hull is the diagonal between those two points, (0, 0) and (1, 1).
+        n_vertices = 2
+
+    tpr_array = cnp.PyArray_EMPTY(1, &n_vertices, cnp.NPY_FLOAT64, 0)
+    fpr_array = cnp.PyArray_EMPTY(1, &n_vertices, cnp.NPY_FLOAT64, 0)
+    tpr = <double*>cnp.PyArray_DATA(tpr_array)
+    fpr = <double*>cnp.PyArray_DATA(fpr_array)
+    if n_negatives == 0 or n_positives == 0:
+        tpr[0] = fpr[0] = 0.0
+        tpr[1] = fpr[1] = 1.0
+    else:
+        for i in range(n_vertices):
+            tpr[i] = hull[i].n_positive / <double>n_positives
+            fpr[i] = hull[i].n_negative / <double>n_negatives
+    return tpr_array, fpr_array
+
+
+def convex_hull(const int[:] y_true, const double[:] y_score) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the convex hull points of the ROC curve.
 
@@ -107,21 +142,39 @@ def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
-    if y_true.shape[0] != y_score.shape[0]:
+    cdef Py_ssize_t n_samples = y_true.shape[0], i
+    if n_samples != y_score.shape[0]:
         raise ValueError(
-            f'y_true and y_score must have the same length, got {y_true.shape[0]} and {y_score.shape[0]}.'
+            f'y_true and y_score must have the same length, got {n_samples} and {y_score.shape[0]}.'
         )
-    if y_true.shape[0] == 0:
+    if n_samples == 0:
         raise ValueError('The ROC convex hull needs at least one sample.')
-    n_ranked_negative, n_ranked_positive = _compute_roc_curve(y_true, y_score)
-    return _roc_convex_hull(n_ranked_negative, n_ranked_positive)
+
+    cdef vector[Point] hull
+    cdef vector[Group] samples
+    cdef const cnp.intp_t[::1] ascending
+    if n_samples <= _MAX_SAMPLES_SORTED_IN_CPP:
+        with nogil:
+            hull.push_back(Point(0, 0))  # targeting no one
+            samples.resize(n_samples)
+            for i in range(n_samples):
+                samples[i] = Group(y_score[i], y_true[i], 1 - y_true[i])
+            _add_groups_to_hull(samples, hull)
+    else:
+        # The order of tied scores does not matter, as each tie is a single point of the curve, so
+        # the sort need not be stable.
+        ascending = np.argsort(y_score)
+        with nogil:
+            hull.push_back(Point(0, 0))  # targeting no one
+            _add_sorted_samples_to_hull(y_true, y_score, ascending, hull)
+    return _rates(hull)
 
 
 def convex_hull_from_counts(
-    cnp.ndarray[cnp.float64_t, ndim=1] y_score,  # noqa: F401
-    cnp.ndarray[cnp.int64_t, ndim=1] n_positive,  # noqa: F401
-    cnp.ndarray[cnp.int64_t, ndim=1] n_negative,  # noqa: F401
-) -> tuple[np.ndarray, np.ndarray]:  # noqa: F401
+    const double[:] y_score,
+    const long long[:] n_positive,
+    const long long[:] n_negative,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the convex hull points of the ROC curve of samples grouped by score.
 
@@ -144,61 +197,27 @@ def convex_hull_from_counts(
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
-    if not y_score.shape[0] == n_positive.shape[0] == n_negative.shape[0]:
+    cdef Py_ssize_t n_groups = y_score.shape[0], i
+    if not n_groups == n_positive.shape[0] == n_negative.shape[0]:
         raise ValueError(
             'y_score, n_positive and n_negative must have the same length, got '
-            f'{y_score.shape[0]}, {n_positive.shape[0]} and {n_negative.shape[0]}.'
+            f'{n_groups}, {n_positive.shape[0]} and {n_negative.shape[0]}.'
         )
-    if np.any(n_positive < 0) or np.any(n_negative < 0):
+    cdef bint has_negative_count = False
+    cdef long long n_samples = 0
+    cdef vector[Group] groups
+    cdef vector[Point] hull
+    with nogil:
+        groups.resize(n_groups)
+        for i in range(n_groups):
+            groups[i] = Group(y_score[i], n_positive[i], n_negative[i])
+            has_negative_count |= n_positive[i] < 0 or n_negative[i] < 0
+            n_samples += n_positive[i] + n_negative[i]
+    if has_negative_count:
         raise ValueError('The numbers of positive and negative samples cannot be negative.')
-    if y_score.shape[0] == 0 or n_positive.sum() + n_negative.sum() == 0:
+    if n_samples == 0:
         raise ValueError('The ROC convex hull needs at least one sample.')
-    n_ranked_negative, n_ranked_positive = _compute_roc_curve_from_counts(y_score, n_positive, n_negative)
-    return _roc_convex_hull(n_ranked_negative, n_ranked_positive)
-
-
-cdef tuple _roc_convex_hull(
-    cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_negative,  # noqa: F401
-    cnp.ndarray[cnp.int64_t, ndim=1] n_ranked_positive,  # noqa: F401
-):
-    """
-    Return the convex hull of the ROC curve points on or above the diagonal, as (TPR, FPR).
-
-    The ROC curve rises in both coordinates from (0, 0) to (1, 1), so its points come already
-    sorted, and the part of its convex hull on or above the diagonal is the upper hull between
-    those two corners. A monotone chain builds it in a single pass: walking the curve from left to
-    right, a point is kept only while the hull turns right (clockwise) at it. Points on a straight
-    line between two others add nothing and are dropped. The turns are computed exactly on the
-    integer counts, so no point of the hull is lost to rounding, however close together the points
-    of a large sample lie.
-
-    Without positives (or without negatives) the true (false) positive rate is undefined, but it
-    is also irrelevant, as it is weighted by a class prior of zero. The profit is then linear in the
-    one rate that matters, so it is highest either when no one or when everyone is targeted: the
-    hull is the diagonal between those two points, (0, 0) and (1, 1).
-    """
-    cdef Py_ssize_t n_points = n_ranked_negative.shape[0]
-    cdef double n_negatives = <double>n_ranked_negative[n_points - 1]
-    cdef double n_positives = <double>n_ranked_positive[n_points - 1]
-    if n_negatives == 0 or n_positives == 0:
-        return np.array([0.0, 1.0]), np.array([0.0, 1.0])
-
-    hull: vector[Point]
-    hull.reserve(n_points + 1)
-    hull.push_back(Point(0, 0))  # predicting every sample negative
-
-    cdef Point point
-    cdef Py_ssize_t i
-    for i in range(n_points):
-        point = Point(n_ranked_negative[i], n_ranked_positive[i])
-        while hull.size() >= 2 and _cross(hull[hull.size() - 2], hull[hull.size() - 1], point) >= 0:
-            hull.pop_back()
-        hull.push_back(point)
-
-    cdef Py_ssize_t n_vertices = hull.size()
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr = np.empty(n_vertices, dtype=np.float64)  # noqa: F401
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] fpr = np.empty(n_vertices, dtype=np.float64)  # noqa: F401
-    for i in range(n_vertices):
-        tpr[i] = hull[i].n_positive / n_positives
-        fpr[i] = hull[i].n_negative / n_negatives
-    return tpr, fpr
+    with nogil:
+        hull.push_back(Point(0, 0))  # targeting no one
+        _add_groups_to_hull(groups, hull)
+    return _rates(hull)
