@@ -4,6 +4,17 @@
 Metrics
 -------
 
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
+  :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
+  :func:`~empulse.metrics.empcs_score`) no longer underestimates the maximum profit on large
+  datasets. The ROC convex hull it integrates over treated any turn of the curve smaller than a fixed
+  tolerance as a straight line, but the points of a curve of n samples lie about 1/n apart, so from
+  roughly 10,000 samples on it dropped vertices of the hull: scores on 100,000 samples could come out
+  about 1% too low. The hull is now computed exactly from the integer counts of the curve. This also
+  affects the optimal rate and threshold of these metrics, the training objectives of
+  :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.CSBoostClassifier` with
+  them, and :class:`~empulse.models.ProfTreeClassifier` with a stochastic
+  :class:`~empulse.metrics.MaxProfit` loss. Results on smaller datasets are normally unchanged.
 - |Fix| :class:`~empulse.metrics.EmpiricalMaxProfit`, :class:`~empulse.metrics.EmpiricalMinCost`
   and :class:`~empulse.metrics.AUEPC` (and so :func:`~empulse.metrics.empb_score` and
   :func:`~empulse.metrics.auepc_score`) now handle tied scores. No threshold can separate samples
