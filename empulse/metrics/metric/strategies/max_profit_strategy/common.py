@@ -9,11 +9,71 @@ from sympy.utilities import lambdify
 
 from ....._common._objective import ElasticNetPenalty, LogitObjective
 from ....._types import Float64Array, FloatNDArray, IntNDArray
-from ...._cy_convex_hull import convex_hull
+from ...._cy_convex_hull import convex_hull, convex_hull_from_counts
+from ..._compile import CountScoreFn
+from ..._parameter_domain import _check_parameters
 
 
 def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[IntNDArray, FloatNDArray]:
     return convex_hull(y_true.astype(np.int32), y_score.astype(np.float64))  # type: ignore[no-any-return]
+
+
+def _convex_hull_from_counts(
+    y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray
+) -> tuple[FloatNDArray, FloatNDArray]:
+    return convex_hull_from_counts(  # type: ignore[no-any-return]
+        np.asarray(y_score, dtype=np.float64),
+        np.asarray(n_positive, dtype=np.int64),
+        np.asarray(n_negative, dtype=np.int64),
+    )
+
+
+class _HullScoreFunction:
+    """
+    Mixin for score functions that see the samples only through their ROC convex hull and class prior.
+
+    Subclasses implement :meth:`_score_hull`. Since that is all they need, they can also score samples
+    grouped by score (:meth:`_count_scorer`), such as the leaves of a decision tree, without
+    expanding the groups back into samples.
+    """
+
+    deterministic_symbols: Iterable[sympy.Symbol]
+    dist_params: list[sympy.Expr]
+
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        raise NotImplementedError
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the maximum profit."""
+        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+        positive_class_prior = float(np.mean(y_true))
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
+        return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, kwargs)
+
+    def _count_scorer(self, **kwargs: Any) -> CountScoreFn:
+        """
+        Prepare the score of samples grouped by score, for parameter values fixed across many calls.
+
+        The parameters are checked once here rather than on every call. The returned function takes
+        each group's score and its numbers of positive and negative samples, and gives the same score
+        as calling this score function on the samples themselves.
+        """
+        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+
+        def score(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
+            n_positives = int(np.sum(n_positive))
+            positive_class_prior = n_positives / (n_positives + int(np.sum(n_negative)))
+            true_positive_rates, false_positive_rates = _convex_hull_from_counts(y_score, n_positive, n_negative)
+            # _score_hull may consume entries of the parameters, so each call gets its own copy.
+            return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
+
+        return score
 
 
 def extract_distribution_parameters(

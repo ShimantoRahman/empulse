@@ -7,9 +7,9 @@ from typing import Any, Literal
 import numpy as np
 import sympy
 
-from ..._types import FloatArrayLike, FloatNDArray
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray
 from .._validation import _check_y_pred, _check_y_true
-from ._compile import PicklableLambda, _safe_lambdify, _safe_run_lambda
+from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_lambda
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
 from ._stochastic import replace_random_var_with_mean
@@ -497,6 +497,20 @@ class Metric(BaseMetric):
             raise ValueError(f'y_true and y_score must have the same length, got {y_true.size} and {y_score.size}.')
         parameters = self._prepare_parameters(n_samples=y_true.size, validate=validate, **parameters)
         return self.strategy.score(y_true.astype(np.intp), y_score, **parameters)
+
+    def _prepare_count_loss(
+        self, *, n_samples: int | None = None, validate: bool = True, **parameters: FloatArrayLike | float
+    ) -> CountScoreFn | None:
+        """Prepare :meth:`_loss` for samples grouped by score (see :meth:`BaseMetric._prepare_count_loss`)."""
+        prepared = self._prepare_parameters(n_samples=n_samples, validate=validate, **parameters)
+        score = self.strategy._prepare_count_score(**prepared)
+        if score is None or self.direction is not Direction.MAXIMIZE:
+            return score
+
+        def loss(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
+            return -score(y_score, n_positive, n_negative)
+
+        return loss
 
     def optimal_threshold(
         self,

@@ -46,6 +46,7 @@ cdef void evaluate_population(
     cnp.ndarray[cnp.int32_t, ndim=1] y,
     int n_samples,
     object fitness_function,
+    bint fitness_from_leaves,
     float alpha,
 )
 
@@ -112,6 +113,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     float alpha = *,
     int random_state = *,
     int n_threads = *,
+    bint fitness_from_leaves = *,
 )
 
 cdef EvolutionResult evolve_forest_deterministic(

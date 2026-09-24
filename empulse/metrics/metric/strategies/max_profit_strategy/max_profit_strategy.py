@@ -8,7 +8,7 @@ from sympy.stats.rv import is_random
 
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._direction import Direction
 from ..._parameter_domain import _check_parameters
 from ..._stochastic import replace_random_var_with_mean
@@ -16,6 +16,7 @@ from ..._symbolic import _latex
 from ...capabilities import Capability
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
+from .common import _HullScoreFunction
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
     MaxProfitLogitGradientDeterministic,
@@ -372,6 +373,17 @@ class MaxProfit(MetricStrategy):
         parameters = _aggregate_instance_parameters(parameters)
         return self._score_function(y_true, y_score, **parameters)
 
+    def _prepare_count_score(self, **parameters: FloatNDArray | float) -> CountScoreFn | None:
+        """
+        Prepare :meth:`score` for samples grouped by score.
+
+        Supported with stochastic variables, whose score depends on the samples only through the ROC
+        convex hull and the class prior, both of which follow from the groups' counts.
+        """
+        if not isinstance(self._score_function, _HullScoreFunction):
+            return None
+        return self._score_function._count_scorer(**_aggregate_instance_parameters(parameters))
+
     def optimal_threshold(
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
@@ -683,6 +695,17 @@ class MinCost(MaxProfit):
             The minimum cost score.
         """
         return -super().score(y_true, y_score, **parameters)
+
+    def _prepare_count_score(self, **parameters: FloatNDArray | float) -> CountScoreFn | None:
+        """Prepare :meth:`score` for samples grouped by score (see :meth:`MaxProfit._prepare_count_score`)."""
+        max_profit = super()._prepare_count_score(**parameters)
+        if max_profit is None:
+            return None
+
+        def min_cost(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
+            return -max_profit(y_score, n_positive, n_negative)
+
+        return min_cost
 
     def to_latex(
         self,

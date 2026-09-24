@@ -6,6 +6,7 @@ import sympy
 
 from ...._common._objective import LogitObjective
 from ...._types import FloatNDArray, IntNDArray
+from .._compile import CountScoreFn
 from .._direction import Direction
 from ..capabilities import Capability
 
@@ -170,6 +171,28 @@ class MetricStrategy(ABC):
         score : float
             The computed metric score or loss.
         """
+
+    def _prepare_count_score(self, **parameters: FloatNDArray | float) -> CountScoreFn | None:
+        """
+        Prepare :meth:`score` for samples grouped by score, or return ``None`` if it needs every sample.
+
+        A model whose predictions take few distinct values (e.g. one per leaf of a decision tree)
+        can then score them from each value's numbers of positive and negative samples, without
+        predicting every sample. The parameter values are fixed for every call of the returned
+        function, so a strategy can check and resolve them once here.
+
+        Parameters
+        ----------
+        **parameters : float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric, as for :meth:`score`.
+
+        Returns
+        -------
+        score : callable or None
+            ``score(y_score, n_positive, n_negative)``, which returns what :meth:`score` would for
+            the samples those groups stand for, or ``None`` when this strategy cannot score groups.
+        """
+        return None
 
     def optimal_threshold(
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float

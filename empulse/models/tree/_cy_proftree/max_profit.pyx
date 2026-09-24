@@ -6,22 +6,17 @@ from libcpp.vector cimport vector
 from .node cimport Node, is_leaf
 
 
-cdef struct Leaf:
-    float score  # the probability the leaf predicts
-    int n_positive
-    int n_negative
-
-
 cdef inline bint _ranks_higher(const Leaf& a, const Leaf& b) noexcept nogil:
     return a.score > b.score
 
 
-cdef void _collect_leaves(Node* node, vector[Leaf]& leaves) noexcept nogil:
+cdef void collect_leaves(Node* node, vector[Leaf]& leaves) noexcept nogil:
+    """Append the leaves that samples reach, in no particular order."""
     if node is NULL:
         return
     if not is_leaf(node):
-        _collect_leaves(node.left, leaves)
-        _collect_leaves(node.right, leaves)
+        collect_leaves(node.left, leaves)
+        collect_leaves(node.right, leaves)
     elif node.n_samples > 0:  # a leaf no sample reaches adds no point to the ROC curve
         leaves.push_back(Leaf(
             <float>node.n_positive_samples / <float>node.n_samples,
@@ -67,7 +62,7 @@ cdef float max_profit_score(
     This costs O(n_leaves log n_leaves) rather than predicting and sorting all n_samples samples.
     """
     cdef vector[Leaf] leaves
-    _collect_leaves(root, leaves)
+    collect_leaves(root, leaves)
     cpp_sort(leaves.begin(), leaves.end(), _ranks_higher)
 
     cdef long n_positive = 0

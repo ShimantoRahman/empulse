@@ -12,7 +12,8 @@ from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
 from .forest cimport Forest, create_forest, free_forest, choose_different_tree
 from .operators cimport count_nodes, crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
 from .random cimport RandState, rand_fraction, seed_rand
-from .max_profit cimport max_profit_score
+from .max_profit cimport Leaf, collect_leaves, max_profit_score
+from libcpp.vector cimport vector
 
 
 cdef Tree* find_best_tree(Forest* population) noexcept:
@@ -88,12 +89,23 @@ cdef void evaluate_population(
     cnp.ndarray[cnp.int32_t, ndim=1] y,
     int n_samples,
     object fitness_function,
+    bint fitness_from_leaves,
     float alpha,
 ):
-    """Set the fitness of every fitted tree with a Python fitness function, one tree at a time."""
+    """
+    Set the fitness of every fitted tree with a Python fitness function, one tree at a time.
+
+    The fitness function takes either the labels and every sample's prediction, or, with
+    ``fitness_from_leaves``, each leaf's prediction and its numbers of positive and negative samples.
+    """
+    cdef int i
+    if fitness_from_leaves:
+        for i in range(population.n_trees):
+            evaluate_leaves(population.trees[i], fitness_function, alpha)
+        return
+
     cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
     cdef float[:] predictions_view = predictions
-    cdef int i
     for i in range(population.n_trees):
         predict_proba_tree(population.trees[i], X, predictions_view, n_samples)
         evaluate(population.trees[i], fitness_function, y, predictions, alpha)
@@ -173,6 +185,24 @@ cdef inline void evaluate(
     tree.n_nodes = count_nodes(tree.root)
     tree.fitness -= alpha * tree.n_nodes
 
+cdef inline void evaluate_leaves(Tree* tree, object fitness_function, float alpha):
+    cdef vector[Leaf] leaves
+    collect_leaves(tree.root, leaves)
+    cdef Py_ssize_t n_leaves = leaves.size()
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] scores = np.empty(n_leaves, dtype=np.float64)
+    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_positive = np.empty(n_leaves, dtype=np.int64)
+    cdef cnp.ndarray[cnp.int64_t, ndim=1] n_negative = np.empty(n_leaves, dtype=np.int64)
+    cdef Py_ssize_t i
+    for i in range(n_leaves):
+        scores[i] = leaves[i].score
+        n_positive[i] = leaves[i].n_positive
+        n_negative[i] = leaves[i].n_negative
+    cdef float fitness = fitness_function(scores, n_positive, n_negative)
+    tree.fitness = fitness
+    # Counted afresh: the variation operators and prune_illegal_nodes change the tree's shape.
+    tree.n_nodes = count_nodes(tree.root)
+    tree.fitness -= alpha * tree.n_nodes
+
 cdef inline void evaluate_max_profit(
     Tree* tree,
     float tp_benefit,
@@ -235,6 +265,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     float alpha = 0.0,
     int random_state = -1,
     int n_threads = 1,
+    bint fitness_from_leaves = False,
 ):
     # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
     # concurrent fits neither interleave draws nor reseed one another.
@@ -250,7 +281,7 @@ cdef EvolutionResult evolve_forest_stochastic(
 
     cdef Forest* population = random_population(&rng, pop_size, n_features, split_values, max_depth)
     fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
-    evaluate_population(population, X_view, y, n_samples, fitness_function, alpha)
+    evaluate_population(population, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
 
     cdef int stagnation_counter = 0
     cdef Tree* parent
@@ -286,7 +317,7 @@ cdef EvolutionResult evolve_forest_stochastic(
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
         fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
-        evaluate_population(population, X_view, y, n_samples, fitness_function, alpha)
+        evaluate_population(population, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(

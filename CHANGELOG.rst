@@ -138,6 +138,14 @@ Models
   is a copy of a fitted tree with one subtree changed by crossover, growing or mutating a split, so
   only the samples that reach that subtree are routed through it again, and pruning a split needs
   no refit at all. This makes each generation about 1.7x faster; the fitted trees are unchanged.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` with a stochastic
+  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` metric as ``loss`` (e.g.
+  the expected maximum profit) fits about 4x faster. The metric depends on a tree's predictions only
+  through the ROC convex hull and the class prior, which follow from each leaf's numbers of positive
+  and negative samples, so each tree is now scored from its leaves rather than by predicting every
+  training sample. The metric's parameters are also resolved once per fit instead of once per tree,
+  and the labels and predictions are no longer re-validated on every evaluation. The fitted trees
+  are unchanged. Other losses are still evaluated on every sample's prediction.
 
 Datasets
 --------

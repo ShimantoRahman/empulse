@@ -14,7 +14,7 @@ from ....._types import FloatNDArray, IntNDArray
 from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ._distributions import ADAPTERS, adapter_for
-from .common import _convex_hull, extract_distribution_parameters
+from .common import _convex_hull, _HullScoreFunction, extract_distribution_parameters
 from .envelope import (
     CallableEnvelope,
     Partition,
@@ -557,7 +557,7 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
         return float(optimal_rate)
 
 
-class MaxProfitScorePiecewise(_PiecewiseBase):
+class MaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
     """
     Compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -576,13 +576,15 @@ class MaxProfitScorePiecewise(_PiecewiseBase):
         self.integrand = profit_function * density(random_symbol).pdf(random_symbol)
         self._prepared = _PreparedIntegrand(self.integrand, random_symbol)
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the maximum profit."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 
@@ -605,7 +607,7 @@ class MaxProfitScorePiecewise(_PiecewiseBase):
         )
 
 
-class BaseMaxProfitScorePiecewise(_PiecewiseBase):
+class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
     """
     Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -630,13 +632,15 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase):
         self.coefficient_eqs: list[sympy.Expr] = self.poly_eqs
         self.coefficient_fns: list[Callable[..., Any]] = self.poly_fns
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the maximum profit."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
 

@@ -25,6 +25,7 @@ from unittest import mock
 import numpy as np
 import pytest
 import sympy
+import sympy.stats
 
 from empulse.metrics import Cost, CostMatrix, LogCost, MaxProfit, Metric
 from empulse.metrics.metric import metric as metric_module
@@ -110,6 +111,32 @@ def test_proftree_validates_once_regardless_of_population(training_data, populat
         loss=instance_dependent_metric(Cost()),
     )
     assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize(('population_size', 'generations'), [(10, 3), (20, 6)], ids=['small', 'larger'])
+def test_proftree_prepares_a_stochastic_max_profit_once(training_data, population_size, generations):
+    """
+    A stochastic `MaxProfit` metric scores each candidate tree from its leaves' class counts.
+
+    The parameters are resolved once, when that leaf-level loss is prepared, rather than once per
+    candidate tree per generation as the per-sample path does.
+    """
+    X, y, clv = training_data
+    calls = 0
+    original = metric_module.Metric._prepare_parameters
+
+    def counting(self: Any, **kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        return original(self, **kwargs)
+
+    gamma = sympy.stats.Beta('gamma', 6, 14)
+    loss = Metric(CostMatrix().add_tp_benefit(gamma * sympy.Symbol('c')).add_fp_cost('d'), MaxProfit())
+    model = ProfTreeClassifier(max_iter=generations, population_size=population_size, random_state=42, loss=loss)
+    with mock.patch.object(metric_module.Metric, '_prepare_parameters', counting):
+        model.fit(X, y, c=clv, d=10.0)
+    # Once to validate the fit's parameters, once to prepare the leaf-level loss.
+    assert calls == 2
 
 
 @pytest.mark.parametrize('n_estimators', [3, 6], ids=['3_estimators', '6_estimators'])

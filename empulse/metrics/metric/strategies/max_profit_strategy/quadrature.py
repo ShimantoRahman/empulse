@@ -8,9 +8,8 @@ from scipy.integrate import IntegrationWarning, dblquad, nquad, quad, tplquad
 from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
-from ....._types import FloatNDArray, IntNDArray
-from ..._parameter_domain import _check_parameters
-from .common import _convex_hull, _substitute_integrand, extract_distribution_parameters
+from ....._types import FloatNDArray
+from .common import _HullScoreFunction, _substitute_integrand, extract_distribution_parameters
 
 
 def compute_integral_multiple_quad(
@@ -61,7 +60,7 @@ def compute_integral_multiple_quad(
     return float(result)
 
 
-class MaxProfitScoreQuad:
+class MaxProfitScoreQuad(_HullScoreFunction):
     """
     Compute the optimal predicted positive rate for one or more stochastic variables using quad integration.
 
@@ -98,13 +97,15 @@ class MaxProfitScoreQuad:
         else:
             self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the maximum profit."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         # certain distributions determine the bounds of the integral (e.g., uniform)
         # for those distributions we have to fill in the parameters of the distribution
