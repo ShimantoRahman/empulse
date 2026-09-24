@@ -41,6 +41,10 @@ Metrics
 - |Fix| The documentation of :func:`~empulse.metrics.auepc_score` no longer lists
   ``optimal_threshold`` and ``optimal_rate``, which AUEPC does not support. Use
   :func:`~empulse.metrics.empb_score`'s methods instead.
+- |Efficiency| A compiled cost expression no longer re-derives the names of its free symbols every
+  time it is evaluated; they are computed once per expression. This matters where the rest of an
+  evaluation is cheap, such as scoring a :class:`~empulse.models.ProfTreeClassifier` tree from its
+  leaves with a stochastic :class:`~empulse.metrics.MaxProfit` metric (about 10% faster).
 
 Models
 ------

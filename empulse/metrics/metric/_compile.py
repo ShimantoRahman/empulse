@@ -10,6 +10,7 @@ since a cost expression's compiled function only accepts the free symbols it was
 """
 
 from collections.abc import Callable, Iterable
+from functools import lru_cache
 from typing import Any, Protocol, TypeVar
 
 import numpy as np
@@ -68,9 +69,24 @@ def _filter_parameters(
     filtered_parameters : dict[str, float | FloatNDArray]
         A dictionary containing only the parameters that are free symbols in the expression.
     """
-    free_symbols = {str(symbol) for symbol in expression.free_symbols}
+    try:
+        free_symbols = _free_symbol_names(expression)
+    except TypeError:  # an unhashable expression, e.g. a mutable sympy Matrix
+        free_symbols = frozenset(str(symbol) for symbol in expression.free_symbols)
     filtered_parameters = {key: value for key, value in parameters.items() if key in free_symbols}
     return filtered_parameters
+
+
+@lru_cache(maxsize=4096)
+def _free_symbol_names(expression: sympy.Expr) -> frozenset[str]:
+    """
+    Return the names of the free symbols in *expression*.
+
+    Cached because compiled cost expressions are evaluated over and over with the same expression
+    (e.g. once per candidate model in a training loop), and walking the expression tree and
+    printing each symbol cost more than evaluating the compiled function itself.
+    """
+    return frozenset(str(symbol) for symbol in expression.free_symbols)
 
 
 class PicklableLambda:
