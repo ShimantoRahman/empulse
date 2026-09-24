@@ -10,7 +10,7 @@ from .._direction import Direction
 from .._parameter_domain import _check_parameters
 from .._stochastic import replace_random_var_with_mean
 from .._symbolic import _latex
-from .auepc_strategy import _build_delta_equation
+from .auepc_strategy import _build_delta_equation, _ranked_profit_curve
 from .metric_strategy import MetricStrategy
 
 
@@ -23,16 +23,21 @@ class EmpiricalMaxProfitScore:
         )
         self.delta_function = _safe_lambdify(self.delta_equation)
 
-    def cumulative_profits(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> tuple[FloatNDArray, int]:
+    def cumulative_profits(
+        self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any
+    ) -> tuple[IntNDArray, FloatNDArray, int]:
         """
         Compute the cumulative profit curve of targeting the top-ranked fraction of samples.
 
-        Samples are ranked by *y_score* (descending); a leading zero represents targeting nobody.
+        Samples are ranked by *y_score* (descending). Samples with equal scores cannot be separated
+        by a threshold, so the curve only has points at the edges of each group of tied scores.
 
         Returns
         -------
-        cumulative_profits : NDArray of shape (n_samples + 1,)
-            Cumulative profit after targeting the top ``k`` samples, for ``k = 0, ..., n_samples``.
+        n_targeted : NDArray of shape (n_points,)
+            Number of samples targeted at each point, from 0 (nobody) to ``n_samples``.
+        cumulative_profits : NDArray of shape (n_points,)
+            Cumulative profit at each point.
         n_samples : int
             Number of samples.
         """
@@ -47,15 +52,12 @@ class EmpiricalMaxProfitScore:
             dtype=np.float64,
         )
 
-        sorted_indices = np.argsort(y_score)[::-1]
-        cumulative_profits: FloatNDArray = np.cumsum(delta[sorted_indices])
-        # Prepend a zero to represent the policy of targeting nobody.
-        cumulative_profits = np.insert(cumulative_profits, 0, 0.0)
-        return cumulative_profits, n_samples
+        n_targeted, cumulative_profits = _ranked_profit_curve(delta, y_score)
+        return n_targeted, cumulative_profits, n_samples
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the empirical maximum profit."""
-        cumulative_profits, _ = self.cumulative_profits(y_true, y_score, **kwargs)
+        _, cumulative_profits, _ = self.cumulative_profits(y_true, y_score, **kwargs)
         return float(np.max(cumulative_profits))
 
 
@@ -67,9 +69,8 @@ class EmpiricalMaxProfitOptimalRate:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the fraction of samples that should be targeted to maximize profit."""
-        cumulative_profits, n_samples = self.score_function.cumulative_profits(y_true, y_score, **kwargs)
-        optimal_index = int(np.argmax(cumulative_profits))
-        return optimal_index / n_samples
+        n_targeted, cumulative_profits, n_samples = self.score_function.cumulative_profits(y_true, y_score, **kwargs)
+        return int(n_targeted[np.argmax(cumulative_profits)]) / n_samples
 
 
 class EmpiricalMaxProfitOptimalThreshold:

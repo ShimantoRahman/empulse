@@ -1,6 +1,47 @@
 `Unreleased`_
 =============
 
+Metrics
+-------
+
+- |Fix| :class:`~empulse.metrics.EmpiricalMaxProfit`, :class:`~empulse.metrics.EmpiricalMinCost`
+  and :class:`~empulse.metrics.AUEPC` (and so :func:`~empulse.metrics.empb_score` and
+  :func:`~empulse.metrics.auepc_score`) now handle tied scores. No threshold can separate samples
+  with equal scores, so each group of ties is now targeted all at once, as
+  :class:`~empulse.metrics.MaxProfit` already did. Previously the profit curve was accumulated one
+  sample at a time, so the result depended on the order the tied samples happened to be in: the
+  same data could score 84.0 or 9.0 with :func:`~empulse.metrics.empb_score`. AUEPC now scores the
+  expected profit curve under random tie-breaking. Scores on data with ties change as a result;
+  scores on data without ties are unchanged.
+- |Fix| :func:`~empulse.metrics.auepc_score` and :class:`~empulse.metrics.AUEPC` no longer raise
+  ``ZeroDivisionError`` when the oracle's cumulative profit turns negative after its first sample.
+  A curve of a single point now scores that point's ratio. The curve also stops where the oracle's
+  profit reaches exactly zero, rather than dividing by that zero, and a dataset in which no sample
+  is profitable scores ``0.0``.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with a single stochastic variable no longer raises
+  ``IndexError`` when the variable's distribution mixes numeric and symbolic parameters (e.g.
+  ``sympy.stats.Beta('gamma', 6, beta)``) or has two equal numeric parameters (e.g.
+  ``sympy.stats.Beta('gamma', 6, 6)``). This affected the score, the optimal rate and threshold,
+  and the training objectives of :class:`~empulse.models.CSLogitClassifier` and
+  :class:`~empulse.models.CSBoostClassifier`.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` now
+  samples :func:`~sympy.stats.Arcsin` and :func:`~sympy.stats.PowerFunction` random variables over
+  their correct support. Their upper bound was passed to SciPy as the width of the support, so
+  ``Arcsin('x', 2, 5)`` was sampled on ``[2, 7]`` instead of ``[2, 5]``.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quad'`` and four or more
+  stochastic variables now integrates each variable over its own support. The variables were
+  paired with the supports in reverse order.
+- |Fix| :func:`~empulse.metrics.lift_score` no longer raises ``ZeroDivisionError`` when
+  ``fraction * n_samples`` rounds to zero; the top fraction now always contains at least one
+  sample. ``fraction=0`` is now rejected with a ``ValueError``.
+- |Fix| :meth:`~empulse.metrics.MixtureMetric.__call__`,
+  :meth:`~empulse.metrics.MixtureMetric.optimal_rate` and
+  :meth:`~empulse.metrics.MixtureMetric.optimal_threshold` now pass ``validate`` on to their
+  component metrics, which previously re-validated their parameters on every call.
+- |Fix| The documentation of :func:`~empulse.metrics.auepc_score` no longer lists
+  ``optimal_threshold`` and ``optimal_rate``, which AUEPC does not support. Use
+  :func:`~empulse.metrics.empb_score`'s methods instead.
+
 Datasets
 --------
 

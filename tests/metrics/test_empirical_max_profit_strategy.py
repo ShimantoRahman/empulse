@@ -176,3 +176,55 @@ def test_empirical_max_profit_repr_and_latex_smoke(empirical_churn_cost_matrix):
     latex = metric._repr_latex_()
     assert isinstance(latex, str)
     assert latex.startswith('$')
+
+
+class TestTiedScores:
+    """No threshold can split samples with equal scores, so ties must be targeted as one group.
+
+    The curve used to be accumulated one sample at a time, so its maximum could fall inside a tie
+    group: the result then depended on the order the tied samples happened to be in (84.0 or 9.0
+    for the same data below, depending on the row order).
+    """
+
+    Y_TRUE = np.array([0, 0, 0, 1, 1, 1, 0, 1])
+    Y_SCORE = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.9, 0.2, 0.2])
+    CLV = np.array([200.0, 200.0, 200.0, 200.0, 200.0, 150.0, 120.0, 300.0])
+
+    def _permuted(self, seed):
+        order = np.random.default_rng(seed).permutation(self.Y_TRUE.size)
+        return self.Y_TRUE[order], self.Y_SCORE[order], self.CLV[order]
+
+    @pytest.mark.parametrize('method', ['__call__', 'optimal_rate', 'optimal_threshold'])
+    def test_result_does_not_depend_on_row_order(self, method):
+        results = {getattr(empb_score, method)(y, s, clv=clv) for y, s, clv in map(self._permuted, range(20))}
+        assert len(results) == 1
+
+    def test_score_is_the_best_group_boundary(self):
+        """Hand-rolled: profits after targeting nobody, the 0.9 group, the 0.5 group, and everyone."""
+        tp, fp = sympy.symbols('tp fp')
+        score_fn = EmpiricalMaxProfitScore(
+            tp_benefit=tp, tn_benefit=sympy.Integer(0), fp_cost=fp, fn_cost=sympy.Integer(0)
+        )
+        delta = np.where(self.Y_TRUE == 1, 100.0, -20.0)
+        boundaries = [0.0, delta[5], delta[:6].sum(), delta.sum()]
+        assert score_fn(self.Y_TRUE, self.Y_SCORE, tp=100.0, fp=20.0) == pytest.approx(max(boundaries))
+
+    def test_constant_scores_target_everyone_or_nobody(self):
+        """With one score for every sample the only policies are to target nobody or everyone."""
+        y, clv = self.Y_TRUE, self.CLV
+        constant = np.full(y.size, 0.5)
+        # empb_score's defaults: accept rate ~ Beta(6, 14) (mean 0.3), incentive 5% of clv, contact 15.
+        accept, incentive, contact = 0.3, 0.05, 15.0
+        per_sample = np.where(
+            y == 1,
+            accept * ((1 - incentive) * clv - contact) - (1 - accept) * contact,
+            -(incentive * clv + contact),
+        )
+        assert empb_score(y, constant, clv=clv) == pytest.approx(max(0.0, per_sample.sum()))
+        assert empb_score.optimal_rate(y, constant, clv=clv) == (1.0 if per_sample.sum() > 0 else 0.0)
+
+    def test_optimal_threshold_targets_the_optimal_rate(self):
+        """The rate is always at a group boundary, so the threshold reproduces it exactly."""
+        rate = empb_score.optimal_rate(self.Y_TRUE, self.Y_SCORE, clv=self.CLV)
+        threshold = empb_score.optimal_threshold(self.Y_TRUE, self.Y_SCORE, clv=self.CLV)
+        assert np.mean(threshold <= self.Y_SCORE) == pytest.approx(rate)

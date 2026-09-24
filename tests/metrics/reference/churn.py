@@ -391,6 +391,13 @@ def empb(
     # Add a zero at the beginning to indicate not contacting anyone
     cumulative_profits = np.insert(cumulative_profits, 0, 0)
 
+    # Samples with equal scores cannot be separated by a threshold, so only the positions between
+    # two different scores (and targeting nobody or everyone) are policies that can be chosen.
+    sorted_scores = y_score[sorted_indices]
+    reachable = np.ones(len(cumulative_profits), dtype=bool)
+    reachable[1:-1] = sorted_scores[:-1] != sorted_scores[1:]
+    cumulative_profits = np.where(reachable, cumulative_profits, -np.inf)
+
     # Find the maximum profit and corresponding threshold
     max_profit_index = np.argmax(cumulative_profits)
     max_profit = cumulative_profits[max_profit_index]
@@ -442,9 +449,14 @@ def auepc_score(
     targets = y_true[sorted_indices]
     clv_targets = clv[sorted_indices]
 
-    benefits = np.cumsum((accept_rate * (1 - incentive_fraction) * clv_targets - contact_cost) * targets)
-    costs = np.cumsum((-contact_cost - incentive_fraction * clv_targets) * (1 - targets))
-    profits = benefits + costs
+    benefits = (accept_rate * (1 - incentive_fraction) * clv_targets - contact_cost) * targets
+    costs = (-contact_cost - incentive_fraction * clv_targets) * (1 - targets)
+
+    # Samples with equal scores are in no particular order, so each one earns its tie group's mean
+    # profit: the expected cumulative profit when ties are broken at random.
+    _, tie_group, group_sizes = np.unique(-y_score[sorted_indices], return_inverse=True, return_counts=True)
+    group_means = np.bincount(tie_group, weights=benefits + costs) / group_sizes
+    profits = np.cumsum(group_means[tie_group])
 
     # Stop at the point where perfect profits become negative
     stop_index: int = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)  # type: ignore[assignment]
