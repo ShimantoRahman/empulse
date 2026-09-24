@@ -4,6 +4,11 @@
 Metrics
 -------
 
+- |Fix| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
+  :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score`,
+  :func:`~empulse.metrics.mpcs_score` and :func:`~empulse.metrics.empcs_score`) no longer return
+  ``nan`` on data with a single class. Their score is now the better of targeting no one and
+  targeting everyone, and their optimal rate and threshold follow from it.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
   :func:`~empulse.metrics.empc_score` and :func:`~empulse.metrics.empa_score`) now scores data with
   a single class as the better of targeting no one and targeting everyone. It only considered
