@@ -89,6 +89,14 @@ Models
 - |Fix| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns the
   original class labels. It returned the 0/1 encoding the inner tree is fitted on, so with labels
   such as ``'no'``/``'yes'`` or ``-1``/``1`` it predicted ``0`` and ``1``, values not in ``classes_``.
+- |Fix| ``pos_label`` now makes its class the positive class in
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`:
+  the class the costs refer to, whose probability is thresholded or ranked, and which is predicted
+  above the threshold or within the targeted fraction. The threshold was computed for
+  ``classes_[1]`` but scores above it were given the ``pos_label`` class, so ``pos_label=classes_[0]``
+  inverted every prediction of :class:`~empulse.models.CSThresholdClassifier`, and
+  :class:`~empulse.models.CSRateClassifier` ignored ``pos_label``. A ``pos_label`` that is not one of
+  the classes now raises a ``ValueError``.
 
 `0.12.0`_ (19-09-2026)
 ======================
