@@ -160,11 +160,6 @@ in a dedicated ``fit_params`` dict:
 ``sample_weight`` is the one exception: it is recognised and forwarded into the booster's own
 ``fit``.
 
-.. warning::
-    ``sample_weight`` is **not** supported on the CatBoost backend. CatBoost's ``sample_weight`` is
-    used internally to carry sample indices through to the custom objective, so passing your own
-    would corrupt training. Use the XGBoost or LightGBM backend if you need sample weights.
-
 Which models honour per-row costs
 =================================
 

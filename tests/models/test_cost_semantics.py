@@ -6,7 +6,7 @@ Cross-cutting cost behaviours defined by ``CostSensitiveClassifier``.
 * binary-only enforcement and the recoding of ``classes_`` to 0/1;
 * the ``Parameter.UNCHANGED`` contract, whose "fit-time cost overrides the constructor cost" half
   had no coverage at all;
-* ``CSBoostClassifier``'s refusal of ``sample_weight`` on the CatBoost backend.
+* ``CSBoostClassifier`` honouring ``sample_weight`` on the CatBoost backend.
 """
 
 import numpy as np
@@ -163,20 +163,29 @@ def test_per_sample_cost_of_the_wrong_length_is_rejected(make_estimator, cost_da
         make_estimator().fit(X, y, fp_cost=1.0, fn_cost=np.ones(len(y) - 1))
 
 
-# --- CatBoost's sample_weight restriction -------------------------------------------------------
+# --- CatBoost's sample_weight support ----------------------------------------------------------
 
 
-def test_catboost_backend_rejects_sample_weight(cost_data):
+def test_catboost_backend_uses_sample_weight(cost_data):
     """
-    CatBoost uses ``sample_weight`` internally to carry sample indices, so the package forbids it.
+    CatBoost trains on sample weights ``|gradient constant|``; a user's ``sample_weight`` multiplies them.
 
-    Documented in CLAUDE.md and enforced in ``csboost.py``, but never tested.
+    Before, the backend used ``sample_weight`` to carry row indices and so rejected a user's own.
     """
     catboost = pytest.importorskip('catboost')
     X, y = cost_data
-    model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, depth=1, verbose=False), fp_cost=1, fn_cost=1)
-    with pytest.raises(ValueError, match='Sample weights are not allowed when training CatBoostClassifier'):
-        model.fit(X, y, sample_weight=np.ones(len(y)))
+
+    def fit(**weights):
+        model = CSBoostClassifier(
+            catboost.CatBoostClassifier(n_estimators=5, depth=2, verbose=False, random_seed=0), fp_cost=1, fn_cost=1
+        )
+        return model.fit(X, y, **weights).predict_proba(X)
+
+    weight = np.where(y == 1, 10.0, 1.0)
+    unweighted, weighted = fit(), fit(sample_weight=weight)
+    assert not np.allclose(unweighted, weighted)
+    # Up-weighting the positives must raise their predicted probability.
+    assert weighted[y == 1, 1].mean() > unweighted[y == 1, 1].mean()
 
 
 # --- RobustCSClassifier forwards costs to the wrapped estimator ---------------------------------
