@@ -6,9 +6,10 @@ reference against reference, so it could never catch a regression in the shipped
 sides now call the public metrics.
 """
 
+import numpy as np
 import pytest
 
-from empulse.metrics import max_profit_score, mpc_score
+from empulse.metrics import empc_score, max_profit_score, mpc_score
 
 
 @pytest.mark.parametrize(
@@ -73,3 +74,17 @@ def test_mpc_optimal_rate_is_max_profit_optimal_rate(clv, incentive_cost, contac
         accept_rate=accept_rate,
     )
     assert generic == pytest.approx(churn)
+
+
+@pytest.mark.parametrize(('label', 'expected'), [(1, 0.3 * (200 - 10 - 1) - 0.7 * 1), (0, 0.0)])
+def test_empc_score_of_a_single_class(label, expected):
+    """
+    With only churners, targeting everyone is best; with no churners, targeting no one is.
+
+    Each targeted churner accepts the incentive with probability E[gamma] = 6 / (6 + 14) = 0.3 and is
+    then worth the CLV of 200 net of the incentive (10) and the contact (1); otherwise the contact is
+    lost.
+    """
+    y_true = np.full(4, label)
+    y_score = np.array([0.1, 0.4, 0.6, 0.9])
+    assert empc_score(y_true, y_score) == pytest.approx(expected, rel=1e-9)
