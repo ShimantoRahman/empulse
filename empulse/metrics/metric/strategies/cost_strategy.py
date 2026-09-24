@@ -28,7 +28,48 @@ from ._training_signal import warn_if_no_training_signal
 from .metric_strategy import MetricStrategy
 
 
-class CostLogitObjective(LogitObjective):
+class _CachedPenaltyWeights:
+    """
+    Keep an objective's penalty resolved into the three scalars the Cython kernels take.
+
+    The penalty rarely changes, but the ``logit_*`` methods are re-entered hundreds of times by
+    L-BFGS-B and thousands of times by the genetic optimizers, so resolving it on every call is
+    measurable overhead on small problems. The scalars are refreshed whenever :attr:`penalty` is
+    assigned, since it is replaced after construction: a :class:`~empulse.metrics.MixtureMetric`
+    strips its components' penalties and applies a single one of its own.
+    """
+
+    fit_intercept: bool
+    _penalty: ElasticNetPenalty | None = None
+    _l1_weight: float = 0.0
+    _l2_weight: float = 0.0
+    _start_coef: int = 1
+
+    @property
+    def penalty(self) -> ElasticNetPenalty | None:
+        """Penalty applied on top of the data term, see :attr:`~empulse.metrics.LogitObjective.penalty`."""
+        return self._penalty
+
+    @penalty.setter
+    def penalty(self, penalty: ElasticNetPenalty | None) -> None:
+        self._penalty = penalty
+        if penalty is None or not penalty.is_active:
+            self._l1_weight = 0.0
+            self._l2_weight = 0.0
+            self._start_coef = 1 if self.fit_intercept else 0
+        else:
+            self._l1_weight = penalty.l1_weight
+            self._l2_weight = penalty.l2_weight
+            self._start_coef = penalty.start_coef
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        # Objectives pickled before the penalty became a property stored it under its own name.
+        if 'penalty' in state:
+            state['_penalty'] = state.pop('penalty')
+        self.__dict__.update(state)
+
+
+class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     """
     Precomputed cost-metric objective for logistic regression.
 
@@ -81,24 +122,6 @@ class CostLogitObjective(LogitObjective):
             fit_intercept=fit_intercept,
             n_samples=self.features.shape[0],
         )
-        self._cache_penalty_weights()
-
-    def _cache_penalty_weights(self) -> None:
-        """Resolve the penalty into the three scalars the kernel takes.
-
-        The penalty is fixed for the life of the objective, but these methods are re-entered
-        hundreds of times by L-BFGS-B and thousands of times by the genetic optimizers, so
-        resolving it per call is measurable overhead on small problems.
-        """
-        penalty = self.penalty
-        if penalty is None or not penalty.is_active:
-            self._l1_weight = 0.0
-            self._l2_weight = 0.0
-            self._start_coef = 1 if self.fit_intercept else 0
-        else:
-            self._l1_weight = penalty.l1_weight
-            self._l2_weight = penalty.l2_weight
-            self._start_coef = penalty.start_coef
 
     def with_indices(self, indices: FloatNDArray) -> 'CostLogitObjective':
         """Return a new objective restricted to the sample subset given by *indices*.

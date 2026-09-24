@@ -4,6 +4,12 @@
 Metrics
 -------
 
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` with a :class:`~empulse.metrics.Cost` or
+  :class:`~empulse.metrics.Savings` component no longer applies the elastic-net penalty twice when
+  it is the loss of :class:`~empulse.models.CSLogitClassifier` or
+  :class:`~empulse.models.ProfLogitClassifier`. The mixture replaces its components' penalties with
+  a single one of its own, but those components kept applying theirs, so models fitted on such a
+  mixture were regularized more strongly than ``C`` asks for.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now works when the metric's
   symbols were declared with assumptions, e.g. ``sympy.symbols('a b', positive=True)``. Parameter
   values were substituted into the expressions by name, which sympy turns into symbols without

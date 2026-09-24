@@ -8,6 +8,7 @@ from empulse.metrics import (
     BaseMetric,
     Cost,
     CostMatrix,
+    LogCost,
     MaxProfit,
     Metric,
     MixtureComponent,
@@ -506,3 +507,54 @@ def test_mixture_forwards_validate_to_components(monkeypatch, empcs_mixture, y_t
 
     getattr(empcs_mixture, method)(y, y_proba, **PARAMETER_SETS[0])
     assert validating_calls > 0
+
+
+@pytest.mark.parametrize('strategy', [Cost, LogCost])
+@pytest.mark.parametrize('method', ['logit_loss', 'logit_gradient', 'logit_loss_gradient'])
+def test_logit_objective_applies_the_penalty_once(strategy, method):
+    """The mixture replaces its components' penalties with one of its own, rather than adding it."""
+    fp, fn = sympy.symbols('fp fn')
+    metric = Metric(CostMatrix().add_tp_benefit(1).add_fp_cost(fp).add_fn_cost(fn), strategy())
+    X_raw, y = make_classification(n_samples=80, n_features=3, n_informative=2, n_redundant=0, random_state=4)
+    X = _with_intercept(X_raw)
+    mixture = MixtureMetric([
+        MixtureComponent(0.3, metric, {'fp': 1.0, 'fn': 5.0}),
+        MixtureComponent(0.7, metric, {'fp': 2.0, 'fn': 1.0}),
+    ])
+    arguments = {'features': X, 'y_true': y, 'C': 0.05, 'l1_ratio': 0.5, 'fit_intercept': True}
+    objective = mixture._logit_objective(**arguments)
+    components = [
+        metric._logit_objective(**arguments, fp=1.0, fn=5.0),
+        metric._logit_objective(**arguments, fp=2.0, fn=1.0),
+    ]
+    weights = np.array([0.1, -0.8, 0.5, 1.2])
+    assert objective.penalty.value(weights) > 0
+
+    data_loss = 0.3 * components[0].data_loss(weights) + 0.7 * components[1].data_loss(weights)
+    data_gradient = 0.3 * components[0].data_gradient(weights) + 0.7 * components[1].data_gradient(weights)
+    expected = {
+        'logit_loss': data_loss + objective.penalty.value(weights),
+        'logit_gradient': data_gradient + objective.penalty.gradient(weights),
+    }
+    expected['logit_loss_gradient'] = (expected['logit_loss'], expected['logit_gradient'])
+
+    def flatten(value):
+        return np.concatenate([np.ravel(part) for part in (value if isinstance(value, tuple) else (value,))])
+
+    np.testing.assert_allclose(flatten(getattr(objective, method)(weights)), flatten(expected[method]), rtol=1e-12)
+
+
+def test_cost_objective_pickled_with_the_penalty_under_its_own_name_still_loads():
+    """Objectives pickled before the penalty became a property stored it as ``penalty``."""
+    fp, fn = sympy.symbols('fp fn')
+    metric = Metric(CostMatrix().add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1.0, fn=5.0), Cost())
+    X = _with_intercept(np.random.default_rng(0).normal(size=(40, 2)))
+    y = np.arange(40) % 3 == 0
+    objective = metric._logit_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
+    state = dict(vars(objective))
+    state['penalty'] = state.pop('_penalty')
+    restored = type(objective).__new__(type(objective))
+    restored.__setstate__(state)
+    weights = np.array([0.2, -0.5, 1.0])
+    assert restored.penalty == objective.penalty
+    assert restored.logit_loss(weights) == objective.logit_loss(weights)
