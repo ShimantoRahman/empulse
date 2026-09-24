@@ -26,8 +26,8 @@ DISTRIBUTIONS = {
 }
 
 
-def _metric(variable, integration_method, polynomial):
-    benefit = variable * CLV if polynomial else sympy.sqrt(variable) * CLV
+def _metric(variable, integration_method, polynomial, extra=0):
+    benefit = (variable * CLV if polynomial else sympy.sqrt(variable) * CLV) + extra
     cost_matrix = CostMatrix().add_tp_benefit(benefit).add_fp_cost(D).set_default(d=10, clv=100)
     return Metric(cost_matrix, MaxProfit(integration_method=integration_method, n_mc_samples_exp=10, random_state=0))
 
@@ -82,3 +82,17 @@ def test_expression_arguments_are_checked_by_the_distribution():
     metric = _metric(DISTRIBUTIONS['beta'][0], 'auto', polynomial=True)
     with pytest.raises(ValueError, match='Invalid parameters for the Beta distribution'):
         metric(Y_TRUE, Y_SCORE, a=-1.0, b=5.0)
+
+
+@pytest.mark.parametrize('distribution', DISTRIBUTIONS)
+@pytest.mark.parametrize('integration_method', ['auto', 'quad', 'monte-carlo', 'quasi-monte-carlo'])
+@pytest.mark.parametrize('polynomial', [True, False], ids=['polynomial', 'sqrt'])
+def test_a_distribution_parameter_can_also_appear_in_the_profit(distribution, integration_method, polynomial):
+    if distribution == 'normal' and not polynomial:
+        pytest.skip('The square root of a normal variable is not real.')
+    expression, value = DISTRIBUTIONS[distribution]
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        expected = _evaluations(_metric(value, integration_method, polynomial, extra=-PARAMETERS['a']), {})
+        actual = _evaluations(_metric(expression, integration_method, polynomial, extra=-A), PARAMETERS)
+    assert actual == pytest.approx(expected, rel=1e-9)
