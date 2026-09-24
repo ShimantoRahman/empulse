@@ -402,5 +402,7 @@ cdef class EntropyCostImpurity(CostImpurity):
         if neg_count_right > 0.0:
             neg_entropy_right = log(neg_count_right / self.weighted_n_right)
 
-        impurity_left[0] = fmin(pos_cost_left * pos_entropy_left, neg_cost_left * neg_entropy_left)
-        impurity_right[0] = fmin(pos_cost_right * pos_entropy_right, neg_cost_right * neg_entropy_right)
+        # The log terms are <= 0, so they are negated, as in node_impurity. Without it the children's
+        # impurities were negative, and sklearn turns any node with impurity <= 0 into a leaf.
+        impurity_left[0] = fmin(pos_cost_left * -pos_entropy_left, neg_cost_left * -neg_entropy_left)
+        impurity_right[0] = fmin(pos_cost_right * -pos_entropy_right, neg_cost_right * -neg_entropy_right)
