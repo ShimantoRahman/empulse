@@ -3,10 +3,15 @@ from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
-from scipy.special import expit
 
 from ...._common._objective import ElasticNetPenalty, LogitObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
+from ..._loss import (
+    cy_log_cost_boost_grad_hess,
+    cy_log_cost_gradient,
+    cy_log_cost_loss,
+    cy_log_cost_loss_gradient,
+)
 from .._compile import (
     MetricFn,
     PicklableLambda,
@@ -21,19 +26,22 @@ from .._parameter_domain import _check_parameters
 from .._stochastic import replace_random_var_with_mean
 from .._symbolic import _latex
 from ..capabilities import Capability
-from .cost_strategy import CostOptimalRate, CostOptimalThreshold
+from .cost_strategy import CostOptimalRate, CostOptimalThreshold, _CachedPenaltyWeights
 from .metric_strategy import MetricStrategy
 
 
-class LogCostLogitObjective(LogitObjective):
+class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     """
     Precomputed log-cost objective for logistic regression.
 
     Holds the constants derived from the data and exposes the :class:`~empulse.metrics.LogitObjective`
     interface. Unlike :class:`~empulse.metrics.Cost`'s objective, the per-sample loss is not linear in the
     predicted probability (it involves ``log(s)`` and ``log(1 - s)``), so the gradient depends on the
-    current predictions and is recomputed (cheaply, in pure numpy) on every call rather than reduced to a
-    single precomputed constant.
+    current predictions and is recomputed on every call rather than reduced to a single precomputed
+    constant.
+
+    As with :class:`~empulse.metrics.Cost`'s objective, the loss, the gradient and the penalty are all
+    computed by a compiled kernel, which takes the penalty as the scalars cached on the objective.
     """
 
     def __init__(
@@ -52,9 +60,11 @@ class LogCostLogitObjective(LogitObjective):
         loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
         loss_const2 = y_true * fn_cost - (1 - y_true) * tn_benefit
 
-        self.loss_const1: Float64Array = np.asarray(loss_const1, dtype=np.float64).reshape(-1)
-        self.loss_const2: Float64Array = np.asarray(loss_const2, dtype=np.float64).reshape(-1)
-        self.features: Float64Array = np.asarray(features, dtype=np.float64)
+        # The Cython kernels take C-contiguous float64 arrays, so convert them once here rather than
+        # on every call.
+        self.loss_const1: Float64Array = np.ascontiguousarray(loss_const1, dtype=np.float64).reshape(-1)
+        self.loss_const2: Float64Array = np.ascontiguousarray(loss_const2, dtype=np.float64).reshape(-1)
+        self.features: Float64Array = np.ascontiguousarray(features, dtype=np.float64)
         self.fit_intercept = fit_intercept
         # The per-sample gradient is `c1 (1 - s) - c2 s`, whose magnitude at s = 0.5 is
         # |c1 - c2| / 2 -- the same scale the Cost strategy uses, up to a constant factor.
@@ -85,6 +95,27 @@ class LogCostLogitObjective(LogitObjective):
         obj.features = self.features[indices]
         return obj
 
+    def _kernel_arguments(self, weights: FloatNDArray) -> tuple[Float64Array, Float64Array, Float64Array, Float64Array]:
+        return np.ascontiguousarray(weights, dtype=np.float64), self.features, self.loss_const1, self.loss_const2
+
+    def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the regularized ``(loss, gradient)`` for *weights*."""
+        return cy_log_cost_loss_gradient(  # type: ignore[no-any-return]
+            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef
+        )
+
+    def logit_loss(self, weights: FloatNDArray) -> float:
+        """Return only the regularized scalar loss for *weights*, without computing the gradient."""
+        return float(
+            cy_log_cost_loss(*self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef)
+        )
+
+    def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return only the regularized gradient for *weights*, without computing the loss."""
+        return cy_log_cost_gradient(  # type: ignore[return-value]
+            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef
+        )
+
     def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the unpenalized ``(loss, gradient)`` for *weights*.
 
@@ -100,18 +131,7 @@ class LogCostLogitObjective(LogitObjective):
         gradient : ndarray
             Gradient of the data term alone.
         """
-        w: Float64Array = np.asarray(weights, dtype=np.float64)
-
-        n_samples = self.features.shape[0]
-        logits = self.features @ w
-        s: Float64Array = expit(logits)
-        epsilon = np.finfo(s.dtype).eps
-        s_clipped = np.clip(s, epsilon, 1 - epsilon)
-
-        loss = float(np.mean(np.log(s_clipped) * self.loss_const1 + np.log(1 - s_clipped) * self.loss_const2))
-        per_sample_grad = self.loss_const1 * (1 - s) - self.loss_const2 * s
-        gradient: Float64Array = (self.features.T @ per_sample_grad) / n_samples
-        return loss, gradient
+        return cy_log_cost_loss_gradient(*self._kernel_arguments(weights))  # type: ignore[no-any-return]
 
     def data_loss(self, weights: FloatNDArray) -> float:
         """Return only the unpenalized scalar loss for *weights*.
@@ -126,7 +146,7 @@ class LogCostLogitObjective(LogitObjective):
         float
             Loss of the data term alone.
         """
-        return self.data_loss_gradient(weights)[0]
+        return float(cy_log_cost_loss(*self._kernel_arguments(weights)))
 
     def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Return only the unpenalized gradient vector for *weights*.
@@ -141,7 +161,7 @@ class LogCostLogitObjective(LogitObjective):
         ndarray
             Gradient of the data term alone.
         """
-        return self.data_loss_gradient(weights)[1]
+        return cy_log_cost_gradient(*self._kernel_arguments(weights))  # type: ignore[return-value]
 
 
 class LogCostBoostGradient:
@@ -169,11 +189,11 @@ class LogCostBoostGradient:
             self.loss_const2_fn, self.loss_const2_eq, shape=y_true.shape[0], y=y_true, **parameters
         )
 
-        y_score = np.asarray(y_score, dtype=np.float64).reshape(-1)
-        s: FloatNDArray = expit(y_score)
-        gradient: FloatNDArray = loss_const1 * (1 - s) - loss_const2 * s
-        hessian: FloatNDArray = np.abs(loss_const1 + loss_const2) * s * (1 - s)
-        return gradient, hessian
+        return cy_log_cost_boost_grad_hess(  # type: ignore[no-any-return]
+            np.ascontiguousarray(y_score, dtype=np.float64).reshape(-1),
+            np.ascontiguousarray(loss_const1, dtype=np.float64).reshape(-1),
+            np.ascontiguousarray(loss_const2, dtype=np.float64).reshape(-1),
+        )
 
 
 class LogCost(MetricStrategy):

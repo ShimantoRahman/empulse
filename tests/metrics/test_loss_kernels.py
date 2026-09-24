@@ -1,4 +1,4 @@
-"""The compiled logistic loss kernels match their definition, including where the probability saturates."""
+"""The compiled logistic and log-cost kernels match their definition, including where the probability saturates."""
 
 import mpmath
 import numpy as np
@@ -6,8 +6,17 @@ import pytest
 import sympy
 from scipy.special import expit
 
-from empulse.metrics import Cost, CostMatrix, Metric
-from empulse.metrics._loss import cy_boost_grad_hess, cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
+from empulse.metrics import Cost, CostMatrix, LogCost, Metric
+from empulse.metrics._loss import (
+    cy_boost_grad_hess,
+    cy_log_cost_boost_grad_hess,
+    cy_log_cost_gradient,
+    cy_log_cost_loss,
+    cy_log_cost_loss_gradient,
+    cy_logit_gradient,
+    cy_logit_loss,
+    cy_logit_loss_gradient,
+)
 
 RNG = np.random.default_rng(0)
 
@@ -126,9 +135,10 @@ def test_logit_kernels_reject_inputs_of_mismatched_shapes(call, message):
         call(np.ones((50, 3)))
 
 
-def test_cost_objective_accepts_features_in_fortran_order():
+@pytest.mark.parametrize('strategy', [Cost, LogCost])
+def test_objective_accepts_features_in_fortran_order(strategy):
     fp, fn = sympy.symbols('fp fn')
-    metric = Metric(CostMatrix().add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1, fn=5), Cost())
+    metric = Metric(CostMatrix().add_tp_benefit(1).add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1, fn=5), strategy())
     features = np.hstack((np.ones((300, 1)), RNG.normal(size=(300, 3))))
     y_true = (RNG.random(300) < 0.3).astype(int)
     weights = RNG.normal(size=4)
@@ -139,3 +149,118 @@ def test_cost_objective_accepts_features_in_fortran_order():
     expected_loss, expected_gradient = c_order.logit_loss_gradient(weights)
     assert loss == expected_loss
     np.testing.assert_array_equal(gradient, expected_gradient)
+
+
+EPSILON = np.finfo(np.float64).eps
+
+
+def _log_cost_reference(weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef):
+    """The log cost as it was computed in numpy, before it moved to the kernels."""
+    probability = expit(features @ weights)
+    clipped = np.clip(probability, EPSILON, 1 - EPSILON)
+    coefficients = weights[start_coef:]
+    loss = np.mean(np.log(clipped) * loss_const1 + np.log(1 - clipped) * loss_const2)
+    loss += l1_weight * np.abs(coefficients).sum() + 0.5 * l2_weight * (coefficients**2).sum()
+    slopes = loss_const1 * (1 - probability) - loss_const2 * probability
+    gradient = features.T @ slopes / len(probability)
+    gradient[start_coef:] += l1_weight * np.sign(coefficients) + l2_weight * coefficients
+    return loss, gradient
+
+
+def _exact_log_cost(margins, loss_const1, loss_const2):
+    """Return the mean clipped log cost of the margins, from 50-digit arithmetic."""
+    with mpmath.workdps(50):
+        low, high = mpmath.mpf(EPSILON), 1 - mpmath.mpf(EPSILON)
+        total = mpmath.mpf(0)
+        for margin, c1, c2 in zip(margins, loss_const1, loss_const2, strict=True):
+            probability = 1 / (1 + mpmath.exp(-mpmath.mpf(float(margin))))
+            complement = 1 / (1 + mpmath.exp(mpmath.mpf(float(margin))))
+            total += c1 * mpmath.log(min(max(probability, low), high))
+            total += c2 * mpmath.log(min(max(complement, low), high))
+        return float(total / len(margins))
+
+
+# Fewer than 128 values take the C library's exp and log, more take numpy's.
+@pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (50, 3), (63, 4), (64, 4), (2000, 20)])
+@pytest.mark.parametrize(('l1_weight', 'l2_weight', 'start_coef'), [(0.0, 0.0, 1), (0.1, 0.2, 1), (0.3, 0.0, 0)])
+def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef):
+    features = RNG.normal(size=(n_samples, n_features))
+    weights = RNG.normal(size=n_features)
+    loss_const1, loss_const2 = RNG.normal(size=(2, n_samples)) * 3
+    arguments = (weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef)
+
+    expected_loss, expected_gradient = _log_cost_reference(*arguments)
+    loss, gradient = cy_log_cost_loss_gradient(*arguments)
+    assert loss == pytest.approx(expected_loss, rel=1e-12, abs=1e-15)
+    np.testing.assert_allclose(gradient, expected_gradient, rtol=1e-10, atol=1e-15)
+    # The kernels computing only one of the two agree with the combined one exactly.
+    assert cy_log_cost_loss(*arguments) == loss
+    np.testing.assert_array_equal(cy_log_cost_gradient(*arguments), gradient)
+
+
+@pytest.mark.parametrize('n_samples', [20, 400], ids=['c-library-log', 'numpy-log'])
+def test_log_cost_is_exact_where_the_probability_saturates(n_samples):
+    """``log(1 - p)`` loses its digits once p rounds towards 1, from a margin of about 14 onwards."""
+    margins = np.linspace(-60, 60, n_samples)
+    loss_const1, loss_const2 = RNG.normal(size=(2, n_samples))
+    loss = cy_log_cost_loss(np.ones(1), margins[:, None], loss_const1, loss_const2)
+    assert loss == pytest.approx(_exact_log_cost(margins, loss_const1, loss_const2), rel=1e-14)
+
+
+def test_log_cost_boost_gradient_and_hessian_match_their_definition():
+    margins = np.concatenate([RNG.normal(size=500) * 5, [0.0, -0.0]])
+    loss_const1, loss_const2 = RNG.normal(size=(2, margins.size))
+    gradient, hessian = cy_log_cost_boost_grad_hess(margins, loss_const1, loss_const2)
+    probability = expit(margins)
+    np.testing.assert_allclose(gradient, loss_const1 * (1 - probability) - loss_const2 * probability, atol=1e-15)
+    # Against the exact derivative, since p * (1 - p) itself loses digits as p approaches 1.
+    slopes = np.array([_exact_expit_derivatives(margin)[0] for margin in margins])
+    np.testing.assert_allclose(hessian, np.abs(loss_const1 + loss_const2) * slopes, rtol=1e-14)
+
+
+def test_log_cost_boost_hessian_is_exact_where_the_probability_saturates():
+    margins = np.array([-300.0, -40.0, 40.0, 300.0])
+    _, hessian = cy_log_cost_boost_grad_hess(margins, np.ones(4), np.ones(4))
+    exact = [2 * _exact_expit_derivatives(margin)[0] for margin in margins]
+    np.testing.assert_allclose(hessian, exact, rtol=1e-14)
+
+
+def test_log_cost_kernels_propagate_nan():
+    features = np.ones((3, 2))
+    ones = np.ones(3)
+    loss, gradient = cy_log_cost_loss_gradient(np.array([np.nan, 1.0]), features, ones, ones)
+    assert np.isnan(loss)
+    assert np.isnan(gradient).all()
+    gradient, hessian = cy_log_cost_boost_grad_hess(np.array([np.nan, 1.0]), np.ones(2), np.ones(2))
+    assert np.isnan(gradient[0]) and np.isnan(hessian[0])
+    assert np.isfinite(gradient[1]) and np.isfinite(hessian[1])
+
+
+def test_log_cost_kernels_accept_read_only_arrays():
+    features = RNG.normal(size=(200, 3))
+    weights = RNG.normal(size=3)
+    loss_const = RNG.normal(size=200)
+    expected = cy_log_cost_loss_gradient(weights, features, loss_const, loss_const)
+    for array in (features, weights, loss_const):
+        array.flags.writeable = False
+    loss, gradient = cy_log_cost_loss_gradient(weights, features, loss_const, loss_const)
+    assert loss == expected[0]
+    np.testing.assert_array_equal(gradient, expected[1])
+    np.testing.assert_array_equal(
+        cy_log_cost_boost_grad_hess(loss_const, loss_const, loss_const),
+        cy_log_cost_boost_grad_hess(loss_const.copy(), loss_const, loss_const),
+    )
+
+
+@pytest.mark.parametrize(
+    ('call', 'message'),
+    [
+        (lambda X: cy_log_cost_loss(np.ones(4), X, np.ones(50), np.ones(50)), 'weights has 4 entries'),
+        (lambda X: cy_log_cost_loss_gradient(np.ones(3), X, np.ones(49), np.ones(50)), 'features has 50 rows'),
+        (lambda X: cy_log_cost_gradient(np.ones(3), X, np.ones(50), np.ones(51)), 'features has 50 rows'),
+        (lambda X: cy_log_cost_boost_grad_hess(np.ones(3), np.ones(4), np.ones(3)), 'y_score has 3 entries'),
+    ],
+)
+def test_log_cost_kernels_reject_inputs_of_mismatched_shapes(call, message):
+    with pytest.raises(ValueError, match=message):
+        call(np.ones((50, 3)))
