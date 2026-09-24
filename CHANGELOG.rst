@@ -81,6 +81,11 @@ Models
   feature has a single distinct value. Drawing a split for such a feature took a random integer
   modulo zero, which raised a floating-point exception (SIGFPE) in C. Splits are now drawn from the
   features with at least two distinct values; if there are none, the tree is a single leaf.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier`'s ``alpha`` complexity penalty now counts the
+  tree's actual nodes. The count was updated incrementally and drifted: it grew when a split was
+  refused at ``max_depth`` and did not shrink when nodes were pruned for violating
+  ``min_samples_split`` or ``min_samples_leaf``, so a fitted tree of 5 nodes could be penalized
+  as 25. Fits with the default ``alpha=0`` are unaffected.
 
 Datasets
 --------

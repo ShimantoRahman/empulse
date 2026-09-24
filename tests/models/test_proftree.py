@@ -154,3 +154,38 @@ if {len(constant_columns)} == X.shape[1]:
             [sys.executable, '-c', script], capture_output=True, text=True, timeout=300, check=False
         )
         assert result.returncode == 0, result.stderr
+
+
+class TestNodeCountPenalty:
+    """Regression tests: the node count behind the ``alpha`` penalty drifted from the real tree.
+
+    ``grow`` added two nodes even when the leaf was already at ``max_depth`` and nothing was split,
+    and pruning illegal nodes removed nodes without subtracting them, so ``alpha`` penalized the
+    wrong trees.
+    """
+
+    @staticmethod
+    def _count(node):
+        return (
+            0
+            if node is None
+            else 1 + TestNodeCountPenalty._count(node['left']) + TestNodeCountPenalty._count(node['right'])
+        )
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('max_depth', [2, 10])
+    @pytest.mark.parametrize('custom_loss', [False, True], ids=['max_profit', 'custom_loss'])
+    def test_stored_node_count_matches_tree(self, max_depth, custom_loss):
+        X, y = make_classification(n_samples=400, random_state=0)
+        fn, fp = sympy.symbols('fn fp')
+        loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()) if custom_loss else None
+        model = ProfTreeClassifier(
+            loss=loss, max_depth=max_depth, max_iter=100, patience=100, population_size=20, alpha=1e-3, random_state=0
+        )
+        if custom_loss:
+            model.fit(X, y, fn=5.0, fp=1.0)
+        else:
+            model.fit(X, y, fn_cost=5.0, fp_cost=1.0)
+
+        tree = model.tree_._serialize_tree()
+        assert tree['n_nodes'] == self._count(tree['root'])

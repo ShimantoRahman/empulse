@@ -8,7 +8,7 @@ from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     compute_split_values, free_split_values, reset_tree,
                     fit_tree, predict_proba_tree, split, prune_illegal_nodes)
 from .forest cimport Forest, create_forest, free_forest, choose_different_tree
-from .operators cimport crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
+from .operators cimport count_nodes, crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
 from .random cimport RandState, rand_fraction, seed_rand
 from .max_profit cimport max_profit_score
 
@@ -157,6 +157,8 @@ cdef inline void evaluate(
 ):
     cdef float fitness = fitness_function(y, predictions)
     tree.fitness = fitness
+    # Counted afresh: the variation operators and prune_illegal_nodes change the tree's shape.
+    tree.n_nodes = count_nodes(tree.root)
     tree.fitness -= alpha * tree.n_nodes
 
 cdef inline void evaluate_max_profit(
@@ -178,6 +180,8 @@ cdef inline void evaluate_max_profit(
         fn_cost=fn_cost,
     )
     tree.fitness = fitness
+    # Counted afresh: the variation operators and prune_illegal_nodes change the tree's shape.
+    tree.n_nodes = count_nodes(tree.root)
     tree.fitness -= alpha * tree.n_nodes
 
 cdef inline bint stop_evolution(

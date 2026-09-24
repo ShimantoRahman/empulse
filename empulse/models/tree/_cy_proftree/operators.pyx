@@ -90,14 +90,12 @@ cdef inline void grow(RandState* rng, Tree* tree, SplitValues* split_values, int
     cdef int depth = 0
     cdef Node* leaf = random_leaf_node(rng, tree.root, &depth)
     split(rng, leaf, n_features, split_values, depth, max_depth)
-    tree.n_nodes += 2
 
 cdef inline void prune_internal(RandState* rng, Tree* tree) noexcept nogil:
     """Prune a random internal node which has two leaf nodes as successors."""
     cdef Node* node = random_subnode_with_leaf_children(rng, tree.root)
     if node is not NULL and node is not tree.root:
         prune(node)
-        tree.n_nodes -= 2
 
 
 cdef inline void mutate_split_feature(RandState* rng, Tree* tree, int n_features, SplitValues* split_values) noexcept nogil:
