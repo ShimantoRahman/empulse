@@ -34,11 +34,11 @@ cdef inline double sign(double x) noexcept nogil:
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def cy_logit_loss_gradient(
-        weights: cython.double[:],
-        features: cython.double[:, :],
-        grad_const: cython.double[:, :],
-        loss_const1: cython.double[:],
-        loss_const2: cython.double[:],
+        const double[:] weights,
+        const double[:, :] features,
+        const double[:, :] grad_const,
+        const double[:] loss_const1,
+        const double[:] loss_const2,
         l1_weight: cython.double = 0.0,
         l2_weight: cython.double = 0.0,
         start_coef: cython.int = 1,
@@ -87,10 +87,10 @@ def cy_logit_loss_gradient(
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def cy_logit_loss(
-        weights: cython.double[:],
-        features: cython.double[:, :],
-        loss_const1: cython.double[:],
-        loss_const2: cython.double[:],
+        const double[:] weights,
+        const double[:, :] features,
+        const double[:] loss_const1,
+        const double[:] loss_const2,
         l1_weight: cython.double = 0.0,
         l2_weight: cython.double = 0.0,
         start_coef: cython.int = 1,
@@ -128,9 +128,9 @@ def cy_logit_loss(
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def cy_logit_gradient(
-        weights: cython.double[:],
-        features: cython.double[:, :],
-        grad_const: cython.double[:, :],
+        const double[:] weights,
+        const double[:, :] features,
+        const double[:, :] grad_const,
         l1_weight: cython.double = 0.0,
         l2_weight: cython.double = 0.0,
         start_coef: cython.int = 1,
