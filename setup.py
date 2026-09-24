@@ -73,6 +73,10 @@ if __name__ == '__main__':
             include_dirs=[np.get_include()],
         ),
         Extension(
+            'empulse.metrics._cy_max_profit.piecewise',
+            ['empulse/metrics/_cy_max_profit/*.pyx'],
+        ),
+        Extension(
             'empulse.models.tree._impurity.cost_impurity',
             ['empulse/models/tree/_impurity/*.pyx'],
             include_dirs=[np.get_include(), 'sklearn.utils._typedefs', 'sklearn.tree._criterion'],
