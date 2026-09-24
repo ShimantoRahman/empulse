@@ -7,6 +7,7 @@ from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
 from ..._compile import _safe_lambdify
+from ..._symbolic import _subs_by_name
 from .common import (
     _BaseMaxProfitLogitObjective,
     _convex_hull,
@@ -78,14 +79,14 @@ class _PiecewiseDerivativeState:
         # Precalculate the exact float bounds of the distribution to avoid sympy overhead in loop
         lower_b = self.score_function.random_var_bounds[0]
         if isinstance(lower_b, sympy.Expr):
-            lower_b = lower_b.subs(self.dist_params)
+            lower_b = _subs_by_name(lower_b, self.dist_params)
             self.lower_bound = -np.inf if lower_b == -sympy.oo else float(lower_b)
         else:
             self.lower_bound = float(lower_b)
 
         upper_b = self.score_function.random_var_bounds[1]
         if isinstance(upper_b, sympy.Expr):
-            upper_b = upper_b.subs(self.dist_params)
+            upper_b = _subs_by_name(upper_b, self.dist_params)
             self.upper_bound = np.inf if upper_b == sympy.oo else float(upper_b)
         else:
             self.upper_bound = float(upper_b)

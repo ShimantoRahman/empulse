@@ -17,6 +17,8 @@ import numpy as np
 import sympy
 import sympy.stats.crv_types
 
+from ._symbolic import _subs_by_name
+
 # Mapping from distribution type to its closed-form mean expression.
 # Used as a fast, reliable fallback for distributions whose expectation
 # sympy.stats.E cannot compute in closed form.
@@ -108,11 +110,11 @@ def _check_distribution_parameters(
     display: Callable[[str], str],
 ) -> None:
     """Validate each random variable's shape parameters using the distribution's own ``check``."""
-    scalars = {sympy.Symbol(name): value for name, value in parameters.items() if isinstance(value, Real)}
+    scalars = {name: value for name, value in parameters.items() if isinstance(value, Real)}
     for expression in expressions:
         for random_symbol in expression.atoms(sympy.stats.rv.RandomSymbol):
             distribution = random_symbol.pspace.distribution
-            arguments = [sympy.sympify(argument).subs(scalars) for argument in distribution.args]
+            arguments = [_subs_by_name(sympy.sympify(argument), scalars) for argument in distribution.args]
             if all(getattr(argument, 'is_number', False) for argument in arguments):
                 _run_distribution_check(distribution, arguments, random_symbol)
             else:

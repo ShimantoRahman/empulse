@@ -9,6 +9,7 @@ from sympy.stats import density, pspace
 from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray
+from ..._symbolic import _subs_by_name
 from .common import _HullScoreFunction, _substitute_integrand, extract_distribution_parameters
 
 
@@ -112,7 +113,8 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
         bounds = [bound for bounds in self.random_variables_bounds for bound in bounds]
         bounds = [
-            bounds.subs(distribution_parameters) if isinstance(bounds, sympy.Expr) else bounds for bounds in bounds
+            _subs_by_name(bounds, distribution_parameters) if isinstance(bounds, sympy.Expr) else bounds
+            for bounds in bounds
         ]
 
         profit_integrand_ = _substitute_integrand(

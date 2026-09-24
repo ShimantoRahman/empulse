@@ -8,6 +8,7 @@ from scipy.stats._qmc import Sobol
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray
+from ..._symbolic import _subs_by_name
 from .common import (
     _evaluate_sampled_integrands,
     _HullScoreFunction,
@@ -194,7 +195,8 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
                 param_grid = cached[1]
             else:
                 scipy_distributions = [
-                    _scipy_distribution(random_var.subs(distribution_parameters)) for random_var in self.random_symbols
+                    _scipy_distribution(_subs_by_name(random_var, distribution_parameters))
+                    for random_var in self.random_symbols
                 ]
                 param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
                 self._grid_cache = (distribution_parameters, param_grid)

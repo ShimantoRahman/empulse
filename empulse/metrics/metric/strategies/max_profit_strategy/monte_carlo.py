@@ -6,6 +6,7 @@ import sympy
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray
+from ..._symbolic import _subs_by_name
 from .common import (
     _evaluate_sampled_integrands,
     _HullScoreFunction,
@@ -76,7 +77,7 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
             else:
                 param_grid = [
                     sympy.stats.sample(
-                        random_var.subs(distribution_parameters), size=(self.n_mc_samples,), seed=self.rng
+                        _subs_by_name(random_var, distribution_parameters), size=(self.n_mc_samples,), seed=self.rng
                     )
                     for random_var in self.random_symbols
                 ]
