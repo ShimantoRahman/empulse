@@ -1,5 +1,5 @@
 try:  # ruff: ignore[non-empty-init-module]
-    from .convex_hull import convex_hull
+    from .convex_hull import convex_hull, convex_hull_from_counts
 except ImportError as exc:  # pragma: no cover - exercised only when the extension is unbuilt
     raise ImportError(
         'empulse.metrics._cy_convex_hull.convex_hull could not be imported. This compiled Cython '
@@ -7,4 +7,4 @@ except ImportError as exc:  # pragma: no cover - exercised only when the extensi
         '`just compile` (requires MSVC on PATH on Windows).'
     ) from exc
 
-__all__ = ['convex_hull']
+__all__ = ['convex_hull', 'convex_hull_from_counts']

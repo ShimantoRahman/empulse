@@ -7,9 +7,13 @@ import sympy
 from scipy.stats._qmc import Sobol
 from sympy.stats import pspace
 
-from ....._types import FloatNDArray, IntNDArray
-from ..._parameter_domain import _check_parameters
-from .common import _convex_hull, _evaluate_sampled_integrands, _substitute_integrand, extract_distribution_parameters
+from ....._types import FloatNDArray
+from .common import (
+    _evaluate_sampled_integrands,
+    _HullScoreFunction,
+    _substitute_integrand,
+    extract_distribution_parameters,
+)
 
 FrozenScipyDist = (
     scipy.stats._distn_infrastructure.rv_continuous_frozen | scipy.stats._distn_infrastructure.rv_discrete_frozen
@@ -122,7 +126,7 @@ def _scipy_distribution(random_var: sympy.Expr) -> FrozenScipyDist:
     return scipy_distribution(*sympy_dist_params)
 
 
-class MaxProfitScoreQuasiMonteCarlo:
+class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
     """
     Compute the maximum profit for one or more stochastic variables using Quasi Monte Carlo (QMC) integration.
 
@@ -170,13 +174,15 @@ class MaxProfitScoreQuasiMonteCarlo:
         # can never pair one call's parameters with another call's samples.
         self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the maximum profit."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
 
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid

@@ -132,3 +132,30 @@ def test_convex_hull_equivalence(y_true, y_score):
     # Values match within tolerance (floating-point ops, sorting, hull construction)
     assert np.allclose(tpr_cy, tpr_py, rtol=1e-10, atol=1e-12)
     assert np.allclose(fpr_cy, fpr_py, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize('seed', range(20))
+def test_convex_hull_from_counts_matches_convex_hull_of_the_samples(seed):
+    """Samples grouped by score give exactly the hull of the samples, however the groups are split up."""
+    from empulse.metrics._cy_convex_hull import convex_hull_from_counts
+
+    rng = np.random.default_rng(seed)
+    n_samples = int(rng.integers(20, 500))
+    y_true = rng.integers(0, 2, n_samples).astype(np.int32)
+    y_true[:2] = [0, 1]
+    n_distinct = int(rng.integers(1, 40))
+    y_score = rng.random(n_distinct)[rng.integers(0, n_distinct, n_samples)]  # many ties
+
+    scores, group = np.unique(y_score, return_inverse=True)
+    n_positive = np.bincount(group, weights=y_true).astype(np.int64)
+    n_negative = np.bincount(group).astype(np.int64) - n_positive
+    # The same score may also be spread over several groups, in any order.
+    scores = np.concatenate([scores, scores])
+    n_positive = np.concatenate([n_positive // 2, n_positive - n_positive // 2])
+    n_negative = np.concatenate([n_negative - n_negative // 3, n_negative // 3])
+    order = rng.permutation(scores.size)
+
+    expected = cy_convex_hull(y_true, y_score)
+    grouped = convex_hull_from_counts(scores[order], n_positive[order], n_negative[order])
+    np.testing.assert_array_equal(grouped[0], expected[0])
+    np.testing.assert_array_equal(grouped[1], expected[1])

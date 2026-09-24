@@ -24,6 +24,37 @@ cdef inline void _push_point(vector[Point]& hull, double x, double y) noexcept n
     p.y = y
     hull.push_back(p)
 
+cdef tuple[np.ndarray[np.float64], np.ndarray[np.float64]] _normalize_roc_curve(  # noqa: F401
+        cnp.ndarray[cnp.float64_t, ndim=1] n_ranked, cnp.ndarray[cnp.float64_t, ndim=1] n_ranked_positive  # noqa: F401
+):
+    """
+    Turn cumulative counts at each distinct threshold into ROC curve points.
+
+    ``n_ranked[i]`` is the number of samples scored at or above the i-th highest distinct score,
+    and ``n_ranked_positive[i]`` how many of them are positive.
+    """
+    n_samples: cython.int = n_ranked.size
+    cdef double n_positives = n_ranked_positive[n_samples - 1]
+    cdef double n_negatives = n_ranked[n_samples - 1] - n_positives
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] fpr = np.empty(n_samples, dtype=np.float64)  # noqa: F401
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr = np.empty(n_samples, dtype=np.float64)  # noqa: F401
+    cdef int i
+    for i in range(n_samples):
+        fpr[i] = (n_ranked[i] - n_ranked_positive[i]) / n_negatives
+        tpr[i] = n_ranked_positive[i] / n_positives
+
+    # Anchor to (0,0) and (1,1) if not already present
+    if fpr.size == 0 or fpr[0] != 0.0 or tpr[0] != 0.0:
+        fpr = np.concatenate(([0.0], fpr))
+        tpr = np.concatenate(([0.0], tpr))
+    if fpr[n_samples - 1] != 1.0 or tpr[n_samples - 1] != 1.0:
+        fpr = np.concatenate((fpr, [1.0]))
+        tpr = np.concatenate((tpr, [1.0]))
+
+    return (np.ascontiguousarray(fpr, dtype=np.float64),
+            np.ascontiguousarray(tpr, dtype=np.float64))
+
+
 cdef tuple[np.ndarray[np.float64], np.ndarray[np.float64]] _compute_roc_curve(  # noqa: F401
         cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score  # noqa: F401
 ):
@@ -48,26 +79,42 @@ cdef tuple[np.ndarray[np.float64], np.ndarray[np.float64]] _compute_roc_curve(  
     for i in range(threshold_idxs_vector.size()):
         threshold_idxs[i] = threshold_idxs_vector[i]
 
-    # Accumulate TP/FP at thresholds
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr = np.cumsum(y_true[desc_idx], dtype=np.float64)[threshold_idxs]  # noqa: F401
-    n_samples: cython.int =  tpr.size
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] fpr = np.array(threshold_idxs, dtype=np.float64)  # noqa: F401
-    cdef double n_positives = tpr[n_samples - 1]
-    cdef double n_negatives = n_rows - n_positives
-    for i in range(n_samples):
-        fpr[i] = (1.0 + fpr[i] - tpr[i]) / n_negatives
-        tpr[i] = tpr[i] / n_positives
+    # Accumulate the samples and positives at each threshold
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] n_ranked_positive = np.cumsum(y_true[desc_idx], dtype=np.float64)[threshold_idxs]  # noqa: F401
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] n_ranked = threshold_idxs + 1.0  # noqa: F401
+    return _normalize_roc_curve(n_ranked, n_ranked_positive)
 
-    # Anchor to (0,0) and (1,1) if not already present
-    if fpr.size == 0 or fpr[0] != 0.0 or tpr[0] != 0.0:
-        fpr = np.concatenate(([0.0], fpr))
-        tpr = np.concatenate(([0.0], tpr))
-    if fpr[n_samples - 1] != 1.0 or tpr[n_samples - 1] != 1.0:
-        fpr = np.concatenate((fpr, [1.0]))
-        tpr = np.concatenate((tpr, [1.0]))
 
-    return (np.ascontiguousarray(fpr, dtype=np.float64),
-            np.ascontiguousarray(tpr, dtype=np.float64))
+cdef tuple[np.ndarray[np.float64], np.ndarray[np.float64]] _compute_roc_curve_from_counts(  # noqa: F401
+        cnp.ndarray[cnp.float64_t, ndim=1] y_score,  # noqa: F401
+        cnp.ndarray[cnp.int64_t, ndim=1] n_positive,  # noqa: F401
+        cnp.ndarray[cnp.int64_t, ndim=1] n_negative,  # noqa: F401
+):
+    """Compute ROC curve points from scores, each with the number of positives and negatives given it."""
+    cdef cnp.ndarray[cnp.int64_t, ndim=1] desc_idx = np.argsort(y_score, kind="mergesort")[::-1]  # noqa: F401
+    cdef int n_groups = y_score.shape[0]
+    n_ranked_vector: vector[cython.double]
+    n_ranked_positive_vector: vector[cython.double]
+    n_ranked_vector.reserve(n_groups)
+    n_ranked_positive_vector.reserve(n_groups)
+
+    # Scores that tie form a single threshold, like tied samples do.
+    cdef long long ranked = 0, ranked_positive = 0
+    cdef int i, j
+    for i in range(n_groups):
+        j = desc_idx[i]
+        ranked += n_positive[j] + n_negative[j]
+        ranked_positive += n_positive[j]
+        if i == n_groups - 1 or y_score[desc_idx[i + 1]] != y_score[j]:
+            n_ranked_vector.push_back(<double>ranked)
+            n_ranked_positive_vector.push_back(<double>ranked_positive)
+
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] n_ranked = np.empty(n_ranked_vector.size(), dtype=np.float64)  # noqa: F401
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] n_ranked_positive = np.empty(n_ranked_vector.size(), dtype=np.float64)  # noqa: F401
+    for i in range(n_ranked_vector.size()):
+        n_ranked[i] = n_ranked_vector[i]
+        n_ranked_positive[i] = n_ranked_positive_vector[i]
+    return _normalize_roc_curve(n_ranked, n_ranked_positive)
 
 
 def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64_t, ndim=1] y_score) -> tuple[np.ndarray, np.ndarray]:  # noqa: F401
@@ -87,10 +134,46 @@ def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] fpr  # noqa: F401
-    cdef cnp.ndarray[cnp.float64_t, ndim=1] tpr  # noqa: F401
     fpr, tpr = _compute_roc_curve(y_true, y_score)
+    return _roc_convex_hull(fpr, tpr)
 
+
+def convex_hull_from_counts(
+    cnp.ndarray[cnp.float64_t, ndim=1] y_score,  # noqa: F401
+    cnp.ndarray[cnp.int64_t, ndim=1] n_positive,  # noqa: F401
+    cnp.ndarray[cnp.int64_t, ndim=1] n_negative,  # noqa: F401
+) -> tuple[np.ndarray, np.ndarray]:  # noqa: F401
+    """
+    Compute the convex hull points of the ROC curve of samples grouped by score.
+
+    Gives the same points as :func:`convex_hull` on the samples themselves, in time that depends on
+    the number of groups rather than the number of samples.
+
+    Parameters
+    ----------
+    y_score : 1D np.ndarray, shape=(n_groups,)
+        The score shared by the samples of each group. Scores need not be distinct.
+
+    n_positive : 1D np.ndarray, shape=(n_groups,)
+        The number of positive samples in each group.
+
+    n_negative : 1D np.ndarray, shape=(n_groups,)
+        The number of negative samples in each group.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Convex Hull points of the ROC curve (TPR, FPR)
+    """
+    fpr, tpr = _compute_roc_curve_from_counts(y_score, n_positive, n_negative)
+    return _roc_convex_hull(fpr, tpr)
+
+
+cdef tuple _roc_convex_hull(
+    cnp.ndarray[cnp.float64_t, ndim=1] fpr,  # noqa: F401
+    cnp.ndarray[cnp.float64_t, ndim=1] tpr,  # noqa: F401
+):
+    """Return the convex hull of the ROC curve points on or above the diagonal, as (TPR, FPR)."""
     n_rows = cython.declare(cython.int, fpr.shape[0])
     cdef int i
     cdef cnp.ndarray[cnp.float64_t, ndim=1] angles = np.empty(n_rows, dtype=np.float64)  # noqa: F401

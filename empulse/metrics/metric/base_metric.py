@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any, Literal
 
 from ..._types import FloatArrayLike, FloatNDArray
+from ._compile import CountScoreFn
 from ._direction import Direction
 from .capabilities import Capability
 from .strategies import LogitObjective, MetricStrategy
@@ -193,6 +194,22 @@ class BaseMetric(ABC):
         """
         value = self(y_true, y_score, validate=validate, **parameters)
         return -value if self.direction is Direction.MAXIMIZE else value
+
+    def _prepare_count_loss(
+        self, *, n_samples: int | None = None, validate: bool = True, **parameters: FloatArrayLike | float
+    ) -> CountScoreFn | None:
+        """
+        Prepare :meth:`_loss` for samples grouped by score, or return ``None`` if it needs every sample.
+
+        For a model whose predictions take few distinct values, such as the leaves of a decision
+        tree: ``loss(y_score, n_positive, n_negative)`` returns the loss of the samples those groups
+        stand for. The parameters are resolved, and validated when ``validate`` is set, once here
+        rather than on every call, and no call re-checks ``y_true`` or ``y_score``.
+
+        ``n_samples`` is the number of samples the groups stand for, which array-valued parameters
+        must match.
+        """
+        return None
 
     @abstractmethod
     def optimal_rate(

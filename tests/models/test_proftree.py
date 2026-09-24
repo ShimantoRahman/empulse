@@ -373,3 +373,37 @@ class TestIncrementalRefit:
 
         tree = model.tree_._serialize_tree()
         self._assert_counts_match_routing(tree['root'], X.astype(np.float32), y, 20, 7)
+
+
+class TestLeafLevelCustomLoss:
+    """A loss that can score samples grouped by score is given each tree's leaves, not every sample."""
+
+    EMPC_MATRIX = (
+        CostMatrix()
+        .add_tp_benefit(sympy.stats.Beta('gamma', 6, 14) * (sympy.Symbol('clv') - sympy.Symbol('d') - 1))
+        .add_tp_benefit((1 - sympy.stats.Beta('gamma', 6, 14)) * -1)
+        .add_fp_cost(sympy.Symbol('d') + 1)
+    )
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('rounded', [False, True], ids=['continuous', 'tied'])
+    def test_fits_the_same_tree_as_scoring_every_sample(self, rounded):
+        from empulse.metrics import MixtureComponent, MixtureMetric
+
+        X, y = make_classification(n_samples=500, n_features=6, weights=[0.7], random_state=0)
+        if rounded:
+            X = np.round(X)
+        metric = Metric(self.EMPC_MATRIX, MaxProfit())
+        # A mixture of one component scores the same, but only from every sample's prediction.
+        per_sample = MixtureMetric([MixtureComponent(1.0, metric, {})])
+        assert metric._prepare_count_loss(clv=200.0, d=10.0) is not None
+        assert per_sample._prepare_count_loss(clv=200.0, d=10.0) is None
+
+        def fit(loss):
+            model = ProfTreeClassifier(loss=loss, max_iter=15, population_size=20, max_depth=5, random_state=0)
+            return model.fit(X, y, clv=200.0, d=10.0)
+
+        from_leaves, from_samples = fit(metric), fit(per_sample)
+        np.testing.assert_array_equal(from_leaves.predict_proba(X), from_samples.predict_proba(X))
+        assert from_leaves.n_iter_ == from_samples.n_iter_
+        assert from_leaves.tree_._serialize_tree()['fitness'] == from_samples.tree_._serialize_tree()['fitness']

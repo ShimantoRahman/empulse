@@ -42,6 +42,12 @@ class RateFn(Protocol):
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...
 
 
+class CountScoreFn(Protocol):
+    """A score of samples grouped by score, with one entry per group (e.g. per leaf of a tree)."""
+
+    def __call__(self, y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float: ...
+
+
 def _filter_parameters(
     expression: sympy.Expr, parameters: dict[str, float | FloatNDArray]
 ) -> dict[str, float | FloatNDArray]:

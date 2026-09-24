@@ -23,6 +23,16 @@ def _negated_loss(loss: BaseMetric, y_true: IntNDArray, y_score: FloatNDArray, *
     return -loss._loss(y_true, y_score, validate=False, **loss_params)
 
 
+def _negated_count_loss(
+    count_loss: 'Callable[[FloatNDArray, IntNDArray, IntNDArray], float]',
+    y_score: FloatNDArray,
+    n_positive: IntNDArray,
+    n_negative: IntNDArray,
+) -> float:
+    """Return the negated loss of samples grouped by score (e.g. a tree's leaves), as a fitness to maximize."""
+    return -count_loss(y_score, n_positive, n_negative)
+
+
 class ProfTreeClassifier(CostSensitiveClassifier):
     """
     Profit-driven evolutionary decision tree classifier.
@@ -355,14 +365,27 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
             assert loss_ is not None
             # The evolutionary search maximizes fitness, while `_loss` is a value to minimize.
-            fitness_fn: Callable[..., float] = partial(_negated_loss, loss_, **loss_params)
+            fitness_fn: Callable[..., float]
 
             y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
             try:  # catch issue with the loss function before it goes into C world
-                fitness_fn(y.astype(np.int32), y_proba)
+                # A loss that can score samples grouped by score (e.g. a stochastic MaxProfit metric)
+                # gets each tree's leaves and their class counts rather than every sample's prediction;
+                # its parameters are then resolved once here instead of on every evaluation.
+                count_loss = loss_._prepare_count_loss(n_samples=y.size, validate=False, **loss_params)
+                if count_loss is None:
+                    fitness_fn = partial(_negated_loss, loss_, **loss_params)
+                    probe: tuple[Any, ...] = (y.astype(np.int32), y_proba)
+                else:
+                    fitness_fn = partial(_negated_count_loss, count_loss)
+                    # Every sample a group of its own.
+                    probe = (y_proba.astype(np.float64), y.astype(np.int64), 1 - y.astype(np.int64))
+                fitness_fn(*probe)
             except (TypeError, ValueError) as e:
                 raise ValueError(f'The loss function {loss_} threw an error when evaluating the function.') from e
-            self.tree_.fit_custom(**common_kwargs, fitness_function=fitness_fn)
+            self.tree_.fit_custom(
+                **common_kwargs, fitness_function=fitness_fn, fitness_from_leaves=count_loss is not None
+            )
 
         self.n_iter_ = self.tree_.n_generations
 

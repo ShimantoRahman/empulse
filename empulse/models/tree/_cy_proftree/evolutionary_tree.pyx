@@ -32,6 +32,7 @@ cdef class EvolutionaryTree:
         object fitness_function=None,
         int random_state=-1,
         int n_jobs=1,
+        bint fitness_from_leaves=False,
     ):
         if self.tree is not NULL:
             free_tree(self.tree)
@@ -63,6 +64,7 @@ cdef class EvolutionaryTree:
             alpha,
             random_state,
             n_jobs,
+            fitness_from_leaves,
         )
         self.tree = result.tree
         self.n_generations = result.n_generations
