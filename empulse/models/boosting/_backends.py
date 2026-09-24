@@ -27,7 +27,7 @@ from typing import Any, Literal, TypeVar
 import numpy as np
 from scipy.special import expit, logit
 
-from ..._types import FloatNDArray
+from ..._types import FloatNDArray, IntNDArray
 from ...metrics import BaseMetric
 from ...metrics._loss import cy_boost_grad_hess
 
@@ -97,16 +97,49 @@ class LGBMMetricObjective:
         return gradient, hessian
 
 
-class CatBoostObjective:
-    """AEC objective for catboost."""
+def _catboost_training_data(grad_const: FloatNDArray, y: IntNDArray) -> tuple[IntNDArray, FloatNDArray]:
+    """
+    Recast the AEC objective as a weighted classification problem CatBoost can train on natively.
 
-    def __init__(self, metric_or_gradient_const: BaseMetric | FloatNDArray, **loss_params: FloatNDArray | float):
-        self.metric = metric_or_gradient_const if isinstance(metric_or_gradient_const, BaseMetric) else None
-        self.gradient_const = metric_or_gradient_const if isinstance(metric_or_gradient_const, np.ndarray) else None
-        self.loss_params = loss_params
+    CatBoost hands its objective callback chunks of rows, out of order (and permuted, under ordered
+    boosting), with nothing identifying which training rows they are. Its only per-row channels are
+    the targets and the sample weights, and it also uses the weights itself when scoring splits and
+    estimating leaves, so they cannot double as row indices without skewing training.
+
+    The AEC gradient is ``grad_const * p * (1 - p)`` for a per-row constant ``grad_const``, so a row
+    is described completely by the constant's sign and size. Training on the target
+    ``y' = [grad_const < 0]`` (predicting positive lowers this row's cost) with sample weight
+    ``|grad_const|`` (how much getting this row right is worth) carries both: the callback recovers
+    ``grad_const = (1 - 2 * y') * weight``, and CatBoost's own use of the weights is then correct.
+
+    A row with ``grad_const == 0`` has weight 0 and so no influence on training, whatever its target;
+    it keeps its original label, so that costs which only ever penalize one kind of error (e.g. only
+    ``fp_cost`` set) still leave CatBoost the two classes it insists on.
+
+    Parameters
+    ----------
+    grad_const : ndarray of shape (n_samples,)
+        The metric's constant gradient term, from ``BaseMetric._prepare_boost_objective``.
+    y : ndarray of shape (n_samples,)
+        The (0/1-encoded) training target.
+
+    Returns
+    -------
+    target : ndarray of shape (n_samples,)
+        The reformulated binary target ``y'``.
+    sample_weight : ndarray of shape (n_samples,)
+        The reformulated sample weight ``|grad_const|``.
+    """
+    target: IntNDArray = np.where(grad_const < 0, 1, np.where(grad_const > 0, 0, y)).astype(np.int64)
+    sample_weight: FloatNDArray = np.abs(grad_const)
+    return target, sample_weight
+
+
+class CatBoostObjective:
+    """AEC objective for catboost, trained on the reformulation built by :func:`_catboost_training_data`."""
 
     def calc_ders_range(
-        self, predictions: Sequence[float], targets: FloatNDArray, weights: FloatNDArray
+        self, predictions: Sequence[float], targets: Sequence[float], weights: Sequence[float] | None
     ) -> list[tuple[float, float]]:
         """
         Compute first and second derivative of the loss function with respect to the predicted value for each object.
@@ -114,85 +147,71 @@ class CatBoostObjective:
         Parameters
         ----------
         predictions : indexed container of floats
-            Current predictions for each object.
+            Current predictions (raw scores) for each object.
 
         targets : indexed container of floats
-            Target values you provided with the dataset.
+            The reformulated target ``y'`` of each object.
 
-        weights : ndarray of float
-            Here instance weights are used to pass the indices of the instances, not actual weights.
+        weights : indexed container of floats
+            The reformulated sample weight ``|grad_const|`` of each object.
 
         Returns
         -------
         list of (float, float)
             The first and second derivative of the loss w.r.t. the prediction, per object.
         """
-        weights = weights.astype(int)
-        predictions = np.array(predictions, dtype=np.float64)
-
-        if self.metric is not None:
-            # Use weights as a proxy to index instance-dependent parameters.
-            loss_params = {
-                name: value[weights] if isinstance(value, np.ndarray) else value
-                for (name, value) in self.loss_params.items()
-            }
-            gradient, hessian = self.metric._gradient_boost_objective(targets, predictions, **loss_params)
-        else:
-            gradient_const = self.gradient_const[weights]  # type: ignore[index]
-            # cy_boost_grad_hess (Cython) requires a float64 memoryview; targets is typed as the
-            # broader FloatNDArray to match catboost's own callback convention.
-            gradient, hessian = cy_boost_grad_hess(np.asarray(targets, dtype=np.float64), predictions, gradient_const)
-        # convert from two arrays to one list of tuples
-        gradient_f = np.asarray(gradient, dtype=np.float32)
-        hessian_f = np.asarray(hessian, dtype=np.float32)
-        return list(zip(-gradient_f, -hessian_f, strict=False))
+        y_prime = np.asarray(targets, dtype=np.float64)
+        weight = np.ones_like(y_prime) if weights is None else np.asarray(weights, dtype=np.float64)
+        gradient, hessian = cy_boost_grad_hess(
+            y_prime, np.asarray(predictions, dtype=np.float64), (1.0 - 2.0 * y_prime) * weight
+        )
+        # CatBoost maximizes, so it wants the derivatives of the negated loss.
+        return list(zip(-gradient, -hessian, strict=True))
 
 
 class CatBoostMetric:
-    """AEC metric for catboost."""
+    """
+    AEC metric for catboost, evaluated on the reformulation built by :func:`_catboost_training_data`.
 
-    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
-        self.metric = metric
-        self.loss_params = loss_params
+    On the training data, the weighted expected misclassification of ``y'`` differs from the
+    expected cost only by a positive factor and a constant, so it ranks models the same way. An
+    ``eval_set`` passed through ``fit_params`` is not reformulated, and is scored by its plain
+    (unweighted) expected misclassification instead.
+    """
 
     def is_max_optimal(self) -> bool:
         """Return whether greater values of metric are better."""
-        # `evaluate` reports `BaseMetric._loss`, which is minimized whatever the metric's direction.
         return False
 
     def evaluate(
-        self, predictions: Sequence[float], targets: Sequence[float], weights: FloatNDArray
+        self, approxes: Sequence[Sequence[float]], targets: Sequence[float], weights: Sequence[float] | None
     ) -> tuple[float, float]:
         """
         Evaluate metric value.
 
         Parameters
         ----------
-        predictions : sequence of float
-            Raw model outputs (logits) for each instance.
+        approxes : sequence of indexed containers of float
+            Raw model outputs (logits) for each instance, one container per model dimension.
 
         targets : sequence of float
-            Vectors of true labels.
+            The reformulated target ``y'`` of each instance.
 
-        weights : ndarray of float
-            Here instance weights are used to pass the indices of the instances, not actual weights.
+        weights : sequence of float or None
+            The reformulated sample weight ``|grad_const|`` of each instance.
 
         Returns
         -------
         weighted_error : float
-            The metric value, reported as a loss to be minimized.
+            The summed weighted expected misclassification.
         total_weight : float
-            Always ``1``; CatBoost divides ``weighted_error`` by this to form the final error.
+            The summed weights; CatBoost divides ``weighted_error`` by this to form the final error.
         """
-        weights = weights.astype(int)
-        # Use weights as a proxy to index the costs
-        loss_params = {
-            name: value[weights] if isinstance(value, np.ndarray) else value
-            for (name, value) in self.loss_params.items()
-        }
-
-        y_proba = expit(predictions)
-        return self.metric._loss(targets, y_proba, validate=False, **loss_params), 1
+        y_proba = expit(np.asarray(approxes[0], dtype=np.float64))
+        y_prime = np.asarray(targets, dtype=np.float64)
+        weight = np.ones_like(y_prime) if weights is None else np.asarray(weights, dtype=np.float64)
+        error = np.where(y_prime == 1, 1.0 - y_proba, y_proba)
+        return float(np.sum(weight * error)), float(np.sum(weight))
 
     def get_final_error(self, error: float, weight: float) -> float:
         """
@@ -201,7 +220,7 @@ class CatBoostMetric:
         Parameters
         ----------
         error : float
-            Sum of errors in all instances.
+            Sum of weighted errors in all instances.
 
         weight : float
             Sum of weights of all instances.
@@ -211,14 +230,7 @@ class CatBoostMetric:
         float
             The final metric value.
         """
-        return error
-
-
-def _broadcast_loss_params(loss_params: dict[str, Any], shape: tuple[int, ...]) -> dict[str, Any]:
-    """Normalize every loss parameter to shape ``(n_samples,)``, as catboost's callbacks need."""
-    return {
-        name: np.full(shape, param) if np.isscalar(param) else param.reshape(-1) for name, param in loss_params.items()
-    }
+        return error / weight if weight > 0 else 0.0
 
 
 @dataclass(frozen=True)
@@ -243,17 +255,6 @@ class BoostingBackend:
         if self.name == 'catboost':
             return _CATBOOST_WARNING_FILTERS
         return ()
-
-    def check_fit_params(self, fit_params: dict[str, Any]) -> None:
-        """
-        Raise if *fit_params* contains something this backend cannot accept.
-
-        Only catboost rejects ``sample_weight``: it is repurposed internally as an index proxy
-        for instance-dependent loss parameters (see :meth:`fit_kwargs`), so a user-supplied
-        weight would silently be discarded rather than used.
-        """
-        if self.name == 'catboost' and 'sample_weight' in fit_params:
-            raise ValueError('Sample weights are not allowed when training CatBoostClassifier.')
 
     def build_default(self, objective: Any) -> Any:
         """
@@ -296,32 +297,81 @@ class BoostingBackend:
             recomputed from the current round's predictions every iteration
             (``Capability.BOOST_OBJECTIVE``). The caller has already checked the metric declares
             one of the two.
+
+        Raises
+        ------
+        ValueError
+            For catboost when ``precomputed`` is ``False``: CatBoost only ever shows its objective a
+            chunk of the rows, so it can neither compute an objective that depends on all of them
+            (MaxProfit's) nor tell which rows' costs a per-row objective should use (LogCost's).
         """
         if not precomputed:
             if self.name == 'xgboost':
                 return partial(loss._gradient_boost_objective, **loss_params)
             if self.name == 'lightgbm':
                 return LGBMMetricObjective(loss, **loss_params)
-            catboost_params = _broadcast_loss_params(loss_params, y.shape)
-            return CatBoostObjective(loss, **catboost_params), CatBoostMetric(loss, **catboost_params)
+            raise ValueError(
+                f'The CatBoost backend does not support the {loss.strategy.name!r} strategy: CatBoost '
+                'computes its objective on chunks of the training rows, which this strategy cannot be '
+                'evaluated on. Use XGBClassifier or LGBMClassifier as the estimator, or a Cost or '
+                'Savings loss.'
+            )
 
+        if self.name == 'catboost':
+            # The per-row gradient constants reach CatBoost as its targets and sample weights, built
+            # by `fit_arguments`; the objective itself needs no parameters.
+            return CatBoostObjective(), CatBoostMetric()
         grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
         if self.name == 'xgboost':
             # cy_boost_grad_hess (Cython) requires a float64 memoryview.
             return partial(cy_boost_grad_hess, grad_const=np.asarray(grad_const, dtype=np.float64))
-        if self.name == 'lightgbm':
-            return LGBMObjective(grad_const)
-        catboost_params = _broadcast_loss_params(loss_params, y.shape)
-        return CatBoostObjective(grad_const), CatBoostMetric(loss, **catboost_params)
+        return LGBMObjective(grad_const)
 
-    def fit_kwargs(self, X: FloatNDArray, y: FloatNDArray) -> dict[str, Any]:
-        """Extra keyword arguments this backend's ``fit`` needs beyond ``X``/``y``/``fit_params``."""
+    def fit_arguments(
+        self,
+        y: IntNDArray,
+        loss: BaseMetric,
+        loss_params: dict[str, Any],
+        fit_params: dict[str, Any],
+    ) -> tuple[IntNDArray, dict[str, Any]]:
+        """
+        Return the target and keyword arguments to pass to this backend's ``fit`` alongside ``X``.
+
+        Parameters
+        ----------
+        y : ndarray of shape (n_samples,)
+            The (0/1-encoded) training target.
+        loss : BaseMetric
+            The metric being optimized.
+        loss_params : dict
+            The metric's parameter values for this fit.
+        fit_params : dict
+            The caller's extra arguments for the estimator's ``fit``; not modified.
+
+        Returns
+        -------
+        y_fit : ndarray of shape (n_samples,)
+            The target to fit on: ``y`` itself, except for catboost (see :func:`_catboost_training_data`).
+        fit_kwargs : dict
+            *fit_params* plus whatever this backend adds.
+        """
         if self.name == 'lightgbm':
-            return {'init_score': np.full(y.shape, _BASE_SCORE_RAW)}
+            return y, {'init_score': np.full(y.shape, _BASE_SCORE_RAW), **fit_params}
         if self.name == 'catboost':
-            # CatBoost uses sample_weight internally as an index proxy (see check_fit_params).
-            return {'sample_weight': np.arange(X.shape[0]), 'baseline': np.full(y.shape, _BASE_SCORE_RAW)}
-        return {}
+            fit_kwargs = dict(fit_params)
+            grad_const = np.asarray(loss._prepare_boost_objective(y, **loss_params), dtype=np.float64).reshape(-1)
+            y_fit, sample_weight = _catboost_training_data(grad_const, y)
+            if (user_weight := fit_kwargs.pop('sample_weight', None)) is not None:
+                # A weighted AEC scales each row's gradient constant, so the weights just multiply.
+                sample_weight = sample_weight * np.asarray(user_weight, dtype=np.float64).reshape(-1)
+            if np.unique(y_fit).size < 2:
+                raise ValueError(
+                    'With these costs, the same prediction is the cheapest for every training sample, '
+                    'so there is nothing for CatBoostClassifier to learn.'
+                )
+            fit_kwargs.update(sample_weight=sample_weight, baseline=np.full(y.shape, _BASE_SCORE_RAW))
+            return y_fit, fit_kwargs
+        return y, dict(fit_params)
 
     def raw_score(self, estimator: Any, X: Any) -> FloatNDArray | None:
         """

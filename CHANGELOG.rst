@@ -42,6 +42,27 @@ Metrics
   ``optimal_threshold`` and ``optimal_rate``, which AUEPC does not support. Use
   :func:`~empulse.metrics.empb_score`'s methods instead.
 
+Models
+------
+
+- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  with a ``CatBoostClassifier`` estimator no longer train on distorted sample weights. The backend
+  passed each row's index as its sample weight, so that the objective could look up that row's
+  costs, but CatBoost also trains on the weights: the first row was ignored, later rows counted
+  progressively more, and the model depended on the order of the training rows. Training now uses
+  an equivalent weighted problem, with each row weighted by how much its costs depend on the
+  prediction. On one example the test-set expected cost fell from 2.02 to 0.83.
+- |Enhancement| :class:`~empulse.models.CSBoostClassifier` now accepts ``sample_weight`` with a
+  ``CatBoostClassifier`` estimator.
+- |API| :class:`~empulse.models.CSBoostClassifier` with a ``CatBoostClassifier`` estimator now
+  raises a ``ValueError`` for :class:`~empulse.metrics.MaxProfit` and
+  :class:`~empulse.metrics.LogCost` losses. CatBoost computes the objective on chunks of the
+  training rows: MaxProfit's gradient depends on every row, so it was computed incorrectly, and
+  LogCost relied on the row indices removed above. Use an ``XGBClassifier`` or ``LGBMClassifier``
+  estimator for these losses. It also raises a ``ValueError`` when the costs make the same
+  prediction strictly cheapest for every training sample, as CatBoost cannot train on a single
+  class.
+
 `0.12.0`_ (19-09-2026)
 ======================
 

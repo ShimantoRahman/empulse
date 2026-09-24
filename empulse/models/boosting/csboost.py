@@ -298,23 +298,16 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
-        # Checked against `self.estimator` (not yet cloned/fitted), before any estimator is
-        # built, so this raises before any of `self`'s state changes -- matching what a
-        # constructor-supplied backend rejects, e.g. CatBoost banning `sample_weight`.
-        if self.estimator is not None:
-            early_backend = _backend_for_estimator(self.estimator)
-            if early_backend is not None:
-                early_backend.check_fit_params(fit_params)
-
         if self.estimator is None:
             backend = self._initialize_default_estimator(y=y, loss=loss, **loss_params)
         else:
             backend = self._initialize_custom_estimator(y=y, loss=loss, **loss_params)
 
+        y_fit, fit_kwargs = backend.fit_arguments(y, loss, loss_params, fit_params)
         with warnings.catch_warnings():
             for message, category in backend.warning_filters:
                 warnings.filterwarnings('ignore', message=message, category=category)
-            self.estimator_.fit(X, y, **backend.fit_kwargs(X, y), **fit_params)
+            self.estimator_.fit(X, y_fit, **fit_kwargs)
         return self
 
     def _initialize_default_estimator(

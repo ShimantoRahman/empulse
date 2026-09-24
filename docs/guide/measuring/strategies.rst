@@ -520,6 +520,11 @@ and reused every boosting round. :class:`~empulse.metrics.MaxProfit` and
 optimal threshold (or the log weighting) moves as the model changes. Expect the dynamic strategies
 to train noticeably slower.
 
+:class:`~empulse.models.CSBoostClassifier`'s CatBoost backend supports the static strategies only.
+CatBoost computes the objective on chunks of the training rows, which a dynamic objective cannot be
+evaluated on, so :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.LogCost` raise a
+``ValueError`` there; use the XGBoost or LightGBM backend for them.
+
 Choosing between them
 =====================
 

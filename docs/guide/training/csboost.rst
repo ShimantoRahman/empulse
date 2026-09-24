@@ -28,7 +28,7 @@ unified sklearn-compatible interface.  If no estimator is supplied, an
    * - CatBoost
      - `CatBoostClassifier <https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier>`__
      - Pass as ``estimator``; install via ``pip install catboost``.
-       ``sample_weight`` cannot be used because it is reserved for internal index passing.
+       Supports :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings` losses only.
 
 .. note::
     You can install all three backends with ``pip install empulse[boosting]``.
@@ -94,8 +94,10 @@ usual one between the libraries themselves.
     .. tab-item:: CatBoost
         :sync: catboost
 
-        Handles categorical features natively, but does **not** accept ``sample_weight`` — it uses
-        that argument internally to carry sample indices through to the cost-sensitive objective.
+        Handles categorical features natively. It only supports :class:`~empulse.metrics.Cost` and
+        :class:`~empulse.metrics.Savings` losses: CatBoost computes the objective on chunks of the
+        training rows, which the :class:`~empulse.metrics.MaxProfit` and
+        :class:`~empulse.metrics.LogCost` objectives cannot be evaluated on.
 
         .. code-block:: python
 
@@ -158,8 +160,9 @@ written from business parameters rather than four flat numbers.
 :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.LogCost` and
 :class:`~empulse.metrics.Savings` are fully supported;
 :class:`~empulse.metrics.MaxProfit` works but is experimental here, and the two ranking-based
-strategies are not available on a gradient-boosted model. :ref:`metric_class_in_model` has the
-matrix.
+strategies are not available on a gradient-boosted model. The CatBoost backend supports only
+:class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`.
+:ref:`metric_class_in_model` has the matrix.
 
 .. code-block:: python
 

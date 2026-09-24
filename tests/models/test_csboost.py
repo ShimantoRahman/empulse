@@ -319,3 +319,99 @@ class TestBaseScoreSpace:
         mean_proba = model.predict_proba(X)[:, 1].mean()
 
         assert mean_proba == pytest.approx(_BASE_SCORE_PROBA, abs=0.02)
+
+
+class TestCatBoostBackend:
+    """Regression tests for the CatBoost backend passing row indices through ``sample_weight``.
+
+    CatBoost calls its objective on chunks of rows, out of order and without any row identifier, so
+    the backend used to smuggle each row's index through ``sample_weight``. CatBoost trains on those
+    weights too, so row 0 was ignored, later rows counted more, and the model depended on row order.
+    The backend now trains on the weighted reformulation built by ``_catboost_training_data``.
+    """
+
+    def test_reformulated_derivatives_match_aec_kernel(self):
+        from empulse.metrics._loss import cy_boost_grad_hess
+        from empulse.models.boosting._backends import CatBoostObjective, _catboost_training_data
+
+        rng = np.random.default_rng(0)
+        grad_const = rng.normal(scale=3, size=200)
+        grad_const[:10] = 0.0
+        y = rng.integers(0, 2, size=200)
+        raw_score = rng.normal(size=200)
+
+        target, weight = _catboost_training_data(grad_const, y)
+        ders = np.array(CatBoostObjective().calc_ders_range(raw_score, target, weight))
+        gradient, hessian = cy_boost_grad_hess(y.astype(np.float64), raw_score, grad_const)
+
+        np.testing.assert_allclose(-ders[:, 0], gradient, atol=1e-12)
+        np.testing.assert_allclose(-ders[:, 1], hessian, atol=1e-12)
+
+    def test_zero_gradient_rows_keep_their_label(self):
+        from empulse.models.boosting._backends import _catboost_training_data
+
+        target, weight = _catboost_training_data(np.array([-2.0, 3.0, 0.0, 0.0]), np.array([0, 1, 1, 0]))
+        np.testing.assert_array_equal(target, [1, 0, 1, 0])
+        np.testing.assert_array_equal(weight, [2.0, 3.0, 0.0, 0.0])
+
+    def test_model_does_not_depend_on_row_order(self):
+        catboost = pytest.importorskip('catboost')
+        X, y = make_classification(n_samples=300, random_state=0)
+        fn_cost = np.random.default_rng(0).gamma(2, 5, size=y.size)
+
+        def fit(order):
+            estimator = catboost.CatBoostClassifier(
+                iterations=20, verbose=False, random_seed=0, bootstrap_type='No', random_strength=0, thread_count=1
+            )
+            model = CSBoostClassifier(estimator).fit(X[order], y[order], fn_cost=fn_cost[order], fp_cost=3.0)
+            return model.predict_proba(X)
+
+        order = np.arange(y.size)
+        np.testing.assert_allclose(fit(order), fit(order[::-1]), atol=1e-10)
+
+    def test_eval_metric_ranks_models_like_expected_cost(self):
+        from empulse.models.boosting._backends import CatBoostMetric, _catboost_training_data
+
+        rng = np.random.default_rng(0)
+        y = rng.integers(0, 2, size=100)
+        fn_cost = rng.gamma(2, 5, size=100)
+        grad_const = np.where(y == 1, -fn_cost, 3.0)  # Cost: y * (tp - fn) + (1 - y) * (fp - tn)
+        target, weight = _catboost_training_data(grad_const, y)
+        metric = CatBoostMetric()
+
+        def evaluate(raw_score):
+            return metric.get_final_error(*metric.evaluate([raw_score], target, weight))
+
+        raw_1, raw_2 = rng.normal(size=100), rng.normal(size=100)
+        cost_1 = expected_cost_loss(y, expit(raw_1), fn_cost=fn_cost, fp_cost=3.0)
+        cost_2 = expected_cost_loss(y, expit(raw_2), fn_cost=fn_cost, fp_cost=3.0)
+        # The metric is the expected cost up to a positive factor and a constant.
+        assert cost_1 - cost_2 == pytest.approx(weight.sum() / y.size * (evaluate(raw_1) - evaluate(raw_2)))
+
+    @pytest.mark.parametrize('strategy_factory', [MaxProfit, LogCost])
+    def test_rejects_strategies_evaluated_per_round(self, dataset, strategy_factory):
+        """MaxProfit's gradient depends on every row and LogCost's on per-row costs; CatBoost gives neither."""
+        catboost = pytest.importorskip('catboost')
+        clv = sympy.symbols('clv')
+        metric = Metric(CostMatrix().add_tp_benefit(clv), strategy_factory())
+        X, y, _, _ = dataset
+        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, verbose=False), loss=metric)
+        with pytest.raises(ValueError, match='The CatBoost backend does not support'):
+            model.fit(X, y, clv=5.0)
+
+    def test_costs_with_nothing_to_learn_raise(self, dataset):
+        catboost = pytest.importorskip('catboost')
+        X, y, _, _ = dataset
+        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, verbose=False))
+        # Predicting positive costs more than predicting negative for positives and negatives alike.
+        with pytest.raises(ValueError, match='the same prediction is the cheapest for every training sample'):
+            model.fit(X, y, tp_cost=2.0, fn_cost=1.0, fp_cost=1.0)
+
+    def test_one_sided_costs_still_fit(self, dataset):
+        """Only ``fp_cost`` set: positives have zero weight but keep their label, so CatBoost sees two classes."""
+        catboost = pytest.importorskip('catboost')
+        X, y, _, _ = dataset
+        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=5, verbose=False))
+        y_proba = model.fit(X, y, fp_cost=1.0).predict_proba(X)
+        # Only false positives cost anything, so the model must lean negative.
+        assert y_proba[:, 1].mean() < _BASE_SCORE_PROBA
