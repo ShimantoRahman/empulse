@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pytest
 from scipy.spatial import ConvexHull, QhullError
@@ -159,3 +161,122 @@ def test_convex_hull_from_counts_matches_convex_hull_of_the_samples(seed):
     grouped = convex_hull_from_counts(scores[order], n_positive[order], n_negative[order])
     np.testing.assert_array_equal(grouped[0], expected[0])
     np.testing.assert_array_equal(grouped[1], expected[1])
+
+
+def _samples_from_groups(n_positive, n_negative):
+    """Expand groups into samples, the i-th group sharing the i-th highest score."""
+    n_groups = len(n_positive)
+    y_score = np.repeat(np.linspace(1.0, 0.0, n_groups), np.add(n_positive, n_negative))
+    y_true = np.concatenate([
+        np.r_[np.ones(p, dtype=np.int32), np.zeros(q, dtype=np.int32)]
+        for p, q in zip(n_positive, n_negative, strict=True)
+    ])
+    return y_true, y_score
+
+
+@pytest.mark.parametrize(
+    'n_positive,n_negative,expected_tpr,expected_fpr',
+    [
+        # Perfect ranking: the hull climbs straight to (0, 1).
+        ([1, 1, 0, 0], [0, 0, 1, 1], [0, 1, 1], [0, 0, 1]),
+        # Inverted ranking: the whole curve lies below the diagonal, which is all that remains.
+        ([0, 0, 1, 1], [1, 1, 0, 0], [0, 1], [0, 1]),
+        # One score for every sample: a single step from (0, 0) to (1, 1).
+        ([3], [5], [0, 1], [0, 1]),
+        # Curve (0, 1/3), (1/3, 1/3), (1/3, 2/3), (1/3, 1), (2/3, 1), (1, 1): the dip at (1/3, 1/3) and
+        # (1/3, 2/3) lie below the hull, and (2/3, 1) lies on its top edge.
+        ([1, 0, 1, 1, 0, 0], [0, 1, 0, 0, 1, 1], [0, 1 / 3, 1, 1], [0, 0, 1 / 3, 1]),
+        # (1/4, 1/2) lies on the straight line from (0, 0) to (1/2, 1), so it is no vertex.
+        ([2, 2, 0], [1, 1, 2], [0, 1, 1], [0, 1 / 2, 1]),
+        # Points on the diagonal add nothing either.
+        ([1, 1, 1], [2, 2, 2], [0, 1], [0, 1]),
+    ],
+)
+def test_convex_hull_of_a_known_curve(n_positive, n_negative, expected_tpr, expected_fpr):
+    from empulse.metrics._cy_convex_hull import convex_hull_from_counts
+
+    y_true, y_score = _samples_from_groups(n_positive, n_negative)
+    tpr, fpr = cy_convex_hull(y_true, y_score)
+    np.testing.assert_allclose(tpr, expected_tpr, rtol=0, atol=1e-15)
+    np.testing.assert_allclose(fpr, expected_fpr, rtol=0, atol=1e-15)
+
+    scores = np.linspace(1.0, 0.0, len(n_positive))
+    tpr, fpr = convex_hull_from_counts(
+        scores, np.asarray(n_positive, dtype=np.int64), np.asarray(n_negative, dtype=np.int64)
+    )
+    np.testing.assert_allclose(tpr, expected_tpr, rtol=0, atol=1e-15)
+    np.testing.assert_allclose(fpr, expected_fpr, rtol=0, atol=1e-15)
+
+
+def test_convex_hull_keeps_every_corner_of_a_finely_sampled_curve():
+    """
+    Every point of a strictly concave curve is a vertex of its hull, however close together they lie.
+
+    The k-th of m groups holds m - k positives and one negative, so the slope of the curve drops by
+    the same amount at every point. With m = 300 the curve turns by about 7e-8 at each point, which a
+    fixed tolerance on the turn (as the hull used to have) mistakes for a straight line.
+    """
+    from empulse.metrics._cy_convex_hull import convex_hull_from_counts
+
+    m = 300
+    n_positive = np.arange(m, 0, -1, dtype=np.int64)
+    n_negative = np.ones(m, dtype=np.int64)
+    expected_tpr = np.r_[0, np.cumsum(n_positive)] / n_positive.sum()
+    expected_fpr = np.arange(m + 1) / m
+
+    y_true, y_score = _samples_from_groups(n_positive, n_negative)
+    for tpr, fpr in (
+        cy_convex_hull(y_true, y_score),
+        convex_hull_from_counts(np.linspace(1.0, 0.0, m), n_positive, n_negative),
+    ):
+        np.testing.assert_array_equal(tpr, expected_tpr)
+        np.testing.assert_array_equal(fpr, expected_fpr)
+
+
+def _roc_counts(y_true, y_score):
+    """The ROC curve as the negatives and positives ranked at or above each distinct score, from (0, 0)."""
+    order = np.argsort(-y_score, kind='stable')
+    ranked_true, ranked_score = y_true[order], y_score[order]
+    ends = np.r_[np.nonzero(ranked_score[1:] != ranked_score[:-1])[0], y_true.size - 1]
+    n_positive = np.cumsum(ranked_true)[ends]
+    return np.r_[0, ends + 1 - n_positive], np.r_[0, n_positive]
+
+
+@pytest.mark.parametrize('seed', range(12))
+def test_convex_hull_is_exactly_the_upper_hull_of_the_roc_curve(seed):
+    """
+    The hull's vertices are points of the ROC curve, no point of the curve lies above it, and it turns at every vertex.
+
+    Checked with exact integer arithmetic on the counts, on samples large enough that the points of
+    the curve lie very close together.
+    """
+    rng = np.random.default_rng(seed)
+    n_samples = int(rng.choice([50, 5_000, 50_000]))
+    y_true = rng.integers(0, 2, n_samples).astype(np.int32)
+    y_true[:2] = [0, 1]
+    y_score = rng.normal(rng.uniform(0, 2) * y_true, 1)
+    if seed % 3 == 1:
+        y_score = np.round(y_score, 1)
+
+    tpr, fpr = cy_convex_hull(y_true, y_score)
+    n_negative, n_positive = _roc_counts(y_true, y_score)
+    total_negative, total_positive = n_negative[-1], n_positive[-1]
+
+    # Each vertex is a point of the curve, in order from (0, 0) to (1, 1).
+    vertices = np.array([
+        np.flatnonzero((n_positive / total_positive == t) & (n_negative / total_negative == f))[0]
+        for t, f in zip(tpr, fpr, strict=True)
+    ])
+    assert vertices[0] == 0
+    assert vertices[-1] == n_negative.size - 1
+    assert np.all(np.diff(vertices) > 0)
+
+    def cross(a, b, c):
+        return (n_negative[b] - n_negative[a]) * (n_positive[c] - n_positive[a]) - (n_positive[b] - n_positive[a]) * (
+            n_negative[c] - n_negative[a]
+        )
+
+    for start, end in itertools.pairwise(vertices):
+        assert np.all(cross(start, end, np.arange(start, end + 1)) <= 0), 'a point of the curve lies above the hull'
+    for previous, vertex, following in zip(vertices[:-2], vertices[1:-1], vertices[2:], strict=True):
+        assert cross(previous, vertex, following) < 0, 'the hull does not turn at a vertex'
