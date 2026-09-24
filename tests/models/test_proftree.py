@@ -7,7 +7,7 @@ import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, max_profit_score
 from empulse.models import ProfTreeClassifier
 
 
@@ -234,3 +234,55 @@ class TestEarlyStoppingWithNegativeFitness:
             loss=loss, patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
         ).fit(X, y, fn=5.0, fp=1.0)
         assert model.n_iter_ == 6
+
+
+class TestLeafLevelFitness:
+    """The native fitness is computed from the fitted tree's leaf counts, not per-sample predictions.
+
+    The two must agree: every sample in a leaf gets the same score, so ranking the leaves gives the
+    same ROC curve as ranking the samples.
+    """
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize(
+        'costs',
+        [
+            {'fn_cost': 5.0, 'fp_cost': 1.0},
+            {'tp_cost': -200.0, 'fp_cost': 11.0},
+            {'tp_cost': -3.0, 'tn_cost': -1.0, 'fn_cost': 4.0, 'fp_cost': 2.0},
+        ],
+        ids=['costs_only', 'benefit', 'all_four'],
+    )
+    @pytest.mark.parametrize('tied_features', [False, True], ids=['continuous', 'tied'])
+    def test_fitness_matches_max_profit_of_the_predictions(self, costs, tied_features):
+        X, y = make_classification(n_samples=600, n_features=6, weights=[0.7], random_state=0)
+        if tied_features:
+            X = np.round(X)  # leaves with equal scores, whose samples tie in the ranking
+        model = ProfTreeClassifier(max_iter=20, population_size=30, max_depth=5, random_state=0).fit(X, y, **costs)
+
+        fitness = model.tree_._serialize_tree()['fitness']
+        expected = max_profit_score(y, model.predict_proba(X)[:, 1], **costs)
+        assert fitness == pytest.approx(expected, rel=1e-5, abs=1e-5)
+
+
+class TestMemoryLayout:
+    """Samples are routed through the tree by pointer to their row, which requires C-ordered rows."""
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('custom_loss', [False, True], ids=['max_profit', 'custom_loss'])
+    def test_fortran_ordered_input_gives_the_same_fit(self, custom_loss):
+        X, y = make_classification(n_samples=300, n_features=5, random_state=0)
+        fn, fp = sympy.symbols('fn fp')
+        loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()) if custom_loss else None
+        fit_params = {'fn': 5.0, 'fp': 1.0} if custom_loss else {'fn_cost': 5.0, 'fp_cost': 1.0}
+
+        def fit(X):
+            return ProfTreeClassifier(loss=loss, max_iter=20, population_size=20, random_state=0).fit(
+                X, y, **fit_params
+            )
+
+        c_ordered = fit(np.ascontiguousarray(X))
+        f_ordered = fit(np.asfortranarray(X))
+        np.testing.assert_array_equal(
+            c_ordered.predict_proba(np.asfortranarray(X)), f_ordered.predict_proba(np.ascontiguousarray(X))
+        )

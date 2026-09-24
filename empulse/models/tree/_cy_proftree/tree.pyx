@@ -93,7 +93,7 @@ cdef Tree* deserialize_tree(object tree_data) noexcept:
 
     return tree
 
-cdef Node* get_leaf(Node* start_node, float[:] x) noexcept nogil:
+cdef Node* get_leaf(Node* start_node, const float* x) noexcept nogil:
     cdef Node* node = start_node
     while not is_leaf(node):
         if x[node.feature_index] <= node.split_value:
@@ -102,7 +102,7 @@ cdef Node* get_leaf(Node* start_node, float[:] x) noexcept nogil:
             node = node.right
     return node
 
-cdef Node* visit_leaf(Node* start_node, float[:] x, int y) noexcept nogil:
+cdef Node* visit_leaf(Node* start_node, const float* x, int y) noexcept nogil:
     """Traverse until the relevant leaf node and update stats."""
     cdef Node* node = start_node
     while not is_leaf(node):
@@ -116,21 +116,23 @@ cdef Node* visit_leaf(Node* start_node, float[:] x, int y) noexcept nogil:
     node.n_positive_samples += y
     return node
 
-cdef void fit_tree(Tree* tree, float[:, :] X, int[:] y, int n_samples) noexcept nogil:
-    cdef float[:] x_i
-    cdef int y_i
+cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samples) noexcept nogil:
+    # Rows are passed on as pointers: slicing X[i] would create a memoryview per sample, and its
+    # reference counting was a sizeable share of the whole fit.
+    cdef Py_ssize_t i
+    for i in range(n_samples):
+        visit_leaf(tree.root, &X[i, 0], y[i])
+
+cdef void predict_proba_tree(
+    Tree* tree, const float[:, ::1] X, float[:] probabilities, int n_samples
+) noexcept nogil:
+    cdef Py_ssize_t i
     cdef Node* leaf
     for i in range(n_samples):
-        x_i = X[i]
-        y_i = y[i]
-        leaf = visit_leaf(tree.root, x_i, y_i)
-
-cdef void predict_proba_tree(Tree* tree, float[:, :] X, float[:] probabilities, int n_samples) noexcept nogil:
-    for i in range(n_samples):
-        leaf = get_leaf(tree.root, X[i])
+        leaf = get_leaf(tree.root, &X[i, 0])
         probabilities[i] = node_probability(leaf)
 
-cdef void predict_labels_tree(Tree* tree, float[:, :] X, float[:] probabilities, int n_samples):
+cdef void predict_labels_tree(Tree* tree, const float[:, ::1] X, float[:] probabilities, int n_samples):
     predict_proba_tree(tree, X, probabilities, n_samples)
     for i in range(n_samples):
         probabilities[i] = 1 if probabilities[i] >= 0.5 else 0
