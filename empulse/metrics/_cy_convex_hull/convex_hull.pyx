@@ -107,6 +107,12 @@ def convex_hull(cnp.ndarray[cnp.int32_t, ndim=1] y_true, cnp.ndarray[cnp.float64
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
+    if y_true.shape[0] != y_score.shape[0]:
+        raise ValueError(
+            f'y_true and y_score must have the same length, got {y_true.shape[0]} and {y_score.shape[0]}.'
+        )
+    if y_true.shape[0] == 0:
+        raise ValueError('The ROC convex hull needs at least one sample.')
     n_ranked_negative, n_ranked_positive = _compute_roc_curve(y_true, y_score)
     return _roc_convex_hull(n_ranked_negative, n_ranked_positive)
 
@@ -138,6 +144,15 @@ def convex_hull_from_counts(
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
+    if not y_score.shape[0] == n_positive.shape[0] == n_negative.shape[0]:
+        raise ValueError(
+            'y_score, n_positive and n_negative must have the same length, got '
+            f'{y_score.shape[0]}, {n_positive.shape[0]} and {n_negative.shape[0]}.'
+        )
+    if np.any(n_positive < 0) or np.any(n_negative < 0):
+        raise ValueError('The numbers of positive and negative samples cannot be negative.')
+    if y_score.shape[0] == 0 or n_positive.sum() + n_negative.sum() == 0:
+        raise ValueError('The ROC convex hull needs at least one sample.')
     n_ranked_negative, n_ranked_positive = _compute_roc_curve_from_counts(y_score, n_positive, n_negative)
     return _roc_convex_hull(n_ranked_negative, n_ranked_positive)
 

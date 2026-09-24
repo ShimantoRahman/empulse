@@ -280,3 +280,37 @@ def test_convex_hull_is_exactly_the_upper_hull_of_the_roc_curve(seed):
         assert np.all(cross(start, end, np.arange(start, end + 1)) <= 0), 'a point of the curve lies above the hull'
     for previous, vertex, following in zip(vertices[:-2], vertices[1:-1], vertices[2:], strict=True):
         assert cross(previous, vertex, following) < 0, 'the hull does not turn at a vertex'
+
+
+@pytest.mark.parametrize(
+    ('y_true', 'y_score', 'match'),
+    [
+        (np.array([], dtype=np.int32), np.array([], dtype=np.float64), 'at least one sample'),
+        (np.array([0, 1], dtype=np.int32), np.array([0.5], dtype=np.float64), 'same length'),
+        (np.array([0], dtype=np.int32), np.array([0.2, 0.5], dtype=np.float64), 'same length'),
+    ],
+)
+def test_convex_hull_rejects_invalid_samples(y_true, y_score, match):
+    with pytest.raises(ValueError, match=match):
+        cy_convex_hull(y_true, y_score)
+
+
+@pytest.mark.parametrize(
+    ('y_score', 'n_positive', 'n_negative', 'match'),
+    [
+        ([], [], [], 'at least one sample'),
+        ([0.2, 0.5], [0, 0], [0, 0], 'at least one sample'),
+        ([0.2, 0.5], [1], [1], 'same length'),
+        ([0.2, 0.5], [1, 2], [1, 2, 3], 'same length'),
+        ([0.2, 0.5], [1, -1], [1, 2], 'cannot be negative'),
+    ],
+)
+def test_convex_hull_from_counts_rejects_invalid_groups(y_score, n_positive, n_negative, match):
+    from empulse.metrics._cy_convex_hull import convex_hull_from_counts
+
+    with pytest.raises(ValueError, match=match):
+        convex_hull_from_counts(
+            np.array(y_score, dtype=np.float64),
+            np.array(n_positive, dtype=np.int64),
+            np.array(n_negative, dtype=np.int64),
+        )

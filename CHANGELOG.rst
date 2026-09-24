@@ -6,6 +6,11 @@ Metrics
 
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
   :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
+  :func:`~empulse.metrics.empcs_score`) now raises a ``ValueError`` when ``y_true`` and ``y_score``
+  are empty or differ in length. Empty inputs crashed the Python interpreter with a segmentation
+  fault, and inputs of different lengths raised an unhelpful ``IndexError``.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
+  :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
   :func:`~empulse.metrics.empcs_score`) no longer underestimates the maximum profit on large
   datasets. The ROC convex hull it integrates over treated any turn of the curve smaller than a fixed
   tolerance as a straight line, but the points of a curve of n samples lie about 1/n apart, so from
