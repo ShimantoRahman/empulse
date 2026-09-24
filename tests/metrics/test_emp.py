@@ -6,10 +6,12 @@ reference against reference, so it could never catch a regression in the shipped
 sides now call the public metrics.
 """
 
+import warnings
+
 import numpy as np
 import pytest
 
-from empulse.metrics import empc_score, max_profit_score, mpc_score
+from empulse.metrics import empc_score, empcs_score, max_profit_score, mpc_score, mpcs_score
 
 
 @pytest.mark.parametrize(
@@ -88,3 +90,29 @@ def test_empc_score_of_a_single_class(label, expected):
     y_true = np.full(4, label)
     y_score = np.array([0.1, 0.4, 0.6, 0.9])
     assert empc_score(y_true, y_score) == pytest.approx(expected, rel=1e-9)
+
+
+@pytest.mark.parametrize(
+    ('metric', 'label', 'expected_score', 'expected_rate'),
+    [
+        # Each targeted churner accepts with probability 0.3 and is then worth the CLV net of the
+        # incentive and the contact; otherwise the contact is lost.
+        (mpc_score, 1, 0.3 * (200 - 10 - 1) - 0.7 * 1, 1.0),
+        (mpc_score, 0, 0.0, 0.0),
+        # Rejecting a defaulter saves the fraction of the loan that would be lost, 0.275 by default.
+        (mpcs_score, 1, 0.275, 1.0),
+        (mpcs_score, 0, 0.0, 0.0),
+        # The lost fraction is 0 w.p. 0.55, 1 w.p. 0.1 and uniform on [0, 1] otherwise: 0.1 + 0.35 / 2.
+        (empcs_score, 1, 0.1 + 0.35 * 0.5, None),
+        (empcs_score, 0, 0.0, None),
+    ],
+)
+def test_deterministic_max_profit_of_a_single_class(metric, label, expected_score, expected_rate):
+    """With only positives, targeting everyone is best; with only negatives, targeting no one is."""
+    y_true = np.full(4, label)
+    y_score = np.array([0.1, 0.4, 0.6, 0.9])
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)  # no 0/0 on the way
+        assert metric(y_true, y_score) == pytest.approx(expected_score, rel=1e-9)
+        if expected_rate is not None:
+            assert metric.optimal_rate(y_true, y_score) == expected_rate

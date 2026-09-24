@@ -28,8 +28,15 @@ def _calculate_profits_deterministic(
     n_pos = float(np.sum(y_true))
     n_neg = y_true.shape[0] - n_pos
     confusion_counts, _, _ = _compute_confusion_matrix(y_true, y_score)
-    tprs = confusion_counts[0] / n_pos
-    fprs = confusion_counts[1] / n_neg
+    if n_pos > 0 and n_neg > 0:
+        tprs = confusion_counts[0] / n_pos
+        fprs = confusion_counts[1] / n_neg
+    else:
+        # Without positives (or without negatives) the true (false) positive rate is 0/0. It is
+        # weighted by a class prior of zero, so any value gives the same profit: take the rate of
+        # the class that is present, so that both equal the fraction of samples targeted.
+        targeted = (confusion_counts[0] + confusion_counts[1]) / y_true.shape[0]
+        tprs, fprs = targeted, targeted.copy()
 
     eval_params = {'pi_0': pi0, 'pi_1': pi1, 'F_0': tprs, 'F_1': fprs, **kwargs}
     profits = np.asarray(_safe_run_lambda(calculate_profit, profit_function, **eval_params), dtype=np.float64)
