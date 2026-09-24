@@ -171,10 +171,17 @@ cdef tuple _roc_convex_hull(
     line between two others add nothing and are dropped. The turns are computed exactly on the
     integer counts, so no point of the hull is lost to rounding, however close together the points
     of a large sample lie.
+
+    Without positives (or without negatives) the true (false) positive rate is undefined, but it
+    is also irrelevant, as it is weighted by a class prior of zero. The profit is then linear in the
+    one rate that matters, so it is highest either when no one or when everyone is targeted: the
+    hull is the diagonal between those two points, (0, 0) and (1, 1).
     """
     cdef Py_ssize_t n_points = n_ranked_negative.shape[0]
     cdef double n_negatives = <double>n_ranked_negative[n_points - 1]
     cdef double n_positives = <double>n_ranked_positive[n_points - 1]
+    if n_negatives == 0 or n_positives == 0:
+        return np.array([0.0, 1.0]), np.array([0.0, 1.0])
 
     hull: vector[Point]
     hull.reserve(n_points + 1)

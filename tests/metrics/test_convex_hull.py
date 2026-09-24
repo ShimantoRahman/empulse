@@ -282,6 +282,22 @@ def test_convex_hull_is_exactly_the_upper_hull_of_the_roc_curve(seed):
         assert cross(previous, vertex, following) < 0, 'the hull does not turn at a vertex'
 
 
+@pytest.mark.parametrize('label', [0, 1])
+def test_convex_hull_of_a_single_class_is_the_diagonal(label):
+    """Without one of the classes, only targeting no one (0, 0) or everyone (1, 1) is worth considering."""
+    from empulse.metrics._cy_convex_hull import convex_hull_from_counts
+
+    y_true = np.full(5, label, dtype=np.int32)
+    tpr, fpr = cy_convex_hull(y_true, np.linspace(0, 1, 5))
+    np.testing.assert_array_equal(tpr, [0, 1])
+    np.testing.assert_array_equal(fpr, [0, 1])
+
+    n_positive = np.full(3, 2 * label, dtype=np.int64)
+    tpr, fpr = convex_hull_from_counts(np.linspace(0, 1, 3), n_positive, 2 - n_positive)
+    np.testing.assert_array_equal(tpr, [0, 1])
+    np.testing.assert_array_equal(fpr, [0, 1])
+
+
 @pytest.mark.parametrize(
     ('y_true', 'y_score', 'match'),
     [

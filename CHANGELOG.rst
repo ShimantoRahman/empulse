@@ -5,6 +5,11 @@ Metrics
 -------
 
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
+  :func:`~empulse.metrics.empc_score` and :func:`~empulse.metrics.empa_score`) now scores data with
+  a single class as the better of targeting no one and targeting everyone. It only considered
+  targeting no one, so e.g. :func:`~empulse.metrics.empc_score` scored ``0.0`` rather than ``56.0``
+  when every customer churns.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
   :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
   :func:`~empulse.metrics.empcs_score`) now raises a ``ValueError`` when ``y_true`` and ``y_score``
   are empty or differ in length. Empty inputs crashed the Python interpreter with a segmentation
