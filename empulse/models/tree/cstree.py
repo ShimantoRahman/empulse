@@ -428,7 +428,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
-        y_pred: NDArray[Any] = self.estimator_.predict(X, check_input=check_input)
+        # The inner tree is fitted on the 0/1-encoded target, so map its predictions back.
+        y_pred: NDArray[Any] = self.classes_.take(self.estimator_.predict(X, check_input=check_input).astype(np.intp))
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike, check_input: bool = True) -> FloatNDArray:

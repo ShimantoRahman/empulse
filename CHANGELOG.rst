@@ -86,6 +86,9 @@ Models
   refused at ``max_depth`` and did not shrink when nodes were pruned for violating
   ``min_samples_split`` or ``min_samples_leaf``, so a fitted tree of 5 nodes could be penalized
   as 25. Fits with the default ``alpha=0`` are unaffected.
+- |Fix| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns the
+  original class labels. It returned the 0/1 encoding the inner tree is fitted on, so with labels
+  such as ``'no'``/``'yes'`` or ``-1``/``1`` it predicted ``0`` and ``1``, values not in ``classes_``.
 
 `0.12.0`_ (19-09-2026)
 ======================
