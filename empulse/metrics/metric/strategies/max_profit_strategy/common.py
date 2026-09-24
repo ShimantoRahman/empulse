@@ -14,8 +14,17 @@ from ..._compile import CountScoreFn
 from ..._parameter_domain import _check_parameters
 
 
-def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[IntNDArray, FloatNDArray]:
-    return convex_hull(y_true.astype(np.int32), y_score.astype(np.float64))  # type: ignore[no-any-return]
+def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+    """
+    Return the ROC convex hull as (TPR, FPR), for labels and scores of any numeric dtype and layout.
+
+    The compiled hull only accepts int32 labels and float64 scores, so any other dtype is converted
+    here. Arrays that already have them are passed on without a copy.
+    """
+    return convex_hull(  # type: ignore[no-any-return]
+        np.asarray(y_true, dtype=np.int32),
+        np.asarray(y_score, dtype=np.float64),
+    )
 
 
 def _convex_hull_from_counts(

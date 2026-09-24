@@ -330,3 +330,53 @@ def test_convex_hull_from_counts_rejects_invalid_groups(y_score, n_positive, n_n
             np.array(n_positive, dtype=np.int64),
             np.array(n_negative, dtype=np.int64),
         )
+
+
+@pytest.mark.parametrize(
+    ('to_labels', 'to_scores'),
+    [
+        (lambda y: y.astype(np.int64), lambda s: s),
+        (lambda y: y.astype(np.uint8), lambda s: s),
+        (lambda y: y.astype(np.float64), lambda s: s.astype(np.float32)),
+        (lambda y: y.astype(bool), lambda s: s),
+        (lambda y: y.astype('>i8'), lambda s: s.astype('>f8')),  # non-native byte order
+        (lambda y: np.repeat(y, 2)[::2], lambda s: np.repeat(s, 2)[::2]),  # strided views
+        (list, list),
+    ],
+    ids=['int64', 'uint8', 'float-labels-float32-scores', 'bool', 'big-endian', 'strided', 'lists'],
+)
+def test_convex_hull_wrapper_accepts_any_numeric_input(to_labels, to_scores):
+    """The wrapper every metric calls converts other dtypes and layouts to exactly the hull of the canonical ones."""
+    from empulse.metrics.metric.strategies.max_profit_strategy.common import _convex_hull
+
+    rng = np.random.default_rng(0)
+    y_true = rng.integers(0, 2, 300).astype(np.int32)
+    y_score = np.round(rng.random(300), 2)  # ties, and exactly representable in float32 up to rounding
+    y_score_input = to_scores(y_score)
+    expected = cy_convex_hull(y_true, np.asarray(y_score_input, dtype=np.float64))
+
+    labels = to_labels(y_true)
+    if isinstance(labels, np.ndarray):
+        labels.flags.writeable = False  # the hull must not need to write to its inputs
+    tpr, fpr = _convex_hull(labels, y_score_input)
+    np.testing.assert_array_equal(tpr, expected[0])
+    np.testing.assert_array_equal(fpr, expected[1])
+
+
+def test_convex_hull_wrapper_does_not_copy_canonical_inputs():
+    from empulse.metrics.metric.strategies.max_profit_strategy import common
+
+    y_true = np.array([0, 1, 0, 1], dtype=np.int32)
+    y_score = np.array([0.1, 0.4, 0.35, 0.8])
+    passed = []
+    compiled_convex_hull = common.convex_hull
+
+    def spy(labels, scores):
+        passed.extend([labels, scores])
+        return compiled_convex_hull(labels, scores)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(common, 'convex_hull', spy)
+        common._convex_hull(y_true, y_score)
+    assert passed[0] is y_true
+    assert passed[1] is y_score
