@@ -212,3 +212,20 @@ class TestCompilationIsNotOnHotPaths:
             for _ in range(10):
                 metric.strategy._evaluate_class_costs(parameters)
         assert spy.call_count == 0  # already compiled by MaxProfit.build()
+
+    def test_compiled_expressions_do_not_rederive_their_symbols(self):
+        """Filtering a call's parameters to an expression's free symbols reuses the symbol names."""
+        from empulse.metrics.metric._compile import _filter_parameters, _safe_lambdify, _safe_run_lambda
+
+        c, d = sympy.symbols('c d')
+        expression = 2 * c + d
+        function = _safe_lambdify(expression)
+        assert _safe_run_lambda(function, expression, c=1.0, d=2.0, unrelated=3.0) == 4.0
+        with mock.patch.object(type(expression), 'free_symbols', new_callable=mock.PropertyMock) as free_symbols:
+            for _ in range(10):
+                assert _safe_run_lambda(function, expression, c=1.0, d=2.0, unrelated=3.0) == 4.0
+        assert free_symbols.call_count == 0
+
+        # An unhashable expression cannot be cached, but is still filtered.
+        matrix = sympy.Matrix([c, d])
+        assert _filter_parameters(matrix, {'c': 1.0, 'd': 2.0, 'unrelated': 3.0}) == {'c': 1.0, 'd': 2.0}
