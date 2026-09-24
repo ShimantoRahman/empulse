@@ -500,8 +500,8 @@ overfitting on small datasets:
 Parallelising the GA
 ---------------------
 
-Set ``n_jobs`` to the number of CPU cores to use when evaluating the population
-in parallel:
+Set ``n_jobs`` to the number of threads that fit and evaluate the population's trees
+in parallel each generation (``-1`` uses all cores):
 
 .. code-block:: python
 
@@ -510,6 +510,11 @@ in parallel:
         fp_cost=10,
         n_jobs=4,
     )
+
+The random variations that produce each generation are still drawn one after another, so the
+fitted tree is the same whatever ``n_jobs`` is. When the fitness is a Python function, that is
+any ``loss`` other than a deterministic :class:`~empulse.metrics.MaxProfit` metric, only fitting
+the trees runs in parallel and the loss is evaluated one tree at a time.
 
 Custom fitness metric
 ---------------------
