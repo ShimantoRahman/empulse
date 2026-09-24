@@ -1,3 +1,6 @@
+import numpy as np
+import pytest
+
 from empulse.metrics import CostMatrix, Metric, Savings
 from empulse.models import CSLogitClassifier
 from empulse.optimizers import LBFGSBOptimizer
@@ -30,3 +33,13 @@ class TestDefaultOptimizer:
         clf = CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=3))
         clf.fit(X, y, fp_cost=1.0, fn_cost=1.0)
         assert clf.n_iter_ <= 3
+
+
+@pytest.mark.parametrize('fit_intercept', [True, False])
+def test_fits_read_only_data(X, y, fit_intercept):
+    """Such as the memory-mapped arrays joblib hands to parallel workers, e.g. in GridSearchCV."""
+    expected = CSLogitClassifier(fit_intercept=fit_intercept).fit(X, y, fp_cost=1.0, fn_cost=5.0).result_.x
+    X = np.array(X, dtype=np.float64)
+    X.flags.writeable = False
+    clf = CSLogitClassifier(fit_intercept=fit_intercept).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+    np.testing.assert_array_equal(clf.result_.x, expected)

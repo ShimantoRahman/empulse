@@ -121,6 +121,10 @@ Metrics
 Models
 ------
 
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  with a cost loss now fit read-only data, such as the memory-mapped arrays joblib passes to
+  parallel workers in ``GridSearchCV(n_jobs=...)``. With ``fit_intercept=False`` they raised
+  ``ValueError: buffer source array is read-only``.
 - |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
   with a ``CatBoostClassifier`` estimator no longer train on distorted sample weights. The backend
   passed each row's index as its sample weight, so that the objective could look up that row's
