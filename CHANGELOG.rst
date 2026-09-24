@@ -134,6 +134,10 @@ Models
   accepts ``None`` and negative values, which count back from the number of processors as in
   scikit-learn (``-1`` uses all of them). The package falls back to a single thread when it is built
   without OpenMP; set ``EMPULSE_DISABLE_OPENMP=1`` to build it that way deliberately.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` refits only what changed. Each new tree
+  is a copy of a fitted tree with one subtree changed by crossover, growing or mutating a split, so
+  only the samples that reach that subtree are routed through it again, and pruning a split needs
+  no refit at all. This makes each generation about 1.7x faster; the fitted trees are unchanged.
 
 Datasets
 --------

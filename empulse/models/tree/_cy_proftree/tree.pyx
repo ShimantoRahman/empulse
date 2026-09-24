@@ -3,6 +3,8 @@
 import numpy as np
 cimport numpy as cnp
 from libc.stdlib cimport malloc, free
+from libcpp.algorithm cimport reverse
+from libcpp.vector cimport vector
 
 from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, reset_node
 from .random cimport RandState, rand_int, rand_bool
@@ -11,12 +13,16 @@ cdef struct Tree:
     Node* root
     float fitness
     int n_nodes
+    # Root of the only subtree whose sample counts may be out of date, or NULL if all are current.
+    Node* stale
 
 cdef Tree* create_tree(bint with_root = True) noexcept nogil:
     cdef Tree* tree = <Tree*>malloc(sizeof(Tree))
+    tree.stale = NULL
     if with_root:
         tree.root = create_node()
         tree.n_nodes = 1
+        tree.stale = tree.root  # never fitted
     else:
         tree.n_nodes = 0
     tree.fitness = -1.0
@@ -27,6 +33,10 @@ cdef Tree* copy_tree(Tree* tree) noexcept nogil:
     new_tree.root = copy_node(tree.root, NULL)
     new_tree.fitness = tree.fitness
     new_tree.n_nodes = tree.n_nodes
+    # The copy has its own nodes; if any of the original's counts were stale, refit it all.
+    new_tree.stale = NULL
+    if tree.stale is not NULL:
+        new_tree.stale = new_tree.root
     return new_tree
 
 cdef void free_tree(Tree* tree) noexcept nogil:
@@ -90,6 +100,7 @@ cdef Tree* deserialize_tree(object tree_data) noexcept:
     tree.root = deserialize_node(tree_data['root'], NULL)
     tree.fitness = tree_data['fitness']
     tree.n_nodes = tree_data['n_nodes']
+    tree.stale = NULL  # the counts are restored with the nodes
 
     return tree
 
@@ -122,6 +133,64 @@ cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samp
     cdef Py_ssize_t i
     for i in range(n_samples):
         visit_leaf(tree.root, &X[i, 0], y[i])
+
+cdef struct PathStep:
+    int feature_index
+    float split_value
+    bint goes_left
+
+cdef void refit_tree(
+    Tree* tree,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+) noexcept nogil:
+    """
+    Bring the tree's sample counts up to date after a variation operator changed it, then prune it.
+
+    An operator only changes the subtree below one node (``tree.stale``): the samples reaching that
+    node, and the counts everywhere outside its subtree, stay the same. So only the samples that
+    follow the path from the root to the stale node are routed again, and only through its subtree.
+    The rest of the tree was already pruned when its counts were last computed, and pruning only
+    looks at counts, so it is revisited only below the stale node too.
+    """
+    cdef Node* stale = tree.stale
+    if stale is NULL:
+        return
+    tree.stale = NULL
+    if stale is tree.root:
+        reset_node(tree.root)
+        fit_tree(tree, X, y, n_samples)
+        prune_illegal_nodes(tree, tree.root, min_samples_split, min_samples_leaf)
+        return
+
+    # The split rules leading to the stale node, from the root down.
+    cdef vector[PathStep] path
+    cdef Node* child = stale
+    cdef Node* parent = stale.parent
+    while parent is not NULL:
+        path.push_back(PathStep(parent.feature_index, parent.split_value, parent.left is child))
+        child = parent
+        parent = parent.parent
+    reverse(path.begin(), path.end())
+
+    reset_node(stale)
+    cdef Py_ssize_t i
+    cdef size_t step
+    cdef const float* x
+    cdef bint reaches_stale
+    for i in range(n_samples):
+        x = &X[i, 0]
+        reaches_stale = True
+        for step in range(path.size()):
+            if (x[path[step].feature_index] <= path[step].split_value) != path[step].goes_left:
+                reaches_stale = False
+                break
+        if reaches_stale:
+            visit_leaf(stale, x, y[i])
+    prune_illegal_nodes(tree, stale, min_samples_split, min_samples_leaf)
 
 cdef void predict_proba_tree(
     Tree* tree, const float[:, ::1] X, float[:] probabilities, int n_samples
