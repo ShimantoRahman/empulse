@@ -62,6 +62,12 @@ Models
   estimator for these losses. It also raises a ``ValueError`` when the costs make the same
   prediction strictly cheapest for every training sample, as CatBoost cannot train on a single
   class.
+- |Fix| :class:`~empulse.models.CSForestClassifier` (with the default ``bootstrap=True``) and
+  :class:`~empulse.models.CSTreeClassifier` (with ``class_weight``) now build correct trees with
+  the cost-sensitive criteria. The criteria ignored sample weights when totalling a node's costs
+  but not when splitting it, so the right child's costs were wrong. Forests pass their bootstrap
+  draws as sample weights, so every bootstrapped tree was affected: a tree fitted on a bootstrap
+  sample disagreed with one fitted on the same rows written out on 80% of its predictions.
 
 `0.12.0`_ (19-09-2026)
 ======================
