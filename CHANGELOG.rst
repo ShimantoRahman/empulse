@@ -18,6 +18,11 @@ Metrics
   distribution was treated as the name of a parameter, so the metric raised
   ``ValueError: Metric expected a value for 2*a`` whatever values were passed. It now asks for the
   symbols the arguments are built from (here ``a`` and ``b``).
+- |Fix| :class:`~empulse.metrics.MaxProfit` with a single stochastic variable and the default
+  ``integration_method='auto'`` no longer raises ``KeyError`` when a parameter of the variable's
+  distribution also appears elsewhere in the cost matrix, e.g.
+  ``sympy.stats.Gamma('v', a, b) * clv - a``. The distribution's parameters were removed from the
+  values used for the rest of the profit.
 - |Fix| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
   :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score`,
   :func:`~empulse.metrics.mpcs_score` and :func:`~empulse.metrics.empcs_score`) no longer return

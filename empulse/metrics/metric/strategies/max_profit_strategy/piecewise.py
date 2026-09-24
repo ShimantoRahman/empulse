@@ -439,14 +439,14 @@ class _PiecewiseBase:
         )
 
     def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Split the call's parameters into the distribution's own and everything else.
+        """Pick the distribution's own parameters out of the call's parameters.
 
         Only the parameters named by a symbol are passed in by the caller; hardcoded numeric ones
-        are read from the distribution itself by :meth:`_distribution_values`.
+        are read from the distribution itself by :meth:`_distribution_values`. The call's
+        parameters keep them too, since the profit can use a distribution parameter as well
+        (``Gamma('v', a, b) * clv - a``).
         """
-        distribution_parameters = {
-            name: kwargs.pop(name) for name in self._distribution_parameter_names if name in kwargs
-        }
+        distribution_parameters = {name: kwargs[name] for name in self._distribution_parameter_names if name in kwargs}
         return distribution_parameters, kwargs
 
     def _distribution_values(self, distribution_parameters: dict[str, Any]) -> list[float]:
