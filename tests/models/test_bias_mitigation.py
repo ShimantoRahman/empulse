@@ -127,3 +127,35 @@ def test_independent_sample_weights():
         weights,
         np.array([0.375, 0.375, 0.375, 0.375, 1, 0.33333333, 0.33333333, 0.75, 0.33333333, 0.75]),
     )
+
+
+NON_ZERO_ONE_LABELS = (np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 5]))
+
+
+class TestNonZeroOneLabels:
+    """Regression tests: relabeling and reweighing assumed the target was encoded as 0/1.
+
+    ``BiasRelabler`` chose candidates by comparing the raw labels to 0 and 1 and relabelled them
+    with the literal values 0 and 1, so ``-1``/``1`` labels gained a third class ``0`` and
+    ``predict`` raised an ``IndexError``. ``BiasReweighingClassifier`` computed its group priors from
+    the raw labels' mean, so ``-1``/``1`` labels got different weights and strings raised.
+    """
+
+    @pytest.fixture
+    def biased_data(self):
+        from sklearn.datasets import make_classification
+
+        X, y = make_classification(n_samples=400, random_state=0)
+        sensitive_feature = (np.random.default_rng(0).random(400) < 0.3 + 0.4 * y).astype(int)
+        return X, y, sensitive_feature
+
+    @pytest.mark.parametrize('classifier_cls', [BiasRelabelingClassifier, BiasReweighingClassifier])
+    @pytest.mark.parametrize('labels', NON_ZERO_ONE_LABELS, ids=['minus_one_one', 'strings', 'two_five'])
+    def test_same_model_as_with_zero_one_labels(self, biased_data, classifier_cls, labels):
+        X, y, sensitive_feature = biased_data
+        reference = classifier_cls(LogisticRegression()).fit(X, y, sensitive_feature=sensitive_feature)
+        model = classifier_cls(LogisticRegression()).fit(X, labels[y], sensitive_feature=sensitive_feature)
+
+        np.testing.assert_array_equal(model.classes_, labels)
+        np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+        np.testing.assert_array_equal(model.predict(X), labels[reference.predict(X)])

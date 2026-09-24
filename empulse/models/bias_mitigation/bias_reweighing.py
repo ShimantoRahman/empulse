@@ -46,7 +46,8 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
         probability of positive predictions are equal between subgroups of sensitive feature.
 
         - ``Callable``: function which computes the sample weights based on the target and sensitive feature. \
-        Callable accepts two arguments: y_true and sensitive_feature and returns the sample weights. \
+        Callable accepts two arguments: y_true (encoded as 0/1, with 1 for ``classes_[1]``) \
+        and sensitive_feature and returns the sample weights. \
         Sample weights are a numpy array where each represents the weight given to that respective instance. \
         Sample weights should be normalized to fall between 0 and 1.
 
@@ -164,7 +165,10 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)
 
-        sample_weights = strategy_fn(y, sensitive_feature)
+        # The strategy works on the 0/1-encoded target (like BiasRelabler's and BiasResampler's),
+        # while the estimator is still fitted on the original labels.
+        y_binary = np.where(y == self.classes_[1], 1, 0)
+        sample_weights = strategy_fn(y_binary, sensitive_feature)
         estimator_ = clone(self.estimator)
         estimator_.fit(X, y, sample_weight=sample_weights, **fit_params)
         return estimator_
