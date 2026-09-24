@@ -14,7 +14,7 @@ def test_works_with_different_loss(X, y):
 
 
 class TestDefaultOptimizer:
-    """`_optimize` is implemented once on `BaseLogitClassifier`, driven by the
+    """`_resolve_optimizer` is implemented once on `BaseLogitClassifier`, driven by the
     `_default_optimizer` ClassVar each subclass sets.
     """
 

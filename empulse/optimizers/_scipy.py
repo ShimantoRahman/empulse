@@ -320,6 +320,11 @@ class ScipyOptimizer(Optimizer):
         self.options = options or {}
         self.scipy_kwargs = scipy_kwargs
 
+    @property
+    def requires_gradient(self) -> bool:
+        """Whether the gradient is passed to scipy, which is ``use_jacobian``."""
+        return self.use_jacobian
+
     def __call__(
         self,
         objective: LogitObjective,
