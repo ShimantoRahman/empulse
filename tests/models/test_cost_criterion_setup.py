@@ -75,3 +75,37 @@ def test_criterion_usable_with_array_valued_costs():
     tree = DecisionTreeClassifier(criterion=criterion).fit(X, y)
     y_pred = tree.predict(X)
     assert y_pred.shape == y.shape
+
+
+@pytest.mark.parametrize('criterion_name', ['cost', 'gini'])
+@pytest.mark.parametrize('instance_dependent', [False, True], ids=['class_dependent', 'instance_dependent'])
+def test_sample_weights_act_like_repeated_rows(criterion_name, instance_dependent):
+    """Regression test: the node cost totals ignored sample weights, but the child sums did not.
+
+    Forests pass their bootstrap draws as sample weights, so a tree fitted with integer weights must
+    match one fitted on the rows repeated that many times. Before the fix, the right child's costs
+    (total minus left) were wrong, and the two trees disagreed on most predictions.
+    """
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(n_samples=300, random_state=0, flip_y=0.2)
+    rng = np.random.default_rng(0)
+    counts = np.bincount(rng.integers(0, 300, 300), minlength=300)
+    fn_cost = rng.random(300) * 10 if instance_dependent else 5.0
+    repeated = np.repeat(np.arange(300), counts)
+
+    def fit(n_samples, fn, **fit_kwargs):
+        criterion = build_cost_criterion(
+            criterion_name, tp_cost=0.0, tn_cost=0.0, fn_cost=fn, fp_cost=1.0, n_samples=n_samples
+        )
+        return DecisionTreeClassifier(criterion=criterion, max_depth=4, random_state=0)
+
+    fn_repeated = fn_cost[repeated] if instance_dependent else fn_cost
+    weighted = fit(300, fn_cost).fit(X, y, sample_weight=counts.astype(np.float64))
+    materialised = fit(repeated.size, fn_repeated).fit(X[repeated], y[repeated])
+
+    # Node by node, both trees see the same costs. Two split candidates can still tie exactly and be
+    # broken differently (floating-point sums run in a different order), so predictions are
+    # compared loosely; before the fix they agreed on about 20% of samples.
+    np.testing.assert_allclose(weighted.tree_.impurity, materialised.tree_.impurity)
+    assert np.mean(weighted.predict(X) == materialised.predict(X)) > 0.95

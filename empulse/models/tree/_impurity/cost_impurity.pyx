@@ -110,23 +110,28 @@ cdef class CostImpurity(ClassificationCriterion):
         memset(&self.neg_cost_sum_total[0, 0], 0, self.n_outputs * self.max_n_classes * sizeof(float64_t))
         for p in range(start, end):
             i = sample_indices[p]
+            # Weighted like the left/right sums in `update`, which are subtracted from these totals.
+            # Forests pass their bootstrap draws as sample weights, so ignoring them here made the
+            # right child's costs wrong (even negative) for every bootstrapped tree.
+            if sample_weight is not None:
+                w = sample_weight[i]
 
             for k in range(self.n_outputs):
                 c = <intp_t> y[i, k]
                 if self.all_class_dependent:
                     if c == 1:
-                        self.pos_cost_sum_total[k, c] += self.tp_cost
-                        self.neg_cost_sum_total[k, c] += self.fn_cost
+                        self.pos_cost_sum_total[k, c] += w * self.tp_cost
+                        self.neg_cost_sum_total[k, c] += w * self.fn_cost
                     else:
-                        self.pos_cost_sum_total[k, c] += self.fp_cost
-                        self.neg_cost_sum_total[k, c] += self.tn_cost
+                        self.pos_cost_sum_total[k, c] += w * self.fp_cost
+                        self.neg_cost_sum_total[k, c] += w * self.tn_cost
                 else:
                     if c == 1:
-                        self.pos_cost_sum_total[k, c] += self.tp_cost_array[i]
-                        self.neg_cost_sum_total[k, c] += self.fn_cost_array[i]
+                        self.pos_cost_sum_total[k, c] += w * self.tp_cost_array[i]
+                        self.neg_cost_sum_total[k, c] += w * self.fn_cost_array[i]
                     else:
-                        self.pos_cost_sum_total[k, c] += self.fp_cost_array[i]
-                        self.neg_cost_sum_total[k, c] += self.tn_cost_array[i]
+                        self.pos_cost_sum_total[k, c] += w * self.fp_cost_array[i]
+                        self.neg_cost_sum_total[k, c] += w * self.tn_cost_array[i]
         # Reset left/right
         self.reset()
         return 0
