@@ -12,6 +12,8 @@ cdef struct SplitValues:
     float **values
     int *lengths
     int n_features
+    int *splittable_features  # features with at least two distinct values
+    int n_splittable
 
 cdef Tree* create_tree(bint with_root = *) noexcept nogil
 cdef Tree* copy_tree(Tree* tree) noexcept nogil

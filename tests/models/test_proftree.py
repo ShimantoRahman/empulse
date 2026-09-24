@@ -123,3 +123,34 @@ class TestCustomLossDirection:
 
         single_leaf_cost = metric(y, np.full(y.size, y.mean()), fn=5.0, fp=1.0)
         assert metric(y, y_proba, fn=5.0, fp=1.0) < 0.5 * single_leaf_cost
+
+
+class TestConstantFeatures:
+    """Regression tests: a constant feature crashed the interpreter.
+
+    Drawing a split for a feature with a single distinct value took a random integer modulo zero,
+    which raises SIGFPE in C and kills the process, so the fit runs in a subprocess.
+    """
+
+    @pytest.mark.parametrize('constant_columns', [[0], [0, 1, 2]], ids=['one_constant', 'all_constant'])
+    def test_fit_with_constant_features(self, constant_columns):
+        import subprocess
+        import sys
+
+        script = f"""
+import numpy as np
+from sklearn.datasets import make_classification
+from empulse.models import ProfTreeClassifier
+
+X, y = make_classification(n_samples=200, n_features=3, n_informative=2, n_redundant=0, random_state=0)
+X[:, {constant_columns}] = 1.0
+model = ProfTreeClassifier(max_iter=20, population_size=20, random_state=0).fit(X, y, fn_cost=5, fp_cost=1)
+y_proba = model.predict_proba(X)[:, 1]
+if {len(constant_columns)} == X.shape[1]:
+    # Nothing to split on: a single leaf predicting the class prior.
+    assert np.allclose(y_proba, y.mean()), y_proba
+"""
+        result = subprocess.run(
+            [sys.executable, '-c', script], capture_output=True, text=True, timeout=300, check=False
+        )
+        assert result.returncode == 0, result.stderr

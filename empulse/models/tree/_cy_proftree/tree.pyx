@@ -139,6 +139,8 @@ cdef struct SplitValues:
     float **values
     int *lengths
     int n_features
+    int *splittable_features  # features with at least two distinct values
+    int n_splittable
 
 cdef SplitValues* compute_split_values(cnp.ndarray[cnp.float32_t, ndim=2] X) noexcept:
     cdef int n_features = <int>X.shape[1]
@@ -146,6 +148,8 @@ cdef SplitValues* compute_split_values(cnp.ndarray[cnp.float32_t, ndim=2] X) noe
     sv.n_features = n_features
     sv.values = <float **>malloc(n_features * sizeof(float *))
     sv.lengths = <int *>malloc(n_features * sizeof(int))
+    sv.splittable_features = <int *>malloc(n_features * sizeof(int))
+    sv.n_splittable = 0
 
     cdef int j, n_unique, i
     cdef cnp.ndarray[cnp.float32_t, ndim=1] vals
@@ -156,6 +160,9 @@ cdef SplitValues* compute_split_values(cnp.ndarray[cnp.float32_t, ndim=2] X) noe
         sv.values[j] = <float *>malloc(n_unique * sizeof(float))
         for i in range(n_unique):
             sv.values[j][i] = <float>vals[i]
+        if n_unique >= 2:
+            sv.splittable_features[sv.n_splittable] = j
+            sv.n_splittable += 1
     return sv
 
 cdef void free_split_values(SplitValues* sv) noexcept nogil:
@@ -164,6 +171,7 @@ cdef void free_split_values(SplitValues* sv) noexcept nogil:
         free(sv.values[j])
     free(sv.values)
     free(sv.lengths)
+    free(sv.splittable_features)
     free(sv)
 
 cdef void split(
@@ -178,8 +186,11 @@ cdef void split(
     if max_depth == -1:
         max_depth = depth
 
-    if depth < max_depth:
-        node.feature_index = rand_int(rng, 0, n_features)
+    # A feature with a single distinct value cannot split anything; drawing a split value for it
+    # would also take a random integer modulo zero, which kills the process.
+    if depth < max_depth and split_values.n_splittable > 0:
+        node.feature_index = split_values.splittable_features[rand_int(rng, 0, split_values.n_splittable)]
+        # Never the largest value: every sample would go left.
         split_value_index = rand_int(rng, 0, split_values.lengths[node.feature_index] - 1)
         node.split_value = split_values.values[node.feature_index][split_value_index]
         node.left = create_node()
