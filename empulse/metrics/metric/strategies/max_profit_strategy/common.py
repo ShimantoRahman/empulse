@@ -48,7 +48,7 @@ class _HullScoreFunction:
     """
 
     deterministic_symbols: Iterable[sympy.Symbol]
-    dist_params: list[sympy.Expr]
+    dist_params: list[sympy.Symbol]
 
     def _score_hull(
         self,
@@ -104,12 +104,31 @@ class _HullScoreFunction:
         return score
 
 
+def _distribution_parameter_symbols(distribution_args: Iterable[sympy.Expr]) -> list[sympy.Symbol]:
+    """Find the symbols the caller gives values for in the distributions' arguments.
+
+    An argument can be an expression of them (``Beta('v', 2 * a, b)``), so these are the arguments'
+    free symbols rather than the arguments themselves: each named once, in order of appearance.
+    """
+    symbols: dict[str, sympy.Symbol] = {}
+    for argument in distribution_args:
+        for symbol in sorted(sympy.sympify(argument).free_symbols, key=lambda symbol: symbol.name):
+            symbols.setdefault(symbol.name, symbol)
+    return list(symbols.values())
+
+
 def extract_distribution_parameters(
-    parameters: dict[str, Any], distribution_args: Iterable[sympy.Symbol]
+    parameters: dict[str, Any], distribution_args: Iterable[sympy.Expr]
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Extract the distribution parameters from the other parameters."""
+    """Extract the distribution parameters from the other parameters.
+
+    ``distribution_args`` may be the distributions' arguments or their symbols, see
+    :func:`_distribution_parameter_symbols`.
+    """
     distribution_parameters = {
-        str(key): parameters.pop(str(key)) for key in distribution_args if str(key) in parameters
+        symbol.name: parameters.pop(symbol.name)
+        for symbol in _distribution_parameter_symbols(distribution_args)
+        if symbol.name in parameters
     }
     return distribution_parameters, parameters
 

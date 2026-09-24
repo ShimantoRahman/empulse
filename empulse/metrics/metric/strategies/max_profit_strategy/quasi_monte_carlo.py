@@ -10,6 +10,7 @@ from sympy.stats import pspace
 from ....._types import FloatNDArray
 from ..._symbolic import _subs_by_name
 from .common import (
+    _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
     _substitute_integrand,
@@ -164,13 +165,11 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
                 _scipy_distribution(random_var) for random_var in random_symbols
             ]
             self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(self.scipy_distributions)]
-            self.dist_params = []
-
         else:
             self.scipy_distributions = None
             self.param_grid_needs_recompute = True
             self.param_grid = []
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        self.dist_params = _distribution_parameter_symbols(self.distribution_args)
         # Parameters and the grid sampled for them are cached as one tuple, so a concurrent caller
         # can never pair one call's parameters with another call's samples.
         self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None

@@ -16,7 +16,7 @@ from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ..._symbolic import _subs_by_name
 from ._distributions import ADAPTERS, adapter_for
-from .common import _convex_hull, _HullScoreFunction
+from .common import _convex_hull, _distribution_parameter_symbols, _HullScoreFunction
 from .envelope import (
     CallableEnvelope,
     Partition,
@@ -395,14 +395,11 @@ class _PiecewiseBase:
             self.poly_fns = None
             self.profit_fn = _safe_lambdify(profit_function)
 
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params: list[sympy.Expr] = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        self.dist_params = _distribution_parameter_symbols(self.distribution_args)
 
         # Resolved once here, since every call needs them: naming a sympy symbol means printing it,
         # which cost more than the rest of scoring a small hull.
-        self._distribution_arg_names = tuple(str(argument) for argument in self.distribution_args)
+        self._distribution_parameter_names = tuple(symbol.name for symbol in self.dist_params)
         self._distribution_value_sources: list[float | str | sympy.Expr] = [
             float(argument) if argument.is_number else str(argument) if isinstance(argument, sympy.Symbol) else argument
             for argument in self.distribution_args
@@ -447,7 +444,9 @@ class _PiecewiseBase:
         Only the parameters named by a symbol are passed in by the caller; hardcoded numeric ones
         are read from the distribution itself by :meth:`_distribution_values`.
         """
-        distribution_parameters = {name: kwargs.pop(name) for name in self._distribution_arg_names if name in kwargs}
+        distribution_parameters = {
+            name: kwargs.pop(name) for name in self._distribution_parameter_names if name in kwargs
+        }
         return distribution_parameters, kwargs
 
     def _distribution_values(self, distribution_parameters: dict[str, Any]) -> list[float]:
