@@ -111,6 +111,10 @@ Models
   negative class (``fp_cost``, ``tn_cost``, and metric parameters that only affect them) were
   silently never cleaned, and with labels such as ``2``/``5`` every sample counted as positive. The
   greater of the two labels is now the positive class, as in the cost-sensitive models it wraps.
+- |Fix| :class:`~empulse.models.CSForestClassifier` now rejects a metric passed as ``criterion``
+  during parameter validation, like :class:`~empulse.models.CSTreeClassifier`, instead of accepting
+  it and failing later in ``fit`` with an "Unknown criterion" error. Like
+  :class:`~empulse.models.CSTreeClassifier`, it now also accepts a cost impurity instance.
 
 `0.12.0`_ (19-09-2026)
 ======================

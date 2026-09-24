@@ -9,14 +9,14 @@ from scipy.sparse import csr_matrix, issparse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble._base import _partition_estimators
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils._param_validation import StrOptions
+from sklearn.utils._param_validation import Hidden, StrOptions
 from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
-from ._impurity import build_cost_criterion
+from ._impurity import CostImpurity, build_cost_criterion
 
 RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()
 RF_PARAM_CONSTRAINTS.pop('criterion')
@@ -301,7 +301,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
-        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), BaseMetric],
+        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), Hidden(CostImpurity)],
         'combination': [
             StrOptions({'majority_voting', 'weighted_voting'}),
         ],
