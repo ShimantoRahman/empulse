@@ -14,6 +14,8 @@ def _validate_input(
     _check_variance(y_true)
     _check_shape(y_true, y_score)
     _check_fraction(fraction, 'fraction')
+    if fraction == 0:
+        raise ValueError('fraction should be greater than 0, got a value of 0 instead.')
 
     return y_true, y_score
 
@@ -33,7 +35,9 @@ def lift_score(
         Target scores, can either be probability estimates or non-thresholded decision values.
 
     fraction : float, optional, default: 0.1
-        Fraction of data to consider. Must be between 0 and 1.
+        Fraction of data to consider. Must be greater than 0 and at most 1.
+        The top fraction always contains at least one sample, even when
+        ``fraction * n_samples`` rounds to 0.
 
     check_input : bool, default=True
         Perform input validation.
@@ -53,7 +57,7 @@ def lift_score(
     # Sort the predictions in descending order
     sorted_indices = np.argsort(y_score)[::-1]
     sorted_labels = y_true[sorted_indices]
-    top_fraction = int(round(len(sorted_labels) * fraction, 0))
+    top_fraction = max(1, int(round(len(sorted_labels) * fraction, 0)))
 
     n_positives_top_fraction: int = int(np.sum(sorted_labels[:top_fraction]))
     prop_positives_top_fraction = n_positives_top_fraction / top_fraction

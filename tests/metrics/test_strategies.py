@@ -53,9 +53,13 @@ from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import (
     _evaluate_coefficient_matrix,
     compute_piecewise_bounds,
 )
-from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import MaxProfitScoreQuad
+from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import (
+    MaxProfitScoreQuad,
+    compute_integral_multiple_quad,
+)
 from empulse.metrics.metric.strategies.max_profit_strategy.quasi_monte_carlo import (
     MaxProfitScoreQuasiMonteCarlo,
+    _scipy_distribution,
     _sympy_dist_to_scipy,
     _sympy_dist_to_scipy_params,
 )
@@ -1059,3 +1063,162 @@ class TestAutoPrefersSampling:
         automatic = Metric(cost_matrix, MaxProfit(random_state=0))(y_true, y_score, **parameters)
         numerical = Metric(cost_matrix, MaxProfit(integration_method='quad'))(y_true, y_score, **parameters)
         assert automatic == pytest.approx(numerical, rel=1e-5)
+
+
+# Every distribution the quasi-Monte Carlo backend can sample, with parameters away from the
+# defaults (a non-zero lower bound in particular), so a mapping that only happens to hold for the
+# standard form still fails.
+QMC_DISTRIBUTION_FACTORIES: dict[type, Callable[[], Any]] = {
+    sympy.stats.crv_types.ArcsinDistribution: lambda: sympy.stats.Arcsin('w', 2.0, 5.0),
+    sympy.stats.crv_types.BetaDistribution: lambda: sympy.stats.Beta('w', 2.0, 3.0),
+    sympy.stats.crv_types.BetaPrimeDistribution: lambda: sympy.stats.BetaPrime('w', 2.0, 3.0),
+    sympy.stats.crv_types.ChiDistribution: lambda: sympy.stats.Chi('w', 3.0),
+    sympy.stats.crv_types.ChiSquaredDistribution: lambda: sympy.stats.ChiSquared('w', 3.0),
+    sympy.stats.crv_types.ExGaussianDistribution: lambda: sympy.stats.ExGaussian('w', 0.5, 1.2, 0.8),
+    sympy.stats.crv_types.ExponentialDistribution: lambda: sympy.stats.Exponential('w', 1.5),
+    sympy.stats.crv_types.FDistributionDistribution: lambda: sympy.stats.FDistribution('w', 5.0, 7.0),
+    sympy.stats.crv_types.GammaDistribution: lambda: sympy.stats.Gamma('w', 2.0, 1.5),
+    sympy.stats.crv_types.GammaInverseDistribution: lambda: sympy.stats.GammaInverse('w', 3.0, 2.0),
+    sympy.stats.crv_types.LaplaceDistribution: lambda: sympy.stats.Laplace('w', 0.5, 1.3),
+    sympy.stats.crv_types.LogisticDistribution: lambda: sympy.stats.Logistic('w', 0.5, 1.3),
+    sympy.stats.crv_types.LogNormalDistribution: lambda: sympy.stats.LogNormal('w', 0.2, 0.6),
+    sympy.stats.crv_types.LomaxDistribution: lambda: sympy.stats.Lomax('w', 3.0, 2.0),
+    sympy.stats.crv_types.MaxwellDistribution: lambda: sympy.stats.Maxwell('w', 1.3),
+    sympy.stats.crv_types.MoyalDistribution: lambda: sympy.stats.Moyal('w', 0.5, 1.2),
+    sympy.stats.crv_types.NakagamiDistribution: lambda: sympy.stats.Nakagami('w', 1.5, 2.0),
+    sympy.stats.crv_types.NormalDistribution: lambda: sympy.stats.Normal('w', 0.5, 1.2),
+    sympy.stats.crv_types.ParetoDistribution: lambda: sympy.stats.Pareto('w', 1.5, 3.0),
+    sympy.stats.crv_types.PowerFunctionDistribution: lambda: sympy.stats.PowerFunction('w', 2.0, 1.0, 3.0),
+    sympy.stats.crv_types.StudentTDistribution: lambda: sympy.stats.StudentT('w', 5.0),
+    sympy.stats.crv_types.TrapezoidalDistribution: lambda: sympy.stats.Trapezoidal('w', 1.0, 2.0, 4.0, 6.0),
+    sympy.stats.crv_types.TriangularDistribution: lambda: sympy.stats.Triangular('w', 1.0, 5.0, 2.0),
+    sympy.stats.crv_types.UniformDistribution: lambda: sympy.stats.Uniform('w', 1.0, 4.0),
+    sympy.stats.crv_types.GaussianInverseDistribution: lambda: sympy.stats.GaussianInverse('w', 1.5, 2.0),
+    **{type(sympy.stats.pspace(factory()).distribution): factory for _, factory, _ in NEWLY_QMC_CAPABLE},
+}
+
+
+def test_qmc_distribution_table_covers_every_registered_distribution():
+    assert set(QMC_DISTRIBUTION_FACTORIES) == set(_sympy_dist_to_scipy)
+
+
+@pytest.mark.parametrize(
+    'factory', list(QMC_DISTRIBUTION_FACTORIES.values()), ids=[t.__name__ for t in QMC_DISTRIBUTION_FACTORIES]
+)
+def test_qmc_scipy_distribution_matches_sympy_density(factory):
+    """The frozen SciPy distribution QMC samples from must have the SymPy distribution's density.
+
+    Arcsin and PowerFunction used to pass their upper bound as SciPy's ``scale`` (a width), which
+    stretched the support: Arcsin(2, 5) was sampled on [2, 7].
+    """
+    random_variable = factory()
+    frozen = _scipy_distribution(random_variable)
+
+    variable = sympy.Symbol('t', real=True)
+    sympy_density = sympy.lambdify(
+        variable, sympy.stats.density(random_variable).pdf(variable), modules=['scipy', 'numpy']
+    )
+    points = frozen.ppf([0.1, 0.3, 0.5, 0.7, 0.9])
+    assert [complex(sympy_density(point)).real for point in points] == pytest.approx(frozen.pdf(points), rel=1e-9)
+
+
+def test_nquad_integrates_each_variable_over_its_own_range():
+    """With four or more random variables the ranges must stay paired with their own variables.
+
+    ``nquad`` passes the variables in the order of its ranges, unlike ``dblquad``/``tplquad``, so
+    reversing them there integrated ``x0`` over ``x3``'s range. The integral of ``x0`` over
+    [0, 1] x [0, 2] x [0, 3] x [0, 4] is 1/2 * 2 * 3 * 4 = 12.
+    """
+    x = sympy.symbols('x0:4')
+    result = compute_integral_multiple_quad(
+        profit_integrand=x[0] + 0 * sympy.Symbol('F_0') + 0 * sympy.Symbol('F_1'),
+        rate_integrand=None,
+        bounds=[0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0],
+        true_positive_rates=[0.5],
+        false_positive_rates=[0.5],
+        random_variables=list(x),
+        n_random=4,
+    )
+    assert result == pytest.approx(12.0)
+
+
+class TestDistributionWithLiteralAndSymbolicParameters:
+    """A distribution mixing literal and symbolic parameters, e.g. ``Beta('g', 6, b)``.
+
+    The piecewise backends read the distribution's parameters by position from the values the
+    caller passed in, so a literal parameter (never passed in) shifted every later one and raised an
+    ``IndexError``. Each result must equal the same metric with every parameter symbolic.
+    """
+
+    Y_TRUE = np.array([0, 1, 0, 1, 0, 1, 0, 1, 1, 0])
+    Y_SCORE = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9, 0.65, 0.35])
+
+    @staticmethod
+    def _metrics(factory_mixed, factory_symbolic):
+        clv = sympy.Symbol('clv')
+
+        def make(random_variable):
+            return Metric(CostMatrix().add_tp_benefit(random_variable * clv).add_fp_cost(10), MaxProfit())
+
+        return make(factory_mixed()), make(factory_symbolic())
+
+    CASES: ClassVar[list[Any]] = [
+        pytest.param(
+            lambda: sympy.stats.Beta('g', 6, sympy.Symbol('b')),
+            lambda: sympy.stats.Beta('g', sympy.Symbol('a'), sympy.Symbol('b')),
+            {'b': 14.0},
+            {'a': 6.0, 'b': 14.0},
+            id='Beta-literal-first',
+        ),
+        pytest.param(
+            lambda: sympy.stats.Gamma('g', sympy.Symbol('a'), 0.5),
+            lambda: sympy.stats.Gamma('g', sympy.Symbol('a'), sympy.Symbol('b')),
+            {'a': 3.0},
+            {'a': 3.0, 'b': 0.5},
+            id='Gamma-literal-last',
+        ),
+        pytest.param(
+            lambda: sympy.stats.Beta('g', 6, 6),
+            lambda: sympy.stats.Beta('g', sympy.Symbol('a'), sympy.Symbol('b')),
+            {},
+            {'a': 6.0, 'b': 6.0},
+            id='Beta-equal-literals',
+        ),
+        pytest.param(
+            lambda: sympy.stats.Normal('g', sympy.Symbol('m'), 0.3),
+            lambda: sympy.stats.Normal('g', sympy.Symbol('m'), sympy.Symbol('s')),
+            {'m': 1.0},
+            {'m': 1.0, 's': 0.3},
+            id='Normal-literal-last',
+        ),
+    ]
+
+    @pytest.mark.parametrize(('mixed', 'symbolic', 'mixed_params', 'symbolic_params'), CASES)
+    def test_score(self, mixed, symbolic, mixed_params, symbolic_params):
+        metric_mixed, metric_symbolic = self._metrics(mixed, symbolic)
+        assert metric_mixed(self.Y_TRUE, self.Y_SCORE, clv=200.0, **mixed_params) == pytest.approx(
+            metric_symbolic(self.Y_TRUE, self.Y_SCORE, clv=200.0, **symbolic_params)
+        )
+
+    @pytest.mark.parametrize(('mixed', 'symbolic', 'mixed_params', 'symbolic_params'), CASES)
+    def test_optimal_rate(self, mixed, symbolic, mixed_params, symbolic_params):
+        metric_mixed, metric_symbolic = self._metrics(mixed, symbolic)
+        assert metric_mixed.optimal_rate(self.Y_TRUE, self.Y_SCORE, clv=200.0, **mixed_params) == pytest.approx(
+            metric_symbolic.optimal_rate(self.Y_TRUE, self.Y_SCORE, clv=200.0, **symbolic_params)
+        )
+
+    @pytest.mark.parametrize(('mixed', 'symbolic', 'mixed_params', 'symbolic_params'), CASES[:3])
+    def test_logit_objective(self, mixed, symbolic, mixed_params, symbolic_params):
+        """The gradient objective reads the same parameters (positive distributions only)."""
+        metric_mixed, metric_symbolic = self._metrics(mixed, symbolic)
+        features = np.column_stack([np.ones(self.Y_TRUE.size), self.Y_SCORE])
+        weights = np.array([0.1, -0.3])
+        kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True, 'clv': 200.0}
+        loss_mixed, grad_mixed = metric_mixed._logit_objective(
+            features, self.Y_TRUE, **kwargs, **mixed_params
+        ).logit_loss_gradient(weights)
+        loss_symbolic, grad_symbolic = metric_symbolic._logit_objective(
+            features, self.Y_TRUE, **kwargs, **symbolic_params
+        ).logit_loss_gradient(weights)
+        assert loss_mixed == pytest.approx(loss_symbolic)
+        assert grad_mixed == pytest.approx(grad_symbolic)

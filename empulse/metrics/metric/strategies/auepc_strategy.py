@@ -69,13 +69,22 @@ class AUEPCScore:
         model_order = np.argsort(y_score)[::-1]
         profits = np.cumsum(delta[model_order])
 
-        # Stop at the point where the oracle's cumulative profit becomes negative: beyond this
-        # point, even the best possible policy is losing money by targeting further samples.
+        # Stop at the point where the oracle's cumulative profit is no longer positive: beyond this
+        # point, even the best possible policy is losing money by targeting further samples. The
+        # oracle curve rises and then falls, so this also keeps every divisor below strictly positive.
         stop_index: int = (
-            int(np.argmax(perfect_profits < 0)) if np.any(perfect_profits < 0) else n_samples  # type: ignore[assignment]
+            int(np.argmax(perfect_profits <= 0)) if np.any(perfect_profits <= 0) else n_samples  # type: ignore[assignment]
         )
+        if stop_index == 0:
+            # Not even the oracle's best single sample is profitable, so there is no curve.
+            return 0.0
 
-        score = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n_samples))  # type: ignore[attr-defined]
+        ratios = profits[:stop_index] / perfect_profits[:stop_index]
+        if stop_index == 1:
+            # A single point spans no area; its mean ratio over that point is the ratio itself.
+            return float(ratios[0]) if self.normalize else 0.0
+
+        score = float(np.trapezoid(ratios, dx=1 / n_samples))  # type: ignore[attr-defined]
         if self.normalize:
             score /= (stop_index - 1) / n_samples
         return score

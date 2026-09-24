@@ -377,7 +377,9 @@ class MixtureMetric(BaseMetric):
         total = 0.0
         for component in self.components:
             weight = self._resolve_weight(component.weight, parameters)
-            total += weight * component.metric(y_true, y_score, **self._component_parameters(component, forwarded))
+            total += weight * component.metric(
+                y_true, y_score, validate=validate, **self._component_parameters(component, forwarded)
+            )
         return float(total)
 
     def optimal_rate(
@@ -407,7 +409,7 @@ class MixtureMetric(BaseMetric):
         for component in self.components:
             weight = self._resolve_weight(component.weight, parameters)
             total += weight * component.metric.optimal_rate(
-                y_true, y_score, **self._component_parameters(component, forwarded)
+                y_true, y_score, validate=validate, **self._component_parameters(component, forwarded)
             )
         return float(total)
 
@@ -440,8 +442,7 @@ class MixtureMetric(BaseMetric):
         optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
-        parameters = self._apply_defaults(parameters, validate=validate)
-        rate = self.optimal_rate(y_true, y_score, **parameters)
+        rate = self.optimal_rate(y_true, y_score, validate=validate, **parameters)
         return classification_threshold(y_true, y_score, rate)  # type: ignore[return-value]
 
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:

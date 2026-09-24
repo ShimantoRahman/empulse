@@ -55,7 +55,9 @@ def compute_integral_multiple_quad(
         else:
             # nquad expects ranges as a list of (lower, upper) pairs, not a flat unpacked list
             ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
-            result, _ = nquad(integrand_fn, ranges)  # type: ignore[call-overload]
+            # Unlike dblquad/tplquad, nquad passes the variables in the order of their ranges, so
+            # undo the reversal integrand_fn applies for those two.
+            result, _ = nquad(lambda *random_vars: integrand_fn(*reversed(random_vars)), ranges)  # type: ignore[call-overload]
     return float(result)
 
 

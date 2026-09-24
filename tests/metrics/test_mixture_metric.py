@@ -483,3 +483,26 @@ class TestOutlierSensitiveParameters:
         metric = Metric(CostMatrix().add_tp_benefit(a), Cost())
         mixture = MixtureMetric([MixtureComponent(1.0, metric, {})])
         assert mixture._outlier_sensitive_parameters() == {}
+
+
+@pytest.mark.parametrize('method', ['__call__', 'optimal_rate', 'optimal_threshold'])
+def test_mixture_forwards_validate_to_components(monkeypatch, empcs_mixture, y_true_and_prediction, method):
+    """``validate=False`` is the training loop's promise that the values were checked already.
+
+    The mixture used to drop it, so every component re-validated on every call.
+    """
+    y, y_proba = y_true_and_prediction
+    validating_calls = 0
+    original = Metric._prepare_parameters
+
+    def counting(self, *, n_samples=None, validate=True, **kwargs):
+        nonlocal validating_calls
+        validating_calls += validate
+        return original(self, n_samples=n_samples, validate=validate, **kwargs)
+
+    monkeypatch.setattr(Metric, '_prepare_parameters', counting)
+    getattr(empcs_mixture, method)(y, y_proba, validate=False, **PARAMETER_SETS[0])
+    assert validating_calls == 0
+
+    getattr(empcs_mixture, method)(y, y_proba, **PARAMETER_SETS[0])
+    assert validating_calls > 0
