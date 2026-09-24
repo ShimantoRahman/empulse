@@ -83,18 +83,7 @@ def test_multiclass_target_is_rejected(make_estimator, cost_data):
 LABEL_ROUND_TRIP_ESTIMATORS = [
     pytest.param(_cslogit, id='CSLogitClassifier'),
     pytest.param(_csboost, id='CSBoostClassifier'),
-    pytest.param(
-        _cstree,
-        id='CSTreeClassifier',
-        marks=pytest.mark.xfail(
-            reason=(
-                'CSTreeClassifier.predict returns the internal 0/1 recoding instead of the original '
-                'labels, even though its own classes_ reports them correctly. CSLogit, CSBoost, '
-                'CSForest and ProfTree all round-trip the labels; only CSTree does not, which breaks '
-                "scikit-learn's contract that predict returns values drawn from classes_."
-            )
-        ),
-    ),
+    pytest.param(_cstree, id='CSTreeClassifier'),
 ]
 
 

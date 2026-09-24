@@ -162,3 +162,24 @@ class TestSklearnDelegation:
             model.get_n_leaves()
         with pytest.raises(NotFittedError):
             _ = model.tree_
+
+
+@pytest.mark.parametrize(
+    'labels',
+    [np.array(['no', 'yes']), np.array([-1, 1]), np.array([2, 5])],
+    ids=['strings', 'minus_one_one', 'two_five'],
+)
+def test_predict_returns_original_labels(data, labels):
+    """Regression test: ``predict`` returned the inner tree's 0/1-encoded classes.
+
+    ``CostSensitiveClassifier.fit`` encodes the target as 0/1 before fitting the inner tree, so its
+    predictions have to be mapped back through ``classes_``.
+    """
+    X, y = data
+    y_labels = labels[y]
+    model = CSTreeClassifier(max_depth=3, random_state=0).fit(X, y_labels, fn_cost=5.0, fp_cost=1.0)
+
+    y_pred = model.predict(X)
+
+    np.testing.assert_array_equal(model.classes_, labels)
+    np.testing.assert_array_equal(y_pred, labels[np.argmax(model.predict_proba(X), axis=1)])
