@@ -131,6 +131,15 @@ Metrics
   0.81 to 0.25 seconds, and ``ProfLogitClassifier`` on 10,000 samples with 20 features from 2.3 to
   1.1 seconds. The derivatives are also exact where the predicted probability is close to 1. They
   used to be computed as ``p * (1 - p)``, which rounds to 0 once the margin exceeds about 37.
+- |Efficiency| :class:`~empulse.metrics.LogCost`'s logistic regression objective and gradient
+  boosting gradient now run in compiled kernels, like those of :class:`~empulse.metrics.Cost`,
+  which are 1.4-3.6x faster than the numpy code they replace. Fitting
+  :class:`~empulse.models.CSLogitClassifier` with a log-cost loss on 100,000 samples with 50
+  features went from 1.0 to 0.23 seconds, and :class:`~empulse.models.ProfLogitClassifier` on
+  10,000 samples with 20 features from 3.2 to 1.5 seconds. The loss is also exact where the
+  predicted probability is close to 1. Its ``log(1 - p)`` was computed from the rounded
+  probability, which was off by up to 0.1% (relative) once the margin exceeds about 14, and the
+  boosting hessian's ``p * (1 - p)`` rounded to 0 once it exceeds about 37.
 
 Models
 ------
