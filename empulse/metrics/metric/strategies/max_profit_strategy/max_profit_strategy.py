@@ -586,8 +586,8 @@ class MaxProfit(MetricStrategy):
         """
         Build the logit objective for an optimizer that needs only its value, not its gradient.
 
-        The objective is the negated MaxProfit score of the model's predicted probabilities, as the
-        metric itself computes it, plus the same elastic-net penalty :meth:`logit_objective` adds.
+        The objective is the negated MaxProfit score of the model, as the metric itself computes
+        it, plus the same elastic-net penalty :meth:`logit_objective` adds.
         Unlike :meth:`logit_objective`, it supports every MaxProfit metric, and neither computes nor
         approximates a gradient.
 

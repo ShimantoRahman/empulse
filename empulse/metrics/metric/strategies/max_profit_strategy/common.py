@@ -327,15 +327,19 @@ class MaxProfitLogitValueObjective(LogitObjective):
     """
     The negated MaxProfit of a logistic model, for optimizers that need only the objective's value.
 
-    Scores the model's predicted probabilities with the metric's own score function, so it gives
-    exactly the metric's value and supports every MaxProfit variant, including those without a
-    gradient. It provides no gradient: :meth:`data_gradient` raises.
+    Scores the model with the metric's own score function, so it gives exactly the metric's value
+    and supports every MaxProfit variant, including those without a gradient. It provides no
+    gradient: :meth:`data_gradient` raises.
+
+    MaxProfit depends on the scores only through their ranking, so the model's linear predictions
+    are scored directly. Their probabilities would rank them the same, except that rounding merges
+    predictions above about 30 into ties: every prediction above about 37 has probability 1.0.
 
     Parameters
     ----------
     score : callable
-        Takes the predicted probabilities of the training samples and returns their MaxProfit
-        score, with the labels and parameters already bound.
+        Takes scores of the training samples and returns their MaxProfit score, with the labels
+        and parameters already bound. Only the ranking of the scores may matter to it.
     features : ndarray of shape (n_samples, n_features)
         The features, with a leading column of ones if an intercept is fitted.
     penalty : ElasticNetPenalty
@@ -351,7 +355,7 @@ class MaxProfitLogitValueObjective(LogitObjective):
 
     def data_loss(self, weights: FloatNDArray) -> float:
         """Return the negated MaxProfit score of the model with coefficients *weights*."""
-        return -self.score(expit(self.features @ np.asarray(weights, dtype=np.float64)))
+        return -self.score(self.features @ np.asarray(weights, dtype=np.float64))
 
     def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Raise: this objective only provides values."""

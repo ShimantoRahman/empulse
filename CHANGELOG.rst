@@ -10,6 +10,13 @@ Metrics
   :class:`~empulse.models.ProfLogitClassifier`. The mixture replaces its components' penalties with
   a single one of its own, but those components kept applying theirs, so models fitted on such a
   mixture were regularized more strongly than ``C`` asks for.
+- |Fix| A :class:`~empulse.metrics.MaxProfit` loss of :class:`~empulse.models.ProfLogitClassifier`,
+  or of :class:`~empulse.models.CSLogitClassifier` with an optimizer that uses only the objective's
+  value, now ranks the samples by the model's linear predictions rather than by their
+  probabilities. Rounding makes all probabilities of predictions above about 37 exactly 1.0, and
+  those above about 30 barely distinguishable, so the objective scored such samples as ties. A
+  model's predictions rarely get this large at the optimum, but the genetic algorithm's candidates
+  often do, and it compared them on slightly wrong values.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now works when the metric's
   symbols were declared with assumptions, e.g. ``sympy.symbols('a b', positive=True)``. Parameter
   values were substituted into the expressions by name, which sympy turns into symbols without

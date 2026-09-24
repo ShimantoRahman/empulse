@@ -68,6 +68,23 @@ def test_value_objective_matches_the_value_of_the_gradient_objective(data, metri
     assert value == pytest.approx(metric._logit_objective(**arguments).logit_loss(weights), rel=1e-12)
 
 
+@pytest.mark.parametrize('metric', [DETERMINISTIC, BETA, UNIFORM], ids=['deterministic', 'beta', 'uniform'])
+def test_value_objective_ranks_models_with_large_linear_predictions(metric):
+    """Predictions this large all have probability 1.0, but are still ranked by their size."""
+    rng = np.random.default_rng(3)
+    y = rng.permutation(np.repeat([0, 1], 50))
+    # The positives get the larger predictions more often, so the ranking has a nontrivial profit.
+    x = rng.normal(size=100) + y
+    X = np.column_stack((np.ones(100), x))
+    weights = np.array([45.0, 1.0])
+    assert np.all(expit(X @ weights) == 1.0)
+    objective = metric._logit_value_objective(features=X, y_true=y, C=np.inf, l1_ratio=0.0, fit_intercept=True)
+    # Without the intercept, the probabilities rank the samples as the predictions do.
+    expected = -metric(y, expit(x))
+    assert objective.logit_loss(weights) == pytest.approx(expected, rel=1e-12)
+    assert expected != pytest.approx(-metric(y, np.ones(100)), rel=1e-3)
+
+
 def test_cost_metrics_keep_their_objective_for_value_only_optimizers(data):
     """Their objective already computes the value on its own, so it is used as it is."""
     X, y = data
