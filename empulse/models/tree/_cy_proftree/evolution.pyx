@@ -70,16 +70,13 @@ cdef Forest* initialize_population_max_profit(
 ) noexcept:
     cdef Forest* population = create_forest(pop_size)
     cdef Tree* tree
-    cdef int i, j
+    cdef int i
     cdef int n_samples = X.shape[0]
-    cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
-    cdef float[:] predictions_view = predictions
     for i in range(pop_size):
         tree = create_tree()
         split(rng, tree.root, n_features, split_values, depth=0, max_depth=max_depth)
         fit_tree(tree, X, y, n_samples)
-        predict_proba_tree(tree, X, predictions_view, n_samples)
-        evaluate_max_profit(tree, y, predictions, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
+        evaluate_max_profit(tree, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
         population.trees[i] = tree
     return population
 
@@ -134,11 +131,10 @@ cdef inline void insert_offspring(Forest* population, Forest* offspring, int i) 
         free_tree(child)
         offspring.trees[i] = NULL  # Already freed, set to NULL
 
-cdef inline void fit_predict(
-    float[:, :] X,
-    int[:] y,
+cdef inline void refit(
+    const float[:, ::1] X,
+    const int[:] y,
     Tree* tree,
-    float[:] predictions,
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
@@ -146,6 +142,17 @@ cdef inline void fit_predict(
     reset_tree(tree)
     fit_tree(tree, X, y, n_samples)
     prune_illegal_nodes(tree, tree.root, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
+
+cdef inline void fit_predict(
+    const float[:, ::1] X,
+    const int[:] y,
+    Tree* tree,
+    float[:] predictions,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+) noexcept nogil:
+    refit(X, y, tree, n_samples, min_samples_split, min_samples_leaf)
     predict_proba_tree(tree, X, predictions, n_samples)
 
 
@@ -164,17 +171,15 @@ cdef inline void evaluate(
 
 cdef inline void evaluate_max_profit(
     Tree* tree,
-    cnp.ndarray[cnp.int32_t, ndim=1] y,
-    cnp.ndarray[cnp.float32_t, ndim=1] predictions,
     float tp_benefit,
     float tn_benefit,
     float fp_cost,
     float fn_cost,
     float alpha,
-) noexcept:
+) noexcept nogil:
+    # Computed from the leaf counts that fitting left in the tree, not from per-sample predictions.
     cdef float fitness = max_profit_score(
-        y,
-        predictions,
+        tree.root,
         tp_benefit=tp_benefit,
         tn_benefit=tn_benefit,
         fp_cost=fp_cost,
@@ -231,8 +236,8 @@ cdef EvolutionResult evolve_forest_stochastic(
     cdef RandState rng
     seed_rand(&rng, <unsigned int>random_state)
 
-    cdef float[:, :] X_view = X
-    cdef int[:] y_view = y
+    cdef const float[:, ::1] X_view = X
+    cdef const int[:] y_view = y
     cdef cnp.int32_t n_samples = <int>X.shape[0]
     cdef cnp.int32_t n_features = <int>X.shape[1]
     cdef int i, generation
@@ -339,8 +344,8 @@ cdef EvolutionResult evolve_forest_deterministic(
     cdef RandState rng
     seed_rand(&rng, <unsigned int>random_state)
 
-    cdef float[:, :] X_view = X
-    cdef int[:] y_view = y
+    cdef const float[:, ::1] X_view = X
+    cdef const int[:] y_view = y
     cdef cnp.int32_t n_samples = <int>X.shape[0]
     cdef cnp.int32_t n_features = <int>X.shape[1]
     cdef int i, generation
@@ -372,8 +377,6 @@ cdef EvolutionResult evolve_forest_deterministic(
     cdef Forest* offspring = create_forest(pop_size)
     for i in range(pop_size):
         offspring.trees[i] = NULL
-    cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
-    cdef float[:] predictions_view = predictions
 
     # set up the rates for various genetic operations
     cdef float probability = 0.0
@@ -399,8 +402,8 @@ cdef EvolutionResult evolve_forest_deterministic(
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
             child = population.trees[i]
-            fit_predict(X_view, y_view, child, predictions_view, n_samples, min_samples_split, min_samples_leaf)
-            evaluate_max_profit(child, y, predictions, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
+            refit(X_view, y_view, child, n_samples, min_samples_split, min_samples_leaf)
+            evaluate_max_profit(child, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(

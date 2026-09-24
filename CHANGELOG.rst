@@ -121,6 +121,12 @@ Models
   current best when the fitness is negative, so a tie counted as an improvement, the patience never
   ran out and every fit ran for ``max_iter`` generations. The tolerance is now scaled by the
   magnitude of the fitness; fits with a positive fitness are unaffected.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits roughly 8x faster with its default
+  maximum profit fitness (no ``loss``, or a deterministic :class:`~empulse.metrics.MaxProfit`
+  metric). Each candidate tree's maximum profit is now computed from its leaf counts: every sample
+  in a leaf gets the same score, so ranking the leaves gives the same ROC curve as predicting and
+  sorting every training sample, which is what each evaluation did before. Routing samples through
+  the tree also no longer creates a memoryview per sample. The fitted trees are unchanged.
 
 Datasets
 --------

@@ -40,6 +40,9 @@ cdef class EvolutionaryTree:
             from sklearn.metrics import accuracy_score
             fitness_function = accuracy_score
 
+        # Samples are routed through the tree by pointer to their row, so rows must be contiguous.
+        X = np.ascontiguousarray(X)
+
         cdef EvolutionResult result = evolve_forest_stochastic(
             X,
             y,
@@ -88,6 +91,9 @@ cdef class EvolutionaryTree:
         if self.tree is not NULL:
             free_tree(self.tree)
 
+        # Samples are routed through the tree by pointer to their row, so rows must be contiguous.
+        X = np.ascontiguousarray(X)
+
         cdef EvolutionResult result = evolve_forest_deterministic(
             X,
             y,
@@ -116,6 +122,7 @@ cdef class EvolutionaryTree:
     def predict_proba(self, cnp.ndarray[cnp.float32_t, ndim=2] X):
         if self.tree is NULL:
             raise ValueError("The model has not been fitted yet.")
+        X = np.ascontiguousarray(X)
         cdef int n_samples = X.shape[0]
         cdef cnp.ndarray[cnp.float32_t, ndim=1] probabilities = np.empty(n_samples, dtype=np.float32)
         cdef float[:] probabilities_view = probabilities
@@ -125,6 +132,7 @@ cdef class EvolutionaryTree:
     def predict(self, cnp.ndarray[cnp.float32_t, ndim=2] X):
         if self.tree is NULL:
             raise ValueError("The model has not been fitted yet.")
+        X = np.ascontiguousarray(X)
         cdef int n_samples = X.shape[0]
         cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
         cdef float[:] predictions_view = predictions

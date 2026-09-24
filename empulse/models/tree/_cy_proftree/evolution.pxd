@@ -36,9 +36,18 @@ cdef Tree* evolve_tree(
 
 cdef inline void insert_offspring(Forest* population, Forest* offspring, int i) noexcept nogil
 
+cdef inline void refit(
+    const float[:, ::1] X,
+    const int[:] y,
+    Tree* tree,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+) noexcept nogil
+
 cdef inline void fit_predict(
-    float[:, :] X,
-    int[:] y,
+    const float[:, ::1] X,
+    const int[:] y,
     Tree* tree,
     float[:] predictions,
     int n_samples,
