@@ -30,7 +30,8 @@ cdef class EvolutionaryTree:
         int patience=5,
         float tol=1e-3,
         object fitness_function=None,
-        int random_state=-1
+        int random_state=-1,
+        int n_jobs=1,
     ):
         if self.tree is not NULL:
             free_tree(self.tree)
@@ -60,7 +61,8 @@ cdef class EvolutionaryTree:
             patience,
             tol,
             alpha,
-            random_state
+            random_state,
+            n_jobs,
         )
         self.tree = result.tree
         self.n_generations = result.n_generations
@@ -86,7 +88,8 @@ cdef class EvolutionaryTree:
         int max_generations=50,
         int patience=5,
         float tol=1e-3,
-        int random_state=-1
+        int random_state=-1,
+        int n_jobs=1,
     ):
         if self.tree is not NULL:
             free_tree(self.tree)
@@ -114,7 +117,8 @@ cdef class EvolutionaryTree:
             patience,
             tol,
             alpha,
-            random_state
+            random_state,
+            n_jobs,
         )
         self.tree = result.tree
         self.n_generations = result.n_generations

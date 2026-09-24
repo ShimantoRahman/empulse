@@ -127,6 +127,13 @@ Models
   in a leaf gets the same score, so ranking the leaves gives the same ROC curve as predicting and
   sorting every training sample, which is what each evaluation did before. Routing samples through
   the tree also no longer creates a memoryview per sample. The fitted trees are unchanged.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` now uses ``n_jobs``, which it accepted
+  but ignored: each generation's trees are fitted, and with the default maximum profit fitness also
+  evaluated, in parallel over ``n_jobs`` threads (about 3x faster on 4 cores). The random variations
+  are still drawn serially, so the fitted tree does not depend on ``n_jobs``. ``n_jobs`` now also
+  accepts ``None`` and negative values, which count back from the number of processors as in
+  scikit-learn (``-1`` uses all of them). The package falls back to a single thread when it is built
+  without OpenMP; set ``EMPULSE_DISABLE_OPENMP=1`` to build it that way deliberately.
 
 Datasets
 --------

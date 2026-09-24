@@ -286,3 +286,30 @@ class TestMemoryLayout:
         np.testing.assert_array_equal(
             c_ordered.predict_proba(np.asfortranarray(X)), f_ordered.predict_proba(np.ascontiguousarray(X))
         )
+
+
+class TestNJobs:
+    """The trees are fitted in parallel, but only the serial variation step draws random numbers."""
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('custom_loss', [False, True], ids=['max_profit', 'custom_loss'])
+    def test_fitted_tree_does_not_depend_on_n_jobs(self, custom_loss):
+        X, y = make_classification(n_samples=500, n_features=6, random_state=0)
+        fn, fp = sympy.symbols('fn fp')
+        loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()) if custom_loss else None
+        fit_params = {'fn': 5.0, 'fp': 1.0} if custom_loss else {'fn_cost': 5.0, 'fp_cost': 1.0}
+
+        def fit(n_jobs):
+            model = ProfTreeClassifier(loss=loss, max_iter=30, population_size=40, n_jobs=n_jobs, random_state=0)
+            return model.fit(X, y, **fit_params)
+
+        serial = fit(1)
+        for n_jobs in (2, -1, None):
+            parallel = fit(n_jobs)
+            np.testing.assert_array_equal(parallel.predict_proba(X), serial.predict_proba(X))
+            assert parallel.n_iter_ == serial.n_iter_
+
+    def test_zero_jobs_is_rejected(self, data):
+        X, y = data
+        with pytest.raises(ValueError, match='n_jobs'):
+            ProfTreeClassifier(n_jobs=0).fit(X, y, fn_cost=1.0, fp_cost=1.0)

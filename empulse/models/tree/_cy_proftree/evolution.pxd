@@ -7,19 +7,47 @@ from .random cimport RandState
 
 cdef Tree* find_best_tree(Forest* population) noexcept
 
-cdef Forest* initialize_population(
+cdef Forest* random_population(
     RandState* rng,
     int pop_size,
     int n_features,
     SplitValues* split_values,
     int max_depth,
-    cnp.ndarray[cnp.float32_t, ndim=2] X,
-    cnp.ndarray[cnp.int32_t, ndim=1] y,
+) noexcept nogil
+
+cdef void fit_population(
+    Forest* population,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
     int min_samples_split,
     int min_samples_leaf,
+    int n_threads,
+) noexcept nogil
+
+cdef void fit_population_max_profit(
+    Forest* population,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+    float tp_benefit,
+    float tn_benefit,
+    float fp_cost,
+    float fn_cost,
     float alpha,
+    int n_threads,
+) noexcept nogil
+
+cdef void evaluate_population(
+    Forest* population,
+    const float[:, ::1] X,
+    cnp.ndarray[cnp.int32_t, ndim=1] y,
+    int n_samples,
     object fitness_function,
-) noexcept
+    float alpha,
+)
 
 cdef Tree* evolve_tree(
     RandState* rng,
@@ -40,16 +68,6 @@ cdef inline void refit(
     const float[:, ::1] X,
     const int[:] y,
     Tree* tree,
-    int n_samples,
-    int min_samples_split,
-    int min_samples_leaf,
-) noexcept nogil
-
-cdef inline void fit_predict(
-    const float[:, ::1] X,
-    const int[:] y,
-    Tree* tree,
-    float[:] predictions,
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
@@ -93,6 +111,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     float tol = *,
     float alpha = *,
     int random_state = *,
+    int n_threads = *,
 )
 
 cdef EvolutionResult evolve_forest_deterministic(
@@ -116,4 +135,5 @@ cdef EvolutionResult evolve_forest_deterministic(
     float tol = *,
     float alpha = *,
     int random_state = *,
+    int n_threads = *,
 )

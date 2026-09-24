@@ -4,6 +4,7 @@ import numpy as np
 cimport numpy as cnp
 from libc.math cimport fabs
 from libc.stdlib cimport free
+from cython.parallel cimport prange
 
 from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     compute_split_values, free_split_values, reset_tree,
@@ -24,61 +25,78 @@ cdef Tree* find_best_tree(Forest* population) noexcept:
             best_tree = population.trees[i]
     return copy_tree(best_tree)
 
-cdef Forest* initialize_population(
+cdef Forest* random_population(
     RandState* rng,
     int pop_size,
     int n_features,
     SplitValues* split_values,
     int max_depth,
-    cnp.ndarray[cnp.float32_t, ndim=2] X,
-    cnp.ndarray[cnp.int32_t, ndim=1] y,
-    int min_samples_split,
-    int min_samples_leaf,
-    float alpha,
-    object fitness_function,
-) noexcept:
+) noexcept nogil:
+    """Draw the initial population: trees of a single random split, not yet fitted."""
     cdef Forest* population = create_forest(pop_size)
-    cdef Tree* tree
-    cdef int i, j
-    cdef int n_samples = X.shape[0]
-    cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
-    cdef float[:] predictions_view = predictions
+    cdef int i
     for i in range(pop_size):
-        tree = create_tree()
-        split(rng, tree.root, n_features, split_values, depth=0, max_depth=max_depth)
-        fit_tree(tree, X, y, n_samples)
-        predict_proba_tree(tree, X, predictions_view, n_samples)
-        evaluate(tree, fitness_function, y, predictions, alpha)
-        population.trees[i] = tree
+        population.trees[i] = create_tree()
+        split(rng, population.trees[i].root, n_features, split_values, depth=0, max_depth=max_depth)
     return population
 
-cdef Forest* initialize_population_max_profit(
-    RandState* rng,
-    int pop_size,
-    int n_features,
-    SplitValues* split_values,
-    int max_depth,
-    cnp.ndarray[cnp.float32_t, ndim=2] X,
-    cnp.ndarray[cnp.int32_t, ndim=1] y,
+
+# Fitting the trees is the bulk of every generation and each tree is fitted independently, so it runs
+# in parallel over the population. Only the variation operators draw random numbers, and they run
+# serially beforehand, so the fit does not depend on the number of threads.
+
+cdef void fit_population(
+    Forest* population,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
+    int n_threads,
+) noexcept nogil:
+    cdef int i
+    for i in prange(
+        population.n_trees, schedule='dynamic', num_threads=n_threads, use_threads_if=n_threads > 1
+    ):
+        refit(X, y, population.trees[i], n_samples, min_samples_split, min_samples_leaf)
+
+cdef void fit_population_max_profit(
+    Forest* population,
+    const float[:, ::1] X,
+    const int[:] y,
+    int n_samples,
+    int min_samples_split,
+    int min_samples_leaf,
     float tp_benefit,
     float tn_benefit,
     float fp_cost,
     float fn_cost,
-    int min_samples_split,
-    int min_samples_leaf,
     float alpha,
-) noexcept:
-    cdef Forest* population = create_forest(pop_size)
-    cdef Tree* tree
+    int n_threads,
+) noexcept nogil:
+    """Fit every tree and set its fitness, which needs nothing but the tree's own leaf counts."""
     cdef int i
-    cdef int n_samples = X.shape[0]
-    for i in range(pop_size):
-        tree = create_tree()
-        split(rng, tree.root, n_features, split_values, depth=0, max_depth=max_depth)
-        fit_tree(tree, X, y, n_samples)
-        evaluate_max_profit(tree, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
-        population.trees[i] = tree
-    return population
+    for i in prange(
+        population.n_trees, schedule='dynamic', num_threads=n_threads, use_threads_if=n_threads > 1
+    ):
+        refit(X, y, population.trees[i], n_samples, min_samples_split, min_samples_leaf)
+        evaluate_max_profit(population.trees[i], tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
+
+cdef void evaluate_population(
+    Forest* population,
+    const float[:, ::1] X,
+    cnp.ndarray[cnp.int32_t, ndim=1] y,
+    int n_samples,
+    object fitness_function,
+    float alpha,
+):
+    """Set the fitness of every fitted tree with a Python fitness function, one tree at a time."""
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
+    cdef float[:] predictions_view = predictions
+    cdef int i
+    for i in range(population.n_trees):
+        predict_proba_tree(population.trees[i], X, predictions_view, n_samples)
+        evaluate(population.trees[i], fitness_function, y, predictions, alpha)
 
 
 cdef Tree* evolve_tree(
@@ -142,18 +160,6 @@ cdef inline void refit(
     reset_tree(tree)
     fit_tree(tree, X, y, n_samples)
     prune_illegal_nodes(tree, tree.root, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
-
-cdef inline void fit_predict(
-    const float[:, ::1] X,
-    const int[:] y,
-    Tree* tree,
-    float[:] predictions,
-    int n_samples,
-    int min_samples_split,
-    int min_samples_leaf,
-) noexcept nogil:
-    refit(X, y, tree, n_samples, min_samples_split, min_samples_leaf)
-    predict_proba_tree(tree, X, predictions, n_samples)
 
 
 cdef inline void evaluate(
@@ -230,6 +236,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     float tol = 1e-3,
     float alpha = 0.0,
     int random_state = -1,
+    int n_threads = 1,
 ):
     # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
     # concurrent fits neither interleave draws nor reseed one another.
@@ -243,19 +250,9 @@ cdef EvolutionResult evolve_forest_stochastic(
     cdef int i, generation
     cdef SplitValues* split_values = compute_split_values(X)
 
-    cdef Forest* population = initialize_population(
-        &rng,
-        pop_size=pop_size,
-        n_features=n_features,
-        split_values=split_values,
-        max_depth=max_depth,
-        X=X,
-        y=y,
-        min_samples_split=min_samples_split,
-        min_samples_leaf=min_samples_leaf,
-        alpha=alpha,
-        fitness_function=fitness_function,
-    )
+    cdef Forest* population = random_population(&rng, pop_size, n_features, split_values, max_depth)
+    fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
+    evaluate_population(population, X_view, y, n_samples, fitness_function, alpha)
 
     cdef int stagnation_counter = 0
     cdef Tree* parent
@@ -266,8 +263,6 @@ cdef EvolutionResult evolve_forest_stochastic(
     cdef Forest* offspring = create_forest(pop_size)
     for i in range(pop_size):
         offspring.trees[i] = NULL
-    cdef cnp.ndarray[cnp.float32_t, ndim=1] predictions = np.empty(n_samples, dtype=np.float32)
-    cdef float[:] predictions_view = predictions
 
     # set up the rates for various genetic operations
     cdef float probability = 0.0
@@ -292,9 +287,8 @@ cdef EvolutionResult evolve_forest_stochastic(
 
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
-            child = population.trees[i]
-            fit_predict(X_view, y_view, child, predictions_view, n_samples, min_samples_split, min_samples_leaf)
-            evaluate(child, fitness_function, y, predictions, alpha)
+        fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
+        evaluate_population(population, X_view, y, n_samples, fitness_function, alpha)
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(
@@ -338,6 +332,7 @@ cdef EvolutionResult evolve_forest_deterministic(
     float tol = 1e-3,
     float alpha = 0.0,
     int random_state = -1,
+    int n_threads = 1,
 ):
     # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
     # concurrent fits neither interleave draws nor reseed one another.
@@ -351,21 +346,10 @@ cdef EvolutionResult evolve_forest_deterministic(
     cdef int i, generation
     cdef SplitValues* split_values = compute_split_values(X)
 
-    cdef Forest* population = initialize_population_max_profit(
-        &rng,
-        pop_size=pop_size,
-        n_features=n_features,
-        split_values=split_values,
-        max_depth=max_depth,
-        X=X,
-        y=y,
-        tp_benefit=tp_benefit,
-        tn_benefit=tn_benefit,
-        fp_cost=fp_cost,
-        fn_cost=fn_cost,
-        min_samples_split=min_samples_split,
-        min_samples_leaf=min_samples_leaf,
-        alpha=alpha,
+    cdef Forest* population = random_population(&rng, pop_size, n_features, split_values, max_depth)
+    fit_population_max_profit(
+        population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
+        tp_benefit, tn_benefit, fp_cost, fn_cost, alpha, n_threads,
     )
 
     cdef int stagnation_counter = 0
@@ -401,9 +385,10 @@ cdef EvolutionResult evolve_forest_deterministic(
 
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
-            child = population.trees[i]
-            refit(X_view, y_view, child, n_samples, min_samples_split, min_samples_leaf)
-            evaluate_max_profit(child, tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
+        fit_population_max_profit(
+            population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
+            tp_benefit, tn_benefit, fp_cost, fn_cost, alpha, n_threads,
+        )
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(
