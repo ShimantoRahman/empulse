@@ -141,3 +141,27 @@ class TestOOBWeightingDirectionAndInstanceCosts:
         majority_acc = accuracy_score(y_test, majority.predict(X_test))
         # Not a strict requirement that weighting always wins, but it shouldn't be far worse.
         assert weighted_acc >= majority_acc - 0.1
+
+
+def test_csforest_rejects_a_metric_as_criterion(data):
+    """Regression test: parameter validation accepted a ``BaseMetric`` as ``criterion``.
+
+    ``fit`` could not use one and failed later with a confusing "Unknown criterion" error. The
+    criterion is now validated like :class:`~empulse.models.CSTreeClassifier`'s.
+    """
+    from sklearn.utils._param_validation import InvalidParameterError
+
+    from empulse.metrics import expected_cost_loss
+
+    X, y = data
+    with pytest.raises(InvalidParameterError, match="The 'criterion' parameter"):
+        CSForestClassifier(criterion=expected_cost_loss, n_estimators=2).fit(X, y, fn_cost=5.0, fp_cost=1.0)
+
+
+def test_csforest_accepts_a_cost_impurity_instance(data):
+    from empulse.models.tree._impurity import GiniCostImpurity
+
+    X, y = data
+    criterion = GiniCostImpurity(n_outputs=1, n_classes=np.array([2], dtype=np.intp))
+    model = CSForestClassifier(criterion=criterion, n_estimators=2, random_state=0).fit(X, y, fn_cost=5.0, fp_cost=1.0)
+    assert isinstance(model.criterion_, GiniCostImpurity)
