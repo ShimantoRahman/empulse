@@ -100,6 +100,13 @@ Metrics
 - |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
   than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
   about 10-40% faster; the names are found again if the metric's cost matrix is changed.
+- |Efficiency| A :class:`~empulse.metrics.Metric` called with ``validate=False`` now also skips the
+  checks of the labels, which the models that pass it have already checked when they were fitted,
+  and only checks that the scores are finite. This makes the metric evaluations inside training
+  loops (such as :class:`~empulse.models.ProfTreeClassifier`, :class:`~empulse.models.ProfSRClassifier`
+  and the out-of-bag weighting of :class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier`) 1.7-3.8x faster on up to 10,000 samples, together
+  with the entry above. Results are unchanged, and scores that are ``nan`` or infinite still raise.
 
 Models
 ------
