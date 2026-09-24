@@ -115,6 +115,12 @@ Models
   during parameter validation, like :class:`~empulse.models.CSTreeClassifier`, instead of accepting
   it and failing later in ``fit`` with an "Unknown criterion" error. Like
   :class:`~empulse.models.CSTreeClassifier`, it now also accepts a cost impurity instance.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier`'s early stopping (``patience`` and
+  ``tolerance``) now works when the fitness is negative, as it is with costs but no benefits, or with
+  a custom ``loss``. A new best tree had to beat ``fitness * (1 + tolerance)``, which is below the
+  current best when the fitness is negative, so a tie counted as an improvement, the patience never
+  ran out and every fit ran for ``max_iter`` generations. The tolerance is now scaled by the
+  magnitude of the fitness; fits with a positive fitness are unaffected.
 
 `0.12.0`_ (19-09-2026)
 ======================

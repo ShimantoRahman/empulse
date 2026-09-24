@@ -2,6 +2,7 @@
 
 import numpy as np
 cimport numpy as cnp
+from libc.math cimport fabs
 from libc.stdlib cimport free
 
 from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
@@ -187,7 +188,10 @@ cdef inline void evaluate_max_profit(
 cdef inline bint stop_evolution(
     Tree* challenger, Tree** champion, int* stagnation_counter, float tolerance, int patience
 ) noexcept:
-    if challenger.fitness > champion[0].fitness * (1.0 + tolerance):
+    # The tolerance is relative to the champion's magnitude. Scaling the fitness itself by
+    # (1 + tolerance) lowers the bar when the fitness is negative (e.g. costs only), so an equal
+    # or slightly worse challenger counted as an improvement and patience never ran out.
+    if challenger.fitness > champion[0].fitness + tolerance * fabs(champion[0].fitness):
         free_tree(champion[0])  # Always free the old champion
         champion[0] = challenger  # New champion takes ownership
         stagnation_counter[0] = 0
