@@ -1,4 +1,5 @@
 import warnings
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -189,3 +190,47 @@ class TestNodeCountPenalty:
 
         tree = model.tree_._serialize_tree()
         assert tree['n_nodes'] == self._count(tree['root'])
+
+
+class TestEarlyStoppingWithNegativeFitness:
+    """Regression tests: early stopping never triggered when the fitness was negative.
+
+    A challenger had to beat ``champion * (1 + tolerance)``, which is below the champion when the
+    fitness is negative (e.g. costs without benefits, or a custom loss), so a tie counted as an
+    improvement and reset the patience counter every generation.
+
+    With crossover as the only variation operator, the population never changes (crossover
+    offspring are never inserted, by design), so every generation's best ties the champion and the
+    search must stop after ``patience`` generations without improvement.
+    """
+
+    FROZEN_POPULATION: ClassVar[dict[str, float]] = {
+        'crossover_rate': 1.0,
+        'grow_rate': 0.0,
+        'prune_rate': 0.0,
+        'mutate_split_rate': 0.0,
+        'mutate_value_rate': 0.0,
+    }
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize(
+        'costs',
+        [{'fn_cost': 5.0, 'fp_cost': 1.0}, {'tp_cost': -20.0, 'fp_cost': 1.0}],
+        ids=['negative_fitness', 'positive_fitness'],
+    )
+    def test_patience_runs_out_on_a_stagnant_population(self, costs):
+        X, y = make_classification(n_samples=400, random_state=0)
+        model = ProfTreeClassifier(
+            patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
+        ).fit(X, y, **costs)
+        assert model.n_iter_ == 6
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    def test_patience_runs_out_with_a_custom_loss(self):
+        X, y = make_classification(n_samples=400, random_state=0)
+        fn, fp = sympy.symbols('fn fp')
+        loss = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost())
+        model = ProfTreeClassifier(
+            loss=loss, patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
+        ).fit(X, y, fn=5.0, fp=1.0)
+        assert model.n_iter_ == 6
