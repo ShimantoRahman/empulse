@@ -255,6 +255,26 @@ class BaseMetric(ABC):
     ) -> LogitObjective:
         """Compute the logit loss and its gradient with respect to the logistic regression weights."""
 
+    def _logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> LogitObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        Takes the same arguments as :meth:`_logit_objective`, which it returns by default, since
+        that objective exposes the value too. Metrics whose gradient is costly to compute, or only
+        approximated, return an objective that computes the value alone.
+        """
+        return self._logit_objective(
+            features=features, y_true=y_true, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, **parameters
+        )
+
     @abstractmethod
     def _evaluate_costs(
         self, *, replace_stochastic: bool = False, **parameters: FloatNDArray | float

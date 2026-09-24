@@ -193,6 +193,27 @@ Models
   training sample. The metric's parameters are also resolved once per fit instead of once per tree,
   and the labels and predictions are no longer re-validated on every evaluation. The fitted trees
   are unchanged. Other losses are still evaluated on every sample's prediction.
+- |Efficiency| :class:`~empulse.models.ProfLogitClassifier` and
+  :class:`~empulse.models.CSLogitClassifier` with a :class:`~empulse.metrics.MaxProfit` loss no
+  longer compute a gradient for optimizers that do not use it, such as the default
+  :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Each candidate model is now scored by the
+  metric itself: with 10,000 samples, :class:`~empulse.models.ProfLogitClassifier` fits about 2.9x
+  faster with a deterministic metric and 1.9x faster with the expected maximum profit, to the same
+  coefficients.
+- |Enhancement| :class:`~empulse.models.ProfLogitClassifier` (and the logit models with any
+  optimizer that does not use gradients) now supports every :class:`~empulse.metrics.MaxProfit`
+  loss. Losses with a stochastic variable whose distribution is not strictly positive, such as a
+  uniform or normal one, or with several stochastic variables, raised a ``NotImplementedError``,
+  since only the gradient was restricted to the others.
+
+Optimizers
+----------
+
+- |API| :class:`~empulse.optimizers.Optimizer` has a new ``requires_gradient`` property, which the
+  logit models read to decide whether to build an objective that also computes its gradient. It is
+  ``True`` by default, ``False`` for :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`, and
+  follows ``use_jacobian`` for :class:`~empulse.optimizers.ScipyOptimizer`. A custom optimizer that
+  only calls ``logit_loss`` can return ``False`` to get the faster objective.
 
 Datasets
 --------

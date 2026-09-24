@@ -10,7 +10,7 @@ from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, LogitObjective
+from ...metrics import BaseMetric
 from ...optimizers import Optimizer
 from .cost_sensitive import CostSensitiveClassifier
 
@@ -58,10 +58,9 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         self.optimizer = optimizer
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
-    def _optimize(self, objective: LogitObjective, X: FloatNDArray, **kwargs: Any) -> OptimizeResult:
-        """Optimize the objective function using `self.optimizer`, or `_default_optimizer` if unset."""
-        optimize = self._default_optimizer() if self.optimizer is None else self.optimizer
-        return optimize(objective=objective, X=X, **kwargs)
+    def _resolve_optimizer(self) -> Optimizer:
+        """Return `self.optimizer`, or a new `_default_optimizer` if unset."""
+        return self._default_optimizer() if self.optimizer is None else self.optimizer
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         if self.fit_intercept and not np.all(X[:, 0] == 1):
@@ -78,7 +77,10 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
     def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
-        objective = loss._logit_objective(
+        optimizer = self._resolve_optimizer()
+        # An optimizer that only compares losses gets an objective that computes the loss alone.
+        build_objective = loss._logit_objective if optimizer.requires_gradient else loss._logit_value_objective
+        objective = build_objective(
             features=X,
             y_true=y,
             C=self.C,
@@ -86,7 +88,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
             fit_intercept=self.fit_intercept,
             **loss_params,
         )
-        self.result_ = self._optimize(objective, X)
+        self.result_ = optimizer(objective=objective, X=X)
 
         if self.fit_intercept:
             self.intercept_ = self.result_.x[0]

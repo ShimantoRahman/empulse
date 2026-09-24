@@ -98,6 +98,11 @@ class GeneticAlgorithmOptimizer(Optimizer):
         self.n_jobs = n_jobs
         self.verbose = verbose
 
+    @property
+    def requires_gradient(self) -> bool:
+        """``False``: the genetic algorithm only ranks individuals by their loss."""
+        return False
+
     def __call__(
         self,
         objective: LogitObjective,

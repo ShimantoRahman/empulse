@@ -487,12 +487,44 @@ class MixtureMetric(BaseMetric):
         fit_intercept: bool,
         **parameters: Any,
     ) -> LogitObjective:
+        return self._mixture_logit_objective(
+            'objective', features, y_true, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, **parameters
+        )
+
+    def _logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: Any,
+    ) -> LogitObjective:
+        """Build the weighted sum of the components' value-only logit objectives."""
+        return self._mixture_logit_objective(
+            'value', features, y_true, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, **parameters
+        )
+
+    def _mixture_logit_objective(
+        self,
+        kind: Literal['objective', 'value'],
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: Any,
+    ) -> LogitObjective:
+        """Combine the components' logit objectives, full or value-only as *kind* says."""
         parameters = self._apply_defaults(parameters, validate=False)
         forwarded = self._forward_parameters(parameters)
         weighted_objectives = []
         for component in self.components:
             weight = self._resolve_weight(component.weight, parameters)
-            objective = component.metric._logit_objective(
+            build = (
+                component.metric._logit_objective if kind == 'objective' else component.metric._logit_value_objective
+            )
+            objective = build(
                 features=features,
                 y_true=y_true,
                 C=C,

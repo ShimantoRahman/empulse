@@ -667,14 +667,7 @@ class Metric(BaseMetric):
         logistic_objective : LogitObjective
             A class that implements the logit loss and its gradient.
         """
-        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
-
-        if y_true.ndim == 1:
-            y_true = np.expand_dims(y_true, axis=1)
-        for key, value in parameters.items():
-            if isinstance(value, np.ndarray) and value.ndim == 1:
-                parameters[key] = np.expand_dims(value, axis=1)
-
+        y_true, parameters = self._prepare_logit_inputs(y_true, parameters)
         return self.strategy.logit_objective(
             features=features,
             y_true=y_true,
@@ -683,6 +676,44 @@ class Metric(BaseMetric):
             fit_intercept=fit_intercept,
             **parameters,
         )
+
+    def _logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> LogitObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        Takes the same arguments as :meth:`_logit_objective`. See
+        :meth:`BaseMetric._logit_value_objective`.
+        """
+        y_true, parameters = self._prepare_logit_inputs(y_true, parameters)
+        return self.strategy.logit_value_objective(
+            features=features,
+            y_true=y_true,
+            C=C,
+            l1_ratio=l1_ratio,
+            fit_intercept=fit_intercept,
+            **parameters,
+        )
+
+    def _prepare_logit_inputs(
+        self, y_true: FloatNDArray, parameters: dict[str, FloatNDArray | float]
+    ) -> tuple[FloatNDArray, dict[str, FloatNDArray | float]]:
+        """Resolve the parameters, and turn the labels and array parameters into column vectors."""
+        parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
+
+        if y_true.ndim == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        for key, value in parameters.items():
+            if isinstance(value, np.ndarray) and value.ndim == 1:
+                parameters[key] = np.expand_dims(value, axis=1)
+        return y_true, parameters
 
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float

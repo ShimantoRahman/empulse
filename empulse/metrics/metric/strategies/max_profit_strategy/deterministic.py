@@ -71,6 +71,25 @@ class _BaseMaxProfitDeterministic:
         )
         return self._reduce(profits, tprs, fprs, pi0, pi1)
 
+    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+        """
+        Prepare the score of fixed labels, for parameter values fixed across many calls.
+
+        The parameters are checked, and the labels converted, once here. The returned function
+        takes the scores and gives the same result as calling this score function.
+        """
+        _check_parameters((*self.deterministic_symbols,), kwargs)
+        y_true = np.asarray(y_true).reshape(-1)
+
+        def score(y_score: FloatNDArray) -> float:
+            return self._reduce(
+                *_calculate_profits_deterministic(
+                    y_true, y_score, self.calculate_profit, self.profit_function, **kwargs
+                )
+            )
+
+        return score
+
     def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
         raise NotImplementedError
 

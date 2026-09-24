@@ -294,6 +294,26 @@ class MetricStrategy(ABC):
         """
         raise NotImplementedError(f'Gradient of the logit function is not defined for the {self.name} strategy')
 
+    def logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> LogitObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        Takes the same arguments as :meth:`logit_objective`, which it returns by default: that
+        objective exposes the value too. Strategies whose gradient is costly, or approximated,
+        override this with an objective that computes the value alone.
+        """
+        return self.logit_objective(
+            features=features, y_true=y_true, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, **parameters
+        )
+
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:

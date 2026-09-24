@@ -1,5 +1,5 @@
 import copy
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any, Literal, Self, overload
 
 import numpy as np
@@ -79,6 +79,24 @@ class _HullScoreFunction:
             n_positives = int(np.sum(n_positive))
             positive_class_prior = n_positives / (n_positives + int(np.sum(n_negative)))
             true_positive_rates, false_positive_rates = _convex_hull_from_counts(y_score, n_positive, n_negative)
+            # _score_hull may consume entries of the parameters, so each call gets its own copy.
+            return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
+
+        return score
+
+    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+        """
+        Prepare the score of fixed labels, for parameter values fixed across many calls.
+
+        The parameters are checked, and the labels converted and counted, once here. The returned
+        function takes the scores and gives the same result as calling this score function.
+        """
+        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+        y_true = np.ascontiguousarray(y_true, dtype=np.int32).reshape(-1)
+        positive_class_prior = float(np.mean(y_true))
+
+        def score(y_score: FloatNDArray) -> float:
+            true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
             # _score_hull may consume entries of the parameters, so each call gets its own copy.
             return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
 
@@ -283,3 +301,41 @@ class _BaseMaxProfitLogitObjective(LogitObjective):
         obj.y_true = self.y_true[indices]  # already int32
         obj._refresh_sample_state()
         return obj
+
+
+class MaxProfitLogitValueObjective(LogitObjective):
+    """
+    The negated MaxProfit of a logistic model, for optimizers that need only the objective's value.
+
+    Scores the model's predicted probabilities with the metric's own score function, so it gives
+    exactly the metric's value and supports every MaxProfit variant, including those without a
+    gradient. It provides no gradient: :meth:`data_gradient` raises.
+
+    Parameters
+    ----------
+    score : callable
+        Takes the predicted probabilities of the training samples and returns their MaxProfit
+        score, with the labels and parameters already bound.
+    features : ndarray of shape (n_samples, n_features)
+        The features, with a leading column of ones if an intercept is fitted.
+    penalty : ElasticNetPenalty
+        The penalty added to the negated score.
+    """
+
+    def __init__(
+        self, *, score: Callable[[FloatNDArray], float], features: FloatNDArray, penalty: ElasticNetPenalty
+    ) -> None:
+        self.score = score
+        self.features = np.asarray(features, dtype=np.float64)
+        self.penalty = penalty
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Return the negated MaxProfit score of the model with coefficients *weights*."""
+        return -self.score(expit(self.features @ np.asarray(weights, dtype=np.float64)))
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Raise: this objective only provides values."""
+        raise NotImplementedError(
+            f'{type(self).__name__} provides only the value of the objective, for optimizers that do '
+            'not need its gradient (Optimizer.requires_gradient is False).'
+        )

@@ -44,6 +44,18 @@ class Optimizer(ABC):
             ``message``.
         """
 
+    @property
+    def requires_gradient(self) -> bool:
+        """
+        Whether this optimizer uses the objective's gradient, or only its value.
+
+        A model builds the objective it hands to the optimizer from this: an optimizer that needs
+        only values gets an objective that scores the model directly, without the work (or the
+        smooth approximations) that computing a gradient takes. Defaults to ``True``, which is
+        always safe, since the full objective also exposes the value.
+        """
+        return True
+
     def _initial_weights(self, X: FloatNDArray) -> Float64Array:
         """
         Return a zero weight vector sized to match *X*.

@@ -6,6 +6,7 @@ import sympy
 from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 
+from ....._common._objective import ElasticNetPenalty
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
 from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
@@ -16,7 +17,7 @@ from ..._symbolic import _latex
 from ...capabilities import Capability
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
-from .common import _HullScoreFunction
+from .common import MaxProfitLogitValueObjective, _HullScoreFunction
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
     MaxProfitLogitGradientDeterministic,
@@ -534,17 +535,7 @@ class MaxProfit(MetricStrategy):
             # The stochastic route integrates over a random variable, so there is no closed-form
             # gradient magnitude. Substituting each random variable by its mean gives the same
             # scale the deterministic route would use, which keeps `C` comparable between the two.
-            mean_params: dict[str, FloatNDArray | float] = {
-                name: cast('FloatNDArray | float', replace_random_var_with_mean(value)[0])
-                if isinstance(value, sympy.Basic)
-                else value
-                for name, value in agg_params.items()
-            }
-            try:
-                tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(mean_params)
-                objective_scale = _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
-            except (TypeError, ValueError, KeyError):
-                objective_scale = 1.0
+            objective_scale = self._stochastic_objective_scale(y_true, agg_params)
 
             return MaxProfitLogitGradientPiecewise(
                 score_function=self._score_function,
@@ -562,6 +553,94 @@ class MaxProfit(MetricStrategy):
                 'logit_objective is currently only supported for Deterministic and '
                 'BasePositiveDistribution stochastic metrics.'
             )
+
+    def _stochastic_objective_scale(self, y_true: FloatNDArray, parameters: dict[str, FloatNDArray | float]) -> float:
+        """
+        Return the scale of the elastic-net penalty for a metric with stochastic variables.
+
+        A stochastic metric integrates over its random variables, so there is no closed-form
+        gradient magnitude. Substituting each random variable by its mean gives the same scale the
+        deterministic route would use, which keeps ``C`` comparable between the two.
+        """
+        mean_params: dict[str, FloatNDArray | float] = {
+            name: cast('FloatNDArray | float', replace_random_var_with_mean(value)[0])
+            if isinstance(value, sympy.Basic)
+            else value
+            for name, value in parameters.items()
+        }
+        try:
+            tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(mean_params)
+            return _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
+        except (TypeError, ValueError, KeyError):
+            return 1.0
+
+    def logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> MaxProfitLogitValueObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        The objective is the negated MaxProfit score of the model's predicted probabilities, as the
+        metric itself computes it, plus the same elastic-net penalty :meth:`logit_objective` adds.
+        Unlike :meth:`logit_objective`, it supports every MaxProfit metric, and neither computes nor
+        approximates a gradient.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        **parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric. For an
+            array, its mean is used, as in :meth:`score`.
+
+        Returns
+        -------
+        logistic_objective : MaxProfitLogitValueObjective
+            The objective, whose ``logit_loss`` is the regularized negated score.
+        """
+        agg_params = _aggregate_instance_parameters(dict(parameters))
+        y_true = np.asarray(y_true).reshape(-1)
+        if isinstance(self._score_function, MaxProfitScoreDeterministic):
+            _check_parameters(self._score_function.deterministic_symbols, agg_params)
+            tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(agg_params)
+            objective_scale = _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
+        else:
+            objective_scale = self._stochastic_objective_scale(y_true, agg_params)
+
+        labels: IntNDArray = y_true.astype(np.intp)
+        score_function = self._score_function
+        if hasattr(score_function, '_sample_scorer'):
+            score = score_function._sample_scorer(labels, **agg_params)
+        else:
+
+            def score(y_score: FloatNDArray) -> float:
+                return float(score_function(labels, y_score, **agg_params))
+
+        return MaxProfitLogitValueObjective(
+            score=score,
+            features=features,
+            penalty=ElasticNetPenalty.from_scale(
+                objective_scale=objective_scale,
+                C=C,
+                l1_ratio=l1_ratio,
+                fit_intercept=fit_intercept,
+                n_samples=features.shape[0],
+            ),
+        )
 
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
