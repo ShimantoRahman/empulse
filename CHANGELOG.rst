@@ -97,6 +97,9 @@ Metrics
   distributions with closed-form partial moments and profits up to quadratic in the variable; other
   profits and distributions are scored as before. Scoring the hull took most of the time of fitting
   a :class:`~empulse.models.ProfTreeClassifier` with such a metric, which is now about 3x faster.
+- |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
+  than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
+  about 10-40% faster; the names are found again if the metric's cost matrix is changed.
 
 Models
 ------
