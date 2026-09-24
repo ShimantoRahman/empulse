@@ -67,11 +67,12 @@ class CostLogitObjective(LogitObjective):
         warn_if_no_training_signal(grad_factor, 'expected cost')
         grad_const = features * grad_factor
 
-        # Cast to float64 so Cython double[:] memoryviews accept the arrays without a copy.
-        self.grad_const: Float64Array = np.asarray(grad_const, dtype=np.float64)
-        self.loss_const1: Float64Array = np.asarray(loss_const1, dtype=np.float64).reshape(-1)
-        self.loss_const2: Float64Array = np.asarray(loss_const2, dtype=np.float64).reshape(-1)
-        self.features: Float64Array = np.asarray(features, dtype=np.float64)
+        # The Cython kernels take C-contiguous float64 arrays, so convert them once here rather than
+        # on every call. Features given in Fortran order would otherwise be rejected.
+        self.grad_const: Float64Array = np.ascontiguousarray(grad_const, dtype=np.float64)
+        self.loss_const1: Float64Array = np.ascontiguousarray(loss_const1, dtype=np.float64).reshape(-1)
+        self.loss_const2: Float64Array = np.ascontiguousarray(loss_const2, dtype=np.float64).reshape(-1)
+        self.features: Float64Array = np.ascontiguousarray(features, dtype=np.float64)
         self.fit_intercept = fit_intercept
         self.penalty = ElasticNetPenalty.from_scale(
             objective_scale=float(np.mean(np.abs(grad_factor))),
@@ -130,7 +131,7 @@ class CostLogitObjective(LogitObjective):
     def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the regularized ``(loss, gradient)`` for *weights*."""
         return cy_logit_loss_gradient(  # type: ignore[no-any-return]
-            np.asarray(weights, dtype=np.float64),
+            np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
             self.grad_const,
             self.loss_const1,
@@ -158,7 +159,7 @@ class CostLogitObjective(LogitObjective):
         """
         return float(
             cy_logit_loss(
-                np.asarray(weights, dtype=np.float64),
+                np.ascontiguousarray(weights, dtype=np.float64),
                 self.features,
                 self.loss_const1,
                 self.loss_const2,
@@ -185,7 +186,7 @@ class CostLogitObjective(LogitObjective):
             Gradient vector matched in shape to *weights*.
         """
         return cy_logit_gradient(  # type: ignore[return-value]
-            np.asarray(weights, dtype=np.float64),
+            np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
             self.grad_const,
             self._l1_weight,
@@ -209,7 +210,7 @@ class CostLogitObjective(LogitObjective):
             Gradient of the data term alone.
         """
         return cy_logit_loss_gradient(  # type: ignore[no-any-return]
-            np.asarray(weights, dtype=np.float64),
+            np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
             self.grad_const,
             self.loss_const1,
@@ -231,7 +232,7 @@ class CostLogitObjective(LogitObjective):
         """
         return float(
             cy_logit_loss(
-                np.asarray(weights, dtype=np.float64),
+                np.ascontiguousarray(weights, dtype=np.float64),
                 self.features,
                 self.loss_const1,
                 self.loss_const2,
@@ -252,7 +253,7 @@ class CostLogitObjective(LogitObjective):
             Gradient of the data term alone, matched in shape to *weights*.
         """
         return cy_logit_gradient(  # type: ignore[return-value]
-            np.asarray(weights, dtype=np.float64),
+            np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
             self.grad_const,
         )
