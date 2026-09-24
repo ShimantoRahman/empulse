@@ -10,7 +10,12 @@ from sympy.utilities import lambdify
 
 from ....._types import FloatNDArray
 from ..._symbolic import _subs_by_name
-from .common import _HullScoreFunction, _substitute_integrand, extract_distribution_parameters
+from .common import (
+    _distribution_parameter_symbols,
+    _HullScoreFunction,
+    _substitute_integrand,
+    extract_distribution_parameters,
+)
 
 
 def compute_integral_multiple_quad(
@@ -93,10 +98,7 @@ class MaxProfitScoreQuad(_HullScoreFunction):
             for random_symbol in random_symbols:
                 self.rate_function *= density(random_symbol).pdf(random_symbol)
 
-        if not any(arg.free_symbols for arg in self.distribution_args):
-            self.dist_params = []
-        else:
-            self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
+        self.dist_params = _distribution_parameter_symbols(self.distribution_args)
 
     def _score_hull(
         self,

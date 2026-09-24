@@ -13,6 +13,11 @@ Metrics
   ``'quasi-monte-carlo'`` integration methods, and for profits that are not polynomial in the
   stochastic variable. Distribution parameters with assumptions also skipped part of their
   validation.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now accepts distributions
+  whose parameters are expressions, e.g. ``sympy.stats.Beta('v', 2 * a, b)``. Each argument of the
+  distribution was treated as the name of a parameter, so the metric raised
+  ``ValueError: Metric expected a value for 2*a`` whatever values were passed. It now asks for the
+  symbols the arguments are built from (here ``a`` and ``b``).
 - |Fix| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
   :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score`,
   :func:`~empulse.metrics.mpcs_score` and :func:`~empulse.metrics.empcs_score`) no longer return
