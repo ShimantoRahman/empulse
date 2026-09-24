@@ -192,6 +192,8 @@ class Metric(BaseMetric):
         self._fn_cost_fn = _safe_lambdify(self.fn_cost)
         self._tp_cost_fn = _safe_lambdify(self.tp_cost)
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
+        # The parameter names, and the cost matrix state they were found for; see _all_parameters.
+        self._all_parameters_cache: tuple[tuple[Any, ...], frozenset[str]] | None = None
         # Built lazily on first _evaluate_costs(replace_stochastic=True) call,
         # since most metrics are deterministic and would never use it.
         self._mean_substituted_costs: (
@@ -285,7 +287,35 @@ class Metric(BaseMetric):
 
     @property
     def _all_parameters(self) -> set[str]:
-        """The set of cost matrix parameters which can be used."""
+        """
+        The set of cost matrix parameters which can be used.
+
+        Every call of the metric needs it, and finding it walks the cost expressions, so it is
+        cached. The cache is keyed on the cost matrix's expressions and aliases, since
+        :attr:`cost_matrix` can still be changed after the metric is built.
+        """
+        cost_matrix = self.cost_matrix
+        key = (
+            cost_matrix._tp_benefit,
+            cost_matrix._tn_benefit,
+            cost_matrix._fp_cost,
+            cost_matrix._fn_cost,
+            tuple(cost_matrix._aliases),
+        )
+        # getattr: a metric pickled before this cache existed has no such attribute.
+        cached = getattr(self, '_all_parameters_cache', None)
+        if (
+            cached is not None
+            and all(stored is current for stored, current in zip(cached[0][:4], key[:4], strict=True))
+            and cached[0][4] == key[4]
+        ):
+            return set(cached[1])
+        parameters = self._find_all_parameters()
+        self._all_parameters_cache = (key, frozenset(parameters))
+        return parameters
+
+    def _find_all_parameters(self) -> set[str]:
+        """Find the cost matrix parameters which can be used, see :attr:`_all_parameters`."""
         all_symbols = (
             self.tp_cost.free_symbols
             | self.tn_cost.free_symbols
