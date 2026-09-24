@@ -14,7 +14,7 @@ from ....._types import FloatNDArray, IntNDArray
 from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ._distributions import ADAPTERS, adapter_for
-from .common import _convex_hull, _HullScoreFunction, extract_distribution_parameters
+from .common import _convex_hull, _HullScoreFunction
 from .envelope import (
     CallableEnvelope,
     Partition,
@@ -354,6 +354,14 @@ class _PiecewiseBase:
         else:
             self.dist_params = [arg for arg in self.distribution_args if arg.free_symbols]
 
+        # Resolved once here, since every call needs them: naming a sympy symbol means printing it,
+        # which cost more than the rest of scoring a small hull.
+        self._distribution_arg_names = tuple(str(argument) for argument in self.distribution_args)
+        self._distribution_value_sources: list[float | str | sympy.Expr] = [
+            float(argument) if argument.is_number else str(argument) if isinstance(argument, sympy.Symbol) else argument
+            for argument in self.distribution_args
+        ]
+
     def _envelope(
         self,
         true_positive_rates: FloatNDArray,
@@ -393,7 +401,8 @@ class _PiecewiseBase:
         Only the parameters named by a symbol are passed in by the caller; hardcoded numeric ones
         are read from the distribution itself by :meth:`_distribution_values`.
         """
-        return extract_distribution_parameters(kwargs, self.distribution_args)
+        distribution_parameters = {name: kwargs.pop(name) for name in self._distribution_arg_names if name in kwargs}
+        return distribution_parameters, kwargs
 
     def _distribution_values(self, distribution_parameters: dict[str, Any]) -> list[float]:
         """Every parameter of the distribution, in the order its constructor takes them.
@@ -403,13 +412,13 @@ class _PiecewiseBase:
         merge equal ones (``Beta('g', 6, 6)``), so each argument is resolved on its own.
         """
         values = []
-        for argument in self.distribution_args:
-            if argument.is_number:
-                values.append(float(argument))
-            elif isinstance(argument, sympy.Symbol):
-                values.append(float(distribution_parameters[str(argument)]))
+        for source in self._distribution_value_sources:
+            if isinstance(source, float):
+                values.append(source)
+            elif isinstance(source, str):
+                values.append(float(distribution_parameters[source]))
             else:
-                values.append(float(argument.subs(distribution_parameters)))
+                values.append(float(source.subs(distribution_parameters)))
         return values
 
     def _support(self, distribution_parameters: dict[str, Any]) -> tuple[float, float]:
