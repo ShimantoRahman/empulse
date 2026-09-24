@@ -117,6 +117,14 @@ Metrics
   and the out-of-bag weighting of :class:`~empulse.models.CSForestClassifier` and
   :class:`~empulse.models.CSBaggingClassifier`) 1.7-3.8x faster on up to 10,000 samples, together
   with the entry above. Results are unchanged, and scores that are ``nan`` or infinite still raise.
+- |Efficiency| The compiled logistic losses behind cost metrics are 1.3-6.6x faster. They drive
+  :class:`~empulse.models.CSLogitClassifier`, :class:`~empulse.models.ProfLogitClassifier` with a
+  cost loss, and the gradient boosting of :class:`~empulse.models.CSBoostClassifier`. Their matrix
+  products now go to BLAS, and their exponentials are computed by numpy's vectorized ``exp`` for
+  all samples at once. Fitting ``CSLogitClassifier`` on 100,000 samples with 50 features went from
+  0.81 to 0.25 seconds, and ``ProfLogitClassifier`` on 10,000 samples with 20 features from 2.3 to
+  1.1 seconds. The derivatives are also exact where the predicted probability is close to 1. They
+  used to be computed as ``p * (1 - p)``, which rounds to 0 once the margin exceeds about 37.
 
 Models
 ------
