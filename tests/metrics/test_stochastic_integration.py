@@ -5,6 +5,7 @@ by quadrature and by (quasi-)Monte Carlo sampling.
 The exact piecewise path for a single variable is in ``test_max_profit_strategy.py``.
 """
 
+import pickle
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -409,6 +410,40 @@ class TestDistributionWithLiteralAndSymbolicParameters:
         ).logit_loss_gradient(weights)
         assert loss_mixed == pytest.approx(loss_symbolic)
         assert grad_mixed == pytest.approx(grad_symbolic)
+
+
+class TestQuasiMonteCarloIsReproducible:
+    """
+    ``random_state`` fixes a quasi-Monte Carlo result, however often the strategy is copied.
+
+    ``Metric`` deep-copies its strategy, and SciPy's QMC engines spawn a child from the generator
+    they are given. NumPy before 2.0 dropped a generator's seed sequence when copying it, so every
+    ``Metric`` built from ``MaxProfit(random_state=0)`` sampled differently, and so did every run.
+    On NumPy 2 these pass either way; the ``py311-lowest`` tox environment, on NumPy 1.x, is the one
+    that can fail them.
+    """
+
+    @pytest.fixture(scope='class')
+    def strategy(self):
+        return MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=10, random_state=0)
+
+    @pytest.fixture(scope='class')
+    def cost_matrix(self):
+        a, b, clv, d = sympy.symbols('a b clv d')
+        benefit = sympy.stats.Uniform('v', a, b) * clv
+        return CostMatrix().add_tp_benefit(benefit).add_fp_cost(d).set_default(a=0.2, b=0.7, clv=100, d=10)
+
+    def test_metrics_built_from_one_strategy_agree(self, strategy, cost_matrix, y_true_and_prediction):
+        y_true, y_score = y_true_and_prediction
+        first = Metric(cost_matrix, strategy)(y_true, y_score)
+        second = Metric(cost_matrix, strategy)(y_true, y_score)
+        assert first == second
+
+    def test_a_pickled_metric_agrees_with_the_original(self, strategy, cost_matrix, y_true_and_prediction):
+        y_true, y_score = y_true_and_prediction
+        metric = Metric(cost_matrix, strategy)
+        restored = pickle.loads(pickle.dumps(Metric(cost_matrix, strategy)))
+        assert restored(y_true, y_score) == metric(y_true, y_score)
 
 
 # --- Every supported distribution, end to end --------------------------------------------------------

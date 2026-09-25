@@ -2,6 +2,7 @@ from typing import Any, Self
 
 import numpy as np
 import sympy
+from scipy.integrate import trapezoid
 
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
@@ -108,7 +109,7 @@ class AUEPCScore:
             # A single point spans no area; its mean ratio over that point is the ratio itself.
             return float(ratios[0]) if self.normalize else 0.0
 
-        score = float(np.trapezoid(ratios, dx=1 / n_samples))  # type: ignore[attr-defined]
+        score = float(trapezoid(ratios, dx=1 / n_samples))
         if self.normalize:
             score /= (stop_index - 1) / n_samples
         return score

@@ -63,6 +63,30 @@ jobs:
       - name: Run slow suite
         run: uvx --with tox-uv tox -e py312-tests -- -m "slow and not remote"
 
+  lowest-test:
+    # Every other job installs the newest version of each dependency. This one installs the lowest
+    # version pyproject.toml declares, on Python 3.11 where those minimums apply, and runs the suite
+    # against the built wheel. It also fails when a declared minimum cannot be installed, since the
+    # suite would then never have run against it. The doc pages run here too: they exercise most of
+    # the public API, which is what an old dependency breaks.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Cache downloaded datasets
+        uses: actions/cache@v4
+        with:
+          path: ~/empulse_data
+          key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
+      - name: Run test suite against the lowest dependency versions
+        run: uvx --with tox-uv tox -e py311-lowest -- -m "not remote"
+
   remote-test:
     # The dataset fetchers download from third-party hosts, so they are too slow and too flaky to
     # sit in the PR path. Running them weekly still catches an upstream dataset change within a

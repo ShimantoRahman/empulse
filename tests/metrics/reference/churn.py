@@ -19,6 +19,7 @@ from typing import Literal, TypeVar, overload
 import numpy as np
 from numpy.typing import NBitBase
 from scipy import stats as st
+from scipy.integrate import trapezoid
 from scipy.special import expit
 
 from empulse._types import FloatArrayLike, FloatNDArray
@@ -462,7 +463,7 @@ def auepc_score(
     stop_index: int = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)  # type: ignore[assignment]
 
     # Calculate the AUEPC
-    score = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits)))  # type: ignore[attr-defined]
+    score = float(trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits)))
     if normalize:
         score /= (stop_index - 1) / len(profits)
     return score

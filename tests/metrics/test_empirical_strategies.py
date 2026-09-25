@@ -17,6 +17,7 @@ import itertools
 import numpy as np
 import pytest
 import sympy
+from scipy.integrate import trapezoid
 
 from empulse.metrics import AUEPC, CostMatrix, EmpiricalMaxProfit, Metric
 from empulse.metrics.churn.stochastic import empb_score
@@ -310,7 +311,7 @@ def test_auepc_score_class_matches_hand_rolled_delta(empirical_churn_dataset):
     profits = np.cumsum(delta[model_order])
     n = y.shape[0]
     stop_index = int(np.argmax(perfect_profits < 0)) if np.any(perfect_profits < 0) else n
-    expected = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n))
+    expected = float(trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n))
     expected /= (stop_index - 1) / n
 
     assert result == pytest.approx(expected)
@@ -387,7 +388,7 @@ class TestAUEPCTiedScores:
         profits = np.cumsum(delta[np.argsort(-y_score, kind='stable')])
         n = y.size
         stop_index = int(np.argmax(perfect_profits <= 0)) if np.any(perfect_profits <= 0) else n
-        score = float(np.trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n))
+        score = float(trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / n))
         return score / ((stop_index - 1) / n)
 
     def test_equals_the_average_over_every_tie_breaking_order(self):

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from numbers import Real
-from typing import Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
 from scipy.optimize import OptimizeResult, minimize, minimize_scalar
@@ -11,6 +12,9 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
 from .cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
+
+if TYPE_CHECKING:
+    from scipy.optimize._typing import Constraint
 
 
 class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
@@ -66,6 +70,55 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         c0: float,
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
         """Solve the minimax problem and return (coef, intercept, alpha_1, alpha_0, result)."""
+
+    @staticmethod
+    def _margin_constraints(
+        mu_1: FloatNDArray,
+        mu_0: FloatNDArray,
+        unpack: Callable[[FloatNDArray], tuple[FloatNDArray, float]],
+    ) -> list['Constraint']:
+        """Scale-fixing constraints of the regularized MEMPM (Eq. 9 in Maldonado et al. 2020).
+
+        w^T mu_1 + b >= 1 and -(w^T mu_0 + b) >= 1.
+
+        The Chebyshev constraints are positively homogeneous in (w, b): scaling both by any t > 0
+        keeps them satisfied at the same kappa. Without a constraint that fixes the scale, the
+        penalty lambda * rho(w) is driven towards zero by shrinking w alone, so regularization only
+        ever changed the size of w -- never its direction, the worst-case accuracies or a single
+        prediction. Requiring each class mean to lie at least one unit on its own side of the
+        hyperplane, as the regularized MEMPM of Eq. (9) that Sections 4.2 and 4.3 extend does, is
+        what makes the penalty trade off against the worst-case accuracies. ``unpack`` maps the
+        solver's parameter vector to ``(w, b)``.
+        """
+
+        def positive_margin(params: FloatNDArray) -> float:
+            w, b = unpack(params)
+            return float(w @ mu_1 + b) - 1.0
+
+        def negative_margin(params: FloatNDArray) -> float:
+            w, b = unpack(params)
+            return -float(w @ mu_0 + b) - 1.0
+
+        return [{'type': 'ineq', 'fun': positive_margin}, {'type': 'ineq', 'fun': negative_margin}]
+
+    def _margin_feasible_mpm(
+        self,
+        mu_1: FloatNDArray,
+        mu_0: FloatNDArray,
+        sigma_1: FloatNDArray,
+        sigma_0: FloatNDArray,
+    ) -> tuple[FloatNDArray, float]:
+        """Solve the unregularized MPM and rescale it to satisfy :meth:`_margin_constraints`.
+
+        Its intercept puts each class mean kappa * d_i > 0 inside its own half-space, so dividing
+        (w, b) by the smaller of the two margins meets both margin constraints, and by homogeneity
+        leaves the Chebyshev constraints satisfied at the same kappa.
+        """
+        w, b, _, _, _ = self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        margin = min(float(w @ mu_1 + b), -float(w @ mu_0 + b))
+        if margin > 0:
+            w, b = np.asarray(w, dtype=np.float64) / margin, b / margin
+        return w, b
 
     def _solve_unregularized_mpm(
         self,
@@ -186,7 +239,7 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         c0: float,
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
         """Solve regularized Lp-ProfMPM (Section 4.2 / Algorithm 2 with shared beta)."""
-        w_init, b_init, _, _, _ = self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        w_init, b_init = self._margin_feasible_mpm(mu_1, mu_0, sigma_1, sigma_0)
         n_features = len(mu_1)
         t1, t2 = 1.0, 1.0
         w = w_init
@@ -226,7 +279,11 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
                     init,
                     method='SLSQP',
                     bounds=bounds,
-                    constraints=[{'type': 'ineq', 'fun': con1_l2}, {'type': 'ineq', 'fun': con2_l2}],
+                    constraints=[
+                        {'type': 'ineq', 'fun': con1_l2},
+                        {'type': 'ineq', 'fun': con2_l2},
+                        *self._margin_constraints(mu_1, mu_0, lambda p: (p[:n_features], p[n_features])),
+                    ],
                 )
                 w = res.x[:n_features]
                 b = float(res.x[n_features])
@@ -268,7 +325,15 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
                     init,
                     method='SLSQP',
                     bounds=bounds,
-                    constraints=[{'type': 'ineq', 'fun': con1_l1}, {'type': 'ineq', 'fun': con2_l1}],
+                    constraints=[
+                        {'type': 'ineq', 'fun': con1_l1},
+                        {'type': 'ineq', 'fun': con2_l1},
+                        *self._margin_constraints(
+                            mu_1,
+                            mu_0,
+                            lambda p: (p[:n_features] - p[n_features : 2 * n_features], p[2 * n_features]),
+                        ),
+                    ],
                 )
                 w = res.x[:n_features] - res.x[n_features : 2 * n_features]
                 b = float(res.x[2 * n_features])
@@ -300,7 +365,7 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         c0: float,
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
         """Solve regularized Lp-ProfMEMPM (Section 4.3 / Algorithm 2 with per-class beta)."""
-        w_init, b_init, _, _, _ = self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        w_init, b_init = self._margin_feasible_mpm(mu_1, mu_0, sigma_1, sigma_0)
         n_features = len(mu_1)
         t1, t2 = 1.0, 1.0
         w = w_init
@@ -342,7 +407,11 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
                     init,
                     method='SLSQP',
                     bounds=bounds,
-                    constraints=[{'type': 'ineq', 'fun': con1_l2}, {'type': 'ineq', 'fun': con2_l2}],
+                    constraints=[
+                        {'type': 'ineq', 'fun': con1_l2},
+                        {'type': 'ineq', 'fun': con2_l2},
+                        *self._margin_constraints(mu_1, mu_0, lambda p: (p[:n_features], p[n_features])),
+                    ],
                 )
                 w = res.x[:n_features]
                 b = float(res.x[n_features])
@@ -389,7 +458,15 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
                     init,
                     method='SLSQP',
                     bounds=bounds,
-                    constraints=[{'type': 'ineq', 'fun': con1_l1}, {'type': 'ineq', 'fun': con2_l1}],
+                    constraints=[
+                        {'type': 'ineq', 'fun': con1_l1},
+                        {'type': 'ineq', 'fun': con2_l1},
+                        *self._margin_constraints(
+                            mu_1,
+                            mu_0,
+                            lambda p: (p[:n_features] - p[n_features : 2 * n_features], p[2 * n_features]),
+                        ),
+                    ],
                 )
                 w = res.x[:n_features] - res.x[n_features : 2 * n_features]
                 b = float(res.x[2 * n_features])

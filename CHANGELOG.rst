@@ -4,6 +4,13 @@
 Metrics
 -------
 
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` now
+  honours ``random_state`` with NumPy 1.x. :class:`~empulse.metrics.Metric` copies its strategy,
+  and before NumPy 2.0 copying a random generator discarded its seed sequence, from which SciPy's
+  quasi-Monte Carlo sampler draws: every metric, and every run, sampled differently. Pickled
+  metrics are affected the same way and are fixed too.
+- |Fix| :class:`~empulse.metrics.AUEPC` and :func:`~empulse.metrics.auepc_score` now work with
+  NumPy 1.x. They called ``numpy.trapezoid``, which only exists from NumPy 2.0.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` with a :class:`~empulse.metrics.Cost` or
   :class:`~empulse.metrics.Savings` component no longer applies the elastic-net penalty twice when
   it is the loss of :class:`~empulse.models.CSLogitClassifier` or
@@ -151,6 +158,15 @@ Metrics
 Models
 ------
 
+- |Fix| ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
+  :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model. The regularized
+  formulations had no constraint fixing the scale of the weights, and the worst-case bounds are
+  unchanged by rescaling them, so the penalty shrank the weights towards zero at no cost: the
+  direction of ``coef_``, the worst-case accuracies and every prediction were the same for any
+  ``lambda_reg``, ``penalty='l1'`` never zeroed a coefficient, and a large ``lambda_reg`` collapsed the
+  fit. The regularized models now require each class mean to lie at least one unit inside its own
+  half-space, the margin constraints of the regularized minimax probability machine they extend,
+  so the penalty trades worst-case accuracy for smaller weights and ``'l1'`` selects features.
 - |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
   with a cost loss now fit read-only data, such as the memory-mapped arrays joblib passes to
   parallel workers in ``GridSearchCV(n_jobs=...)``. With ``fit_intercept=False`` they raised
@@ -304,6 +320,14 @@ Packaging and dependencies
 ---------------------------
 
 - |Fix| The source distribution no longer contains the test modules at the top of ``tests/``.
+- |Fix| Raised the minimum versions of four dependencies to ones the package actually works with,
+  now checked by a test run against the lowest version of every dependency: ``numpy>=1.25.2`` on
+  Python 3.11 and 3.12 and ``joblib>=1.4.0``, since ``imbalanced-learn`` and ``scikit-learn``
+  already required those, so the lower minimums could never be installed; ``lightgbm>=4.6.0``,
+  since 4.5 passes an argument scikit-learn 1.8 removed; and ``sympy>=1.14.0``, since earlier
+  releases compile ``Max`` and ``Min`` into code that fails on a mix of per-sample and scalar
+  values, which the bank telemarketing cost matrix is, and reject whole-number floats as a
+  distribution's degrees of freedom.
 
 `0.12.0`_ (19-09-2026)
 ======================

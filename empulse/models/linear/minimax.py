@@ -22,7 +22,8 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
 
     Setting ``lambda_reg>0`` switches to the Lp-regularized variant (Lp-ProfMPM):
     an L1 or L2 penalty (controlled by ``penalty``) on the weight vector is added
-    to the objective, controlling the scale of ``w``.
+    to the objective, and each class mean must lie at least one unit inside its own
+    half-space, so the penalty trades worst-case accuracy for smaller weights.
 
     Read more in the :ref:`User Guide <profmpm>`.
 
@@ -178,9 +179,10 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     :math:`w^T(\mu_1 - \mu_0) = 1` and no additional regularization is applied.
 
     Setting ``lambda_reg>0`` switches to the Lp-regularized variant (Lp-ProfMEMPM):
-    the canonical scale constraint is dropped and an L1 or L2 penalty (controlled by
-    ``penalty``) on the weight vector is added to the objective instead, controlling the
-    scale of ``w``.
+    the canonical scale constraint is replaced by requiring each class mean to lie at least
+    one unit inside its own half-space, and an L1 or L2 penalty (controlled by ``penalty``)
+    on the weight vector is added to the objective, trading worst-case accuracy for smaller
+    weights.
 
     Read more in the :ref:`User Guide <profmempm>`.
 

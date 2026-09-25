@@ -149,3 +149,55 @@ class TestConstraints:
         b0 = -float(w @ mu_0) - k0 * d0
         assert b1 == pytest.approx(b0, abs=1e-3)
         assert model.intercept_ == pytest.approx(b1, abs=1e-3)
+
+    @pytest.mark.parametrize('model_cls', MODEL_CLASSES)
+    @pytest.mark.parametrize('penalty', ['l1', 'l2'])
+    def test_regularized_margin_constraints(self, model_cls, penalty, data):
+        """Regularized models keep each class mean a unit inside its half-space (Eq. 9)."""
+        X, y = data
+        model = model_cls(lambda_reg=1.0, penalty=penalty).fit(X, y, tp_cost=-200, fp_cost=10)
+        mu_1 = np.mean(X[y == 1], axis=0)
+        mu_0 = np.mean(X[y == 0], axis=0)
+        assert float(model.coef_ @ mu_1 + model.intercept_) >= 1.0 - 1e-6
+        assert -float(model.coef_ @ mu_0 + model.intercept_) >= 1.0 - 1e-6
+
+
+class TestRegularization:
+    """
+    The penalty must change the classifier, not just the size of its weights.
+
+    The Chebyshev constraints of Formulations (17) and (20) are unchanged by scaling ``(w, b)``, so
+    without Eq. (9)'s margin constraints the penalty shrank ``w`` towards zero at no cost: every
+    ``lambda_reg`` gave the same direction, worst-case accuracies and predictions, until the solution
+    collapsed numerically.
+    """
+
+    FN_COST = 4.0
+    FP_COST = 1.0
+
+    @pytest.fixture(scope='class')
+    def independent_data(self, make_data):
+        # No redundant features: they make the optimal direction non-unique, so a sparse solution
+        # would not need the penalty to be doing anything.
+        return make_data(n_samples=400, n_features=5, n_informative=3, n_redundant=0)
+
+    @pytest.mark.parametrize('model_cls', MODEL_CLASSES)
+    def test_strong_l1_penalty_zeroes_coefficients(self, model_cls, independent_data):
+        X, y = independent_data
+        model = model_cls(lambda_reg=10.0, penalty='l1').fit(X, y, fn_cost=self.FN_COST, fp_cost=self.FP_COST)
+        coef = np.abs(model.coef_)
+        assert np.sum(coef <= 1e-6 * coef.max()) >= 1
+
+    @pytest.mark.parametrize('penalty', ['l1', 'l2'])
+    def test_penalty_is_paid_for_in_worst_case_profit(self, penalty, independent_data):
+        """ProfMEMPM maximises c_1 alpha_1 + c_0 alpha_0 minus the penalty, so more penalty, less of it."""
+        X, y = independent_data
+        c_1 = np.mean(y == 1) * self.FN_COST
+        c_0 = np.mean(y == 0) * self.FP_COST
+
+        def worst_case_profit(lambda_reg):
+            model = ProfMEMPMClassifier(lambda_reg=lambda_reg, penalty=penalty)
+            model.fit(X, y, fn_cost=self.FN_COST, fp_cost=self.FP_COST)
+            return c_1 * model.alpha_1_ + c_0 * model.alpha_0_
+
+        assert worst_case_profit(1.0) < worst_case_profit(1e-3) - 0.01

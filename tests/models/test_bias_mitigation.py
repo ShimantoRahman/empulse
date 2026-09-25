@@ -12,6 +12,7 @@ target is chosen per classifier by the ``target`` fixture rather than shared.
 
 import numpy as np
 import pytest
+from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
@@ -127,6 +128,29 @@ def test_independent_sample_weights():
         weights,
         np.array([0.375, 0.375, 0.375, 0.375, 1, 0.33333333, 0.33333333, 0.75, 0.33333333, 0.75]),
     )
+
+
+@pytest.mark.parametrize('strategy', ['statistical parity', 'demographic parity'])
+def test_mitigation_narrows_the_positive_rate_gap(classifier_cls, strategy):
+    """
+    The point of all three: the model flags the two groups at more similar rates than it would unmitigated.
+
+    The labels depend on the protected attribute, which is also a feature, so a plain logistic
+    regression flags one group far more often than the other (a gap of 0.34 on this data).
+    """
+    rng = np.random.default_rng(42)
+    n_samples = 1200
+    group = (rng.random(n_samples) < 0.5).astype(int)
+    features = rng.normal(0.0, 1.0, (n_samples, 2))
+    y = (rng.random(n_samples) < expit(1.5 * features[:, 0] + 1.5 * group - 0.75)).astype(int)
+    X = np.column_stack([features, group])
+
+    def positive_rate_gap(y_pred):
+        return abs(y_pred[group == 1].mean() - y_pred[group == 0].mean())
+
+    unmitigated = positive_rate_gap(LogisticRegression().fit(X, y).predict(X))
+    model = classifier_cls(LogisticRegression(), strategy=strategy).fit(X, y, sensitive_feature=group)
+    assert positive_rate_gap(model.predict(X)) < unmitigated / 2
 
 
 NON_ZERO_ONE_LABELS = (np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 5]))

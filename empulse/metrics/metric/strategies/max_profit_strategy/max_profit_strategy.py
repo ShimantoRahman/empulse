@@ -43,6 +43,33 @@ class _ScoreFunction(Protocol):
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...
 
 
+def _portable_generator(rng: np.random.Generator) -> Any:
+    """
+    Reduce *rng* to what rebuilds it exactly: its bit generator's type, seed sequence and state.
+
+    NumPy before 2.0 pickles -- and so deep-copies -- a ``Generator`` without its ``SeedSequence``:
+    the copy draws the same numbers, but its seed sequence is fresh OS entropy, so anything *spawned*
+    from it differs on every run. SciPy's QMC engines spawn a child from the generator they are given,
+    and ``Metric`` deep-copies its strategy, so a quasi-Monte Carlo ``MaxProfit`` ignored its
+    ``random_state``. Carrying the seed sequence explicitly makes a copy identical on every NumPy.
+    """
+    bit_generator = rng.bit_generator
+    seed_seq = getattr(bit_generator, 'seed_seq', None)
+    if not isinstance(seed_seq, np.random.SeedSequence):
+        return rng
+    return type(bit_generator), seed_seq, bit_generator.state
+
+
+def _restore_generator(snapshot: Any) -> np.random.Generator:
+    """Rebuild the generator :func:`_portable_generator` reduced."""
+    if isinstance(snapshot, np.random.Generator):
+        return snapshot
+    bit_generator_type, seed_seq, state = snapshot
+    bit_generator = bit_generator_type(seed_seq)
+    bit_generator.state = state
+    return np.random.Generator(bit_generator)
+
+
 def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
     """
     Return a copy of *parameters* where every array value is replaced by its mean (float).
@@ -232,6 +259,16 @@ class MaxProfit(MetricStrategy):
             self._rng: np.random.Generator = random_state
         else:
             self._rng = np.random.default_rng(random_state)
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state['_rng'] = _portable_generator(self._rng)
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        # Strategies pickled before the generator was stored portably hold the Generator itself.
+        state['_rng'] = _restore_generator(state['_rng'])
+        self.__dict__.update(state)
 
     @property
     def capabilities(self) -> frozenset[Capability]:

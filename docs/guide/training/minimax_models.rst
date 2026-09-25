@@ -91,8 +91,11 @@ penalty" — it changes the constraint set.
         and :class:`~empulse.models.ProfMPMClassifier` fix scale invariance using the
         canonical constraint :math:`w^T(\mu_1 - \mu_0) = 1`. No penalty term.
     * - ``> 0``
-      - The Lp-regularised variants. Solved using coordinate descent with an L1 or L2 penalty
-        on the weights added to the objective.
+      - The Lp-regularised variants. An L1 or L2 penalty on the weights is added to the
+        objective, and the canonical constraint is replaced by margin constraints: each class
+        mean must lie at least one unit inside its own half-space,
+        :math:`w^T\mu_1 + b \geq 1` and :math:`-(w^T\mu_0 + b) \geq 1`. Solved using coordinate
+        descent.
 
 ``penalty`` chooses between ``'l1'`` and ``'l2'`` for the regularised form, and ``ridge_penalty``
 adds a small amount to the diagonal of the covariance estimates. Raise it when the covariance
@@ -101,20 +104,22 @@ solver struggles to converge.
 
 .. code-block:: python
 
-    import numpy as np
-
     plain = ProfMPMClassifier(tp_cost=-200, fp_cost=10).fit(X, y)
     regularised = ProfMPMClassifier(
         tp_cost=-200, fp_cost=10, penalty='l1', lambda_reg=1.0, ridge_penalty=1e-4
     ).fit(X, y)
 
-    print(np.linalg.norm(plain.coef_).round(4))
-    print(np.linalg.norm(regularised.coef_).round(4))
+    print(plain.coef_.round(3))
+    print(regularised.coef_.round(3))
 
-The penalty shrinks the **scale** of the weight vector rather than driving individual coefficients
-to exactly zero: the constrained problem is solved continuously, so ``'l1'`` here is a magnitude
-penalty, not a feature selector. Judge its effect by the norm of ``coef_``, and use it to stabilise
-a fit rather than to prune features.
+The worst-case bounds are unchanged by rescaling the weights, so it is the margin constraints that
+give the penalty something to push against: shrinking ``coef_`` now costs worst-case accuracy, and
+the penalty settles that trade-off. With ``'l1'``, coefficients reach exactly zero as ``lambda_reg``
+grows, so it also selects features. Compare fits across ``lambda_reg`` values rather than with the
+unregularised model, whose weights are on the scale set by the canonical constraint. What matters
+is ``lambda_reg`` relative to the costs, since the penalty competes with the cost-weighted
+worst-case accuracies: costs in the hundreds need a correspondingly larger ``lambda_reg`` to have
+an effect.
 
 .. warning::
     Both models are **class-dependent only**. Array-valued costs are averaged before fitting,

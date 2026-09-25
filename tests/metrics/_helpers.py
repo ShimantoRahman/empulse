@@ -7,6 +7,7 @@ Helpers shared by several metric test modules.
 """
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 from empulse.metrics.metric.strategies.max_profit_strategy.common import _convex_hull
 
@@ -49,4 +50,4 @@ def brute_force_emp(y_true, y_score, benefit_of, cost, pdf, lower, upper, n_poin
     profit = positive_class_prior * np.outer(tprs, benefit_of(x)) - negative_class_prior * np.outer(
         fprs, np.full_like(x, cost)
     )
-    return float(np.trapezoid(profit.max(axis=0) * pdf(x), x))
+    return float(trapezoid(profit.max(axis=0) * pdf(x), x))

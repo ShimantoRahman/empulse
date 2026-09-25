@@ -1,18 +1,17 @@
 import os
 import traceback
+from pathlib import Path
 
 import pytest
 from sklearn import set_config
 
 from tests._docs_common import extract_code_blocks
 
-# Directory containing the documentation. All prose pages are walked, not just docs/guide,
-# so the code blocks in the getting-started and tutorial pages are executed too.
-DOCS_DIR = 'docs'
-
-# Adjust DOCS_DIR if the current working directory is "tests/"
-if os.getcwd().endswith('tests'):
-    DOCS_DIR = '../' + DOCS_DIR
+# The documentation, found from this file rather than the working directory: walking a relative path
+# that does not exist collects no pages at all, and reports that as a pass. All prose pages are walked,
+# not just docs/guide, so the code blocks in the getting-started and tutorial pages are executed too.
+ROOT = Path(__file__).resolve().parents[1]
+DOCS_DIR = ROOT / 'docs'
 
 # Build output and generated API stubs are not hand-written prose and contain no examples worth
 # executing (the stubs' content comes from docstrings, which tests/test_docstring.py already covers).
@@ -35,6 +34,7 @@ REMOTE_PAGES = frozenset({
 
 
 def _iter_doc_files():
+    assert DOCS_DIR.is_dir(), f'{DOCS_DIR} does not exist, so no documentation page would be tested'
     for root, dirs, files in os.walk(DOCS_DIR):
         dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
         for file in files:
@@ -47,7 +47,8 @@ def _doc_file_params():
         remote = os.path.basename(os.path.dirname(file_path)) == 'datasets' and (
             os.path.basename(file_path) in REMOTE_PAGES
         )
-        yield pytest.param(file_path, id=file_path, marks=[pytest.mark.remote] if remote else [])
+        test_id = os.path.relpath(file_path, ROOT)
+        yield pytest.param(file_path, id=test_id, marks=[pytest.mark.remote] if remote else [])
 
 
 def execute_code_blocks(code_blocks):
