@@ -5,7 +5,10 @@ by quadrature and by (quasi-)Monte Carlo sampling.
 The exact piecewise path for a single variable is in ``test_max_profit_strategy.py``.
 """
 
+import os
 import pickle
+import subprocess
+import sys
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -14,6 +17,7 @@ import pytest
 import scipy.stats as st
 import sympy
 import sympy.stats
+from scipy.integrate import trapezoid
 from sympy.stats import Normal
 
 from empulse.metrics import (
@@ -22,7 +26,16 @@ from empulse.metrics import (
     MaxProfit,
     Metric,
 )
+from empulse.metrics.metric._symbolic import _subs_by_name
+from empulse.metrics.metric.strategies.max_profit_strategy import common
+from empulse.metrics.metric.strategies.max_profit_strategy.common import (
+    _convex_hull,
+    _evaluate_sampled_integrands,
+    _SampledIntegrand,
+)
 from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy import (
+    _build_profit_function,
+    _build_rate_function,
     _support_all_distributions,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import (
@@ -444,6 +457,151 @@ class TestQuasiMonteCarloIsReproducible:
         metric = Metric(cost_matrix, strategy)
         restored = pickle.loads(pickle.dumps(Metric(cost_matrix, strategy)))
         assert restored(y_true, y_score) == metric(y_true, y_score)
+
+    _SCRIPT = """
+import numpy as np, sympy, sympy.stats
+from empulse.metrics import CostMatrix, MaxProfit, Metric
+
+clv = sympy.symbols('clv')
+gamma, incentive, contact = (
+    sympy.stats.Beta('gamma', 6, 14), sympy.stats.Uniform('incentive', 5, 15), sympy.stats.Exponential('contact', 2)
+)
+cost_matrix = CostMatrix().add_tp_benefit(gamma * clv - incentive).add_fp_cost(incentive + contact)
+rng = np.random.default_rng(0)
+y_true = rng.integers(0, 2, 500)
+y_score = rng.normal(size=500) + y_true
+for method in ('quasi-monte-carlo', 'monte-carlo'):
+    metric = Metric(cost_matrix, MaxProfit(integration_method=method, n_mc_samples_exp=8, random_state=0))
+    print(repr(metric(y_true, y_score, clv=100.0)), repr(metric.optimal_rate(y_true, y_score, clv=100.0)))
+print(metric._repr_latex_())
+"""
+
+    def test_results_do_not_depend_on_the_hash_seed(self):
+        """
+        Each stochastic variable keeps its sampling dimension from one Python process to the next.
+
+        Which variable gets which dimension of the Sobol sequence, or which Monte Carlo draw, follows
+        the order of the variables. Taken from a set of symbols, that order changes with the string
+        hash seed, which Python randomizes per process, so ``random_state`` did not fix the result.
+        With three variables, four seeds would all give the same order by chance with probability 1/216.
+        """
+        processes = [
+            subprocess.Popen(
+                [sys.executable, '-c', self._SCRIPT],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env={**os.environ, 'PYTHONHASHSEED': str(seed)},
+            )
+            for seed in range(4)
+        ]
+        outputs = []
+        for process in processes:
+            stdout, stderr = process.communicate(timeout=300)
+            assert process.returncode == 0, stderr
+            outputs.append(stdout)
+        assert all(output == outputs[0] for output in outputs)
+
+
+@pytest.mark.parametrize('integration_method', ['auto', 'quasi-monte-carlo'])
+def test_a_variable_that_cancels_across_the_terms_is_still_integrated(integration_method, y_true_and_prediction):
+    """
+    ``tp_benefit = clv - v`` and ``fp_cost = v`` sum to ``clv``, but the profit weighs them differently.
+
+    The stochastic variables were found in the terms' sum, so ``v`` was missed and scoring failed.
+    """
+    y_true, y_score = y_true_and_prediction
+    clv = sympy.symbols('clv')
+    v = sympy.stats.Uniform('v', 2, 8)
+    cost_matrix = CostMatrix().add_tp_benefit(clv - v).add_fp_cost(v)
+    metric = Metric(cost_matrix, MaxProfit(integration_method=integration_method, random_state=0))
+
+    positive_class_prior = float(np.mean(y_true))
+    tprs, fprs = _convex_hull(y_true, y_score)
+    x = np.linspace(2, 8, 100_001)
+    profit = positive_class_prior * np.outer(tprs, 20 - x) - (1 - positive_class_prior) * np.outer(fprs, x)
+    expected = trapezoid(profit.max(axis=0), x) / 6
+
+    assert metric(y_true, y_score, clv=20) == pytest.approx(expected, rel=1e-5)
+
+
+class TestSampledIntegrandEvaluation:
+    """
+    The (quasi-)Monte Carlo backends evaluate the integrand at every hull point and sample at once.
+
+    The profit function is compiled once as a polynomial in the ROC point and the class priors, and
+    its coefficients' values over the samples are cached. The reference here substitutes each hull
+    point into the expression and compiles it separately, the direct reading of the definition.
+    """
+
+    @pytest.fixture(scope='class')
+    def problem(self):
+        a, clv, d = sympy.symbols('a clv d', positive=True)
+        gamma = sympy.stats.Beta('gamma', a, 3)
+        cost = sympy.stats.Gamma('cost', 2, 5)
+        # `a` is both a distribution parameter and a cost, and `cost` also enters a term without F.
+        profit_function = _build_profit_function(
+            tp_benefit=gamma * clv - d, tn_benefit=cost / 10, fp_cost=cost + a, fn_cost=gamma * d
+        )
+        random_symbols = [gamma, cost]
+        rng = np.random.default_rng(0)
+        param_grid = [rng.beta(2, 3, size=101), rng.gamma(2, 5, size=101)]
+        parameters = {'a': 2.0, 'clv': 50.0, 'd': 4.0}
+        tpr = np.array([0.0, 0.3, 0.55, 0.8, 0.95, 1.0])
+        fpr = np.array([0.0, 0.05, 0.15, 0.4, 0.7, 1.0])
+        return profit_function, random_symbols, param_grid, parameters, tpr, fpr
+
+    @staticmethod
+    def _per_hull_point(expression, random_symbols, param_grid, parameters, tpr, fpr, prior):
+        values = {**parameters, 'pi_0': prior, 'pi_1': 1 - prior}
+        rows = []
+        for tp_rate, fp_rate in zip(tpr, fpr, strict=True):
+            substituted = _subs_by_name(expression, {**values, 'F_0': tp_rate, 'F_1': fp_rate})
+            rows.append(np.broadcast_to(sympy.lambdify(random_symbols, substituted)(*param_grid), (101,)))
+        return np.array(rows)
+
+    @pytest.mark.parametrize('max_evaluations', [2**22, 7], ids=['one-chunk', 'uneven-chunks'])
+    @pytest.mark.parametrize('with_rate', [False, True], ids=['score', 'rate'])
+    def test_matches_evaluating_each_hull_point(self, problem, monkeypatch, max_evaluations, with_rate):
+        monkeypatch.setattr(common, '_MAX_HULL_EVALUATIONS', max_evaluations)
+        profit_function, random_symbols, param_grid, parameters, tpr, fpr = problem
+        rate_function = _build_rate_function()
+        prior = 0.3
+
+        result = _evaluate_sampled_integrands(
+            _SampledIntegrand(profit_function, random_symbols),
+            _SampledIntegrand(rate_function, random_symbols) if with_rate else None,
+            tpr,
+            fpr,
+            prior,
+            parameters,
+            param_grid,
+            101,
+        )
+
+        profits = self._per_hull_point(profit_function, random_symbols, param_grid, parameters, tpr, fpr, prior)
+        if with_rate:
+            rates = self._per_hull_point(rate_function, random_symbols, param_grid, parameters, tpr, fpr, prior)
+            expected = rates[profits.argmax(axis=0), np.arange(101)].mean()
+        else:
+            expected = profits.max(axis=0).mean()
+        assert result == pytest.approx(expected, rel=1e-12)
+
+    def test_coefficients_are_reused_across_hulls_and_priors(self, problem):
+        profit_function, random_symbols, param_grid, parameters, _, _ = problem
+        integrand = _SampledIntegrand(profit_function, random_symbols)
+
+        first = integrand._coefficient_values(parameters, param_grid)
+        assert integrand._coefficient_values(dict(parameters), param_grid) is first
+        assert integrand._coefficient_values({**parameters, 'clv': 60.0}, param_grid) is not first
+
+    def test_coefficients_are_recomputed_for_a_new_grid(self, problem):
+        """The grid is resampled when a distribution's parameters change: its values must not be reused."""
+        profit_function, random_symbols, param_grid, parameters, _, _ = problem
+        integrand = _SampledIntegrand(profit_function, random_symbols)
+
+        first = integrand._coefficient_values(parameters, param_grid)
+        assert integrand._coefficient_values(parameters, [grid.copy() for grid in param_grid]) is not first
 
 
 # --- Every supported distribution, end to end --------------------------------------------------------

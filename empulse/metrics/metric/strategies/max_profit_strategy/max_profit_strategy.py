@@ -882,10 +882,19 @@ def _build_max_profit_optimal_rate(
 def _identify_symbols(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> tuple[list[sympy.Symbol], list[sympy.Symbol]]:
-    """Identify random and deterministic symbols in the profit function."""
-    terms = tp_benefit + tn_benefit + fp_cost + fn_cost
-    random_symbols = [symbol for symbol in terms.free_symbols if is_random(symbol)]
-    deterministic_symbols = [symbol for symbol in terms.free_symbols if not is_random(symbol)]
+    """
+    Identify random and deterministic symbols in the profit function, each sorted by name.
+
+    The symbols are collected from each term separately: in their sum a symbol can cancel out
+    (``tp_benefit = clv - v``, ``fp_cost = v``) while it remains in the profit function, which weighs
+    the terms differently. They are sorted because the order of the random symbols decides which
+    one gets which dimension of the (quasi-)Monte Carlo samples, and a set's order changes with the
+    string hash seed, which Python randomizes per process.
+    """
+    free_symbols = set().union(*(term.free_symbols for term in (tp_benefit, tn_benefit, fp_cost, fn_cost)))
+    symbols = sorted(free_symbols, key=str)
+    random_symbols = [symbol for symbol in symbols if is_random(symbol)]
+    deterministic_symbols = [symbol for symbol in symbols if not is_random(symbol)]
     return random_symbols, deterministic_symbols
 
 
@@ -1013,7 +1022,8 @@ def _max_profit_score_to_latex(
         profit_function = _build_profit_function(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-    random_symbols = [symbol for symbol in profit_function.free_symbols if is_random(symbol)]
+    # Sorted so the integrals nest in the same order in every process.
+    random_symbols = [symbol for symbol in sorted(profit_function.free_symbols, key=str) if is_random(symbol)]
 
     if random_symbols:
         integrand = profit_function

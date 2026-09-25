@@ -11,7 +11,7 @@ from .common import (
     _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
-    _substitute_integrand,
+    _SampledIntegrand,
     extract_distribution_parameters,
 )
 
@@ -40,6 +40,8 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         self.deterministic_symbols = deterministic_symbols
         self.n_mc_samples = n_mc_samples
         self.rng = rng
+        self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
+        self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
 
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
@@ -64,8 +66,6 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         kwargs: dict[str, Any],
     ) -> float:
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
-        negative_class_prior = 1 - positive_class_prior
-
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid
         if self.param_grid_needs_recompute:
@@ -84,22 +84,14 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
                 self._grid_cache = (distribution_parameters, param_grid)
             dist_params = distribution_parameters
 
-        profit_integrand = _substitute_integrand(
-            self.profit_function, kwargs, dist_params, positive_class_prior, negative_class_prior
-        )
-        rate_integrand = (
-            _substitute_integrand(self.rate_function, kwargs, dist_params, positive_class_prior, negative_class_prior)
-            if self.rate_function is not None
-            else None
-        )
-
         assert param_grid is not None
         return _evaluate_sampled_integrands(
-            profit_integrand,
-            rate_integrand,
+            self._profit_integrand,
+            self._rate_integrand,
             true_positive_rates,
             false_positive_rates,
-            self.random_symbols,
+            positive_class_prior,
+            {**kwargs, **dist_params},
             param_grid,
             self.n_mc_samples,
         )

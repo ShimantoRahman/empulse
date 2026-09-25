@@ -5,12 +5,11 @@ from typing import Any, Literal, Self, overload
 import numpy as np
 import sympy
 from scipy.special import expit
-from sympy.utilities import lambdify
 
 from ....._common._objective import ElasticNetPenalty, LogitObjective
 from ....._types import Float64Array, FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull, convex_hull_from_counts
-from ..._compile import CountScoreFn
+from ..._compile import CountScoreFn, _safe_lambdify
 from ..._parameter_domain import _check_parameters
 from ..._symbolic import _subs_by_name
 
@@ -144,17 +143,114 @@ def _substitute_integrand(
 
     ``dist_params={}`` is a no-op substitution, so this covers both the "distribution parameters
     are fixed numeric literals" and "distribution parameters were just resolved from kwargs" cases
-    used by the Monte-Carlo, Quasi-Monte-Carlo, and quadrature integration backends.
+    used by the quadrature integration backend.
     """
     return _subs_by_name(expr, {**kwargs, **dist_params, 'pi_0': pi0, 'pi_1': pi1})
 
 
+#: Upper bound on the number of (hull point, sample) values held in memory at once. The samples are
+#: evaluated in chunks of at most this many values divided by the number of hull points (32 MiB).
+_MAX_HULL_EVALUATIONS = 2**22
+
+
+class _SampledIntegrand:
+    """
+    A profit or rate function compiled for evaluation over samples of its stochastic variables.
+
+    The function is a polynomial in the ROC point ``F_0``, ``F_1`` and the class priors ``pi_0``,
+    ``pi_1``, with coefficients in the stochastic and deterministic variables. The coefficients are
+    compiled once, here. Their values over the samples depend on neither the ROC convex hull nor
+    the class priors, so the values for the last parameters are cached: scoring again with the same
+    parameters, as a training loop does, only combines them with the hull and the priors.
+
+    Parameters
+    ----------
+    expression : sympy.Expr
+        The profit or rate function.
+    random_symbols : sequence of sympy.stats.rv.RandomSymbol
+        The stochastic variables, in the order of the sample grid's entries.
+    """
+
+    def __init__(self, expression: sympy.Expr, random_symbols: Iterable[sympy.Symbol]) -> None:
+        generators = sympy.symbols('pi_0 pi_1 F_0 F_1')
+        polynomial = sympy.Poly(sympy.expand(expression), *generators)
+        random_symbols = list(random_symbols)
+        coefficients = polynomial.coeffs()
+        # A random symbol's free symbols are itself, not its distribution's parameters, so this
+        # finds the deterministic variables (and any distribution parameter used as one).
+        parameters = sorted(
+            {symbol for coefficient in coefficients for symbol in coefficient.free_symbols} - set(random_symbols),
+            key=str,
+        )
+        self.parameter_names = [str(symbol) for symbol in parameters]
+        #: The exponents of ``(pi_0, pi_1, F_0, F_1)`` of each term, matching :attr:`coefficients`.
+        self.monomials: list[tuple[int, ...]] = polynomial.monoms()
+        self.coefficients = [
+            _safe_lambdify(coefficient, [*parameters, *random_symbols]) for coefficient in coefficients
+        ]
+        # The parameter values, the grid and the coefficients' values over it are cached as one
+        # tuple, so a concurrent caller can never pair one call's parameters with another's values.
+        self._cache: tuple[list[Any], list[Any], list[Float64Array]] | None = None
+
+    def _coefficient_values(self, parameters: dict[str, Any], param_grid: list[Any]) -> list[Float64Array]:
+        """Return each coefficient's values over *param_grid*, of shape (n_samples,) or () if constant."""
+        values = [parameters[name] for name in self.parameter_names]
+        cached = self._cache
+        if cached is not None and cached[1] is param_grid and cached[0] == values:
+            return cached[2]
+        coefficient_values = [
+            np.asarray(coefficient(*values, *param_grid), dtype=np.float64) for coefficient in self.coefficients
+        ]
+        self._cache = (values, param_grid, coefficient_values)
+        return coefficient_values
+
+    def terms(
+        self,
+        parameters: dict[str, Any],
+        param_grid: list[Any],
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+    ) -> list[tuple[FloatNDArray, FloatNDArray]]:
+        """
+        Split the function over the ROC convex hull and the samples into a sum of outer products.
+
+        Returns
+        -------
+        list of (ndarray of shape (n_hull_points, 1), ndarray of shape (n_samples,) or ())
+            Pairs whose products, summed, are the function at every hull point (rows) and sample
+            (columns): one pair per power of ``F_0`` and ``F_1``, with the priors folded into the
+            samples' side.
+        """
+        priors = (positive_class_prior, 1.0 - positive_class_prior)
+        sample_sides: dict[tuple[int, ...], Any] = {}
+        for (pos_power, neg_power, *roc_powers), value in zip(
+            self.monomials, self._coefficient_values(parameters, param_grid), strict=True
+        ):
+            term = priors[0] ** pos_power * priors[1] ** neg_power * value
+            key = tuple(roc_powers)
+            sample_sides[key] = sample_sides[key] + term if key in sample_sides else term
+        return [
+            ((true_positive_rates**tpr_power * false_positive_rates**fpr_power)[:, np.newaxis], sample_side)
+            for (tpr_power, fpr_power), sample_side in sample_sides.items()
+        ]
+
+
+def _evaluate_terms(terms: list[tuple[FloatNDArray, FloatNDArray]], samples: slice, shape: tuple[int, int]) -> Any:
+    """Sum the outer products of :meth:`_SampledIntegrand.terms` over a slice of the samples."""
+    total: Any = 0.0
+    for hull_side, sample_side in terms:
+        total = total + hull_side * (sample_side[samples] if sample_side.ndim else sample_side)
+    return np.broadcast_to(total, shape)
+
+
 def _evaluate_sampled_integrands(
-    profit_integrand: sympy.Expr,
-    rate_integrand: sympy.Expr | None,
-    true_positive_rates: Iterable[float],
-    false_positive_rates: Iterable[float],
-    random_symbols: Iterable[sympy.Symbol],
+    profit_integrand: _SampledIntegrand,
+    rate_integrand: _SampledIntegrand | None,
+    true_positive_rates: FloatNDArray,
+    false_positive_rates: FloatNDArray,
+    positive_class_prior: float,
+    parameters: dict[str, Any],
     param_grid: list[Any],
     n_samples: int,
 ) -> float:
@@ -162,8 +258,8 @@ def _evaluate_sampled_integrands(
 
     Used by both the Monte-Carlo and Quasi-Monte-Carlo integration backends, which differ only
     in how *param_grid* is generated (plain sympy sampling vs. a Sobol sequence mapped through
-    each distribution's inverse CDF). For each convex-hull point, lambdifies the integrand at
-    that point's F_0/F_1 and evaluates it over every sample in *param_grid*.
+    each distribution's inverse CDF). Evaluates the integrand at every convex-hull point and every
+    sample in *param_grid*, in chunks of samples to bound the memory this takes.
 
     Returns
     -------
@@ -172,26 +268,31 @@ def _evaluate_sampled_integrands(
         profit. Otherwise: the mean, over samples, of the predicted-positive rate at each
         sample's profit-maximizing convex-hull point.
     """
-    profit_integrands = [
-        lambdify(random_symbols, profit_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
-        for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
-    ]
+    true_positive_rates = np.asarray(true_positive_rates, dtype=np.float64)
+    false_positive_rates = np.asarray(false_positive_rates, dtype=np.float64)
+    profit_terms = profit_integrand.terms(
+        parameters, param_grid, true_positive_rates, false_positive_rates, positive_class_prior
+    )
+    rate_terms = (
+        rate_integrand.terms(parameters, param_grid, true_positive_rates, false_positive_rates, positive_class_prior)
+        if rate_integrand is not None
+        else None
+    )
 
-    results = np.empty((len(profit_integrands), n_samples))
-    for i, integrand in enumerate(profit_integrands):
-        results[i, :] = integrand(*param_grid)
-    if rate_integrand is None:
-        return float(results.max(axis=0).mean())
-
-    rate_integrands = [
-        lambdify(random_symbols, rate_integrand.subs('F_0', tpr).subs('F_1', fpr).evalf())
-        for tpr, fpr in zip(true_positive_rates, false_positive_rates, strict=True)
-    ]
-    rate_results = np.empty((len(profit_integrands), n_samples))
-    best_indices = results.argmax(axis=0)
-    for i, integrand in enumerate(rate_integrands):
-        rate_results[i, :] = integrand(*param_grid)
-    return float(rate_results[best_indices, np.arange(n_samples)].mean())
+    n_hull_points = len(true_positive_rates)
+    chunk_size = max(1, _MAX_HULL_EVALUATIONS // n_hull_points)
+    total = 0.0
+    for start in range(0, n_samples, chunk_size):
+        samples = slice(start, min(start + chunk_size, n_samples))
+        shape = (n_hull_points, samples.stop - samples.start)
+        profits = _evaluate_terms(profit_terms, samples, shape)
+        if rate_terms is None:
+            total += float(profits.max(axis=0).sum())
+        else:
+            best_indices = profits.argmax(axis=0)
+            rates = _evaluate_terms(rate_terms, samples, shape)
+            total += float(rates[best_indices, np.arange(shape[1])].sum())
+    return total / n_samples
 
 
 @overload

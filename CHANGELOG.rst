@@ -9,6 +9,18 @@ Metrics
   and before NumPy 2.0 copying a random generator discarded its seed sequence, from which SciPy's
   quasi-Monte Carlo sampler draws: every metric, and every run, sampled differently. Pickled
   metrics are affected the same way and are fixed too.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with two or more stochastic variables now gives the
+  same result in every Python process for a given ``random_state``. Which variable was assigned
+  which dimension of the quasi-Monte Carlo samples, or which Monte Carlo draw, followed an order
+  that changed with Python's per-process string hash seed, so the score varied from run to run
+  (in one two-variable example with ``2**14`` samples, by about 1e-6 relative with quasi-Monte
+  Carlo and 4e-3 with Monte Carlo). The variables are now ordered by name, so a given ``random_state`` may give a
+  slightly different result than before, once. The order of the integrals in the metric's LaTeX
+  representation is fixed the same way.
+- |Fix| :class:`~empulse.metrics.MaxProfit` now integrates a stochastic variable, and asks for a
+  parameter, that cancels out when the four cost matrix terms are added up, such as ``v`` in
+  ``tp_benefit = clv - v`` and ``fp_cost = v``. The profit weighs those terms differently, so the
+  variable still matters, but it was looked for in their sum, and scoring such a metric failed.
 - |Fix| :class:`~empulse.metrics.AUEPC` and :func:`~empulse.metrics.auepc_score` now work with
   NumPy 1.x. They called ``numpy.trapezoid``, which only exists from NumPy 2.0.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` with a :class:`~empulse.metrics.Cost` or
@@ -127,6 +139,14 @@ Metrics
   distributions with closed-form partial moments and profits up to quadratic in the variable; other
   profits and distributions are scored as before. Scoring the hull took most of the time of fitting
   a :class:`~empulse.models.ProfTreeClassifier` with such a metric, which is now about 3x faster.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'``
+  or ``'monte-carlo'`` (what ``'auto'`` uses for most metrics with two or more stochastic
+  variables) scores and finds the
+  optimal rate about 20x faster, in about 7 ms instead of 150 ms for a ROC convex hull of 85 points
+  and 16,384 samples, with identical results. The profit function is compiled once instead of once
+  per hull point on every call, its values over the samples are reused while the parameters stay the
+  same, and all hull points are evaluated at once. Memory use is now bounded: at most 32 MiB of
+  intermediate values, however large the hull and the number of samples.
 - |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
   than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
   about 10-40% faster; the names are found again if the metric's cost matrix is changed.
