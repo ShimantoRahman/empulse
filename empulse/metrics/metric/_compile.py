@@ -90,13 +90,22 @@ def _free_symbol_names(expression: sympy.Expr) -> frozenset[str]:
 
 
 class PicklableLambda:
-    """A callable wrapper that securely pickles lambdified Sympy functions."""
+    """
+    A callable wrapper that securely pickles lambdified Sympy functions.
+
+    With ``dummify=True`` the arguments get private names in the generated code, so a symbol named
+    after a function the expression calls, such as a parameter ``beta`` beside the Beta function
+    ``beta(alpha, beta)``, no longer shadows it.
+    """
 
     func: Callable[..., Any]
 
-    def __init__(self, expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None):
+    def __init__(
+        self, expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None, *, dummify: bool = False
+    ):
         self.expression = expression
         self.variables = variables
+        self.dummify = dummify
         self._compile()
 
     def _compile(self) -> None:
@@ -107,7 +116,15 @@ class PicklableLambda:
             # Sort free_symbols by name for deterministic variable ordering,
             # ensuring the lambdified function receives kwargs correctly.
             variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
-            self.func = sympy.lambdify(variables, self.expression)  # type: ignore[assignment]
+            expression = self.expression
+            # Instances pickled before `dummify` existed do not carry it.
+            if getattr(self, 'dummify', False):
+                # Substituted here rather than with lambdify's own `dummify`, which still binds the
+                # symbols' names in the function's namespace, where they shadow functions of the same name.
+                dummies = [sympy.Dummy() for _ in variables]
+                expression = expression.xreplace(dict(zip(variables, dummies, strict=True)))
+                variables = dummies
+            self.func = sympy.lambdify(variables, expression)  # type: ignore[assignment]
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
@@ -122,9 +139,11 @@ class PicklableLambda:
         self._compile()
 
 
-def _safe_lambdify(expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None) -> PicklableLambda:
+def _safe_lambdify(
+    expression: sympy.Expr, variables: Iterable[sympy.Symbol] | None = None, *, dummify: bool = False
+) -> PicklableLambda:
     """Safely lambdify a sympy expression and return a picklable callable."""
-    return PicklableLambda(expression, variables)
+    return PicklableLambda(expression, variables, dummify=dummify)
 
 
 def _safe_run_lambda(

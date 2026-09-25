@@ -147,6 +147,14 @@ Metrics
   per hull point on every call, its values over the samples are reused while the parameters stay the
   same, and all hull points are evaluated at once. Memory use is now bounded: at most 32 MiB of
   intermediate values, however large the hull and the number of samples.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quad'`` (what
+  ``'auto'`` uses for two stochastic variables when one of them cannot be sampled by quasi-Monte
+  Carlo) scores 6-85x faster and finds the optimal rate 8-30x faster, with identical results: two
+  stochastic variables and a ROC convex hull of 85 points take 0.9 s instead of 77 s. The profit
+  function and the density are compiled once instead of once per hull point on every call, the
+  density is evaluated once per point of the integration instead of once per hull point, and the
+  hull point with the highest profit is found by bisection instead of by evaluating the profit at
+  every hull point.
 - |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
   than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
   about 10-40% faster; the names are found again if the metric's cost matrix is changed.

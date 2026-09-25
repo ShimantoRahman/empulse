@@ -11,7 +11,6 @@ from ....._types import Float64Array, FloatNDArray, IntNDArray
 from ...._cy_convex_hull import convex_hull, convex_hull_from_counts
 from ..._compile import CountScoreFn, _safe_lambdify
 from ..._parameter_domain import _check_parameters
-from ..._symbolic import _subs_by_name
 
 
 def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
@@ -132,22 +131,6 @@ def extract_distribution_parameters(
     return distribution_parameters, parameters
 
 
-def _substitute_integrand(
-    expr: sympy.Expr,
-    kwargs: dict[str, Any],
-    dist_params: dict[str, Any],
-    pi0: float,
-    pi1: float,
-) -> sympy.Expr:
-    """Substitute deterministic parameters, distribution parameters, and class priors into *expr*.
-
-    ``dist_params={}`` is a no-op substitution, so this covers both the "distribution parameters
-    are fixed numeric literals" and "distribution parameters were just resolved from kwargs" cases
-    used by the quadrature integration backend.
-    """
-    return _subs_by_name(expr, {**kwargs, **dist_params, 'pi_0': pi0, 'pi_1': pi1})
-
-
 #: Upper bound on the number of (hull point, sample) values held in memory at once. The samples are
 #: evaluated in chunks of at most this many values divided by the number of hull points (32 MiB).
 _MAX_HULL_EVALUATIONS = 2**22
@@ -186,7 +169,7 @@ class _SampledIntegrand:
         #: The exponents of ``(pi_0, pi_1, F_0, F_1)`` of each term, matching :attr:`coefficients`.
         self.monomials: list[tuple[int, ...]] = polynomial.monoms()
         self.coefficients = [
-            _safe_lambdify(coefficient, [*parameters, *random_symbols]) for coefficient in coefficients
+            _safe_lambdify(coefficient, [*parameters, *random_symbols], dummify=True) for coefficient in coefficients
         ]
         # The parameter values, the grid and the coefficients' values over it are cached as one
         # tuple, so a concurrent caller can never pair one call's parameters with another's values.

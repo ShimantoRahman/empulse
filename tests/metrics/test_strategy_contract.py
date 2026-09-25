@@ -13,6 +13,7 @@ import pickle
 
 import numpy as np
 import pytest
+import scipy.stats as st
 import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
@@ -162,6 +163,21 @@ def test_picklable_lambda_multiple_variables():
 
     restored = pickle.loads(pickle.dumps(pl))
     assert restored(x=2, y=3) == pl(x=2, y=3) == 8
+
+
+def test_picklable_lambda_dummify_keeps_functions_named_like_a_variable():
+    """A variable named ``beta`` must not shadow the Beta function ``beta(alpha, beta)`` it is passed to.
+
+    lambdify's own ``dummify`` still binds the symbols' names in the generated function's namespace.
+    """
+    alpha, beta, x = sympy.symbols('alpha beta x')
+    expression = x ** (alpha - 1) * (1 - x) ** (beta - 1) / sympy.beta(alpha, beta)
+    pl = PicklableLambda(expression, [alpha, beta, x], dummify=True)
+
+    expected = st.beta(6, 14).pdf(0.3)
+    restored = pickle.loads(pickle.dumps(pl))
+    assert pl(6.0, 14.0, 0.3) == pytest.approx(expected)
+    assert restored(6.0, 14.0, 0.3) == pytest.approx(expected)
 
 
 def test_picklable_lambda_explicit_variable_order():

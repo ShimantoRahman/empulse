@@ -5,6 +5,7 @@ by quadrature and by (quasi-)Monte Carlo sampling.
 The exact piecewise path for a single variable is in ``test_max_profit_strategy.py``.
 """
 
+import math
 import os
 import pickle
 import subprocess
@@ -40,6 +41,7 @@ from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy i
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import (
     MaxProfitScoreQuad,
+    _Hull,
     compute_integral_multiple_quad,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.quasi_monte_carlo import (
@@ -328,17 +330,42 @@ def test_nquad_integrates_each_variable_over_its_own_range():
     reversing them there integrated ``x0`` over ``x3``'s range. The integral of ``x0`` over
     [0, 1] x [0, 2] x [0, 3] x [0, 4] is 1/2 * 2 * 3 * 4 = 12.
     """
-    x = sympy.symbols('x0:4')
     result = compute_integral_multiple_quad(
-        profit_integrand=x[0] + 0 * sympy.Symbol('F_0') + 0 * sympy.Symbol('F_1'),
-        rate_integrand=None,
+        integrand=lambda x0, x1, x2, x3: x0,
         bounds=[0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0],
-        true_positive_rates=[0.5],
-        false_positive_rates=[0.5],
-        random_variables=list(x),
         n_random=4,
     )
     assert result == pytest.approx(12.0)
+
+
+@pytest.mark.parametrize(
+    'hull',
+    [
+        # A vertical first segment (slope 0), a horizontal last one (infinite slope) and collinear points.
+        ([0.0, 0.4, 0.7, 0.85, 1.0, 1.0], [0.0, 0.0, 0.1, 0.25, 0.6, 1.0]),
+        ([0.0, 1.0], [0.0, 1.0]),
+        ([0.0, 0.5, 1.0], [0.0, 0.25, 0.5]),
+    ],
+    ids=['general', 'diagonal', 'collinear'],
+)
+def test_best_hull_vertex_matches_evaluating_every_vertex(hull):
+    """For every sign of the two coefficients, including zero and ties, the vertex found is a maximizing one."""
+    tprs, fprs = np.array(hull[0]), np.array(hull[1])
+    vertices = _Hull(tprs, fprs)
+    coefficients = [-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 3.0]
+    for tpr_coefficient in coefficients:
+        for fpr_coefficient in coefficients:
+            values = tpr_coefficient * tprs + fpr_coefficient * fprs
+            best = vertices.best_vertex(tpr_coefficient, fpr_coefficient)
+            assert values[best] == pytest.approx(values.max(), abs=1e-12), (tpr_coefficient, fpr_coefficient)
+
+
+@pytest.mark.parametrize('n_random', [2, 3])
+def test_dblquad_and_tplquad_integrate_each_variable_over_its_own_range(n_random):
+    """``dblquad`` and ``tplquad`` pass the innermost variable first; the integrand gets them in order."""
+    bounds = [0.0, 1.0, 0.0, 2.0, 0.0, 3.0][: 2 * n_random]
+    result = compute_integral_multiple_quad(integrand=lambda x0, *_: x0, bounds=bounds, n_random=n_random)
+    assert result == pytest.approx(0.5 * math.prod(bounds[3::2]))
 
 
 class TestDistributionWithLiteralAndSymbolicParameters:
