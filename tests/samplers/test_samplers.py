@@ -8,6 +8,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from empulse.samplers import BiasRelabler, BiasResampler, CostSensitiveSampler
 
+from .._estimator_common import iter_invalid_params
 from .sampler_checks import parametrize_with_checks_samplers
 
 ESTIMATORS = (
@@ -16,7 +17,6 @@ ESTIMATORS = (
     CostSensitiveSampler(method='rejection sampling', random_state=42),
     CostSensitiveSampler(method='oversampling', random_state=42),
 )
-ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 
 FIT_PARAMS = (
     {'sensitive_feature': np.append(np.zeros(500), np.ones(500))},
@@ -38,30 +38,23 @@ def test_samplers(estimator, check):
     check(estimator)
 
 
-class InvalidParameter:
-    pass
+def _invalid_param_cases():
+    """One case per (sampler class, constructor parameter), so the id names the parameter.
+
+    Sorted, because a set of classes iterates in an order that differs between processes, and
+    pytest-xdist refuses to run a suite whose workers collected different tests.
+    """
+    for estimator_class in sorted({type(est) for est in ESTIMATORS}, key=lambda c: c.__name__):
+        for name, invalid in iter_invalid_params(estimator_class):
+            yield pytest.param(estimator_class, name, invalid, id=f'{estimator_class.__name__}-{name}')
 
 
-def generate_invalid_params(estimator_class):
+@pytest.mark.parametrize(('estimator_class', 'param_name', 'invalid_params'), _invalid_param_cases())
+def test_invalid_params(estimator_class, param_name, invalid_params):
+    """Every constructor parameter must be rejected by scikit-learn's parameter validation."""
     parameters = inspect.signature(estimator_class.__init__).parameters
-    takes_estimator = 'estimator' in parameters
-    return [{param: InvalidParameter()} for param in parameters if param != 'self'], takes_estimator
-
-
-@pytest.mark.parametrize('estimator_class', ESTIMATOR_CLASSES)
-def test_invalid_params(estimator_class):
-    X, y = 1, 1
-    invalid_params_list, takes_estimator = generate_invalid_params(estimator_class)
-    for invalid_params in invalid_params_list:
-        if (
-            takes_estimator
-            and 'estimator' in invalid_params
-            and isinstance(invalid_params['estimator'], InvalidParameter)
-        ):
-            model = estimator_class(**invalid_params)
-        elif takes_estimator:
-            model = estimator_class(estimator=LogisticRegression(), **invalid_params)
-        else:
-            model = estimator_class(**invalid_params)
-        with pytest.raises(InvalidParameterError):
-            model.fit_resample(X, y)
+    # Supply a valid estimator when the sampler needs one, unless that parameter is the one under test.
+    defaults = {'estimator': LogisticRegression()} if 'estimator' in parameters and param_name != 'estimator' else {}
+    model = estimator_class(**defaults, **invalid_params)
+    with pytest.raises(InvalidParameterError):
+        model.fit_resample(1, 1)

@@ -1,28 +1,21 @@
 import inspect
 
-import numpy as np
 import pandas as pd
 import pytest
-import sympy
-from sklearn import config_context
-from sklearn.base import clone
-from sklearn.datasets import make_classification
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
-from sklearn.utils.estimator_checks import parametrize_with_checks
+from sklearn.utils.estimator_checks import _get_check_estimator_ids, estimator_checks_generator
 from xgboost import XGBClassifier
 
 from empulse.datasets import fetch_give_me_some_credit
-from empulse.metrics import Cost, CostMatrix, Metric, cost_loss, mpc_score
+from empulse.metrics import cost_loss, mpc_score
 from empulse.models import (
-    CSBaggingClassifier,
     CSBoostClassifier,
     CSForestClassifier,
     CSLogitClassifier,
-    CSRateClassifier,
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
@@ -32,7 +25,7 @@ from empulse.models import (
     ProfTreeClassifier,
     RobustCSClassifier,
 )
-from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
+from empulse.optimizers import LBFGSBOptimizer
 
 from .._estimator_common import iter_invalid_params
 from .estimator_inventory import estimator_id, make_estimators
@@ -40,24 +33,6 @@ from .estimator_inventory import estimator_id, make_estimators
 # The single source of truth for "every estimator, cheaply configured". Shared with
 # `test_sklearn_integration.py` so the list cannot drift between the two conformance suites.
 ESTIMATORS = tuple(make_estimators())
-
-METRIC_ESTIMATORS = (
-    ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=100, population_size=10, random_state=42)),
-    ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
-    CSBoostClassifier(),
-    CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=10)),
-    CSTreeClassifier(max_depth=2),
-    CSForestClassifier(n_estimators=3, max_depth=1, random_state=10),
-    CSBaggingClassifier(n_estimators=3, random_state=10),
-    RobustCSClassifier(estimator=CSBoostClassifier()),
-    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
-    CSRateClassifier(estimator=LogisticRegression(max_iter=2)),
-)
-
-PREDICT_TIME_ESTIMATORS = (
-    CSThresholdClassifier(LogisticRegression(), calibrator='sigmoid', random_state=42),
-    CSRateClassifier(estimator=LogisticRegression(max_iter=2)),
-)
 
 
 ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
@@ -84,14 +59,31 @@ def expected_failed_checks(estimator):
     return {}
 
 
-@parametrize_with_checks(list(ESTIMATORS), expected_failed_checks=expected_failed_checks)
+def _conformance_checks():
+    for estimator in ESTIMATORS:
+        yield from estimator_checks_generator(
+            estimator, expected_failed_checks=expected_failed_checks(estimator), mark='xfail'
+        )
+
+
+def _conformance_check_id(value):
+    # `parametrize_with_checks` names a case by the estimator's repr, which for the models taking an
+    # optimizer includes that optimizer's memory address. The ids then differ between processes, and
+    # pytest-xdist refuses to run a suite whose workers collected different tests.
+    if isinstance(value, BaseEstimator):
+        return estimator_id(value)
+    return _get_check_estimator_ids(value)
+
+
+# `parametrize_with_checks`, with ids that are the same in every process.
+@pytest.mark.parametrize(('estimator', 'check'), _conformance_checks(), ids=_conformance_check_id)
 def test_estimators(estimator, check):
     """Check the compatibility with scikit-learn API"""
     check(estimator)
 
 
 @pytest.fixture(scope='module')
-def data():
+def give_me_some_credit():
     dataset = fetch_give_me_some_credit(backend=pd)
     X = dataset.data
     y = dataset.target
@@ -115,8 +107,8 @@ def data():
     ],
     ids=estimator_id,
 )
-def test_cost_loss_performance(classifier, data):
-    X, y, tp_cost, fp_cost, tn_cost, fn_cost = data
+def test_cost_loss_performance(classifier, give_me_some_credit):
+    X, y, tp_cost, fp_cost, tn_cost, fn_cost = give_me_some_credit
 
     pipeline = Pipeline([('scaler', StandardScaler()), ('model', classifier)])
 
@@ -136,15 +128,6 @@ def test_cost_loss_performance(classifier, data):
     assert performance < 750, f'Performance {performance} is not better than 750'
 
 
-@pytest.fixture(scope='module')
-def dataset():
-    X, y = make_classification(n_samples=50, random_state=42)
-    rng = np.random.default_rng(42)
-    fn_cost = rng.random(y.size)
-    fp_cost = 5
-    return X, y, fn_cost, fp_cost
-
-
 def _invalid_param_cases():
     """One case per (estimator class, constructor parameter), so the id names the parameter."""
     for estimator_class in sorted(ESTIMATOR_CLASSES, key=lambda c: c.__name__):
@@ -153,9 +136,9 @@ def _invalid_param_cases():
 
 
 @pytest.mark.parametrize(('estimator_class', 'param_name', 'invalid_params'), _invalid_param_cases())
-def test_invalid_params(estimator_class, param_name, invalid_params, dataset):
+def test_invalid_params(estimator_class, param_name, invalid_params, cost_dataset):
     """Every constructor parameter must be rejected by scikit-learn's parameter validation."""
-    X, y, _, _ = dataset
+    X, y, _, _ = cost_dataset
     parameters = inspect.signature(estimator_class.__init__).parameters
     # Supply a valid value for the parameters the estimator cannot be constructed without, unless
     # that parameter is itself the one under test.
@@ -168,245 +151,3 @@ def test_invalid_params(estimator_class, param_name, invalid_params, dataset):
     model = estimator_class(**defaults, **invalid_params)
     with pytest.raises(InvalidParameterError):
         model.fit(X, y)
-
-
-def set_metric_loss(estimator, loss):
-    """Set the metric loss for the estimator."""
-    if isinstance(estimator, RobustCSClassifier):
-        estimator.estimator.loss = loss
-        return estimator
-    elif hasattr(estimator, 'loss'):
-        return estimator.set_params(loss=loss)
-    elif hasattr(estimator, 'criterion'):
-        return estimator.set_params(criterion=loss)
-    elif hasattr(estimator, 'estimator') and hasattr(estimator.estimator, 'loss'):
-        return estimator.set_params(estimator__loss=loss)
-    else:
-        raise ValueError(f'Estimator {estimator} does not support setting a loss function.')
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_metric_api_consistency(estimator, dataset):
-    """Test that the metric API is consistent with the cost matrix API."""
-    X, y, _, _ = dataset
-    strategy_source = estimator.estimator if isinstance(estimator, RobustCSClassifier) else estimator
-    kind = strategy_source._default_metric_strategy()
-
-    loss = Metric(CostMatrix().add_fn_cost('a').add_fp_cost('b'), kind)
-    model_metric = set_metric_loss(clone(estimator), loss)
-    model = clone(estimator)
-
-    if isinstance(model, CSThresholdClassifier):
-        model.fit(X, y)
-        model_metric.fit(X, y)
-
-        preds_metric = model_metric.predict(X, a=1, b=1)
-        preds_metric_weighted = model_metric.predict(X, a=1, b=10)
-        preds = model.predict(X, fp_cost=1, fn_cost=1)
-        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
-        assert not np.allclose(preds_metric_weighted, preds), (
-            'Predictions of the metric API do not change with weights.'
-        )
-    elif isinstance(model, CSRateClassifier):
-        # CSRateClassifier computes optimal rate at fit time (rate depends on training data).
-        model_metric.fit(X, y, a=1, b=1)
-        model.fit(X, y, fp_cost=1, fn_cost=1)
-
-        preds_metric = model_metric.predict(X)
-        preds = model.predict(X)
-        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
-
-        model_metric.fit(X, y, a=1, b=10)
-        preds_metric_weighted = model_metric.predict(X)
-        assert not np.allclose(preds_metric_weighted, preds), (
-            'Predictions of the metric API do not change with weights.'
-        )
-    else:
-        model_metric.fit(X, y, a=1, b=1)
-        model.fit(X, y, fp_cost=1, fn_cost=1)
-
-        preds_metric = model_metric.predict_proba(X)[:, 1]
-        preds = model.predict_proba(X)[:, 1]
-        assert np.allclose(preds_metric, preds), 'Predictions are not consistent with the metric API.'
-
-        # For evolutionary estimators with very few iterations, use more iterations to ensure
-        # the algorithm is sensitive to cost weights (avoids platform-dependent flakiness).
-        model_metric_weighted = (
-            set_metric_loss(clone(estimator).set_params(max_iter=100), loss)
-            if isinstance(model, ProfTreeClassifier)
-            else model_metric
-        )
-        model_metric_weighted.fit(X, y, a=1, b=10)
-        preds_metric_weighted = model_metric_weighted.predict_proba(X)[:, 1]
-        assert not np.allclose(preds_metric_weighted, preds), (
-            'Predictions of the metric API do not change with weights.'
-        )
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_data_format(estimator, dataset):
-    """Test that the estimators accept data in different formats."""
-    X, y, _, _ = dataset
-    tp_cost = 0
-    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
-    fn_cost = np.ones(y.size)
-    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
-
-    estimator = clone(estimator)
-    if isinstance(estimator, CSThresholdClassifier):
-        estimator.fit(X, y)
-        estimator.predict(X, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-    else:
-        estimator.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, tp_cost=tp_cost, tn_cost=tn_cost)
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_data_format_metric_loss(estimator, dataset):
-    """Test that the estimators accept data in different formats when using metric loss."""
-    X, y, _, _ = dataset
-    tp_cost = 0
-    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
-    fn_cost = np.ones(y.size)
-    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
-
-    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fn_cost('fn').add_fp_cost('fp')
-    cost_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), cost_loss)
-
-    if isinstance(estimator, CSThresholdClassifier):
-        estimator.fit(X, y)
-        estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-    else:
-        estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_data_types_metric_loss(estimator, dataset):
-    """Test that the estimators accept different data types when using metric loss."""
-    X, y, _, _ = dataset
-    tp_cost = 0
-    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
-    # cost matrix that Metric.optimal_threshold() now correctly rejects, which isn't what this test is about.
-    tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
-    fn_cost = np.ones(y.size, dtype=np.int32)
-    fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
-
-    tp, tn, fn, fp = sympy.symbols('tp tn fn fp')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fn_cost(fn).add_fp_cost(fp)
-    cost_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), cost_loss)
-
-    if isinstance(estimator, CSThresholdClassifier):
-        estimator.fit(X, y)
-        estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-    else:
-        estimator.fit(X, y, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_metric_loss_all_default_params(estimator, dataset):
-    """Test that the metric loss works with all default parameters."""
-    X, y, _, _ = dataset
-
-    fn, fp = sympy.symbols('fn fp')
-    cost_matrix = CostMatrix().add_fn_cost(fn).add_fp_cost(fp).set_default(fp=1, fn=1)
-    cost_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), cost_loss)
-
-    if isinstance(estimator, CSThresholdClassifier):
-        estimator.fit(X, y)
-        estimator.predict(X)
-    else:
-        estimator.fit(X, y)
-
-
-@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
-def test_data_format_metric_loss_predict_time(estimator, dataset):
-    """Test that predict-time estimators accept data in different formats through the Metric loss API."""
-    X, y, _, _ = dataset
-    tp_cost = 0
-    tn_cost = np.expand_dims(np.zeros(y.size), axis=1)
-    fn_cost = np.ones(y.size)
-    fp_cost = np.expand_dims(np.ones(y.size), axis=0)
-
-    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fn_cost('fn').add_fp_cost('fp')
-    metric_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), metric_loss)
-    estimator.fit(X, y)
-    y_pred = estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-    assert y_pred.shape == y.shape
-
-
-@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
-def test_data_types_metric_loss_predict_time(estimator, dataset):
-    """Test that predict-time estimators accept different data types through the Metric loss API."""
-    X, y, _, _ = dataset
-    tp_cost = 0
-    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
-    # cost matrix that Metric.optimal_threshold() now correctly rejects (see
-    # METRIC_CORE_REVIEW.md finding 08), which isn't what this test is about.
-    tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
-    fn_cost = np.ones(y.size, dtype=np.int32)
-    fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
-
-    cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fn_cost('fn').add_fp_cost('fp')
-    metric_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), metric_loss)
-    estimator.fit(X, y)
-    y_pred = estimator.predict(X, tp=tp_cost, tn=tn_cost, fn=fn_cost, fp=fp_cost)
-    assert y_pred.shape == y.shape
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_metric_loss_partial_defaults(estimator, dataset):
-    """Test that the metric loss works when only some parameters have defaults."""
-    X, y, _, _ = dataset
-
-    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').set_default(fp=1)
-    cost_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), cost_loss)
-    estimator.fit(X, y, fn=1)
-    y_pred = estimator.predict(X)
-    assert y_pred.shape == y.shape
-
-
-@pytest.mark.parametrize('estimator', PREDICT_TIME_ESTIMATORS, ids=estimator_id)
-def test_metric_loss_partial_defaults_predict_time(estimator, dataset):
-    """Test that the metric loss works when only some parameters have defaults."""
-    X, y, _, _ = dataset
-
-    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').set_default(fp=1)
-    metric_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), metric_loss)
-    estimator.fit(X, y)
-    y_pred = estimator.predict(X, fn=1)
-    assert y_pred.shape == y.shape
-
-
-@pytest.mark.parametrize('estimator', METRIC_ESTIMATORS, ids=estimator_id)
-def test_metric_loss_metadata_routing(estimator, dataset):
-    """Test that the metric loss metadata routing works."""
-    X, y, fn_cost, fp_cost = dataset
-
-    cost_matrix = CostMatrix().add_fn_cost('fn').add_fp_cost('fp').mark_outlier_sensitive('fn')
-    cost_loss = Metric(cost_matrix, Cost())
-
-    estimator = set_metric_loss(clone(estimator), cost_loss)
-
-    with config_context(enable_metadata_routing=True):
-        if isinstance(estimator, CSThresholdClassifier | CSRateClassifier):
-            estimator.set_fit_request(fp=True, fn=True)
-            estimator.set_predict_request(fp=True, fn=True)
-            cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})
-        else:
-            estimator.set_fit_request(fp=True, fn=True)
-            cross_val_score(estimator, X, y, cv=2, params={'fp': fp_cost, 'fn': fn_cost})

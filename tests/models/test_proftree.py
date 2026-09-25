@@ -11,9 +11,9 @@ from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, max_profit_scor
 from empulse.models import ProfTreeClassifier
 
 
-@pytest.fixture
-def data():
-    return make_classification(n_samples=100, n_features=4, random_state=0)
+@pytest.fixture(scope='module')
+def data(make_data):
+    return make_data(n_samples=100, n_features=4, random_state=0)
 
 
 class TestFitDispatch:
@@ -133,23 +133,28 @@ class TestConstantFeatures:
     which raises SIGFPE in C and kills the process, so the fit runs in a subprocess.
     """
 
-    @pytest.mark.parametrize('constant_columns', [[0], [0, 1, 2]], ids=['one_constant', 'all_constant'])
-    def test_fit_with_constant_features(self, constant_columns):
+    def test_fit_with_constant_features(self):
+        # Both configurations share one subprocess: starting an interpreter and importing Empulse
+        # costs far more than the fits. A crash still fails the test, and the script says which
+        # configuration it was on before starting it.
         import subprocess
         import sys
 
-        script = f"""
+        script = """
+import sys
 import numpy as np
 from sklearn.datasets import make_classification
 from empulse.models import ProfTreeClassifier
 
-X, y = make_classification(n_samples=200, n_features=3, n_informative=2, n_redundant=0, random_state=0)
-X[:, {constant_columns}] = 1.0
-model = ProfTreeClassifier(max_iter=20, population_size=20, random_state=0).fit(X, y, fn_cost=5, fp_cost=1)
-y_proba = model.predict_proba(X)[:, 1]
-if {len(constant_columns)} == X.shape[1]:
-    # Nothing to split on: a single leaf predicting the class prior.
-    assert np.allclose(y_proba, y.mean()), y_proba
+for constant_columns in ([0], [0, 1, 2]):
+    print(f'fitting with constant columns {constant_columns}', file=sys.stderr, flush=True)
+    X, y = make_classification(n_samples=200, n_features=3, n_informative=2, n_redundant=0, random_state=0)
+    X[:, constant_columns] = 1.0
+    model = ProfTreeClassifier(max_iter=20, population_size=20, random_state=0).fit(X, y, fn_cost=5, fp_cost=1)
+    y_proba = model.predict_proba(X)[:, 1]
+    if len(constant_columns) == X.shape[1]:
+        # Nothing to split on: a single leaf predicting the class prior.
+        assert np.allclose(y_proba, y.mean()), y_proba
 """
         result = subprocess.run(
             [sys.executable, '-c', script], capture_output=True, text=True, timeout=300, check=False

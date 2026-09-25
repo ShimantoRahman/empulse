@@ -4,7 +4,11 @@ Fixtures shared across ``tests/metrics/``.
 Each of these previously existed in two or three modules with a byte-identical body. The
 ``empirical_churn_*`` pair in particular was duplicated verbatim between
 ``test_auepc_strategy.py`` and ``test_empirical_max_profit_strategy.py``, which are otherwise
-near-identical twins.
+near-identical twins (now merged into ``test_empirical_strategies.py``).
+
+``stochastic_churn_cost_matrix``, ``delta_churn_cost_matrix``, ``uniform_dist_matrix`` and
+``bank_upsell_cost_matrix`` moved here from ``test_metric.py`` when its tests were split across
+modules; ``delta_churn_cost_matrix`` stays function-scoped because tests mutate it.
 """
 
 import numpy as np
@@ -65,3 +69,43 @@ def empirical_churn_dataset():
     clv = rng.gamma(2, 100, size=n)
     y_score = rng.normal(size=n) + y * 1.5
     return y, y_score, clv
+
+
+@pytest.fixture()
+def stochastic_churn_cost_matrix():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = sympy.stats.Beta('gamma', alpha, beta)
+    return CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
+
+
+@pytest.fixture()
+def delta_churn_cost_matrix():
+    clv, delta, f, gamma = sympy.symbols('clv delta f gamma')
+    return (
+        CostMatrix()
+        .add_tp_benefit(gamma * (clv - delta * clv - f))
+        .add_tp_benefit((1 - gamma) * -f)
+        .add_fp_cost(delta * clv + f)
+    )
+
+
+@pytest.fixture()
+def uniform_dist_matrix():
+    clv, d, f, alpha, beta = sympy.symbols('clv d f alpha beta')
+    gamma = sympy.stats.Uniform('gamma', alpha, beta)
+    return CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost('d + f')
+
+
+@pytest.fixture()
+def bank_upsell_cost_matrix():
+    c, r, d, b = sympy.symbols('c r d b')
+    return (
+        CostMatrix()
+        .add_tp_cost(c)
+        .add_fp_cost(c)
+        .add_fn_cost(r * d * b)
+        .alias('contact_cost', c)
+        .alias('interest_rate', r)
+        .alias('deposit_fraction', d)
+        .alias('balance', b)
+    )

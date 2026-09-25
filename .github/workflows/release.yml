@@ -125,6 +125,15 @@ jobs:
       - name: Build sdist
         run: uv build --sdist
 
+      # setuptools adds `tests/test*.py` to an sdist by default; MANIFEST.in prunes it. Check the
+      # built archive rather than trusting the manifest, so a regression fails here, before upload.
+      - name: Check the sdist ships no tests
+        run: |
+          if tar tzf dist/*.tar.gz | grep -E '^[^/]+/tests/'; then
+            echo "::error::the sdist contains test files"
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist

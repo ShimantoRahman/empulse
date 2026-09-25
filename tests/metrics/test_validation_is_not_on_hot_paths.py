@@ -17,8 +17,12 @@ CSBoost + LogCost/MaxProfit   one per boosting round
 CSBoost + CatBoost            one per evaluation period
 ProfTree + a non-MaxProfit    one per candidate tree per generation
 ============================  ==========================================
+
+The last section checks the other side of ``validate=False``: skipping the label checks must never
+change a result, and the checks that guard against garbage input still run.
 """
 
+import functools
 from typing import Any
 from unittest import mock
 
@@ -27,7 +31,21 @@ import pytest
 import sympy
 import sympy.stats
 
-from empulse.metrics import Cost, CostMatrix, LogCost, MaxProfit, Metric
+from empulse.metrics import (
+    AUEPC,
+    Cost,
+    CostMatrix,
+    EmpiricalMaxProfit,
+    EmpiricalMinCost,
+    LogCost,
+    MaxProfit,
+    Metric,
+    MinCost,
+    MixtureComponent,
+    MixtureMetric,
+    Profit,
+    Savings,
+)
 from empulse.metrics.metric import metric as metric_module
 from empulse.models import CSBaggingClassifier, CSBoostClassifier, CSForestClassifier, ProfTreeClassifier
 
@@ -89,7 +107,7 @@ def test_catboost_validates_once_regardless_of_rounds(training_data, n_estimator
     catboost = pytest.importorskip('catboost')
     X, y, clv = training_data
     model = CSBoostClassifier(
-        catboost.CatBoostClassifier(n_estimators=n_estimators, depth=3, verbose=False),
+        catboost.CatBoostClassifier(n_estimators=n_estimators, depth=3, verbose=False, allow_writing_files=False),
         loss=instance_dependent_metric(Cost()),
     )
     assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
@@ -229,3 +247,83 @@ class TestCompilationIsNotOnHotPaths:
         # An unhashable expression cannot be cached, but is still filtered.
         matrix = sympy.Matrix([c, d])
         assert _filter_parameters(matrix, {'c': 1.0, 'd': 2.0, 'unrelated': 3.0}) == {'c': 1.0, 'd': 2.0}
+
+
+# --- validate=False gives the same results as validating ---------------------------------------------
+
+
+_VF_RNG = np.random.default_rng(0)
+VF_Y_TRUE = (_VF_RNG.random(100) < 0.3).astype(int)
+VF_Y_SCORE = np.clip(_VF_RNG.random(100) + 0.3 * VF_Y_TRUE, 0.01, 0.99)
+_CLV, _D = sympy.symbols('clv d')
+
+
+def _vf_metric(strategy, stochastic=False):
+    benefit = sympy.stats.Beta('gamma', 6, 14) * _CLV if stochastic else _CLV / 4
+    cost_matrix = CostMatrix().add_tp_benefit(benefit).add_fp_cost(_D).add_fn_cost(_CLV / 10)
+    return Metric(cost_matrix.set_default(clv=100, d=5), strategy)
+
+
+_VF_METRIC_FACTORIES = {
+    'cost': lambda: _vf_metric(Cost()),
+    'profit': lambda: _vf_metric(Profit()),
+    'savings': lambda: _vf_metric(Savings()),
+    'log_cost': lambda: _vf_metric(LogCost()),
+    'max_profit': lambda: _vf_metric(MaxProfit()),
+    'expected_max_profit': lambda: _vf_metric(MaxProfit(), stochastic=True),
+    'min_cost': lambda: _vf_metric(MinCost()),
+    'empirical_max_profit': lambda: _vf_metric(EmpiricalMaxProfit()),
+    'empirical_min_cost': lambda: _vf_metric(EmpiricalMinCost()),
+    'auepc': lambda: _vf_metric(AUEPC()),
+    'mixture': lambda: MixtureMetric([
+        MixtureComponent(0.5, _vf_metric(MaxProfit()), {}),
+        MixtureComponent(0.5, _vf_metric(Cost()), {}),
+    ]),
+}
+
+
+@functools.cache
+def _vf_metrics(name):
+    return _VF_METRIC_FACTORIES[name]()
+
+
+def _outcome(method, *args, **kwargs):
+    try:
+        return method(*args, **kwargs)
+    except NotImplementedError:
+        return 'not implemented'
+
+
+@pytest.mark.parametrize('name', _VF_METRIC_FACTORIES)
+@pytest.mark.parametrize('method', ['__call__', 'optimal_threshold', 'optimal_rate'])
+def test_validate_false_gives_the_same_result(name, method):
+    metric = _vf_metrics(name)
+    call = getattr(metric, method)
+    for y_true, y_score in [
+        (VF_Y_TRUE, VF_Y_SCORE),
+        (list(VF_Y_TRUE), list(VF_Y_SCORE)),
+        (VF_Y_TRUE[:, None], VF_Y_SCORE[:, None]),
+    ]:
+        validated = _outcome(call, y_true, y_score)
+        unvalidated = _outcome(call, y_true, y_score, validate=False)
+        np.testing.assert_array_equal(unvalidated, validated)
+
+
+@pytest.mark.parametrize('name', _VF_METRIC_FACTORIES)
+@pytest.mark.parametrize('bad', [np.nan, np.inf])
+def test_validate_false_still_rejects_scores_that_are_not_finite(name, bad):
+    y_score = VF_Y_SCORE.copy()
+    y_score[3] = bad
+    kind = 'NaN' if np.isnan(bad) else 'Inf'
+    with pytest.raises(ValueError, match=f'should not contain {kind} values'):
+        _vf_metrics(name)(VF_Y_TRUE, y_score, validate=False)
+
+
+def test_validate_false_still_rejects_inputs_of_different_lengths():
+    with pytest.raises(ValueError, match='same length'):
+        _vf_metrics('max_profit')(VF_Y_TRUE, VF_Y_SCORE[:-1], validate=False)
+
+
+def test_validate_true_still_checks_the_labels():
+    with pytest.raises(ValueError, match='binary'):
+        _vf_metrics('max_profit')(VF_Y_TRUE * 2, VF_Y_SCORE)

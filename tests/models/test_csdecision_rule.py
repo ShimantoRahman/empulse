@@ -2,17 +2,15 @@ import numpy as np
 import pytest
 import sympy
 from sklearn import config_context
-from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 
 from empulse.metrics import Capability, Cost, CostMatrix, EmpiricalMaxProfit, MaxProfit, Metric
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
 
 
-@pytest.fixture
-def data():
-    X, y = make_classification(n_samples=1000, n_features=20, random_state=42)
-    return X, y
+@pytest.fixture(scope='module')
+def data(make_data):
+    return make_data(n_samples=1000, n_features=20)
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +112,13 @@ class TestCSThresholdCalibration:
 # ===================================================================
 # CSRateClassifier-specific tests
 # ===================================================================
+
+
+def test_cs_threshold_multiclass_target_is_rejected(data):
+    X, y = data
+    model = CSThresholdClassifier(estimator=LogisticRegression(max_iter=10), fp_cost=1, fn_cost=1, random_state=42)
+    with pytest.raises(ValueError, match='Only binary classification is supported'):
+        model.fit(X, np.arange(len(y)) % 3)
 
 
 class TestCSRateSpecific:

@@ -10,6 +10,8 @@ node can legitimately hold a single class. ``xfail_strict`` is on, so if that ev
 turns red and the marker has to go.
 """
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -127,18 +129,20 @@ def test_invalid_input_is_rejected(case, y_true, y_score, expected_exception):
         case.call_metric(y_true, y_score)
 
 
-@pytest.mark.xfail(
-    reason=(
-        'The prebuilt metrics no longer reject a single-class y_true. The reference '
-        'implementations raised ValueError; the Metric-based replacements return a number '
-        '(often nan) instead, because nothing validates that both classes are present.'
-    )
-)
 @pytest.mark.parametrize('label', [0, 1], ids=['all_negative', 'all_positive'])
 @pytest.mark.parametrize('case', CASES, ids=case_id)
-def test_single_class_y_true_is_rejected(case, label):
-    with pytest.raises(ValueError):
-        case.call_metric([label, label], [0.25, 0.75])
+def test_single_class_y_true_is_accepted(case, label):
+    """
+    A single-class ``y_true`` is scored rather than rejected.
+
+    The reference implementations raised ``ValueError``; the prebuilt metrics compute a value (possibly
+    ``nan``, for a metric that divides by the size of the missing class), as ``test_metric_validation``
+    and ``test_prebuilt_relations`` also pin down for the metrics where that value is meaningful.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', RuntimeWarning)
+        result = case.call_metric([label, label], [0.25, 0.75])
+    assert isinstance(result, float)
 
 
 @pytest.mark.parametrize(('case', 'params'), _case_invalid_params())

@@ -72,6 +72,7 @@ test = [
     "scikit-learn>=1.9.0",
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
+    "pytest-xdist>=3.8.0",
     "tox>=4.13.0",
     "cython==3.2.5",
     "tox-uv>=1.25.0",

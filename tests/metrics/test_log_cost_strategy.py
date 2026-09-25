@@ -11,7 +11,9 @@ log loss. These tests check:
 * Every object handed back by the strategy (used inside cost-sensitive models) is a plain,
   picklable class -- no closures -- since these get pickled by sklearn (cloning, cross-validation,
   bagging/forest parallel estimators).
-* End-to-end training works with CSLogitClassifier and CSBoostClassifier.
+
+Training CSLogitClassifier and CSBoostClassifier on a LogCost loss is tested in
+``tests/models/test_loss_api.py``.
 """
 
 import pickle
@@ -28,7 +30,6 @@ from empulse.metrics.metric.strategies.log_cost_strategy import (
     LogCostLogitObjective,
     LogCostLoss,
 )
-from empulse.models import CSBoostClassifier, CSLogitClassifier
 
 
 def _expit(x):
@@ -291,90 +292,3 @@ def test_log_cost_repr_and_latex_smoke():
     latex = metric._repr_latex_()
     assert isinstance(latex, str)
     assert latex.startswith('$')
-
-
-def test_cslogit_accepts_log_cost_metric(dataset):
-    from scipy.optimize import OptimizeResult
-
-    X, y = dataset
-    tp, fp = sympy.symbols('tp fp')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
-    metric = Metric(cost_matrix, LogCost())
-
-    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0)
-    model.fit(X, y, tp=0.0, fp=1.0)
-
-    assert isinstance(model.result_, OptimizeResult)
-    assert model.coef_.shape == (X.shape[1],)
-    assert np.all(np.isfinite(model.coef_))
-
-    y_proba = model.predict_proba(X)
-    assert y_proba.shape == (X.shape[0], 2)
-    assert np.all(np.isfinite(y_proba))
-
-
-def test_cslogit_log_cost_is_picklable_after_fit(dataset):
-    """The fitted model (holding the LogCost-based Metric as `loss`) must be picklable,
-
-    mirroring what sklearn does during cross-validation / grid search.
-    """
-    X, y = dataset
-    cost_matrix = CostMatrix().add_tp_benefit(1.0).add_fp_cost(1.0)
-    metric = Metric(cost_matrix, LogCost())
-
-    model = CSLogitClassifier(loss=metric, C=1e6, l1_ratio=0.0)
-    model.fit(X, y)
-
-    restored = pickle.loads(pickle.dumps(model))
-    np.testing.assert_allclose(restored.predict_proba(X), model.predict_proba(X))
-
-
-def test_csboost_dispatches_log_cost_through_dynamic_gradient_boost_objective(dataset):
-    """CSBoostClassifier must route LogCost through the dynamic gradient_boost_objective path.
-
-    LogCost's per-sample loss is non-linear in the predicted probability, so it cannot use the
-    generic ``cy_boost_grad_hess`` kernel that Cost/Savings rely on (that kernel assumes a single
-    precomputed constant gradient, which only holds for a loss that is linear in the score). This
-    does not require xgboost/lightgbm/catboost to be installed: it inspects what callable
-    ``_get_objective`` builds for the xgboost backend.
-    """
-    from functools import partial
-
-    from empulse.models.boosting._backends import BoostingBackend
-
-    _X, y = dataset
-    tp, fp = sympy.symbols('tp fp')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
-    metric = Metric(cost_matrix, LogCost())
-
-    model = CSBoostClassifier(loss=metric)
-    xgboost_backend = BoostingBackend(name='xgboost', classifier=None)
-    objective = model._get_objective(xgboost_backend, y=y, loss=metric, tp=0.0, fp=1.0)
-
-    assert isinstance(objective, partial)
-    assert objective.func == metric._gradient_boost_objective
-
-    # Sanity check: the returned objective actually computes finite gradients/hessians.
-    y_score = np.zeros_like(y)
-    gradient, hessian = objective(y, y_score)
-    assert np.all(np.isfinite(gradient))
-    assert np.all(np.isfinite(hessian))
-
-
-def test_csboost_accepts_log_cost_metric(dataset):
-    xgboost = pytest.importorskip('xgboost')
-    X, y = dataset
-
-    tp, fp = sympy.symbols('tp fp')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
-    metric = Metric(cost_matrix, LogCost())
-
-    model = CSBoostClassifier(
-        estimator=xgboost.XGBClassifier(n_estimators=5, max_depth=1, verbosity=0),
-        loss=metric,
-    )
-    model.fit(X, y, tp=0.0, fp=1.0)
-    y_proba = model.predict_proba(X)
-
-    assert y_proba.shape == (X.shape[0], len(np.unique(y)))
-    assert np.all(np.isfinite(y_proba))

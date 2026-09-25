@@ -34,3 +34,11 @@ def sensitive_feature():
 def classification_data(make_data):
     """The 100-sample, 20-feature problem that most model tests use."""
     return make_data(n_samples=100, n_features=20)
+
+
+@pytest.fixture(scope='session')
+def cost_dataset(make_data):
+    """A 50-sample problem with a per-sample ``fn_cost`` and a scalar ``fp_cost``: ``(X, y, fn_cost, fp_cost)``."""
+    X, y = make_data(n_samples=50)
+    fn_cost = np.random.default_rng(42).random(y.size)
+    return X, y, fn_cost, 5

@@ -10,12 +10,19 @@ import pytest
 from empulse.datasets._cost_matrices import (
     _compute_credit_lines,
     _creditscoring_costmat,
+    churn_monthly_charges_cost_matrix,
     churn_precomputed_cost_matrix,
     churn_retention_cost_matrix,
+    churn_retention_monthly_cost_matrix,
     credit_scoring_cost_matrix,
+    credit_scoring_known_cl_cost_matrix,
+    direct_marketing_cost_matrix,
+    fraud_detection_cost_matrix,
     upsell_bank_cost_matrix,
 )
-from empulse.metrics import CostMatrix
+from empulse.metrics import Cost, CostMatrix, Metric
+
+from ._helpers import bahnsen_fp_cost
 
 
 @pytest.fixture
@@ -164,19 +171,17 @@ class TestCreditScoringCostMatrix:
         assert costs_high['cl'][0] >= costs_low['cl'][0]
 
     def test_loss_given_default_scales_fn_cost(self):
-        """Higher LGD should scale credit-line portion of the fn cost."""
+        """The false negative cost is the credit line times the loss given default."""
         income = np.array([1000.0])
         debt = np.array([0.1])
-        target = np.array([0])
-        _, costs_low_lgd = credit_scoring_cost_matrix(
-            income, debt, target, **{**self.DEFAULTS, 'loss_given_default': 0.5}
-        )
-        _, costs_high_lgd = credit_scoring_cost_matrix(
-            income, debt, target, **{**self.DEFAULTS, 'loss_given_default': 0.9}
-        )
-        # fn_cost = cl * lgd  → same cl, higher lgd → larger effective fn cost
-        # We can compare credit lines (should be the same) and check lgd in matrix
-        assert costs_low_lgd['cl'][0] == pytest.approx(costs_high_lgd['cl'][0])
+        target = np.array([1])
+        fn_costs = []
+        for lgd in (0.5, 0.9):
+            cm, costs = credit_scoring_cost_matrix(income, debt, target, **{**self.DEFAULTS, 'loss_given_default': lgd})
+            # Accepting a defaulter is a false negative, which costs the defaulted part of the credit line.
+            fn_costs.append(Metric(cm, Cost())(target, np.zeros(1), **costs))
+            assert fn_costs[-1] == pytest.approx(lgd * costs['cl'][0])
+        assert fn_costs[1] == pytest.approx(fn_costs[0] * 0.9 / 0.5)
 
 
 class TestCreditScoringCostmat:
@@ -234,3 +239,76 @@ class TestComputeCreditLines:
         debt = np.zeros(1)
         cl = _compute_credit_lines(income, debt, self.PARAMS)
         assert cl[0] <= self.PARAMS['cl_max'] + 1e-6
+
+
+class TestLiteratureCostMatrices:
+    """The factories behind the datasets whose cost matrices come from the literature."""
+
+    def test_churn_monthly_charges_cost_matrix(self):
+        charges = np.array([29.85, 56.95])
+        cm, costs = churn_monthly_charges_cost_matrix(charges, fn_months=12.0, fp_months=2.0)
+        assert isinstance(cm, CostMatrix)
+        np.testing.assert_array_equal(costs['monthly_charges'], charges)
+
+        # Predict nobody churns: the churner costs 12 months of charges, the other nothing.
+        score = Metric(cm, Cost())(np.array([1, 0]), np.zeros(2), **costs)
+        np.testing.assert_allclose(score, 12 * charges[0] / 2)
+
+    def test_credit_scoring_known_cl_cost_matrix(self):
+        cl = np.array([20000.0, 120000.0, 90000.0])
+        target = np.array([1, 0, 0])
+        cm, costs = credit_scoring_known_cl_cost_matrix(cl, target)
+        assert isinstance(cm, CostMatrix)
+        np.testing.assert_array_equal(costs['cl'], cl)
+        np.testing.assert_allclose(costs['fp_cost'], bahnsen_fp_cost(cl, pi_1=1 / 3))
+
+        # Reject everybody: each non-defaulter costs its fp_cost.
+        score = Metric(cm, Cost())(target, np.ones(3), **costs)
+        np.testing.assert_allclose(score, costs['fp_cost'][1:].sum() / 3)
+
+    def test_fraud_detection_cost_matrix(self):
+        amounts = np.array([50.0, 120.5])
+        cm, costs = fraud_detection_cost_matrix(amounts, investigation_cost=10.0)
+        np.testing.assert_array_equal(costs['amount'], amounts)
+
+        metric = Metric(cm, Cost())
+        # Investigating everything costs c_f per transaction; investigating nothing loses the fraud.
+        np.testing.assert_allclose(metric(np.array([1, 0]), np.ones(2), **costs), 10.0)
+        np.testing.assert_allclose(metric(np.array([1, 0]), np.zeros(2), **costs), 50.0 / 2)
+
+    def test_direct_marketing_cost_matrix(self):
+        amounts = np.array([15.0, 0.0])
+        cm, costs = direct_marketing_cost_matrix(amounts, contact_cost=0.68)
+        np.testing.assert_array_equal(costs['amount'], amounts)
+
+        metric = Metric(cm, Cost())
+        np.testing.assert_allclose(metric(np.array([1, 0]), np.ones(2), **costs), 0.68)
+        np.testing.assert_allclose(metric(np.array([1, 0]), np.zeros(2), **costs), 15.0 / 2)
+
+
+class TestChurnRetentionMonthlyCostMatrix:
+    def test_costs_follow_verbraken_with_clv_from_revenue(self):
+        monthly_revenue = np.array([50.0, 80.0])
+        cm, costs = churn_retention_monthly_cost_matrix(
+            monthly_revenue, clv_months=12, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
+        )
+        assert set(costs) == {'monthly_revenue'}
+
+        # Predict every customer as a churner: a churner yields the retention benefit, a
+        # non-churner costs the incentive plus the contact.
+        y_true = np.array([1, 0])
+        clv = 12 * monthly_revenue
+        tp_benefit = 0.3 * (clv[0] - 0.05 * clv[0] - 1) - 0.7 * 1
+        fp_cost = 0.05 * clv[1] + 1
+        expected = (-tp_benefit + fp_cost) / 2
+
+        score = Metric(cm, Cost())(y_true, np.ones(2), **costs)
+        np.testing.assert_allclose(score, expected)
+
+    def test_clv_months_is_overridable(self):
+        monthly_revenue = np.array([50.0])
+        cm, costs = churn_retention_monthly_cost_matrix(
+            monthly_revenue, clv_months=12, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
+        )
+        score = Metric(cm, Cost())(np.array([0]), np.ones(1), clv_months=24, **costs)
+        np.testing.assert_allclose(score, 0.05 * 24 * 50.0 + 1)

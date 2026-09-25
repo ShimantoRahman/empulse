@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 import sympy
 from sklearn.datasets import make_classification
-from sklearn.linear_model import LogisticRegression
 
 from empulse.metrics import (
     BaseMetric,
@@ -19,15 +18,6 @@ from empulse.metrics import (
 )
 
 from .reference.credit_scoring import empcs, mpcs
-
-
-@pytest.fixture(scope='module')
-def y_true_and_prediction():
-    X, y = make_classification(random_state=12)
-    lr = LogisticRegression()
-    lr.fit(X, y)
-    y_proba = lr.predict_proba(X)[:, 1]
-    return y, y_proba
 
 
 @pytest.fixture(scope='module')

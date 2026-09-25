@@ -1,16 +1,21 @@
+"""
+The cost and savings metrics, on cases small enough to compute by hand.
+
+``cost_loss`` and ``savings_score`` take decisions; ``expected_cost_loss``,
+``expected_log_cost_loss`` and ``expected_savings_score`` take probabilities. The latter used to be
+checked against ``tests/metrics/reference/savings.py`` instead of the package, so these tests never
+ran a line of Empulse; they now call the public metrics. Their agreement with the reference over
+many parameter sets is ``test_prebuilt_metric_contract.py``'s job.
+"""
+
 import numpy as np
 import pytest
 
+from empulse.metrics import expected_cost_loss, expected_log_cost_loss, expected_savings_score
 from empulse.metrics.savings import (
     _compute_expected_cost,
     cost_loss,
     savings_score,
-)
-
-from .reference.savings import (
-    expected_cost_loss,
-    expected_log_cost_loss,
-    expected_savings_score,
 )
 
 
@@ -96,7 +101,6 @@ def test_cost_loss_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_c
         assert cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)
 
 
-@pytest.mark.parametrize('check_input', [True, False])
 @pytest.mark.parametrize(
     'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected',
     [
@@ -134,13 +138,13 @@ def test_cost_loss_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_c
         ),
     ],
 )
-def test_expected_cost_loss(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected, check_input):
+def test_expected_cost_loss(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected):
+    # `expected` is the total cost; the metric reports the average.
     assert expected_cost_loss(
-        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=check_input
-    ) == pytest.approx(expected)
+        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost
+    ) == pytest.approx(expected / len(y_true))
 
 
-@pytest.mark.parametrize('check_input', [True, False])
 @pytest.mark.parametrize(
     'y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs, expected_cost, expected_avg_cost, expected_log_cost',
     [
@@ -266,7 +270,6 @@ def test_average_expected_cost(
     expected_cost,
     expected_avg_cost,
     expected_log_cost,
-    check_input,
 ):
     avg_expected_cost = expected_cost_loss(
         y_true,
@@ -275,8 +278,6 @@ def test_average_expected_cost(
         tn_cost=tn_costs,
         fn_cost=fn_costs,
         fp_cost=fp_costs,
-        check_input=check_input,
-        normalize=True,
     )
     log_avg_expected_cost = expected_log_cost_loss(
         y_true,
@@ -285,8 +286,6 @@ def test_average_expected_cost(
         tn_cost=tn_costs,
         fn_cost=fn_costs,
         fp_cost=fp_costs,
-        check_input=check_input,
-        normalize=True,
     )
     assert np.isclose(
         expected_cost, _compute_expected_cost(y_true, y_pred, tp_costs, tn_costs, fn_costs, fp_costs)
@@ -304,24 +303,8 @@ def test_log_aec_cross_entropy():
     tn_costs = -1
 
     assert log_loss(y_true, y_pred) == pytest.approx(
-        expected_log_cost_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs, normalize=True)
+        expected_log_cost_loss(y_true, y_pred, tp_cost=tp_costs, tn_cost=tn_costs)
     )
-
-
-@pytest.mark.parametrize(
-    'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg',
-    [
-        ([1, 0, 0, 1], [1, 1, 0, 0], 0.0, 0.0, 0.0, 0.0, r'All costs are zero.'),
-        ([1, 0, 0, 1], [1, 1, 0], 1.0, 0.0, 0.0, 0.0, r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2, 3], [1, 2], [1, 2], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2, 3], [1, 2], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2, 3], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2], [1, 2, 3], r'inconsistent numbers of samples'),
-    ],
-)
-def test_expected_cost_loss_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg):
-    with pytest.raises(ValueError, match=msg):
-        assert expected_cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)
 
 
 @pytest.mark.parametrize('check_input', [True, False])
@@ -379,7 +362,6 @@ def test_saving_score_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, f
         savings_score(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)
 
 
-@pytest.mark.parametrize('check_input', [True, False])
 @pytest.mark.parametrize(
     'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected',
     [
@@ -413,17 +395,18 @@ def test_saving_score_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, f
         ([0, 1, 1, 0], [0.4, 0.8, 0.75, 0.1], 0.0, np.array([4, 1, 2, 2]), 0.0, np.array([1, 3, 3, 1]), 0.475),
     ],
 )
-def test_expected_saving_score(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected, check_input):
+def test_expected_saving_score(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expected):
     assert expected_savings_score(
-        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=check_input
+        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost
     ) == pytest.approx(expected)
 
 
-@pytest.mark.parametrize('check_input', [True, False])
 @pytest.mark.parametrize(
     'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, baseline, expected',
     [
-        ([1, 0, 0, 1], [1, 1, 0, 0], 1.0, 2.0, 3.0, 4.0, 'prior', 0.2857142857142857),
+        # The model's total cost is 1 + 2 + 3 + 4 = 10, and so is the expected cost of predicting the
+        # prior 0.5 for every sample. (The reference module hard-thresholds the prior and gets 0.2857.)
+        ([1, 0, 0, 1], [1, 1, 0, 0], 1.0, 2.0, 3.0, 4.0, 'prior', 0.0),
         ([1, 0, 0, 1], [1, 1, 1, 1], 0.0, 1.0, 0.0, 1.0, 'prior', 0.0),
         ([1, 0, 0, 1], [0, 0, 0, 0], 0.0, 1.0, 0.0, 1.0, 'prior', 0.0),
         ([1, 0, 0, 1], [1, 0, 0, 1], 0.0, 1.0, 0.0, 1.0, 'prior', 1.0),
@@ -503,9 +486,7 @@ def test_expected_saving_score(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cos
         ),
     ],
 )
-def test_expected_saving_score_with_baseline(
-    y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, baseline, expected, check_input
-):
+def test_expected_saving_score_with_baseline(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, baseline, expected):
     assert expected_savings_score(
         y_true,
         y_pred,
@@ -514,21 +495,4 @@ def test_expected_saving_score_with_baseline(
         tn_cost=tn_cost,
         fn_cost=fn_cost,
         baseline=baseline,
-        check_input=check_input,
     ) == pytest.approx(expected)
-
-
-@pytest.mark.parametrize(
-    'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg',
-    [
-        ([1, 0, 0, 1], [1, 1, 0, 0], 0.0, 0.0, 0.0, 0.0, r'All costs are zero.'),
-        ([1, 0, 0, 1], [1, 1, 0], 1.0, 0.0, 0.0, 0.0, r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2, 3], [1, 2], [1, 2], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2, 3], [1, 2], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2, 3], [1, 2], r'inconsistent numbers of samples'),
-        ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2], [1, 2, 3], r'inconsistent numbers of samples'),
-    ],
-)
-def test_expected_saving_score_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg):
-    with pytest.raises(ValueError, match=msg):
-        expected_savings_score(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)

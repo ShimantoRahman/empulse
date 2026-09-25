@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import sympy
-from sklearn.datasets import make_classification
 
 from empulse.metrics import CostMatrix, MaxProfit, Metric
 from empulse.models import ProfMEMPMClassifier, ProfMPMClassifier
@@ -9,9 +8,9 @@ from empulse.models import ProfMEMPMClassifier, ProfMPMClassifier
 MODEL_CLASSES = [ProfMPMClassifier, ProfMEMPMClassifier]
 
 
-@pytest.fixture
-def data():
-    return make_classification(n_samples=200, n_features=5, random_state=42)
+@pytest.fixture(scope='module')
+def data(make_data):
+    return make_data(n_samples=200, n_features=5)
 
 
 @pytest.mark.parametrize('model_cls', MODEL_CLASSES)

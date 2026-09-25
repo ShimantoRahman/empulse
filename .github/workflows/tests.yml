@@ -52,6 +52,14 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
+      # A few documentation pages fetch a small dataset (Give Me Some Credit, Iranian Churn) to show
+      # a real workflow. Caching the data home keeps those pages in the PR path without downloading
+      # from UCI/OpenML on every run; the key changes whenever the fetching code does.
+      - name: Cache downloaded datasets
+        uses: actions/cache@v4
+        with:
+          path: ~/empulse_data
+          key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
       - name: Run slow suite
         run: uvx --with tox-uv tox -e py312-tests -- -m "slow and not remote"
 

@@ -71,7 +71,9 @@ Then, the workflow would look as follows:
     $ git checkout fix_bug
 
 8. Implement the modifications wished. During the process of development, honor `PEP 8`_ as much as possible.
-9. Add unit tests (don't hesitate to be exhaustive!) and ensure none are failing using::
+9. Add unit tests (don't hesitate to be exhaustive!). While you work, ``just fast-test`` runs
+   everything except the slow and network-dependent tests in parallel; before opening a pull
+   request, ensure none are failing across the supported interpreters using::
 
     $ uvx --with tox-uv tox -f tests
 

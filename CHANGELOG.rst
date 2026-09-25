@@ -295,6 +295,15 @@ Datasets
 
   :func:`~empulse.datasets.load_vub_credit_scoring` is bundled with the package; the others are
   downloaded on first use and cached.
+- |Fix| The ``fetch_*`` loaders now write a downloaded dataset to their cache atomically. Two
+  processes sharing a data home could previously see the file while it was still being written,
+  and the second one then failed reading a truncated archive instead of waiting for, or repeating,
+  the download.
+
+Packaging and dependencies
+---------------------------
+
+- |Fix| The source distribution no longer contains the test modules at the top of ``tests/``.
 
 `0.12.0`_ (19-09-2026)
 ======================

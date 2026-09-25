@@ -47,6 +47,11 @@ check-cython-abi:
 test target='':
     uv run pytest tests/{{target}}
 
+# Run the tests in parallel, skipping the slow and remote ones (optionally specify: models, metrics, ...)
+[group('test')]
+fast-test target='':
+    uv run pytest -m "not slow and not remote" -n auto tests/{{target}}
+
 _cov:
     uv run pytest --cov-report term --cov=empulse tests/
     uv run coverage html

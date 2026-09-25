@@ -62,9 +62,9 @@ class TestCheckOptimizeResult:
             _check_optimize_result(result, 'my-optimizer')
 
 
-@pytest.fixture
-def data():
-    return make_classification(n_samples=200, n_features=5, random_state=0)
+@pytest.fixture(scope='module')
+def data(make_data):
+    return make_data(n_samples=200, n_features=5, random_state=0)
 
 
 class TestScipyOptimizer:

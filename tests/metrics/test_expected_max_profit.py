@@ -92,6 +92,7 @@ DISTRIBUTIONS = [
 ]
 
 
+@pytest.mark.slow  # 150 adaptive quadratures of the reference integral
 @pytest.mark.parametrize(('distribution', 'parameters', 'support', 'reference'), DISTRIBUTIONS)
 @pytest.mark.parametrize('n_powers', [1, 2, 3])
 def test_expected_max_profit_is_the_integral_of_the_best_profit(distribution, parameters, support, reference, n_powers):

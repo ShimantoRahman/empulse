@@ -363,7 +363,7 @@ follow the ``(y_true, y_score, **kwargs) → float`` signature accepted by
 .. code-block:: python
 
     from sklearn.datasets import make_classification
-    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import make_scorer
     from sklearn.model_selection import TunedThresholdClassifierCV
     from empulse.metrics import mpc_score
@@ -381,7 +381,7 @@ follow the ``(y_true, y_score, **kwargs) → float`` signature accepted by
     )
 
     model = TunedThresholdClassifierCV(
-        estimator=GradientBoostingClassifier(),
+        estimator=LogisticRegression(),
         scoring=scorer,
         cv=5,
     )
@@ -402,7 +402,7 @@ when you use :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.Sav
 
     import sympy
     from sklearn.datasets import make_classification
-    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import make_scorer
     from sklearn.model_selection import TunedThresholdClassifierCV
     from empulse.metrics import Metric, MaxProfit, CostMatrix
@@ -435,7 +435,7 @@ when you use :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.Sav
     X, y = make_classification(n_samples=1000, random_state=0)
 
     model = TunedThresholdClassifierCV(
-        estimator=GradientBoostingClassifier(),
+        estimator=LogisticRegression(),
         scoring=scorer,
         cv=5,
     )
@@ -493,7 +493,7 @@ the cost array on the scorer, then pass it to ``fit``:
     import numpy as np
     from sklearn import set_config
     from sklearn.datasets import make_classification
-    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import make_scorer
     from sklearn.model_selection import TunedThresholdClassifierCV
     from empulse.metrics import expected_cost_loss
@@ -515,7 +515,7 @@ the cost array on the scorer, then pass it to ``fit``:
     )
 
     model = TunedThresholdClassifierCV(
-        estimator=GradientBoostingClassifier(),
+        estimator=LogisticRegression(),
         scoring=scorer,
         cv=5,
     )
@@ -533,7 +533,7 @@ estimator's hyperparameters and the decision threshold:
 
     import numpy as np
     from sklearn.datasets import make_classification
-    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import make_scorer
     from sklearn.model_selection import GridSearchCV, TunedThresholdClassifierCV
     from empulse.metrics import mpc_score
@@ -551,17 +551,14 @@ estimator's hyperparameters and the decision threshold:
     )
 
     tuned_model = TunedThresholdClassifierCV(
-        estimator=GradientBoostingClassifier(),
+        estimator=LogisticRegression(),
         scoring=scorer,
         cv=3,
     )
 
     grid_search = GridSearchCV(
         tuned_model,
-        param_grid={
-            'estimator__n_estimators': [50, 100],
-            'estimator__max_depth': [3, 5],
-        },
+        param_grid={'estimator__C': [0.1, 1.0, 10.0]},
         scoring=scorer,
         cv=5,
     )

@@ -78,20 +78,6 @@ def test_mpc_optimal_rate_is_max_profit_optimal_rate(clv, incentive_cost, contac
     assert generic == pytest.approx(churn)
 
 
-@pytest.mark.parametrize(('label', 'expected'), [(1, 0.3 * (200 - 10 - 1) - 0.7 * 1), (0, 0.0)])
-def test_empc_score_of_a_single_class(label, expected):
-    """
-    With only churners, targeting everyone is best; with no churners, targeting no one is.
-
-    Each targeted churner accepts the incentive with probability E[gamma] = 6 / (6 + 14) = 0.3 and is
-    then worth the CLV of 200 net of the incentive (10) and the contact (1); otherwise the contact is
-    lost.
-    """
-    y_true = np.full(4, label)
-    y_score = np.array([0.1, 0.4, 0.6, 0.9])
-    assert empc_score(y_true, y_score) == pytest.approx(expected, rel=1e-9)
-
-
 @pytest.mark.parametrize(
     ('metric', 'label', 'expected_score', 'expected_rate'),
     [
@@ -99,6 +85,9 @@ def test_empc_score_of_a_single_class(label, expected):
         # incentive and the contact; otherwise the contact is lost.
         (mpc_score, 1, 0.3 * (200 - 10 - 1) - 0.7 * 1, 1.0),
         (mpc_score, 0, 0.0, 0.0),
+        # The same for the expected MPC: the accept rate follows Beta(6, 14), whose mean is 0.3.
+        (empc_score, 1, 0.3 * (200 - 10 - 1) - 0.7 * 1, None),
+        (empc_score, 0, 0.0, None),
         # Rejecting a defaulter saves the fraction of the loan that would be lost, 0.275 by default.
         (mpcs_score, 1, 0.275, 1.0),
         (mpcs_score, 0, 0.0, 0.0),
@@ -107,7 +96,7 @@ def test_empc_score_of_a_single_class(label, expected):
         (empcs_score, 0, 0.0, None),
     ],
 )
-def test_deterministic_max_profit_of_a_single_class(metric, label, expected_score, expected_rate):
+def test_max_profit_of_a_single_class(metric, label, expected_score, expected_rate):
     """With only positives, targeting everyone is best; with only negatives, targeting no one is."""
     y_true = np.full(4, label)
     y_score = np.array([0.1, 0.4, 0.6, 0.9])

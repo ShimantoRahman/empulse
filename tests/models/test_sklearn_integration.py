@@ -73,8 +73,8 @@ def test_clone_does_not_share_state_between_instances(estimator):
     """
     Regression guard for the dynamic metadata routing.
 
-    ``CostSensitiveClassifier.__init__`` rewrites ``set_fit_request`` on ``self.__class__`` -- not on
-    the instance -- so a second instance could in principle observe the first one's symbol list.
+    The routing keys come from each instance's own loss. They used to be installed on the class, so
+    a second instance could observe the first one's symbol list; see ``test_metadata_routing.py``.
     """
     first = clone(estimator)
     second = clone(estimator)

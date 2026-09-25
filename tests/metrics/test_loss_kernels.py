@@ -18,8 +18,6 @@ from empulse.metrics._loss import (
     cy_logit_loss_gradient,
 )
 
-RNG = np.random.default_rng(0)
-
 
 def _reference(weights, features, grad_const, loss_const1, loss_const2, l1_weight, l2_weight, start_coef):
     probability = expit(features @ weights)
@@ -43,11 +41,11 @@ def _exact_expit_derivatives(margin):
 # Fewer than 128 samples take the C library's exp, more take numpy's.
 @pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (50, 3), (127, 4), (128, 4), (2000, 20)])
 @pytest.mark.parametrize(('l1_weight', 'l2_weight', 'start_coef'), [(0.0, 0.0, 1), (0.1, 0.2, 1), (0.3, 0.0, 0)])
-def test_logit_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef):
-    features = RNG.normal(size=(n_samples, n_features))
-    weights = RNG.normal(size=n_features)
-    grad_const = features * RNG.normal(size=(n_samples, 1))
-    loss_const1, loss_const2 = RNG.normal(size=(2, n_samples))
+def test_logit_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef, seeded_rng):
+    features = seeded_rng.normal(size=(n_samples, n_features))
+    weights = seeded_rng.normal(size=n_features)
+    grad_const = features * seeded_rng.normal(size=(n_samples, 1))
+    loss_const1, loss_const2 = seeded_rng.normal(size=(2, n_samples))
     penalty = (l1_weight, l2_weight, start_coef)
 
     expected_loss, expected_gradient = _reference(weights, features, grad_const, loss_const1, loss_const2, *penalty)
@@ -78,10 +76,10 @@ def test_logit_kernels_stay_accurate_where_the_probability_saturates(n_samples):
 
 
 @pytest.mark.parametrize('dtype', [np.float64, np.float32])
-def test_boost_gradient_and_hessian_are_exact_to_double_precision(dtype):
+def test_boost_gradient_and_hessian_are_exact_to_double_precision(dtype, seeded_rng):
     """``p * (1 - p)`` rounds to 0 once p rounds to 1, from a margin of about 37; this does not."""
-    margins = np.concatenate([RNG.normal(size=500) * 20, [0.0, -0.0, 36.0, -36.0, 300.0, -300.0]]).astype(dtype)
-    grad_const = RNG.normal(size=margins.size).astype(dtype)
+    margins = np.concatenate([seeded_rng.normal(size=500) * 20, [0.0, -0.0, 36.0, -36.0, 300.0, -300.0]]).astype(dtype)
+    grad_const = seeded_rng.normal(size=margins.size).astype(dtype)
     gradient, hessian = cy_boost_grad_hess(None, margins, grad_const)
     assert gradient.dtype == hessian.dtype == np.float64
 
@@ -103,10 +101,10 @@ def test_logit_kernels_propagate_nan():
     assert np.isfinite(gradient[1]) and np.isfinite(hessian[1])
 
 
-def test_logit_kernels_accept_read_only_arrays():
-    features = RNG.normal(size=(200, 3))
-    weights = RNG.normal(size=3)
-    loss_const = RNG.normal(size=200)
+def test_logit_kernels_accept_read_only_arrays(seeded_rng):
+    features = seeded_rng.normal(size=(200, 3))
+    weights = seeded_rng.normal(size=3)
+    loss_const = seeded_rng.normal(size=200)
     expected = cy_logit_loss(weights, features, loss_const, loss_const)
     for array in (features, weights, loss_const):
         array.flags.writeable = False
@@ -136,12 +134,12 @@ def test_logit_kernels_reject_inputs_of_mismatched_shapes(call, message):
 
 
 @pytest.mark.parametrize('strategy', [Cost, LogCost])
-def test_objective_accepts_features_in_fortran_order(strategy):
+def test_objective_accepts_features_in_fortran_order(strategy, seeded_rng):
     fp, fn = sympy.symbols('fp fn')
     metric = Metric(CostMatrix().add_tp_benefit(1).add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1, fn=5), strategy())
-    features = np.hstack((np.ones((300, 1)), RNG.normal(size=(300, 3))))
-    y_true = (RNG.random(300) < 0.3).astype(int)
-    weights = RNG.normal(size=4)
+    features = np.hstack((np.ones((300, 1)), seeded_rng.normal(size=(300, 3))))
+    y_true = (seeded_rng.random(300) < 0.3).astype(int)
+    weights = seeded_rng.normal(size=4)
     arguments = {'y_true': y_true, 'C': 1.0, 'l1_ratio': 0.5, 'fit_intercept': True}
     c_order = metric._logit_objective(features=features, **arguments)
     fortran_order = metric._logit_objective(features=np.asfortranarray(features), **arguments)
@@ -183,10 +181,10 @@ def _exact_log_cost(margins, loss_const1, loss_const2):
 # Fewer than 128 values take the C library's exp and log, more take numpy's.
 @pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (50, 3), (63, 4), (64, 4), (2000, 20)])
 @pytest.mark.parametrize(('l1_weight', 'l2_weight', 'start_coef'), [(0.0, 0.0, 1), (0.1, 0.2, 1), (0.3, 0.0, 0)])
-def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef):
-    features = RNG.normal(size=(n_samples, n_features))
-    weights = RNG.normal(size=n_features)
-    loss_const1, loss_const2 = RNG.normal(size=(2, n_samples)) * 3
+def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef, seeded_rng):
+    features = seeded_rng.normal(size=(n_samples, n_features))
+    weights = seeded_rng.normal(size=n_features)
+    loss_const1, loss_const2 = seeded_rng.normal(size=(2, n_samples)) * 3
     arguments = (weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef)
 
     expected_loss, expected_gradient = _log_cost_reference(*arguments)
@@ -199,17 +197,17 @@ def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weigh
 
 
 @pytest.mark.parametrize('n_samples', [20, 400], ids=['c-library-log', 'numpy-log'])
-def test_log_cost_is_exact_where_the_probability_saturates(n_samples):
+def test_log_cost_is_exact_where_the_probability_saturates(n_samples, seeded_rng):
     """``log(1 - p)`` loses its digits once p rounds towards 1, from a margin of about 14 onwards."""
     margins = np.linspace(-60, 60, n_samples)
-    loss_const1, loss_const2 = RNG.normal(size=(2, n_samples))
+    loss_const1, loss_const2 = seeded_rng.normal(size=(2, n_samples))
     loss = cy_log_cost_loss(np.ones(1), margins[:, None], loss_const1, loss_const2)
     assert loss == pytest.approx(_exact_log_cost(margins, loss_const1, loss_const2), rel=1e-14)
 
 
-def test_log_cost_boost_gradient_and_hessian_match_their_definition():
-    margins = np.concatenate([RNG.normal(size=500) * 5, [0.0, -0.0]])
-    loss_const1, loss_const2 = RNG.normal(size=(2, margins.size))
+def test_log_cost_boost_gradient_and_hessian_match_their_definition(seeded_rng):
+    margins = np.concatenate([seeded_rng.normal(size=500) * 5, [0.0, -0.0]])
+    loss_const1, loss_const2 = seeded_rng.normal(size=(2, margins.size))
     gradient, hessian = cy_log_cost_boost_grad_hess(margins, loss_const1, loss_const2)
     probability = expit(margins)
     np.testing.assert_allclose(gradient, loss_const1 * (1 - probability) - loss_const2 * probability, atol=1e-15)
@@ -236,10 +234,10 @@ def test_log_cost_kernels_propagate_nan():
     assert np.isfinite(gradient[1]) and np.isfinite(hessian[1])
 
 
-def test_log_cost_kernels_accept_read_only_arrays():
-    features = RNG.normal(size=(200, 3))
-    weights = RNG.normal(size=3)
-    loss_const = RNG.normal(size=200)
+def test_log_cost_kernels_accept_read_only_arrays(seeded_rng):
+    features = seeded_rng.normal(size=(200, 3))
+    weights = seeded_rng.normal(size=3)
+    loss_const = seeded_rng.normal(size=200)
     expected = cy_log_cost_loss_gradient(weights, features, loss_const, loss_const)
     for array in (features, weights, loss_const):
         array.flags.writeable = False

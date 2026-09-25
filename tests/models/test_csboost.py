@@ -26,23 +26,16 @@ from empulse.models.boosting.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
 
 
-@pytest.fixture(scope='module')
-def dataset():
-    X, y = make_classification(n_samples=50, random_state=42)
-    fn_cost = np.random.default_rng(42).random(y.size)
-    fp_cost = 5
-    return X, y, fn_cost, fp_cost
-
-
 @pytest.mark.filterwarnings('ignore::UserWarning')
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
-def test_csboost_different_classifiers(library, classifier_name, dataset):
+def test_csboost_different_classifiers(library, classifier_name, cost_dataset):
     # Import the classifier dynamically
     classifier_module = pytest.importorskip(library)
     classifier_class = getattr(classifier_module, classifier_name)
 
-    X, y, fn_cost, fp_cost = dataset
-    model = CSBoostClassifier(estimator=classifier_class(n_estimators=2, verbose=0))
+    X, y, fn_cost, fp_cost = cost_dataset
+    extra = {'allow_writing_files': False} if library == 'catboost' else {}
+    model = CSBoostClassifier(estimator=classifier_class(n_estimators=2, verbose=0, **extra))
     model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
     y_pred = model.predict(X)
     y_proba = model.predict_proba(X)
@@ -51,49 +44,19 @@ def test_csboost_different_classifiers(library, classifier_name, dataset):
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
 
 
-def test_csboost_when_xgboost_is_missing(dataset):
-    X, y, fn_cost, fp_cost = dataset
+def test_csboost_when_xgboost_is_missing(cost_dataset):
+    X, y, fn_cost, fp_cost = cost_dataset
     with mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
         model = CSBoostClassifier()
-        with pytest.raises(ImportError, match=r'XGBoost package is required to use CSBoostClassifier.'):
+        with pytest.raises(ImportError, match=r'XGBoost package is required to use CSBoostClassifier.') as exc_info:
             model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
+    # The message says how to get it.
+    assert 'pip install' in str(exc_info.value)
 
 
-def test_csboost_when_lightgbm_is_missing_with_lgbm_estimator(dataset):
-    """Test that CSBoostClassifier raises ValueError when LightGBM is missing but LGBMClassifier is passed."""
-    X, y, fn_cost, fp_cost = dataset
-
-    # Mock LGBMClassifier to be TypeVar (simulating it's not installed)
-    with mock.patch.object(empulse.models.boosting.csboost, 'LGBMClassifier', TypeVar('LGBMClassifier')):
-        # Create a mock estimator that would fail the isinstance check
-        mock_estimator = mock.Mock()
-        model = CSBoostClassifier(estimator=mock_estimator)
-
-        with pytest.raises(
-            TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
-        ):
-            model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-
-def test_csboost_when_catboost_is_missing_with_catboost_estimator(dataset):
-    """Test that CSBoostClassifier raises ValueError when CatBoost is missing but CatBoostClassifier is passed."""
-    X, y, fn_cost, fp_cost = dataset
-
-    # Mock CatBoostClassifier to be TypeVar (simulating it's not installed)
-    with mock.patch.object(empulse.models.boosting.csboost, 'CatBoostClassifier', TypeVar('CatBoostClassifier')):
-        # Create a mock estimator that would fail the isinstance check
-        mock_estimator = mock.Mock()
-        model = CSBoostClassifier(estimator=mock_estimator)
-
-        with pytest.raises(
-            TypeError, match=r'Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier'
-        ):
-            model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-
-def test_csboost_with_invalid_estimator_type(dataset):
+def test_csboost_with_invalid_estimator_type(cost_dataset):
     """Test that CSBoostClassifier raises ValueError when an unsupported estimator type is provided."""
-    X, y, fn_cost, fp_cost = dataset
+    X, y, fn_cost, fp_cost = cost_dataset
 
     from sklearn.ensemble import RandomForestClassifier
 
@@ -105,12 +68,12 @@ def test_csboost_with_invalid_estimator_type(dataset):
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
 
-def test_csboost_with_deterministic_max_profit_metric(dataset):
+def test_csboost_with_deterministic_max_profit_metric(cost_dataset):
     xgboost = pytest.importorskip('xgboost')
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
 
-    X, y, _, _ = dataset
+    X, y, _, _ = cost_dataset
     model = CSBoostClassifier(
         estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0),
         loss=metric,
@@ -132,7 +95,7 @@ def test_csboost_with_deterministic_max_profit_metric(dataset):
         pytest.param(expected_cost_loss, id='expected_cost_loss'),
     ],
 )
-def test_csboost_fits_with_renamed_prebuilt_metrics(dataset, metric):
+def test_csboost_fits_with_renamed_prebuilt_metrics(cost_dataset, metric):
     """Regression test for CSBoostClassifier dispatching on `strategy.name`.
 
     Every prebuilt metric renames its strategy via `Metric.__name__` (e.g.
@@ -141,7 +104,7 @@ def test_csboost_fits_with_renamed_prebuilt_metrics(dataset, metric):
     metrics used here have defaults for every parameter, so no `loss_params` are needed.
     """
     xgboost = pytest.importorskip('xgboost')
-    X, y, _, _ = dataset
+    X, y, _, _ = cost_dataset
     model = CSBoostClassifier(estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0), loss=metric)
     model.fit(X, y)
     y_proba = model.predict_proba(X)
@@ -151,7 +114,7 @@ def test_csboost_fits_with_renamed_prebuilt_metrics(dataset, metric):
 
 @pytest.mark.filterwarnings('ignore::UserWarning')
 @pytest.mark.parametrize('strategy_factory', [MaxProfit, LogCost])
-def test_csboost_dispatch_ignores_strategy_name(dataset, strategy_factory):
+def test_csboost_dispatch_ignores_strategy_name(cost_dataset, strategy_factory):
     """Renaming a custom metric must not change which boosting objective is built.
 
     Before the fix, `CSBoostClassifier._get_objective` compared `loss.strategy.name` against
@@ -165,7 +128,7 @@ def test_csboost_dispatch_ignores_strategy_name(dataset, strategy_factory):
     metric.__name__ = 'renamed_metric'
     assert metric.strategy.name == 'renamed_metric'
 
-    X, y, _, _ = dataset
+    X, y, _, _ = cost_dataset
     model = CSBoostClassifier(
         estimator=xgboost.XGBClassifier(n_estimators=2, max_depth=1, verbosity=0),
         loss=metric,
@@ -176,9 +139,9 @@ def test_csboost_dispatch_ignores_strategy_name(dataset, strategy_factory):
     assert y_proba.shape == (X.shape[0], len(np.unique(y)))
 
 
-def test_csboost_when_all_libraries_missing(dataset):
+def test_csboost_when_all_libraries_missing(cost_dataset):
     """Test that CSBoostClassifier fails gracefully when all boosting libraries are missing."""
-    X, y, fn_cost, fp_cost = dataset
+    X, y, fn_cost, fp_cost = cost_dataset
 
     with (
         mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')),
@@ -190,31 +153,7 @@ def test_csboost_when_all_libraries_missing(dataset):
             model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
 
-@pytest.mark.parametrize(
-    'missing_library,library_name',
-    [
-        ('XGBClassifier', 'XGBoost'),
-        ('LGBMClassifier', 'LightGBM'),
-        ('CatBoostClassifier', 'CatBoost'),
-    ],
-)
-def test_csboost_import_error_message_quality(dataset, missing_library, library_name):
-    """Test that import error messages are informative and include installation instructions."""
-    X, y, fn_cost, fp_cost = dataset
-
-    with mock.patch.object(empulse.models.boosting.csboost, missing_library, TypeVar(missing_library)):
-        if missing_library == 'XGBClassifier':
-            model = CSBoostClassifier()
-            with pytest.raises(ImportError) as exc_info:
-                model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
-
-            # Check that the error message contains helpful information
-            error_message = str(exc_info.value)
-            assert 'required' in error_message.lower()
-            assert 'install' in error_message.lower() or 'pip install' in error_message.lower()
-
-
-def test_csboost_fit_does_not_mutate_callers_fit_params_dict(dataset):
+def test_csboost_fit_does_not_mutate_callers_fit_params_dict(cost_dataset):
     """Regression test: `_fit` used to mutate the caller's `fit_params` dict in place.
 
     Reusing one `fit_params` dict across two `fit()` calls (or across GridSearchCV folds) would
@@ -224,7 +163,7 @@ def test_csboost_fit_does_not_mutate_callers_fit_params_dict(dataset):
     `sample_weight` at all (a separate, pre-existing limitation unrelated to this bug).
     """
     lightgbm = pytest.importorskip('lightgbm')
-    X, y, fn_cost, fp_cost = dataset
+    X, y, fn_cost, fp_cost = cost_dataset
 
     shared_fit_params: dict = {}
     model1 = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=2, max_depth=1, verbosity=-1))
@@ -253,14 +192,14 @@ class TestBaseScoreSpace:
         assert _BASE_SCORE_RAW != _BASE_SCORE_PROBA
         assert expit(_BASE_SCORE_RAW) == pytest.approx(_BASE_SCORE_PROBA)
 
-    def test_lightgbm_predict_proba_reconstructs_raw_offset(self, dataset):
+    def test_lightgbm_predict_proba_reconstructs_raw_offset(self, cost_dataset):
         """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
 
         LightGBM does not persist `init_score` into the trained model, so the offset used at fit
         time must be added back manually at predict time.
         """
         lightgbm = pytest.importorskip('lightgbm')
-        X, y, fn_cost, fp_cost = dataset
+        X, y, fn_cost, fp_cost = cost_dataset
         model = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=5, max_depth=2, verbosity=-1))
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
@@ -272,7 +211,7 @@ class TestBaseScoreSpace:
         # Regression guard: the old (buggy) reconstruction without the offset must NOT match.
         assert not np.allclose(actual_proba, expit(raw_score))
 
-    def test_catboost_predict_proba_reconstructs_raw_offset(self, dataset):
+    def test_catboost_predict_proba_reconstructs_raw_offset(self, cost_dataset):
         """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
 
         CatBoost does not persist `baseline` into the trained model either, and its predict/
@@ -280,7 +219,7 @@ class TestBaseScoreSpace:
         manually from the raw formula value.
         """
         catboost = pytest.importorskip('catboost')
-        X, y, fn_cost, fp_cost = dataset
+        X, y, fn_cost, fp_cost = cost_dataset
         model = CSBoostClassifier(
             estimator=catboost.CatBoostClassifier(n_estimators=5, max_depth=2, verbose=False, allow_writing_files=False)
         )
@@ -321,6 +260,11 @@ class TestBaseScoreSpace:
         assert mean_proba == pytest.approx(_BASE_SCORE_PROBA, abs=0.02)
 
 
+@pytest.fixture(scope='module')
+def cost_data(make_data):
+    return make_data(n_samples=80, n_features=5)
+
+
 class TestCatBoostBackend:
     """Regression tests for the CatBoost backend passing row indices through ``sample_weight``.
 
@@ -354,6 +298,31 @@ class TestCatBoostBackend:
         np.testing.assert_array_equal(target, [1, 0, 1, 0])
         np.testing.assert_array_equal(weight, [2.0, 3.0, 0.0, 0.0])
 
+    def test_uses_sample_weight(self, cost_data):
+        """
+        CatBoost trains on sample weights ``|gradient constant|``; a user's ``sample_weight`` multiplies them.
+
+        Before, the backend used ``sample_weight`` to carry row indices and so rejected a user's own.
+        """
+        catboost = pytest.importorskip('catboost')
+        X, y = cost_data
+
+        def fit(**weights):
+            model = CSBoostClassifier(
+                catboost.CatBoostClassifier(
+                    n_estimators=5, depth=2, verbose=False, random_seed=0, allow_writing_files=False
+                ),
+                fp_cost=1,
+                fn_cost=1,
+            )
+            return model.fit(X, y, **weights).predict_proba(X)
+
+        weight = np.where(y == 1, 10.0, 1.0)
+        unweighted, weighted = fit(), fit(sample_weight=weight)
+        assert not np.allclose(unweighted, weighted)
+        # Up-weighting the positives must raise their predicted probability.
+        assert weighted[y == 1, 1].mean() > unweighted[y == 1, 1].mean()
+
     def test_model_does_not_depend_on_row_order(self):
         catboost = pytest.importorskip('catboost')
         X, y = make_classification(n_samples=300, random_state=0)
@@ -361,7 +330,13 @@ class TestCatBoostBackend:
 
         def fit(order):
             estimator = catboost.CatBoostClassifier(
-                iterations=20, verbose=False, random_seed=0, bootstrap_type='No', random_strength=0, thread_count=1
+                iterations=20,
+                verbose=False,
+                random_seed=0,
+                bootstrap_type='No',
+                random_strength=0,
+                thread_count=1,
+                allow_writing_files=False,
             )
             model = CSBoostClassifier(estimator).fit(X[order], y[order], fn_cost=fn_cost[order], fp_cost=3.0)
             return model.predict_proba(X)
@@ -389,29 +364,31 @@ class TestCatBoostBackend:
         assert cost_1 - cost_2 == pytest.approx(weight.sum() / y.size * (evaluate(raw_1) - evaluate(raw_2)))
 
     @pytest.mark.parametrize('strategy_factory', [MaxProfit, LogCost])
-    def test_rejects_strategies_evaluated_per_round(self, dataset, strategy_factory):
+    def test_rejects_strategies_evaluated_per_round(self, cost_dataset, strategy_factory):
         """MaxProfit's gradient depends on every row and LogCost's on per-row costs; CatBoost gives neither."""
         catboost = pytest.importorskip('catboost')
         clv = sympy.symbols('clv')
         metric = Metric(CostMatrix().add_tp_benefit(clv), strategy_factory())
-        X, y, _, _ = dataset
-        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, verbose=False), loss=metric)
+        X, y, _, _ = cost_dataset
+        model = CSBoostClassifier(
+            catboost.CatBoostClassifier(n_estimators=2, verbose=False, allow_writing_files=False), loss=metric
+        )
         with pytest.raises(ValueError, match='The CatBoost backend does not support'):
             model.fit(X, y, clv=5.0)
 
-    def test_costs_with_nothing_to_learn_raise(self, dataset):
+    def test_costs_with_nothing_to_learn_raise(self, cost_dataset):
         catboost = pytest.importorskip('catboost')
-        X, y, _, _ = dataset
-        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, verbose=False))
+        X, y, _, _ = cost_dataset
+        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=2, verbose=False, allow_writing_files=False))
         # Predicting positive costs more than predicting negative for positives and negatives alike.
         with pytest.raises(ValueError, match='the same prediction is the cheapest for every training sample'):
             model.fit(X, y, tp_cost=2.0, fn_cost=1.0, fp_cost=1.0)
 
-    def test_one_sided_costs_still_fit(self, dataset):
+    def test_one_sided_costs_still_fit(self, cost_dataset):
         """Only ``fp_cost`` set: positives have zero weight but keep their label, so CatBoost sees two classes."""
         catboost = pytest.importorskip('catboost')
-        X, y, _, _ = dataset
-        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=5, verbose=False))
+        X, y, _, _ = cost_dataset
+        model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=5, verbose=False, allow_writing_files=False))
         y_proba = model.fit(X, y, fp_cost=1.0).predict_proba(X)
         # Only false positives cost anything, so the model must lean negative.
         assert y_proba[:, 1].mean() < _BASE_SCORE_PROBA

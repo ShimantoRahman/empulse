@@ -7,20 +7,31 @@ import polars as pl
 import pytest
 from narwhals.typing import EagerAllowed, IntoBackend
 
+from empulse.datasets._cost_matrices import churn_retention_monthly_cost_matrix
 from empulse.datasets._process import (
     _GIVE_ME_SOME_CREDIT_COL_MAP,
     _GIVE_ME_SOME_CREDIT_FEATURE_ORDER,
+    KDD98_ATTRIBUTES,
+    SOUTH_GERMAN_CREDIT_COLUMNS,
     process_bank_telemarketing,
+    process_cell2cell,
     process_churn_tv,
+    process_credit_card_fraud,
     process_credit_scoring_pakdd,
+    process_default_credit_card_clients,
     process_give_me_some_credit,
+    process_home_equity,
+    process_ieee_fraud_detection,
     process_iranian_churn,
+    process_kdd98,
+    process_kddcup09_churn,
+    process_south_german_credit,
+    process_telco_customer_churn,
+    process_vub_credit_scoring,
 )
+from empulse.metrics import Cost, Metric
 
-BACKENDS = [
-    pytest.param(pd, id='pandas'),
-    pytest.param(pl, id='polars'),
-]
+from ._helpers import BACKENDS, MOCK_RAW_CELL2CELL
 
 
 def _from_dict(data: dict, backend: IntoBackend[EagerAllowed]) -> nw.DataFrame:
@@ -245,9 +256,7 @@ class TestProcessCreditScoringPakdd:
         df = _from_dict(_pakdd_raw(), pd)
         feat_nw, _, _ = process_credit_scoring_pakdd(df)
         feat = feat_nw.to_native()
-        flag_col = 'has_residential_phone'
-        if flag_col in feat.columns:
-            assert set(feat[flag_col].unique()).issubset({0, 1})
+        assert set(feat['has_residential_phone'].unique()).issubset({0, 1})
 
     def test_sex_encoding(self):
         """M → 1, F → 0."""
@@ -255,11 +264,9 @@ class TestProcessCreditScoringPakdd:
         raw['SEX'] = ['M', 'F']
         df = _from_dict(raw, pd)
         feat_nw, _, _ = process_credit_scoring_pakdd(df)
-        feat = feat_nw.to_native()
-        if 'is_male' in feat.columns:
-            vals = feat['is_male'].to_numpy()
-            assert vals[0] == 1
-            assert vals[1] == 0
+        vals = feat_nw.to_native()['is_male'].to_numpy()
+        assert vals[0] == 1
+        assert vals[1] == 0
 
     def test_column_names_snake_case(self):
         """All output column names should be lowercase snake_case."""
@@ -329,11 +336,7 @@ class TestProcessIranianChurn:
     def test_yes_no_column_encoded(self):
         """'Status' column (yes/no) should become 0/1 UInt8."""
         feat, _, _ = process_iranian_churn(_iranian_raw(), pd)
-        # 'status' after sanitization
-        status_col = next((c for c in feat.columns if 'status' in c), None)
-        if status_col:
-            vals = set(feat.to_native()[status_col].to_numpy())
-            assert vals.issubset({0, 1})
+        assert set(feat.to_native()['status'].to_numpy()).issubset({0, 1})
 
     def test_column_names_sanitized(self):
         """Column names should have no double underscores."""
@@ -348,8 +351,7 @@ class TestProcessIranianChurn:
             assert 'customer_value' not in col.lower()
             assert col.lower() not in {'churn', 'class'}
 
-    @pytest.mark.parametrize('backend', BACKENDS)
-    def test_cross_backend_same_shape(self, backend):
+    def test_cross_backend_same_shape(self):
         raw = _iranian_raw()
         feat_pd, _, clv_pd = process_iranian_churn(raw, pd)
         feat_pl, _, clv_pl = process_iranian_churn(raw, pl)
@@ -424,12 +426,11 @@ class TestProcessGiveMeSomeCredit:
         assert 'monthly_income' in feat.columns
         assert 'debt_ratio' in feat.columns
 
-    @pytest.mark.parametrize('backend', BACKENDS)
-    def test_cross_backend_same_shape(self, backend):
+    def test_cross_backend_same_shape(self):
         raw = _gmsc_raw()
         feat_pd, *_ = process_give_me_some_credit(raw, pd)
-        feat_other, *_ = process_give_me_some_credit(raw, backend)
-        assert feat_pd.shape == feat_other.shape
+        feat_pl, *_ = process_give_me_some_credit(raw, pl)
+        assert feat_pd.shape == feat_pl.shape
 
 
 class TestGiveMeSomeCreditColMap:
@@ -438,3 +439,208 @@ class TestGiveMeSomeCreditColMap:
         mapped_values = set(_GIVE_ME_SOME_CREDIT_COL_MAP.values())
         for col in _GIVE_ME_SOME_CREDIT_FEATURE_ORDER:
             assert col in mapped_values, f'{col!r} is not a target value in the column map'
+
+
+class TestProcessLiteratureDatasets:
+    """The processors of the datasets whose cost matrices come from the literature."""
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_telco_customer_churn(self, backend):
+        raw = {
+            'customerID': ['1', '2', '3', '4'],
+            'gender': ['Female', 'Male', 'Male', 'Female'],
+            'SeniorCitizen': ['0', '0', '1', '0'],
+            'MonthlyCharges': ['29.85', '56.95', '53.85', '42.30'],
+            'TotalCharges': ['29.85', '1889.50', ' ', '108.15'],  # 3rd row has blank TotalCharges
+            'Churn': ['No', 'No', 'Yes', 'Yes'],
+        }
+        feat, target, charges = process_telco_customer_churn(raw, backend)
+        # Blank row filtered out
+        assert len(feat) == 3
+        assert feat.columns == ['gender', 'senior_citizen', 'monthly_charges', 'total_charges']
+        assert 'customer_id' not in feat.columns and 'customerID' not in feat.columns
+        assert 'churn' not in feat.columns
+        np.testing.assert_array_equal(charges, [29.85, 56.95, 42.30])
+        np.testing.assert_array_equal(target.to_numpy(), [0, 0, 1])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_default_credit_card_clients(self, backend):
+        raw = {
+            'id': ['1', '2', '3'],
+            'x1': ['20000', '120000', '90000'],
+            'x2': ['2', '2', '2'],
+            'x3': ['2', '2', '2'],
+            'x4': ['1', '2', '2'],
+            'x5': ['24', '26', '34'],
+            'y': ['1', '0', '0'],
+        }
+        feat, _target, cl, target_np = process_default_credit_card_clients(raw, backend)
+        assert len(feat) == 3
+        assert 'id' not in feat.columns
+        assert 'target' not in feat.columns
+        assert 'limit_bal' in feat.columns
+        np.testing.assert_array_equal(cl, [20000.0, 120000.0, 90000.0])
+        np.testing.assert_array_equal(target_np, [1, 0, 0])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_ieee_fraud_detection(self, backend):
+        raw = {
+            'TransactionID': ['1001', '1002', '1003'],
+            'TransactionDT': ['86400', '86401', '86402'],
+            'TransactionAmt': ['36.5', '117.0', '280.0'],
+            'ProductCD': ['W', 'W', 'H'],
+            'id_01': ['-5.0', '?', '0.0'],
+            'id-01': ['?', '?', '?'],  # the Kaggle test set's naming, empty for training rows
+            'isFraud': ['0', '0', '1'],
+        }
+        feat, target, amount = process_ieee_fraud_detection(raw, backend)
+        assert feat.columns == ['transaction_amt', 'product_cd', 'id_01']
+        # numeric attributes are numbers, categorical ones stay strings; '?' is missing in both
+        assert feat.schema['transaction_amt'] == nw.Float64
+        assert feat.schema['id_01'] == nw.Float64
+        assert feat['id_01'].is_null().to_list() == [False, True, False]
+        assert feat['product_cd'].to_list() == ['W', 'W', 'H']
+        np.testing.assert_array_equal(amount, [36.5, 117.0, 280.0])
+        np.testing.assert_array_equal(target.to_numpy(), [0, 0, 1])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_credit_card_fraud(self, backend):
+        raw = {
+            'Time': ['0.0', '1.0', '2.0', '3.0'],
+            'V1': ['-1.35', '1.19', '-0.43', '0.50'],
+            'V2': ['-0.07', '0.26', '-0.17', '0.10'],
+            'Amount': ['149.62', '0.0', '2.69', '300.0'],  # 2nd row has Amount == 0.0, filtered out
+            'Class': ['0', '1', '0', '1'],
+        }
+        feat, target, amount = process_credit_card_fraud(raw, backend)
+        assert feat.columns == ['v1', 'v2', 'amount']
+        np.testing.assert_array_equal(amount, [149.62, 2.69, 300.0])
+        # the zero-amount fraud is dropped with its row
+        np.testing.assert_array_equal(target.to_numpy(), [0, 0, 1])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_kdd98(self, backend):
+        raw = {col: ['1', '2', ' '] for col in KDD98_ATTRIBUTES}
+        raw['GENDER'] = ['F', 'M', ' ']
+        raw['AVGGIFT'] = ['12.5', '25.0', '15.0']
+        raw['TARGET_B'] = ['0', '1', '1']
+        raw['TARGET_D'] = ['0', '25', '7.5']
+
+        feat, target, amount = process_kdd98(raw, backend)
+        assert feat.columns == list(KDD98_ATTRIBUTES.values())
+        # the donation amount is the false-negative cost, so it must not leak into the features
+        assert 'target_d' not in feat.columns
+        assert 'target_b' not in feat.columns
+        np.testing.assert_array_equal(amount, [0.0, 25.0, 7.5])
+        np.testing.assert_array_equal(target.to_numpy(), [0, 1, 1])
+
+        # blanks are missing values, in both categorical and numeric attributes
+        assert feat['gender'].is_null().to_list() == [False, False, True]
+        assert feat['gender'].to_list()[:2] == ['F', 'M']
+        assert feat['age'].is_null().to_list() == [False, False, True]
+        assert feat['age'].to_list()[:2] == [1.0, 2.0]
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_vub_credit_scoring(self, backend):
+        raw = {
+            'ID': ['1', '2', '3'],
+            'Default_45': ['0', '1', '0'],
+            'Loan_amount': ['-1.0', '0.5', '2.0'],
+            'FICO_Score': ['0.3', '', '-0.7'],
+            'Days_late': ['0', '45', '0'],
+            'Expected_loss': ['-1.0', '0.5', '2.0'],
+            'Expected_profit': ['-1.0', '0.5', '2.0'],
+            'Test_set1': ['0', '1', '0'],
+            'v1': ['0.1', '0.2', '0.3'],
+        }
+        df = nw.from_dict(raw, backend=backend)
+        feat, target, amounts = process_vub_credit_scoring(df)
+        assert feat.columns == ['loan_amount', 'fico_score', 'v1']
+        # standardised loan amounts are shifted to be strictly positive, keeping their differences
+        np.testing.assert_allclose(amounts, [1e-9, 1.5 + 1e-9, 3.0 + 1e-9])
+        np.testing.assert_array_equal(target.to_numpy(), [0, 1, 0])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_home_equity(self, backend):
+        raw = {
+            'BAD': ['1', '0', '1'],
+            'LOAN': ['1100', '1700', '1800'],
+            'MORTDUE': ['25860.0', '97800.0', '48649.0'],
+            'REASON': ['HomeImp', 'HomeImp', 'DebtCon'],
+            'JOB': ['Other', 'Office', 'Other'],
+            'DEBTINC': ['?', '37.11', '36.88'],
+        }
+        feat, _target, amounts, target_np = process_home_equity(raw, backend)
+        assert feat.columns == ['loan_amount', 'mortgage_due', 'reason', 'job', 'debt_to_income']
+        np.testing.assert_array_equal(amounts, [1100.0, 1700.0, 1800.0])
+        np.testing.assert_array_equal(target_np, [1, 0, 1])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_south_german_credit(self, backend):
+        rows = [
+            # laufkont laufzeit moral verw hoehe ... kredit
+            '1 18 4 2 1049 1 2 4 2 1 4 2 21 3 1 1 3 2 1 2 1',
+            '1 9 4 0 2799 1 3 2 3 1 2 1 36 3 1 2 3 1 1 2 0',
+        ]
+        german_names = list(SOUTH_GERMAN_CREDIT_COLUMNS)
+        raw = {col: [row.split()[i] for row in rows] for i, col in enumerate(german_names)}
+
+        feat, target, amounts, target_np = process_south_german_credit(raw, backend)
+        assert feat.columns == [SOUTH_GERMAN_CREDIT_COLUMNS[col] for col in german_names[:-1]]
+        np.testing.assert_array_equal(amounts, [1049.0, 2799.0])
+        # `kredit` is 1 = good; the positive class is the bad credit risk
+        np.testing.assert_array_equal(target_np, [0, 1])
+        np.testing.assert_array_equal(target.to_numpy(), [0, 1])
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_kddcup09_churn(self, backend):
+        raw = {
+            'Var1': ['10.5', '?'],
+            'Var191': ['cat_a', '?'],
+            'CHURN': ['-1', '1'],
+        }
+        feat, target = process_kddcup09_churn(raw, backend)
+        assert feat.columns == ['var1', 'var191']
+        np.testing.assert_array_equal(target.to_numpy(), [0, 1])
+
+
+class TestProcessCell2Cell:
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_cell2cell_filtering_and_types(self, backend):
+        feat, target, monthly_revenue = process_cell2cell(MOCK_RAW_CELL2CELL, backend)
+
+        # Row with missing MonthlyRevenue should be filtered out: 4 -> 3
+        assert len(target) == 3
+        assert len(monthly_revenue) == 3
+        df = nw.to_native(feat)
+        assert len(df) == 3
+
+        # Target checks
+        np.testing.assert_array_equal(target.to_numpy(), [1, 0, 0])
+
+        # Monthly revenue checks
+        np.testing.assert_allclose(monthly_revenue, [50.0, 100.0, 75.5])
+
+        # Feature columns: CustomerID and Churn dropped
+        assert 'customerid' not in feat.columns
+        assert 'customer_id' not in feat.columns
+        assert 'churn' not in feat.columns
+        assert 'monthly_revenue' in feat.columns
+        assert 'service_area' in feat.columns
+        assert 'credit_rating' in feat.columns
+        assert 'handset_price' in feat.columns
+        assert 'age_hh1' in feat.columns
+        assert 'non_us_travel' in feat.columns
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_process_cell2cell_cost_evaluation(self, backend):
+        _feat, _target, monthly_revenue = process_cell2cell(MOCK_RAW_CELL2CELL, backend)
+
+        cm, costs = churn_retention_monthly_cost_matrix(
+            monthly_revenue, clv_months=12, incentive_fraction=0.05, contact_cost=1, accept_rate=0.3
+        )
+        metric = Metric(cm, Cost())
+        y_true = np.array([1, 0, 0])
+        y_score = np.array([0.9, 0.1, 0.2])
+        score = metric(y_true, y_score, **costs)
+        assert np.isfinite(score)

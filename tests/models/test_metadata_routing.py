@@ -23,7 +23,6 @@ from empulse.models import (
     CSThresholdClassifier,
     RobustCSClassifier,
 )
-from empulse.samplers import CostSensitiveSampler
 
 
 @pytest.fixture(autouse=True)
@@ -128,23 +127,3 @@ class TestCSDecisionRuleClassifierRoutesFitAndPredict:
         model.set_predict_request(clv=True)
         assert model.get_metadata_routing()._self_request.fit.requests['clv'] is True
         assert model.get_metadata_routing()._self_request.predict.requests['clv'] is True
-
-
-class TestCostSensitiveSamplerRouting:
-    """CostSensitiveSampler routes `fit_resample`, not `fit`."""
-
-    def test_two_samplers_keep_independent_routing_keys(self, loss_a, loss_b):
-        a = CostSensitiveSampler(loss=loss_a)
-        b = CostSensitiveSampler(loss=loss_b)
-
-        a.set_fit_resample_request(clv=True)
-        b.set_fit_resample_request(roi=True)
-
-        assert a.get_metadata_routing().fit_resample.requests['clv'] is True
-        with pytest.raises(TypeError, match='roi'):
-            a.set_fit_resample_request(roi=True)
-
-    def test_no_loss_still_routes_plain_costs(self):
-        sampler = CostSensitiveSampler()
-        sampler.set_fit_resample_request(fp_cost=True, fn_cost=True)
-        assert sampler.get_metadata_routing().fit_resample.requests['fp_cost'] is True

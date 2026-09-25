@@ -3,7 +3,6 @@ from unittest import mock
 
 import numpy as np
 import pytest
-from sklearn.datasets import make_classification
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 from xgboost import XGBClassifier
 
@@ -72,14 +71,8 @@ def test_b2boost_score(clf, X, y):
     assert isinstance(score, float)
 
 
-@pytest.fixture(scope='module')
-def dataset():
-    X, y = make_classification(n_samples=50, random_state=42)
-    return X, y
-
-
-def test_b2boost_when_xgboost_is_missing(dataset):
-    X, y = dataset
+def test_b2boost_when_xgboost_is_missing(cost_dataset):
+    X, y, _, _ = cost_dataset
     with mock.patch.object(empulse.models.boosting.csboost, 'XGBClassifier', TypeVar('XGBClassifier')):
         model = B2BoostClassifier()
         with pytest.raises(ImportError, match=r'XGBoost package is required to use B2BoostClassifier.'):

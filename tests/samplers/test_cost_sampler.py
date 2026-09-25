@@ -9,6 +9,7 @@ what makes it cost-sensitive, namely that the costs change which rows survive.
 
 import numpy as np
 import pytest
+from sklearn import config_context
 from sklearn.datasets import make_classification
 
 from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
@@ -158,3 +159,28 @@ def test_mixture_metric_loss_is_used_not_silently_ignored(data):
     )
     assert np.array_equal(from_mixture[0], from_plain[0])
     assert np.array_equal(from_mixture[1], from_plain[1])
+
+
+class TestCostSensitiveSamplerRouting:
+    """CostSensitiveSampler routes `fit_resample`, not `fit`; see `tests/models/test_metadata_routing.py`."""
+
+    @pytest.fixture(autouse=True)
+    def _enable_metadata_routing(self):
+        with config_context(enable_metadata_routing=True):
+            yield
+
+    def test_two_samplers_keep_independent_routing_keys(self):
+        a = CostSensitiveSampler(loss=Metric(CostMatrix().add_fp_cost('clv').add_fn_cost('other'), Cost()))
+        b = CostSensitiveSampler(loss=Metric(CostMatrix().add_fp_cost('roi').add_fn_cost('another'), Cost()))
+
+        a.set_fit_resample_request(clv=True)
+        b.set_fit_resample_request(roi=True)
+
+        assert a.get_metadata_routing().fit_resample.requests['clv'] is True
+        with pytest.raises(TypeError, match='roi'):
+            a.set_fit_resample_request(roi=True)
+
+    def test_no_loss_still_routes_plain_costs(self):
+        sampler = CostSensitiveSampler()
+        sampler.set_fit_resample_request(fp_cost=True, fn_cost=True)
+        assert sampler.get_metadata_routing().fit_resample.requests['fp_cost'] is True

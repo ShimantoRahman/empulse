@@ -1,0 +1,4 @@
+# setuptools adds `tests/test*.py` to every sdist by default -- one directory level only, so the
+# top-level test modules were shipped while the ones in subpackages were not. The tests are not part
+# of the distribution; the release workflow checks the built sdist for this.
+prune tests

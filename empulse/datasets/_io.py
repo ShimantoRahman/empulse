@@ -6,8 +6,10 @@ import csv
 import gzip
 import io
 import json
+import os
 import re
 import ssl
+import threading
 import time
 import unicodedata
 import urllib.error
@@ -224,7 +226,14 @@ def load_or_fetch(
             f'{dataset_name} not found at {cache_file}. Set download_if_missing=True to download it automatically.'
         )
     raw = fetcher()
-    _write_csv_gz(cache_file, raw)
+    # Write beside the cache file and move it into place, so that another process sharing the data
+    # home sees either no file or a complete one -- never a half-written archive.
+    partial_file = cache_file.with_name(f'{cache_file.name}.{os.getpid()}-{threading.get_ident()}.partial')
+    try:
+        _write_csv_gz(partial_file, raw)
+        os.replace(partial_file, cache_file)
+    finally:
+        partial_file.unlink(missing_ok=True)
     # Re-read so callers always get the same string-only representation
     return _read_csv_gz(cache_file, null_values=[''])
 

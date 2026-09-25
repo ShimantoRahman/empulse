@@ -51,7 +51,7 @@ def make_estimators():
         ),
         ProfTreeClassifier(max_iter=2, population_size=10, random_state=42),
         CSBoostClassifier(XGBClassifier(n_estimators=2, max_depth=1), fp_cost=1, fn_cost=1),
-        CSLogitClassifier(fp_cost=1, fn_cost=1),
+        CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=2), fp_cost=1, fn_cost=1),
         CSTreeClassifier(max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
         CSForestClassifier(n_estimators=2, max_depth=2, fp_cost=1, fn_cost=1, random_state=42),
         CSBaggingClassifier(

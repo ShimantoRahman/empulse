@@ -71,9 +71,10 @@ def test_rga_optimize_differentiable_unimodal_func(generation):
 
 
 def test_rga_optimize_non_differentiable_unimodal_func(generation):
+    # The same bowl as the differentiable case, with a kink at its minimum instead of a smooth floor.
     def objective(x, a=10, b=3):
         x1, x2 = x[0], x[1]
-        z = x1**2 + b * x2**2
+        z = abs(x1) + b * abs(x2)
         return -(a - np.exp(-z))
 
     bounds = [(-1, 1)] * 2
