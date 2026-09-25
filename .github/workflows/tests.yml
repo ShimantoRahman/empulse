@@ -27,11 +27,11 @@ jobs:
           - "py312-tests"
           - "py311-tests"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -44,11 +44,11 @@ jobs:
     # build docs, not because their outcome varies by interpreter version.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -56,7 +56,7 @@ jobs:
       # a real workflow. Caching the data home keeps those pages in the PR path without downloading
       # from UCI/OpenML on every run; the key changes whenever the fetching code does.
       - name: Cache downloaded datasets
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/empulse_data
           key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
@@ -71,16 +71,16 @@ jobs:
     # the public API, which is what an old dependency breaks.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - name: Cache downloaded datasets
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/empulse_data
           key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
@@ -94,11 +94,11 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"

@@ -41,9 +41,9 @@ jobs:
       cache_key: ${{ steps.report.outputs.cache_key }}
       should_test: ${{ steps.decide.outputs.should_test }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Inspect the latest scikit-learn release
         id: report
@@ -68,7 +68,7 @@ jobs:
 
       - name: Has this version been tested before?
         id: marker
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .sklearn-watch-marker
           key: ${{ steps.report.outputs.cache_key }}
@@ -109,11 +109,11 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.detect.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -247,7 +247,7 @@ jobs:
         # Saved whatever the outcome, so a failing release is reported once rather than every day.
         # The open issue is the standing reminder from then on.
         run: touch .sklearn-watch-marker
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         with:
           path: .sklearn-watch-marker
           key: ${{ needs.detect.outputs.cache_key }}
