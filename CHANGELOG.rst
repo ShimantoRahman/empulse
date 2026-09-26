@@ -155,6 +155,15 @@ Metrics
   density is evaluated once per point of the integration instead of once per hull point, and the
   hull point with the highest profit is found by bisection instead of by evaluating the profit at
   every hull point.
+- |Enhancement| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` (what
+  ``'auto'`` uses for three or more stochastic variables when one of them cannot be sampled by
+  quasi-Monte Carlo) is 10-50x more accurate for the same number of samples, and so gives a
+  different result than before for a given ``random_state``. Every stochastic variable with a SciPy
+  counterpart and a finite mean and variance now serves as a control variate: the score is the
+  intercept of regressing each sample's maximum profit on those variables, whose means are known
+  exactly, rather than the plain mean over the samples. The optimal rate improves about 2x. Other
+  variables are left out, because sympy's own expectation is wrong or does not finish for some
+  distributions.
 - |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
   than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
   about 10-40% faster; the names are found again if the metric's cost matrix is changed.

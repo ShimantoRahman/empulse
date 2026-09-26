@@ -1,5 +1,5 @@
 import copy
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Literal, Self, overload
 
 import numpy as np
@@ -236,6 +236,7 @@ def _evaluate_sampled_integrands(
     parameters: dict[str, Any],
     param_grid: list[Any],
     n_samples: int,
+    controls: Sequence[FloatNDArray] = (),
 ) -> float:
     """Evaluate a profit (and optional rate) integrand over a sampled parameter grid.
 
@@ -243,6 +244,8 @@ def _evaluate_sampled_integrands(
     in how *param_grid* is generated (plain sympy sampling vs. a Sobol sequence mapped through
     each distribution's inverse CDF). Evaluates the integrand at every convex-hull point and every
     sample in *param_grid*, in chunks of samples to bound the memory this takes.
+
+    *controls* are optional control variates, see :func:`_control_variate_mean`.
 
     Returns
     -------
@@ -264,18 +267,46 @@ def _evaluate_sampled_integrands(
 
     n_hull_points = len(true_positive_rates)
     chunk_size = max(1, _MAX_HULL_EVALUATIONS // n_hull_points)
+    # The control variates need every sample's value; without them a running sum is enough.
+    values = np.empty(n_samples) if controls else None
     total = 0.0
     for start in range(0, n_samples, chunk_size):
         samples = slice(start, min(start + chunk_size, n_samples))
         shape = (n_hull_points, samples.stop - samples.start)
         profits = _evaluate_terms(profit_terms, samples, shape)
         if rate_terms is None:
-            total += float(profits.max(axis=0).sum())
+            sample_values = profits.max(axis=0)
         else:
             best_indices = profits.argmax(axis=0)
             rates = _evaluate_terms(rate_terms, samples, shape)
-            total += float(rates[best_indices, np.arange(shape[1])].sum())
+            sample_values = rates[best_indices, np.arange(shape[1])]
+        if values is not None:
+            values[samples] = sample_values
+        else:
+            total += float(sample_values.sum())
+    if values is not None:
+        return _control_variate_mean(values, controls)
     return total / n_samples
+
+
+def _control_variate_mean(values: FloatNDArray, controls: Sequence[FloatNDArray]) -> float:
+    """
+    Estimate the expectation of *values* with linear control variates.
+
+    Each control is a sampled stochastic variable minus its exact mean, so its expectation is zero.
+    Regressing *values* on the controls and taking the intercept subtracts the part of the sample
+    mean's error that the controls explain linearly. The maximum profit is close to linear in the
+    stochastic variables, so that is most of it. The estimate is biased by O(1 / n_samples), far less
+    than the sampling error it removes.
+
+    Falls back to the sample mean when there are too few samples for the regression, or when any
+    value is not finite.
+    """
+    design = np.column_stack([np.ones_like(values), *controls])
+    if len(values) <= 2 * design.shape[1] or not (np.isfinite(values).all() and np.isfinite(design).all()):
+        return float(values.mean())
+    coefficients = np.linalg.lstsq(design, values, rcond=None)[0]
+    return float(coefficients[0])
 
 
 @overload

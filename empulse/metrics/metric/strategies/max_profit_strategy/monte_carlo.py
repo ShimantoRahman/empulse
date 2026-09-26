@@ -14,6 +14,31 @@ from .common import (
     _SampledIntegrand,
     extract_distribution_parameters,
 )
+from .quasi_monte_carlo import _scipy_distribution, _sympy_dist_to_scipy
+
+
+def _control_variates(
+    random_symbols: Iterable[sympy.Expr], param_grid: list[Any], distribution_parameters: dict[str, Any]
+) -> list[FloatNDArray]:
+    """
+    Return the samples of each stochastic variable minus its exact mean, for use as control variates.
+
+    Only variables with a SciPy counterpart qualify, and only while its mean and variance are finite
+    (SciPy reports ``inf`` or ``nan`` for a moment that does not exist, such as a Pareto mean with
+    shape at most 1). sympy.stats's own expectation is not used: for some distributions it returns a
+    wrong value (``QuadraticU``) or does not finish (``LogitNormal``), and a wrong mean would bias
+    the estimate rather than merely fail to improve it.
+    """
+    controls: list[FloatNDArray] = []
+    for random_symbol, samples in zip(random_symbols, param_grid, strict=True):
+        if type(pspace(random_symbol).distribution) not in _sympy_dist_to_scipy:
+            continue
+        distribution = _scipy_distribution(_subs_by_name(random_symbol, distribution_parameters))
+        with np.errstate(all='ignore'):
+            mean, variance = float(distribution.mean()), float(distribution.var())
+        if np.isfinite(mean) and np.isfinite(variance):
+            controls.append(np.asarray(samples, dtype=np.float64) - mean)
+    return controls
 
 
 class MaxProfitScoreMonteCarlo(_HullScoreFunction):
@@ -23,6 +48,9 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
     This method is less accurate than quad integration but faster for many stochastic variables.
     The QMC method is preferred over the MC due to better accuracy.
     This method should only be used if there is no mapping of sympy distributions to scipy distributions.
+
+    The stochastic variables that do have one, with a finite mean and variance, serve as linear
+    control variates (see :func:`_control_variates`), which removes most of the sampling error.
     """
 
     def __init__(
@@ -50,13 +78,15 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
             self.param_grid: list[Any] | None = [
                 sympy.stats.sample(random_var, size=(n_mc_samples,), seed=rng) for random_var in random_symbols
             ]
+            self.controls = _control_variates(random_symbols, self.param_grid, {})
         else:
             self.param_grid_needs_recompute = True
             self.param_grid = None
+            self.controls = []
         self.dist_params = _distribution_parameter_symbols(self.distribution_args)
-        # Parameters and the grid sampled for them are cached as one tuple, so a concurrent caller
-        # can never pair one call's parameters with another call's samples.
-        self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None
+        # Parameters, the grid sampled for them and its control variates are cached as one tuple, so
+        # a concurrent caller can never pair one call's parameters with another call's samples.
+        self._grid_cache: tuple[dict[str, Any], list[Any], list[FloatNDArray]] | None = None
 
     def _score_hull(
         self,
@@ -68,12 +98,13 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid
+        controls = self.controls
         if self.param_grid_needs_recompute:
             # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
             cached = self._grid_cache
             if cached is not None and cached[0] == distribution_parameters:
-                param_grid = cached[1]
+                param_grid, controls = cached[1], cached[2]
             else:
                 param_grid = [
                     sympy.stats.sample(
@@ -81,7 +112,8 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
                     )
                     for random_var in self.random_symbols
                 ]
-                self._grid_cache = (distribution_parameters, param_grid)
+                controls = _control_variates(self.random_symbols, param_grid, distribution_parameters)
+                self._grid_cache = (distribution_parameters, param_grid, controls)
             dist_params = distribution_parameters
 
         assert param_grid is not None
@@ -94,4 +126,5 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
             {**kwargs, **dist_params},
             param_grid,
             self.n_mc_samples,
+            controls,
         )

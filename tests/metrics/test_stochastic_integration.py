@@ -30,6 +30,7 @@ from empulse.metrics import (
 from empulse.metrics.metric._symbolic import _subs_by_name
 from empulse.metrics.metric.strategies.max_profit_strategy import common
 from empulse.metrics.metric.strategies.max_profit_strategy.common import (
+    _control_variate_mean,
     _convex_hull,
     _evaluate_sampled_integrands,
     _SampledIntegrand,
@@ -39,6 +40,7 @@ from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy i
     _build_rate_function,
     _support_all_distributions,
 )
+from empulse.metrics.metric.strategies.max_profit_strategy.monte_carlo import _control_variates
 from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import (
     MaxProfitScoreQuad,
     _Hull,
@@ -550,6 +552,70 @@ def test_a_variable_that_cancels_across_the_terms_is_still_integrated(integratio
     expected = trapezoid(profit.max(axis=0), x) / 6
 
     assert metric(y_true, y_score, clv=20) == pytest.approx(expected, rel=1e-5)
+
+
+class TestMonteCarloControlVariates:
+    """
+    Monte Carlo regresses the per-sample profit on the stochastic variables, whose means are known.
+
+    The intercept of that regression estimates the expectation with most of the sampling error of
+    the plain mean removed, because the maximum profit is close to linear in the variables.
+    """
+
+    def test_values_linear_in_the_controls_are_estimated_exactly(self, seeded_rng):
+        samples = seeded_rng.gamma(2.0, 3.0, size=1000)
+        values = 5.0 + 2.0 * (samples - 6.0)  # the expectation is 5, whatever the sample mean
+        assert _control_variate_mean(values, [samples - 6.0]) == pytest.approx(5.0, rel=1e-12)
+        assert values.mean() != pytest.approx(5.0, rel=1e-3)
+
+    def test_falls_back_to_the_sample_mean(self, seeded_rng):
+        samples = seeded_rng.normal(size=1000)
+        with_nan = np.append(samples[:-1], np.nan)
+        assert _control_variate_mean(samples, [with_nan]) == samples.mean()
+        few = samples[:3]
+        assert _control_variate_mean(few, [few]) == few.mean()
+
+    @pytest.mark.parametrize(
+        ('variable', 'qualifies'),
+        [
+            (lambda: sympy.stats.Beta('v', 6, 14), True),
+            (lambda: sympy.stats.Normal('v', 3, 2), True),
+            (lambda: sympy.stats.Pareto('v', 1, 0.8), False),  # no mean
+            (lambda: sympy.stats.Pareto('v', 1, 1.5), False),  # a mean but no variance
+            (lambda: sympy.stats.StudentT('v', 2), False),  # a mean but no variance
+            (lambda: sympy.stats.Gumbel('v', 2, 3), False),  # no SciPy counterpart
+        ],
+        ids=['beta', 'normal', 'pareto-no-mean', 'pareto-no-variance', 'student-t-no-variance', 'gumbel'],
+    )
+    def test_only_variables_with_an_exact_finite_mean_and_variance_qualify(self, variable, qualifies):
+        """sympy.stats's own expectation is wrong for some distributions, so only SciPy's moments are trusted."""
+        random_variable = variable()
+        samples = np.linspace(1.5, 2.5, 11)
+        controls = _control_variates([random_variable], [samples], {})
+        assert len(controls) == int(qualifies)
+        if qualifies:
+            expected_mean = _scipy_distribution(random_variable).mean()
+            np.testing.assert_allclose(controls[0], samples - expected_mean)
+
+    def test_distribution_parameters_are_filled_in(self):
+        a = sympy.Symbol('a', positive=True)
+        controls = _control_variates([sympy.stats.Beta('v', a, 3)], [np.array([0.5])], {'a': 2.0})
+        np.testing.assert_allclose(controls[0], [0.5 - 2.0 / 5.0])
+
+    def test_monte_carlo_matches_quasi_monte_carlo_closely(self):
+        """At the default number of samples the plain Monte Carlo mean is off by 6e-4 relative here, and fails."""
+        rng = np.random.default_rng(0)
+        y_true = rng.integers(0, 2, 5000)
+        y_score = rng.normal(size=5000) + 1.2 * y_true
+        clv = sympy.Symbol('clv')
+        gamma = sympy.stats.Beta('gamma', 6, 14)
+        cost = sympy.stats.Uniform('incentive', 5, 15) + sympy.stats.Normal('contact', 3, 2)
+        cost_matrix = CostMatrix().add_tp_benefit(gamma * clv - 1).add_fp_cost(cost)
+
+        sampled = Metric(cost_matrix, MaxProfit(integration_method='monte-carlo', random_state=0))
+        reference = Metric(cost_matrix, MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=20))
+
+        assert sampled(y_true, y_score, clv=190) == pytest.approx(reference(y_true, y_score, clv=190), rel=2e-4)
 
 
 class TestSampledIntegrandEvaluation:
