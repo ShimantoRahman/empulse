@@ -177,3 +177,67 @@ def test_predict_returns_original_labels(classification_data, labels):
 
     np.testing.assert_array_equal(model.classes_, labels)
     np.testing.assert_array_equal(y_pred, labels[np.argmax(model.predict_proba(X), axis=1)])
+
+
+def _split_gains(model):
+    """The decrease of the weighted impurity at every internal node of a fitted tree."""
+    tree = model.tree_
+    internal = np.flatnonzero(tree.children_left != -1)
+    left, right = tree.children_left[internal], tree.children_right[internal]
+    weight = tree.weighted_n_node_samples
+    return (
+        weight[internal] * tree.impurity[internal]
+        - weight[left] * tree.impurity[left]
+        - weight[right] * tree.impurity[right]
+    )
+
+
+class TestSplitsMustLowerTheCost:
+    """With the cost criterion, a split that leaves the training cost unchanged is not made by default.
+
+    The cost impurity is the cost of the node's best decision, so a split whose children both keep that
+    decision has no gain; making such splits anyway grew trees until every leaf held one class.
+    """
+
+    @staticmethod
+    def _fit(make_data, seeded_rng, **params):
+        X, y = make_data(n_samples=2000, n_features=10, weights=[0.9], flip_y=0.1)
+        fn_cost = seeded_rng.uniform(2, 20, y.size)
+        return CSTreeClassifier(random_state=0, **params).fit(X, y, fp_cost=1.0, fn_cost=fn_cost)
+
+    def test_every_split_lowers_the_cost_by_default(self, make_data, seeded_rng):
+        model = self._fit(make_data, seeded_rng)
+        cost_scale = model.tree_.impurity[0] * model.tree_.weighted_n_node_samples[0]
+
+        assert np.all(_split_gains(model) > 1e-9 * cost_scale)
+
+    def test_zero_restores_splits_that_leave_the_cost_unchanged(self, make_data, seeded_rng):
+        default = self._fit(make_data, seeded_rng)
+        unrestricted = self._fit(make_data, seeded_rng, min_impurity_decrease=0.0)
+        cost_scale = unrestricted.tree_.impurity[0] * unrestricted.tree_.weighted_n_node_samples[0]
+
+        assert np.any(np.abs(_split_gains(unrestricted)) <= 1e-9 * cost_scale)
+        assert default.get_depth() < unrestricted.get_depth()
+        assert default.get_n_leaves() < unrestricted.get_n_leaves()
+
+    def test_threshold_follows_the_scale_of_the_costs(self, make_data, seeded_rng):
+        cheap = self._fit(make_data, np.random.default_rng(0))
+        X, y = make_data(n_samples=2000, n_features=10, weights=[0.9], flip_y=0.1)
+        fn_cost = np.random.default_rng(0).uniform(2, 20, y.size)
+        expensive = CSTreeClassifier(random_state=0).fit(X, y, fp_cost=1000.0, fn_cost=1000.0 * fn_cost)
+
+        assert expensive.estimator_.min_impurity_decrease == pytest.approx(
+            1000 * cheap.estimator_.min_impurity_decrease
+        )
+        # Scaling every cost by the same factor does not change which splits lower the cost.
+        assert expensive.get_depth() == cheap.get_depth()
+        assert expensive.get_n_leaves() == cheap.get_n_leaves()
+
+    @pytest.mark.parametrize('criterion', ['gini', 'entropy'])
+    def test_other_criteria_keep_scikit_learns_default(self, make_data, seeded_rng, criterion):
+        model = self._fit(make_data, seeded_rng, criterion=criterion)
+        assert model.estimator_.min_impurity_decrease == 0.0
+
+    def test_an_explicit_value_is_used_as_is(self, make_data, seeded_rng):
+        model = self._fit(make_data, seeded_rng, min_impurity_decrease=0.01)
+        assert model.estimator_.min_impurity_decrease == 0.01

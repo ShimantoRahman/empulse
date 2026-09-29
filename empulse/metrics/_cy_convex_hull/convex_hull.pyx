@@ -221,3 +221,79 @@ def convex_hull_from_counts(
         hull.push_back(Point(0, 0))  # targeting no one
         _add_groups_to_hull(groups, hull)
     return _rates(hull)
+
+
+def max_profit_scan(
+    const int[:] y_true,
+    const double[:] y_score,
+    double tp_benefit,
+    double tn_benefit,
+    double fp_cost,
+    double fn_cost,
+) -> tuple[float, float, float]:
+    """
+    Compute the highest profit over every threshold of a deterministic cost matrix.
+
+    The profit of targeting everyone scored at or above a threshold is linear in its numbers of true
+    and false positives, so it is evaluated at every distinct score in a single pass over the ranked
+    samples, without building the curve's arrays. Every point is checked, not only those on the
+    convex hull, so the result does not depend on the signs of the benefits and costs.
+
+    Parameters
+    ----------
+    y_true : 1D np.ndarray, shape=(n_samples,)
+        Binary target values.
+
+    y_score : 1D np.ndarray, shape=(n_samples,)
+        Target scores, can either be probability estimates or non-thresholded decision values.
+
+    tp_benefit, tn_benefit, fp_cost, fn_cost : float
+        The value of each outcome, the costs counted positively.
+
+    Returns
+    -------
+    tuple[float, float, float]
+        The highest average profit per sample, the fraction of samples targeted to reach it, and the
+        score of the lowest ranked sample targeted (1.0 when targeting no one is best). The first
+        threshold to reach the highest profit is chosen, i.e. the one targeting the fewest samples.
+    """
+    cdef Py_ssize_t n_samples = y_true.shape[0], i, sample
+    if n_samples != y_score.shape[0]:
+        raise ValueError(
+            f'y_true and y_score must have the same length, got {n_samples} and {y_score.shape[0]}.'
+        )
+    if n_samples == 0:
+        raise ValueError('The maximum profit needs at least one sample.')
+
+    cdef long long n_positives = 0, n_negatives, n_positive = 0, n_negative
+    for i in range(n_samples):
+        n_positives += y_true[i]
+    n_negatives = n_samples - n_positives
+
+    # The order of tied scores does not matter, as each tie is a single threshold, so the sort need
+    # not be stable.
+    cdef const cnp.intp_t[::1] ascending = np.argsort(y_score)
+    # Profits are summed over samples rather than averaged, so that thresholds with equal profit
+    # compare equal whenever the benefits and costs are whole numbers.
+    cdef double profit
+    cdef double best_profit = tn_benefit * n_negatives - fn_cost * n_positives  # targeting no one
+    cdef long long best_n_targeted = 0
+    cdef double best_threshold = 1.0
+    with nogil:
+        for i in range(n_samples - 1, -1, -1):
+            sample = ascending[i]
+            n_positive += y_true[sample]
+            # Scores that tie form a single threshold: only the last of them is a point of the curve.
+            if i == 0 or y_score[ascending[i - 1]] != y_score[sample]:
+                n_negative = n_samples - i - n_positive
+                profit = (
+                    tp_benefit * n_positive
+                    - fn_cost * (n_positives - n_positive)
+                    + tn_benefit * (n_negatives - n_negative)
+                    - fp_cost * n_negative
+                )
+                if profit > best_profit:
+                    best_profit = profit
+                    best_n_targeted = n_samples - i
+                    best_threshold = y_score[sample]
+    return best_profit / n_samples, best_n_targeted / <double>n_samples, best_threshold

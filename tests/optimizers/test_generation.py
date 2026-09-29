@@ -141,6 +141,44 @@ def test_rga_fitness_calculation(generation):
         assert fitness_val == pytest.approx(objective(x))
 
 
+class TestParallelEvaluation:
+    """Evaluating the population in parallel threads gives the run evaluating it one by one."""
+
+    @staticmethod
+    def _run(n_jobs):
+        def objective(x):
+            return -np.sum((x - 1.5) ** 2) + np.sin(5 * x).sum()
+
+        generation = Generation(population_size=40, random_state=7, n_jobs=n_jobs)
+        for _ in islice(generation.optimize(objective, [(-5.0, 5.0)] * 3), 25):
+            pass
+        return generation
+
+    @pytest.mark.parametrize('n_jobs', [2, 4, -1])
+    def test_result_does_not_depend_on_n_jobs(self, n_jobs):
+        sequential = self._run(1)
+        parallel = self._run(n_jobs)
+
+        np.testing.assert_array_equal(parallel.population, sequential.population)
+        np.testing.assert_array_equal(parallel.fitness, sequential.fitness)
+        assert parallel.fx_best == sequential.fx_best
+        assert parallel.result.nfev == sequential.result.nfev
+
+    def test_only_changed_individuals_are_evaluated(self):
+        calls = []
+
+        def objective(x):
+            calls.append(1)
+            return -np.sum(x**2)
+
+        generation = Generation(population_size=30, random_state=0, n_jobs=2)
+        for _ in islice(generation.optimize(objective, [(-5.0, 5.0)] * 2), 10):
+            pass
+        # Survivors of a generation keep their fitness, so nfev counts every evaluation and no more.
+        assert generation.result.nfev == len(calls)
+        assert len(calls) < 30 * 10
+
+
 class TestPopulationSizeResolution:
     """`population_size=None` is resolved from `n_dim` each `optimize()` call rather than being
     cached by mutating the constructor argument, so reusing an instance on a different-dimensional

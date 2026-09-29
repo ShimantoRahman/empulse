@@ -1,5 +1,7 @@
+import importlib
+import sys
 import warnings
-from typing import Any, ClassVar, Self, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -8,22 +10,8 @@ from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-
-try:
-    from xgboost import XGBClassifier
-except ImportError:
-    XGBClassifier = TypeVar('XGBClassifier')  # type: ignore[misc, assignment]
-try:
-    from lightgbm import LGBMClassifier
-except ImportError:
-    LGBMClassifier = TypeVar('LGBMClassifier')  # type: ignore[misc, assignment]
-try:
-    from catboost import CatBoostClassifier
-except ImportError:
-    CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
-
 from ..._common import Parameter
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._backends import (  # ruff: ignore[unused-import] (re-exported for tests/models/test_csboost.py)
@@ -33,10 +21,50 @@ from ._backends import (  # ruff: ignore[unused-import] (re-exported for tests/m
     backend_for,
 )
 
+if TYPE_CHECKING:
+    from catboost import CatBoostClassifier
+    from lightgbm import LGBMClassifier
+    from xgboost import XGBClassifier
+
+# The boosting libraries are imported the first time one of these names is used, rather than with
+# this module: together they take most of a second to import, and a fit needs at most one of them.
+_BOOSTING_CLASSIFIERS = {
+    'XGBClassifier': 'xgboost',
+    'LGBMClassifier': 'lightgbm',
+    'CatBoostClassifier': 'catboost',
+}
+
+
+def __getattr__(name: str) -> Any:
+    """
+    Import a boosting library's classifier on first use (PEP 562).
+
+    Kept as a module attribute once imported, so that tests can patch it, e.g. with a ``TypeVar`` to
+    simulate the library missing, which is also what stands in for a library that is not installed.
+    """
+    if name not in _BOOSTING_CLASSIFIERS:
+        raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    try:
+        value = getattr(importlib.import_module(_BOOSTING_CLASSIFIERS[name]), name)
+    except ImportError:
+        value = TypeVar(name)  # type: ignore[misc]
+    globals()[name] = value
+    return value
+
+
+def _classifier(name: str) -> Any:
+    """Look *name* up as a module attribute, so a patched or not-yet-imported classifier is found."""
+    return getattr(sys.modules[__name__], name)
+
 
 def _backend_for_estimator(estimator: Any) -> BoostingBackend | None:
     """:func:`backend_for`, threading through this module's own (patchable) classifier names."""
-    return backend_for(estimator, xgb_cls=XGBClassifier, lgbm_cls=LGBMClassifier, catboost_cls=CatBoostClassifier)
+    return backend_for(
+        estimator,
+        xgb_cls=_classifier('XGBClassifier'),
+        lgbm_cls=_classifier('LGBMClassifier'),
+        catboost_cls=_classifier('CatBoostClassifier'),
+    )
 
 
 class CSBoostClassifier(CostSensitiveClassifier):
@@ -202,7 +230,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         grid_search.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
     """
 
-    estimator_: XGBClassifier | LGBMClassifier | CatBoostClassifier
+    estimator_: 'XGBClassifier | LGBMClassifier | CatBoostClassifier'
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
@@ -211,7 +239,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
     def __init__(
         self,
-        estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
+        estimator: 'XGBClassifier | LGBMClassifier | CatBoostClassifier | None' = None,
         *,
         tp_cost: FloatArrayLike | float = 0.0,
         tn_cost: FloatArrayLike | float = 0.0,
@@ -316,7 +344,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
         loss: BaseMetric,
         **loss_params: Any,
     ) -> BoostingBackend:
-        xgb_cls = None if isinstance(XGBClassifier, TypeVar) else XGBClassifier
+        xgb_classifier = _classifier('XGBClassifier')
+        xgb_cls = None if isinstance(xgb_classifier, TypeVar) else xgb_classifier
         backend = BoostingBackend(name='xgboost', classifier=xgb_cls)
         if backend.classifier is None:
             raise ImportError(

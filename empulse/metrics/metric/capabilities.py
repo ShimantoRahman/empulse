@@ -67,6 +67,14 @@ class Capability(Enum):
         The metric is reducible to four class-level scalars (``tp_benefit``, ``tn_benefit``,
         ``fp_cost``, ``fn_cost``), which is what a model needs to feed a cost-sensitive criterion
         (e.g. a decision tree's split criterion) that only accepts scalar, class-dependent costs.
+    RANKING : Capability
+        The score depends on ``y_score`` only through how it ranks the samples, ties included: any
+        strictly increasing transformation of the scores gives the same score. A model can then
+        score its raw decision values (e.g. logits) without converting them to probabilities,
+        which is both cheaper and keeps apart large values that rounding would make equal
+        probabilities. Present for the ranking-based strategies (e.g.
+        :class:`~empulse.metrics.MaxProfit`), absent for those that read ``y_score`` as a
+        calibrated probability (e.g. :class:`~empulse.metrics.Cost`).
     """
 
     OPTIMAL_THRESHOLD = 'optimal_threshold'
@@ -76,3 +84,4 @@ class Capability(Enum):
     PRECOMPUTED_BOOST_OBJECTIVE = 'precomputed_boost_objective'
     COST_ONLY_DECISION = 'cost_only_decision'
     CLASS_COSTS = 'class_costs'
+    RANKING = 'ranking'

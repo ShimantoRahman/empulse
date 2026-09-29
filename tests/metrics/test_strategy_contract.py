@@ -9,6 +9,7 @@ What every :class:`~empulse.metrics.MetricStrategy` promises, whichever one it i
   they negate their parent's score and hand an estimator exactly the same loss.
 """
 
+import copy
 import pickle
 
 import numpy as np
@@ -163,6 +164,22 @@ def test_picklable_lambda_multiple_variables():
 
     restored = pickle.loads(pickle.dumps(pl))
     assert restored(x=2, y=3) == pl(x=2, y=3) == 8
+
+
+def test_picklable_lambda_deepcopy_shares_the_compiled_function():
+    """Deep-copying (e.g. when cloning an estimator) reuses the compiled function instead of recompiling."""
+    x, y = sympy.symbols('x y')
+    pl = PicklableLambda(x * y + x)
+
+    copied = copy.deepcopy(pl)
+    assert copied is not pl
+    assert copied.func is pl.func
+    assert copied(x=2, y=3) == 8
+
+
+def test_picklable_lambda_reuses_the_function_compiled_for_an_equal_expression():
+    x = sympy.Symbol('x')
+    assert PicklableLambda(x**2 + 1).func is PicklableLambda(x**2 + 1).func
 
 
 def test_picklable_lambda_dummify_keeps_functions_named_like_a_variable():
@@ -389,6 +406,7 @@ class TestCapabilities:
                 MaxProfit,
                 frozenset({
                     Capability.CLASS_COSTS,
+                    Capability.RANKING,
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
@@ -400,6 +418,7 @@ class TestCapabilities:
                 MinCost,
                 frozenset({
                     Capability.CLASS_COSTS,
+                    Capability.RANKING,
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
@@ -409,15 +428,15 @@ class TestCapabilities:
             ),
             pytest.param(
                 EmpiricalMaxProfit,
-                frozenset({Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                frozenset({Capability.RANKING, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
                 id='EmpiricalMaxProfit',
             ),
             pytest.param(
                 EmpiricalMinCost,
-                frozenset({Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                frozenset({Capability.RANKING, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
                 id='EmpiricalMinCost',
             ),
-            pytest.param(AUEPC, frozenset(), id='AUEPC'),
+            pytest.param(AUEPC, frozenset({Capability.RANKING}), id='AUEPC'),
         ],
     )
     def test_bundled_strategy_capability_sets(self, strategy_factory, expected):
@@ -435,6 +454,65 @@ class TestCapabilities:
         assert Capability.LOGIT_OBJECTIVE not in metric.strategy.capabilities
         assert Capability.BOOST_OBJECTIVE not in metric.strategy.capabilities
         assert Capability.CLASS_COSTS in metric.strategy.capabilities
+
+    _PREBUILT_METRICS = (
+        auepc_score,
+        empa_score,
+        empb_score,
+        empc_score,
+        empcs_score,
+        expected_cost_loss,
+        expected_cost_loss_acquisition,
+        expected_cost_loss_churn,
+        expected_log_cost_loss,
+        expected_savings_score,
+        max_profit_score,
+        mpa_score,
+        mpc_score,
+        mpcs_score,
+    )
+
+    @staticmethod
+    def _scores_and_transforms(seeded_rng):
+        # Ties included, and kept inside (0, 1) so that the logit is defined.
+        y_true = seeded_rng.integers(0, 2, 400)
+        y_score = (seeded_rng.integers(0, 20, 400) + 1) / 22
+        return y_true, y_score, [5 * y_score - 3, np.log(y_score / (1 - y_score))]
+
+    @pytest.mark.parametrize('metric', _PREBUILT_METRICS, ids=lambda metric: metric.strategy.name)
+    def test_ranking_metrics_score_any_increasing_transformation_the_same(self, metric, seeded_rng):
+        """`RANKING` promises that only the ranking of the scores matters; check it on every prebuilt metric."""
+        if Capability.RANKING not in metric.capabilities:
+            pytest.skip('not a ranking metric')
+        y_true, y_score, transformed_scores = self._scores_and_transforms(seeded_rng)
+        # Per-sample values for whatever the metric has no default for (e.g. the customer lifetime value).
+        parameters = {name: seeded_rng.uniform(50, 150, y_true.size) for name in metric._missing_parameters(())}
+        expected = metric(y_true, y_score, **parameters)
+        for transformed in transformed_scores:
+            assert metric(y_true, transformed, **parameters) == pytest.approx(expected, rel=1e-12, abs=1e-12)
+
+    @pytest.mark.parametrize('integration_method', ['quad', 'quasi-monte-carlo', 'monte-carlo'])
+    def test_stochastic_max_profit_scores_any_increasing_transformation_the_same(self, integration_method, seeded_rng):
+        gamma = sympy.stats.Beta('gamma', 6, 14)
+        cost_matrix = CostMatrix().add_tp_benefit(200 * gamma - 10).add_fp_cost(10)
+        y_true, y_score, transformed_scores = self._scores_and_transforms(seeded_rng)
+
+        def score(scores):
+            # A fresh metric for each call, so the (quasi-)Monte Carlo methods draw the same samples.
+            strategy = MaxProfit(integration_method=integration_method, random_state=0)
+            return Metric(cost_matrix, strategy)(y_true, scores)
+
+        expected = score(y_score)
+        for transformed in transformed_scores:
+            assert score(transformed) == pytest.approx(expected, rel=1e-12, abs=1e-12)
+
+    def test_probability_metrics_are_not_ranking(self):
+        """A metric that reads the scores as probabilities must not claim `RANKING`."""
+        for metric in (expected_cost_loss, expected_log_cost_loss, expected_savings_score):
+            assert Capability.RANKING not in metric.capabilities
+
+    def test_a_mixture_of_ranking_metrics_is_ranking(self):
+        assert Capability.RANKING in empcs_score.capabilities
 
     def test_unbuilt_max_profit_has_no_logit_or_boost_capability(self):
         """`capabilities` must not crash on an unbuilt strategy (before `Metric.__init__` calls `build`)."""

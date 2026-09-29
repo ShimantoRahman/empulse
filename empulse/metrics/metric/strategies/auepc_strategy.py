@@ -1,4 +1,4 @@
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
@@ -10,6 +10,7 @@ from .._direction import Direction
 from .._parameter_domain import _check_parameters
 from .._stochastic import replace_random_var_with_mean
 from .._symbolic import _latex
+from ..capabilities import Capability
 from .metric_strategy import MetricStrategy
 
 
@@ -141,6 +142,7 @@ class AUEPC(MetricStrategy):
         This is only useful when part of the expected profit curve is negative.
     """
 
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.RANKING})
     _name: str = 'auepc'
     _direction: Direction = Direction.MAXIMIZE
 

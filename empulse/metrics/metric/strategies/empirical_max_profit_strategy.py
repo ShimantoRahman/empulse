@@ -1,4 +1,4 @@
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 import sympy
@@ -10,6 +10,7 @@ from .._direction import Direction
 from .._parameter_domain import _check_parameters
 from .._stochastic import replace_random_var_with_mean
 from .._symbolic import _latex
+from ..capabilities import Capability
 from .auepc_strategy import _build_delta_equation, _ranked_profit_curve
 from .metric_strategy import MetricStrategy
 
@@ -111,6 +112,7 @@ class EmpiricalMaxProfit(MetricStrategy):
         :func:`~empulse.metrics.empb_score` : the underlying metric function.
     """
 
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.RANKING})
     _name: str = 'empirical max profit'
     _direction: Direction = Direction.MAXIMIZE
 

@@ -228,7 +228,7 @@ class MaxProfit(MetricStrategy):
     #: Reducible to four class-level scalars (mean-substituted for any stochastic variable).
     #: `LOGIT_OBJECTIVE`/`BOOST_OBJECTIVE` are added or removed by the `capabilities` override
     #: below, since they depend on which integration backend `build()` picked.
-    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.CLASS_COSTS})
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.CLASS_COSTS, Capability.RANKING})
 
     def __init__(
         self,
@@ -302,6 +302,7 @@ class MaxProfit(MetricStrategy):
         )
         random_symbols, deterministic_symbols = _identify_symbols(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
+        class_terms = (tp_benefit, tn_benefit, fp_cost, fn_cost)
         self._score_function = _build_max_profit_score(
             profit_function=profit_function,
             random_symbols=random_symbols,
@@ -309,6 +310,7 @@ class MaxProfit(MetricStrategy):
             integration_method=self.integration_method,
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
+            class_terms=class_terms,
         )
         self._optimal_rate: RateFn = _build_max_profit_optimal_rate(
             profit_function=profit_function,
@@ -317,6 +319,7 @@ class MaxProfit(MetricStrategy):
             integration_method=self.integration_method,
             n_mc_samples=self.n_mc_samples,
             rng=self._rng,
+            class_terms=class_terms,
         )
         # Store symbolic expressions for gradient computation in logit_objective
         self._tp_benefit = tp_benefit
@@ -841,11 +844,14 @@ def _build_max_profit_score(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
+    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr] | None = None,
 ) -> _ScoreFunction:
     n_random = len(random_symbols)
 
     if n_random == 0:
-        max_profit_score: _ScoreFunction = MaxProfitScoreDeterministic(profit_function, deterministic_symbols)
+        max_profit_score: _ScoreFunction = MaxProfitScoreDeterministic(
+            profit_function, deterministic_symbols, class_terms
+        )
     else:
         max_profit_score = _build_max_profit_stochastic(
             profit_function,
@@ -866,12 +872,13 @@ def _build_max_profit_optimal_rate(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
+    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr] | None = None,
 ) -> RateFn:
     n_random = len(random_symbols)
 
     rate_function = _build_rate_function()
     if n_random == 0:
-        optimal_rate: MetricFn = MaxProfitRateDeterministic(profit_function, deterministic_symbols)
+        optimal_rate: MetricFn = MaxProfitRateDeterministic(profit_function, deterministic_symbols, class_terms)
     else:
         optimal_rate = _build_max_profit_stochastic(
             profit_function, rate_function, random_symbols, deterministic_symbols, integration_method, n_mc_samples, rng

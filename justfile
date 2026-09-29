@@ -74,6 +74,11 @@ cov: _cov
 cov: _cov
     xdg-open htmlcov/index.html || echo "Coverage report generated at htmlcov/index.html"
 
+# Time the known hot paths (optionally name cases to run a subset)
+[group('test')]
+bench *cases:
+    uv run python scripts/benchmark.py {{cases}}
+
 # Run doctests
 [group('test')]
 doctest:

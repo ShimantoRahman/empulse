@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Any, ClassVar, Self, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 import sympy
@@ -8,18 +8,10 @@ from sklearn.utils._param_validation import HasMethods
 
 from ..._types import FloatArrayLike, ParameterConstraint
 
-try:
-    from xgboost import XGBClassifier
-except ImportError:
-    XGBClassifier = TypeVar('XGBClassifier')  # type: ignore[misc, assignment]
-try:
-    from lightgbm import LGBMClassifier
-except ImportError:
-    LGBMClassifier = TypeVar('LGBMClassifier')  # type: ignore[misc, assignment]
-try:
+if TYPE_CHECKING:
     from catboost import CatBoostClassifier
-except ImportError:
-    CatBoostClassifier = TypeVar('CatBoostClassifier')  # type: ignore[misc, assignment]
+    from lightgbm import LGBMClassifier
+    from xgboost import XGBClassifier
 
 from ..._common import Parameter
 from ...metrics import Cost, CostMatrix, Metric
@@ -194,7 +186,7 @@ class B2BoostClassifier(CSBoostClassifier):
 
     def __init__(
         self,
-        estimator: XGBClassifier | LGBMClassifier | CatBoostClassifier | None = None,
+        estimator: 'XGBClassifier | LGBMClassifier | CatBoostClassifier | None' = None,
         *,
         accept_rate: float = 0.3,
         clv: float | FloatArrayLike = 200,

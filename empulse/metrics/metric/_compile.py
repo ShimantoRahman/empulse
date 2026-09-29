@@ -9,6 +9,7 @@ compiled function with only the keyword arguments it actually uses, via :func:`_
 since a cost expression's compiled function only accepts the free symbols it was built from.
 """
 
+import copy
 from collections.abc import Callable, Iterable
 from functools import lru_cache
 from typing import Any, Protocol, TypeVar
@@ -124,10 +125,21 @@ class PicklableLambda:
                 dummies = [sympy.Dummy() for _ in variables]
                 expression = expression.xreplace(dict(zip(variables, dummies, strict=True)))
                 variables = dummies
-            self.func = sympy.lambdify(variables, expression)  # type: ignore[assignment]
+                # Fresh dummies never equal those of an earlier compile, so there is nothing to reuse.
+                self.func = sympy.lambdify(variables, expression)  # type: ignore[assignment]
+            else:
+                self.func = _lambdify(tuple(variables), expression)
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> 'PicklableLambda':
+        # The compiled function is stateless and the expression immutable, so a copy can share both
+        # rather than compile the expression again, as unpickling (which deepcopy defaults to) does.
+        # Cloning an estimator deep-copies its loss, so this is paid per clone in a grid search.
+        new = copy.copy(self)
+        memo[id(self)] = new
+        return new
 
     def __getstate__(self) -> dict[str, Any]:
         state = self.__dict__.copy()
@@ -137,6 +149,25 @@ class PicklableLambda:
     def __setstate__(self, state: dict[str, Any]) -> None:
         self.__dict__.update(state)
         self._compile()
+
+
+def _lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
+    """
+    Compile *expression* with :func:`sympy.lambdify`, reusing the function compiled for an equal one.
+
+    Compiling prints the expression to source code and executes it, which costs milliseconds, and
+    every unpickled metric (e.g. one per parallel worker) would otherwise pay that again for each of
+    its expressions. The compiled functions are stateless, so sharing one between metrics is safe.
+    """
+    try:
+        return _cached_lambdify(variables, expression)
+    except TypeError:  # an unhashable expression, e.g. a mutable sympy Matrix
+        return sympy.lambdify(variables, expression)  # type: ignore[no-any-return]
+
+
+@lru_cache(maxsize=1024)
+def _cached_lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
+    return sympy.lambdify(variables, expression)  # type: ignore[no-any-return]
 
 
 def _safe_lambdify(

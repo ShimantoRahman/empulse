@@ -16,6 +16,12 @@ from ._impurity import CostImpurity, build_cost_criterion
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
 TREE_PARAM_CONSTRAINTS.pop('criterion')
+TREE_PARAM_CONSTRAINTS['min_impurity_decrease'] = [*TREE_PARAM_CONSTRAINTS['min_impurity_decrease'], None]
+
+# The smallest decrease of the training cost per sample, relative to the average cost per sample,
+# that `min_impurity_decrease=None` counts as a decrease rather than rounding. A split that changes
+# the decision for a single sample out of a million still lowers the cost a thousand times more.
+_RELATIVE_MIN_COST_DECREASE = 1e-9
 
 
 class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
@@ -154,9 +160,17 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         Best nodes are defined as relative reduction in impurity.
         If None then unlimited number of leaf nodes.
 
-    min_impurity_decrease : float, default=0.0
+    min_impurity_decrease : float or None, default=None
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value.
+
+        ``None`` means that with ``criterion="cost"`` a node is only split if the split lowers the
+        cost of the training samples, and otherwise means ``0.0``. The cost impurity is the cost of
+        the node's best single decision, so a split whose children both keep their parent's
+        decision leaves it unchanged. With ``0.0``, such splits are still made, and the tree keeps
+        splitting until every leaf holds one class, often a hundred or more levels deep, which
+        overfits the costs of the training samples. The threshold ``None`` resolves to is a
+        billionth of the average cost per sample, to tell a real decrease from rounding.
 
         The weighted impurity decrease equation is the following::
 
@@ -280,7 +294,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         max_features: Literal['sqrt', 'log2'] | float | None = None,
         random_state: int | np.random.RandomState | None = None,
         max_leaf_nodes: int | None = None,
-        min_impurity_decrease: float = 0.0,
+        min_impurity_decrease: float | None = None,
         class_weight: dict[int, float] | Literal['balanced'] | None = None,
         ccp_alpha: float = 0.0,
         monotonic_cst: IntArrayLike | None = None,
@@ -397,7 +411,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             max_features=self.max_features,
             random_state=self.random_state,
             max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self.min_impurity_decrease,
+            min_impurity_decrease=self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost),
             class_weight=self.class_weight,
             ccp_alpha=self.ccp_alpha,
             monotonic_cst=self.monotonic_cst,
@@ -405,6 +419,26 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self.estimator_.fit(X, y)
 
         return self
+
+    def _resolve_min_impurity_decrease(
+        self,
+        y: IntArrayLike,
+        tp_cost: FloatNDArray | float,
+        tn_cost: FloatNDArray | float,
+        fp_cost: FloatNDArray | float,
+        fn_cost: FloatNDArray | float,
+    ) -> float:
+        """Return ``min_impurity_decrease``, resolving ``None`` as its docstring describes."""
+        if self.min_impurity_decrease is not None:
+            return float(self.min_impurity_decrease)
+        if not (isinstance(self.criterion, str) and self.criterion == 'cost'):
+            return 0.0
+        is_positive = np.asarray(y).reshape(-1) == 1
+        # The cost of predicting each sample positive, and negative.
+        positive_cost = np.where(is_positive, tp_cost, fp_cost)
+        negative_cost = np.where(is_positive, fn_cost, tn_cost)
+        cost_scale = float(np.mean(np.abs(positive_cost)) + np.mean(np.abs(negative_cost)))
+        return _RELATIVE_MIN_COST_DECREASE * cost_scale
 
     def predict(self, X: FloatArrayLike, check_input: bool = True) -> NDArray[Any]:
         """

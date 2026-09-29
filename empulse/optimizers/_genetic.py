@@ -57,7 +57,7 @@ class GeneticAlgorithmOptimizer(Optimizer):
     random_state : int or None, default=None
         Seed for reproducibility.
     n_jobs : int, default=1
-        Number of parallel jobs for fitness evaluation.
+        Number of threads evaluating the fitness of the population in parallel.
     verbose : bool, default=False
         Print generation-level progress.
 

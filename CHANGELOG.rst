@@ -4,6 +4,24 @@
 Metrics
 -------
 
+- |API| :class:`~empulse.metrics.Capability` has a new ``RANKING`` member: the metric depends on
+  the scores only through how they rank the samples, so any strictly increasing transformation of
+  them (e.g. logits instead of probabilities) gives the same value. :class:`~empulse.metrics.MaxProfit`,
+  :class:`~empulse.metrics.MinCost`, :class:`~empulse.metrics.EmpiricalMaxProfit`,
+  :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC` declare it, and a
+  :class:`~empulse.metrics.MixtureMetric` has it when all of its components do.
+- |Efficiency| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
+  :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score` and the other prebuilt
+  maximum profit metrics without a stochastic variable) now find the highest profit in a single
+  compiled pass over the ranked samples. Scoring the candidate models of
+  :class:`~empulse.models.ProfLogitClassifier` is about twice as fast, and the pass releases the GIL.
+  Thresholds with exactly the same profit now resolve to the one targeting the fewest samples, so
+  :meth:`~empulse.metrics.Metric.optimal_rate` can differ from before for a cost matrix under which
+  several thresholds tie. Before, rounding in the order the profit was computed decided the tie.
+- |Efficiency| Cloning an estimator whose ``loss`` is a :class:`~empulse.metrics.Metric`, as grid
+  search and cross-validation do for every candidate and fold, is about seven times faster. Copying
+  a metric recompiled each of its expressions, and it now shares them. Metrics unpickled in a
+  parallel worker also reuse expressions that are already compiled in that process.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` now
   honours ``random_state`` with NumPy 1.x. :class:`~empulse.metrics.Metric` copies its strategy,
   and before NumPy 2.0 copying a random generator discarded its seed sequence, from which SciPy's
@@ -195,6 +213,33 @@ Metrics
 Models
 ------
 
+- |API| :class:`~empulse.models.CSTreeClassifier` with ``criterion="cost"`` now only splits a
+  node if the split lowers the cost of the training samples. The new default
+  ``min_impurity_decrease=None`` resolves to a billionth of the average cost per sample; pass
+  ``min_impurity_decrease=0.0`` for the previous trees. The cost impurity is the cost of a node's
+  best decision, so a split whose children both keep that decision leaves it unchanged, and such
+  splits were made anyway until every leaf held one class. On the four bundled datasets and two
+  synthetic ones, those trees were 30 to 300 levels deep. The new trees are 3 to 15 times
+  shallower, fit up to 3 times faster, and, deciding each leaf by its cost-optimal threshold, save
+  as much or more on held-out data: from -0.33 to 0.46 on the bank telemarketing data, and from
+  0.21 to 0.33 on the VUB credit scoring data. :class:`~empulse.models.CSForestClassifier` is
+  unchanged: averaging over many trees makes deep trees worthwhile there, and no single setting
+  did better on every dataset.
+- |Efficiency| :class:`~empulse.models.ProfSRClassifier` with a loss that has
+  the ``RANKING`` :class:`~empulse.metrics.Capability` (including its default maximum profit) scores the
+  programs' outputs directly instead of converting them to probabilities first. Fitting is about
+  1.3 times as fast on 10,000 samples and 1.5 times on 50,000. Outputs above about 37, which all
+  rounded to a probability of exactly 1.0, are no longer scored as ties.
+- |Fix| :class:`~empulse.models.ProfSRClassifier` now evolves every generation it is asked for.
+  gplearn stops as soon as the best fitness reaches its ``stopping_criteria``, which defaults to 0.
+  The fitness is the loss, and that is negative whenever the model makes a profit, so the
+  evolution stopped after the first generation for nearly every problem. ``n_iter_`` now reports
+  the number of generations actually evolved.
+- |Enhancement| :class:`~empulse.models.ProfSRClassifier` has an ``n_jobs`` parameter, passed on
+  to gplearn to evaluate the population in parallel.
+- |Efficiency| ``import empulse.models`` no longer imports XGBoost, LightGBM and CatBoost, which
+  took about half a second. :class:`~empulse.models.CSBoostClassifier` and
+  :class:`~empulse.models.B2BoostClassifier` import the library they use when they are fitted.
 - |Fix| ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
   :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model. The regularized
   formulations had no constraint fixing the scale of the weights, and the worst-case bounds are
@@ -325,6 +370,12 @@ Models
 Optimizers
 ----------
 
+- |Efficiency| ``n_jobs`` of :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` (and
+  :class:`~empulse.optimizers.Generation`) now evaluates the population in threads, one batch per
+  thread, and only evaluates the individuals that changed. Each individual was sent to a separate
+  process with a copy of the training data, which made ``n_jobs=4`` about seven times *slower*
+  than ``n_jobs=1`` for :class:`~empulse.models.ProfLogitClassifier` on 10,000 samples. It is now
+  about twice as fast as ``n_jobs=1``, and the result does not depend on ``n_jobs``.
 - |API| :class:`~empulse.optimizers.Optimizer` has a new ``requires_gradient`` property, which the
   logit models read to decide whether to build an objective that also computes its gradient. It is
   ``True`` by default, ``False`` for :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`, and

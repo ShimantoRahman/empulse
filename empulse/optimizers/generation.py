@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, effective_n_jobs
 from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
@@ -51,7 +51,7 @@ class Generation:
         or ``None`` (uses the global NumPy random state).
 
     n_jobs : int or None, default=1
-        Number of jobs to run in parallel.
+        Number of threads evaluating the fitness of the population in parallel.
         If ``-1``, use all available processors.
         If ``None``, use 1 processor.
 
@@ -96,7 +96,7 @@ class Generation:
         Random state object.
 
     n_jobs : int
-        Number of jobs to run in parallel.
+        Number of threads evaluating the fitness of the population in parallel.
         If ``-1``, use all available processors.
         If ``None``, use 1 processor.
 
@@ -265,21 +265,30 @@ class Generation:
         return self.lower_bounds + population * self.delta_bounds  # type: ignore
 
     def _evaluate(self, objective: Callable[[NDArray[np.float64]], float]) -> None:
-        nan_mask = np.isnan(self.fitness)
-        fitness_values = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._update_fitness)(objective, ix) for ix in range(self._pop_size)
-        )
-        self.fitness = np.asarray(fitness_values)
-        # Count re-evaluated individuals after the (possibly parallel) call to
-        # avoid the race condition that arises from incrementing inside workers.
-        self.result.nfev += int(nan_mask.sum())  # type: ignore[attr-defined]
-
-    def _update_fitness(self, objective: Callable[[NDArray[np.float64]], float], index: int) -> float:
-        fitness_value = float(self.fitness[index])
-        if np.isnan(fitness_value):
-            return objective(self.population[index])
+        # Only individuals changed by crossover or mutation lost their fitness; the rest keep theirs.
+        stale = np.flatnonzero(np.isnan(self.fitness))
+        n_jobs = min(effective_n_jobs(self.n_jobs), len(stale))
+        if n_jobs <= 1:
+            for index in stale:
+                self.fitness[index] = objective(self.population[index])
         else:
-            return fitness_value
+            # Threads rather than processes: the objectives spend their time in NumPy and compiled
+            # code that release the GIL, and a process would need the objective (with its copy of the
+            # training data) pickled over to it. One task per thread keeps joblib's overhead per
+            # generation rather than per individual. Each result is written back to its own index, so
+            # the outcome does not depend on the number of jobs.
+            chunks = np.array_split(stale, n_jobs)
+            results = Parallel(n_jobs=n_jobs, prefer='threads')(
+                delayed(self._evaluate_chunk)(objective, chunk) for chunk in chunks
+            )
+            for chunk, values in zip(chunks, results, strict=True):
+                self.fitness[chunk] = values
+        self.result.nfev += len(stale)  # type: ignore[attr-defined]
+
+    def _evaluate_chunk(
+        self, objective: Callable[[NDArray[np.float64]], float], indices: NDArray[np.intp]
+    ) -> list[float]:
+        return [objective(self.population[index]) for index in indices]
 
     def _crossover(self) -> None:
         """Perform local arithmetic crossover."""

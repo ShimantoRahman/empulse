@@ -2,12 +2,13 @@ from numbers import Integral, Real
 from typing import Any, ClassVar, Self
 
 import numpy as np
+from joblib import effective_n_jobs
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, MaxProfit
+from ...metrics import BaseMetric, Capability, MaxProfit
 from .._base import CostSensitiveClassifier, MetricStrategyFactory
 
 
@@ -18,7 +19,9 @@ class ProfSRClassifier(CostSensitiveClassifier):
     Maximizes an empirical cost-sensitive/value-driven metric by evolving a population of
     mathematical expressions through genetic programming (symbolic regression).
     The predicted score of a program is squashed through the logistic function to obtain
-    a probability estimate, which is used to evaluate the loss function.
+    a probability estimate, which is used to evaluate the loss function. A loss that depends only on
+    how the samples are ranked (the ``RANKING`` member of :class:`~empulse.metrics.Capability`), such as the default
+    maximum profit, is evaluated on the programs' outputs directly.
 
     Read more in the :ref:`User Guide <profsr>`.
 
@@ -82,6 +85,11 @@ class ProfSRClassifier(CostSensitiveClassifier):
         Constant that penalizes large programs by adjusting their fitness to be less favorable
         for selection. Larger values penalize larger programs more severely.
 
+    n_jobs : int or None, default=1
+        Number of jobs evaluating the population in parallel, passed on to gplearn.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors.
+
     random_state : int, :class:`numpy:numpy.random.RandomState` or None, default=None
         Controls the randomness of the estimator.
         To obtain a deterministic behaviour
@@ -124,6 +132,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         'generations': [Interval(Integral, 1, None, closed='left')],
         'population_size': [Interval(Integral, 1, None, closed='left')],
         'parsimony_coefficient': [Interval(Real, 0, None, closed='left')],
+        'n_jobs': [Interval(Integral, 1, None, closed='left'), Interval(Integral, None, -1, closed='right'), None],
         'random_state': ['random_state'],
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
@@ -139,11 +148,13 @@ class ProfSRClassifier(CostSensitiveClassifier):
         generations: int = 50,
         population_size: int = 1000,
         parsimony_coefficient: float = 0.01,
+        n_jobs: int | None = 1,
         random_state: np.random.RandomState | int | None = None,
     ) -> None:
         self.generations = generations
         self.population_size = population_size
         self.parsimony_coefficient = parsimony_coefficient
+        self.n_jobs = n_jobs
         self.random_state = random_state
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
@@ -157,8 +168,13 @@ class ProfSRClassifier(CostSensitiveClassifier):
                 'Install it with `pip install empulse[symbolic]` or `pip install gplearn`.'
             ) from e
 
+        # A loss that only ranks the samples scores the programs' outputs directly: squashing them into
+        # probabilities would not change their ranking, only cost time and tie the largest outputs,
+        # which rounding makes equal probabilities.
+        scores_rank_only = Capability.RANKING in loss.capabilities
+
         def _fitness(y_true: FloatNDArray, y_pred: FloatNDArray, sample_weight: FloatNDArray) -> float:
-            y_score = expit(y_pred)
+            y_score = y_pred if scores_rank_only else expit(y_pred)
             try:
                 value = loss._loss(y_true, y_score, validate=False, **loss_params)
             except (ValueError, TypeError):
@@ -176,10 +192,15 @@ class ProfSRClassifier(CostSensitiveClassifier):
             generations=self.generations,
             metric=fitness,
             parsimony_coefficient=self.parsimony_coefficient,
+            # gplearn stops early once the best fitness reaches this value. The fitness is a loss,
+            # which is negative whenever the model makes a profit, so its default of 0 would stop
+            # the evolution after the first generation.
+            stopping_criteria=-np.inf,
+            n_jobs=effective_n_jobs(self.n_jobs),
             random_state=self.random_state,
         )
         self.model_.fit(X, y)
-        self.n_iter_ = self.generations
+        self.n_iter_ = len(self.model_.run_details_['generation'])
 
         return self
 
