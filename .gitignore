@@ -154,3 +154,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# JSS replication materials: quick-run results
+examples/results_quick/

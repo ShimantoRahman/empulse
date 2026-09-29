@@ -170,7 +170,7 @@ exclude_lines = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["docs", "notebooks"]
+exclude = ["docs", "notebooks", "examples"]
 
 [tool.ruff.format]
 quote-style = "single"
