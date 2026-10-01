@@ -13,15 +13,17 @@ from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, Pa
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._impurity import CostImpurity, build_cost_criterion
+from ._leaf_decisions import positive_leaves
 
 TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
 TREE_PARAM_CONSTRAINTS.pop('criterion')
 TREE_PARAM_CONSTRAINTS['min_impurity_decrease'] = [*TREE_PARAM_CONSTRAINTS['min_impurity_decrease'], None]
 
 # The smallest decrease of the training cost per sample, relative to the average cost per sample,
-# that `min_impurity_decrease=None` counts as a decrease rather than rounding. A split that changes
-# the decision for a single sample out of a million still lowers the cost a thousand times more.
-_RELATIVE_MIN_COST_DECREASE = 1e-9
+# that `min_impurity_decrease=None` counts as a decrease rather than rounding. On a million samples,
+# rounding left splits that change nothing with a relative decrease below 1e-16, while the smallest
+# real decrease was 2e-10, so this sits well clear of both.
+_RELATIVE_MIN_COST_DECREASE = 1e-12
 
 
 class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
@@ -169,8 +171,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         the node's best single decision, so a split whose children both keep their parent's
         decision leaves it unchanged. With ``0.0``, such splits are still made, and the tree keeps
         splitting until every leaf holds one class, often a hundred or more levels deep, which
-        overfits the costs of the training samples. The threshold ``None`` resolves to is a
-        billionth of the average cost per sample, to tell a real decrease from rounding.
+        overfits the costs of the training samples. The threshold ``None`` resolves to is
+        ``1e-12`` times the average cost per sample, to tell a real decrease from rounding.
 
         The weighted impurity decrease equation is the following::
 
@@ -417,6 +419,9 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             monotonic_cst=self.monotonic_cst,
         )
         self.estimator_.fit(X, y)
+        self._positive_leaves = positive_leaves(
+            self.estimator_.tree_, self.estimator_.apply(X), y, tp_cost, tn_cost, fp_cost, fn_cost
+        )
 
         return self
 
@@ -444,6 +449,13 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         """
         Predict class value for X.
 
+        Each leaf predicts the class that costs least on the training samples that fell in it,
+        whatever the split ``criterion``. A leaf where both classes cost the same predicts its more
+        frequent class. With instance-dependent costs, these are the costs of the
+        training samples, so every sample in a leaf gets the same prediction. To decide each sample
+        by its own costs, threshold :meth:`predict_proba` with the loss's optimal threshold instead,
+        e.g. with :class:`~empulse.models.CSThresholdClassifier`.
+
         Parameters
         ----------
         X : {array-like, sparse matrix} of shape (n_samples, n_features)
@@ -463,7 +475,12 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
         # The inner tree is fitted on the 0/1-encoded target, so map its predictions back.
-        y_pred: NDArray[Any] = self.classes_.take(self.estimator_.predict(X, check_input=check_input).astype(np.intp))
+        positive = getattr(self, '_positive_leaves', None)
+        if positive is None:  # fitted before leaves predicted their cheapest class
+            encoded = self.estimator_.predict(X, check_input=check_input).astype(np.intp)
+        else:
+            encoded = positive[self.estimator_.apply(X, check_input=check_input)].astype(np.intp)
+        y_pred: NDArray[Any] = self.classes_.take(encoded)
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike, check_input: bool = True) -> FloatNDArray:

@@ -5,6 +5,7 @@ from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import Parallel, delayed
+from numpy.typing import NDArray
 from scipy.sparse import csr_matrix, issparse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble._base import _partition_estimators
@@ -17,6 +18,7 @@ from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
 from ._impurity import CostImpurity, build_cost_criterion
+from ._leaf_decisions import positive_leaves
 
 RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()
 RF_PARAM_CONSTRAINTS.pop('criterion')
@@ -99,6 +101,9 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         - "majority_voting": the majority vote of the models.
         - "weighted_voting": the models are weighted by their oob score
+
+        :meth:`predict` combines the trees' cost-optimal decisions this way, and
+        :meth:`predict_proba` their class probabilities.
 
     max_depth : int, default=None
         The maximum depth of the tree. If None, then nodes are expanded until
@@ -470,7 +475,63 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         if self.combination == 'weighted_voting':
             self.estimator_weights_ = self._get_oob_weights(loss, X, y, **loss_params)
+
+        # Each tree's leaves decide by the costs of the samples that tree drew.
+        leaves = self.estimator_.apply(X)
+        self._positive_leaves = [
+            positive_leaves(
+                tree.tree_,
+                leaves[:, i],
+                y,
+                tp_cost,
+                tn_cost,
+                fp_cost,
+                fn_cost,
+                counts=np.bincount(drawn, minlength=n_samples),
+            )
+            for i, (tree, drawn) in enumerate(zip(self.estimators_, self.estimator_.estimators_samples_, strict=True))
+        ]
         return self
+
+    def predict(self, X: FloatArrayLike) -> NDArray[Any]:
+        """
+        Predict class labels for samples in X.
+
+        Each tree votes for the class that costs least on the training samples in the leaf the sample
+        falls in (see :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>`).
+        With ``combination="majority_voting"`` every tree has one vote, and with
+        ``"weighted_voting"`` its out-of-bag weight. A tie goes to the negative class.
+
+        With instance-dependent costs, the votes use the costs of the training samples. To decide
+        each sample by its own costs, threshold :meth:`predict_proba` with the loss's optimal
+        threshold instead, e.g. with :class:`~empulse.models.CSThresholdClassifier`.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
+
+        Returns
+        -------
+        y_pred : ndarray of shape (n_samples,)
+            Predicted labels for each sample.
+        """
+        check_is_fitted(self)
+        positive = getattr(self, '_positive_leaves', None)
+        if positive is None:  # fitted before leaves predicted their cheapest class
+            return super().predict(X)
+        X = validate_data(self, X, reset=False)
+        leaves = self.estimator_.apply(X)
+        weights = (
+            np.asarray(self.estimator_weights_, dtype=np.float64)
+            if self.combination == 'weighted_voting'
+            else np.ones(len(positive))
+        )
+        votes = np.zeros(leaves.shape[0], dtype=np.float64)
+        for i, (tree_positive, weight) in enumerate(zip(positive, weights, strict=True)):
+            votes += weight * tree_positive[leaves[:, i]]
+        y_pred: NDArray[Any] = self.classes_.take((votes > weights.sum() / 2).astype(np.intp))
+        return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """

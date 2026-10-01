@@ -140,7 +140,7 @@ The ``criterion`` parameter controls how the cost signal is weighted at each spl
 Controlling tree size
 ---------------------
 
-Use the standard scikit-learn parameters to regularise the tree:
+Use the standard scikit-learn parameters to regularise the tree further:
 
 .. code-block:: python
 
@@ -227,7 +227,7 @@ aggregated into a single ensemble prediction:
    * - ``combination``
      - Description
    * - ``"majority_voting"`` *(default)*
-     - Each tree casts one vote; the majority class wins.
+     - Each tree casts one vote, for the class that costs least in the sample's leaf; the majority class wins.
    * - ``"weighted_voting"``
      - Trees are weighted by their out-of-bag (OOB) score; requires ``oob_score=True``.
 

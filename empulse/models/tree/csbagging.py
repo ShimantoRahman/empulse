@@ -359,7 +359,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
                 else np.array([], dtype=np.float64),
                 n_samples=n_samples,
             )
-            self.base_estimator_ = CSTreeClassifier(criterion=criterion)
+            self.base_estimator_ = CSTreeClassifier(criterion=criterion, min_impurity_decrease=0.0)
         else:
             self.base_estimator_ = clone(self.estimator)
 
@@ -393,9 +393,14 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         """
         Predict class for X.
 
-        The predicted class of an input sample is computed as the class with
-        the highest mean predicted probability. If base estimators do not
-        implement a ``predict_proba`` method, then it resorts to voting.
+        With the default cost-sensitive trees as base estimators, each tree votes for the class that
+        costs least on the training samples in the leaf the sample falls in (see
+        :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>`). With
+        ``combination="majority_voting"`` every tree has one vote, and with ``"weighted_voting"`` its
+        out-of-bag weight. A tie goes to the negative class.
+
+        With a custom ``estimator``, the predicted class is the one with the highest (weighted) mean
+        predicted probability.
 
         Parameters
         ----------
@@ -409,8 +414,23 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             The predicted classes.
         """
         check_is_fitted(self)
-        y_proba = self.predict_proba(X)
-        y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+        if self.estimator is not None:
+            y_proba = self.predict_proba(X)
+            y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
+            return y_pred
+
+        X = validate_data(self, X, reset=False)
+        estimators = self.estimator_.estimators_
+        weights = (
+            np.asarray(self.estimator_weights_, dtype=np.float64)
+            if self.combination == 'weighted_voting'
+            else np.ones(len(estimators))
+        )
+        votes = np.zeros(X.shape[0], dtype=np.float64)
+        for estimator, features, weight in zip(estimators, self.estimator_.estimators_features_, weights, strict=True):
+            # The trees are fitted on the 0/1-encoded target, so they vote 0 or 1.
+            votes += weight * estimator.predict(X[:, features])
+        y_pred = self.classes_.take((votes > weights.sum() / 2).astype(np.intp))
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:

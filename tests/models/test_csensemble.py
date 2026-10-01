@@ -256,3 +256,91 @@ def test_accumulate_weighted_prediction():
 
     accumulate_weighted_prediction(predict, np.zeros((3, 1)), out, weight=0.5, lock=lock)
     np.testing.assert_allclose(out, np.full((3, 2), 1.0))
+
+
+class TestPredictVotesCheapestClasses:
+    """Each tree votes for the class that costs least on the samples it drew into the leaf."""
+
+    @staticmethod
+    def _data(seed=0):
+        X, y = make_classification(n_samples=800, n_features=6, weights=[0.85], flip_y=0.05, random_state=seed)
+        rng = np.random.default_rng(seed)
+        return X, y, rng.uniform(0.5, 2, y.size), rng.uniform(5, 30, y.size)
+
+    @staticmethod
+    def _tree_votes(leaves, y, counts, fp_cost, fn_cost):
+        """Reference: per leaf, sum each decision's cost over the drawn samples, one sample at a time."""
+        votes = np.zeros(leaves.size)
+        for leaf in np.unique(leaves):
+            in_leaf = leaves == leaf
+            w, positive = counts[in_leaf], y[in_leaf] == 1
+            cost_positive = np.sum(w * np.where(positive, 0.0, fp_cost[in_leaf]))
+            cost_negative = np.sum(w * np.where(positive, fn_cost[in_leaf], 0.0))
+            votes[in_leaf] = cost_positive < cost_negative
+        return votes
+
+    @pytest.mark.parametrize('bootstrap', [True, False])
+    def test_forest_majority_vote_of_the_cheapest_classes(self, bootstrap):
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSForestClassifier(n_estimators=9, max_depth=4, bootstrap=bootstrap, random_state=0)
+        model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        leaves = model.apply(X)
+        votes = sum(
+            self._tree_votes(leaves[:, i], y, np.bincount(drawn, minlength=y.size), fp_cost, fn_cost)
+            for i, drawn in enumerate(model.estimators_samples_)
+        )
+        np.testing.assert_array_equal(model.predict(X), (votes > 9 / 2).astype(int))
+
+    def test_forest_weighted_vote_uses_the_out_of_bag_weights(self):
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSForestClassifier(n_estimators=9, max_depth=4, combination='weighted_voting', random_state=0)
+        model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        leaves = model.apply(X)
+        votes = sum(
+            weight * self._tree_votes(leaves[:, i], y, np.bincount(drawn, minlength=y.size), fp_cost, fn_cost)
+            for i, (drawn, weight) in enumerate(zip(model.estimators_samples_, model.estimator_weights_, strict=True))
+        )
+        np.testing.assert_array_equal(model.predict(X), (votes > model.estimator_weights_.sum() / 2).astype(int))
+
+    def test_forest_decisions_cost_less_than_the_majority(self):
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSForestClassifier(n_estimators=25, max_depth=6, random_state=0).fit(
+            X, y, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+
+        def training_cost(y_pred):
+            return np.sum(np.where(y == 1, np.where(y_pred == 1, 0, fn_cost), np.where(y_pred == 1, fp_cost, 0)))
+
+        assert training_cost(model.predict(X)) < training_cost(model.predict_proba(X).argmax(axis=1))
+
+    @pytest.mark.parametrize('combination', ['majority_voting', 'weighted_voting'])
+    def test_bagging_votes_its_trees_decisions(self, combination):
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSBaggingClassifier(n_estimators=9, combination=combination, random_state=0)
+        model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        weights = model.estimator_weights_ if combination == 'weighted_voting' else np.ones(9)
+        votes = sum(
+            weight * tree.predict(X[:, features])
+            for tree, features, weight in zip(
+                model.estimator_.estimators_, model.estimator_.estimators_features_, weights, strict=True
+            )
+        )
+        np.testing.assert_array_equal(model.predict(X), (votes > weights.sum() / 2).astype(int))
+
+    def test_bagging_keeps_fully_grown_trees(self):
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        assert all(tree.estimator_.min_impurity_decrease == 0.0 for tree in model.estimator_.estimators_)
+
+    def test_bagging_a_custom_estimator_still_averages_probabilities(self):
+        from empulse.models import CSLogitClassifier
+
+        X, y, fp_cost, fn_cost = self._data()
+        model = CSBaggingClassifier(CSLogitClassifier(), n_estimators=5, random_state=0)
+        model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        np.testing.assert_array_equal(model.predict(X), model.predict_proba(X).argmax(axis=1))

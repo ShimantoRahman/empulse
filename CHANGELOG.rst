@@ -213,9 +213,21 @@ Metrics
 Models
 ------
 
+- |API| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns, for
+  each leaf, the class that costs least on the training samples in it, instead of the leaf's
+  majority class. With imbalanced classes the majority is usually negative even where a positive
+  prediction is cheaper, so ``predict`` ignored the costs the tree was grown to lower: on the bank
+  telemarketing data it saved -0.57 of the cost of the best single decision, and now saves 0.45. A
+  leaf where both classes cost the same still predicts its majority class. ``predict_proba`` is
+  unchanged. :class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier` (with its default base trees) now predict by a
+  majority, or out-of-bag weighted, vote of their trees' cheapest classes, instead of the class with
+  the highest average probability. With instance-dependent costs, these decisions use the training
+  samples' costs; threshold ``predict_proba`` (e.g. with :class:`~empulse.models.CSThresholdClassifier`)
+  to decide each sample by its own.
 - |API| :class:`~empulse.models.CSTreeClassifier` with ``criterion="cost"`` now only splits a
   node if the split lowers the cost of the training samples. The new default
-  ``min_impurity_decrease=None`` resolves to a billionth of the average cost per sample; pass
+  ``min_impurity_decrease=None`` resolves to ``1e-12`` times the average cost per sample; pass
   ``min_impurity_decrease=0.0`` for the previous trees. The cost impurity is the cost of a node's
   best decision, so a split whose children both keep that decision leaves it unchanged, and such
   splits were made anyway until every leaf held one class. On the four bundled datasets and two

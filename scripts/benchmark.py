@@ -30,13 +30,14 @@ def _import_models() -> None:
 
 def _cases() -> dict[str, tuple[Callable[[], object], int]]:
     from empulse.metrics import empc_score, mpc_score
-    from empulse.models import CSLogitClassifier, ProfLogitClassifier, ProfSRClassifier
+    from empulse.models import CSLogitClassifier, CSTreeClassifier, ProfLogitClassifier, ProfSRClassifier
     from empulse.optimizers import GeneticAlgorithmOptimizer
 
     X, y = _data(10_000)
     rng = np.random.default_rng(0)
     y_true = rng.integers(0, 2, 100_000)
     y_score = rng.random(100_000)
+    fn_cost = rng.uniform(2, 20, y.size)
     model = CSLogitClassifier(loss=empc_score)
 
     def proflogit(loss: object, n_jobs: int) -> Callable[[], object]:
@@ -59,6 +60,7 @@ def _cases() -> dict[str, tuple[Callable[[], object], int]]:
             3,
         ),
         'clone': (lambda: clone(model), 50),
+        'cstree_fit': (lambda: CSTreeClassifier(random_state=0).fit(X, y, fp_cost=1.0, fn_cost=fn_cost), 5),
     }
 
 

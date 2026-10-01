@@ -241,3 +241,85 @@ class TestSplitsMustLowerTheCost:
     def test_an_explicit_value_is_used_as_is(self, make_data, seeded_rng):
         model = self._fit(make_data, seeded_rng, min_impurity_decrease=0.01)
         assert model.estimator_.min_impurity_decrease == 0.01
+
+
+def _cheapest_class_per_leaf(leaves, y, weights, tp, tn, fp, fn):
+    """Reference: sum each decision's cost over every training sample in each leaf, one sample at a time."""
+    decisions = {}
+    for leaf in np.unique(leaves):
+        in_leaf = leaves == leaf
+        w, positive = weights[in_leaf], y[in_leaf] == 1
+        cost_positive = np.sum(w * np.where(positive, tp[in_leaf], fp[in_leaf]))
+        cost_negative = np.sum(w * np.where(positive, fn[in_leaf], tn[in_leaf]))
+        if np.isclose(cost_positive, cost_negative):
+            decisions[leaf] = int(np.sum(w[positive]) > np.sum(w[~positive]))
+        else:
+            decisions[leaf] = int(cost_positive < cost_negative)
+    return decisions
+
+
+class TestPredictDecidesByCost:
+    """Each leaf predicts the class that costs least on its training samples, not its majority class."""
+
+    @staticmethod
+    def _data(make_data, seeded_rng):
+        X, y = make_data(n_samples=1500, n_features=6, weights=[0.85], flip_y=0.05)
+        fn_cost = seeded_rng.uniform(5, 30, y.size)
+        fp_cost = seeded_rng.uniform(0.5, 2, y.size)
+        return X, y, fp_cost, fn_cost
+
+    def test_each_leaf_predicts_its_cheapest_class(self, make_data, seeded_rng):
+        X, y, fp_cost, fn_cost = self._data(make_data, seeded_rng)
+        model = CSTreeClassifier(max_depth=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        zeros = np.zeros(y.size)
+        expected = _cheapest_class_per_leaf(
+            model.estimator_.apply(X), y, np.ones(y.size), zeros, zeros, fp_cost, fn_cost
+        )
+        leaves = model.estimator_.apply(X)
+        np.testing.assert_array_equal(model.predict(X), [expected[leaf] for leaf in leaves])
+
+    def test_predicts_the_costly_class_where_it_is_the_minority(self, make_data, seeded_rng):
+        X, y, fp_cost, fn_cost = self._data(make_data, seeded_rng)
+        model = CSTreeClassifier(max_depth=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        majority = model.predict_proba(X).argmax(axis=1)
+        # False negatives cost far more, so some leaves with a negative majority predict positive.
+        assert np.any((model.predict(X) == 1) & (majority == 0))
+
+        # And the decisions cost less on the training data than the majority's.
+        def training_cost(y_pred):
+            return np.sum(np.where(y == 1, np.where(y_pred == 1, 0, fn_cost), np.where(y_pred == 1, fp_cost, 0)))
+
+        assert training_cost(model.predict(X)) < training_cost(majority)
+
+    def test_decisions_follow_the_class_weights_the_tree_was_grown_with(self, make_data, seeded_rng):
+        from sklearn.utils.class_weight import compute_sample_weight
+
+        X, y, fp_cost, fn_cost = self._data(make_data, seeded_rng)
+        class_weight = {0: 3.0, 1: 0.5}
+        model = CSTreeClassifier(max_depth=5, random_state=0, class_weight=class_weight).fit(
+            X, y, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+
+        zeros = np.zeros(y.size)
+        leaves = model.estimator_.apply(X)
+        expected = _cheapest_class_per_leaf(
+            leaves, y, compute_sample_weight(class_weight, y), zeros, zeros, fp_cost, fn_cost
+        )
+        np.testing.assert_array_equal(model.predict(X), [expected[leaf] for leaf in leaves])
+
+    def test_leaves_whose_classes_cost_the_same_predict_their_majority(self, make_data):
+        X, y = make_data(n_samples=500, n_features=4)
+        # Every outcome costs the same whatever is predicted, so the costs prefer neither class.
+        model = CSTreeClassifier(max_depth=4, random_state=0).fit(X, y, tp_cost=2, fn_cost=2, fp_cost=3, tn_cost=3)
+
+        np.testing.assert_array_equal(model.predict(X), model.predict_proba(X).argmax(axis=1))
+
+    def test_predicts_the_original_labels(self, make_data, seeded_rng):
+        X, y, fp_cost, fn_cost = self._data(make_data, seeded_rng)
+        labels = np.where(y == 1, 'yes', 'no')
+        model = CSTreeClassifier(max_depth=5, random_state=0).fit(X, labels, fp_cost=fp_cost, fn_cost=fn_cost)
+        encoded = CSTreeClassifier(max_depth=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        np.testing.assert_array_equal(model.predict(X), np.where(encoded.predict(X) == 1, 'yes', 'no'))
