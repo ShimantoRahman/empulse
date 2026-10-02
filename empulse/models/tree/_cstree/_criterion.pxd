@@ -8,7 +8,7 @@
 #
 # The sums are kept per class and added in sample order.
 
-from libc.math cimport fmin, log as ln
+from libc.math cimport log as ln
 
 from ._utils cimport float64_t, intp_t
 
@@ -36,19 +36,41 @@ cdef inline void sums_clear(ClassSums* s) noexcept nogil:
 
 
 cdef inline void sums_add(ClassSums* s, const float64_t* cost, float64_t w) noexcept nogil:
-    """Add one sample: ``cost`` points at its record ``[a, b, y, _]``."""
-    cdef intp_t c = <intp_t> cost[2]
-    s.cw[c] += w
-    s.cp[c] += w * cost[0]
-    s.cn[c] += w * cost[1]
+    """
+    Add one sample: ``cost`` points at its record ``[a, b, y, _]``.
+
+    The class is selected arithmetically rather than by indexing: with y either 0.0 or 1.0, each
+    product below is exactly the term or exactly zero, so the sums are those of adding the sample to
+    its own class alone. Constant indices let the compiler keep the sums in registers.
+    """
+    cdef float64_t y = cost[2]
+    cdef float64_t wy = w * y
+    cdef float64_t wa = w * cost[0]
+    cdef float64_t wb = w * cost[1]
+    cdef float64_t way = wa * y
+    cdef float64_t wby = wb * y
+    s.cw[0] += w - wy
+    s.cw[1] += wy
+    s.cp[0] += wa - way
+    s.cp[1] += way
+    s.cn[0] += wb - wby
+    s.cn[1] += wby
     s.w += w
 
 
 cdef inline void sums_remove(ClassSums* s, const float64_t* cost, float64_t w) noexcept nogil:
-    cdef intp_t c = <intp_t> cost[2]
-    s.cw[c] -= w
-    s.cp[c] -= w * cost[0]
-    s.cn[c] -= w * cost[1]
+    cdef float64_t y = cost[2]
+    cdef float64_t wy = w * y
+    cdef float64_t wa = w * cost[0]
+    cdef float64_t wb = w * cost[1]
+    cdef float64_t way = wa * y
+    cdef float64_t wby = wb * y
+    s.cw[0] -= w - wy
+    s.cw[1] -= wy
+    s.cp[0] -= wa - way
+    s.cp[1] -= way
+    s.cn[0] -= wb - wby
+    s.cn[1] -= wby
     s.w -= w
 
 
@@ -67,27 +89,66 @@ cdef inline float64_t _log2(float64_t x) noexcept nogil:
     return ln(x) / ln(2.0)
 
 
-cdef inline float64_t impurity(CriterionKind kind, const ClassSums* s, float64_t w) noexcept nogil:
-    """The impurity of a node with sums ``s`` and total weight ``w``."""
+cdef extern from *:
+    """
+    #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_AMD64))
+    #include <emmintrin.h>
+    static __inline double empulse_fast_fmin(double a, double b) {
+        return _mm_cvtsd_f64(_mm_min_sd(_mm_set_sd(a), _mm_set_sd(b)));
+    }
+    #else
+    static inline double empulse_fast_fmin(double a, double b) { return a < b ? a : b; }
+    #endif
+    """
+    # ``a if a < b else b``. MSVC calls the CRT for ``fmin`` and branches on the ternary, which
+    # mispredicts whenever the cheaper decision varies; minsd computes it without a branch.
+    float64_t fast_fmin "empulse_fast_fmin"(float64_t a, float64_t b) noexcept nogil
+
+
+cdef inline float64_t decision_cost(float64_t cp0, float64_t cp1, float64_t cn0, float64_t cn1) noexcept nogil:
+    """The weighted cost of a node's cheapest single decision: its cost impurity times its weight."""
     cdef float64_t pos_cost = 0.0
     cdef float64_t neg_cost = 0.0
-    cdef float64_t pos_count, neg_count, pos_entropy, neg_entropy
-    pos_cost += s.cp[0]
-    pos_cost += s.cp[1]
-    neg_cost += s.cn[0]
-    neg_cost += s.cn[1]
+    pos_cost += cp0
+    pos_cost += cp1
+    neg_cost += cn0
+    neg_cost += cn1
+    return fast_fmin(pos_cost, neg_cost)
+
+
+cdef inline float64_t impurity_of(
+    CriterionKind kind,
+    float64_t w,
+    float64_t neg_count,
+    float64_t pos_count,
+    float64_t cp0,
+    float64_t cp1,
+    float64_t cn0,
+    float64_t cn1,
+) noexcept nogil:
+    """The impurity of a node with total weight ``w``, from its sums as ``ClassSums`` holds them."""
+    cdef float64_t pos_cost = 0.0
+    cdef float64_t neg_cost = 0.0
+    cdef float64_t pos_entropy, neg_entropy
     if kind == COST:
-        return fmin(pos_cost, neg_cost) / w
-    pos_count = s.cw[1]
-    neg_count = s.cw[0]
+        return decision_cost(cp0, cp1, cn0, cn1) / w
+    pos_cost += cp0
+    pos_cost += cp1
+    neg_cost += cn0
+    neg_cost += cn1
     if kind == GINI:
-        return fmin(pos_cost * (pos_count * pos_count / w), neg_cost * (neg_count * neg_count / w)) / w
+        return fast_fmin(pos_cost * (pos_count * pos_count / w), neg_cost * (neg_count * neg_count / w)) / w
     # ENTROPY
     pos_cost /= w
     neg_cost /= w
     pos_entropy = _log2(pos_count / w) if pos_count > 0.0 else 0.0
     neg_entropy = _log2(neg_count / w) if neg_count > 0.0 else 0.0
-    return fmin(pos_cost * -pos_entropy, neg_cost * -neg_entropy)
+    return fast_fmin(pos_cost * -pos_entropy, neg_cost * -neg_entropy)
+
+
+cdef inline float64_t impurity(CriterionKind kind, const ClassSums* s, float64_t w) noexcept nogil:
+    """The impurity of a node with sums ``s`` and total weight ``w``."""
+    return impurity_of(kind, w, s.cw[0], s.cw[1], s.cp[0], s.cp[1], s.cn[0], s.cn[1])
 
 
 cdef inline float64_t proxy_improvement(CriterionKind kind, const ClassSums* left, const ClassSums* right) noexcept nogil:

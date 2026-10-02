@@ -1,5 +1,5 @@
 from ._criterion cimport ClassSums, CriterionKind
-from ._utils cimport float32_t, float64_t, intp_t, uint8_t, uint32_t
+from ._utils cimport float32_t, float64_t, intp_t, uint8_t, uint32_t, uint64_t
 
 
 cdef struct SplitRecord:
@@ -26,9 +26,9 @@ cdef class Splitter:
     cdef float32_t[::1] feature_values
     cdef intp_t[::1] features
     cdef intp_t[::1] constant_features
-    cdef uint32_t[::1] sort_keys            # radix sort buffers, unused by random splits
-    cdef uint32_t[::1] sort_keys_buffer
-    cdef intp_t[::1] sort_samples_buffer
+    cdef uint64_t[::1] sort_items           # radix sort buffers, unused by random splits
+    cdef uint64_t[::1] sort_items_buffer
+    cdef intp_t radix_sort_min_samples  # nodes this large are radix sorted
 
     # Parameters
     cdef CriterionKind kind

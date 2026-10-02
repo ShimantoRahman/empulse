@@ -15,6 +15,7 @@ ctypedef double float64_t
 ctypedef Py_ssize_t intp_t
 ctypedef signed int int32_t
 ctypedef unsigned int uint32_t
+ctypedef unsigned long long uint64_t
 ctypedef unsigned char uint8_t
 
 cdef enum:
@@ -163,52 +164,45 @@ cdef inline uint32_t float_to_key(float32_t value) noexcept nogil:
     """Map a float to an unsigned integer with the same order (for every non-NaN value)."""
     cdef uint32_t bits
     memcpy(&bits, &value, 4)
-    if bits & 0x80000000u:
-        return ~bits
-    return bits | 0x80000000u
+    # Flip every bit of a negative value and only the sign bit of the others, without a branch on
+    # the sign (which mispredicts on centred features).
+    return bits ^ ((0u - (bits >> 31)) | 0x80000000u)
 
 
 cdef inline float32_t key_to_float(uint32_t key) noexcept nogil:
     """Invert ``float_to_key``."""
-    cdef uint32_t bits
+    cdef uint32_t bits = key ^ (((key >> 31) - 1u) | 0x80000000u)
     cdef float32_t value
-    if key & 0x80000000u:
-        bits = key & 0x7FFFFFFFu
-    else:
-        bits = ~key
     memcpy(&value, &bits, 4)
     return value
 
 
-cdef inline void radix_sort(
-    uint32_t* keys, intp_t* indices, uint32_t* keys_buffer, intp_t* indices_buffer, intp_t n
-) noexcept nogil:
+cdef inline void radix_sort(uint64_t* items, uint64_t* buffer, intp_t n) noexcept nogil:
     """
-    Sort ``keys`` ascending, applying the same permutation to ``indices``.
+    Sort ``items`` ascending by their upper 32 bits, keeping items with equal keys in their order.
 
-    A stable least-significant-digit radix sort in three passes of 11 bits, linear in ``n``; a pass
-    is skipped when every key shares its digit. The two buffers hold ``n`` elements each.
+    Each item packs its key above a 32-bit payload, so a pass moves a single word per item. A stable
+    least-significant-digit radix sort in three passes of 11 bits, linear in ``n``; a pass is skipped
+    when every key shares its digit. ``buffer`` holds ``n`` items.
     """
     cdef uint32_t counts[3][2048]
     cdef uint32_t* count
-    cdef uint32_t* source_keys = keys
-    cdef uint32_t* target_keys = keys_buffer
-    cdef intp_t* source_indices = indices
-    cdef intp_t* target_indices = indices_buffer
-    cdef uint32_t* swap_keys
-    cdef intp_t* swap_indices
+    cdef uint64_t* source = items
+    cdef uint64_t* target = buffer
+    cdef uint64_t* swap
+    cdef uint64_t item
     cdef uint32_t key, total, digit_count, digit
     cdef intp_t i, d, shift
     memset(counts, 0, sizeof(counts))
     for i in range(n):
-        key = keys[i]
+        key = <uint32_t> (items[i] >> 32)
         counts[0][key & 0x7FF] += 1
         counts[1][(key >> 11) & 0x7FF] += 1
         counts[2][key >> 22] += 1
     for d in range(3):
-        shift = 11 * d
+        shift = 32 + 11 * d
         count = counts[d]
-        if count[(keys[0] >> shift) & 0x7FF] == <uint32_t> n:
+        if count[(items[0] >> shift) & 0x7FF] == <uint32_t> n:
             continue
         total = 0
         for i in range(2048):
@@ -216,17 +210,12 @@ cdef inline void radix_sort(
             count[i] = total
             total += digit_count
         for i in range(n):
-            key = source_keys[i]
-            digit = (key >> shift) & 0x7FF
-            target_keys[count[digit]] = key
-            target_indices[count[digit]] = source_indices[i]
+            item = source[i]
+            digit = (item >> shift) & 0x7FF
+            target[count[digit]] = item
             count[digit] += 1
-        swap_keys = source_keys
-        source_keys = target_keys
-        target_keys = swap_keys
-        swap_indices = source_indices
-        source_indices = target_indices
-        target_indices = swap_indices
-    if source_keys != keys:
-        memcpy(keys, source_keys, n * sizeof(uint32_t))
-        memcpy(indices, source_indices, n * sizeof(intp_t))
+        swap = source
+        source = target
+        target = swap
+    if source != items:
+        memcpy(items, source, n * sizeof(uint64_t))

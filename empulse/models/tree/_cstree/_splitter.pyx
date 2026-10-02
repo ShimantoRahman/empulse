@@ -11,14 +11,14 @@ input and monotonic constraints are not supported. The criterion's running sums 
 ``_criterion.pxd``), and every sample's costs are read from a single record.
 """
 
-from libc.math cimport INFINITY, fmin, isnan
+from libc.math cimport INFINITY, isnan
 from libc.string cimport memcpy
 
 import numpy as np
 
 from ._criterion cimport (
-    CriterionKind, ClassSums, impurity, impurity_improvement, proxy_improvement,
-    sums_add, sums_clear, sums_remove, sums_subtract,
+    COST, CriterionKind, ClassSums, decision_cost, fast_fmin, impurity, impurity_of, impurity_improvement,
+    proxy_improvement, sums_add, sums_clear, sums_remove, sums_subtract,
 )
 from ._utils cimport float_to_key, key_to_float, radix_sort, rand_int, rand_uniform, sort
 
@@ -31,6 +31,11 @@ cdef intp_t RADIX_SORT_MIN_SAMPLES = 512
 # The relative rounding error of a sum, per term, assumed by max_cost_decrease. Generous: the bound it
 # guards may only ever overestimate.
 cdef float64_t ROUNDING = 4.0 * np.finfo(np.float64).eps
+
+# How far, relatively, the cost criterion's split proxy may lie from minus the sum of its children's
+# decision costs. Three roundings separate them; the margin is far wider, so that it can only ever
+# let through a candidate that loses, never turn one away that wins.
+cdef float64_t PROXY_SLACK = 1e-13
 
 
 cdef inline void _init_split(SplitRecord* split, intp_t start_pos) noexcept nogil:
@@ -125,9 +130,10 @@ cdef class Splitter:
         self.features = np.arange(self.n_features, dtype=np.intp)
         self.constant_features = np.empty(self.n_features, dtype=np.intp)
         if not random:
-            self.sort_keys = np.empty(self.n_samples, dtype=np.uint32)
-            self.sort_keys_buffer = np.empty(self.n_samples, dtype=np.uint32)
-            self.sort_samples_buffer = np.empty(self.n_samples, dtype=np.intp)
+            self.sort_items = np.empty(self.n_samples, dtype=np.uint64)
+            self.sort_items_buffer = np.empty(self.n_samples, dtype=np.uint64)
+        # The radix sort carries row indices in 32 bits.
+        self.radix_sort_min_samples = RADIX_SORT_MIN_SAMPLES if self.n_rows <= 0xFFFFFFFF else self.n_rows + 1
 
         self.kind = <CriterionKind> criterion
         self.random = random
@@ -154,7 +160,7 @@ cdef class Splitter:
             record = cost + 4 * i
             sums_add(&total, record, w)
             if self.track_oracle:
-                oracle += w * fmin(record[0], record[1])
+                oracle += w * fast_fmin(record[0], record[1])
         self.start = start
         self.end = end
         self.total = total
@@ -178,7 +184,7 @@ cdef class Splitter:
         """
         cdef float64_t pos_cost = self.total.cp[0] + self.total.cp[1]
         cdef float64_t neg_cost = self.total.cn[0] + self.total.cn[1]
-        cdef float64_t node_cost = fmin(pos_cost, neg_cost)
+        cdef float64_t node_cost = fast_fmin(pos_cost, neg_cost)
         cdef float64_t slack = ROUNDING * (self.end - self.start + 1) * (
             abs(pos_cost) + abs(neg_cost) + abs(self.oracle)
         )
@@ -215,7 +221,7 @@ cdef class Splitter:
         cdef bint missing_go_to_left
 
         cdef intp_t f_i = n_features
-        cdef intp_t f_j, p, p_prev
+        cdef intp_t f_j, p
         cdef intp_t n_visited_features = 0
         cdef intp_t n_found_constants = 0      # found constant during this search
         cdef intp_t n_drawn_constants = 0      # known constant and drawn without replacement
@@ -284,32 +290,7 @@ cdef class Splitter:
             if not self.random and n_missing > 0:
                 _search_with_missing(self, end - n_missing, &current_split, &best_split, &best_proxy_improvement)
             elif not self.random:
-                # Try every position between two distinct values.
-                _reset(self)
-                p = start
-                while p < end:
-                    p += 1
-                    while p < end and feature_values[p] <= feature_values[p - 1] + FEATURE_THRESHOLD:
-                        p += 1
-                    p_prev = p - 1
-                    if p == end:
-                        continue
-                    if p - start < min_samples_leaf or end - p < min_samples_leaf:
-                        continue
-
-                    current_split.pos = p
-                    _update(self, p)
-                    sums_subtract(&right, &self.total, &self.left)
-                    if self.left.w < min_weight_leaf or right.w < min_weight_leaf:
-                        continue
-
-                    current_proxy_improvement = proxy_improvement(kind, &self.left, &right)
-                    if current_proxy_improvement > best_proxy_improvement:
-                        best_proxy_improvement = current_proxy_improvement
-                        # The sum of halves avoids overflowing to infinity.
-                        current_split.threshold = feature_values[p_prev] / 2.0 + feature_values[p] / 2.0
-                        current_split.missing_go_to_left = p - start > end - p
-                        best_split = current_split
+                _search_sorted(self, &current_split, &best_split, &best_proxy_improvement)
             else:
                 # Try one random threshold, sending the missing values to a random side.
                 current_split.threshold = rand_uniform(min_feature_value, max_feature_value, random_state)
@@ -385,21 +366,24 @@ cdef inline void _update(Splitter self, intp_t new_pos) noexcept nogil:
 
 cdef inline void _sort_node(Splitter self, const float32_t* Xf, intp_t start, intp_t end) noexcept nogil:
     """Sort samples[start:end] by their value of feature ``Xf``, into feature_values[start:end]."""
-    cdef intp_t p
+    cdef intp_t p, i
     cdef intp_t* samples = &self.samples[0]
     cdef float32_t* feature_values = &self.feature_values[0]
-    cdef uint32_t* keys
-    if end - start < RADIX_SORT_MIN_SAMPLES:
+    cdef uint64_t* items
+    if end - start < self.radix_sort_min_samples:
         for p in range(start, end):
             feature_values[p] = Xf[samples[p]]
         sort(feature_values + start, samples + start, end - start)
     else:
-        keys = &self.sort_keys[0]
+        # Each item packs the sort key above the row index.
+        items = &self.sort_items[0]
         for p in range(start, end):
-            keys[p] = float_to_key(Xf[samples[p]])
-        radix_sort(keys + start, samples + start, &self.sort_keys_buffer[0], &self.sort_samples_buffer[0], end - start)
+            i = samples[p]
+            items[p] = (<uint64_t> float_to_key(Xf[i]) << 32) | <uint64_t> i
+        radix_sort(items + start, &self.sort_items_buffer[0], end - start)
         for p in range(start, end):
-            feature_values[p] = key_to_float(keys[p])
+            samples[p] = <intp_t> (items[p] & 0xFFFFFFFFu)
+            feature_values[p] = key_to_float(<uint32_t> (items[p] >> 32))
 
 
 cdef inline void _partition(
@@ -511,6 +495,92 @@ cdef inline intp_t _gather_values(
     min_value[0] = low
     max_value[0] = high
     return n_missing
+
+
+cdef inline void _search_sorted(
+    Splitter self,
+    SplitRecord* current_split,
+    SplitRecord* best_split,
+    float64_t* best_proxy_improvement,
+) noexcept nogil:
+    """
+    Try every position between two distinct values of a feature that no sample of the node misses.
+
+    samples[start:end] are sorted into feature_values. The sums of the left child are moved from
+    whichever end is closer, as ``_update`` moves them, but kept in locals and passed on by value so
+    that they can stay in registers.
+    """
+    cdef intp_t start = self.start
+    cdef intp_t end = self.end
+    cdef intp_t min_samples_leaf = self.min_samples_leaf
+    cdef float64_t min_weight_leaf = self.min_weight_leaf
+    cdef CriterionKind kind = self.kind
+    cdef const float32_t* feature_values = &self.feature_values[0]
+    cdef const intp_t* samples = &self.samples[0]
+    cdef const float64_t* cost = self.cost
+    cdef const float64_t* weight = self.weight
+    cdef ClassSums total = self.total
+    cdef ClassSums left, right
+    cdef float64_t current_proxy_improvement, left_cost, right_cost
+    cdef intp_t p = start
+    cdef intp_t pos = start
+    cdef intp_t p_prev, q
+
+    sums_clear(&left)
+    while p < end:
+        p += 1
+        while p < end and feature_values[p] <= feature_values[p - 1] + FEATURE_THRESHOLD:
+            p += 1
+        p_prev = p - 1
+        if p == end:
+            continue
+        if p - start < min_samples_leaf or end - p < min_samples_leaf:
+            continue
+
+        if (p - pos) <= (end - p):
+            if weight == NULL:
+                for q in range(pos, p):
+                    sums_add(&left, cost + 4 * samples[q], 1.0)
+            else:
+                for q in range(pos, p):
+                    sums_add(&left, cost + 4 * samples[q], weight[samples[q]])
+        else:
+            left = total
+            if weight == NULL:
+                for q in range(end - 1, p - 1, -1):
+                    sums_remove(&left, cost + 4 * samples[q], 1.0)
+            else:
+                for q in range(end - 1, p - 1, -1):
+                    sums_remove(&left, cost + 4 * samples[q], weight[samples[q]])
+        pos = p
+
+        sums_subtract(&right, &total, &left)
+        if left.w < min_weight_leaf or right.w < min_weight_leaf:
+            continue
+
+        # proxy_improvement, written out so that no sums escape to memory.
+        if kind == COST:
+            right_cost = decision_cost(right.cp[0], right.cp[1], right.cn[0], right.cn[1])
+            left_cost = decision_cost(left.cp[0], left.cp[1], left.cn[0], left.cn[1])
+            # The proxy is -(left_cost + right_cost) up to a few roundings, so a candidate that falls
+            # short of the best by more than PROXY_SLACK cannot win and needs no divisions.
+            if (left_cost + right_cost) * (1.0 - PROXY_SLACK) > -best_proxy_improvement[0]:
+                continue
+            current_proxy_improvement = -right.w * (right_cost / right.w) - left.w * (left_cost / left.w)
+        else:
+            current_proxy_improvement = (
+                -right.w * impurity_of(kind, right.w, right.cw[0], right.cw[1],
+                                       right.cp[0], right.cp[1], right.cn[0], right.cn[1])
+                - left.w * impurity_of(kind, left.w, left.cw[0], left.cw[1],
+                                       left.cp[0], left.cp[1], left.cn[0], left.cn[1])
+            )
+        if current_proxy_improvement > best_proxy_improvement[0]:
+            best_proxy_improvement[0] = current_proxy_improvement
+            current_split.pos = p
+            # The sum of halves avoids overflowing to infinity.
+            current_split.threshold = feature_values[p_prev] / 2.0 + feature_values[p] / 2.0
+            current_split.missing_go_to_left = p - start > end - p
+            best_split[0] = current_split[0]
 
 
 cdef inline void _search_with_missing(
