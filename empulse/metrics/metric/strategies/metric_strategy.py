@@ -10,11 +10,10 @@ from .._compile import CountScoreFn
 from .._direction import Direction
 from ..capabilities import Capability
 
-#: Maps each capability that corresponds directly to a `MetricStrategy` method to that method's
-#: name, for `_capabilities_from_overrides` to detect an override by. The capabilities with no
-#: entry here (`COST_ONLY_DECISION`, `CLASS_COSTS`, `RANKING`, `PRECOMPUTED_BOOST_OBJECTIVE`) describe a
-#: property of *what* a method computes, not *whether* it is implemented, so no override-sniffing
-#: can infer them -- a strategy that supports one of them must declare it via `_capabilities`.
+#: Maps each capability that corresponds to a `MetricStrategy` method to that method's name, so
+#: `_capabilities_from_overrides` can detect an override. The capabilities without an entry
+#: (`COST_ONLY_DECISION`, `CLASS_COSTS`, `RANKING`, `PRECOMPUTED_BOOST_OBJECTIVE`) describe what a
+#: method computes, not whether it exists, so a strategy must declare them via `_capabilities`.
 _CAPABILITY_METHOD_NAMES: dict[Capability, str] = {
     Capability.OPTIMAL_THRESHOLD: 'optimal_threshold',
     Capability.OPTIMAL_RATE: 'optimal_rate',

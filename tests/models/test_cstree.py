@@ -35,12 +35,11 @@ def test_monotonic_cst_is_not_a_parameter():
 
 
 def test_cstree_with_stochastic_maxprofit_metric(classification_data):
-    """Regression test: a MaxProfit metric with a stochastic variable used to raise, not reduce to its mean.
+    """A MaxProfit metric with a stochastic variable reduces to its mean.
 
-    `_fit` used to call `self.loss._evaluate_costs(**loss_params)` without `replace_stochastic=True`,
-    so a `sympy.stats` random variable in the cost/benefit expression raised deep inside
-    `_evaluate_expression` instead of being reduced to its mean - the same reduction
-    `_prepare_class_costs`/`ProfTreeClassifier` already apply for exactly this situation.
+    `_fit` must call `self.loss._evaluate_costs(**loss_params)` with `replace_stochastic=True`;
+    otherwise a `sympy.stats` random variable in the cost/benefit expression raises deep inside
+    `_evaluate_expression`. `_prepare_class_costs`/`ProfTreeClassifier` apply the same reduction.
     """
     X, y = classification_data
     clv = sympy.stats.Beta('clv', 2, 5)
@@ -139,7 +138,7 @@ class TestInspection:
     ids=['strings', 'minus_one_one', 'two_five'],
 )
 def test_predict_returns_original_labels(classification_data, labels):
-    """Regression test: ``predict`` returned the inner tree's 0/1-encoded classes.
+    """``predict`` returns the original labels, not the inner tree's 0/1-encoded classes.
 
     ``CostSensitiveClassifier.fit`` encodes the target as 0/1 before fitting the inner tree, so its
     predictions have to be mapped back through ``classes_``.

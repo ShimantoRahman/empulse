@@ -46,8 +46,7 @@ def get_all_functions_and_classes(module):
                     if attr_name.startswith('_') and attr_name != '__call__':
                         continue
                     if attr_name not in vars(obj):
-                        continue  # inherited; collected once, when the owning class's own
-                        # module is iterated, instead of once per subclass here
+                        continue  # inherited; collected with the owning class
                     raw = vars(obj)[attr_name]
                     if not isinstance(raw, _DOC_CARRIERS):
                         continue
@@ -59,17 +58,13 @@ def get_all_functions_and_classes(module):
             and hasattr(obj, '__dict__')
             and isinstance(obj.__dict__.get('__doc__'), str)
         ):
-            # a module-level instance with its own hand-assigned docstring, e.g. a prebuilt
-            # `Metric`/`MixtureMetric` such as `empc_score`. An instance's `__module__`
-            # resolves through its *type*, not where the instance itself was created, so
-            # (unlike the function/class branch above) module ownership can't be checked this
-            # way; the explicit instance-level `__doc__` is itself a strong enough signal.
-            # Requiring the *type* to be an empulse class (rather than excluding classes/
-            # functions/modules one by one) is what keeps this from also matching a re-exported
-            # third-party class (whose own docstring is out of scope) or a `types.GenericAlias`
-            # type annotation (e.g. `FloatNDArray = NDArray[np.float64]`), both of which turned
-            # up here during testing. `add()`'s id-based dedup keeps a metric re-imported into
-            # several modules from being collected (and thus executed) more than once.
+            # A module-level instance with its own hand-assigned docstring, e.g. a prebuilt
+            # `Metric`/`MixtureMetric` such as `empc_score`. An instance's `__module__` resolves
+            # through its type, so module ownership cannot be checked as for functions and classes
+            # above; the instance-level `__doc__` is signal enough. Requiring the type to be an
+            # empulse class keeps out re-exported third-party classes (whose docstrings are out of
+            # scope) and `types.GenericAlias` annotations (e.g. `FloatNDArray = NDArray[np.float64]`).
+            # `add()` deduplicates by id, so a metric re-imported into several modules is collected once.
             add(obj)
 
     return found

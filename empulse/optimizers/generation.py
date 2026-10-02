@@ -150,7 +150,7 @@ class Generation:
                 raise TypeError('`population_size` must be an int.')
             if population_size < MIN_POP_SIZE:
                 raise ValueError(f'`population_size` must be >= {MIN_POP_SIZE}, got {population_size}.')
-        # None is stored as-is; the actual size is resolved in optimize() once n_dim is known.
+        # optimize() resolves None once n_dim is known.
         self.population_size: int | None = population_size
 
         if not 0.0 <= crossover_rate <= 1.0:
@@ -164,17 +164,15 @@ class Generation:
         if not 0.0 <= elitism <= 1.0:
             raise ValueError('`elitism` must be in [0, 1].')
         self.elitism_fraction: float = elitism
-        self.elitism = 0  # determined later
+        self.elitism = 0  # set in optimize()
 
         self.verbose = verbose
         self.logging_fn = logging_fn
 
-        # Get random state object
         self.rng = check_random_state(random_state)
 
         self.n_jobs = n_jobs
 
-        # Attributes
         self._pop_size_: int | None = None
         self._n_mating_pairs: int | None = None
         self.elite_pool: list[tuple[NDArray[np.float64], np.float64]] = []  # individual, fitness
@@ -212,12 +210,10 @@ class Generation:
         Calling ``optimize`` on the same instance a second time resets all
         accumulated state (``fx_best``, ``result``, ``elite_pool``, etc.).
         """
-        # Reset state so that calling optimize() twice gives a clean run.
         self.fx_best = []
         self.elite_pool = []
         self.result = OptimizeResult(success=False, nfev=0, nit=0, fun=np.inf, x=None)  # type: ignore[call-arg]
 
-        # Check bounds
         bounds = list(bounds)
         if not all(
             isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], int | float) and isinstance(t[1], int | float)
@@ -230,10 +226,8 @@ class Generation:
         self.delta_bounds = np.fabs(self.upper_bounds - self.lower_bounds)
         self.n_dim = len(bounds)
 
-        # Resolve population size now that n_dim is known. Stored separately from
-        # `population_size` (left untouched at whatever the constructor received) so a second
-        # `optimize()` call on a different-dimensional problem re-resolves it instead of reusing
-        # a stale size from the first call.
+        # Stored apart from `population_size` so a second optimize() call on a problem with a
+        # different dimension resolves the size again.
         self._pop_size_ = (
             self.population_size if self.population_size is not None else self.n_dim * FEATURE_TO_POP_SIZE_RATIO
         )
@@ -257,7 +251,7 @@ class Generation:
             self._crossover()
             self._mutate()
             self._evaluate(objective)
-            self._insert_elites()  # survivor selection: overlapping-generation model
+            self._insert_elites()
             self._update_elite_pool()
 
     def _generate_population(self) -> NDArray[np.float64]:
@@ -272,11 +266,10 @@ class Generation:
             for index in stale:
                 self.fitness[index] = objective(self.population[index])
         else:
-            # Threads rather than processes: the objectives spend their time in NumPy and compiled
-            # code that release the GIL, and a process would need the objective (with its copy of the
-            # training data) pickled over to it. One task per thread keeps joblib's overhead per
-            # generation rather than per individual. Each result is written back to its own index, so
-            # the outcome does not depend on the number of jobs.
+            # Threads, not processes: the objectives spend their time in NumPy and compiled code that
+            # release the GIL, and a process would need the objective and its copy of the training data
+            # pickled over. One task per thread keeps joblib's overhead per generation, not per
+            # individual. Each result goes to its own index, so the outcome does not depend on n_jobs.
             chunks = np.array_split(stale, n_jobs)
             results = Parallel(n_jobs=n_jobs, prefer='threads')(
                 delayed(self._evaluate_chunk)(objective, chunk) for chunk in chunks
@@ -308,7 +301,7 @@ class Generation:
         """Perform uniform random mutation."""
         for ix in range(self._pop_size):
             if self.rng.uniform() < self.mutation_rate:
-                mutant = self.population[ix]  # view — mutation writes through to self.population
+                mutant = self.population[ix]  # a view, so mutating it changes self.population
                 rnd_gene = self.rng.choice(self.n_dim)
                 rnd_val = self.rng.uniform(
                     low=self.lower_bounds[rnd_gene],
@@ -324,15 +317,13 @@ class Generation:
         avg_fitness = float(np.mean(fitness_values))
         max_fitness = float(np.max(fitness_values))
 
-        # Shift all values above zero before applying linear scaling so that
-        # the scaling formula always operates on non-negative inputs.
+        # Linear scaling needs non-negative inputs.
         if min_fitness < 0:
             fitness_values -= min_fitness
             avg_fitness -= min_fitness
             max_fitness -= min_fitness
             min_fitness = 0.0
 
-        # Linear scaling
         if min_fitness > (2 * avg_fitness - max_fitness):
             denominator = max_fitness - avg_fitness
             a = avg_fitness / (denominator if denominator != 0 else 1e-10)
@@ -343,13 +334,11 @@ class Generation:
             b = -min_fitness * a
         scaled_fitness = np.abs(a * fitness_values + b)
 
-        # Normalize
         if (normalization_factor := np.sum(scaled_fitness)) == 0:
-            relative_fitness = np.ones(self._pop_size) / self._pop_size  # Uniform distribution
+            relative_fitness = np.ones(self._pop_size) / self._pop_size  # uniform
         else:
             relative_fitness = scaled_fitness / normalization_factor
 
-        # Select individuals
         select_ix = self.rng.choice(
             self._pop_size,
             size=self._pop_size,
@@ -384,9 +373,8 @@ class Generation:
         else:
             elite_ix = list(np.argsort(self.fitness)[-self.elitism :])
         self.elite_pool = [(self.population[ix].copy(), self.fitness[ix]) for ix in elite_ix]
-        # Append best solution
         self.fx_best.append(self.fitness[elite_ix[-1]])
-        # Store a copy so that subsequent population mutations don't corrupt result.x
+        # A copy, so later mutations of the population do not change result.x.
         self.result.x = self.population[elite_ix[-1]].copy()  # type: ignore[attr-defined]
         self.result.fun = self.fx_best[-1]  # type: ignore[attr-defined]
         self.result.nit = len(self.fx_best)  # type: ignore[attr-defined]
@@ -403,13 +391,8 @@ class Generation:
         status_msg = f'Iter = {self.result.nit:5d}; nfev = {self.result.nfev:6d}; fx = {self.fx_best[-1]:.4f}'
         self.logging_fn(status_msg)
 
-    # ------------------------------------------------------------------
-    # Narrowing accessors
-    # Private methods are only ever called from optimize(), which always
-    # resolves both attributes to int before any of them are invoked.
-    # cast() lets mypy see the non-optional type without scattering
-    # assert-not-None guards across every method.
-    # ------------------------------------------------------------------
+    # Narrowing accessors: optimize() resolves both attributes to int before any private method runs,
+    # and cast() lets mypy see that without assert-not-None guards in every method.
 
     @property
     def _pop_size(self) -> int:
@@ -504,7 +487,7 @@ class LamarckianGeneration(Generation):
         """
         theta = theta.copy()
 
-        # Adam moment buffers (only used when optimizer == "adam")
+        # Adam moment buffers.
         m = np.zeros_like(theta)
         v = np.zeros_like(theta)
 

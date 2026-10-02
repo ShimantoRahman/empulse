@@ -266,7 +266,7 @@ class MaxProfit(MetricStrategy):
         return state
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # Strategies pickled before the generator was stored portably hold the Generator itself.
+        # Strategies pickled by older versions hold the Generator itself.
         state['_rng'] = _restore_generator(state['_rng'])
         self.__dict__.update(state)
 
@@ -295,8 +295,7 @@ class MaxProfit(MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
-        # Compute the profit function once and reuse for both score and rate builders
-        # to avoid rebuilding the sympy expression twice.
+        # Build the profit function once and share it between the score and rate builders.
         profit_function = _build_profit_function(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
@@ -321,13 +320,12 @@ class MaxProfit(MetricStrategy):
             rng=self._rng,
             class_terms=class_terms,
         )
-        # Store symbolic expressions for gradient computation in logit_objective
+        # Kept symbolic for the gradients in logit_objective.
         self._tp_benefit = tp_benefit
         self._tn_benefit = tn_benefit
         self._fp_cost = fp_cost
         self._fn_cost = fn_cost
-        # Compiled once here rather than on every _evaluate_class_costs() call -- the same
-        # anti-pattern LogCost's build() already avoids (see log_cost_strategy.py).
+        # Compiled once here, not on every _evaluate_class_costs() call.
         self._tp_benefit_fn = _safe_lambdify(self._tp_benefit)
         self._tn_benefit_fn = _safe_lambdify(self._tn_benefit)
         self._fp_cost_fn = _safe_lambdify(self._fp_cost)
@@ -549,7 +547,6 @@ class MaxProfit(MetricStrategy):
         _check_parameters(self._score_function.deterministic_symbols, parameters)
         agg_params = _aggregate_instance_parameters(dict(parameters))
 
-        # 1. Deterministic Route
         if isinstance(self._score_function, MaxProfitScoreDeterministic):
             tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(agg_params)
 
@@ -570,7 +567,6 @@ class MaxProfit(MetricStrategy):
                 parameters=agg_params,
             )
 
-        # 2. Stochastic Piecewise Route (e.g., Beta, Gamma, Pareto)
         elif isinstance(self._score_function, BasePositiveDistribution):
             # The stochastic route integrates over a random variable, so there is no closed-form
             # gradient magnitude. Substituting each random variable by its mean gives the same
@@ -697,18 +693,16 @@ class MaxProfit(MetricStrategy):
         param_signature = tuple(sorted((k, float(v)) for k, v in agg_params.items()))
         signature = (y_true_arr.shape, param_signature)
 
-        # Build the objective once and cache it under its signature. Read the cache once into a
-        # local, and evaluate that local: another thread may replace it at any point, but this call
-        # then still evaluates the objective its own signature selected.
+        # Build the objective once and cache it under its signature. Read the cache into a local first:
+        # another thread may replace it at any point, and this call must evaluate the objective its own
+        # signature selected.
         cached = self._boost_cache
         if cached is not None and cached[0] == signature:
             objective = cached[1]
         else:
-            # Route: Deterministic Linear EMP
             if isinstance(self._score_function, MaxProfitScoreDeterministic):
                 objective = self._prepare_boost_deterministic_objective(y_true_arr, **agg_params)
 
-            # Route: Stochastic Piecewise EMP
             elif isinstance(self._score_function, BasePositiveDistribution):
                 objective = self._prepare_boost_piecewise_objective(y_true_arr, **agg_params)
 
@@ -720,7 +714,6 @@ class MaxProfit(MetricStrategy):
 
             self._boost_cache = (signature, objective)
 
-        # Evaluate and return gradient and hessian for GBDT
         return objective(np.asarray(y_score), alpha)
 
     def _prepare_boost_piecewise_objective(

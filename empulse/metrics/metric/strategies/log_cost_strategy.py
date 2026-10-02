@@ -262,10 +262,9 @@ class LogCost(MetricStrategy):
         self._fp_cost: sympy.Expr = fp_cost
         self._fn_cost: sympy.Expr = fn_cost
 
-        # Lambdified here rather than inside `logit_objective`, which used to recompile all four on
-        # every call. The expressions are fixed from `build()` onwards, and `lambdify` runs `exec`
-        # on generated source and goes through sympy's process-global cache, so it is the expensive
-        # part. This matches how every other strategy builds its callables.
+        # Lambdified once here, not on every `logit_objective` call. The expressions are fixed after
+        # `build()`, and `lambdify` is expensive: it runs `exec` on generated source and goes through
+        # sympy's process-global cache.
         self._tp_benefit_fn: PicklableLambda = _safe_lambdify(tp_benefit)
         self._tn_benefit_fn: PicklableLambda = _safe_lambdify(tn_benefit)
         self._fp_cost_fn: PicklableLambda = _safe_lambdify(fp_cost)

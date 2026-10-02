@@ -71,10 +71,10 @@ def test_clone_round_trips_every_parameter(estimator):
 
 def test_clone_does_not_share_state_between_instances(estimator):
     """
-    Regression guard for the dynamic metadata routing.
+    Cloned instances do not share routing state.
 
-    The routing keys come from each instance's own loss. They used to be installed on the class, so
-    a second instance could observe the first one's symbol list; see ``test_metadata_routing.py``.
+    The routing keys come from each instance's own loss and must not be installed on the class,
+    or a second instance could observe the first one's symbol list; see ``test_metadata_routing.py``.
     """
     first = clone(estimator)
     second = clone(estimator)

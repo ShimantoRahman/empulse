@@ -214,7 +214,7 @@ def test_convex_hull_keeps_every_corner_of_a_finely_sampled_curve():
 
     The k-th of m groups holds m - k positives and one negative, so the slope of the curve drops by
     the same amount at every point. With m = 300 the curve turns by about 7e-8 at each point, which a
-    fixed tolerance on the turn (as the hull used to have) mistakes for a straight line.
+    fixed tolerance on the turn would mistake for a straight line.
     """
     from empulse.metrics._cy_convex_hull import convex_hull_from_counts
 

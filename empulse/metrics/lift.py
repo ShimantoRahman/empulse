@@ -54,7 +54,6 @@ def lift_score(
         y_true = np.asarray(y_true)
         y_score = np.asarray(y_score)
 
-    # Sort the predictions in descending order
     sorted_indices = np.argsort(y_score)[::-1]
     sorted_labels = y_true[sorted_indices]
     top_fraction = max(1, int(round(len(sorted_labels) * fraction, 0)))

@@ -19,9 +19,8 @@ def data(make_data):
 
 
 class _DummyCostStrategy:
-    # Metric._prepare_parameters reads this when deciding which keyword arguments are unknown, and
-    # parameter validation at fit time now reaches that path. MetricStrategy supplies it as an empty
-    # set; this stub is deliberately minimal, so it just mirrors that default.
+    # Metric._prepare_parameters reads this to decide which keyword arguments are unknown.
+    # MetricStrategy supplies an empty set; this stub mirrors that default.
     _extra_kwargs: frozenset[str] = frozenset()
 
     # csdecision_rule.py's predict-time gate reads this to decide whether a decision can be
@@ -95,10 +94,9 @@ class TestCSThresholdCalibration:
     def test_custom_calibrator_instance_not_mutated_by_fit(self, data):
         """A user-supplied calibrator object must not have its `estimator` set in place.
 
-        Previously `_get_calibrator` called `self.calibrator.set_params(estimator=estimator)`
-        directly on the constructor argument, so fitting (or refitting with a clone, e.g. inside
-        cross-validation) would silently bind a fitted estimator into the object the caller still
-        holds a reference to.
+        `_get_calibrator` must not call `self.calibrator.set_params(estimator=estimator)` directly on the
+        constructor argument: fitting (or refitting with a clone, e.g. inside cross-validation) would bind
+        a fitted estimator into the object the caller still holds a reference to.
         """
         from sklearn.calibration import CalibratedClassifierCV
 
@@ -326,9 +324,8 @@ class TestPredictTimeCosts:
         """
         `predict` must not call the base estimator's `predict_proba` twice on the same X.
 
-        Previously `predict` computed `y_proba` itself to pick the decision, then
-        `_apply_decision` re-scored `X` through `estimator_.predict_proba` a second time,
-        doubling the cost of an expensive base estimator.
+        Scoring `X` a second time in `_apply_decision` would double the cost of an expensive base
+        estimator.
         """
         X, y = data
         clf = _make_model(classifier_type)
@@ -457,13 +454,13 @@ class TestMetadataRouting:
 
 class TestAliasedMetric:
     """
-    Regression tests for cost-sensitive fitting silently skipping on an aliased Metric.
+    Cost-sensitive fitting with an aliased Metric.
 
-    `_should_skip_cost_sensitive_fit` used to compare `loss._all_parameters` (which lists both a
-    symbol's raw name and its alias) for equality against the caller's supplied keys. Since a
-    caller only ever supplies one spelling per parameter, that equality could never hold for an
-    aliased metric, so it silently skipped learning a threshold/rate and instead forwarded the
-    loss's kwargs straight to the base estimator's `fit`, which doesn't recognize them.
+    `_should_skip_cost_sensitive_fit` must not compare `loss._all_parameters` (which lists both a
+    symbol's raw name and its alias) for equality against the caller's supplied keys. A caller only
+    supplies one spelling per parameter, so that equality can never hold for an aliased metric: the
+    model would skip learning a threshold/rate and forward the loss's kwargs straight to the base
+    estimator's `fit`, which doesn't recognize them.
     """
 
     @staticmethod
@@ -535,12 +532,10 @@ DECISION_RULE_FACTORIES = [
 
 
 class TestPosLabel:
-    """Regression tests: ``pos_label`` did not make its class the positive one.
+    """``pos_label`` makes its class the positive one.
 
-    The decision was computed treating ``classes_[1]`` as positive, from ``classes_[1]``'s
-    probabilities, but ``CSThresholdClassifier`` then gave scores above the threshold the
-    ``pos_label`` class, so ``pos_label=classes_[0]`` inverted every prediction.
-    ``CSRateClassifier`` ignored ``pos_label`` altogether.
+    The decision is computed from the ``pos_label`` class's probabilities, so ``pos_label=classes_[0]``
+    must not invert predictions, for ``CSThresholdClassifier`` and ``CSRateClassifier`` alike.
     """
 
     @pytest.mark.parametrize('make_model', DECISION_RULE_FACTORIES)

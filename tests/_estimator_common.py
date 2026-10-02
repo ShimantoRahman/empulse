@@ -1,10 +1,4 @@
-"""
-Helpers shared by the model and sampler conformance suites.
-
-``InvalidParameter`` + ``generate_invalid_params`` + ``test_invalid_params`` previously existed
-twice, in ``tests/models/test_models.py`` and ``tests/samplers/test_samplers.py``, differing only in
-whether the final call was ``fit`` or ``fit_resample``.
-"""
+"""Helpers shared by the model and sampler conformance suites."""
 
 import inspect
 from collections.abc import Iterator
@@ -19,9 +13,8 @@ def iter_invalid_params(estimator_class: type) -> Iterator[tuple[str, dict[str, 
     """
     Yield ``(parameter_name, kwargs)`` with exactly one constructor parameter made invalid.
 
-    Yielding one parameter at a time -- rather than looping inside a single test, as both copies of
-    this used to -- means the test id names the offending parameter, so a failure says which one
-    stopped validating instead of only that some parameter did.
+    Yielding one parameter at a time makes the test id name the offending parameter, so a failure says
+    which parameter stopped validating.
     """
     for name in inspect.signature(estimator_class.__init__).parameters:
         if name == 'self':

@@ -29,8 +29,7 @@ def load():
     """
     Load a bundled dataset with a backend, reading each (loader, backend) pair only once.
 
-    The per-backend and the cross-backend fixtures below used to load every pair independently.
-    Nothing here modifies a dataset, so they can share one copy.
+    Nothing here modifies a dataset, so the per-backend and cross-backend fixtures can share one copy.
     """
     cache = {}
 

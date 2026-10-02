@@ -7,6 +7,6 @@ class Parameter(Enum):
 
     UNCHANGED = 'unchanged'
 
-    # This is a bit of a hack to make sure that if someone tries to negate the parameter, it doesn't change it.
+    # Negating an unset cost argument returns the sentinel instead of raising.
     def __neg__(self) -> Self:
         return self

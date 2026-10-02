@@ -1,4 +1,4 @@
-"""Internal I/O helpers — stdlib + numpy only, no dataframe library required."""
+"""Internal I/O helpers; stdlib and numpy only, no dataframe library required."""
 
 from __future__ import annotations
 
@@ -234,7 +234,7 @@ def load_or_fetch(
         os.replace(partial_file, cache_file)
     finally:
         partial_file.unlink(missing_ok=True)
-    # Re-read so callers always get the same string-only representation
+    # Re-read so callers always get the same string-only representation.
     return _read_csv_gz(cache_file, null_values=[''])
 
 
@@ -258,9 +258,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
     targets : dict[str, numpy.ndarray]
         Column-oriented dict of target arrays (string dtype).
     """
-    # ------------------------------------------------------------------
-    # Step 1 — query the metadata API
-    # ------------------------------------------------------------------
+    # Query the metadata API.
     api_url = f'{_UCI_API_BASE}?id={dataset_id}'
     try:
         ctx = ssl.create_default_context()
@@ -284,14 +282,11 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
             'See https://archive.ics.uci.edu/datasets for available datasets.'
         )
 
-    # Determine feature vs. target column names from variable metadata
     variables: list[dict[str, Any]] = metadata.get('variables', [])
     feature_names = [v['name'] for v in variables if v.get('role') == 'Feature']
     target_col_names = [v['name'] for v in variables if v.get('role') == 'Target']
 
-    # ------------------------------------------------------------------
-    # Step 2 — download the CSV (may be plain text or gzip-compressed)
-    # ------------------------------------------------------------------
+    # Download the CSV, which is plain text or gzip-compressed.
     try:
         ctx2 = ssl.create_default_context()
         with urllib.request.urlopen(data_url, context=ctx2, timeout=60) as resp:
@@ -299,7 +294,6 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
         raise OSError(f'Failed to download UCI dataset {dataset_id} from {data_url}.  Original error: {exc}') from exc
 
-    # Try gzip first, fall back to plain text
     try:
         with gzip.open(io.BytesIO(raw_bytes), 'rt', encoding='utf-8') as gz:
             content = gz.read()
@@ -314,7 +308,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
     all_cols = list(rows[0].keys())
     raw: dict[str, np.ndarray] = {col: np.array([row[col] for row in rows]) for col in all_cols}
 
-    # Fall back if the API didn't return role information
+    # The API may not return roles.
     if not feature_names:
         feature_names = [c for c in all_cols if c not in target_col_names]
     if not target_col_names:
@@ -610,9 +604,7 @@ def _fetch_openml(
     if name is not None and data_id is not None:
         raise ValueError('Provide either name or data_id, not both.')
 
-    # ------------------------------------------------------------------
-    # Step 1 — resolve data_id from name + version
-    # ------------------------------------------------------------------
+    # Resolve data_id from name and version.
     if name is not None:
         name_lower = name.lower()
         if version == 'active':
@@ -634,9 +626,7 @@ def _fetch_openml(
             raise OSError(f'No OpenML dataset found with name={name!r}, version={version!r}.')
         data_id = int(datasets_list[0]['did'])
 
-    # ------------------------------------------------------------------
-    # Step 2 — get dataset description (contains the ARFF download URL)
-    # ------------------------------------------------------------------
+    # The dataset description holds the ARFF download URL.
     desc_url = _OPENML_DATA_INFO.format(data_id)
     desc_json = _openml_api_request(desc_url, n_retries=n_retries, delay=delay)
     description: dict[str, Any] = desc_json.get('data_set_description', {})
@@ -655,9 +645,7 @@ def _fetch_openml(
             stacklevel=3,
         )
 
-    # ------------------------------------------------------------------
-    # Step 3 — download the ARFF file with retry logic
-    # ------------------------------------------------------------------
+    # Download the ARFF file, retrying on failure.
     ctx = ssl.create_default_context()
     arff_req = urllib.request.Request(arff_url)
     arff_req.add_header('Accept-encoding', 'gzip')
@@ -683,10 +671,7 @@ def _fetch_openml(
             f'after {n_retries + 1} attempts. Last error: {last_exc}'
         ) from last_exc
 
-    # ------------------------------------------------------------------
-    # Step 4 — decompress (the ARFF file itself may be gzip-compressed)
-    #          and parse
-    # ------------------------------------------------------------------
+    # The ARFF file may itself be gzip-compressed.
     try:
         with gzip.open(io.BytesIO(arff_bytes), 'rt', encoding='utf-8') as gz:
             content = gz.read()

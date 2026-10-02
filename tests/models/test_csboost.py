@@ -22,14 +22,12 @@ from empulse.metrics import (
 from empulse.models import CSBoostClassifier
 from empulse.models.boosting.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
 
-# Define the classifiers to test
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
 
 
 @pytest.mark.filterwarnings('ignore::UserWarning')
 @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
 def test_csboost_different_classifiers(library, classifier_name, cost_dataset):
-    # Import the classifier dynamically
     classifier_module = pytest.importorskip(library)
     classifier_class = getattr(classifier_module, classifier_name)
 
@@ -96,12 +94,12 @@ def test_csboost_with_deterministic_max_profit_metric(cost_dataset):
     ],
 )
 def test_csboost_fits_with_renamed_prebuilt_metrics(cost_dataset, metric):
-    """Regression test for CSBoostClassifier dispatching on `strategy.name`.
+    """CSBoostClassifier builds the right objective for renamed prebuilt metrics.
 
     Every prebuilt metric renames its strategy via `Metric.__name__` (e.g.
-    `empc_score.__name__ = 'empc_score'`), which used to make `_get_objective` take the wrong
-    branch and raise `NotImplementedError` for MaxProfit/LogCost-backed metrics. All prebuilt
-    metrics used here have defaults for every parameter, so no `loss_params` are needed.
+    `empc_score.__name__ = 'empc_score'`), and that must not stop `_get_objective` from handling
+    MaxProfit/LogCost-backed metrics. All prebuilt metrics used here have defaults for every
+    parameter, so no `loss_params` are needed.
     """
     xgboost = pytest.importorskip('xgboost')
     X, y, _, _ = cost_dataset
@@ -117,10 +115,10 @@ def test_csboost_fits_with_renamed_prebuilt_metrics(cost_dataset, metric):
 def test_csboost_dispatch_ignores_strategy_name(cost_dataset, strategy_factory):
     """Renaming a custom metric must not change which boosting objective is built.
 
-    Before the fix, `CSBoostClassifier._get_objective` compared `loss.strategy.name` against
-    `{'max profit', 'log cost'}`; renaming the metric (as every prebuilt metric does) made it
-    silently take the constant-gradient branch instead of raising, or - for a strategy that does
-    implement `prepare_boost_objective` - would have trained on the wrong gradients silently.
+    `CSBoostClassifier._get_objective` must not compare `loss.strategy.name` against
+    `{'max profit', 'log cost'}`: a renamed metric (as every prebuilt metric is) would silently take
+    the constant-gradient branch instead of raising, or - for a strategy that does implement
+    `prepare_boost_objective` - train on the wrong gradients.
     """
     xgboost = pytest.importorskip('xgboost')
     clv = sympy.symbols('clv')
@@ -154,13 +152,11 @@ def test_csboost_when_all_libraries_missing(cost_dataset):
 
 
 def test_csboost_fit_does_not_mutate_callers_fit_params_dict(cost_dataset):
-    """Regression test: `_fit` used to mutate the caller's `fit_params` dict in place.
+    """`_fit` must not mutate the caller's `fit_params` dict.
 
-    Reusing one `fit_params` dict across two `fit()` calls (or across GridSearchCV folds) would
-    silently carry `sample_weight` from the first call into the second, since `sample_weight`
-    (passed as a loss-param kwarg) was popped straight into the caller-supplied `fit_params` dict.
-    Uses LightGBM rather than XGBoost: XGBoost's custom-objective path does not support
-    `sample_weight` at all (a separate, pre-existing limitation unrelated to this bug).
+    Reusing one `fit_params` dict across two `fit()` calls (or across GridSearchCV folds) must not
+    carry `sample_weight` from the first call into the second. Uses LightGBM rather than XGBoost:
+    XGBoost's custom-objective path does not support `sample_weight` at all.
     """
     lightgbm = pytest.importorskip('lightgbm')
     X, y, fn_cost, fp_cost = cost_dataset
@@ -179,12 +175,12 @@ def test_csboost_fit_does_not_mutate_callers_fit_params_dict(cost_dataset):
 
 
 class TestBaseScoreSpace:
-    """Regression tests for _BASE_SCORE meaning a probability for XGBoost but a raw score elsewhere.
+    """_BASE_SCORE is a probability for XGBoost but a raw score for the other backends.
 
     XGBoost's `base_score` is documented as a probability; LightGBM's `init_score` and CatBoost's
-    `baseline` are raw (log-odds) scores. Using the same literal constant for all three meant
-    `expit(0.51) != 0.51` was silently ignored, and neither LightGBM nor CatBoost persist that
-    offset into the saved model, so `predict_proba` must add it back manually before `expit`.
+    `baseline` are raw (log-odds) scores, and `expit(0.51) != 0.51`. Neither LightGBM nor CatBoost
+    persist that offset into the saved model, so `predict_proba` must add it back manually before
+    `expit`.
     """
 
     def test_base_score_constants_are_logit_pairs(self):
@@ -208,7 +204,7 @@ class TestBaseScoreSpace:
         actual_proba = model.predict_proba(X)[:, 1]
 
         np.testing.assert_allclose(actual_proba, expected_proba)
-        # Regression guard: the old (buggy) reconstruction without the offset must NOT match.
+        # Reconstructing without the offset must not match.
         assert not np.allclose(actual_proba, expit(raw_score))
 
     def test_catboost_predict_proba_reconstructs_raw_offset(self, cost_dataset):
@@ -266,12 +262,12 @@ def cost_data(make_data):
 
 
 class TestCatBoostBackend:
-    """Regression tests for the CatBoost backend passing row indices through ``sample_weight``.
+    """The CatBoost backend must not pass row indices through ``sample_weight``.
 
-    CatBoost calls its objective on chunks of rows, out of order and without any row identifier, so
-    the backend used to smuggle each row's index through ``sample_weight``. CatBoost trains on those
-    weights too, so row 0 was ignored, later rows counted more, and the model depended on row order.
-    The backend now trains on the weighted reformulation built by ``_catboost_training_data``.
+    CatBoost calls its objective on chunks of rows, out of order and without any row identifier, and
+    it trains on ``sample_weight`` too. The backend therefore trains on the weighted reformulation
+    built by ``_catboost_training_data``, so that no row is ignored or counted more and the model does
+    not depend on row order.
     """
 
     def test_reformulated_derivatives_match_aec_kernel(self):

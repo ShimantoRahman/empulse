@@ -63,7 +63,7 @@ class _CachedPenaltyWeights:
             self._start_coef = penalty.start_coef
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # Objectives pickled before the penalty became a property stored it under its own name.
+        # Objectives pickled by older versions stored the penalty as `penalty`.
         if 'penalty' in state:
             state['_penalty'] = state.pop('penalty')
         self.__dict__.update(state)

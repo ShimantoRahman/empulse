@@ -136,7 +136,6 @@ def test_rga_fitness_calculation(generation):
     assert isinstance(generation.fitness, np.ndarray)
     assert generation.population.shape == (10, 1)
     assert generation.fitness.shape == (10,)
-    # Check if fitness is calculated correctly
     for fitness_val, x in zip(generation.fitness, generation.population, strict=False):
         assert fitness_val == pytest.approx(objective(x))
 

@@ -176,9 +176,7 @@ def test_empirical_max_profit_score_class_matches_hand_rolled_delta(empirical_ch
 class TestEmpiricalMaxProfitTiedScores:
     """No threshold can split samples with equal scores, so ties must be targeted as one group.
 
-    The curve used to be accumulated one sample at a time, so its maximum could fall inside a tie
-    group: the result then depended on the order the tied samples happened to be in (84.0 or 9.0
-    for the same data below, depending on the row order).
+    The result must not depend on the row order of the tied samples.
     """
 
     Y_TRUE = np.array([0, 0, 0, 1, 1, 1, 0, 1])
@@ -340,9 +338,8 @@ def _auepc_score_function(normalize=True):
 def test_auepc_single_profitable_point(normalize, expected):
     """The oracle curve turns negative right after its first point, so there is no area to average over.
 
-    Normalizing used to divide by ``(stop_index - 1) / n == 0``. With a single point, the mean ratio
-    is that point's own ratio: the model's top sample is a negative (-1000) where the oracle's is a
-    positive (+100).
+    With a single point, the mean ratio is that point's own ratio: the model's top sample is a negative
+    (-1000) where the oracle's is a positive (+100).
     """
     y = np.array([1, 0, 0, 0])
     y_score = np.array([0.6, 0.9, 0.8, 0.7])
@@ -374,15 +371,14 @@ def test_auepc_no_profitable_sample_scores_zero():
 class TestAUEPCTiedScores:
     """Within a group of tied scores the curve is the expected profit under random tie-breaking.
 
-    The curve used to be accumulated one sample at a time in whatever order the tied samples
-    happened to be in, so the same data scored 1.0 or -0.66 depending on its row order.
+    The score must not depend on the row order of the tied samples.
     """
 
     Y_TRUE = np.array([1, 0, 1, 0, 0, 1, 0, 1])
     Y_SCORE = np.array([0.9, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.1])
 
     def _per_sample_auepc(self, y, y_score, tp, fp):
-        """The old algorithm: one sample at a time, in the order given (stable within ties)."""
+        """AUEPC accumulated one sample at a time, in the order given (stable within ties)."""
         delta = np.where(y == 1, tp, -fp)
         perfect_profits = np.cumsum(np.sort(delta)[::-1])
         profits = np.cumsum(delta[np.argsort(-y_score, kind='stable')])

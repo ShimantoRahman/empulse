@@ -96,7 +96,7 @@ class PicklableLambda:
 
     With ``dummify=True`` the arguments get private names in the generated code, so a symbol named
     after a function the expression calls, such as a parameter ``beta`` beside the Beta function
-    ``beta(alpha, beta)``, no longer shadows it.
+    ``beta(alpha, beta)``, does not shadow it.
     """
 
     func: Callable[..., Any]
@@ -118,14 +118,14 @@ class PicklableLambda:
             # ensuring the lambdified function receives kwargs correctly.
             variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
             expression = self.expression
-            # Instances pickled before `dummify` existed do not carry it.
+            # Instances pickled by older versions lack `dummify`.
             if getattr(self, 'dummify', False):
                 # Substituted here rather than with lambdify's own `dummify`, which still binds the
                 # symbols' names in the function's namespace, where they shadow functions of the same name.
                 dummies = [sympy.Dummy() for _ in variables]
                 expression = expression.xreplace(dict(zip(variables, dummies, strict=True)))
                 variables = dummies
-                # Fresh dummies never equal those of an earlier compile, so there is nothing to reuse.
+                # Fresh dummies are never equal across compiles, so the cached `_lambdify` cannot help here.
                 self.func = sympy.lambdify(variables, expression)  # type: ignore[assignment]
             else:
                 self.func = _lambdify(tuple(variables), expression)
@@ -134,9 +134,9 @@ class PicklableLambda:
         return self.func(*args, **kwargs)
 
     def __deepcopy__(self, memo: dict[int, Any]) -> 'PicklableLambda':
-        # The compiled function is stateless and the expression immutable, so a copy can share both
-        # rather than compile the expression again, as unpickling (which deepcopy defaults to) does.
-        # Cloning an estimator deep-copies its loss, so this is paid per clone in a grid search.
+        # The compiled function is stateless and the expression immutable, so a copy shares both
+        # instead of compiling again, as the default deepcopy through pickling would. Cloning an
+        # estimator deep-copies its loss, so this saves one compile per clone in a grid search.
         new = copy.copy(self)
         memo[id(self)] = new
         return new

@@ -114,7 +114,7 @@ def test_sample_weights_act_like_repeated_rows(make_data, seeded_rng, criterion,
 
 @pytest.mark.parametrize('criterion', ['entropy', 'log_loss'])
 def test_entropy_criterion_grows_beyond_a_stump(make_data, criterion):
-    """Regression test: negative child impurities used to make every entropy tree a stump."""
+    """Negative child impurities must not turn every entropy tree into a stump."""
     X, y = make_data(n_samples=500)
     tree = CSTreeClassifier(criterion=criterion, max_depth=6, random_state=0).fit(X, y, fn_cost=5.0, fp_cost=1.0)
 

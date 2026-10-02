@@ -6,8 +6,8 @@ is rendered from a template rather than from reStructuredText, so its snippets l
 namespace, the way a reader would type them, and each one's result is checked against the value the
 page prints beside it.
 
-That last part is the point. A snippet that still runs but no longer produces what the front page
-says it produces is exactly the kind of drift a landing page invites.
+Checking the results matters because a snippet can still run while no longer producing what the
+front page says it produces.
 """
 
 import sys

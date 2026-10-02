@@ -1,11 +1,8 @@
 """
 Fixtures shared across ``tests/models/``.
 
-``X``/``y`` were previously defined with byte-identical bodies in six modules
-(``test_b2boost.py``, the three ``test_bias_*.py`` files, ``test_cslogit.py`` and
-``test_proflogit.py``), and ``sensitive_feature`` in three. The single-letter names are kept
-because ``X, y`` is the scikit-learn convention and this conftest is scoped to the model tests,
-where that reading is unambiguous.
+The single-letter names ``X`` and ``y`` follow the scikit-learn convention; this conftest is scoped
+to the model tests, where that reading is unambiguous.
 """
 
 import numpy as np

@@ -1,61 +1,44 @@
-"""
-Per-instance metadata routing and cost resolution shared by every cost-sensitive estimator.
+"""Metadata routing and cost resolution shared by the cost-sensitive estimators.
 
 :class:`~empulse.models.CostSensitiveClassifier`, :class:`~empulse.models.RobustCSClassifier` and
-:class:`~empulse.samplers.CostSensitiveSampler` all accept plain ``tp_cost``/``tn_cost``/``fn_cost``/
-``fp_cost`` (or a subset -- the sampler only uses two) and, except for ``RobustCSClassifier``, a
-``loss`` whose cost-matrix parameter names (e.g. ``clv``, ``incentive_cost``) should be routable
-through ``set_{method}_request``, exactly like a builtin ``sample_weight`` -- that is what lets
-:class:`~sklearn.pipeline.Pipeline` and :class:`~sklearn.model_selection.GridSearchCV` carry a
-business parameter like ``clv`` through to ``fit``. :class:`RoutesLossParameters` is the shared home
-for both concerns, so a fix to either lands once instead of drifting across three copies.
+:class:`~empulse.samplers.CostSensitiveSampler` accept plain ``tp_cost``/``tn_cost``/``fn_cost``/
+``fp_cost`` (the sampler uses only two) and, except for ``RobustCSClassifier``, a ``loss`` whose
+cost-matrix parameter names (e.g. ``clv``) can be routed through ``set_{method}_request`` like
+``sample_weight``. This lets :class:`~sklearn.pipeline.Pipeline` and
+:class:`~sklearn.model_selection.GridSearchCV` pass a business parameter such as ``clv`` to ``fit``.
 
-**Metadata routing.** sklearn's ``RequestMethod`` descriptor (``sklearn.utils._metadata_requests``)
-fixes its accepted keys once, at class-definition time, and ``_MetadataRequester.__init_subclass__``
-regenerates it on every subclass from a fixed set of sources (the method's own signature, or
-``__metadata_request__*`` class attributes) -- it has no notion of a key set that depends on which
-*instance* you access it through. Empulse's accepted keys depend on the ``loss`` object passed to
-``__init__``, which is per-instance, so mutating the class-level descriptor (as this package used to
-do, in each of ``CostSensitiveClassifier``, ``CSDecisionRuleClassifier`` and ``CostSensitiveSampler``)
-means the last instance constructed silently overwrites every earlier instance's accepted keys,
-illustrated here without the ``>>>`` doctest prompt so this example is not itself collected as a
-doctest::
+**Metadata routing.** scikit-learn fixes the keys ``set_{method}_request`` accepts when a class is
+defined, but here they depend on the ``loss`` passed to ``__init__``. Changing the class-level
+descriptor per instance would let the last instance constructed overwrite the keys of every earlier
+one::
 
-    a = CSBoostClassifier(loss=empc_score)  # class keys become empc_score's symbols
-    b = CSBoostClassifier(
-        loss=mpcs_score
-    )  # class keys become mpcs_score's symbols -- A's are gone
+    a = CSBoostClassifier(loss=empc_score)
+    b = CSBoostClassifier(loss=mpcs_score)
     a.set_fit_request(clv=True)
     # TypeError: Unexpected args: {'clv'} in fit. Accepted arguments are: {...mpcs_score's names...}
 
-:class:`RoutesLossParameters` fixes this by making both halves of the mechanism per-instance:
+:class:`RoutesLossParameters` computes the keys per instance instead:
 
-- :class:`_LossAwareRequestMethod` recomputes its accepted keys from the *instance* being accessed,
-  instead of serving the keys frozen in at class-definition time.
-- :meth:`RoutesLossParameters.__init_subclass__` swaps a :class:`_LossAwareRequestMethod` in for
-  the plain ``RequestMethod`` sklearn generates on every subclass -- it has to run after
-  ``super().__init_subclass__()``, since that is what generates the descriptor being replaced, and
-  it has to run on every subclass, since sklearn's own hook regenerates its descriptor there too.
+- :class:`_LossAwareRequestMethod` derives its accepted keys from the instance it is accessed through.
+- :meth:`RoutesLossParameters.__init_subclass__` replaces the plain ``RequestMethod`` that scikit-learn
+  generates on every subclass. It runs after ``super().__init_subclass__()`` because that call
+  generates the descriptor, and on every subclass because scikit-learn regenerates it on each one.
 - :meth:`RoutesLossParameters._get_metadata_request` registers each loss parameter name on the
-  instance's own request objects as known-but-not-yet-requested, so it appears in
-  ``set_{method}_request``'s accepted keys and in ``get_metadata_routing()`` without the user
-  having to request it first, and without disturbing a request the user already made explicitly.
+  instance's request objects as known but not requested, so it appears in ``set_{method}_request``
+  and ``get_metadata_routing()`` without overriding a request the user already made.
 
 **Cost resolution.** :meth:`~RoutesLossParameters._check_costs` resolves ``Parameter.UNCHANGED`` costs
 to the constructor's, warns and substitutes ``fp_cost=fn_cost=1`` when every cost is zero, and
 converts array-like costs to ``numpy`` arrays. :meth:`~RoutesLossParameters._route_costs_to_loss`
-forwards an explicitly passed cost argument to a ``loss`` metric when the metric's cost matrix
-happens to use that name as a symbol (several bundled datasets name a symbol ``fp_cost``), and warns
-rather than silently dropping it otherwise. Both read the cost names to resolve from
-:attr:`_cost_names`, so :class:`~empulse.samplers.CostSensitiveSampler` (``('fp_cost', 'fn_cost')``)
-and :class:`~empulse.models.CostSensitiveClassifier` (all four) share one implementation instead of
-three that can drift apart. :meth:`~RoutesLossParameters._take_fit_local_loss` takes a deep copy of
-``self.loss`` for the current fit: a module-level prebuilt metric such as ``empc_score`` is shared by
-every caller in the process and memoizes per-call state on itself (the boosting objective, the Monte
-Carlo sample grid, the RNG), so two concurrent fits through one prebuilt metric would read each
-other's cache without this. :meth:`~RoutesLossParameters._get_metric_loss` prefers that per-fit copy
-once one has been taken, so nothing below that point mutates a metric object the caller still holds a
-reference to.
+forwards an explicitly passed cost argument to a ``loss`` metric whose cost matrix uses that name as
+a symbol (several bundled datasets name a symbol ``fp_cost``), and warns about it otherwise. Both
+read the cost names from :attr:`_cost_names`.
+
+:meth:`~RoutesLossParameters._take_fit_local_loss` deep-copies ``self.loss`` for the current fit. A
+prebuilt metric such as ``empc_score`` is shared by every caller in the process and caches state on
+itself (the boosting objective, the Monte Carlo sample grid, the RNG), so two concurrent fits would
+otherwise read each other's cache. :meth:`~RoutesLossParameters._get_metric_loss` returns that copy
+once it exists, so nothing mutates a metric the caller still holds.
 """
 
 from __future__ import annotations
@@ -264,10 +247,9 @@ class RoutesLossParameters:
         return set(loss._all_symbols) if loss is not None else set()
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        # sklearn's own __init_subclass__ (de)generates a plain RequestMethod for every
-        # set_{method}_request on every subclass definition; let it run first, then replace
-        # what it just installed. Running this only once (e.g. at import time on the base class)
-        # would not survive a grandchild class, whose own __init_subclass__ pass overwrites it again.
+        # scikit-learn's __init_subclass__ installs a plain RequestMethod for every set_{method}_request
+        # on each subclass. Let it run first, then replace what it installed; one replacement on the
+        # base class would not survive a grandchild class.
         super().__init_subclass__(**kwargs)
         for method in cls._routed_methods:
             name = f'set_{method}_request'

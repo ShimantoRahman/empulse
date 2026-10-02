@@ -32,7 +32,7 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> in
     n_not_sensitive = len(not_sensitive_indices)
     n = n_sensitive + n_not_sensitive
 
-    # no swapping needed if one of the groups is empty
+    # With one group empty there is nothing to swap.
     if n_sensitive == 0 or n_not_sensitive == 0:
         warnings.warn(
             'sensitive_feature only contains one class, no relabeling is performed.',
@@ -46,7 +46,6 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> in
 
     discrimination = pos_ratio_not_sensitive - pos_ratio_sensitive
 
-    # number of pairs to swap label
     return int(abs(round((discrimination * n_sensitive * n_not_sensitive) / n)))
 
 
@@ -123,12 +122,10 @@ def relabel(
     promotion_candidates = _get_promotion_candidates(probas_sensitive, y_binarized[sensitive_indices], n_pairs)
     negative_label, positive_label = classes
 
-    # map promotion and demotion candidates to original indices
     indices = np.arange(len(y))
     demotion_candidates = indices[non_sensitive][demotion_candidates]
     promotion_candidates = indices[sensitive_indices][promotion_candidates]
 
-    # relabel the data
     if hasattr(y, 'copy'):
         relabeled_y = y.copy()
     elif hasattr(y, 'clone'):
@@ -169,7 +166,6 @@ def resample_indices(
 
     strategy_fn = RESAMPLE_STRATEGIES[strategy] if isinstance(strategy, str) else strategy
     class_weights = strategy_fn(y_binarized, sensitive_feature)
-    # if class_weights are all 1, no resampling is needed
     if np.allclose(class_weights, np.ones(class_weights.shape)):
         return np.arange(len(y))
 
@@ -183,20 +179,19 @@ def resample_indices(
         return np.arange(len(y))
 
     indices = np.empty((0,), dtype=int)
-    # determine the number of samples to be drawn for each class and sensitive_feature value
     for target_class, sensitive_val in product(np.unique(y_binarized), unique_attr):
         sensitive_val = int(sensitive_val)
         idx_class = np.flatnonzero(y_binarized == target_class)
         idx_sensitive_feature = np.flatnonzero(sensitive_feature == sensitive_val)
         idx_class_sensitive = np.intersect1d(idx_class, idx_sensitive_feature)
         n_samples = int(class_weights[target_class, sensitive_val] * len(idx_class_sensitive))
-        if n_samples > len(idx_class_sensitive):  # oversampling
+        if n_samples > len(idx_class_sensitive):
             indices = np.concatenate((indices, idx_class_sensitive))
             indices = np.concatenate((
                 indices,
                 rng.choice(idx_class_sensitive, n_samples - len(idx_class_sensitive), replace=True),
             ))
-        else:  # undersampling
+        else:
             indices = np.concatenate((indices, rng.choice(idx_class_sensitive, n_samples, replace=False)))
 
     return indices

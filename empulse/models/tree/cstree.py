@@ -15,10 +15,9 @@ from .._base.cost_sensitive import CostSensitiveClassifier
 from ._cstree import CostTree, ccp_pruning_path, cost_records
 from ._cstree._grow import TREE_PARAM_CONSTRAINTS, TreeParams, as_float32, grow_tree, resolve_tree_params
 
-# The smallest decrease of the training cost per sample, relative to the average cost per sample,
-# that `min_impurity_decrease=None` counts as a decrease rather than rounding. On a million samples,
-# rounding left splits that change nothing with a relative decrease below 1e-16, while the smallest
-# real decrease was 2e-10, so this sits well clear of both.
+# The smallest cost decrease per sample, relative to the average cost per sample, that
+# `min_impurity_decrease=None` counts as a real decrease. On a million samples, rounding errors
+# stayed below 1e-16 while the smallest real decrease was 2e-10, so this sits well clear of both.
 _RELATIVE_MIN_COST_DECREASE = 1e-12
 
 

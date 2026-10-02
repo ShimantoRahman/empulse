@@ -343,9 +343,8 @@ def test_requires_dynamic_boost_objective(strategy_factory, expected):
 def test_requires_dynamic_boost_objective_survives_rename():
     """Renaming a strategy (e.g. via Metric.__name__) must not change its objective capability.
 
-    Regression test: CSBoostClassifier used to dispatch on `strategy.name`, which
-    `Metric.__name__`'s setter overwrites - every prebuilt metric (empc_score, mpc_score, ...)
-    renames its strategy this way, so they all silently took the wrong branch.
+    CSBoostClassifier must not dispatch on `strategy.name`, which `Metric.__name__`'s setter
+    overwrites: every prebuilt metric (empc_score, mpc_score, ...) renames its strategy this way.
     """
     strategy = MaxProfit()
     strategy.name = 'my_custom_metric'

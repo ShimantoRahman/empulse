@@ -33,7 +33,6 @@ cdef Tree* choose_different_tree(RandState* rng, Forest* population, int current
     if population.n_trees <= 1:
         return copy_tree(population.trees[0])
 
-    # Keep selecting until we get a different index
     partner_index = rand_int(rng, 0, population.n_trees)
     while partner_index == current_index:
         partner_index = rand_int(rng, 0, population.n_trees)

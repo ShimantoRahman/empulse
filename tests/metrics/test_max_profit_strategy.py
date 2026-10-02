@@ -131,8 +131,7 @@ class TestPartitionSupport:
 
         ``clv**2 = contact_cost * pi_1 * (F_1 - F_3) / (pi_0 * (F_0 - F_2))`` gives 0.8 and 3.2, so
         the boundaries are their square roots. The negative roots fall outside the support and must
-        be dropped, not clipped onto it: clipping used to leave degenerate zero-width regions
-        whose labels then displaced the real ones.
+        be dropped, not clipped onto it, which would leave degenerate zero-width regions.
         """
         partition = self._call(self._coefficients(degree=2, sign=1))
 
@@ -258,8 +257,8 @@ class TestHandBuiltDensity:
     def test_piecewise_matches_quadrature(self):
         """``ContinuousRV`` carries a Lambda and a support set where a named distribution carries
         numeric parameters, so the "every parameter is a literal" shortcut must not try to read
-        them as floats. It used to, which made the exact path raise ``TypeError: Cannot convert
-        expression to float`` for every hand-built density.
+        them as floats. Otherwise the exact path raises ``TypeError: Cannot convert expression to
+        float`` for every hand-built density.
         """
         rng = np.random.default_rng(0)
         y_true = rng.integers(0, 2, 200)
@@ -329,7 +328,7 @@ class TestPiecewiseAgreesWithBruteForce:
 
     @pytest.mark.parametrize('degree', [1, 2, 3])
     def test_normal_including_negative_support(self, hull_data, degree):
-        """Even powers over a support that straddles zero are where the old ordering broke down."""
+        """Even powers over a support that straddles zero."""
         y_true, y_score = hull_data
         clv = sympy.stats.Normal('clv', 0, 1)
         metric = Metric(CostMatrix().add_tp_benefit(clv**degree).add_fp_cost(self.COST), MaxProfit())
@@ -340,16 +339,16 @@ class TestPiecewiseAgreesWithBruteForce:
 
 class TestProfitFunctionsBeyondRadicals:
     """
-    Profit shapes the symbolic root solver could not reach.
+    Profit functions of degree five and above, and non-polynomial ones.
 
     Degree five and above has no solution in radicals, and ``exp``/``log``/``sqrt`` are not
-    polynomials at all. Boundaries are found numerically now, so neither is special.
+    polynomials at all. Boundaries are found numerically, so neither is special.
     """
 
     COST = sympy.Symbol('d')
 
     def test_quintic_builds_and_scores(self, hull_data):
-        """``sympy.solve`` returns an empty list here, which used to read as 'no real roots'."""
+        """``sympy.solve`` returns an empty list here, which must not be read as 'no real roots'."""
         y_true, y_score = hull_data
         clv = sympy.stats.Uniform('clv', 0, 10)
         metric = Metric(CostMatrix().add_tp_benefit(clv**5 + clv**2 + 1).add_fp_cost(self.COST), MaxProfit())
@@ -369,7 +368,7 @@ class TestProfitFunctionsBeyondRadicals:
         ],
     )
     def test_non_polynomial_profit(self, hull_data, name, symbolic, numeric):
-        """Constructing these used to raise ``PolynomialError`` out of ``is_linear_in``."""
+        """Constructing these must not raise ``PolynomialError`` out of ``is_linear_in``."""
         y_true, y_score = hull_data
         clv = sympy.stats.Uniform('clv', 0, 10)
         metric = Metric(CostMatrix().add_tp_benefit(symbolic(clv)).add_fp_cost(self.COST), MaxProfit())
@@ -401,8 +400,7 @@ class TestProfitFunctionsBeyondRadicals:
         The optimal rate is exact at any degree.
 
         The rate does not depend on the stochastic variable at all -- only on which vertex is
-        optimal -- so its expectation is always a plain probability-of-region weighting. Linearity
-        was only ever needed to keep the old region ordering valid.
+        optimal -- so its expectation is always a plain probability-of-region weighting.
         """
         y_true, y_score = hull_data
         clv = sympy.stats.Uniform('clv', 0, 10)
@@ -467,9 +465,10 @@ def test_objective_max_profit_logit_deterministic():
 
 
 def test_max_profit_logit_alpha_is_constant():
-    """MaxProfit's logit objective no longer anneals alpha internally (see CHANGELOG): alpha is a
-    plain constant that only ``set_alpha`` can change. Annealing on the logit path is now solely
-    the job of an optimizer ``alpha_schedule`` (e.g. :class:`~empulse.optimizers.ExponentialSchedule`).
+    """MaxProfit's logit objective keeps alpha constant: only ``set_alpha`` changes it.
+
+    Annealing on the logit path is solely the job of an optimizer ``alpha_schedule`` (e.g.
+    :class:`~empulse.optimizers.ExponentialSchedule`).
     """
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
@@ -534,11 +533,9 @@ def test_objective_boost_max_profit_deterministic_linear():
 
 
 def test_objective_boost_max_profit_alpha_is_constant_across_fits():
-    """Regression test: MaxProfit's boosting-side alpha used to anneal via an epoch counter that
-    was reset only in `build()` (i.e. once, from `Metric.__init__`), so a second call resumed
-    annealing from wherever the first call left off, making repeated calls on the same `Metric`
-    non-reproducible. Alpha is now a plain constant, so repeated calls with identical inputs must
-    return identical results.
+    """MaxProfit's boosting-side alpha is a plain constant.
+
+    Repeated calls with identical inputs on the same `Metric` must return identical results.
     """
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=2.0))

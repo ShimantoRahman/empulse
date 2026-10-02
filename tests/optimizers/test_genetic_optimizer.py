@@ -9,11 +9,9 @@ from empulse.optimizers import GeneticAlgorithmOptimizer, MemeticOptimizer
 class _ConstantLossObjective:
     """A degenerate objective whose loss is always exactly 0.0.
 
-    Used to reproduce MODELS_OPTIMIZERS_REVIEW.md item 18: the stagnation check's relative
-    improvement used to divide by ``abs(previous_score)`` directly, which is exactly 0 here and
-    silently produces ``nan`` (comparing ``False`` against tolerance and disabling early stopping)
-    rather than raising, so the regression is that the run must actually converge via `patience`
-    instead of always exhausting `max_iter`.
+    The stagnation check's relative improvement divides by ``abs(previous_score)``, which is exactly 0
+    here. That must not silently produce ``nan`` (comparing ``False`` against tolerance and disabling
+    early stopping): the run must converge via `patience` instead of always exhausting `max_iter`.
     """
 
     def logit_loss(self, weights: np.ndarray) -> float:
@@ -61,8 +59,8 @@ class _QuadraticGradObjective:
 
 
 class TestMemeticOptimizer:
-    """MODELS_OPTIMIZERS_REVIEW.md item 40: bounds should be a (min, max) tuple, matching
-    GeneticAlgorithmOptimizer, and an invalid `optimizer` string should fail fast at construction.
+    """`bounds` is a (min, max) tuple, matching GeneticAlgorithmOptimizer, and an invalid `optimizer`
+    string fails fast at construction.
     """
 
     def test_bounds_is_tuple_not_float(self):

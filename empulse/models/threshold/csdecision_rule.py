@@ -176,11 +176,10 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         )
         no_costs_no_loss = self._all_init_costs_zero() and costs_not_provided and self.loss is None
 
-        # Second condition: loss exists but the caller left at least one required parameter
-        # unsupplied. `_missing_parameters` treats a parameter as covered under either its symbol
-        # name or any alias (never both), and ignores unrelated extra keys (e.g. sample_weight) -
-        # unlike a direct comparison against `_all_parameters`, which lists both spellings and can
-        # never be satisfied for an aliased metric.
+        # Second condition: loss exists but the caller left a required parameter unsupplied.
+        # `_missing_parameters` accepts a parameter under its symbol name or any alias and ignores
+        # unrelated keys such as sample_weight. Comparing against `_all_parameters` would never be
+        # satisfied for an aliased metric, because it lists both spellings.
         loss_without_params = self.loss is not None and bool(self.loss._missing_parameters(params.keys()))
 
         return no_costs_no_loss or loss_without_params
@@ -673,8 +672,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             return CalibratedClassifierCV(estimator, method=self.calibrator, cv=cv, ensemble=False)
         else:
-            # Clone first so refitting a fitted decision-rule classifier cannot mutate the
-            # calibrator instance the caller passed to __init__.
+            # Clone so refitting cannot mutate the calibrator the caller passed to __init__.
             return clone(self.calibrator).set_params(estimator=estimator)  # type: ignore[union-attr]
 
     def _fit_estimator(
@@ -710,7 +708,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         y_score: FloatNDArray,
         loss_params: dict[str, Any],
     ) -> float | FloatNDArray:
-        # Convert instance-dependent costs to class-dependent so we only get a single threshold.
+        # A single threshold needs class-dependent costs.
         for key, value in list(loss_params.items()):
             loss_params[key] = _to_class_dependent_cost(value)
         return loss.optimal_threshold(y, y_score, **loss_params)

@@ -102,7 +102,6 @@ def process_credit_scoring_pakdd(
     target_col = 'TARGET_LABEL_BAD=1'
     income_col = 'PERSONAL_NET_INCOME'
 
-    # Replace sentinel strings with null, then cast and filter
     df = df.with_columns(
         nw
         .when(nw.col(income_col).is_in(['N', '']))
@@ -114,18 +113,17 @@ def process_credit_scoring_pakdd(
 
     target_series = df.select(nw.col(target_col).cast(nw.Int64).alias('default'))['default']
 
-    # Feature columns: all except the target and the last (trailing) column
+    # The last column is not a feature.
     all_cols = df.columns
     feature_col_names = [c for c in all_cols if c != target_col][:-1]
     feat = df.select(feature_col_names)
 
-    # 1. Encode FLAG columns (Y → 1, anything else → 0)
+    # FLAG columns hold Y or something else; encode them as 1 and 0.
     flag_cols = [c for c in feat.columns if c.upper().startswith('FLAG')]
     feat = feat.with_columns(*[
         nw.when(nw.col(col) == 'Y').then(nw.lit(1)).otherwise(nw.lit(0)).cast(nw.UInt8).alias(col) for col in flag_cols
     ])
 
-    # 2. Normalise column names
     def _norm(name: str) -> str:
         return (
             name
@@ -138,7 +136,6 @@ def process_credit_scoring_pakdd(
 
     feat = feat.rename({col: _norm(col) for col in feat.columns})
 
-    # 3. Value mappings
     feat = feat.with_columns(
         nw
         .when(nw.col('sex') == 'M')
@@ -170,7 +167,6 @@ def process_credit_scoring_pakdd(
         .alias('residence_type'),
     )
 
-    # 4. Rename to descriptive names
     pakdd_renames = {
         'flag_residence_town_eq_working_town': 'lives_in_work_town',
         'flag_residence_state_eq_working_state': 'lives_in_work_state',
@@ -189,7 +185,6 @@ def process_credit_scoring_pakdd(
     }
     feat = feat.rename({k: v for k, v in pakdd_renames.items() if k in feat.columns})
 
-    # 5. Canonical column order
     pakdd_order = [
         'age',
         'personal_net_income',
@@ -219,7 +214,6 @@ def process_credit_scoring_pakdd(
     ]
     feat = feat.select([col for col in pakdd_order if col in feat.columns])
 
-    # 6. Type casting
     feat = feat.with_columns(
         nw.col('age').cast(nw.UInt8),
         nw.col('personal_net_income').cast(nw.Float32),
@@ -258,14 +252,13 @@ def process_iranian_churn(
     target_col = _find_column(raw, ('Churn', 'churn', 'Class', 'class'))
     feature_cols = [c for c in raw if c not in {clv_col, target_col}]
 
-    # Detect yes/no columns from raw strings BEFORE building the frame
+    # Detect yes/no columns on the raw strings, before the frame is built.
     yes_no_norm: set[str] = {
         _sanitize_column_name(col)
         for col in feature_cols
         if {str(v).strip().lower() for v in raw[col] if v is not None and str(v).strip()} <= {'yes', 'no'}
     }
 
-    # Build feature dict with sanitised column names and string values
     feat_dict: dict[str, list[str | None]] = {
         _sanitize_column_name(col): [str(v) if v is not None else None for v in raw[col]] for col in feature_cols
     }
@@ -351,7 +344,6 @@ def process_give_me_some_credit(
     debt_ratio_np : numpy array
     target_np : numpy array
     """
-    # Normalise column names
     renamed: dict[str, list[Any]] = {}
     for col, vals in raw.items():
         stripped = col.strip()
@@ -375,7 +367,6 @@ def process_give_me_some_credit(
 
     df = nw.from_dict(renamed, backend=backend)
 
-    # Handle missing values and cast income/debt
     df = df.with_columns(
         nw
         .when(nw.col('monthly_income').is_in(['?', 'NA', '']))
@@ -396,7 +387,6 @@ def process_give_me_some_credit(
         & (nw.col('debt_ratio') < 1)
     )
 
-    # Encode target (handles numeric strings and Yes/No variants)
     target_as_int = (
         nw
         .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
@@ -411,7 +401,6 @@ def process_give_me_some_credit(
     debt_ratio_np: FloatNDArray = df['debt_ratio'].cast(nw.Float64).to_numpy()
     target_np: FloatNDArray = target_series.to_numpy()
 
-    # Select and type-cast feature columns
     available_features = [c for c in _GIVE_ME_SOME_CREDIT_FEATURE_ORDER if c in df.columns]
     float_cols = {'monthly_income', 'debt_ratio', 'revolving_utilization'}
     feat = df.select(*[
@@ -453,10 +442,9 @@ def process_telco_customer_churn(
     """
     df = nw.from_dict(raw, backend=backend)
 
-    # Filter out empty/blank TotalCharges (dropping 11 rows with missing charges, matching the paper's N=7032)
+    # Drop the 11 rows with blank TotalCharges, which matches the paper's N=7032.
     df = df.filter(~nw.col('TotalCharges').is_null() & ~nw.col('TotalCharges').is_in(['', ' ']))
 
-    # Target
     target_series = df.select(
         nw
         .when(nw.col('Churn').is_in(['Yes', 'yes', '1', '1.0']))
@@ -468,7 +456,6 @@ def process_telco_customer_churn(
 
     monthly_charges: FloatNDArray = df['MonthlyCharges'].cast(nw.Float64).to_numpy()
 
-    # Drop customerID and Churn from features
     feature_cols = [c for c in df.columns if c not in {'customerID', 'CustomerID', 'customer_id', 'Churn', 'churn'}]
 
     numeric_cols = {'tenure', 'MonthlyCharges', 'TotalCharges', 'SeniorCitizen'}
@@ -536,7 +523,6 @@ def process_default_credit_card_clients(
     """
     df = nw.from_dict(raw, backend=backend)
 
-    # Map column names if present
     col_map = {}
     for c in df.columns:
         c_low = c.lower().strip()
@@ -671,7 +657,7 @@ def process_credit_card_fraud(
     target_col = _find_column(dict.fromkeys(df.columns), ('Class', 'class', 'target', 'fraud'))
     amt_col = _find_column(dict.fromkeys(df.columns), ('Amount', 'amount', 'transactionamt'))
 
-    # Filter out zero/negative amount transactions (following Hoppner et al., 2022 and Vanderschueren et al., 2022)
+    # Drop zero and negative amounts, following Hoppner et al. (2022) and Vanderschueren et al. (2022).
     amt_expr = nw.col(amt_col).cast(nw.Float64)
     df = df.filter(~amt_expr.is_null() & (amt_expr > 0))
 
@@ -686,7 +672,7 @@ def process_credit_card_fraud(
 
     amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
 
-    # Drop non-predictive sequential Time index and target Class
+    # Time is a sequential index, not a predictor.
     drop_cols = {target_col, 'Time', 'time'}
     feature_cols = [c for c in df.columns if c not in drop_cols]
 
@@ -1066,7 +1052,7 @@ def process_cell2cell(
     """
     df = nw.from_dict(raw, backend=backend)
 
-    # Filter out rows with missing MonthlyRevenue (156 rows, 0.31%), matching standard practice
+    # Drop the 156 rows (0.31%) without MonthlyRevenue.
     rev_col = _find_column(dict.fromkeys(df.columns), ('MonthlyRevenue', 'monthly_revenue', 'monthlyrevenue'))
     df = df.filter(~nw.col(rev_col).is_null() & ~nw.col(rev_col).is_in(['', 'NA', '?', 'None']))
 
@@ -1082,11 +1068,9 @@ def process_cell2cell(
 
     monthly_revenue: FloatNDArray = df[rev_col].cast(nw.Float64).to_numpy()
 
-    # Drop ID and target columns
     id_cols = {'CustomerID', 'customerid', 'customer_id'}
     feature_cols = [c for c in df.columns if c != target_col and c not in id_cols]
 
-    # Categorical features in Cell2Cell
     categorical_cols = {
         _snake_case_column_name(col)
         for col in (

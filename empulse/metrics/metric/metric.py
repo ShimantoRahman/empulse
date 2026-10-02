@@ -218,8 +218,7 @@ class Metric(BaseMetric):
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
         # The parameter names, and the cost matrix state they were found for; see _all_parameters.
         self._all_parameters_cache: tuple[tuple[Any, ...], frozenset[str]] | None = None
-        # Built lazily on first _evaluate_costs(replace_stochastic=True) call,
-        # since most metrics are deterministic and would never use it.
+        # Built on the first _evaluate_costs(replace_stochastic=True) call; most metrics never need it.
         self._mean_substituted_costs: (
             tuple[
                 sympy.Expr,
@@ -293,7 +292,6 @@ class Metric(BaseMetric):
             | self.fn_cost.free_symbols
         )
 
-        # Extract parameters from stochastic variables
         stochastic_params = set()
         for expr in [
             self.cost_matrix.tp_cost,
@@ -326,7 +324,7 @@ class Metric(BaseMetric):
             cost_matrix._fn_cost,
             tuple(cost_matrix._aliases),
         )
-        # getattr: a metric pickled before this cache existed has no such attribute.
+        # getattr: metrics pickled by older versions lack the cache.
         cached = getattr(self, '_all_parameters_cache', None)
         if (
             cached is not None
@@ -347,7 +345,6 @@ class Metric(BaseMetric):
             | self.fn_cost.free_symbols
         )
 
-        # Extract parameters from stochastic variables
         stochastic_symbols = set()
         stochastic_params = set()
         for expr in [
@@ -435,14 +432,10 @@ class Metric(BaseMetric):
             would make instance-dependent training measurably slower for no benefit: the values
             are fixed for the whole fit.
         """
-        # Use a separate output dict to avoid dual-purpose mutation of kwargs
         params: dict[str, FloatArrayLike | float] = {}
 
-        # Map aliases to the appropriate symbol names. Track which caller-supplied key each
-        # resolved symbol name came from, so that passing both a symbol and one of its aliases
-        # (or two different aliases for the same symbol) raises instead of silently letting
-        # whichever kwarg happens to be seen last win - which would make the result depend on
-        # the caller's kwarg order.
+        # Resolve aliases to symbol names. Passing a symbol and one of its aliases, or two aliases of
+        # one symbol, raises; otherwise the last kwarg would win and the result would depend on kwarg order.
         resolved_from: dict[str, str] = {}
         for key, value in kwargs.items():
             alias_target = self.cost_matrix._aliases.get(key)
@@ -455,12 +448,11 @@ class Metric(BaseMetric):
             resolved_from[symbol_name] = key
             params[symbol_name] = value
 
-        # Use default values if not provided
         for key, value in self.cost_matrix._defaults.items():
             params.setdefault(key, value)
 
-        # Warn about unknown parameters (likely typos), excluding strategy-specific extras
-        # and sklearn metadata-routing kwargs (e.g. sample_weight passed via fit()).
+        # Warn about unknown parameters, which are likely typos. Strategy extras and scikit-learn's
+        # metadata-routing kwargs (e.g. sample_weight passed via fit()) are known.
         sklearn_internal_params = frozenset({'sample_weight'})
         known = self._all_parameters | self.strategy._extra_kwargs | sklearn_internal_params
         extra_keys = set(params) - known

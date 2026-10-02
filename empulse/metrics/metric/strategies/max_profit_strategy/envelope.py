@@ -7,13 +7,10 @@ vertex therefore contributes one candidate curve ``P_m(x)``, and the optimal thr
 of ``x`` is the **upper envelope** of those ``M`` curves. The piecewise regions the EMP integrates
 over are exactly the intervals on which a single curve is on top.
 
-Computing the envelope needs no assumption about how the optimum moves along the hull. Earlier
-versions solved the indifference equation symbolically, sorted every root branch globally and zipped
-the sorted bounds against the vertex list; that pairing is only valid while the optimal vertex
-traverses the hull monotonically in ``x``, which holds for a profit function linear in ``x`` and
-fails from degree two upwards.
+The envelope needs no assumption about how the optimal vertex moves along the hull in ``x``. In
+particular, it need not move monotonically, which holds only for a profit function linear in ``x``.
 
-Two consequences fall out of the envelope formulation:
+Two consequences follow from this formulation:
 
 * Complex roots need no special handling. A conjugate pair means the two vertices never swap on the
   real line, so they contribute no breakpoint and the dominant one simply wins its whole interval.

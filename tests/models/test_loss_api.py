@@ -185,9 +185,9 @@ def test_data_types_metric_loss(estimator, cost_dataset):
     """Test that the estimators accept different data types when using metric loss."""
     X, y, _, _ = cost_dataset
     tp_cost = 0
-    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
-    # cost matrix that Metric.optimal_threshold() now correctly rejects, which isn't what this test is about.
+    # +0.5 keeps tn_cost off integer values, so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
+    # threshold's denominator) never lands on exactly 0 for any sample. That would be a degenerate
+    # cost matrix, which Metric.optimal_threshold() rejects.
     tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
@@ -246,10 +246,9 @@ def test_data_types_metric_loss_predict_time(estimator, cost_dataset):
     """Test that predict-time estimators accept different data types through the Metric loss API."""
     X, y, _, _ = cost_dataset
     tp_cost = 0
-    # +0.5 keeps tn_cost off integer values so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample - a genuinely degenerate
-    # cost matrix that Metric.optimal_threshold() now correctly rejects (see
-    # METRIC_CORE_REVIEW.md finding 08), which isn't what this test is about.
+    # +0.5 keeps tn_cost off integer values, so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
+    # threshold's denominator) never lands on exactly 0 for any sample. That would be a degenerate
+    # cost matrix, which Metric.optimal_threshold() rejects.
     tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
@@ -313,10 +312,8 @@ def test_metric_loss_metadata_routing(estimator, cost_dataset):
 
 # --- MixtureMetric as a loss ---------------------------------------------------------------------
 #
-# Cost-sensitive models used to hard-code `Metric` as the only accepted `loss` type, both in sklearn's
-# `_parameter_constraints` and in scattered `isinstance(loss, Metric)` checks. A `MixtureMetric` --
-# despite implementing every method a `Metric` does -- was rejected by parameter validation before a
-# model ever got to use it. Models now accept any `BaseMetric`.
+# Cost-sensitive models accept any `BaseMetric` as their `loss`, including a `MixtureMetric`, which
+# implements every method a `Metric` does without being one.
 
 
 @pytest.fixture(scope='module')
@@ -327,7 +324,7 @@ def mixture_dataset():
 
 @pytest.fixture()
 def two_point_mixture():
-    """A MaxProfit MixtureMetric mixing two point masses of `gamma` -- gradient-trainable today."""
+    """A MaxProfit MixtureMetric mixing two point masses of `gamma`, which is gradient-trainable."""
     gamma, roi = sympy.symbols('gamma roi')
     metric_det = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost(roi), MaxProfit())
     return MixtureMetric([
@@ -403,8 +400,8 @@ def test_cslogit_mixture_metric_matches_weighted_average_gamma(mixture_dataset):
 def test_cslogit_mixture_metric_weights_are_not_ignored(mixture_dataset):
     """Two mixtures with swapped weights must fit to different coefficients.
 
-    This guards against a class of bug where a mixture's weights are silently dropped and every
-    component ends up contributing equally (or only one component's `parameters` override wins).
+    This guards against a mixture's weights being silently dropped, so that every component
+    contributes equally (or only one component's `parameters` override wins).
     """
     X, y = mixture_dataset
     gamma, roi = sympy.symbols('gamma roi')

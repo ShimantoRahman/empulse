@@ -6,8 +6,7 @@
 # min(sum w_i a_i, sum w_i b_i) / sum w_i. The gini and entropy criteria weight the two sides by a
 # class-purity term (Correa Bahnsen et al., 2015).
 #
-# The sums are kept per class, and added up in the same order as the scikit-learn based criterion
-# this replaces, so the impurities, and hence the fitted trees, come out the same to the last bit.
+# The sums are kept per class and added in sample order.
 
 from libc.math cimport fmin, log as ln
 

@@ -122,11 +122,9 @@ def statistical_parity(y, sensitive_feature):
     statistical_parity : float
         The statistical parity value.
     """
-    # Calculate the probabilities of positive outcomes for protected and non-protected groups
     prob_positive_protected = y[sensitive_feature == 1].mean()
     prob_positive_non_protected = y[sensitive_feature == 0].mean()
 
-    # Calculate the statistical parity
     statistical_parity = prob_positive_protected - prob_positive_non_protected
 
     return statistical_parity

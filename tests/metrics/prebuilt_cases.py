@@ -1,8 +1,8 @@
 """
 The table of prebuilt metrics under test, and how each maps onto its reference implementation.
 
-``tests/metrics/reference/`` holds the pre-refactor NumPy implementations, kept purely as ground
-truth. Every prebuilt metric in ``empulse.metrics`` is checked against its entry here by
+``tests/metrics/reference/`` holds hand-written NumPy implementations that serve as ground truth.
+Every prebuilt metric in ``empulse.metrics`` is checked against its entry here by
 ``test_prebuilt_metric_contract.py``.
 
 Two behaviour differences between the package and the reference are intentional and are encoded in

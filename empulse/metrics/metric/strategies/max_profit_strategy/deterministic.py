@@ -123,7 +123,7 @@ class _BaseMaxProfitDeterministic:
 
     def _class_values(self, kwargs: dict[str, Any]) -> tuple[float, float, float, float] | None:
         """Evaluate the class terms, or ``None`` when they are unknown or not all scalars."""
-        # Instances pickled before the class terms were kept do not carry them.
+        # Instances pickled by older versions lack the class terms.
         class_term_fns = getattr(self, '_class_term_fns', None)
         class_terms = getattr(self, 'class_terms', None)
         if class_term_fns is None or class_terms is None:

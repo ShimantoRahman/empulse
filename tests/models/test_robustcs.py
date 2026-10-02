@@ -82,10 +82,9 @@ def test_robustcs_mixture_metric_loss(classification_data):
     """
     A ``MixtureMetric`` loss is imputed, not rejected.
 
-    Previously ``RobustCSClassifier.fit`` raised ``NotImplementedError`` for any loss that
-    wasn't a plain ``Metric``, since it could only walk a single ``CostMatrix``'s sympy
-    expressions directly. ``BaseMetric._outlier_sensitive_parameters()`` now answers the same
-    question uniformly, so a ``MixtureMetric`` (here, trivially, one component) works too.
+    ``BaseMetric._outlier_sensitive_parameters()`` answers which parameters are outlier-sensitive
+    uniformly for a ``Metric`` and a ``MixtureMetric`` (here, trivially, one component), so
+    ``RobustCSClassifier`` does not need to walk a single ``CostMatrix``'s sympy expressions.
     """
     X, y = classification_data
 
@@ -108,11 +107,11 @@ def test_robustcs_mixture_metric_loss(classification_data):
     ids=['minus_one_one', 'strings', 'two_five'],
 )
 def test_outlier_detection_does_not_depend_on_label_encoding(labels):
-    """Regression test: the classes were selected with ``y > 0`` and ``y == 0``.
+    """Outlier detection does not depend on the label encoding.
 
-    With labels other than 0/1, no sample matched ``y == 0``, so the negative-class costs
-    (``fp_cost``, ``tn_cost``) were silently never cleaned; with labels such as 2/5 every sample
-    counted as positive.
+    Selecting the classes with ``y > 0`` and ``y == 0`` would match no sample on ``y == 0`` for labels
+    other than 0/1, so the negative-class costs (``fp_cost``, ``tn_cost``) would never be cleaned;
+    with labels such as 2/5 every sample would count as positive.
     """
     X, y = make_classification(n_samples=300, random_state=0)
     fp_cost = np.random.default_rng(0).random(300)

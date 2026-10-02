@@ -1,12 +1,10 @@
 """
-Regression tests for per-instance metadata routing (``empulse._common._cost_routing``).
+Tests for per-instance metadata routing (``empulse._common._cost_routing``).
 
 sklearn's ``RequestMethod`` descriptor fixes its accepted keys at class-definition time.
 Empulse's accepted keys depend on the ``loss`` instance each estimator was constructed with, so
-the package used to install a fresh ``RequestMethod`` on ``self.__class__`` from ``__init__`` --
-which meant constructing a *second* instance of the same class with a different loss silently
-overwrote the routing keys of every earlier instance. The tests below reproduce that scenario and
-would fail against the old class-mutating implementation.
+constructing a *second* instance of the same class with a different loss must not overwrite the
+routing keys of any earlier instance. The tests below build that scenario.
 """
 
 import pytest
@@ -50,8 +48,8 @@ class TestRoutingIsPerInstance:
         a = CSBoostClassifier(loss=loss_a)
         b = CSBoostClassifier(loss=loss_b)
 
-        # Order matters for the regression this guards: `b` is constructed *after* `a`, which is
-        # exactly what broke the class-mutating implementation.
+        # Order matters: `b` is constructed *after* `a`, which is what would overwrite `a`'s keys if
+        # the routing were installed on the class.
         a.set_fit_request(clv=True)
         b.set_fit_request(roi=True)
 

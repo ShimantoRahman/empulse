@@ -1,22 +1,13 @@
 """
 The sympy.stats distributions with a closed-form piecewise treatment, as scipy equivalents.
 
-``piecewise.py`` used to carry two parallel 11-branch ``isinstance(distribution, sympy.stats.
-crv_types.XDistribution)`` chains -- one in ``_build_max_profit_score_piecewise``, one in
-``_build_max_profit_rate_piecewise`` -- agreeing on which distributions get a closed-form
-treatment and differing only in which ``(scipy_dist, param_adapter)`` pair each branch used for
-the *rate* side (the score side additionally picks a distribution-specific score class; that
-mapping stays in ``piecewise.py`` itself, since the classes it names are defined there).
-:data:`ADAPTERS` is the ``(scipy_dist, param_adapter)`` half of that shared information as one
-table, so adding a distribution to the rate side is one row here instead of a matching edit in
-each chain.
+:data:`ADAPTERS` pairs each such distribution with its ``scipy_dist`` and a ``param_adapter`` that
+maps the sympy parameters to scipy's, for the rate side of the piecewise computation. Adding a
+distribution to the rate side takes one row. The score side picks a distribution-specific score
+class instead; that mapping lives in ``piecewise.py``, next to the classes it names.
 
-``quasi_monte_carlo.py`` separately maintains its own, larger ``_sympy_dist_to_scipy``/
-``_sympy_dist_to_scipy_params`` tables, covering every quasi-Monte-Carlo-sampleable distribution
-(~30, most with no closed-form piecewise treatment at all). Its entries for the ten distributions
-this module also covers happen to compute the same adapters (e.g. both give ``GammaDistribution``
-``{'a': k, 'scale': theta}``) -- a real, if smaller, duplication left alone here rather than
-merged into a table shaped for a different purpose and a different caller.
+``quasi_monte_carlo.py`` keeps its own, larger tables for every distribution it can sample. For
+the distributions both cover, the adapters are identical.
 """
 
 from collections.abc import Callable

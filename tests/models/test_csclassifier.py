@@ -58,9 +58,8 @@ def small_data(make_data):
 class TestNormalizeCostShapes:
     """
     `Metric._prepare_parameters` accepts a length-1 array as shorthand for "one value applied to
-    every sample", but `_normalize_cost_shapes` used to reject anything whose size wasn't exactly
-    `n_samples`, so a plain length-1 cost array was rejected by the model even though the metric
-    itself would have accepted it.
+    every sample", so `_normalize_cost_shapes` must accept one too, instead of requiring a size of
+    exactly `n_samples`.
     """
 
     def test_length_one_array_cost_is_accepted(self, small_data):
@@ -84,8 +83,8 @@ class TestCostSymbolsCollidingWithFitParameters:
     """
     A cost matrix may name one of its symbols ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` --
     several of the bundled datasets do (e.g. ``fetch_give_me_some_credit`` supplies ``'cl'`` and
-    ``'fp_cost'``). Those names collide with ``fit``'s own keyword parameters, so the value used to
-    bind to the parameter and be dropped instead of reaching the metric, and training failed with
+    ``'fp_cost'``). Those names collide with ``fit``'s own keyword parameters, so the value must still
+    reach the metric instead of binding to the parameter and being dropped, which fails training with
     ``TypeError: _lambdifygenerated() missing 1 required positional argument: 'fp_cost'``.
     """
 

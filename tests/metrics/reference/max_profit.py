@@ -1,15 +1,13 @@
 """
-Reference (native/legacy) implementation of the generic Maximum Profit measure.
+Reference implementation of the generic Maximum Profit measure.
 
-This is the hand-written math implementation that used to live in
-``empulse.metrics.max_profit`` before it was refactored to build ``max_profit_score`` from a
-:class:`~empulse.metrics.Metric` instance instead. It is kept here, unchanged, purely as ground
-truth to numerically verify the new prebuilt metric against.
+This hand-written math implementation is ground truth for numerically verifying
+``max_profit_score``.
 
-Note that this reference version parameterizes true positive/negative outcomes by *benefit*
-(``tp_benefit``/``tn_benefit``), whereas the new ``max_profit_score`` parameterizes them by *cost*
+The reference parameterizes true positive/negative outcomes by *benefit*
+(``tp_benefit``/``tn_benefit``), whereas ``max_profit_score`` parameterizes them by *cost*
 (``tp_cost``/``tn_cost``), i.e. ``tp_cost = -tp_benefit`` and ``tn_cost = -tn_benefit``.
-``fp_cost``/``fn_cost`` are unchanged between the two.
+``fp_cost``/``fn_cost`` are the same in both.
 """
 
 import numpy as np

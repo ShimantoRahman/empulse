@@ -17,12 +17,11 @@ def data(make_data):
 
 
 class TestFitDispatch:
-    """Regression tests for the four `_fit` code paths after deduplicating the two
-    `fit_max_profit` calls into one (MODELS_OPTIMIZERS_REVIEW.md item 28).
+    """The four `_fit` code paths.
 
     `_prepare_class_costs` is shared between the "no custom loss" and "deterministic MaxProfit
     metric" cases (both use `fit_max_profit`); a stochastic MaxProfit metric or any other strategy
-    still falls through to the generic `fit_custom` fitness-function path.
+    falls through to the generic `fit_custom` fitness-function path.
     """
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
@@ -71,11 +70,9 @@ class TestFitDispatch:
 
 
 class TestPreflightSmokeTestReproducibility:
-    """Regression test: the pre-flight loss-function smoke test used an unseeded RNG.
+    """The pre-flight loss-function smoke test is seeded from `self.random_state` via `check_random_state`.
 
-    `np.random.default_rng()` with no seed meant a loss function that only fails for some random
-    inputs would fail non-reproducibly across runs. It's now seeded from `self.random_state` via
-    `check_random_state`.
+    A loss function that only fails for some random inputs then fails reproducibly across runs.
     """
 
     def test_same_random_state_gives_reproducible_smoke_test_probe(self):
@@ -107,11 +104,12 @@ class TestPreflightSmokeTestReproducibility:
 
 
 class TestCustomLossDirection:
-    """Regression test: the custom-loss path handed the evolutionary search ``BaseMetric._loss``.
+    """The custom-loss path hands the evolutionary search the negated ``BaseMetric._loss``.
 
-    The search keeps the fittest trees, i.e. it maximizes, while ``_loss`` is a value to minimize,
-    so ProfTree searched for the costliest tree: with an expected-cost loss it settled on a single
-    leaf, which predicts the class prior for every sample.
+    The search keeps the fittest trees, i.e. it maximizes, while ``_loss`` is a value to minimize.
+    Handing it ``_loss`` directly would make ProfTree search for the costliest tree: with an
+    expected-cost loss it would settle on a single leaf, which predicts the class prior for every
+    sample.
     """
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
@@ -127,10 +125,10 @@ class TestCustomLossDirection:
 
 
 class TestConstantFeatures:
-    """Regression tests: a constant feature crashed the interpreter.
+    """A constant feature must not crash the interpreter.
 
-    Drawing a split for a feature with a single distinct value took a random integer modulo zero,
-    which raises SIGFPE in C and kills the process, so the fit runs in a subprocess.
+    Drawing a split for a feature with a single distinct value would take a random integer modulo
+    zero, which raises SIGFPE in C and kills the process, so the fit runs in a subprocess.
     """
 
     def test_fit_with_constant_features(self):
@@ -163,10 +161,10 @@ for constant_columns in ([0], [0, 1, 2]):
 
 
 class TestNodeCountPenalty:
-    """Regression tests: the node count behind the ``alpha`` penalty drifted from the real tree.
+    """The node count behind the ``alpha`` penalty matches the real tree.
 
-    ``grow`` added two nodes even when the leaf was already at ``max_depth`` and nothing was split,
-    and pruning illegal nodes removed nodes without subtracting them, so ``alpha`` penalized the
+    ``grow`` must not add two nodes when the leaf is already at ``max_depth`` and nothing is split,
+    and pruning illegal nodes must subtract the nodes it removes; otherwise ``alpha`` penalizes the
     wrong trees.
     """
 
@@ -198,11 +196,12 @@ class TestNodeCountPenalty:
 
 
 class TestEarlyStoppingWithNegativeFitness:
-    """Regression tests: early stopping never triggered when the fitness was negative.
+    """Early stopping triggers when the fitness is negative.
 
-    A challenger had to beat ``champion * (1 + tolerance)``, which is below the champion when the
-    fitness is negative (e.g. costs without benefits, or a custom loss), so a tie counted as an
-    improvement and reset the patience counter every generation.
+    A challenger has to beat the champion by a tolerance relative to the champion's magnitude. Scaling
+    the champion by ``(1 + tolerance)`` is below the champion when the fitness is negative (e.g. costs
+    without benefits, or a custom loss), so a tie would count as an improvement and reset the patience
+    counter every generation.
 
     With crossover as the only variation operator, the population never changes (crossover
     offspring are never inserted, by design), so every generation's best ties the champion and the

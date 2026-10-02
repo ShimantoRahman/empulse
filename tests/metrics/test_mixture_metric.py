@@ -144,10 +144,10 @@ def test_mixture_name_property(empcs_mixture):
 
 
 # ---- BaseMetric interface: what makes MixtureMetric usable as a model `loss` ----
-# CSLogitClassifier/CSBoostClassifier/CSTreeClassifier/... accept any BaseMetric as their `loss`,
-# not just a plain Metric. These tests verify MixtureMetric satisfies that shared interface,
-# including the extra methods (`strategy`, `_all_symbols`, `_is_deterministic`, `_evaluate_costs`)
-# that model code relies on beyond score/rate/threshold/gradient.
+# The cost-sensitive models accept any BaseMetric as their `loss`, not just a plain Metric. These
+# tests verify that MixtureMetric satisfies that shared interface, including the extra members
+# (`strategy`, `_all_symbols`, `_is_deterministic`, `_evaluate_costs`) that model code relies on
+# beyond score/rate/threshold/gradient.
 
 
 def test_mixture_is_a_base_metric(empcs_mixture, credit_scoring_metrics):
@@ -266,19 +266,17 @@ def test_mixture_evaluate_costs_replace_stochastic_with_stochastic_component(cre
 
 
 # ---- gradient-boosting / logit objective plumbing checks ----
-# There is no independent "native EMPCS gradient" to compare against, so these tests check
-# that MixtureMetric's combination is *self-consistent*: it must equal manually combining
-# each component's own (already-tested-elsewhere) gradient/hessian/loss with the same weights.
+# There is no independent native EMPCS gradient to compare against, so these tests check that
+# MixtureMetric's combination is *self-consistent*: it must equal manually combining each
+# component's own gradient/hessian/loss with the same weights.
 #
-# These use an all-deterministic 2-component mixture (gamma fixed to 0 and 1), not the full
-# 3-component EMPCS mixture with its Uniform(0, 1)-distributed component. That's deliberate:
-# MaxProfit's own gradient_boost_objective/logit_objective are currently only implemented for
-# deterministic metrics and for stochastic metrics whose distribution derives from
-# BasePositiveDistribution (Beta, Gamma, Pareto, etc.) -- Uniform is not one of them, so
-# metric_stoch._gradient_boost_objective(...)/._logit_objective(...) themselves raise
-# NotImplementedError today, independent of MixtureMetric. That's a pre-existing gap in the
-# native MaxProfit machinery, not something introduced by MixtureMetric -- see
-# test_full_mixture_gradient_training_not_yet_supported below, which documents it explicitly.
+# They use an all-deterministic 2-component mixture (gamma fixed to 0 and 1), not the full
+# 3-component EMPCS mixture with its Uniform(0, 1)-distributed component. MaxProfit's
+# gradient_boost_objective/logit_objective only support deterministic metrics and stochastic
+# metrics whose distribution derives from BasePositiveDistribution (Beta, Gamma, Pareto, etc.).
+# Uniform is not one of them, so metric_stoch._gradient_boost_objective(...)/._logit_objective(...)
+# raise NotImplementedError regardless of MixtureMetric; see
+# test_full_mixture_gradient_training_not_yet_supported below.
 
 
 def _two_point_mixture(metric_det, weight_at_0=0.6, weight_at_1=0.4):
@@ -314,9 +312,8 @@ def test_gradient_boost_objective_matches_manual_combination(y_true_and_predicti
 
 
 def test_prepare_boost_objective_matches_manual_combination(y_true_and_prediction):
-    # MaxProfit does not implement prepare_boost_objective at all (only Cost/Savings do), so
-    # this uses a Cost-strategy mixture instead -- still exercises the same MixtureMetric
-    # plumbing, just through a strategy that actually supports the method.
+    # MaxProfit does not implement prepare_boost_objective (only Cost/Savings do), so this uses a
+    # Cost-strategy mixture, which exercises the same MixtureMetric plumbing.
     a, b = sympy.symbols('a b')
     metric_cost = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b), Cost())
     y, _ = y_true_and_prediction
@@ -403,13 +400,12 @@ def test_logit_gradient_steps_matches_direct_call():
 
 
 def test_full_mixture_gradient_training_not_yet_supported(credit_scoring_metrics, y_true_and_prediction):
-    """Documents a pre-existing native limitation, not a MixtureMetric bug.
+    """MaxProfit's gradient_boost_objective/logit_objective only support deterministic metrics and
+    stochastic metrics built on a BasePositiveDistribution (Beta, Gamma, Pareto, ...).
 
-    MaxProfit's gradient_boost_objective/logit_objective only support deterministic metrics
-    and stochastic metrics built on a BasePositiveDistribution (Beta, Gamma, Pareto, ...).
-    Uniform is not one of those, so the EMPCS mixture's third (Uniform) component cannot be
-    used for gradient-based training today. MixtureMetric correctly propagates that
-    NotImplementedError rather than silently producing a wrong gradient.
+    Uniform is not one of those, so the EMPCS mixture's third (Uniform) component cannot be used for
+    gradient-based training. MixtureMetric propagates that NotImplementedError rather than silently
+    producing a wrong gradient.
     """
     metric_det, metric_stoch = credit_scoring_metrics
     y, y_proba = y_true_and_prediction
@@ -422,14 +418,13 @@ def test_full_mixture_gradient_training_not_yet_supported(credit_scoring_metrics
         mixture._gradient_boost_objective(y, y_proba, roi=0.2644)
 
 
-# ---- regression test for the ExactMaxProfitRatePiecewise hardcoded-literal-bounds bug ----
+# ---- optimal_rate with hardcoded Uniform bounds ----
 
 
 @pytest.mark.parametrize('integration_method', ['auto', 'quad'])
 def test_hardcoded_uniform_bounds_optimal_rate_no_error(y_true_and_prediction, integration_method):
-    """Previously crashed with TypeError: _uniform_params() missing 2 required positional
-    arguments 'a' and 'b' when the Uniform distribution's bounds were hardcoded literals
-    (no free symbols) and .optimal_rate() (not just __call__) was used.
+    """``optimal_rate()`` (not just ``__call__``) works when the Uniform distribution's bounds are
+    hardcoded literals with no free symbols.
     """
     y, y_proba = y_true_and_prediction
     clv, d, f = sympy.symbols('clv d f')
@@ -480,7 +475,7 @@ class TestOutlierSensitiveParameters:
 def test_mixture_forwards_validate_to_components(monkeypatch, empcs_mixture, y_true_and_prediction, method):
     """``validate=False`` is the training loop's promise that the values were checked already.
 
-    The mixture used to drop it, so every component re-validated on every call.
+    The mixture must forward it, or every component re-validates on every call.
     """
     y, y_proba = y_true_and_prediction
     validating_calls = 0

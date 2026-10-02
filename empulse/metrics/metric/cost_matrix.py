@@ -394,7 +394,6 @@ class CostMatrix:
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
             cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
         """
-        # Convert aliases to symbol names before storing defaults
         converted_defaults = {}
         for key, value in defaults.items():
             if key in self._aliases:
@@ -564,10 +563,9 @@ class CostMatrix:
 
         if isinstance(target, str):
             target = sympy.Symbol(target)
-        # A sympy.stats random variable is a RandomSymbol, not a Symbol, but it names a parameter
-        # just the same. Accepting it lets one builder constrain a symbol that is stochastic in one
-        # metric and deterministic in its sibling; the constraint is simply inert in the stochastic
-        # case, where the variable is drawn rather than supplied by the caller.
+        # A sympy.stats random variable is a RandomSymbol, not a Symbol. Accept it so one builder can
+        # constrain a symbol that is stochastic in one metric and deterministic in another; the
+        # constraint has no effect on a variable that is drawn instead of supplied.
         if not isinstance(target, sympy.Symbol | sympy.stats.rv.RandomSymbol):
             raise TypeError(
                 'The target must be a sympy.Symbol, a string that can be converted to one, or a callable, '
@@ -580,7 +578,7 @@ class CostMatrix:
 
         name = str(self._aliases.get(str(target), target))
         existing = self._bounds.get(name)
-        if existing is not None:  # tighten rather than replace, so two calls compose
+        if existing is not None:  # Tighten instead of replacing, so two calls compose.
             lower = _tightest(lower, existing.lower, max)
             upper = _tightest(upper, existing.upper, min)
         self._bounds[name] = ParameterBounds(lower=lower, upper=upper)
@@ -606,15 +604,12 @@ class CostMatrix:
         )
 
 
-# Symbol names used internally by Metric and its strategies to inject data (labels, scores,
-# true/false positive rates, class priors) into the lambdified cost-matrix expressions, or used
-# by to_latex() rendering, or as a keyword-only parameter of Metric._prepare_parameters(). A
-# user-defined symbol or alias sharing one of these names would either be silently fused with the
-# internal one, raise a confusing internal TypeError, or (for 'n_samples') actually be captured by
-# _prepare_parameters()'s own n_samples parameter instead of reaching its **kwargs - see
-# Metric.__init__ and _check_reserved_symbol_names(). 'validate' is reserved for the same reason
-# as 'n_samples': it is a keyword-only parameter of _prepare_parameters() and of the public
-# scoring methods, so a symbol of that name would be captured by it rather than reach **kwargs.
+# Names the metric machinery injects into the lambdified expressions (labels, scores, rates, class
+# priors) or uses when rendering LaTeX. A user symbol or alias with one of these names would fuse
+# with the internal one or raise a confusing TypeError. 'n_samples' and 'validate' are also
+# keyword-only parameters of Metric._prepare_parameters() and the public scoring methods, which
+# would capture a symbol of that name before it reached **kwargs.
+# See _check_reserved_symbol_names().
 RESERVED_SYMBOL_NAMES = frozenset({'y', 's', 'F_0', 'F_1', 'pi_0', 'pi_1', 'N', 'i', 'n_samples', 'validate'})
 
 

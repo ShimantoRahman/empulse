@@ -43,13 +43,13 @@ def test_reusing_one_strategy_instance_keeps_metrics_independent():
     """
     Building a second Metric from the same strategy instance must not corrupt the first.
 
-    Before the fix, `Metric.__init__` built the strategy object in place, so the second
-    `Metric`'s `build()` call silently overwrote the first metric's compiled formula.
+    `Metric.__init__` must not build the strategy object in place, or the second `Metric`'s `build()`
+    call would overwrite the first metric's compiled formula.
     """
     strategy = Cost()
     metric_fp = Metric(CostMatrix().add_fp_cost('a'), strategy)
-    # Building a second Metric from the *same* strategy instance, with an overlapping symbol
-    # name, used to silently rewrite metric_fp's formula.
+    # The second Metric shares the strategy instance and an overlapping symbol name, and must not
+    # rewrite metric_fp's formula.
     metric_fn = Metric(CostMatrix().add_fn_cost('a'), strategy)
 
     expected_fp = Metric(CostMatrix().add_fp_cost('a'), Cost())(Y_TRUE, Y_SCORE, a=100.0)
@@ -175,7 +175,7 @@ def test_inf_in_y_score_raises():
 
 
 def test_expected_cost_loss_and_cost_loss_raise_the_same_error_on_non_binary_labels():
-    """expected_cost_loss (a Metric) and cost_loss (the legacy function) must reject bad input alike."""
+    """expected_cost_loss (a Metric) and cost_loss (a function) must reject bad input alike."""
     y_bad = np.array([1, 2, 1, 2, 1])
 
     with pytest.raises(ValueError, match='should be binary') as legacy_exc_info:
@@ -377,9 +377,9 @@ def test_mixture_metric_name_is_settable():
 
 def test_max_profit_averages_array_like_parameters():
     """
-    Pin the documented (finding 13) MaxProfit behaviour: an array-like parameter is reduced to
-    its mean, so it gives the exact same result as passing that mean directly - unlike Cost, which
-    genuinely uses per-instance values.
+    Pin MaxProfit's documented behaviour: an array-like parameter is reduced to its mean, so it gives
+    the exact same result as passing that mean directly - unlike Cost, which genuinely uses
+    per-instance values.
     """
     cost_matrix = CostMatrix().add_tp_benefit('a').add_fp_cost('b')
     max_profit_metric = Metric(cost_matrix, MaxProfit())
@@ -397,11 +397,11 @@ def test_max_profit_averages_array_like_parameters():
     assert cost_from_array != pytest.approx(cost_from_mean)
 
 
-# --- Savings reduces stochastic variables to their mean, matching Cost (finding 12) ----
+# --- Savings reduces stochastic variables to their mean, matching Cost ------------------
 
 
 def test_savings_accepts_a_stochastic_cost_matrix():
-    """Savings must no longer raise NotImplementedError for a stochastic cost matrix."""
+    """Savings accepts a stochastic cost matrix."""
     gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), sympy.Symbol('beta'))
     cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost('b')
     metric = Metric(cost_matrix, Savings())

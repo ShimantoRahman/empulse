@@ -1,11 +1,6 @@
 """
 The three bias-mitigation classifiers, tested once and parametrised over the estimator.
 
-This replaces ``test_bias_relabeling.py``, ``test_bias_resampling.py`` and
-``test_bias_reweighing.py``, which were the same 148-line file three times over: the relabeling and
-resampling versions differed by six lines, all of them the class name. One of the copies had drifted
--- the relabeling file reported ``'BiasReweighingClassifier is not fitted'`` on failure.
-
 ``BiasReweighingClassifier`` needs an imbalanced target for its weights to be interesting, so the
 target is chosen per classifier by the ``target`` fixture rather than shared.
 """
@@ -112,7 +107,7 @@ def test_metadata_routing_through_grid_search(classifier_cls, X, target, sensiti
 
 
 def test_sensitive_feature_length_mismatch_raises(classifier_cls, X, target, sensitive_feature):
-    """Regression test: a sensitive_feature of the wrong length used to be silently accepted."""
+    """A sensitive_feature of the wrong length raises."""
     model = classifier_cls(estimator=LogisticRegression())
     with pytest.raises(ValueError, match='sensitive_feature must have the same length as y'):
         model.fit(X, target, sensitive_feature=sensitive_feature[:-1])
@@ -157,12 +152,11 @@ NON_ZERO_ONE_LABELS = (np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 
 
 
 class TestNonZeroOneLabels:
-    """Regression tests: relabeling and reweighing assumed the target was encoded as 0/1.
+    """The classifiers work for targets that are not encoded as 0/1.
 
-    ``BiasRelabler`` chose candidates by comparing the raw labels to 0 and 1 and relabelled them
-    with the literal values 0 and 1, so ``-1``/``1`` labels gained a third class ``0`` and
-    ``predict`` raised an ``IndexError``. ``BiasReweighingClassifier`` computed its group priors from
-    the raw labels' mean, so ``-1``/``1`` labels got different weights and strings raised.
+    ``BiasRelabler`` relabels with the original labels, so ``-1``/``1`` labels must not gain a third
+    class ``0``. ``BiasReweighingClassifier`` computes its group priors from the 0/1 encoding, so
+    ``-1``/``1`` labels and strings get the same weights as 0/1 labels.
     """
 
     @pytest.fixture

@@ -59,12 +59,11 @@ def test_instance_dependent_costs_are_aggregated_to_mean(model_cls, data):
 
 
 class TestWorstCaseAccuracies:
-    """Regression tests for the shared-vs-per-class worst-case accuracy bound distinction.
+    """Shared versus per-class worst-case accuracy bounds.
 
     ``_worst_case_accuracies`` is the one real behavioral difference between ProfMPMClassifier
-    and ProfMEMPMClassifier that survived extracting their shared BaseMinimaxProbabilityMachine
-    base, and every ``_solve_*`` method on that base defers to it for its final
-    ``(alpha_1, alpha_0)``.
+    and ProfMEMPMClassifier; every ``_solve_*`` method on BaseMinimaxProbabilityMachine defers to it
+    for its final ``(alpha_1, alpha_0)``.
     """
 
     def test_profmpm_shares_one_alpha_across_classes(self):
@@ -111,8 +110,8 @@ class TestWorstCaseAccuracies:
         # Heavily favors specificity, so the optimum sits where alpha_0 is large.
         model = ProfMEMPMClassifier().fit(X, y, tp_cost=-1.0, fp_cost=1000.0)
 
-        # The bug capped alpha_0 near 0.59 on data shaped like this; the true achievable
-        # bound is close to 0.95.
+        # Bounding kappa at the MPM solution caps alpha_0 near 0.59 on data shaped like this; the
+        # achievable bound is close to 0.95.
         assert model.alpha_0_ > 0.8
 
 

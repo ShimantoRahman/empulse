@@ -37,7 +37,6 @@ cdef class EvolutionaryTree:
         if self.tree is not NULL:
             free_tree(self.tree)
 
-        # Import default fitness function if not provided
         if fitness_function is None:
             from sklearn.metrics import accuracy_score
             fitness_function = accuracy_score
@@ -154,7 +153,6 @@ cdef class EvolutionaryTree:
         if self.tree is NULL:
             return (self.__class__, (), None)
 
-        # Serialize the tree structure and generation count
         tree_data = self._serialize_tree()
         state = (tree_data, self.n_generations)
         return (self.__class__, (), state)

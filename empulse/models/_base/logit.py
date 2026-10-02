@@ -68,8 +68,8 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
         if self._get_metric_loss() is None:
-            # `fit()` already checked/converted these costs; the logit objective additionally
-            # needs instance-dependent costs as a column vector rather than a flat array.
+            # `fit()` already validated these costs; the logit objective needs instance-dependent
+            # costs as column vectors.
             for key in ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'):
                 value = loss_params[key]
                 if not isinstance(value, Real) and (value := np.asarray(value)).ndim == 1:
@@ -123,6 +123,5 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         theta = self.result_.x
         logits = np.dot(X, theta)
         y_pred = expit(logits)
-        # create 2D array with complementary probabilities
         y_pred = np.vstack((1 - y_pred, y_pred)).T
         return y_pred

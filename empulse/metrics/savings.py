@@ -183,7 +183,7 @@ def cost_loss(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    # If the prediction is not binary, we need to find the optimal threshold
+    # Scores that are not binary are thresholded at the cost-optimal threshold.
     if not np.all((y_pred == 0) | (y_pred == 1)):
         denominator = fp_cost - tn_cost + fn_cost - tp_cost
         denominator = np.clip(denominator, np.finfo(float).eps, denominator)  # Avoid division by zero
@@ -427,7 +427,6 @@ def savings_score(
             check_input=False,
         )
     elif baseline == 'zero_one':
-        # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
                 y_true,

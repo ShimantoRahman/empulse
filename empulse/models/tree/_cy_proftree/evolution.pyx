@@ -151,13 +151,11 @@ cdef inline void insert_offspring(Forest* population, Forest* offspring, int i) 
     cdef Tree* parent = population.trees[i]
     cdef Tree* child = offspring.trees[i]
 
-    # If child is better or equal, replace parent
     if child.fitness >= parent.fitness:
         free_tree(parent)
         population.trees[i] = child
         offspring.trees[i] = NULL  # Transfer ownership to population
     else:
-        # Parent is better, keep parent and free child
         free_tree(child)
         offspring.trees[i] = NULL  # Already freed, set to NULL
 
@@ -227,15 +225,14 @@ cdef inline void evaluate_max_profit(
 cdef inline bint stop_evolution(
     Tree* challenger, Tree** champion, int* stagnation_counter, float tolerance, int patience
 ) noexcept:
-    # The tolerance is relative to the champion's magnitude. Scaling the fitness itself by
-    # (1 + tolerance) lowers the bar when the fitness is negative (e.g. costs only), so an equal
-    # or slightly worse challenger counted as an improvement and patience never ran out.
+    # The tolerance is relative to the champion's magnitude, so the bar also rises when the fitness
+    # is negative (e.g. costs only).
     if challenger.fitness > champion[0].fitness + tolerance * fabs(champion[0].fitness):
-        free_tree(champion[0])  # Always free the old champion
-        champion[0] = challenger  # New champion takes ownership
+        free_tree(champion[0])
+        champion[0] = challenger  # the champion takes ownership
         stagnation_counter[0] = 0
     else:
-        free_tree(challenger)  # Free the losing challenger
+        free_tree(challenger)
         stagnation_counter[0] += 1
 
     return stagnation_counter[0] >= patience
@@ -293,7 +290,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     for i in range(pop_size):
         offspring.trees[i] = NULL
 
-    # set up the rates for various genetic operations
+    # Cumulative rates for choosing a genetic operation.
     cdef float probability = 0.0
     grow_rate = crossover_rate + grow_rate
     prune_rate = grow_rate + prune_rate
@@ -391,7 +388,7 @@ cdef EvolutionResult evolve_forest_deterministic(
     for i in range(pop_size):
         offspring.trees[i] = NULL
 
-    # set up the rates for various genetic operations
+    # Cumulative rates for choosing a genetic operation.
     cdef float probability = 0.0
     grow_rate = crossover_rate + grow_rate
     prune_rate = grow_rate + prune_rate

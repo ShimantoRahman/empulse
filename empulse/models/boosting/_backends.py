@@ -1,22 +1,18 @@
 """
-Per-boosting-library dispatch for :class:`~empulse.models.CSBoostClassifier`.
+Per-library dispatch for :class:`~empulse.models.CSBoostClassifier`.
 
-XGBoost, LightGBM and CatBoost each want the AEC/metric objective wired up differently -- a plain
-callable, a callable object, or a ``(objective, metric)`` pair -- and each has its own quirk around
-the shared ``_BASE_SCORE`` initialization (XGBoost's ``base_score`` is a genuine model parameter;
-LightGBM's ``init_score`` and CatBoost's ``baseline`` bias training only and must be added back
-manually in :meth:`~empulse.models.CSBoostClassifier.predict_proba`). :class:`BoostingBackend`
-collects those differences as data instead of scattering them across ``isinstance`` chains in
-``csboost.py``: one for which classifier matches, one for how the estimator is built, one for how
-it is fit, one for how predictions are reconstructed.
+XGBoost, LightGBM and CatBoost each wire up the objective differently (a plain callable, a
+callable object or an ``(objective, metric)`` pair) and treat the shared ``_BASE_SCORE``
+differently: XGBoost's ``base_score`` is a model parameter, while LightGBM's ``init_score`` and
+CatBoost's ``baseline`` only bias training and must be added back in
+:meth:`~empulse.models.CSBoostClassifier.predict_proba`. :class:`BoostingBackend` collects these
+differences as data: which classifier matches, how the estimator is built and fit, and how
+predictions are reconstructed.
 
-:func:`backend_for` still needs to guard against ``isinstance(x, XGBClassifier)`` where
-``XGBClassifier`` is itself the ``TypeVar`` placeholder ``csboost.py`` substitutes when a library
-is not installed -- ``isinstance()``'s second argument must be a type, and a bare ``TypeVar`` is
-not one. The classifier references are passed in by the caller (``csboost.py``) rather than
-imported here a second time, since ``tests/models/test_csboost.py`` patches
-``empulse.models.boosting.csboost.XGBClassifier`` (etc.) directly to simulate a missing library;
-a second, independent import in this module would not see that patch.
+:func:`backend_for` receives the classifier classes from ``csboost.py`` instead of importing them,
+because the tests patch ``empulse.models.boosting.csboost.XGBClassifier`` (and the others) to
+simulate a missing library. A library that is not installed is represented by a ``TypeVar``, which
+``isinstance`` rejects as its second argument, so ``backend_for`` guards against it.
 """
 
 from collections.abc import Sequence
@@ -31,15 +27,12 @@ from ..._types import FloatNDArray, IntNDArray
 from ...metrics import BaseMetric
 from ...metrics._loss import cy_boost_grad_hess
 
-# Hessian is 0 at score 0.5 because the AEC objective's hessian evaluates to p*(1-p), which is
-# exactly 0 when p=0.5. A nudge of 1e-2 is large enough to produce a non-zero hessian at
-# initialization (kick-starting the optimizer) yet small enough not to meaningfully bias the
-# starting point away from 0.5.
+# The AEC objective's hessian is p * (1 - p), which is 0 at p = 0.5. Starting at 0.5 + 1e-2 gives
+# a non-zero hessian at initialization without noticeably biasing the starting point.
 #
 # XGBoost's `base_score` is a probability, but LightGBM's `init_score` and CatBoost's `baseline`
-# are raw (log-odds) scores - the same literal nudge does not mean "start at ~51% probability" in
-# both spaces (expit(0.51) != 0.51). Two separate constants keep the *actual* starting probability
-# consistent across backends.
+# are raw log-odds scores, and expit(0.51) != 0.51. Two constants give every backend the same
+# starting probability.
 _BASE_SCORE_PROBA = 0.5 + 1e-2
 _BASE_SCORE_RAW = float(logit(_BASE_SCORE_PROBA))
 

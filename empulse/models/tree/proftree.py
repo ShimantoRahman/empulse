@@ -351,9 +351,8 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             'n_jobs': effective_n_jobs(self.n_jobs),
         }
 
-        # `_prepare_class_costs` supports exactly the two cases handled by `fit_max_profit`
-        # (no custom loss, or a deterministic MaxProfit metric); a stochastic MaxProfit metric or
-        # any other strategy needs the full custom fitness-function path instead.
+        # `fit_max_profit` handles only the default loss and deterministic MaxProfit metrics. Any other
+        # loss, such as a stochastic MaxProfit metric, goes through a custom fitness function.
         use_fit_max_profit = loss_ is None or (Capability.CLASS_COSTS in loss_.capabilities and loss_._is_deterministic)
 
         if use_fit_max_profit:
@@ -362,17 +361,15 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 **common_kwargs, tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
             )
         else:
-            # `use_fit_max_profit` is only False when `loss_ is None` is False, i.e. `loss_` is a
-            # BaseMetric (either a non-MaxProfit strategy, or a stochastic MaxProfit metric).
             assert loss_ is not None
             # The evolutionary search maximizes fitness, while `_loss` is a value to minimize.
             fitness_fn: Callable[..., float]
 
             y_proba = check_random_state(self.random_state).random(y.size).astype(np.float32)
             try:  # catch issue with the loss function before it goes into C world
-                # A loss that can score samples grouped by score (e.g. a stochastic MaxProfit metric)
-                # gets each tree's leaves and their class counts rather than every sample's prediction;
-                # its parameters are then resolved once here instead of on every evaluation.
+                # A loss that scores samples grouped by score (e.g. a stochastic MaxProfit metric) gets
+                # each tree's leaves with their class counts instead of every sample's prediction, and
+                # its parameters are resolved once here.
                 count_loss = loss_._prepare_count_loss(n_samples=y.size, validate=False, **loss_params)
                 if count_loss is None:
                     fitness_fn = partial(_negated_loss, loss_, **loss_params)

@@ -19,9 +19,7 @@ import sympy.stats.crv_types
 
 from ._symbolic import _subs_by_name
 
-# Mapping from distribution type to its closed-form mean expression.
-# Used as a fast, reliable fallback for distributions whose expectation
-# sympy.stats.E cannot compute in closed form.
+# Closed-form means of the distributions whose expectation `sympy.stats.E` cannot compute.
 _FIXED_MEANS: dict[
     type[sympy.stats.crv_types.SingleContinuousDistribution],
     Callable[[tuple[sympy.Expr, ...]], sympy.Expr],
@@ -50,7 +48,6 @@ def _distribution_mean(symbol: sympy.Expr) -> sympy.Expr:
 
     try:
         mean_expr = sympy.stats.E(symbol)
-        # Verify the expectation can actually be evaluated numerically.
         sympy.lambdify([], mean_expr, modules=['scipy', 'numpy'])
     except (NotImplementedError, TypeError) as error:
         raise NotImplementedError(
@@ -88,8 +85,7 @@ def replace_random_var_with_mean(*expressions: sympy.Expr) -> tuple[sympy.Expr, 
 
     subs_map = {symbol: _distribution_mean(symbol) for symbol in random_symbols}
 
-    # xreplace performs exact structural matching, which is faster than subs()
-    # here since we are only replacing atomic random symbols (no pattern matching needed).
+    # xreplace matches structurally and is faster than subs(), which is enough for atomic random symbols.
     return tuple(expression.xreplace(subs_map) for expression in expressions)
 
 
@@ -118,10 +114,9 @@ def _check_distribution_parameters(
             if all(getattr(argument, 'is_number', False) for argument in arguments):
                 _run_distribution_check(distribution, arguments, random_symbol)
             else:
-                # At least one shape parameter is instance-dependent, so the distribution's own
-                # check cannot run on the whole vector. Probe it with that parameter's extremes
-                # instead: if both ends are admissible, so is everything between them for the
-                # interval constraints these distributions actually impose.
+                # A shape parameter is instance-dependent, so the distribution's own check cannot run on
+                # the whole vector. Check the parameter's extremes instead: these distributions only
+                # impose interval constraints, so if both ends are admissible, everything between is.
                 _check_array_distribution_parameters(distribution, parameters, random_symbol, display)
 
 

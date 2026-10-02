@@ -108,7 +108,6 @@ class _IterativeGradientOptimizer(Optimizer):
         weights: FloatNDArray = self._initial_weights(X)
         state = self._init_state(weights)
 
-        # Mini-batch setup
         n_samples = X.shape[0]
         rng: np.random.Generator | None = None
         effective_batch = None
@@ -138,14 +137,11 @@ class _IterativeGradientOptimizer(Optimizer):
         best_gradient = gradient.copy()
 
         for t in range(1, self.max_iter + 1):
-            # Apply alpha schedule (no-op if objective doesn't support it)
             if self.alpha_schedule is not None and hasattr(objective, 'set_alpha'):
                 objective.set_alpha(self.alpha_schedule(t - 1))
 
-            # Compute effective learning rate
             effective_lr = self.lr_schedule(t - 1) if self.lr_schedule is not None else base_lr
 
-            # Select full or mini-batch objective
             if rng is not None and effective_batch is not None:
                 indices = rng.choice(n_samples, size=effective_batch, replace=False)
                 step_objective = objective.with_indices(indices)
@@ -161,7 +157,6 @@ class _IterativeGradientOptimizer(Optimizer):
                 best_weights = weights.copy()
                 best_gradient = gradient.copy()
 
-            # Gradient-norm convergence
             if float(np.max(np.abs(gradient))) < self.tolerance:
                 return _make_result(
                     best_weights,
@@ -174,9 +169,8 @@ class _IterativeGradientOptimizer(Optimizer):
                     status=0,
                 )
 
-            # Loss-plateau convergence (patience window): compare the window's range, not just
-            # its endpoints, so an objective that oscillates back to its starting value isn't
-            # mistaken for having converged.
+            # Compare the patience window's range, not just its endpoints, so an objective that
+            # oscillates back to its starting value does not count as converged.
             if len(loss_history) > self.patience:
                 window = loss_history[-self.patience - 1 :]
                 if (max(window) - min(window)) < self.tolerance:

@@ -5,9 +5,9 @@ Find the best split of a node of a cost-sensitive decision tree.
 The split search is ported from scikit-learn's ``node_split_best`` and ``node_split_random``
 (sklearn/tree/_splitter.pyx and sklearn/tree/_partitioner.pyx), Copyright (c) the scikit-learn
 developers, BSD-3-Clause license. It keeps their feature sampling, constant-feature bookkeeping and
-tie handling, and drops what a binary cost-sensitive tree never needs: missing values, sparse input,
-monotonic constraints and the virtual criterion interface. The criterion's running sums are inline
-(see ``_criterion.pxd``), and every sample's costs are read from a single record.
+tie handling. Missing values, sparse input and monotonic constraints are not supported. The
+criterion's running sums are inline (see ``_criterion.pxd``), and every sample's costs are read from
+a single record.
 """
 
 from libc.math cimport INFINITY, fmin

@@ -725,12 +725,12 @@ class TestOptimizeResult:
         assert result.x.shape == (6,)
 
     def test_result_fun_and_jac_are_correct_on_max_iter_exit(self, X):
-        """Regression test: the max-iter exit path used to return fun/jac from BEFORE the last step.
+        """The max-iter exit path returns fun/jac that describe `result.x`.
 
-        `weights` is updated via `_step()` after `loss`/`gradient` are computed each iteration, so
-        the common (max-iter-exhausted) exit returning the post-step `weights` alongside the
-        pre-step `loss`/`gradient` described a different point than `result.x`. The early-return
-        (convergence) paths never had this bug; this test targets the max-iter path specifically.
+        `weights` is updated via `_step()` after `loss`/`gradient` are computed each iteration, so the
+        common (max-iter-exhausted) exit must not return the post-step `weights` alongside the pre-step
+        `loss`/`gradient`. The early-return (convergence) paths are not affected; this test targets the
+        max-iter path specifically.
         """
         obj = _ShiftedQuadraticObjective(n_features=X.shape[1])
         # tolerance=0 and patience=9999 guarantee the max-iter path is taken.
@@ -741,7 +741,7 @@ class TestOptimizeResult:
 
 
 class TestBestIterateTracking:
-    """Regression tests: the optimizer used to return the LAST iterate, not the best one seen.
+    """The optimizer returns the best iterate seen, not the last one.
 
     `alpha_schedule` exists precisely because loss surfaces like MaxProfit's are rugged and
     non-convex, so the final iterate is routinely worse than an earlier one. Uses a scripted
@@ -803,25 +803,25 @@ class _ScriptedGradientNormObjective(_ScriptedObjective):
 
 
 class TestLossPlateauUsesRange:
-    """Regression test: loss-plateau convergence compared only the window's endpoints.
+    """Loss-plateau convergence compares the window's range, not only its endpoints.
 
-    `abs(window[0] - window[-1]) < tolerance` declares convergence whenever the loss returns to
-    (approximately) its starting value, even if it swung wildly in between. The fix compares the
-    window's range (`max - min`) instead, matching what `MemeticOptimizer` already does.
+    `abs(window[0] - window[-1]) < tolerance` would declare convergence whenever the loss returns to
+    (approximately) its starting value, even if it swung wildly in between. Comparing the window's
+    range (`max - min`) matches what `MemeticOptimizer` does.
     """
 
     def test_oscillation_back_to_start_does_not_trigger_early_convergence(self):
         # Window endpoints are equal (10.0 and 10.0), but the window contains a large swing
-        # (down to 0.0, up to 20.0) that the old endpoint-only check would have missed entirely.
+        # (down to 0.0, up to 20.0) that an endpoint-only check would miss.
         losses = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 20.0, 10.0]
         obj = _ScriptedObjective(losses, n_features=1)
         # patience=8 -> window = last 9 losses = the full list above.
-        # tolerance is small enough that the old endpoint check (|10-10|=0 < tolerance) would
-        # have declared convergence at iteration 9, well before max_iter is reached.
+        # An endpoint check (|10-10|=0 < tolerance) would declare convergence at iteration 9, well
+        # before max_iter is reached.
         result = SGD(lr=0.1, max_iter=len(losses), tolerance=1e-6, patience=8)(obj, np.zeros((1, 1)))
 
-        # With the range-based check, (max(window) - min(window)) = 20.0, nowhere near tolerance,
-        # so the run must exhaust max_iter instead of falsely declaring convergence.
+        # The window's range, max(window) - min(window) = 20.0, is nowhere near tolerance, so the run
+        # must exhaust max_iter instead of falsely declaring convergence.
         assert result.success is False
         assert result.nit == len(losses)
         assert 'maximum number of iterations' in result.message.lower()

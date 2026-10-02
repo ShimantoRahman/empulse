@@ -1,21 +1,13 @@
 """
-Reference (native/legacy) implementations of the generic expected-cost/savings metrics.
+Reference implementations of the generic expected-cost/savings metrics.
 
-These are the hand-written math implementations that used to live in ``empulse.metrics.savings``
-before ``expected_cost_loss``, ``expected_log_cost_loss``, and ``expected_savings_score`` were
-refactored to build on :class:`~empulse.metrics.Metric` instances instead, and before
-``make_objective_aec``/``AECObjective``/``AECMetric`` were removed (their job is now done by
-passing any :class:`~empulse.metrics.Metric` as ``loss=`` to a cost-sensitive boosting model
-directly). They are kept here, unchanged, purely as ground truth to numerically verify the new
-prebuilt metrics against, and to keep exercising the original edge-case and input-validation test
-coverage in ``test_savings.py``.
+These hand-written math implementations are ground truth for numerically verifying
+``expected_cost_loss``, ``expected_log_cost_loss`` and ``expected_savings_score``, and they carry
+the edge-case and input-validation coverage in ``test_savings.py``.
 
-``cost_loss`` and ``savings_score`` (the hard-label/auto-thresholding variants) were **not**
-refactored -- they remain in the live package unchanged, since there is no
-:class:`~empulse.metrics.Metric`/:class:`~empulse.metrics.MetricStrategy` equivalent for their
-auto-thresholding behavior. ``_validate_input``/``_compute_expected_cost`` also remain live (still
-used by ``cost_loss``/``savings_score``), so they are imported from the package here rather than
-duplicated.
+``cost_loss`` and ``savings_score`` (the hard-label, auto-thresholding variants) have no
+:class:`~empulse.metrics.Metric` equivalent and live only in the package. ``_validate_input`` and
+``_compute_expected_cost`` are imported from it rather than duplicated.
 """
 
 from typing import Any, Literal
@@ -121,7 +113,6 @@ def expected_savings_score(
             check_input=False,
         )
     elif baseline == 'zero_one':
-        # Calculate the cost of naive prediction
         cost_base = min(
             cost_loss(
                 y_true,

@@ -1,13 +1,8 @@
 """
-Reference (native/legacy) implementations of the customer churn metrics.
+Reference implementations of the customer churn metrics.
 
-These are the hand-written math implementations that used to live in
-``empulse.metrics.churn`` before it was refactored to build ``empc_score``, ``mpc_score``,
-``empb_score``, ``auepc_score``, and ``expected_cost_loss_churn`` from
-:class:`~empulse.metrics.Metric` instances instead. They are kept here, unchanged, purely as
-ground truth to numerically verify the new prebuilt metrics against (see
-``test_churn_reference_equivalence.py``), and to keep exercising the original edge-case and
-input-validation test coverage in ``test_churn.py``.
+These hand-written math implementations are ground truth for numerically verifying ``empc_score``,
+``mpc_score``, ``empb_score``, ``auepc_score`` and ``expected_cost_loss_churn``.
 """
 
 import numbers
@@ -376,7 +371,6 @@ def empb(
         clv = np.asarray(clv)
     gamma = alpha / (alpha + beta)
 
-    # Sort by predicted probabilities
     sorted_indices = np.argsort(y_score)[::-1]
     sorted_y_true = y_true[sorted_indices]
     sorted_clv = clv[sorted_indices]
@@ -399,7 +393,6 @@ def empb(
     reachable[1:-1] = sorted_scores[:-1] != sorted_scores[1:]
     cumulative_profits = np.where(reachable, cumulative_profits, -np.inf)
 
-    # Find the maximum profit and corresponding threshold
     max_profit_index = np.argmax(cumulative_profits)
     max_profit = cumulative_profits[max_profit_index]
     threshold = max_profit_index / len(y_score)
@@ -462,7 +455,6 @@ def auepc_score(
     # Stop at the point where perfect profits become negative
     stop_index: int = np.argmax(perfect_profits < 0) if np.any(perfect_profits < 0) else len(perfect_profits)  # type: ignore[assignment]
 
-    # Calculate the AUEPC
     score = float(trapezoid(profits[:stop_index] / perfect_profits[:stop_index], dx=1 / len(profits)))
     if normalize:
         score /= (stop_index - 1) / len(profits)

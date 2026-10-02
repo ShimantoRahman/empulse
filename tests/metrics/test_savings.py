@@ -2,10 +2,9 @@
 The cost and savings metrics, on cases small enough to compute by hand.
 
 ``cost_loss`` and ``savings_score`` take decisions; ``expected_cost_loss``,
-``expected_log_cost_loss`` and ``expected_savings_score`` take probabilities. The latter used to be
-checked against ``tests/metrics/reference/savings.py`` instead of the package, so these tests never
-ran a line of Empulse; they now call the public metrics. Their agreement with the reference over
-many parameter sets is ``test_prebuilt_metric_contract.py``'s job.
+``expected_log_cost_loss`` and ``expected_savings_score`` take probabilities. These tests call the
+public metrics. Their agreement with the reference over many parameter sets is
+``test_prebuilt_metric_contract.py``'s job.
 """
 
 import numpy as np

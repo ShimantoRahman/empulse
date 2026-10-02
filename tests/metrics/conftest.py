@@ -1,14 +1,7 @@
 """
 Fixtures shared across ``tests/metrics/``.
 
-Each of these previously existed in two or three modules with a byte-identical body. The
-``empirical_churn_*`` pair in particular was duplicated verbatim between
-``test_auepc_strategy.py`` and ``test_empirical_max_profit_strategy.py``, which are otherwise
-near-identical twins (now merged into ``test_empirical_strategies.py``).
-
-``stochastic_churn_cost_matrix``, ``delta_churn_cost_matrix``, ``uniform_dist_matrix`` and
-``bank_upsell_cost_matrix`` moved here from ``test_metric.py`` when its tests were split across
-modules; ``delta_churn_cost_matrix`` stays function-scoped because tests mutate it.
+``delta_churn_cost_matrix`` is function-scoped because tests mutate it.
 """
 
 import numpy as np

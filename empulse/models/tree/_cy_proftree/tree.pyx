@@ -274,7 +274,6 @@ cdef void prune(Node* node) noexcept nogil:
     if node is NULL:
         return
 
-    # Simply free both children - don't recurse
     free_node(node.left)
     free_node(node.right)
     node.left = NULL
@@ -294,7 +293,6 @@ cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int
     if node is tree.root:
         return
 
-    # Check if this node violates min_samples_split
     if node.n_samples < min_samples_split:
         free_node(node.left)
         free_node(node.right)
@@ -302,7 +300,6 @@ cdef void prune_illegal_nodes(Tree* tree, Node* node, int min_samples_split, int
         node.right = NULL
         return
 
-    # Check if children violate min_samples_leaf
     if node.left is not NULL and node.left.n_samples < min_samples_leaf:
         free_node(node.left)
         free_node(node.right)
@@ -393,7 +390,6 @@ cdef void _find_candidate_helper(RandState* rng, Node* n, CandidateSearch* searc
     if n is NULL or is_leaf(n):
         return
 
-    # Check if this node has two leaf children
     if (n.left is not NULL and is_leaf(n.left) and
             n.right is not NULL and is_leaf(n.right)):
         search.count += 1
@@ -401,7 +397,6 @@ cdef void _find_candidate_helper(RandState* rng, Node* n, CandidateSearch* searc
         if rand_int(rng, 0, search.count) == 0:
             search.candidate = n
 
-    # Recurse to children
     if n.left is not NULL:
         _find_candidate_helper(rng, n.left, search)
     if n.right is not NULL:

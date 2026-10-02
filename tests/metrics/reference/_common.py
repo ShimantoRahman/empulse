@@ -1,11 +1,7 @@
 """
-Shared helper functions used by the reference (native/legacy) metric implementations.
+Shared helper functions for the reference metric implementations in this package.
 
-These functions used to live in ``empulse.metrics.common`` but became unused by the package
-itself once ``metrics.acquisition``, ``metrics.churn``, and ``metrics.credit_scoring`` were
-refactored to build their metrics from :class:`~empulse.metrics.Metric` instances instead of
-hand-written math. They are kept here, verbatim, purely so the reference implementations below
-(used to numerically verify the new prebuilt metrics) keep working unchanged.
+The reference implementations are hand-written math that the prebuilt metrics are verified against.
 """
 
 import numpy as np
@@ -16,16 +12,15 @@ from empulse._types import FloatNDArray
 def _compute_confusion_matrix(
     y_true: FloatNDArray, y_pred: FloatNDArray
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
-    # sort true labels and predictions by highest to the lowest predicted score
     sorted_indices = y_pred.argsort()[::-1]
     sorted_labels = y_true[sorted_indices]
     sorted_predictions = y_pred[sorted_indices]
 
-    # calculate the TP & FP at each new lead targeted
+    # Counts after targeting 0, 1, ... samples.
     true_positives = np.pad(np.cumsum(sorted_labels), pad_width=(1, 0))
     false_positives = np.pad(np.cumsum(sorted_labels == 0), pad_width=(1, 0))
 
-    # merge consecutive equal prediction values
+    # Tied scores form one threshold: keep only the counts after the last sample of each tie.
     duplicated_prediction_indices = np.where(np.diff(sorted_predictions) == 0)[0] + 1
     true_positives = np.delete(true_positives, duplicated_prediction_indices)
     false_positives = np.delete(false_positives, duplicated_prediction_indices)

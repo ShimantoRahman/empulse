@@ -140,11 +140,10 @@ def test_mixture_metric_loss_is_used_not_silently_ignored(data):
     """
     A ``MixtureMetric`` loss must actually be consulted, not silently fall back to plain costs.
 
-    The loss-or-plain-costs branch used to check ``isinstance(loss, Metric)``, which a
-    ``MixtureMetric`` never satisfies (it implements ``BaseMetric`` directly). A mixture loss
-    therefore fell through to the plain-cost branch, where the unset ``fp_cost``/``fn_cost``
-    constructor defaults (``0.0``) triggered the all-zero-costs fallback -- silently discarding
-    the mixture entirely instead of raising or using it.
+    The loss-or-plain-costs branch must not check ``isinstance(loss, Metric)``, which a
+    ``MixtureMetric`` never satisfies (it implements ``BaseMetric`` directly). The mixture would then
+    fall through to the plain-cost branch, where the unset ``fp_cost``/``fn_cost`` constructor defaults
+    (``0.0``) trigger the all-zero-costs fallback and discard the mixture entirely.
     """
     X, y = data
     cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')

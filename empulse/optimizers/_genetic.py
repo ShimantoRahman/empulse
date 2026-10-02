@@ -141,7 +141,7 @@ class GeneticAlgorithmOptimizer(Optimizer):
         rga = Generation(**generation_kwargs)
         bounds_per_feature = [self.bounds] * X.shape[1]
 
-        # Generation.optimize() always maximizes; objective.logit_loss is a loss for minimization.
+        # Generation.optimize() maximizes, but objective.logit_loss is a loss to minimize.
         fitness = _as_generation_fitness(objective.logit_loss)
 
         previous_loss: float | None = None
@@ -170,7 +170,7 @@ class GeneticAlgorithmOptimizer(Optimizer):
             rga.result.success = False  # type: ignore[attr-defined]
 
         result = rga.result
-        # Report `fun` as a loss, per the Optimizer contract (see Optimizer.__call__ docstring).
+        # `fun` is reported as a loss, per the Optimizer contract.
         result.fun = -result.fun  # type: ignore[attr-defined]
         return result  # type: ignore[return-value]
 
@@ -306,11 +306,8 @@ class MemeticOptimizer(Optimizer):
 
         bounds_list = [self.bounds] * X.shape[1]
 
-        # Generation.optimize() always maximizes; objective.logit_loss is a loss for
-        # minimization. Adapt once here rather than handing a minimization loss to a maximizer.
-        # (The Lamarckian local search itself descends the true loss directly via
-        # `_grad_objective.logit_gradient_steps()`, independent of this adapter, so both the
-        # local search and the population-level GA now pull in the same direction.)
+        # Generation.optimize() maximizes, but objective.logit_loss is a loss to minimize. The Lamarckian
+        # local search descends the true loss through `_grad_objective.logit_gradient_steps()`.
         fitness = _as_generation_fitness(objective.logit_loss)
 
         last_gen: Generation | None = None
@@ -322,10 +319,10 @@ class MemeticOptimizer(Optimizer):
                 if max(recent) - min(recent) < self.tol:
                     break
 
-        # optimize() is an infinite generator so last_gen is always set after at least one iteration.
+        # optimize() is an infinite generator, so last_gen is set after the first iteration.
         assert last_gen is not None
         ga_result = last_gen.result
-        # Final loss evaluation on true hull (score() does not increment epoch)
+        # Evaluate the final loss on the true hull; score() does not increment the epoch.
         loss = objective.logit_loss(ga_result.x)
         return OptimizeResult(  # type: ignore[call-arg]
             x=ga_result.x,

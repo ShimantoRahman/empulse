@@ -268,7 +268,7 @@ def test_lift_score_rejects_invalid_input(y_true, y_score, expected_exception):
 
 
 def test_lift_score_small_fraction_takes_at_least_one_sample():
-    """round(4 * 0.1) is 0, which used to divide by zero instead of scoring the top sample."""
+    """round(4 * 0.1) is 0, which must still score the top sample instead of dividing by zero."""
     assert lift_score([0, 1, 0, 1], [0.1, 0.2, 0.3, 0.4], fraction=0.1) == pytest.approx(2.0)
 
 

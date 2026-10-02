@@ -12,10 +12,9 @@ from ..._common._sklearn_compat import Tags, type_of_target, validate_data
 from ..._common._strategies import Strategy
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 
-# Each subclass's `strategy` callable has a different, more specific contract (documented on the
-# subclass itself): BiasRelabelingClassifier's returns an int (a pair count), BiasResamplingClassifier's
-# returns a 2x2 group-weight matrix, and BiasReweighingClassifier's returns a per-sample weight
-# array. This shared, deliberately loose type covers all three without narrowing to any one of them.
+# The `strategy` callable differs per subclass: BiasRelabelingClassifier's returns a pair count,
+# BiasResamplingClassifier's a 2x2 group-weight matrix and BiasReweighingClassifier's a per-sample
+# weight array. This loose type covers all three.
 AnyStrategyFn = Callable[[NDArray[Any], NDArray[Any]], Any]
 
 

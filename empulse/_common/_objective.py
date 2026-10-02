@@ -572,9 +572,9 @@ class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-
         ``theta`` a coefficient vector)::
 
             gen = objective.logit_gradient_steps()
-            grad = gen.send(theta)  # first time gradient is computed from scratch
-            grad = gen.send(theta)  # gradient computed from cached information
-            grad = gen.send((theta, True))  # gradient computed from scratch
+            grad = gen.send(theta)  # first call: computed from scratch
+            grad = gen.send(theta)  # later calls: computed from cached information
+            grad = gen.send((theta, True))  # computed from scratch again
             gen.close()
         """
         generator = self._logit_gradient_steps()
@@ -624,7 +624,7 @@ class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-
         alpha : float
             New alpha value to use for the next gradient computation.
         """
-        # no-op: override in subclasses that support alpha annealing
+        # No-op by default; subclasses that support alpha annealing override it.
 
     def with_indices(self, indices: np.ndarray) -> 'LogitObjective':
         """

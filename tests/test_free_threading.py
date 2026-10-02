@@ -81,8 +81,8 @@ class TestConcurrentFitsAreIndependent:
     """Each estimator instance owns its randomness; threads must not perturb one another."""
 
     def test_proftree_fits_do_not_share_rng_state(self, data):
-        # ProfTree used to draw from libc rand()/srand(), which is process-global: one fit
-        # reseeded every other, so threaded fits diverged from their sequential counterparts.
+        # ProfTree must not draw from libc rand()/srand(), which is process-global: one fit would
+        # reseed every other, and threaded fits would diverge from their sequential counterparts.
         X, y = data
 
         def fit(seed):

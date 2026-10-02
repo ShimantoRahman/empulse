@@ -1,43 +1,34 @@
 """
-Equivalence tests for the thin-wrapper generic metrics in ``empulse.metrics``.
+Equivalence tests for the generic metrics in ``empulse.metrics``.
 
-``max_profit_score``, ``expected_cost_loss``, ``expected_log_cost_loss``, and
-``expected_savings_score`` used to be hand-written native math functions living in
-``empulse/metrics/max_profit.py`` and ``empulse/metrics/savings.py``. They are now built from
-:class:`~empulse.metrics.Metric` instances (see ``empulse/metrics/metric/prebuilt_metrics.py``).
-The native math still exists, unchanged, in ``tests/metrics/reference/`` purely as ground truth
--- these tests check that the new instances numerically reproduce it (subject to the documented,
-intentional behavior differences noted below).
+``max_profit_score``, ``expected_cost_loss``, ``expected_log_cost_loss`` and
+``expected_savings_score`` are built from :class:`~empulse.metrics.Metric` instances (see
+``empulse/metrics/metric/prebuilt_metrics.py``). These tests check that they numerically reproduce
+the hand-written math in ``tests/metrics/reference/``, apart from the intentional differences below.
 
 Notes
 -----
-* ``max_profit_score`` now takes ``tp_cost``/``tn_cost`` (all-cost naming, consistent with the
-  rest of the package) instead of the reference's ``tp_benefit``/``tn_benefit``:
-  ``tp_cost = -tp_benefit`` and ``tn_cost = -tn_benefit``. ``fp_cost``/``fn_cost`` are unchanged.
-* ``MaxProfit`` (pre-existing, unrelated to this refactor) aggregates any instance-dependent
-  (array-like) parameter to its mean before computing the maximum profit, since the profit
-  surface is optimized over the convex hull of the ROC curve rather than per-sample. The
-  reference ``max_profit``, by contrast, multiplies the raw arrays directly against the
-  hull-reduced TPR/FPR arrays, which only broadcasts correctly when a cost happens to be a
-  scalar. So the instance-dependent case below compares the new instance against the reference
-  called with the *mean* of the arrays, matching the new instance's own documented aggregation
-  behavior, rather than against the reference called with the raw arrays.
+* ``max_profit_score`` takes ``tp_cost``/``tn_cost`` where the reference takes
+  ``tp_benefit``/``tn_benefit``: ``tp_cost = -tp_benefit`` and ``tn_cost = -tn_benefit``.
+  ``fp_cost``/``fn_cost`` are the same.
+* ``MaxProfit`` aggregates any instance-dependent (array-like) parameter to its mean before
+  computing the maximum profit, since the profit surface is optimized over the convex hull of the
+  ROC curve rather than per sample. The reference multiplies the raw arrays against the
+  hull-reduced TPR/FPR arrays, which only broadcasts correctly when a cost is a scalar. The
+  instance-dependent case below therefore compares the metric against the reference called with the
+  *mean* of the arrays.
 * ``expected_cost_loss``/``expected_log_cost_loss`` are built on the ``Cost``/``LogCost``
   strategies, which always return the *mean* cost across samples. The reference functions default
-  to returning the *sum* (``normalize=False``), so comparisons below pass ``normalize=True`` to
-  the reference call.
-* ``expected_savings_score``'s ``baseline='prior'`` behavior was *fixed* as part of this refactor:
-  the old native implementation (preserved verbatim in the reference module) hard-thresholds the
-  constant prior probability through ``cost_loss``'s auto-thresholding logic, which degenerates
-  the "expected cost at the prior probability" baseline into a hard all-zero/all-one decision in
-  most cases, and it also only ever considered ``prior_pos = mean(y_true)``, never the cheaper
-  ``prior_neg = 1 - prior_pos`` alternative. The new ``Savings``-strategy-based instance correctly
-  evaluates the continuous expected cost at both ``prior_pos`` and ``prior_neg`` and takes
-  whichever is cheaper. So ``baseline='prior'`` is *not* compared against the (buggy) reference
-  here; instead it is checked against an independent hand-computed formula using
-  ``expected_cost_loss`` at the constant prior probabilities. All other baselines
-  (``'zero_one'``, ``'zero'``, ``'one'``, and array-like) are unaffected by the fix and are
-  compared directly against the reference.
+  to returning the *sum* (``normalize=False``), so comparisons pass ``normalize=True`` to the
+  reference call.
+* ``expected_savings_score``'s ``baseline='prior'`` is not compared against the reference. The
+  reference hard-thresholds the constant prior probability through ``cost_loss``'s
+  auto-thresholding, which collapses the baseline into an all-zero or all-one decision in most
+  cases, and it only considers ``prior_pos = mean(y_true)``, never ``prior_neg = 1 - prior_pos``.
+  ``Savings`` evaluates the continuous expected cost at both priors and takes the cheaper one, so
+  ``baseline='prior'`` is checked against a hand-computed formula using ``expected_cost_loss`` at
+  the constant prior probabilities. All other baselines (``'zero_one'``, ``'zero'``, ``'one'`` and
+  array-like) are compared directly against the reference.
 """
 
 import numpy as np
@@ -167,10 +158,10 @@ def test_expected_savings_score_prior_baseline_matches_hand_computed_formula(
     y_true, tp_cost, fp_cost, tn_cost, fn_cost
 ):
     """
-    ``baseline='prior'`` was fixed as part of this refactor (see module docstring): the correct
-    semantics are "the expected cost at the prior probability, whichever of ``prior_pos``/
-    ``prior_neg`` is cheaper" -- computed here directly with ``expected_cost_loss`` rather than
-    the (differently, and more subtly, buggy) native reference.
+    ``baseline='prior'`` is the expected cost at the prior probability, whichever of
+    ``prior_pos``/``prior_neg`` is cheaper (see the module docstring).
+
+    It is computed here directly with ``expected_cost_loss`` instead of through the reference.
     """
     rng = np.random.default_rng(17)
     y_score = rng.random(len(y_true))

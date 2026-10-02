@@ -1,9 +1,7 @@
 """
 Cross-checks between prebuilt metrics that should agree by construction.
 
-This file used to compare ``reference.max_profit.max_profit`` against ``reference.churn.mpc`` --
-reference against reference, so it could never catch a regression in the shipped package. Both
-sides now call the public metrics.
+Both sides call the public metrics, not the reference implementations.
 """
 
 import warnings

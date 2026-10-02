@@ -16,11 +16,12 @@ GradientType = cython.fused_type(cython.float[:], cython.double[:])
 # precision where the probability is close to 0 or 1. The exponent is clamped to [-700, 700], so E
 # neither overflows nor underflows; that changes only probabilities below 1e-304.
 #
-# The exponentials (and the logarithms of the log cost) are taken by numpy for the whole vector at
-# once: its exp and log are vectorized, and cost a fraction of calling the C library's for every
-# sample. The matrix-vector products go to BLAS. Everything else is a single pass over the samples, without the GIL, and without a
-# branch on the sign of the margin: that sign is as good as random from one sample to the next,
-# and a branch on it would be mispredicted about half the time, costing more than the arithmetic.
+# numpy takes the exponentials (and the logarithms of the log cost) for the whole vector at once:
+# its vectorized exp and log cost a fraction of calling the C library's for every sample. The
+# matrix-vector products go to BLAS. Everything else is a single pass over the samples without the
+# GIL and without a branch on the sign of the margin. That sign is effectively random from one
+# sample to the next, so a branch would be mispredicted about half the time and cost more than the
+# arithmetic.
 _exp = np.exp
 _log = np.log
 # Below this many values, calling numpy costs more than it saves, so the C library's exp and log are
@@ -28,12 +29,11 @@ _log = np.log
 cdef Py_ssize_t _VECTORIZED_MIN_SIZE = 128
 
 
-# The elastic-net penalty arrives already scaled, as the two precomputed weights `l1_weight` and
-# `l2_weight`. `ElasticNetPenalty` derives them once per fit from `C`, `l1_ratio` and the
-# objective's scale, which keeps the scaling policy in Python (where it is easy to change without a
-# rebuild) while the arithmetic stays here, where it costs nothing. Passing them as weights rather
-# than as `C`/`l1_ratio` also removes the per-call branching on `l1_ratio == 0.0 / == 1.0`.
-# Pass 0.0 for both to get the unpenalized data term, which is what the split-variable solver wants.
+# The elastic-net penalty arrives as the two precomputed weights `l1_weight` and `l2_weight`.
+# `ElasticNetPenalty` derives them once per fit from `C`, `l1_ratio` and the objective's scale,
+# which keeps the scaling policy in Python, where it changes without a rebuild. Weights also avoid
+# a per-call branch on `l1_ratio == 0.0` and `l1_ratio == 1.0`. Pass 0.0 for both to get the
+# unpenalized data term, which the split-variable solver uses.
 
 
 cdef inline double _clamped_exponent(double negative_margin) noexcept nogil:

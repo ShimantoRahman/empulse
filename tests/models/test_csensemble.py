@@ -49,12 +49,12 @@ def test_csbagging_combination(classification_data, combination):
 
 
 class TestCSBaggingFeatureSubsets:
-    """Regression tests: weighted-voting predict used to call sub-estimators on the full X.
+    """Weighted-voting predict with per-estimator feature subsets.
 
     `BaggingClassifier` draws a feature subset per estimator when `max_features < 1.0` or
     `bootstrap_features=True`; `_predict_weighted_proba` must slice `X` to each estimator's own
-    `estimators_features_` before calling `predict_proba`, exactly like `_get_oob_weights` already
-    does, or a sub-estimator raises "X has N features, but ... is expecting M features".
+    `estimators_features_` before calling `predict_proba`, exactly like `_get_oob_weights`, or a
+    sub-estimator raises "X has N features, but ... is expecting M features".
     """
 
     @pytest.mark.parametrize('max_features', [1.0, 0.5])
@@ -91,11 +91,11 @@ class TestCSBaggingFeatureSubsets:
 
 
 class TestOOBWeightsFiniteAndNormalized:
-    """Regression test: an integer `max_samples` used to make CSForestClassifier's OOB weights NaN.
+    """An integer `max_samples` gives finite, normalized OOB weights for CSForestClassifier.
 
-    `isinstance(x, Real)` is also `True` for every `int`, so three independent `if`s (rather than
-    `if/elif/else`) meant an integer `max_samples` fell through the `Integral` branch and then got
-    overwritten by the `Real` branch, computing a wildly wrong bootstrap sample size.
+    `isinstance(x, Real)` is also `True` for every `int`, so the bootstrap sample size must be chosen
+    with `if/elif/else`: three independent `if`s would let an integer `max_samples` fall through the
+    `Integral` branch and then be overwritten by the `Real` branch.
     """
 
     @pytest.mark.parametrize('max_samples', [None, 50, 0.5])
@@ -110,12 +110,12 @@ class TestOOBWeightsFiniteAndNormalized:
 
 
 class TestOOBWeightingDirectionAndInstanceCosts:
-    """Regression tests: OOB weighting used to ignore metric direction and instance-dependent costs.
+    """OOB weighting respects metric direction and instance-dependent costs.
 
-    Weighting proportionally to a raw loss value (rather than a direction-aware "goodness" score)
-    gives the *worst* estimators the most weight; and passing whole-dataset instance-dependent costs
-    unsliced to a loss evaluated on OOB rows either raises a shape-mismatch error or silently scores
-    against the wrong rows.
+    Weights must follow a direction-aware "goodness" score: proportional to a raw loss value, the
+    *worst* estimators would get the most weight. Whole-dataset instance-dependent costs must be
+    sliced to the OOB rows before a loss is evaluated on them; unsliced, they either raise a
+    shape-mismatch error or silently score against the wrong rows.
     """
 
     @pytest.mark.parametrize('model_cls', [CSForestClassifier, CSBaggingClassifier])
@@ -148,10 +148,10 @@ class TestOOBWeightingDirectionAndInstanceCosts:
 
 
 def test_csforest_rejects_a_metric_as_criterion(classification_data):
-    """Regression test: parameter validation accepted a ``BaseMetric`` as ``criterion``.
+    """Parameter validation rejects a ``BaseMetric`` as ``criterion``.
 
-    ``fit`` could not use one and failed later with a confusing "Unknown criterion" error. The
-    criterion is now validated like :class:`~empulse.models.CSTreeClassifier`'s.
+    ``fit`` cannot use one and would fail later with a confusing "Unknown criterion" error. The
+    criterion is validated like :class:`~empulse.models.CSTreeClassifier`'s.
     """
     from sklearn.utils._param_validation import InvalidParameterError
 
@@ -163,7 +163,7 @@ def test_csforest_rejects_a_metric_as_criterion(classification_data):
 
 
 class TestCSForestWarmStart:
-    """Regression test: ``warm_start`` refitted the whole forest, as its inner forest was rebuilt every fit."""
+    """``warm_start`` keeps the trees already grown instead of rebuilding the inner forest on every fit."""
 
     def test_adding_trees_keeps_the_old_ones(self, make_data):
         X, y = make_data(n_samples=300)
@@ -234,7 +234,7 @@ def test_csforest_balanced_subsample_weighs_each_bootstrap_sample(make_data):
 
 
 class TestGoodnessWeights:
-    """Regression tests for OOB weighting giving more weight to worse estimators.
+    """OOB weighting gives more weight to better estimators.
 
     `goodness_weights` takes values from `BaseMetric._loss`, which is always minimized, so a lower
     value must win the higher weight. It must also not blow up when normalizing signed values.
@@ -273,7 +273,7 @@ class TestGoodnessWeights:
 
 
 class TestSubsetLossParams:
-    """Regression tests for instance-dependent loss params not being subset to OOB rows."""
+    """Instance-dependent loss params are subset to the OOB rows."""
 
     def test_array_matching_n_samples_is_subset_by_index(self):
         params = {'fn_cost': np.array([1.0, 2.0, 3.0, 4.0, 5.0])}

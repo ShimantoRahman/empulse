@@ -1,9 +1,4 @@
-"""
-Helpers shared by the dataset tests.
-
-``BACKENDS`` was previously defined in four modules, and the cell2cell fixture and the Bahnsen
-false positive cost were only reachable from the module that happened to define them.
-"""
+"""Helpers shared by the dataset tests."""
 
 import numpy as np
 import pandas as pd

@@ -100,7 +100,6 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         param_grid = self.param_grid
         controls = self.controls
         if self.param_grid_needs_recompute:
-            # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
             cached = self._grid_cache
             if cached is not None and cached[0] == distribution_parameters:

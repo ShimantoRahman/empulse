@@ -68,8 +68,8 @@ def _build_max_profit_score_piecewise(
     deterministic_symbols: Iterable[sympy.Symbol],
 ) -> MetricFn:
     if not _is_polynomial_in(profit_function, random_symbol):
-        # No a_k decomposition, so no closed-form partial moments; each region is integrated
-        # numerically instead. The regions themselves are found the same way either way.
+        # Without the a_k decomposition there are no closed-form partial moments, so each region is
+        # integrated numerically. The regions are found the same way in both cases.
         return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
 
     distribution = pspace(random_symbol).distribution
@@ -95,9 +95,9 @@ class _PreparedIntegrand:
     """An integrand compiled once per parameter set, ready to be integrated over any region.
 
     Compiling means substituting everything except the rates and the stochastic variable, then
-    lambdifying over those three. Both steps are kept out of the region loop: doing them per region
-    -- as this code used to -- meant a fresh ``subs`` and a fresh ``lambdify`` for every one of the
-    tens of regions in a partition, which dominated the runtime of the numerical path.
+    lambdifying over those three. Doing both once per parameter set instead of once per region avoids
+    a fresh ``subs`` and ``lambdify`` for each of the tens of regions in a partition, which dominated
+    the runtime of the numerical path.
 
     The substitution has to happen before lambdifying, not be replaced by passing the parameters as
     extra arguments. A density can name a special function that collides with a symbol: the Chi
@@ -376,8 +376,7 @@ class _PiecewiseBase:
         self.random_var_bounds = pspace(random_symbol).domain.set.args
         self.distribution_args = pspace(random_symbol).distribution.args
 
-        # Most supports are plain numbers, so resolving them symbolically on every call costs a
-        # sympy substitution for no gain. Resolve once here when nothing in them is symbolic.
+        # Most supports are plain numbers; resolve those once instead of substituting on every call.
         if not any(isinstance(bound, sympy.Expr) and bound.free_symbols for bound in self.random_var_bounds):
             self._static_support: tuple[float, float] | None = _resolve_support(self.random_var_bounds, {}, None, None)
         else:
@@ -397,8 +396,8 @@ class _PiecewiseBase:
 
         self.dist_params = _distribution_parameter_symbols(self.distribution_args)
 
-        # Resolved once here, since every call needs them: naming a sympy symbol means printing it,
-        # which cost more than the rest of scoring a small hull.
+        # Resolved once because naming a sympy symbol means printing it, which costs more than
+        # scoring a small hull.
         self._distribution_parameter_names = tuple(symbol.name for symbol in self.dist_params)
         self._distribution_value_sources: list[float | str | sympy.Expr] = [
             float(argument) if argument.is_number else str(argument) if isinstance(argument, sympy.Symbol) else argument
@@ -689,8 +688,7 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
                 f'polynomial in {random_symbol}. Use a MaxProfit() integration method other than '
                 "'auto', or build the metric with a polynomial profit function."
             )
-        # Republished without the Optional: reaching here proves the decomposition exists, and the
-        # gradient objectives differentiate these directly.
+        # Narrowed from Optional: the check above proves the decomposition exists.
         self.coefficient_eqs: list[sympy.Expr] = self.poly_eqs
         self.coefficient_fns: list[Callable[..., Any]] = self.poly_fns
 
@@ -728,8 +726,7 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
                 )
             )
 
-        # The coefficients are needed at every hull vertex to build the envelope, and the regions
-        # then select which vertex's coefficients apply where.
+        # The envelope needs the coefficients at every hull vertex; each region then selects one vertex.
         coefficient_matrix = _evaluate_coefficient_matrix(
             self.coefficient_eqs,
             self.coefficient_fns,
@@ -786,22 +783,18 @@ class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
         lower_bounds = np.asarray(bounds[:-1])
         upper_bounds = np.asarray(bounds[1:])
 
-        # Max and min of the Uniform distribution support
         max_val = float(upper_bound)
         min_val = float(lower_bound)
 
-        # The constant PDF of the Uniform distribution: 1 / (beta - alpha)
+        # The density is constant: 1 / (beta - alpha).
         pdf_val = 1.0 / (max_val - min_val)
 
         total_score = 0.0
 
-        # Iterate over each term in the polynomial: a_k * x^k
         for k, a_k in enumerate(coefficients):
-            # Skip zero coefficients to save computation
             if np.all(np.asarray(a_k) == 0.0):
                 continue
 
-            # Integral of a_k * x^k * h(x)
             term_val = (a_k * pdf_val / (k + 1.0)) * (upper_bounds ** (k + 1) - lower_bounds ** (k + 1))
 
             total_score += term_val.sum()
@@ -814,7 +807,7 @@ def _safe_pow_phi(x: np.ndarray, exp: int, phi: float | np.ndarray) -> np.ndarra
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', RuntimeWarning)
         result = (x**exp) * phi
-    # Where phi is 0 (i.e., x is ±inf), the product should be 0, not NaN
+    # Where phi is 0 (x is infinite), the product is 0, not NaN.
     result[np.asarray(phi) == 0] = 0.0
     return result
 
@@ -845,10 +838,10 @@ class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
         phi_lower = st.norm.pdf(z_lower)
         phi_upper = st.norm.pdf(z_upper)
 
-        # R will store the integrated value of x^k for the segment
+        # r[k] is the integral of x**k times the density over each segment.
         r = []
 
-        # R_0: The basic integral of the PDF (the CDF difference)
+        # R_0 is the CDF difference.
         r0 = st.norm.cdf(z_upper) - st.norm.cdf(z_lower)
         r.append(r0)
 
@@ -860,7 +853,7 @@ class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
             r1 = mu * r0 - sigma * e0
             r.append(r1)
 
-        # R_k: Recurrence relation for k >= 2
+        # R_k for k >= 2 follows from a recurrence.
         for k in range(2, max_degree + 1):
             r_k_minus_1 = _safe_pow_phi(upper_bounds, k - 1, phi_upper) - _safe_pow_phi(lower_bounds, k - 1, phi_lower)
             r_k = mu * r[-1] + (k - 1.0) * (sigma**2) * r[-2] - sigma * r_k_minus_1
@@ -868,7 +861,6 @@ class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
 
         total_score = 0.0
 
-        # Multiply each raw integral R_k by its polynomial coefficient a_k
         for k, a_k in enumerate(coefficients):
             if np.all(np.asarray(a_k) == 0.0):
                 continue
@@ -895,12 +887,8 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
     ) -> float:
         total_score = 0.0
 
-        # Iterate over each term in the polynomial: a_k * x^k
         for k, a_k in enumerate(coefficients):
-            # Fetch the k-th moment and the CDF shifted by degree k
             kth_moment, shifted_cdf_k_diff = self._get_kth_integration_components(bounds, k, distribution_parameters)
-
-            # Add the evaluated term to the total integral sum
             total_score += (a_k * kth_moment * shifted_cdf_k_diff).sum()
 
         return float(total_score)
@@ -942,7 +930,7 @@ class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
         x_m = float(dist_params_list[0])  # Scale
         alpha = float(dist_params_list[1])  # Shape
 
-        # Guardrail: The k-th moment only exists if alpha > k
+        # The k-th moment exists only if alpha > k.
         if alpha <= k:
             raise ValueError(
                 f'The Pareto shape parameter (alpha={alpha}) must be strictly greater than degree k={k} '
@@ -982,14 +970,12 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
 
         bounds_arr = np.clip(np.asarray(bounds), a, b)
 
-        # Pre-calculate masks for the two segments of the triangle
         mask1 = bounds_arr <= m
         mask2 = bounds_arr > m
 
         total_score = 0.0
 
         for k, a_k in enumerate(coefficients):
-            # Skip zero coefficients
             if np.all(np.asarray(a_k) == 0.0):
                 continue
 
@@ -1002,7 +988,7 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
             # For k >= 1, use the exact polynomial integral A_k(x)
             a_x = np.zeros_like(bounds_arr)
 
-            # 1. Evaluate bounds falling in the first segment: [a, m]
+            # Bounds in the first segment, [a, m].
             if np.any(mask1) and m > a:
                 x1 = bounds_arr[mask1]
                 a_x[mask1] = (2.0 / ((b - a) * (m - a))) * (
@@ -1011,11 +997,11 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
                     + (a ** (k + 2)) / ((k + 1.0) * (k + 2.0))
                 )
 
-            # 2. Evaluate bounds falling in the second segment: (m, b]
+            # Bounds in the second segment, (m, b].
             if np.any(mask2) and b > m:
                 x2 = bounds_arr[mask2]
 
-                # A_k(m) is the integral up to the mode
+                # A_k(m) is the integral up to the mode.
                 a_m = 0.0
                 if m > a:
                     a_m = (2.0 / ((b - a) * (m - a))) * (
@@ -1154,10 +1140,9 @@ class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
         return kth_moment, shifted_cdf_k_diff
 
 
-#: The score-side counterpart to `_distributions.ADAPTERS`'s rate-side table, keyed by the same
-#: sympy.stats distribution types. Kept here rather than in `_distributions.py` because the
-#: classes it names are defined in this module; `_distributions.py` importing them back would
-#: make the two modules import each other.
+#: The score-side counterpart of `_distributions.ADAPTERS`, keyed by the same sympy.stats distribution
+#: types. It lives here because `_distributions.py` importing these classes would make the two
+#: modules import each other.
 _SCORE_CLASSES: dict[type, type[BaseMaxProfitScorePiecewise]] = {
     sympy.stats.crv_types.UniformDistribution: MaxProfitScorePiecewiseUniform,
     sympy.stats.crv_types.BetaDistribution: MaxProfitScorePiecewiseBeta,

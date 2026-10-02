@@ -494,7 +494,6 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         for i, estimator, samples, features in zip(
             range(self.n_estimators), self.estimators_, self.estimators_samples_, self.estimators_features_, strict=True
         ):
-            # Create mask for OOB samples
             mask = ~indices_to_mask(samples, n_samples)
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
@@ -507,10 +506,9 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:
         X = validate_data(self, X, reset=False)
 
-        # Assign chunk of trees to jobs
         n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
 
-        # avoid storing the output of every estimator by summing them here
+        # Sum the estimators' outputs as they arrive instead of storing each one.
         n_classes = int(self.n_classes_) if np.ndim(self.n_classes_) == 0 else int(self.n_classes_[0])
         all_proba = np.zeros((X.shape[0], n_classes), dtype=np.float64)
         lock = threading.Lock()

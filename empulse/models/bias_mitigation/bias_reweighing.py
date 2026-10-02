@@ -165,8 +165,7 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
         if self.transform_feature is not None:
             sensitive_feature = self.transform_feature(sensitive_feature)
 
-        # The strategy works on the 0/1-encoded target (like BiasRelabler's and BiasResampler's),
-        # while the estimator is still fitted on the original labels.
+        # The strategy works on the 0/1-encoded target; the estimator is fitted on the original labels.
         y_binary = np.where(y == self.classes_[1], 1, 0)
         sample_weights = strategy_fn(y_binary, sensitive_feature)
         estimator_ = clone(self.estimator)

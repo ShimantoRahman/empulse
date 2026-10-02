@@ -1,12 +1,8 @@
 """
-Reference (native/legacy) implementations of the customer acquisition metrics.
+Reference implementations of the customer acquisition metrics.
 
-These are the hand-written math implementations that used to live in
-``empulse.metrics.acquisition`` before it was refactored to build ``mpa_score``, ``empa_score``,
-and ``expected_cost_loss_acquisition`` from :class:`~empulse.metrics.Metric` instances instead.
-They are kept here, unchanged, purely as ground truth to numerically verify the new prebuilt
-metrics against, and to keep exercising the original edge-case and input-validation test
-coverage in ``test_acquisition.py``.
+These hand-written math implementations are ground truth for numerically verifying ``mpa_score``,
+``empa_score`` and ``expected_cost_loss_acquisition``.
 """
 
 import warnings

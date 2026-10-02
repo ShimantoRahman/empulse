@@ -30,8 +30,7 @@ _sympy_dist_to_scipy: dict[
     sympy.stats.crv_types.BetaPrimeDistribution: scipy.stats.betaprime,
     sympy.stats.crv_types.ChiDistribution: scipy.stats.chi,
     sympy.stats.crv_types.ChiSquaredDistribution: scipy.stats.chi2,
-    # sympy.stats.crv_types.Erlang: scipy.stats.chi2
-    # Erlang internally calls GammaDistribution so should be supported
+    # Erlang is built on GammaDistribution, so it needs no entry of its own.
     sympy.stats.crv_types.ExGaussianDistribution: scipy.stats.exponnorm,
     sympy.stats.crv_types.ExponentialDistribution: scipy.stats.expon,
     sympy.stats.crv_types.FDistributionDistribution: scipy.stats.f,
@@ -156,13 +155,11 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
 
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
-        # Generate a Sobol sequence for QMC sampling
         sobol = Sobol(d=len(random_symbols), scramble=True, rng=rng)
         self.sobol_samples = sobol.random(n_mc_samples)
         if not any(arg.free_symbols for arg in self.distribution_args):
-            # If all distribution parameters are fixed, then the param grid can be pre-computed.
+            # With fixed distribution parameters, the grid can be computed up front.
             self.param_grid_needs_recompute = False
-            # convert to scipy distributions
             self.scipy_distributions: list[FrozenScipyDist] | None = [
                 _scipy_distribution(random_var) for random_var in random_symbols
             ]
@@ -187,7 +184,6 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid
         if self.param_grid_needs_recompute:
-            # distribution parameters of the random variable
             distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
             cached = self._grid_cache
             if cached is not None and cached[0] == distribution_parameters:

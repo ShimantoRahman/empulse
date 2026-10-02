@@ -152,7 +152,7 @@ class TestNewlyQmcCapableDistributions:
         points = frozen.ppf([0.1, 0.3, 0.5, 0.7, 0.9])
         assert [float(sympy_density(point)) for point in points] == pytest.approx(frozen.pdf(points), rel=1e-9)
 
-    # A 2M-point reference grid per distribution; see `slow` in CLAUDE.md.
+    # A 2M-point reference grid per distribution.
     @pytest.mark.slow
     @pytest.mark.parametrize(('name', 'factory', 'frozen'), NEWLY_QMC_CAPABLE)
     def test_quasi_monte_carlo_matches_a_dense_grid_reference(self, name, factory, frozen):
@@ -224,11 +224,11 @@ class TestNewlyQmcCapableDistributions:
 
 
 class TestAutoPrefersSampling:
-    """``auto`` now reaches for quasi-Monte Carlo whenever every distribution can be sampled."""
+    """``auto`` reaches for quasi-Monte Carlo whenever every distribution can be sampled."""
 
     def test_two_variables_use_quasi_monte_carlo(self):
-        """Two stochastic variables used to go to nested quadrature, which needed about 19,000
-        integrand evaluations to resolve the kinks for an answer sampling reaches to ~1e-6.
+        """Two stochastic variables go to quasi-Monte Carlo, not to nested quadrature, which needs about
+        19,000 integrand evaluations to resolve the kinks for an answer sampling reaches to ~1e-6.
         """
         clv, d, f = sympy.symbols('clv d f')
         gamma = sympy.stats.Beta('gamma', 6, 14)
@@ -311,8 +311,8 @@ def test_qmc_distribution_table_covers_every_registered_distribution():
 def test_qmc_scipy_distribution_matches_sympy_density(factory):
     """The frozen SciPy distribution QMC samples from must have the SymPy distribution's density.
 
-    Arcsin and PowerFunction used to pass their upper bound as SciPy's ``scale`` (a width), which
-    stretched the support: Arcsin(2, 5) was sampled on [2, 7].
+    For Arcsin and PowerFunction, SciPy's ``scale`` is the width of the support, not its upper bound:
+    Arcsin(2, 5) must be sampled on [2, 5], not [2, 7].
     """
     random_variable = factory()
     frozen = _scipy_distribution(random_variable)
@@ -511,7 +511,7 @@ print(metric._repr_latex_())
 
         Which variable gets which dimension of the Sobol sequence, or which Monte Carlo draw, follows
         the order of the variables. Taken from a set of symbols, that order changes with the string
-        hash seed, which Python randomizes per process, so ``random_state`` did not fix the result.
+        hash seed, which Python randomizes per process, so ``random_state`` would not fix the result.
         With three variables, four seeds would all give the same order by chance with probability 1/216.
         """
         processes = [
@@ -777,40 +777,30 @@ def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sy
     y, y_proba = y_true_and_prediction
     sympy_dist = sympy_dist_map[0]
     params = sympy_dist_map[1]
-    #
-    # if sympy_dist in (sympy.stats.crv_types.BetaPrimeDistribution,):
-    #     pytest.xfail("Distribution has non-lambdifiable expectation")
 
-    # symbols used in the cost expressions
     clv, d, f = sympy.symbols('clv d f')
 
-    # create named parameter symbols (param_0, param_1, ...)
     random_symbol_params = tuple(sympy.symbols([f'param_{i}' for i in range(len(params))]))
 
-    # prepare substitution dicts:
-    #  - for calling the metric (keyword args must be strings)
-    #  - for substituting into sympy expressions (symbols -> values)
+    # Keyword arguments must be strings; sympy substitutions need symbols as keys.
     param_values_kwargs = {f'param_{i}': params[i] for i in range(len(params))}
     param_values_subs = {random_symbol_params[i]: params[i] for i in range(len(params))}
 
-    # build random-variable based cost matrix (gamma is the rv)
+    # gamma is the random variable.
     gamma = sympy.stats.crv_types.rv('gamma', sympy_dist, random_symbol_params)
     cost_matrix_rv = (
         CostMatrix().add_tp_benefit(gamma * (clv - d - f)).add_tp_benefit((1 - gamma) * -f).add_fp_cost(d + f)
     )
     profit_rv = Metric(cost_matrix_rv, Cost())
 
-    # build deterministic cost matrix using a gamma symbol
     gamma_sym = sympy.symbols('gamma')
     cost_matrix_det = (
         CostMatrix().add_tp_benefit(gamma_sym * (clv - d - f)).add_tp_benefit((1 - gamma_sym) * -f).add_fp_cost(d + f)
     )
     profit_det = Metric(cost_matrix_det, Cost())
 
-    # numeric parameters for clv/d/f
     clv_val, d_val, f_val = 100.0, 10.0, 1.0
 
-    # compute the mean of the random variable (E[gamma]) and evaluate to float
     fixed_means = {
         sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
         sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
@@ -826,7 +816,6 @@ def test_cost_strategy_random_equals_mean_parametrized(y_true_and_prediction, sy
         mean_expr = sympy.stats.E(gamma)
         mean_value = float(sympy.N(mean_expr.subs(param_values_subs)))
 
-    # evaluate both metrics:
     val_rv = profit_rv(y, y_proba, clv=clv_val, d=d_val, f=f_val, **param_values_kwargs)
     val_det = profit_det(y, y_proba, clv=clv_val, d=d_val, f=f_val, gamma=mean_value)
 

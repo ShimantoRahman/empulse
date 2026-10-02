@@ -1,12 +1,12 @@
 """Regularization and L1-solver behaviour of :class:`~empulse.models.CSLogitClassifier`.
 
-The elastic-net penalty used to be added unnormalized to a sample-averaged data loss, which made it
-roughly ``n_samples`` times stronger than scikit-learn's at the same ``C``. Because the expected
-cost is linear in the predicted probability, its gradient is bounded by ``0.25 * max|c1 - c2|``, so
-with mirrored unit costs ``w = 0`` genuinely satisfied the L1 optimality condition: the model
-returned all-zero coefficients and predicted exactly 0.5 for every sample. On top of that, L-BFGS-B
-cannot minimize a non-smooth L1 objective at all, since ``sign(0) == 0`` makes the origin look
-stationary.
+The elastic-net penalty is scaled against the sample-averaged data loss, so at the same ``C`` it
+is as strong as scikit-learn's. Unnormalized, it would be roughly ``n_samples`` times stronger.
+Because the expected cost is linear in the predicted probability, its gradient is bounded by
+``0.25 * max|c1 - c2|``, so with mirrored unit costs ``w = 0`` would satisfy the L1 optimality
+condition and the model would return all-zero coefficients and predict exactly 0.5 for every
+sample. L-BFGS-B also cannot minimize a non-smooth L1 objective, since ``sign(0) == 0`` makes the
+origin look stationary.
 """
 
 import warnings
@@ -130,8 +130,7 @@ class TestScaleInvariance:
 
     @pytest.mark.parametrize('C', [0.01, 0.1, 1.0, 10.0, 100.0])
     def test_reproduces_sklearn_logistic_regression(self, standardised_data, C):
-        """The whole point of the new scaling: at the same ``C``, plain log loss must give
-        scikit-learn's model.
+        """At the same ``C``, plain log loss must give scikit-learn's model.
 
         A :class:`~empulse.metrics.LogCost` metric whose only terms are a true-positive and
         true-negative benefit of 1 *is* the log loss, so an L2-penalized fit has to land on

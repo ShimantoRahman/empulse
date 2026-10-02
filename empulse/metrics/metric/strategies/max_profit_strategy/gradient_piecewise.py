@@ -17,7 +17,7 @@ from .common import (
 from .envelope import Partition, PolynomialEnvelope
 from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
 
-# Type alias for the hull state tuple cached between gradient steps.
+# The hull state cached between gradient steps: (bounds, seg_tprs, seg_fprs, M).
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
 
 
@@ -76,7 +76,7 @@ class _PiecewiseDerivativeState:
             parameters, self.score_function.distribution_args
         )
 
-        # Precalculate the exact float bounds of the distribution to avoid sympy overhead in loop
+        # Float bounds of the distribution, computed once to keep sympy out of the loop.
         lower_b = self.score_function.random_var_bounds[0]
         if isinstance(lower_b, sympy.Expr):
             lower_b = _subs_by_name(lower_b, self.dist_params)
@@ -361,22 +361,19 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         ``theta`` a coefficient vector)::
 
             gen = objective.logit_gradient_steps()
-            grad = gen.send(theta)  # first time hull is built
-            grad = gen.send(theta)  # hull reused
-            grad = gen.send((theta, True))  # hull refreshed
+            grad = gen.send(theta)  # first call: the hull is built
+            grad = gen.send(theta)  # later calls: the hull is reused
+            grad = gen.send((theta, True))  # the hull is rebuilt
             gen.close()
         """
         weights: FloatNDArray
-        cached: _HullCache | None = None  # (bounds, seg_tprs, seg_fprs, M)
+        cached: _HullCache | None = None
 
-        # Priming yield: its value is discarded by the caller's next(generator) advance below,
-        # so it is never actually observed as a FloatNDArray - mypy doesn't model that.
+        # Priming yield: the caller's next(generator) discards its value, which mypy cannot see.
         sent = yield  # type: ignore[misc]
 
         while True:
-            # Sending None is an alternative to close() for terminating the generator - matches
-            # the sibling _logit_gradient_steps() implementations (CostLogitObjective,
-            # MaxProfitLogitGradientDeterministic, LogitObjective's own default).
+            # Sending None ends the generator, like close(), as in the other _logit_gradient_steps().
             if sent is None:
                 return
             if isinstance(sent, tuple):
@@ -477,11 +474,9 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         segment_fprs_arr = np.asarray(partition.fprs, dtype=np.float64)
         M = len(segment_tprs_arr)  # ruff: ignore[non-lowercase-variable-in-function]
 
-        # Vectorized Thresholds
         rates = np.clip(segment_tprs_arr * self.pi0 + segment_fprs_arr * self.pi1, 0.0, 1.0)
         T_M = np.quantile(y_score_arr, 1.0 - rates)  # ruff: ignore[non-lowercase-variable-in-function]
 
-        # Precompute logistic derivatives for instances
         s_pos = y_score_arr[self.pos_mask]
         s_neg = y_score_arr[self.neg_mask]
 
@@ -515,11 +510,9 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
             weight_F0_M += R_kM * da_dF0_M  # ruff: ignore[non-lowercase-variable-in-function]
             weight_F1_M += R_kM * da_dF1_M  # ruff: ignore[non-lowercase-variable-in-function]
 
-        # Convert to minimization constants per segment
         c_pos_M = -weight_F0_M / self.n_pos  # ruff: ignore[non-lowercase-variable-in-function]
         c_neg_M = -weight_F1_M / self.n_neg  # ruff: ignore[non-lowercase-variable-in-function]
 
-        # Matrix Multiply to compute global gradients/hessians per instance
         grad_pos = sig_prime_pos @ c_pos_M
         grad_neg = sig_prime_neg @ c_neg_M
 
@@ -534,13 +527,10 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         hessian[self.pos_mask] = hess_pos
         hessian[self.neg_mask] = hess_neg
 
-        # At epoch 0, all scores are identical. sigma = 0.5, so the exact hessian is 0.
-        # XGBoost refuses to split nodes if sum(hessian) < min_child_weight.
-        # We fall back to a strict numerical floor (or gradient magnitude) ONLY when it vanishes.
+        # At epoch 0 all scores are equal, so sigma = 0.5 and the exact hessian is 0. XGBoost refuses to
+        # split a node when sum(hessian) < min_child_weight, so a vanishing hessian is replaced by the
+        # absolute gradient, with a floor of 0.1 to clear the default min_child_weight of 1.0.
         hessian = np.abs(hessian)
-
-        # Use a floor of 0.1 to guarantee it passes the default min_child_weight of 1.0,
-        # or use the absolute gradient if it's larger.
         hessian_floor = np.maximum(np.abs(gradient), 0.1)
         hessian = np.where(hessian < 1e-7, hessian_floor, hessian)
 

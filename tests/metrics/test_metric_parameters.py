@@ -26,9 +26,9 @@ class TestMissingParameters:
     """
     Tests for Metric._missing_parameters, used by CSThresholdClassifier/CSRateClassifier.
 
-    Regression coverage for a bug where comparing `_all_parameters` (which lists both a symbol's
-    raw name and its alias) for equality against the caller-supplied keys could never succeed for
-    an aliased metric, since a caller only ever supplies one spelling per parameter.
+    A caller supplies one spelling per parameter (a symbol's raw name or its alias), so either must
+    count as covered. Comparing the caller's keys for equality against `_all_parameters`, which lists
+    both spellings, could never succeed for an aliased metric.
     """
 
     @staticmethod
@@ -197,6 +197,6 @@ def test_parameter_name_cache_survives_pickling():
     names = metric._all_parameters
     restored = pickle.loads(pickle.dumps(metric))
     assert restored._all_parameters == names
-    # A metric pickled before the cache existed has no cache attribute at all.
+    # A metric pickled by an older version has no cache attribute at all.
     del restored._all_parameters_cache
     assert restored._all_parameters == names

@@ -40,8 +40,8 @@ def __getattr__(name: str) -> Any:
     """
     Import a boosting library's classifier on first use (PEP 562).
 
-    Kept as a module attribute once imported, so that tests can patch it, e.g. with a ``TypeVar`` to
-    simulate the library missing, which is also what stands in for a library that is not installed.
+    A library that is not installed is replaced by a ``TypeVar``. The class stays a module attribute
+    once imported, so tests can patch it, e.g. with a ``TypeVar`` to simulate a missing library.
     """
     if name not in _BOOSTING_CLASSIFIERS:
         raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
@@ -323,7 +323,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         **loss_params: Any,
     ) -> Self:
         fit_params = {} if fit_params is None else dict(fit_params)
-        # allow sample weights still to be passed as kwargs to comply with sklearn interface
+        # scikit-learn passes sample_weight as a regular keyword argument; forward it to the booster.
         if 'sample_weight' in loss_params:
             fit_params['sample_weight'] = loss_params.pop('sample_weight')
 
@@ -378,10 +378,9 @@ class CSBoostClassifier(CostSensitiveClassifier):
         loss: BaseMetric,
         **loss_params: Any,
     ) -> Any:
-        # MaxProfit requires dynamic thresholding from current round predictions, and LogCost's
-        # per-sample loss is non-linear in the predicted probability (unlike Cost/Savings), so both
-        # evaluate gradients/hessians directly from the metric each iteration instead of going through
-        # a precomputed constant.
+        # MaxProfit thresholds on the current round's predictions, and LogCost's per-sample loss is
+        # non-linear in the predicted probability (unlike Cost and Savings). Both therefore evaluate
+        # gradients and hessians from the metric each iteration instead of from precomputed constants.
         capabilities = loss.capabilities
         if Capability.BOOST_OBJECTIVE in capabilities:
             return backend.wrap_objective(loss, y, loss_params, precomputed=False)

@@ -1,12 +1,8 @@
 """
-Reference (native/legacy) implementations of the credit scoring metrics.
+Reference implementations of the credit scoring metrics.
 
-These are the hand-written math implementations that used to live in
-``empulse.metrics.credit_scoring`` before it was refactored to build ``mpcs_score`` and
-``empcs_score`` from :class:`~empulse.metrics.Metric`/:class:`~empulse.metrics.MixtureMetric`
-instances instead. They are kept here, unchanged, purely as ground truth to numerically verify
-the new prebuilt metrics against, and to keep exercising the original edge-case and
-input-validation test coverage in ``test_credit_scoring.py``.
+These hand-written math implementations are ground truth for numerically verifying ``mpcs_score``
+and ``empcs_score``.
 """
 
 import warnings

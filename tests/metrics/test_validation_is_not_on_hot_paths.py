@@ -226,14 +226,13 @@ def test_a_constrained_symbol_is_checked_during_fit(training_data):
 
 class TestCompilationIsNotOnHotPaths:
     """
-    Compiling a cost expression to a numpy function (``sympy.lambdify``) is also O(expression
-    size), not free, and used to happen on every ``Metric._evaluate_costs``/``MaxProfit.
-    _evaluate_class_costs`` call rather than once at ``build()``/``__init__`` time -- the same
-    shape of regression the validation tests above guard against, just for compilation instead
-    of validation. These count calls to ``sympy.lambdify`` directly across repeated calls on the
-    *same* metric/strategy instance, rather than through a specific model's training loop: the
-    compiled functions are cached on the instance, so the count that matters is calls per
-    instance, independent of which model (or how many times) ends up calling into it.
+    Compiling a cost expression to a numpy function (``sympy.lambdify``) is O(expression size), not
+    free, so it must happen once at ``build()``/``__init__`` time instead of on every
+    ``Metric._evaluate_costs``/``MaxProfit._evaluate_class_costs`` call. These count calls to
+    ``sympy.lambdify`` directly across repeated calls on the *same* metric/strategy instance, rather
+    than through a specific model's training loop: the compiled functions are cached on the instance,
+    so the count that matters is calls per instance, independent of which model (or how many times)
+    ends up calling into it.
     """
 
     def test_metric_evaluate_costs_compiles_once(self):
@@ -247,10 +246,9 @@ class TestCompilationIsNotOnHotPaths:
         alpha, beta = sympy.symbols('alpha beta')
         gamma = sympy.stats.Beta('gamma', alpha, beta)
         metric = Metric(CostMatrix().add_tp_benefit(gamma * 10).add_fp_cost('d'), Cost())
-        # The first replace_stochastic=True call builds and caches the mean-substituted
-        # expressions' compiled functions (PicklableLambda's constant-expression fast path skips
-        # sympy.lambdify entirely for tn_cost/fn_cost here, since neither has a term -- so the
-        # exact count from this first call is an implementation detail, not what's under test).
+        # The first replace_stochastic=True call builds and caches the compiled mean-substituted
+        # expressions. Its lambdify count is an implementation detail (PicklableLambda skips
+        # sympy.lambdify for the constant tn_cost/fn_cost), so only later calls are counted.
         metric._evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
         with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
             for _ in range(10):
