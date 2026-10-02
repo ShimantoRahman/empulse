@@ -56,7 +56,7 @@ changelog = "https://empulse.readthedocs.io/en/stable/project/changelog.html"
 
 [project.optional-dependencies]
 boosting = [
-    "xgboost>=1.7.4",
+    "xgboost>=2.1.4",
     "lightgbm>=4.6.0",
     "catboost>=1.2.7; python_version < '3.13'",
     "catboost>=1.2.8; python_version >= '3.13' and python_version < '3.14'",

@@ -193,8 +193,9 @@ Packaging and dependencies
 - |API| ``imbalanced-learn`` is now optional and only needed by :mod:`empulse.samplers`. Install it
   with ``pip install empulse[sampling]`` (included in ``empulse[optional]``).
 - |Fix| Raised the minimum versions of dependencies to ones the package works with:
-  ``numpy>=1.25.2`` (Python 3.11 and 3.12), ``joblib>=1.4.0``, ``lightgbm>=4.6.0`` and
-  ``sympy>=1.14.0``.
+  ``numpy>=1.25.2`` (Python 3.11 and 3.12), ``joblib>=1.4.0``, ``lightgbm>=4.6.0``,
+  ``sympy>=1.14.0`` and ``xgboost>=2.1.4``. Older XGBoost releases fail scikit-learn 1.6's
+  ``check_is_fitted``.
 - |Fix| The source distribution no longer contains the top-level test modules.
 
 `0.12.0`_ (19-09-2026)
