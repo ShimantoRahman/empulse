@@ -408,6 +408,28 @@ converges in far fewer generations than a plain RGA:
     )
 
 
+Parallel Training
+=================
+
+With a :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+:class:`~empulse.metrics.Savings` or :class:`~empulse.metrics.LogCost` loss, including the default
+loss of :class:`~empulse.models.CSLogitClassifier`, ``n_jobs`` sets how many threads compute each
+evaluation of the loss and its gradient. ``-1`` uses all processors:
+
+.. code-block:: python
+
+    from empulse.models import CSLogitClassifier
+
+    model = CSLogitClassifier(n_jobs=-1)
+
+The work is split the same way whatever the number of threads, so the fitted coefficients do not
+depend on ``n_jobs``. The speed-up grows with the size of the training set, and is largest from tens
+of thousands of rows on. Inside a parallel grid search or cross-validation, leave ``n_jobs`` at 1 and
+parallelize the search instead, so that the two do not compete for the same cores. An optimizer that
+evaluates the loss from threads of its own, such as :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`
+with ``n_jobs > 1``, runs each evaluation on a single thread.
+
+
 sklearn Integration
 ===================
 

@@ -18,10 +18,10 @@ def openmp_flags() -> tuple[list[str], list[str]]:
     """
     Return the compile and link flags that enable OpenMP, or empty lists if the compiler lacks it.
 
-    OpenMP only parallelizes ProfTree's population loop (``prange``), which Cython compiles to an
-    ordinary serial loop without it, so a compiler without OpenMP support (e.g. Apple clang without
-    libomp) still builds a working, single-threaded package. Set ``EMPULSE_DISABLE_OPENMP=1`` to
-    build without it regardless.
+    OpenMP only parallelizes ProfTree's population loop and the logit loss kernels (``prange``),
+    which Cython compiles to ordinary serial loops without it, so a compiler without OpenMP support
+    (e.g. Apple clang without libomp) still builds a working, single-threaded package. Set
+    ``EMPULSE_DISABLE_OPENMP=1`` to build without it regardless.
     """
     if os.environ.get('EMPULSE_DISABLE_OPENMP', '0') not in {'', '0'}:
         return [], []
@@ -55,7 +55,11 @@ def openmp_flags() -> tuple[list[str], list[str]]:
             except (CompileError, LinkError):
                 continue
             return compile_flags, link_flags
-    warnings.warn('OpenMP is unavailable: ProfTreeClassifier will ignore n_jobs and run single-threaded.', stacklevel=1)
+    warnings.warn(
+        'OpenMP is unavailable: ProfTreeClassifier, CSLogitClassifier and ProfLogitClassifier will ignore n_jobs '
+        'and run single-threaded.',
+        stacklevel=1,
+    )
     return [], []
 
 
@@ -66,6 +70,8 @@ if __name__ == '__main__':
             'empulse.metrics._loss.loss',
             ['empulse/metrics/_loss/*.pyx'],
             include_dirs=[np.get_include()],
+            extra_compile_args=openmp_compile_flags,
+            extra_link_args=openmp_link_flags,
         ),
         Extension(
             'empulse.metrics._cy_convex_hull.convex_hull',

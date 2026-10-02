@@ -530,7 +530,7 @@ def test_logit_objective_applies_the_penalty_once(strategy, method):
 
 
 def test_cost_objective_pickled_with_the_penalty_under_its_own_name_still_loads():
-    """Objectives pickled before the penalty became a property stored it as ``penalty``."""
+    """Older objectives stored the penalty as ``penalty``, and the cost objective a ``grad_const`` array."""
     fp, fn = sympy.symbols('fp fn')
     metric = Metric(CostMatrix().add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1.0, fn=5.0), Cost())
     X = _with_intercept(np.random.default_rng(0).normal(size=(40, 2)))
@@ -538,8 +538,27 @@ def test_cost_objective_pickled_with_the_penalty_under_its_own_name_still_loads(
     objective = metric._logit_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
     state = dict(vars(objective))
     state['penalty'] = state.pop('_penalty')
+    state['grad_const'] = np.zeros_like(X)
     restored = type(objective).__new__(type(objective))
     restored.__setstate__(state)
     weights = np.array([0.2, -0.5, 1.0])
     assert restored.penalty == objective.penalty
+    assert 'grad_const' not in vars(restored)
     assert restored.logit_loss(weights) == objective.logit_loss(weights)
+
+
+def test_logit_objective_forwards_n_threads_to_its_components():
+    fp, fn = sympy.symbols('fp fn')
+    metric = Metric(CostMatrix().add_fp_cost(fp).add_fn_cost(fn), Cost())
+    mixture = MixtureMetric([
+        MixtureComponent(0.3, metric, {'fp': 1.0, 'fn': 5.0}),
+        MixtureComponent(0.7, metric, {'fp': 2.0, 'fn': 1.0}),
+    ])
+    X = _with_intercept(np.random.default_rng(0).normal(size=(40, 2)))
+    y = np.arange(40) % 3 == 0
+    objective = mixture._logit_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
+    assert objective.n_threads == 1
+    objective.n_threads = 4
+    assert objective.n_threads == 4
+    assert [component.n_threads for _, component in objective._weighted_objectives] == [4, 4]
+    assert objective.with_indices(np.arange(10)).n_threads == 4

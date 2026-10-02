@@ -1,9 +1,10 @@
 from abc import ABC
 from collections.abc import Callable
-from numbers import Real
+from numbers import Integral, Real
 from typing import Any, ClassVar, Protocol, Self
 
 import numpy as np
+from joblib import effective_n_jobs
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
@@ -37,6 +38,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         'l1_ratio': [Interval(Real, 0, 1, closed='both')],
         'loss': [BaseMetric, None],
         'optimizer': [Optimizer, None],
+        'n_jobs': [Interval(Integral, 1, None, closed='left'), Interval(Integral, None, -1, closed='right'), None],
     }
     _default_optimizer: ClassVar[type[Optimizer]]
 
@@ -52,11 +54,13 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         l1_ratio: float = 1.0,
         loss: BaseMetric | None = None,
         optimizer: Optimizer | None = None,
+        n_jobs: int | None = 1,
     ):
         self.C = C
         self.fit_intercept = fit_intercept
         self.l1_ratio = l1_ratio
         self.optimizer = optimizer
+        self.n_jobs = n_jobs
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def _resolve_optimizer(self) -> Optimizer:
@@ -89,6 +93,10 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
             fit_intercept=self.fit_intercept,
             **loss_params,
         )
+        # An optimizer that evaluates the objective from several threads of its own, like the genetic
+        # algorithm with `n_jobs > 1`, gets one thread per evaluation, so the two do not multiply.
+        optimizer_jobs = effective_n_jobs(getattr(optimizer, 'n_jobs', 1))
+        objective.n_threads = 1 if optimizer_jobs > 1 else effective_n_jobs(self.n_jobs)
         self.result_ = optimizer(objective=objective, X=X)
 
         if self.fit_intercept:

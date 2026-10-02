@@ -101,19 +101,25 @@ class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     def logit_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
         """Return the regularized ``(loss, gradient)`` for *weights*."""
         return cy_log_cost_loss_gradient(  # type: ignore[no-any-return]
-            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef
+            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef, self.n_threads
         )
 
     def logit_loss(self, weights: FloatNDArray) -> float:
         """Return only the regularized scalar loss for *weights*, without computing the gradient."""
         return float(
-            cy_log_cost_loss(*self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef)
+            cy_log_cost_loss(
+                *self._kernel_arguments(weights),
+                self._l1_weight,
+                self._l2_weight,
+                self._start_coef,
+                self.n_threads,
+            )
         )
 
     def logit_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Return only the regularized gradient for *weights*, without computing the loss."""
         return cy_log_cost_gradient(  # type: ignore[return-value]
-            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef
+            *self._kernel_arguments(weights), self._l1_weight, self._l2_weight, self._start_coef, self.n_threads
         )
 
     def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
@@ -131,7 +137,9 @@ class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         gradient : ndarray
             Gradient of the data term alone.
         """
-        return cy_log_cost_loss_gradient(*self._kernel_arguments(weights))  # type: ignore[no-any-return]
+        return cy_log_cost_loss_gradient(  # type: ignore[no-any-return]
+            *self._kernel_arguments(weights), n_threads=self.n_threads
+        )
 
     def data_loss(self, weights: FloatNDArray) -> float:
         """Return only the unpenalized scalar loss for *weights*.
@@ -146,7 +154,7 @@ class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         float
             Loss of the data term alone.
         """
-        return float(cy_log_cost_loss(*self._kernel_arguments(weights)))
+        return float(cy_log_cost_loss(*self._kernel_arguments(weights), n_threads=self.n_threads))
 
     def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
         """Return only the unpenalized gradient vector for *weights*.
@@ -161,7 +169,9 @@ class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         ndarray
             Gradient of the data term alone.
         """
-        return cy_log_cost_gradient(*self._kernel_arguments(weights))  # type: ignore[return-value]
+        return cy_log_cost_gradient(  # type: ignore[return-value]
+            *self._kernel_arguments(weights), n_threads=self.n_threads
+        )
 
 
 class LogCostBoostGradient:

@@ -165,6 +165,9 @@ numpydoc_validation_exclude = {
     # `MixtureComponent` is a NamedTuple; `index`/`count` are inherited from `tuple` and carry
     # CPython's own (GL02-failing) docstrings, not ours.
     r'\.MixtureComponent\.(index|count)$',
+    # A class attribute documented with `#:` is validated against the docstring of its value, here
+    # CPython's own docstring of `int`.
+    r'\.LogitObjective\.n_threads$',
 }
 autodoc_typehints = 'none'
 doctest_test_doctest_blocks = 'default'

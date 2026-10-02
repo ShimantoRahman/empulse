@@ -431,6 +431,9 @@ class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-
     #: it as opaque.
     penalty: 'ElasticNetPenalty | None' = None
 
+    #: Number of threads one evaluation may use, ignored by objectives that cannot use more than one.
+    n_threads: int = 1
+
     def data_loss(self, weights: FloatNDArray) -> float:
         """
         Compute the unregularized loss for minimization.

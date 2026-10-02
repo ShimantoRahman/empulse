@@ -1,5 +1,6 @@
 import cython
 import numpy as np
+from cython.parallel cimport prange
 from libc.float cimport DBL_EPSILON
 from libc.math cimport exp, fabs, log
 from scipy.linalg.cython_blas cimport dgemv
@@ -14,18 +15,13 @@ GradientType = cython.fused_type(cython.float[:], cython.double[:])
 #
 # Neither the complement nor the derivative is formed by subtracting from 1, so both keep their
 # precision where the probability is close to 0 or 1. The exponent is clamped to [-700, 700], so E
-# neither overflows nor underflows; that changes only probabilities below 1e-304.
+# neither overflows nor underflows; that changes only probabilities below 1e-304. No branch depends
+# on the sign of the margin: that sign is effectively random from one sample to the next, so a branch
+# would be mispredicted about half the time and cost more than the arithmetic.
 #
-# numpy takes the exponentials (and the logarithms of the log cost) for the whole vector at once:
-# its vectorized exp and log cost a fraction of calling the C library's for every sample. The
-# matrix-vector products go to BLAS. Everything else is a single pass over the samples without the
-# GIL and without a branch on the sign of the margin. That sign is effectively random from one
-# sample to the next, so a branch would be mispredicted about half the time and cost more than the
-# arithmetic.
+# The boosting kernels take their exponentials with numpy for the whole vector at once.
 _exp = np.exp
-_log = np.log
-# Below this many values, calling numpy costs more than it saves, so the C library's exp and log are
-# used.
+# Below this many values, calling numpy costs more than it saves, so the C library's exp is used.
 cdef Py_ssize_t _VECTORIZED_MIN_SIZE = 128
 
 
@@ -63,27 +59,6 @@ cdef inline double sign(double x) noexcept nogil:
         return -1.0
 
 
-cdef void _matrix_vector(
-    bint transpose, const double[:, ::1] matrix, const double* vector, double scale, double* out
-) noexcept nogil:
-    """Set `out` to `scale * matrix @ vector`, or to `scale * matrix.T @ vector` if `transpose`.
-
-    `out` must be zeroed beforehand when the matrix is empty, since BLAS then leaves it untouched.
-    """
-    cdef int n_rows = <int>matrix.shape[0]
-    cdef int n_cols = <int>matrix.shape[1]
-    cdef int one = 1
-    cdef double zero = 0.0
-    # BLAS reads matrices column by column, so it sees this row-major matrix as its transpose.
-    cdef char blas_transpose = b'N' if transpose else b'T'
-    if n_rows == 0 or n_cols == 0:
-        return
-    dgemv(
-        &blas_transpose, &n_cols, &n_rows, &scale, <double*>&matrix[0, 0], &n_cols,
-        <double*>vector, &one, &zero, out, &one,
-    )
-
-
 cdef void _exp_in_place(object array, double[::1] values) except *:
     """Replace each of `values`, which views `array`, by its exponential."""
     cdef Py_ssize_t i
@@ -93,17 +68,6 @@ cdef void _exp_in_place(object array, double[::1] values) except *:
                 values[i] = exp(values[i])
     else:
         _exp(array, out=array)
-
-
-cdef void _log_in_place(object array, double[::1] values) except *:
-    """Replace each of `values`, which views `array`, by its natural logarithm."""
-    cdef Py_ssize_t i
-    if values.shape[0] < _VECTORIZED_MIN_SIZE:
-        with nogil:
-            for i in range(values.shape[0]):
-                values[i] = log(values[i])
-    else:
-        _log(array, out=array)
 
 
 cdef object _negative_exponentials(const double[::1] margins):
@@ -118,20 +82,6 @@ cdef object _negative_exponentials(const double[::1] margins):
     return exponentials
 
 
-cdef object _margins_and_exponentials(const double[::1] weights, const double[:, ::1] features):
-    """Return `features @ weights` and `exp(-features @ weights)`, see `_clamped_exponent`."""
-    cdef Py_ssize_t n_rows = features.shape[0]
-    if weights.shape[0] != features.shape[1]:
-        raise ValueError(
-            f'weights has {weights.shape[0]} entries, but features has {features.shape[1]} columns.'
-        )
-    margins = np.zeros(n_rows, dtype=np.float64)
-    cdef double[::1] margins_view = margins
-    with nogil:
-        _matrix_vector(False, features, &weights[0] if weights.shape[0] else NULL, 1.0, &margins_view[0] if n_rows else NULL)
-    return margins, _negative_exponentials(margins_view)
-
-
 cdef void _check_rows(
     Py_ssize_t n_rows,
     const double[::1] loss_const1,
@@ -143,36 +93,6 @@ cdef void _check_rows(
             f'{description.format(n_rows)}, but loss_const1 and loss_const2 have '
             f'{loss_const1.shape[0]} and {loss_const2.shape[0]} entries.'
         )
-
-
-cdef void _check_gradient_const(const double[:, ::1] features, const double[:, ::1] grad_const) except *:
-    if grad_const.shape[0] != features.shape[0] or grad_const.shape[1] != features.shape[1]:
-        raise ValueError(
-            f'features has shape ({features.shape[0]}, {features.shape[1]}), but grad_const has shape '
-            f'({grad_const.shape[0]}, {grad_const.shape[1]}).'
-        )
-
-
-cdef double _data_loss_and_slopes(
-    const double[::1] loss_const1,
-    const double[::1] loss_const2,
-    const double[::1] exponentials,
-    double[::1] slopes,
-    bint want_slopes,
-) noexcept nogil:
-    """Return the mean data loss. If `want_slopes`, also store expit' of each margin in `slopes`."""
-    cdef Py_ssize_t i
-    cdef Py_ssize_t n_rows = exponentials.shape[0]
-    cdef double loss = 0.0
-    cdef double exponential, probability, complement
-    for i in range(n_rows):
-        exponential = exponentials[i]
-        probability = 1.0 / (1.0 + exponential)
-        complement = exponential * probability
-        loss += probability * loss_const1[i] + complement * loss_const2[i]
-        if want_slopes:
-            slopes[i] = complement * probability
-    return loss / n_rows
 
 
 cdef double _penalty(const double[::1] weights, double l1_weight, double l2_weight, Py_ssize_t start_coef) noexcept nogil:
@@ -201,30 +121,210 @@ cdef void _add_penalty_gradient(
         gradient[j] += l1_weight * sign(w) + l2_weight * w
 
 
+# The logit kernels make a single pass over the rows of `features`. The rows are taken in blocks
+# small enough to stay in cache between the two matrix-vector products that read them, one for the
+# margins and one for the gradient, so each call reads `features` from memory once rather than twice.
+# The data term of a row, and its derivative with respect to the row's margin, are computed in
+# between from the two loss constants of the row:
+#
+#     cost:      c1 * p + c2 * (1 - p),                    derivative (c1 - c2) * expit'(m)
+#     log cost:  c1 * log(p) + c2 * log(1 - p),            derivative c1 * (1 - p) - c2 * p
+#
+# with both probabilities of the log cost clipped to [eps, 1 - eps] first, and its derivative taken
+# from the unclipped ones.
+#
+# Consecutive blocks are grouped into at most `_MAX_CHUNKS` chunks, which are spread over
+# `n_threads` threads. Each chunk sums its loss and gradient on its own, and the chunk sums are added
+# up in order afterwards. The chunks depend only on the shape of `features`, so the result is the
+# same, to the last bit, whatever the number of threads.
+
+cdef enum _DataTerm:
+    _COST
+    _LOG_COST
+
+
+cdef Py_ssize_t _MAX_CHUNKS = 64
+
+
+cdef struct _Pass:
+    _DataTerm data_term
+    const double* weights
+    const double* features
+    const double* loss_const1
+    const double* loss_const2
+    Py_ssize_t n_rows
+    Py_ssize_t n_cols
+    Py_ssize_t block_rows
+    Py_ssize_t n_blocks
+    Py_ssize_t n_chunks
+    bint want_loss
+    bint want_gradient
+
+
+cdef inline Py_ssize_t _block_rows(Py_ssize_t n_cols) noexcept nogil:
+    """Return the rows per block: at most 256, and at most about 1 MiB of features."""
+    if n_cols <= 512:
+        return 256
+    return max(16, 131072 // n_cols)
+
+
+cdef inline void _matrix_vector(
+    bint transpose, const double* matrix, int n_rows, int n_cols, const double* vector, double beta, double* out
+) noexcept nogil:
+    """Set `out` to `matrix @ vector + beta * out`, or to `matrix.T @ vector + beta * out` if `transpose`.
+
+    `matrix` is row-major, with at least one row and one column.
+    """
+    cdef int one = 1
+    cdef double alpha = 1.0
+    # BLAS reads matrices column by column, so it sees this row-major matrix as its transpose.
+    cdef char blas_transpose = b'N' if transpose else b'T'
+    dgemv(
+        &blas_transpose, &n_cols, &n_rows, &alpha, <double*>matrix, &n_cols,
+        <double*>vector, &one, &beta, out, &one,
+    )
+
+
+cdef double _block(const _Pass* p, Py_ssize_t start, int n_rows, double* buffer, double* gradient) noexcept nogil:
+    """Return the summed loss of `n_rows` rows from `start` on, and add their gradient to `gradient`.
+
+    `buffer` holds `3 * block_rows` values. The first `n_rows` hold the margins, then the
+    exponentials, then the derivative of each row's loss with respect to its margin. The log cost
+    keeps the clipped probabilities, and then their logarithms, in the other two thirds.
+    """
+    cdef int i
+    cdef int n_cols = <int>p.n_cols
+    cdef const double* features = p.features + start * p.n_cols
+    cdef const double* loss_const1 = p.loss_const1 + start
+    cdef const double* loss_const2 = p.loss_const2 + start
+    cdef double* log_probabilities = buffer + p.block_rows
+    cdef double* log_complements = buffer + 2 * p.block_rows
+    cdef double loss = 0.0
+    cdef double exponential, probability, complement
+    # Zeroed even though BLAS overwrites it, since some BLAS libraries scale `out` by beta = 0, and
+    # 0 * NaN left over from the previous block would then be NaN.
+    for i in range(n_rows):
+        buffer[i] = 0.0
+    if n_cols:
+        _matrix_vector(False, features, n_rows, n_cols, p.weights, 0.0, buffer)
+    # exp and log each get a loop of their own. Called from the loop below, which keeps many more
+    # values live, they cost up to 70% more per value with MSVC.
+    for i in range(n_rows):
+        buffer[i] = _clamped_exponent(-buffer[i])
+    for i in range(n_rows):
+        buffer[i] = exp(buffer[i])
+    if p.data_term == _COST:
+        for i in range(n_rows):
+            exponential = buffer[i]
+            probability = 1.0 / (1.0 + exponential)
+            complement = exponential * probability
+            if p.want_loss:
+                loss += probability * loss_const1[i] + complement * loss_const2[i]
+            buffer[i] = complement * probability * (loss_const1[i] - loss_const2[i])
+    else:
+        for i in range(n_rows):
+            exponential = buffer[i]
+            probability = 1.0 / (1.0 + exponential)
+            complement = exponential * probability
+            buffer[i] = loss_const1[i] * complement - loss_const2[i] * probability
+            log_probabilities[i] = _clipped_probability(probability)
+            log_complements[i] = _clipped_probability(complement)
+        if p.want_loss:
+            for i in range(n_rows):
+                log_probabilities[i] = log(log_probabilities[i])
+            for i in range(n_rows):
+                log_complements[i] = log(log_complements[i])
+            for i in range(n_rows):
+                loss += loss_const1[i] * log_probabilities[i] + loss_const2[i] * log_complements[i]
+    if p.want_gradient and n_cols:
+        _matrix_vector(True, features, n_rows, n_cols, buffer, 1.0, gradient)
+    return loss
+
+
+cdef double _chunk(const _Pass* p, Py_ssize_t chunk, double* buffer, double* gradient) noexcept nogil:
+    """Return the summed loss of one chunk's rows, and add their gradient to `gradient`."""
+    cdef Py_ssize_t start = (chunk * p.n_blocks // p.n_chunks) * p.block_rows
+    cdef Py_ssize_t end = min(((chunk + 1) * p.n_blocks // p.n_chunks) * p.block_rows, p.n_rows)
+    cdef Py_ssize_t stop
+    cdef double loss = 0.0
+    while start < end:
+        stop = min(start + p.block_rows, end)
+        loss += _block(p, start, <int>(stop - start), buffer, gradient)
+        start = stop
+    return loss
+
+
+cdef double _data_term(
+    _DataTerm data_term,
+    const double[::1] weights,
+    const double[:, ::1] features,
+    const double[::1] loss_const1,
+    const double[::1] loss_const2,
+    double[::1] gradient,
+    bint want_loss,
+    bint want_gradient,
+    int n_threads,
+) except *:
+    """Return the mean data loss. If `want_gradient`, also store its gradient in `gradient`."""
+    cdef _Pass p
+    cdef Py_ssize_t chunk, j
+    cdef double loss = 0.0
+    p.n_rows = features.shape[0]
+    p.n_cols = features.shape[1]
+    if weights.shape[0] != p.n_cols:
+        raise ValueError(f'weights has {weights.shape[0]} entries, but features has {p.n_cols} columns.')
+    _check_rows(p.n_rows, loss_const1, loss_const2)
+    p.data_term = data_term
+    p.weights = &weights[0] if p.n_cols else NULL
+    p.features = &features[0, 0] if p.n_rows else NULL
+    p.loss_const1 = &loss_const1[0] if p.n_rows else NULL
+    p.loss_const2 = &loss_const2[0] if p.n_rows else NULL
+    p.block_rows = _block_rows(p.n_cols)
+    p.n_blocks = (p.n_rows + p.block_rows - 1) // p.block_rows
+    p.n_chunks = min(p.n_blocks, _MAX_CHUNKS)
+    p.want_loss = want_loss
+    p.want_gradient = want_gradient
+    n_threads = max(1, n_threads)
+
+    buffers = np.empty((p.n_chunks, 3 * p.block_rows), dtype=np.float64)
+    partial_losses = np.empty(p.n_chunks, dtype=np.float64)
+    partial_gradients = np.zeros((p.n_chunks, p.n_cols if want_gradient else 0), dtype=np.float64)
+    cdef double[:, ::1] buffers_view = buffers
+    cdef double[::1] partial_losses_view = partial_losses
+    cdef double[:, ::1] partial_gradients_view = partial_gradients
+    with nogil:
+        for chunk in prange(
+            p.n_chunks, schedule='dynamic', num_threads=n_threads, use_threads_if=n_threads > 1 and p.n_chunks > 1
+        ):
+            partial_losses_view[chunk] = _chunk(
+                &p, chunk, &buffers_view[chunk, 0], &partial_gradients_view[chunk, 0]
+            )
+        for chunk in range(p.n_chunks):
+            loss += partial_losses_view[chunk]
+        if want_gradient and p.n_rows:
+            for chunk in range(p.n_chunks):
+                for j in range(p.n_cols):
+                    gradient[j] += partial_gradients_view[chunk, j]
+            for j in range(p.n_cols):
+                gradient[j] /= p.n_rows
+    return loss / p.n_rows
+
+
 def cy_logit_loss_gradient(
         const double[::1] weights,
         const double[:, ::1] features,
-        const double[:, ::1] grad_const,
         const double[::1] loss_const1,
         const double[::1] loss_const2,
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef Py_ssize_t n_rows = features.shape[0]
-    cdef Py_ssize_t n_cols = features.shape[1]
     cdef double loss
-    _check_rows(n_rows, loss_const1, loss_const2)
-    _check_gradient_const(features, grad_const)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    gradient = np.zeros(n_cols, dtype=np.float64)
-    cdef double[::1] slopes = margins
-    cdef const double[::1] exponentials_view = exponentials
+    gradient = np.zeros(features.shape[1], dtype=np.float64)
     cdef double[::1] gradient_view = gradient
+    loss = _data_term(_COST, weights, features, loss_const1, loss_const2, gradient_view, True, True, n_threads)
     with nogil:
-        loss = _data_loss_and_slopes(loss_const1, loss_const2, exponentials_view, slopes, True)
-        if n_cols:
-            _matrix_vector(True, grad_const, &slopes[0] if n_rows else NULL, 1.0 / n_rows, &gradient_view[0])
         loss += _penalty(weights, l1_weight, l2_weight, start_coef)
         _add_penalty_gradient(weights, gradient_view, l1_weight, l2_weight, start_coef)
     return loss, gradient
@@ -238,15 +338,10 @@ def cy_logit_loss(
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef Py_ssize_t n_rows = features.shape[0]
-    cdef double loss
-    _check_rows(n_rows, loss_const1, loss_const2)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    cdef double[::1] margins_view = margins
-    cdef const double[::1] exponentials_view = exponentials
+    cdef double loss = _data_term(_COST, weights, features, loss_const1, loss_const2, None, True, False, n_threads)
     with nogil:
-        loss = _data_loss_and_slopes(loss_const1, loss_const2, exponentials_view, margins_view, False)
         loss += _penalty(weights, l1_weight, l2_weight, start_coef)
     return loss
 
@@ -254,28 +349,17 @@ def cy_logit_loss(
 def cy_logit_gradient(
         const double[::1] weights,
         const double[:, ::1] features,
-        const double[:, ::1] grad_const,
+        const double[::1] loss_const1,
+        const double[::1] loss_const2,
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef Py_ssize_t i
-    cdef Py_ssize_t n_rows = features.shape[0]
-    cdef Py_ssize_t n_cols = features.shape[1]
-    cdef double exponential, probability
-    _check_gradient_const(features, grad_const)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    gradient = np.zeros(n_cols, dtype=np.float64)
-    cdef double[::1] slopes = margins
-    cdef const double[::1] exponentials_view = exponentials
+    gradient = np.zeros(features.shape[1], dtype=np.float64)
     cdef double[::1] gradient_view = gradient
+    _data_term(_COST, weights, features, loss_const1, loss_const2, gradient_view, False, True, n_threads)
     with nogil:
-        for i in range(n_rows):
-            exponential = exponentials_view[i]
-            probability = 1.0 / (1.0 + exponential)
-            slopes[i] = exponential * probability * probability
-        if n_cols:
-            _matrix_vector(True, grad_const, &slopes[0] if n_rows else NULL, 1.0 / n_rows, &gradient_view[0])
         _add_penalty_gradient(weights, gradient_view, l1_weight, l2_weight, start_coef)
     return gradient
 
@@ -308,41 +392,8 @@ def cy_boost_grad_hess(y_true, ScoreType y_score, GradientType grad_const):
     return gradient, hessian
 
 
-# The log cost of a sample with loss constants c1 and c2 is c1 * log(p) + c2 * log(1 - p), with both
-# probabilities clipped to [eps, 1 - eps] first. Its derivative with respect to the margin,
-# c1 * (1 - p) - c2 * p, uses the unclipped probabilities, and its second derivative is
-# (c1 + c2) * p * (1 - p). Both of the logs are taken in one vectorized call.
-
-
-cdef double _log_cost_loss_and_slopes(
-    const double[::1] loss_const1,
-    const double[::1] loss_const2,
-    const double[::1] exponentials,
-    double[::1] slopes,
-    bint want_slopes,
-) except *:
-    """Return the mean data loss. If `want_slopes`, also store its derivative wrt each margin in `slopes`."""
-    cdef Py_ssize_t i
-    cdef Py_ssize_t n_rows = exponentials.shape[0]
-    cdef double loss = 0.0
-    cdef double exponential, probability, complement
-    # The first half holds each sample's probability, the second half its complement.
-    logs = np.empty(2 * n_rows, dtype=np.float64)
-    cdef double[::1] logs_view = logs
-    with nogil:
-        for i in range(n_rows):
-            exponential = exponentials[i]
-            probability = 1.0 / (1.0 + exponential)
-            complement = exponential * probability
-            if want_slopes:
-                slopes[i] = loss_const1[i] * complement - loss_const2[i] * probability
-            logs_view[i] = _clipped_probability(probability)
-            logs_view[n_rows + i] = _clipped_probability(complement)
-    _log_in_place(logs, logs_view)
-    with nogil:
-        for i in range(n_rows):
-            loss += loss_const1[i] * logs_view[i] + loss_const2[i] * logs_view[n_rows + i]
-    return loss / n_rows
+# The second derivative of the log cost with respect to the margin, used by the boosting kernel
+# below, is (c1 + c2) * p * (1 - p).
 
 
 def cy_log_cost_loss_gradient(
@@ -353,19 +404,13 @@ def cy_log_cost_loss_gradient(
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef Py_ssize_t n_rows = features.shape[0]
-    cdef Py_ssize_t n_cols = features.shape[1]
     cdef double loss
-    _check_rows(n_rows, loss_const1, loss_const2)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    gradient = np.zeros(n_cols, dtype=np.float64)
-    cdef double[::1] slopes = margins
+    gradient = np.zeros(features.shape[1], dtype=np.float64)
     cdef double[::1] gradient_view = gradient
-    loss = _log_cost_loss_and_slopes(loss_const1, loss_const2, exponentials, slopes, True)
+    loss = _data_term(_LOG_COST, weights, features, loss_const1, loss_const2, gradient_view, True, True, n_threads)
     with nogil:
-        if n_cols:
-            _matrix_vector(True, features, &slopes[0] if n_rows else NULL, 1.0 / n_rows, &gradient_view[0])
         loss += _penalty(weights, l1_weight, l2_weight, start_coef)
         _add_penalty_gradient(weights, gradient_view, l1_weight, l2_weight, start_coef)
     return loss, gradient
@@ -379,11 +424,9 @@ def cy_log_cost_loss(
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef double loss
-    _check_rows(features.shape[0], loss_const1, loss_const2)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    loss = _log_cost_loss_and_slopes(loss_const1, loss_const2, exponentials, margins, False)
+    cdef double loss = _data_term(_LOG_COST, weights, features, loss_const1, loss_const2, None, True, False, n_threads)
     with nogil:
         loss += _penalty(weights, l1_weight, l2_weight, start_coef)
     return loss
@@ -397,25 +440,12 @@ def cy_log_cost_gradient(
         double l1_weight = 0.0,
         double l2_weight = 0.0,
         Py_ssize_t start_coef = 1,
+        int n_threads = 1,
 ):
-    cdef Py_ssize_t i
-    cdef Py_ssize_t n_rows = features.shape[0]
-    cdef Py_ssize_t n_cols = features.shape[1]
-    cdef double exponential, probability, complement
-    _check_rows(n_rows, loss_const1, loss_const2)
-    margins, exponentials = _margins_and_exponentials(weights, features)
-    gradient = np.zeros(n_cols, dtype=np.float64)
-    cdef double[::1] slopes = margins
-    cdef const double[::1] exponentials_view = exponentials
+    gradient = np.zeros(features.shape[1], dtype=np.float64)
     cdef double[::1] gradient_view = gradient
+    _data_term(_LOG_COST, weights, features, loss_const1, loss_const2, gradient_view, False, True, n_threads)
     with nogil:
-        for i in range(n_rows):
-            exponential = exponentials_view[i]
-            probability = 1.0 / (1.0 + exponential)
-            complement = exponential * probability
-            slopes[i] = loss_const1[i] * complement - loss_const2[i] * probability
-        if n_cols:
-            _matrix_vector(True, features, &slopes[0] if n_rows else NULL, 1.0 / n_rows, &gradient_view[0])
         _add_penalty_gradient(weights, gradient_view, l1_weight, l2_weight, start_coef)
     return gradient
 
@@ -442,4 +472,3 @@ def cy_log_cost_boost_grad_hess(
             gradient_view[i] = loss_const1[i] * complement - loss_const2[i] * probability
             hessian_view[i] = fabs(loss_const1[i] + loss_const2[i]) * complement * probability
     return gradient, hessian
-

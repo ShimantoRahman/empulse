@@ -70,6 +70,12 @@ Metrics
 Models
 ------
 
+- |Feature| :class:`~empulse.models.CSLogitClassifier` and
+  :class:`~empulse.models.ProfLogitClassifier` have a new ``n_jobs`` parameter that computes a
+  :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+  :class:`~empulse.metrics.Savings` or :class:`~empulse.metrics.LogCost` loss on several threads,
+  making fits on tens of thousands of rows or more 2-3.5x faster on 8 cores. The fitted model does
+  not depend on ``n_jobs``.
 - |MajorFeature| :class:`~empulse.models.CSTreeClassifier` and
   :class:`~empulse.models.CSForestClassifier` are grown by Empulse's own tree builder instead of
   scikit-learn's, about 3x faster and with about 30% less memory for a forest. Fitted trees can

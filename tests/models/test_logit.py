@@ -5,7 +5,7 @@ import pytest
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.metrics import CostMatrix, Metric, Savings
+from empulse.metrics import CostMatrix, LogCost, Metric, Savings
 from empulse.models import CSLogitClassifier, ProfLogitClassifier
 from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
 
@@ -64,6 +64,53 @@ class TestCSLogit:
         X.flags.writeable = False
         clf = CSLogitClassifier(fit_intercept=fit_intercept).fit(X, y, fp_cost=1.0, fn_cost=5.0)
         np.testing.assert_array_equal(clf.result_.x, expected)
+
+
+class _RecordingLBFGSB(LBFGSBOptimizer):
+    """Records the number of threads the objective it is given may use."""
+
+    def __call__(self, objective, X, **kwargs):
+        self.n_threads_ = objective.n_threads
+        return super().__call__(objective, X, **kwargs)
+
+
+class _RecordingGeneticAlgorithm(GeneticAlgorithmOptimizer):
+    """Records the number of threads the objective it is given may use."""
+
+    def __call__(self, objective, X, **kwargs):
+        self.n_threads_ = objective.n_threads
+        return super().__call__(objective, X, **kwargs)
+
+
+class TestNJobs:
+    @pytest.mark.parametrize('loss', [None, 'log_cost'], ids=['cost', 'log_cost'])
+    def test_fitted_model_does_not_depend_on_n_jobs(self, make_data, loss):
+        # Large enough that the loss is split over several chunks of rows.
+        X, y = make_data(n_samples=3000, n_features=10)
+        fn_cost = np.random.default_rng(0).uniform(1, 20, size=y.size)
+        if loss == 'log_cost':
+            loss = Metric(CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost'), LogCost())
+        models = [
+            CSLogitClassifier(loss=loss, n_jobs=n_jobs).fit(X, y, fp_cost=5.0, fn_cost=fn_cost) for n_jobs in (1, 3, -1)
+        ]
+        for model in models[1:]:
+            np.testing.assert_array_equal(model.coef_, models[0].coef_)
+            assert model.intercept_ == models[0].intercept_
+
+    @pytest.mark.parametrize(('n_jobs', 'expected'), [(1, 1), (None, 1), (3, 3)])
+    def test_objective_gets_n_jobs_threads(self, X, y, n_jobs, expected):
+        optimizer = _RecordingLBFGSB()
+        CSLogitClassifier(n_jobs=n_jobs, optimizer=optimizer).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        assert optimizer.n_threads_ == expected
+
+    def test_optimizer_with_threads_of_its_own_gets_one_thread_per_evaluation(self, X, y):
+        optimizer = _RecordingGeneticAlgorithm(max_iter=2, population_size=10, random_state=0, n_jobs=2)
+        CSLogitClassifier(n_jobs=4, optimizer=optimizer).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        assert optimizer.n_threads_ == 1
+
+    def test_rejects_zero_n_jobs(self, X, y):
+        with pytest.raises(ValueError, match='n_jobs'):
+            CSLogitClassifier(n_jobs=0).fit(X, y, fp_cost=1.0, fn_cost=1.0)
 
 
 class TestProfLogit:

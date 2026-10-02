@@ -4,12 +4,12 @@ import numpy.typing as npt
 def cy_logit_loss_gradient(
     weights: npt.NDArray[np.float64],
     features: npt.NDArray[np.float64],
-    grad_const: npt.NDArray[np.float64],
     loss_const1: npt.NDArray[np.float64],
     loss_const2: npt.NDArray[np.float64],
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> tuple[float, npt.NDArray[np.float64]]: ...
 def cy_logit_loss(
     weights: npt.NDArray[np.float64],
@@ -19,14 +19,17 @@ def cy_logit_loss(
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> float: ...
 def cy_logit_gradient(
     weights: npt.NDArray[np.float64],
     features: npt.NDArray[np.float64],
-    grad_const: npt.NDArray[np.float64],
+    loss_const1: npt.NDArray[np.float64],
+    loss_const2: npt.NDArray[np.float64],
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> npt.NDArray[np.float64]: ...
 def cy_boost_grad_hess(
     y_true: npt.NDArray[np.float64],
@@ -41,6 +44,7 @@ def cy_log_cost_loss_gradient(
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> tuple[float, npt.NDArray[np.float64]]: ...
 def cy_log_cost_loss(
     weights: npt.NDArray[np.float64],
@@ -50,6 +54,7 @@ def cy_log_cost_loss(
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> float: ...
 def cy_log_cost_gradient(
     weights: npt.NDArray[np.float64],
@@ -59,6 +64,7 @@ def cy_log_cost_gradient(
     l1_weight: float = ...,
     l2_weight: float = ...,
     start_coef: int = ...,
+    n_threads: int = ...,
 ) -> npt.NDArray[np.float64]: ...
 def cy_log_cost_boost_grad_hess(
     y_score: npt.NDArray[np.float64],

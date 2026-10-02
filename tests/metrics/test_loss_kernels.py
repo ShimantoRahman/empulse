@@ -19,12 +19,12 @@ from empulse.metrics._loss import (
 )
 
 
-def _reference(weights, features, grad_const, loss_const1, loss_const2, l1_weight, l2_weight, start_coef):
+def _reference(weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef):
     probability = expit(features @ weights)
     coefficients = weights[start_coef:]
     loss = np.mean(probability * loss_const1 + (1 - probability) * loss_const2)
     loss += l1_weight * np.abs(coefficients).sum() + 0.5 * l2_weight * (coefficients**2).sum()
-    gradient = grad_const.T @ (probability * (1 - probability)) / len(probability)
+    gradient = features.T @ (probability * (1 - probability) * (loss_const1 - loss_const2)) / len(probability)
     gradient[start_coef:] += l1_weight * np.sign(coefficients) + l2_weight * coefficients
     return loss, gradient
 
@@ -38,41 +38,72 @@ def _exact_expit_derivatives(margin):
         return float(slope), float((1 - exponential) / (1 + exponential) * slope)
 
 
-# Fewer than 128 samples take the C library's exp, more take numpy's.
-@pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (50, 3), (127, 4), (128, 4), (2000, 20)])
+# The kernels take the rows in blocks of 256, or fewer with more than 512 features, and group the
+# blocks into at most 64 chunks.
+SHAPES = [(1, 1), (50, 3), (255, 4), (256, 4), (257, 4), (2000, 20), (300, 600), (20_000, 3)]
+
+
+@pytest.mark.parametrize(('n_samples', 'n_features'), SHAPES)
 @pytest.mark.parametrize(('l1_weight', 'l2_weight', 'start_coef'), [(0.0, 0.0, 1), (0.1, 0.2, 1), (0.3, 0.0, 0)])
 def test_logit_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef, seeded_rng):
     features = seeded_rng.normal(size=(n_samples, n_features))
     weights = seeded_rng.normal(size=n_features)
-    grad_const = features * seeded_rng.normal(size=(n_samples, 1))
     loss_const1, loss_const2 = seeded_rng.normal(size=(2, n_samples))
-    penalty = (l1_weight, l2_weight, start_coef)
+    arguments = (weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef)
 
-    expected_loss, expected_gradient = _reference(weights, features, grad_const, loss_const1, loss_const2, *penalty)
-    loss, gradient = cy_logit_loss_gradient(weights, features, grad_const, loss_const1, loss_const2, *penalty)
+    expected_loss, expected_gradient = _reference(*arguments)
+    loss, gradient = cy_logit_loss_gradient(*arguments)
     assert loss == pytest.approx(expected_loss, rel=1e-12, abs=1e-15)
     np.testing.assert_allclose(gradient, expected_gradient, rtol=1e-10, atol=1e-15)
     # The kernels computing only one of the two agree with the combined one exactly.
-    assert cy_logit_loss(weights, features, loss_const1, loss_const2, *penalty) == loss
-    np.testing.assert_array_equal(cy_logit_gradient(weights, features, grad_const, *penalty), gradient)
+    assert cy_logit_loss(*arguments) == loss
+    np.testing.assert_array_equal(cy_logit_gradient(*arguments), gradient)
 
 
-@pytest.mark.parametrize('n_samples', [20, 400], ids=['c-library-exp', 'numpy-exp'])
+@pytest.mark.parametrize(
+    'kernel',
+    [
+        cy_logit_loss_gradient,
+        cy_logit_loss,
+        cy_logit_gradient,
+        cy_log_cost_loss_gradient,
+        cy_log_cost_loss,
+        cy_log_cost_gradient,
+    ],
+)
+@pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (257, 4), (20_000, 3), (300, 600)])
+def test_logit_kernels_do_not_depend_on_the_number_of_threads(kernel, n_samples, n_features, seeded_rng):
+    features = seeded_rng.normal(size=(n_samples, n_features))
+    weights = seeded_rng.normal(size=n_features)
+    loss_const1, loss_const2 = seeded_rng.normal(size=(2, n_samples))
+    arguments = (weights, features, loss_const1, loss_const2, 0.1, 0.2, 1)
+    expected = kernel(*arguments)
+    for n_threads in (2, 3, 8, 100):
+        result = kernel(*arguments, n_threads)
+        if isinstance(expected, tuple):
+            assert result[0] == expected[0]
+            np.testing.assert_array_equal(result[1], expected[1])
+        else:
+            np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize('n_samples', [20, 400])
 def test_logit_kernels_stay_accurate_where_the_probability_saturates(n_samples):
     margins = np.linspace(-800, 800, n_samples)
-    features = margins[:, None]
+    # One feature per sample, with the sample's margin as its weight.
+    features = np.eye(n_samples)
     ones = np.ones(n_samples)
-    # With loss_const1 = 1 and loss_const2 = 0, the loss is the mean probability.
-    loss, gradient = cy_logit_loss_gradient(np.ones(1), features, np.eye(n_samples, 1) * n_samples, ones, 0 * ones)
+    # With loss_const1 = 1 and loss_const2 = 0, the loss is the mean probability, and each entry of
+    # the gradient expit' of one margin, divided by the number of samples.
+    loss, gradient = cy_logit_loss_gradient(margins, features, ones, 0 * ones)
     assert loss == pytest.approx(np.mean(expit(margins)), rel=1e-14)
-    # expit' of the first margin, -800, is about 1e-348, which is 0 in double precision.
-    assert gradient[0] == pytest.approx(_exact_expit_derivatives(margins[0])[0], abs=1e-303)
 
-    slopes = [cy_logit_gradient(np.ones(1), margins[[i]][:, None], np.ones((1, 1)))[0] for i in range(n_samples)]
+    slopes = gradient * n_samples
     exact = np.array([_exact_expit_derivatives(margin)[0] for margin in margins])
     representable = np.abs(margins) < 700
-    np.testing.assert_allclose(np.array(slopes)[representable], exact[representable], rtol=1e-14)
-    assert np.all(np.array(slopes)[~representable] < 1e-303)
+    np.testing.assert_allclose(slopes[representable], exact[representable], rtol=1e-14)
+    # expit' of a margin beyond 700 in size, e.g. about 1e-348 at -800, is 0 in double precision.
+    assert np.all(slopes[~representable] < 1e-303)
 
 
 @pytest.mark.parametrize('dtype', [np.float64, np.float32])
@@ -93,7 +124,7 @@ def test_boost_gradient_and_hessian_are_exact_to_double_precision(dtype, seeded_
 def test_logit_kernels_propagate_nan():
     features = np.ones((3, 2))
     ones = np.ones(3)
-    loss, gradient = cy_logit_loss_gradient(np.array([np.nan, 1.0]), features, features, ones, ones)
+    loss, gradient = cy_logit_loss_gradient(np.array([np.nan, 1.0]), features, ones, ones)
     assert np.isnan(loss)
     assert np.isnan(gradient).all()
     gradient, hessian = cy_boost_grad_hess(None, np.array([np.nan, 1.0]), np.ones(2))
@@ -112,7 +143,7 @@ def test_logit_kernels_accept_read_only_arrays(seeded_rng):
 
 
 def test_logit_kernels_handle_empty_inputs():
-    loss, gradient = cy_logit_loss_gradient(np.zeros(0), np.zeros((5, 0)), np.zeros((5, 0)), np.ones(5), np.zeros(5))
+    loss, gradient = cy_logit_loss_gradient(np.zeros(0), np.zeros((5, 0)), np.ones(5), np.zeros(5))
     assert loss == 0.5
     assert gradient.shape == (0,)
     gradient, hessian = cy_boost_grad_hess(None, np.zeros(0), np.zeros(0))
@@ -124,7 +155,7 @@ def test_logit_kernels_handle_empty_inputs():
     [
         (lambda X: cy_logit_loss(np.ones(4), X, np.ones(50), np.ones(50)), 'weights has 4 entries'),
         (lambda X: cy_logit_loss(np.ones(3), X, np.ones(49), np.ones(50)), 'features has 50 rows'),
-        (lambda X: cy_logit_gradient(np.ones(3), X, np.ones((50, 2))), r'grad_const has shape \(50, 2\)'),
+        (lambda X: cy_logit_gradient(np.ones(3), X, np.ones(50), np.ones(51)), 'features has 50 rows'),
         (lambda X: cy_boost_grad_hess(None, np.ones(3), np.ones(4)), 'y_score has 3 entries'),
     ],
 )
@@ -153,13 +184,17 @@ EPSILON = np.finfo(np.float64).eps
 
 
 def _log_cost_reference(weights, features, loss_const1, loss_const2, l1_weight, l2_weight, start_coef):
-    """The log cost as it was computed in numpy, before it moved to the kernels."""
-    probability = expit(features @ weights)
-    clipped = np.clip(probability, EPSILON, 1 - EPSILON)
+    """The log cost in numpy, with 1 - p taken as expit(-m): subtracting p from 1 loses its digits as p nears 1."""
+    margins = features @ weights
+    probability = expit(margins)
+    complement = expit(-margins)
     coefficients = weights[start_coef:]
-    loss = np.mean(np.log(clipped) * loss_const1 + np.log(1 - clipped) * loss_const2)
+    loss = np.mean(
+        np.log(np.clip(probability, EPSILON, 1 - EPSILON)) * loss_const1
+        + np.log(np.clip(complement, EPSILON, 1 - EPSILON)) * loss_const2
+    )
     loss += l1_weight * np.abs(coefficients).sum() + 0.5 * l2_weight * (coefficients**2).sum()
-    slopes = loss_const1 * (1 - probability) - loss_const2 * probability
+    slopes = loss_const1 * complement - loss_const2 * probability
     gradient = features.T @ slopes / len(probability)
     gradient[start_coef:] += l1_weight * np.sign(coefficients) + l2_weight * coefficients
     return loss, gradient
@@ -178,8 +213,7 @@ def _exact_log_cost(margins, loss_const1, loss_const2):
         return float(total / len(margins))
 
 
-# Fewer than 128 values take the C library's exp and log, more take numpy's.
-@pytest.mark.parametrize(('n_samples', 'n_features'), [(1, 1), (50, 3), (63, 4), (64, 4), (2000, 20)])
+@pytest.mark.parametrize(('n_samples', 'n_features'), SHAPES)
 @pytest.mark.parametrize(('l1_weight', 'l2_weight', 'start_coef'), [(0.0, 0.0, 1), (0.1, 0.2, 1), (0.3, 0.0, 0)])
 def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weight, l2_weight, start_coef, seeded_rng):
     features = seeded_rng.normal(size=(n_samples, n_features))
@@ -196,7 +230,7 @@ def test_log_cost_kernels_match_their_definition(n_samples, n_features, l1_weigh
     np.testing.assert_array_equal(cy_log_cost_gradient(*arguments), gradient)
 
 
-@pytest.mark.parametrize('n_samples', [20, 400], ids=['c-library-log', 'numpy-log'])
+@pytest.mark.parametrize('n_samples', [20, 400])
 def test_log_cost_is_exact_where_the_probability_saturates(n_samples, seeded_rng):
     """``log(1 - p)`` loses its digits once p rounds towards 1, from a margin of about 14 onwards."""
     margins = np.linspace(-60, 60, n_samples)

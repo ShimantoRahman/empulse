@@ -603,6 +603,16 @@ class _MixtureLogitObjective(LogitObjective):
     def __init__(self, weighted_objectives: list[tuple[float, LogitObjective]]) -> None:
         self._weighted_objectives = weighted_objectives
 
+    @property
+    def n_threads(self) -> int:  # type: ignore[override]
+        """Number of threads each component objective may use for one evaluation."""
+        return max((objective.n_threads for _, objective in self._weighted_objectives), default=1)
+
+    @n_threads.setter
+    def n_threads(self, n_threads: int) -> None:
+        for _, objective in self._weighted_objectives:
+            objective.n_threads = n_threads
+
     def data_loss(self, weights: FloatNDArray) -> float:
         """Compute the weighted sum of each component objective's unpenalized loss."""
         return float(sum(weight * objective.logit_loss(weights) for weight, objective in self._weighted_objectives))

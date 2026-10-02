@@ -63,9 +63,11 @@ class _CachedPenaltyWeights:
             self._start_coef = penalty.start_coef
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # Objectives pickled by older versions stored the penalty as `penalty`.
+        # Objectives pickled by older versions stored the penalty as `penalty`, and the cost
+        # objective a `grad_const` array the kernels no longer take.
         if 'penalty' in state:
             state['_penalty'] = state.pop('penalty')
+        state.pop('grad_const', None)
         self.__dict__.update(state)
 
 
@@ -76,7 +78,7 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     Holds the constants derived from the data and exposes the
     :class:`~empulse.metrics.LogitObjective` interface. The expected cost is linear in the
     predicted probability, so the derivative of the cost with respect to the probability is a
-    per-sample constant that can be folded into ``grad_const`` once and never recomputed.
+    per-sample constant, ``loss_const1 - loss_const2``.
 
     The regularized ``logit_*`` methods add the penalty inside the Cython kernel rather than
     through :class:`~empulse.metrics.ElasticNetPenalty` in numpy. The penalty is only
@@ -102,15 +104,13 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     ) -> None:
         loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
         loss_const2 = y_true * fn_cost - (1 - y_true) * tn_benefit
-        # Derivative of the expected cost wrt the predicted probability, per sample. This is both
-        # the gradient factor and the magnitude the elastic-net penalty is scaled against.
+        # Derivative of the expected cost wrt the predicted probability, per sample. The kernels form
+        # it from the two loss constants; here it is the magnitude the penalty is scaled against.
         grad_factor = np.asarray(loss_const1 - loss_const2, dtype=np.float64)
         warn_if_no_training_signal(grad_factor, 'expected cost')
-        grad_const = features * grad_factor
 
         # The Cython kernels take C-contiguous float64 arrays, so convert them once here rather than
         # on every call. Features given in Fortran order would otherwise be rejected.
-        self.grad_const: Float64Array = np.ascontiguousarray(grad_const, dtype=np.float64)
         self.loss_const1: Float64Array = np.ascontiguousarray(loss_const1, dtype=np.float64).reshape(-1)
         self.loss_const2: Float64Array = np.ascontiguousarray(loss_const2, dtype=np.float64).reshape(-1)
         self.features: Float64Array = np.ascontiguousarray(features, dtype=np.float64)
@@ -126,9 +126,9 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     def with_indices(self, indices: FloatNDArray) -> 'CostLogitObjective':
         """Return a new objective restricted to the sample subset given by *indices*.
 
-        The pre-computed constant arrays (``grad_const``, ``loss_const1``,
-        ``loss_const2``, ``features``) are sliced; all scalar attributes are
-        shared.  This is very cheap compared to rebuilding from scratch.
+        The pre-computed constant arrays (``loss_const1``, ``loss_const2``,
+        ``features``) are sliced; all scalar attributes are shared.  This is
+        very cheap compared to rebuilding from scratch.
 
         Parameters
         ----------
@@ -141,7 +141,6 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
             A new objective for the selected samples.
         """
         obj = copy.copy(self)
-        obj.grad_const = self.grad_const[indices]
         obj.loss_const1 = self.loss_const1[indices]
         obj.loss_const2 = self.loss_const2[indices]
         obj.features = self.features[indices]
@@ -156,12 +155,12 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         return cy_logit_loss_gradient(  # type: ignore[no-any-return]
             np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
-            self.grad_const,
             self.loss_const1,
             self.loss_const2,
             self._l1_weight,
             self._l2_weight,
             self._start_coef,
+            self.n_threads,
         )
 
     def logit_loss(self, weights: FloatNDArray) -> float:
@@ -189,6 +188,7 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
                 self._l1_weight,
                 self._l2_weight,
                 self._start_coef,
+                self.n_threads,
             )
         )
 
@@ -211,10 +211,12 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         return cy_logit_gradient(  # type: ignore[return-value]
             np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
-            self.grad_const,
+            self.loss_const1,
+            self.loss_const2,
             self._l1_weight,
             self._l2_weight,
             self._start_coef,
+            self.n_threads,
         )
 
     def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
@@ -235,9 +237,9 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         return cy_logit_loss_gradient(  # type: ignore[no-any-return]
             np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
-            self.grad_const,
             self.loss_const1,
             self.loss_const2,
+            n_threads=self.n_threads,
         )
 
     def data_loss(self, weights: FloatNDArray) -> float:
@@ -259,6 +261,7 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
                 self.features,
                 self.loss_const1,
                 self.loss_const2,
+                n_threads=self.n_threads,
             )
         )
 
@@ -278,7 +281,9 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         return cy_logit_gradient(  # type: ignore[return-value]
             np.ascontiguousarray(weights, dtype=np.float64),
             self.features,
-            self.grad_const,
+            self.loss_const1,
+            self.loss_const2,
+            n_threads=self.n_threads,
         )
 
     def _logit_gradient_steps(self) -> Generator[FloatNDArray, FloatNDArray | tuple[FloatNDArray, bool] | None, None]:

@@ -79,6 +79,17 @@ class CSLogitClassifier(BaseLogitClassifier):
     optimizer : :class:`empulse.optimizers.Optimizer`, optional
         Optimization algorithm. See :ref:`cslogit` for more information.
 
+    n_jobs : int or None, default=1
+        Number of threads that compute the loss and its gradient in parallel, for the default loss
+        and any :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+        :class:`~empulse.metrics.Savings` or :class:`~empulse.metrics.LogCost` loss.
+        Other losses ignore it. ``None`` means 1 and ``-1`` means using all processors.
+        The fitted model does not depend on ``n_jobs``.
+
+        An optimizer that evaluates the loss from threads of its own, such as
+        :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` with ``n_jobs > 1``, runs each
+        evaluation on a single thread instead.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -248,6 +259,17 @@ class ProfLogitClassifier(BaseLogitClassifier):
 
     optimizer : :class:`empulse.optimizers.Optimizer`, optional
         Optimization algorithm. See :ref:`proflogit` for more information.
+
+    n_jobs : int or None, default=1
+        Number of threads that compute the loss and its gradient in parallel, for a
+        :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+        :class:`~empulse.metrics.Savings` or :class:`~empulse.metrics.LogCost` loss.
+        Other losses ignore it. ``None`` means 1 and ``-1`` means using all processors.
+        The fitted model does not depend on ``n_jobs``.
+
+        An optimizer that evaluates the loss from threads of its own, such as
+        :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` with ``n_jobs > 1``, runs each
+        evaluation on a single thread instead.
 
     Attributes
     ----------
