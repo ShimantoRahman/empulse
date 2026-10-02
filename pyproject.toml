@@ -105,7 +105,8 @@ lint = [
 
 profile = [
     "scalene>=2.3.0",
-    "line-profiler>=5.0.0"
+    "line-profiler>=5.0.0",
+    "py-spy>=0.4.2"
 ]
 
 dev = [
