@@ -41,7 +41,7 @@ def make_estimators():
     Returns instances rather than a module-level tuple so that a test which fits one cannot leak
     fitted state into another.
     """
-    return [
+    estimators = [
         BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
         BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
         BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
@@ -66,8 +66,9 @@ def make_estimators():
         CSRateClassifier(estimator=LogisticRegression(max_iter=2), fp_cost=1, fn_cost=1),
         ProfMPMClassifier(tp_cost=-1, fp_cost=1),
         ProfMEMPMClassifier(tp_cost=-1, fp_cost=1),
-        ProfSRClassifier(tp_cost=-1, fp_cost=1, generations=2, population_size=20, random_state=42),
+        ProfSRClassifier(tp_cost=-1, fp_cost=1, max_iter=2, population_size=20, tuning_interval=1, random_state=42),
     ]
+    return estimators
 
 
 # The bias-mitigation classifiers are the only ones that need a fit-time argument beyond X and y.

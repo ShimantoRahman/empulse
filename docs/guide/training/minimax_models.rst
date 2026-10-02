@@ -163,19 +163,14 @@ The result is a decision function you can read:
 
     from empulse.models import ProfSRClassifier
 
-    model = ProfSRClassifier(generations=5, population_size=50, random_state=42)
+    model = ProfSRClassifier(max_iter=5, population_size=50, random_state=42)
     model.fit(X, y, tp_cost=-200, fp_cost=10)
 
-    print(model.model_)
+    print(model.program_)
 
 That readability is the point. A linear model tells you the weight on each feature; a symbolic model
 can tell you that what matters is a *ratio* or a *product* of two features, and say so in a form a
-domain expert can argue with.
-
-.. note::
-    :class:`~empulse.models.ProfSRClassifier` needs the optional
-    `gplearn <https://gplearn.readthedocs.io/>`_ dependency. Install it with
-    ``pip install empulse[symbolic]``.
+domain expert can argue with. When ``X`` is a dataframe, the expression names its columns.
 
 Controlling the search
 ----------------------
@@ -186,22 +181,54 @@ Controlling the search
 
     * - Parameter
       - Effect
-    * - ``generations``
+    * - ``max_iter``
       - How many rounds of evolution to run. More generations find better expressions and take
-        proportionally longer.
+        proportionally longer. ``patience`` stops the search once the best loss stops improving,
+        and ``max_time`` stops it after a number of seconds.
     * - ``population_size``
-      - How many candidate programs are kept per generation. Larger populations explore more of the
+      - How many candidate expressions are kept per generation. Larger populations explore more of the
         space but cost memory and time per generation.
+    * - ``max_length``
+      - A hard limit on the number of symbols (operators, features and constants) in an expression.
+        No candidate ever exceeds it, which bounds how complicated the fitted formula can be.
     * - ``parsimony_coefficient``
-      - Penalty on program length. This is the knob that keeps expressions readable: raise it when
-        the fitted program has grown into something nobody can interpret, lower it if the model is
-        underfitting.
+      - Penalty on expression length when parents are selected. This is the knob that keeps expressions
+        readable within the limit: raise it when the fitted expression has grown into something nobody
+        can interpret, lower it if the model is underfitting.
+    * - ``function_set``
+      - The operators an expression may use: arithmetic, ``exp``, ``log``, ``sig`` by default, and also
+        ``sqrt``, ``abs``, ``sin``, ``cos`` and others.
+    * - ``n_tuned_programs``
+      - How many of the best expressions have their constants tuned every ``tuning_interval``
+        generations. Evolution finds the structure of an expression quickly but its constants slowly,
+        so a Nelder--Mead search refines them while the structure stays fixed. ``0`` turns tuning off.
+        ``constant_rate`` sets how many of the leaves of new expressions are constants, which are what
+        tuning refines.
+    * - ``max_samples``
+      - The fraction of the training samples each candidate is scored on. Every candidate gets its own random
+        batch, which keeps a generation cheap on large datasets.
     * - ``random_state``
       - The search is stochastic. Fix this or successive fits will differ.
 
-``parsimony_coefficient`` deserves particular attention. Genetic programming suffers from *bloat*:
-without pressure against it, programs grow ever longer while barely improving fitness, and the
-interpretability that motivated the model evaporates.
+``max_length`` and ``parsimony_coefficient`` deserve particular attention. Genetic programming suffers
+from *bloat*: without pressure against it, expressions grow ever longer while barely improving fitness,
+and the interpretability that motivated the model evaporates.
+
+The trade-off between profit and size
+-------------------------------------
+
+The search does not only keep the best expression of the last generation. It remembers the best
+expression it ever found at every length, and ``pareto_front_`` lists those that beat every shorter
+one. Each point shows what the extra symbols bought:
+
+.. code-block:: python
+
+    for point in model.pareto_front_:
+        print(point.length, round(point.loss, 3), point.program)
+
+``program_`` is the point on the front with the lowest loss plus ``parsimony_coefficient`` times its
+length. Pick another point of the front if a shorter or a more accurate formula suits the application
+better; its ``program.execute(X)`` gives the scores that expression assigns to ``X``.
 
 Unlike the minimax models, :class:`~empulse.models.ProfSRClassifier` accepts any strategy, since
 evaluating a candidate program only requires a scalar fitness — including the two ranking-based
@@ -214,7 +241,7 @@ strategies that gradient methods cannot use.
     matrix = CostMatrix().add_fp_cost('c_fp').add_fn_cost('c_fn').set_default(c_fp=1.0, c_fn=5.0)
 
     model = ProfSRClassifier(
-        loss=Metric(matrix, AUEPC()), generations=5, population_size=50, random_state=42
+        loss=Metric(matrix, AUEPC()), max_iter=5, population_size=50, random_state=42
     )
     model.fit(X, y)
 

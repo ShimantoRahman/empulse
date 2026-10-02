@@ -213,6 +213,44 @@ Metrics
 Models
 ------
 
+- |MajorFeature| :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` are grown by Empulse's own compiled tree builder
+  instead of scikit-learn's :class:`~sklearn.tree.DecisionTreeClassifier` and
+  :class:`~sklearn.ensemble.RandomForestClassifier`. The builder is ported from scikit-learn's and
+  specialized for binary cost-sensitive trees, and Empulse's wheels no longer depend on the binary
+  layout of a particular scikit-learn release.
+- |Efficiency| Fitting :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` is about three times faster, growing the same trees,
+  and a forest needs about 30% less memory (100,000 samples, 50 trees: 86 s instead of 278 s on one
+  core, 23 s instead of 81 s on four). Large nodes are sorted by a radix sort, each sample's costs
+  are read from a single record, and leaves record their cheapest class while the tree grows, so
+  fitting no longer passes the training data through every tree again. A forest's ``predict`` and
+  ``predict_proba`` add up the trees' votes without storing every tree's leaf for every sample.
+  With ``criterion="cost"`` and the default ``min_impurity_decrease=None``, nodes whose samples all
+  cost least under the same decision become leaves without a split search. Fitted trees can differ
+  from before where two splits tie up to rounding, as the radix sort orders equal feature values
+  differently.
+- |API| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
+  no longer have an ``estimator_`` attribute holding a scikit-learn estimator, nor a
+  ``criterion_``. ``tree_`` is now an Empulse ``CostTree``, whose attributes carry the names of
+  scikit-learn's tree, and a forest's ``estimators_`` are :class:`~empulse.models.CSTreeClassifier`
+  instances. :func:`sklearn.tree.export_graphviz` accepts a fitted
+  :class:`~empulse.models.CSTreeClassifier`; :func:`sklearn.tree.plot_tree` and
+  :func:`sklearn.tree.export_text` only accept scikit-learn's own trees. Models pickled with an
+  earlier release do not load.
+- |API| The ``monotonic_cst`` parameter of :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` is removed, and their ``criterion`` no longer accepts
+  a criterion object, only ``"cost"``, ``"gini"``, ``"entropy"`` or ``"log_loss"``.
+- |API| :meth:`CSTreeClassifier.cost_complexity_pruning_path
+  <empulse.models.CSTreeClassifier.cost_complexity_pruning_path>` takes the keyword arguments of
+  ``fit``, such as instance-dependent costs, instead of ``sample_weight``, and fits an unpruned copy
+  of the classifier with them.
+- |Fix| :class:`~empulse.models.CSForestClassifier` with ``warm_start=True`` now adds trees to the
+  fitted forest. It refitted the whole forest on every call.
+- |Fix| :class:`~empulse.models.CSForestClassifier` with ``combination="weighted_voting"`` and a
+  ``class_weight`` now weighs each tree by its loss on the samples it left out. Bootstrap samples are
+  drawn in proportion to the class weights, and the weights were computed on samples drawn without
+  them.
 - |API| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns, for
   each leaf, the class that costs least on the training samples in it, instead of the leaf's
   majority class. With imbalanced classes the majority is usually negative even where a positive
@@ -243,12 +281,33 @@ Models
   1.3 times as fast on 10,000 samples and 1.5 times on 50,000. Outputs above about 37, which all
   rounded to a probability of exactly 1.0, are no longer scored as ties.
 - |Fix| :class:`~empulse.models.ProfSRClassifier` now evolves every generation it is asked for.
-  gplearn stops as soon as the best fitness reaches its ``stopping_criteria``, which defaults to 0.
-  The fitness is the loss, and that is negative whenever the model makes a profit, so the
-  evolution stopped after the first generation for nearly every problem. ``n_iter_`` now reports
-  the number of generations actually evolved.
-- |Enhancement| :class:`~empulse.models.ProfSRClassifier` has an ``n_jobs`` parameter, passed on
-  to gplearn to evaluate the population in parallel.
+  The search stopped as soon as the best fitness reached 0. The fitness is the loss, and that is
+  negative whenever the model makes a profit, so the evolution stopped after the first generation
+  for nearly every problem. ``n_iter_`` now reports the number of generations actually evolved.
+- |Enhancement| :class:`~empulse.models.ProfSRClassifier` has an ``n_jobs`` parameter to score the
+  population in parallel. The fitted expression does not depend on it.
+- |API| :class:`~empulse.models.ProfSRClassifier` runs its own symbolic regression engine, adapted
+  from gplearn (BSD-3-Clause), instead of depending on gplearn. The ``symbolic`` extra no longer
+  exists and gplearn is not needed. ``generations`` is now ``max_iter``, and the fitted ``model_``
+  is replaced by ``program_`` (the fitted expression, which names the columns of a dataframe),
+  ``pareto_front_`` and ``run_details_``. The defaults follow the profit-driven symbolic regression
+  paper the model implements (a function set with ``exp`` and ``sig``, expressions of at most 20
+  nodes, tuned constants), so a model fitted with the default parameters differs from before.
+- |Feature| :class:`~empulse.models.ProfSRClassifier` limits the size of an expression with
+  ``max_length``, returns the best expression found at every length as ``pareto_front_``, and
+  tunes the constants of its best expressions with the Nelder--Mead simplex method (``n_tuned_programs``,
+  ``tuning_interval`` and ``tuning_max_iter``), as the paper does. Half of the leaves of new expressions
+  are constants (``constant_rate``), so there is something to tune. It can score each expression on a
+  random batch of the samples (``max_samples``), stop early (``patience``, ``tolerance`` and
+  ``max_time``), and has parameters for the operators (``function_set``), the selection
+  (``tournament_size``), the initial expressions (``init_depth``, ``init_method`` and ``const_range``) and the
+  genetic operators (``crossover_rate``, ``mutate_subtree_rate``, ``hoist_rate``, ``mutate_point_rate`` and
+  ``point_replace_rate``).
+- |Efficiency| :class:`~empulse.models.ProfSRClassifier` scores every distinct expression once per
+  fit. A population is full of copies of the expressions it was bred from, and most expressions of a
+  generation had already been scored in an earlier one. Together with less bookkeeping per
+  expression, fitting with the same function set and settings is 3 to 5 times as fast on 1,000 to
+  100,000 samples.
 - |Efficiency| ``import empulse.models`` no longer imports XGBoost, LightGBM and CatBoost, which
   took about half a second. :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier` import the library they use when they are fitted.
@@ -419,6 +478,11 @@ Datasets
 Packaging and dependencies
 ---------------------------
 
+- |Enhancement| Empulse's compiled extensions no longer build against scikit-learn, so a
+  scikit-learn release no longer needs a matching Empulse release, and Cython is no longer pinned
+  to the version scikit-learn's wheels were built with (any Cython 3.1 or later builds Empulse).
+- |Enhancement| Empulse works with scikit-learn 1.5.2 and later (1.7.2 and later on Python 3.14),
+  where it used to need 1.9. Everything is tested against 1.5.2, 1.6.1, 1.7.2, 1.8.0 and 1.9.1.
 - |Fix| The source distribution no longer contains the test modules at the top of ``tests/``.
 - |Fix| Raised the minimum versions of four dependencies to ones the package actually works with,
   now checked by a test run against the lowest version of every dependency: ``numpy>=1.25.2`` on

@@ -7,27 +7,33 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils._param_validation import InvalidParameterError
-from sklearn.utils.estimator_checks import _get_check_estimator_ids, estimator_checks_generator
+from sklearn.utils.fixes import parse_version
 from xgboost import XGBClassifier
 
+from empulse._common._sklearn_compat import sklearn_version
 from empulse.datasets import fetch_give_me_some_credit
 from empulse.metrics import cost_loss, mpc_score
 from empulse.models import (
     CSBoostClassifier,
     CSForestClassifier,
     CSLogitClassifier,
+    CSRateClassifier,
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
     ProfMEMPMClassifier,
     ProfMPMClassifier,
-    ProfSRClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
 from empulse.optimizers import LBFGSBOptimizer
 
 from .._estimator_common import iter_invalid_params
+
+try:
+    from sklearn.utils.estimator_checks import _get_check_estimator_ids, estimator_checks_generator
+except ImportError:
+    pytest.skip('scikit-learn < 1.6 has no estimator_checks_generator', allow_module_level=True)
 from .estimator_inventory import estimator_id, make_estimators
 
 # The single source of truth for "every estimator, cheaply configured". Shared with
@@ -41,6 +47,11 @@ ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 def expected_failed_checks(estimator):
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
+    if isinstance(estimator, CSRateClassifier) and sklearn_version < parse_version('1.7'):
+        return {
+            'check_methods_subset_invariance': 'A rate classifier labels the top fraction of the batch it is given, '
+            'so a subset can change a decision. Only the data of the check in scikit-learn 1.6 shows it.'
+        }
     if isinstance(
         estimator,
         CSTreeClassifier
@@ -49,7 +60,6 @@ def expected_failed_checks(estimator):
         | RobustCSClassifier
         | ProfTreeClassifier
         | ProfLogitClassifier
-        | ProfSRClassifier
         | ProfMPMClassifier
         | ProfMEMPMClassifier,
     ):

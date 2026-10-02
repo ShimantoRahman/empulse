@@ -54,7 +54,7 @@ def _cases() -> dict[str, tuple[Callable[[], object], int]]:
         'proflogit_empc_4_jobs': (proflogit(empc_score, 4), 3),
         'proflogit_mpc_4_jobs': (proflogit(mpc_score, 4), 3),
         'profsr': (
-            lambda: ProfSRClassifier(generations=5, population_size=300, random_state=0).fit(
+            lambda: ProfSRClassifier(max_iter=5, population_size=300, random_state=0).fit(
                 X, y, tp_cost=-200, fp_cost=10
             ),
             3,

@@ -15,7 +15,7 @@ That gives you every metric, the linear and tree-based models, the samplers and 
 Optional extras
 ===============
 
-Two features need extra dependencies, both installable as extras:
+The boosting models need extra dependencies, installable as an extra:
 
 .. list-table::
     :widths: 22 30 48
@@ -29,12 +29,8 @@ Two features need extra dependencies, both installable as extras:
       - XGBoost, LightGBM and CatBoost, the backends behind
         :class:`~empulse.models.CSBoostClassifier` and
         :class:`~empulse.models.B2BoostClassifier`.
-    * - ``symbolic``
-      - ``pip install empulse[symbolic]``
-      - gplearn, required by :class:`~empulse.models.ProfSRClassifier`
-        (genetic-programming symbolic regression).
 
-To install everything, use the ``optional`` extra, which pulls in every other extra:
+To install everything, use the ``optional`` extra, which pulls in every extra:
 
 .. code-block:: bash
 

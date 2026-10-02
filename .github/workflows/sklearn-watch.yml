@@ -1,8 +1,8 @@
 name: scikit-learn release watch
 
-# Empulse tracks scikit-learn internals closely -- it subclasses a precompiled Cython criterion and
-# leans on estimator-check and metadata-routing behaviour -- so a scikit-learn release can break it
-# without anything in this repository changing.
+# Empulse leans on scikit-learn's estimator checks, parameter validation and metadata-routing
+# behaviour, so a scikit-learn release can break it without anything in this repository changing.
+# Its compiled extensions do not link against scikit-learn, so a release cannot break them.
 # This workflow is to check daily whether anything broke with new releases.
 
 on:
@@ -180,10 +180,6 @@ jobs:
 
           Worth checking first, in the order these usually bite this package:
 
-          - a segfault or access violation rather than a Python traceback points at the Cython ABI,
-            not at the test: read the `scripts/check_cython_abi.py` output at the top of the job log,
-            and see whether `cython==3.2.5` in `pyproject.toml` still matches what the new
-            scikit-learn wheels were built with
           - `parametrize_with_checks` failures in `tests/models/test_models.py` usually mean a new or
             renamed estimator check; `expected_failed_checks` may need an entry, or one may have
             started passing, which `xfail_strict` also turns red

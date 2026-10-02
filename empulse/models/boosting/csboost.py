@@ -8,9 +8,10 @@ from numpy.typing import ArrayLike
 from scipy.special import expit
 from sklearn.base import clone
 from sklearn.utils._param_validation import HasMethods
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
+from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
 from .._base.cost_sensitive import CostSensitiveClassifier

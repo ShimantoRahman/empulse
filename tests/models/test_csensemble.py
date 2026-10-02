@@ -21,7 +21,7 @@ def test_csforest_criteria(classification_data, criterion):
     model = CSForestClassifier(n_estimators=5, max_depth=3, criterion=criterion)
     model.fit(X, y, fp_cost=1, fn_cost=1)
     y_proba = model.predict_proba(X)
-    assert hasattr(model, 'estimator_')
+    assert len(model.estimators_) == 5
     assert y_proba.shape == (100, 2)
     assert np.allclose(y_proba.sum(axis=1), 1)
 
@@ -32,7 +32,7 @@ def test_csforest_combination(classification_data, combination):
     model = CSForestClassifier(n_estimators=5, max_depth=3, combination=combination)
     model.fit(X, y, fp_cost=1, fn_cost=1)
     y_proba = model.predict_proba(X)
-    assert hasattr(model, 'estimator_')
+    assert len(model.estimators_) == 5
     assert y_proba.shape == (100, 2)
     assert np.allclose(y_proba.sum(axis=1), 1)
 
@@ -162,13 +162,72 @@ def test_csforest_rejects_a_metric_as_criterion(classification_data):
         CSForestClassifier(criterion=expected_cost_loss, n_estimators=2).fit(X, y, fn_cost=5.0, fp_cost=1.0)
 
 
-def test_csforest_accepts_a_cost_impurity_instance(classification_data):
-    from empulse.models.tree._impurity import GiniCostImpurity
+class TestCSForestWarmStart:
+    """Regression test: ``warm_start`` refitted the whole forest, as its inner forest was rebuilt every fit."""
 
-    X, y = classification_data
-    criterion = GiniCostImpurity(n_outputs=1, n_classes=np.array([2], dtype=np.intp))
-    model = CSForestClassifier(criterion=criterion, n_estimators=2, random_state=0).fit(X, y, fn_cost=5.0, fp_cost=1.0)
-    assert isinstance(model.criterion_, GiniCostImpurity)
+    def test_adding_trees_keeps_the_old_ones(self, make_data):
+        X, y = make_data(n_samples=300)
+        model = CSForestClassifier(n_estimators=4, warm_start=True, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        first = list(model.estimators_)
+        model.set_params(n_estimators=7).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert len(model.estimators_) == 7
+        assert all(a is b for a, b in zip(first, model.estimators_[:4], strict=False))
+
+    def test_matches_growing_all_trees_at_once(self, make_data):
+        X, y = make_data(n_samples=300)
+        warm = CSForestClassifier(n_estimators=4, warm_start=True, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        warm.set_params(n_estimators=7).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        cold = CSForestClassifier(n_estimators=7, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        np.testing.assert_array_equal(warm.predict_proba(X), cold.predict_proba(X))
+
+    def test_fewer_trees_raises(self, make_data):
+        X, y = make_data(n_samples=100)
+        model = CSForestClassifier(n_estimators=4, warm_start=True, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        with pytest.raises(ValueError, match='must be larger or equal'):
+            model.set_params(n_estimators=2).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+
+class TestCSForestOutOfBag:
+    def test_oob_decision_function_averages_the_trees_that_left_each_sample_out(self, make_data):
+        X, y = make_data(n_samples=300)
+        model = CSForestClassifier(n_estimators=15, oob_score=True, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        total = np.zeros((y.size, 2))
+        count = np.zeros(y.size)
+        for tree, drawn in zip(model.estimators_, model.estimators_samples_, strict=True):
+            out = np.bincount(drawn, minlength=y.size) == 0
+            total[out] += tree.predict_proba(X[out])
+            count[out] += 1
+        expected = total / np.maximum(count, 1)[:, None]
+
+        np.testing.assert_allclose(model.oob_decision_function_, expected)
+        assert model.oob_score_ == pytest.approx(np.mean(expected.argmax(axis=1) == y))
+
+    def test_callable_oob_score(self, make_data):
+        from sklearn.metrics import balanced_accuracy_score
+
+        X, y = make_data(n_samples=300)
+        model = CSForestClassifier(n_estimators=25, oob_score=balanced_accuracy_score, random_state=0)
+        model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        assert model.oob_score_ == pytest.approx(
+            balanced_accuracy_score(y, model.oob_decision_function_.argmax(axis=1))
+        )
+
+    def test_oob_requires_bootstrap(self, make_data):
+        X, y = make_data(n_samples=100)
+        with pytest.raises(ValueError, match='Out of bag'):
+            CSForestClassifier(bootstrap=False, oob_score=True).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+
+def test_csforest_balanced_subsample_weighs_each_bootstrap_sample(make_data):
+    X, y = make_data(n_samples=400, weights=[0.8])
+    model = CSForestClassifier(n_estimators=3, class_weight='balanced_subsample', max_depth=2, random_state=0)
+    model.fit(X, y, fp_cost=1.0, fn_cost=1.0)
+    # Balanced classes weigh the same at the root of every tree.
+    for tree in model.estimators_:
+        np.testing.assert_allclose(tree.tree_.value[0, 0], [0.5, 0.5])
 
 
 # --- The out-of-bag weighting helpers ------------------------------------------------------------
@@ -334,7 +393,7 @@ class TestPredictVotesCheapestClasses:
         X, y, fp_cost, fn_cost = self._data()
         model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
-        assert all(tree.estimator_.min_impurity_decrease == 0.0 for tree in model.estimator_.estimators_)
+        assert all(tree.min_impurity_decrease_ == 0.0 for tree in model.estimator_.estimators_)
 
     def test_bagging_a_custom_estimator_still_averages_probabilities(self):
         from empulse.models import CSLogitClassifier

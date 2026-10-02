@@ -7,10 +7,10 @@ import numpy as np
 from imblearn.base import BaseSampler
 from numpy.random import RandomState
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import ClassifierTags, Tags, _safe_indexing, check_random_state
+from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.multiclass import type_of_target
 
+from .._common._sklearn_compat import ClassifierTags, Tags, type_of_target
 from .._common._strategies import Strategy, StrategyFn, _independent_weights
 from .._types import IntNDArray, ParameterConstraint
 
@@ -171,6 +171,7 @@ class BiasResampler(BaseSampler):  # type: ignore[misc]
         return {
             'binary_only': True,
             'poor_score': True,
+            'sample_indices': True,
         }
 
     def __sklearn_tags__(self) -> Tags:

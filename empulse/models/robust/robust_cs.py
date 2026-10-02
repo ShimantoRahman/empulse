@@ -5,13 +5,13 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
-from sklearn.utils import Tags
-from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
-from sklearn.utils.validation import _estimator_has, validate_data
+from sklearn.utils.metaestimators import available_if
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
+from ..._common._metaestimators import estimator_has
+from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
@@ -479,21 +479,21 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             else:
                 self.outlier_estimators_[cost_name] = None
 
-    @available_if(_estimator_has('predict'))  # type: ignore[misc]
+    @available_if(estimator_has('predict'))  # type: ignore[misc]
     def predict(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class labels with the wrapped estimator fitted on cleaned costs."""
         check_is_fitted(self, 'estimator_')
         y_pred: FloatNDArray = self.estimator_.predict(X)
         return y_pred
 
-    @available_if(_estimator_has('predict_proba'))  # type: ignore[misc]
+    @available_if(estimator_has('predict_proba'))  # type: ignore[misc]
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities with the wrapped estimator."""
         check_is_fitted(self, 'estimator_')
         y_proba: FloatNDArray = self.estimator_.predict_proba(X)
         return y_proba
 
-    @available_if(_estimator_has('decision_function'))  # type: ignore[misc]
+    @available_if(estimator_has('decision_function'))  # type: ignore[misc]
     def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
         """Return the wrapped estimator's decision function values."""
         check_is_fitted(self, 'estimator_')

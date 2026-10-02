@@ -1,27 +1,30 @@
-import threading
+import numbers
+import warnings
 from collections.abc import Callable
-from functools import partial
-from typing import Any, ClassVar, Literal, Self
+from numbers import Integral, Real
+from typing import Any, ClassVar, Literal, Self, cast
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, effective_n_jobs
 from numpy.typing import NDArray
-from scipy.sparse import csr_matrix, issparse
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble._base import _partition_estimators
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils._param_validation import Hidden, StrOptions
-from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
+from scipy.sparse import csr_matrix
+from scipy.sparse import hstack as sparse_hstack
+from sklearn.metrics import accuracy_score
+from sklearn.utils import check_random_state, compute_sample_weight
+from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
+from sklearn.utils.validation import check_is_fitted
 
-from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
+from ..._common._sklearn_compat import validate_data
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
-from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
-from ._impurity import CostImpurity, build_cost_criterion
-from ._leaf_decisions import positive_leaves
+from .._base.ensemble_weighting import goodness_weights, subset_loss_params
+from ._cstree import CostTree, cost_records
+from ._cstree._grow import TREE_PARAM_CONSTRAINTS, TreeParams, as_float32, grow_tree, resolve_tree_params
+from .cstree import CSTreeClassifier
 
-RF_PARAM_CONSTRAINTS = RandomForestClassifier._parameter_constraints.copy()
-RF_PARAM_CONSTRAINTS.pop('criterion')
+# The largest tree seed, as scikit-learn's forests draw them.
+MAX_INT = np.iinfo(np.int32).max
 
 
 class CSForestClassifier(CostSensitiveClassifier):
@@ -214,16 +217,15 @@ class CSForestClassifier(CostSensitiveClassifier):
         weights are computed based on the bootstrap sample for every tree
         grown.
 
-        Note that these weights will be multiplied with sample_weight (passed
-        through the fit method) if sample_weight is specified.
+        With ``bootstrap=True``, a dict or "balanced" weight is applied by drawing
+        the bootstrap samples with probability proportional to it, as scikit-learn's
+        random forests do.
 
     ccp_alpha : non-negative float, default=0.0
-        Complexity parameter used for Minimal Cost-Complexity Pruning. The
-        subtree with the largest cost complexity that is smaller than
+        Complexity parameter used for Minimal Cost-Complexity Pruning of every tree.
+        The subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`sklearn:minimal_cost_complexity_pruning` for details. See
-        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
-        for an example of such pruning.
+        :ref:`sklearn:minimal_cost_complexity_pruning` for details.
 
     max_samples : int or float, default=None
         If bootstrap is True, the number of samples to draw from X
@@ -231,31 +233,13 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         - If None (default), then draw `X.shape[0]` samples.
         - If int, then draw `max_samples` samples.
-        - If float, then draw `max(round(n_samples * max_samples), 1)` samples. Thus,
+        - If float, then draw `max(int(n_samples * max_samples), 1)` samples. Thus,
           `max_samples` should be in the interval `(0.0, 1.0]`.
-
-    monotonic_cst : array-like of int of shape (n_features), default=None
-        Indicates the monotonicity constraint to enforce on each feature.
-          - 1: monotonic increase
-          - 0: no constraint
-          - -1: monotonic decrease
-
-        If monotonic_cst is None, no constraints are applied.
-
-        Monotonicity constraints are not supported for classifications trained on
-        data with missing values.
-
-        The constraints hold over the probability of the positive class.
-
-        Read more in the :ref:`Sklearn User Guide <sklearn:monotonic_cst_gbdt>`.
 
     Attributes
     ----------
-    estimator_ : :class:`~sklearn.tree.RandomForestClassifier`
-        The underlying RandomForestClassifier estimator.
-
-    estimators_ : list of DecisionTreeClassifier
-        The collection of fitted sub-estimators.
+    estimators_ : list of :class:`~empulse.models.CSTreeClassifier`
+        The collection of fitted trees. They are fitted on the 0/1-encoded target.
 
     classes_ : ndarray of shape (2,)
         The class labels.
@@ -280,6 +264,10 @@ class CSForestClassifier(CostSensitiveClassifier):
         Warning: impurity-based feature importances can be misleading for
         high cardinality features (many unique values). See
         :func:`sklearn.inspection.permutation_importance` as an alternative.
+
+    estimator_weights_ : ndarray of shape (n_estimators,)
+        The weight of each tree's vote, from its out-of-bag loss. This attribute
+        exists only when ``combination="weighted_voting"``.
 
     oob_score_ : float
         Score of the training dataset obtained using an out-of-bag estimate.
@@ -306,11 +294,21 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
-        'criterion': [StrOptions({'cost', 'log_loss', 'gini', 'entropy'}), Hidden(CostImpurity)],
-        'combination': [
-            StrOptions({'majority_voting', 'weighted_voting'}),
+        **TREE_PARAM_CONSTRAINTS,
+        'min_impurity_decrease': [Interval(Real, 0.0, None, closed='left')],
+        'combination': [StrOptions({'majority_voting', 'weighted_voting'})],
+        'n_estimators': [Interval(Integral, 1, None, closed='left')],
+        'bootstrap': ['boolean'],
+        'oob_score': ['boolean', callable],
+        'n_jobs': [Integral, None],
+        'verbose': ['verbose'],
+        'warm_start': ['boolean'],
+        'class_weight': [StrOptions({'balanced_subsample', 'balanced'}), dict, list, None],
+        'max_samples': [
+            None,
+            Interval(RealNotInt, 0.0, None, closed='neither'),
+            Interval(Integral, 1, None, closed='left'),
         ],
-        **RF_PARAM_CONSTRAINTS,
     }
 
     def __init__(
@@ -328,7 +326,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         min_samples_split: float = 2,
         min_samples_leaf: float = 1,
         min_weight_fraction_leaf: float = 0.0,
-        max_features: Literal['sqrt', 'log2'] | float = 'sqrt',
+        max_features: Literal['sqrt', 'log2'] | float | None = 'sqrt',
         max_leaf_nodes: int | None = None,
         min_impurity_decrease: float = 0.0,
         bootstrap: bool = True,
@@ -337,10 +335,9 @@ class CSForestClassifier(CostSensitiveClassifier):
         random_state: int | np.random.RandomState | None = None,
         verbose: bool | int = 0,
         warm_start: bool = False,
-        class_weight: dict[int, float] | Literal['balanced'] | None = None,
+        class_weight: dict[int, float] | Literal['balanced', 'balanced_subsample'] | None = None,
         ccp_alpha: float = 0.0,
         max_samples: float | None = None,
-        monotonic_cst: IntArrayLike | None = None,
     ):
         self.n_estimators = n_estimators
         self.criterion = criterion
@@ -361,50 +358,32 @@ class CSForestClassifier(CostSensitiveClassifier):
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
         self.max_samples = max_samples
-        self.monotonic_cst = monotonic_cst
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     @property
-    def estimators_(self) -> list[DecisionTreeClassifier]:
-        """The collection of fitted sub-estimators."""
-        check_is_fitted(self)
-        estimators: list[DecisionTreeClassifier] = self.estimator_.estimators_
-        return estimators
-
-    @property
-    def n_classes_(self) -> int | list[int]:
+    def n_classes_(self) -> int:
         """The number of classes seen during :term:`fit <sklearn:fit>`."""
         check_is_fitted(self)
-        n_classes: int | list[int] = self.estimator_.n_classes_
-        return n_classes
+        return 2
 
     @property
     def feature_importances_(self) -> FloatNDArray:
         """The impurity-based feature importances."""
         check_is_fitted(self)
-        importances: FloatNDArray = self.estimator_.feature_importances_
-        return importances
-
-    @property
-    def oob_score_(self) -> float:
-        """Score of the training dataset obtained using an out-of-bag estimate."""
-        check_is_fitted(self)
-        oob_score: float = self.estimator_.oob_score_
-        return oob_score
-
-    @property
-    def oob_decision_function_(self) -> FloatNDArray:
-        """Decision function computed with out-of-bag estimate on the training set."""
-        check_is_fitted(self)
-        oob_decision_function: FloatNDArray = self.estimator_.oob_decision_function_
-        return oob_decision_function
+        all_importances = [
+            tree.tree_.compute_feature_importances() for tree in self.estimators_ if tree.tree_.node_count > 1
+        ]
+        if not all_importances:
+            return np.zeros(self.n_features_in_, dtype=np.float64)
+        importances: FloatNDArray = np.asarray(np.mean(all_importances, axis=0), dtype=np.float64)
+        normalized: FloatNDArray = importances / importances.sum()
+        return normalized
 
     @property
     def estimators_samples_(self) -> list[IntNDArray]:
         """The subset of drawn samples (i.e., the in-bag samples) for each base estimator."""
         check_is_fitted(self)
-        estimators_samples: list[IntNDArray] = self.estimator_.estimators_samples_
-        return estimators_samples
+        return [self._drawn_samples(cast('int', tree.random_state)) for tree in self.estimators_]
 
     def _fit(
         self,
@@ -437,22 +416,29 @@ class CSForestClassifier(CostSensitiveClassifier):
         """
         if self.combination == 'weighted_voting' and not self.bootstrap:
             raise ValueError('Weighted voting is only available when bootstrap=True.')
+        if not self.bootstrap and self.max_samples is not None:
+            raise ValueError(
+                '`max_sample` cannot be set if `bootstrap=False`. '
+                'Either switch to `bootstrap=True` or set `max_sample=None`.'
+            )
+        if not self.bootstrap and self.oob_score:
+            raise ValueError('Out of bag estimation only available if bootstrap=True')
 
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+        y = np.asarray(y).reshape(-1)
+        n_samples, n_features = X.shape
+        records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
 
-        n_samples = X.shape[0]
-        self.criterion_ = build_cost_criterion(
-            self.criterion,
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            n_samples=n_samples,
+        self._n_samples = n_samples
+        self._sample_weight = self._class_sample_weight(y)
+        self._n_samples_bootstrap = (
+            _get_n_samples_bootstrap(n_samples, self.max_samples, self._sample_weight) if self.bootstrap else None
         )
-
-        self.estimator_ = RandomForestClassifier(
-            n_estimators=self.n_estimators,
-            criterion=self.criterion_,
+        params = resolve_tree_params(
+            n_samples=n_samples,
+            n_features=n_features,
+            criterion=self.criterion,
+            splitter='best',
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
@@ -460,38 +446,142 @@ class CSForestClassifier(CostSensitiveClassifier):
             max_features=self.max_features,
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
-            bootstrap=self.bootstrap,
-            oob_score=self.oob_score,
-            n_jobs=self.n_jobs,
-            random_state=self.random_state,
-            verbose=self.verbose,
-            warm_start=self.warm_start,
-            class_weight=self.class_weight,
             ccp_alpha=self.ccp_alpha,
-            max_samples=self.max_samples,
-            monotonic_cst=self.monotonic_cst,
         )
-        self.estimator_.fit(X, y)
+
+        random_state = check_random_state(self.random_state)
+        if not self.warm_start or not hasattr(self, 'estimators_'):
+            self.estimators_: list[CSTreeClassifier] = []
+        n_more_estimators = self.n_estimators - len(self.estimators_)
+        if n_more_estimators < 0:
+            raise ValueError(
+                f'n_estimators={self.n_estimators} must be larger or equal to '
+                f'len(estimators_)={len(self.estimators_)} when warm_start==True'
+            )
+        if n_more_estimators == 0:
+            warnings.warn('Warm-start fitting without increasing n_estimators does not fit new trees.', stacklevel=2)
+        else:
+            if self.warm_start and self.estimators_:
+                # Draw the seeds the trees grown so far took, so the new trees get the seeds they would
+                # have had in a single fit.
+                random_state.randint(MAX_INT, size=len(self.estimators_))
+            seeds = [random_state.randint(MAX_INT) for _ in range(n_more_estimators)]
+
+            # Shared, read-only, by every tree.
+            X_fortran = as_float32(X, fortran=True)
+            trees = Parallel(n_jobs=self.n_jobs, verbose=self.verbose, prefer='threads')(
+                delayed(self._grow_one)(params, X_fortran, y, records, seed) for seed in seeds
+            )
+            self.estimators_.extend(
+                _fitted_tree(tree, seed, params, n_features, self.criterion)
+                for tree, seed in zip(trees, seeds, strict=True)
+            )
+
+        if self.oob_score or self.combination == 'weighted_voting':
+            self._set_oob_attributes(as_float32(X), y, loss, n_more_estimators, **loss_params)
+        return self
+
+    def _class_sample_weight(self, y: IntNDArray) -> FloatNDArray | None:
+        """Return the per-sample weight of the ``class_weight``, or ``None`` when each tree weighs classes."""
+        if self.class_weight is None:
+            return None
+        if self.class_weight == 'balanced_subsample':
+            if self.bootstrap:
+                return None  # computed on each bootstrap sample
+            return compute_sample_weight('balanced', y)  # type: ignore[no-any-return]
+        return compute_sample_weight(self.class_weight, y)  # type: ignore[no-any-return]
+
+    def _drawn_samples(self, seed: int) -> IntNDArray:
+        """Return the bootstrap sample of the tree with ``seed``, drawn as when it was grown."""
+        if not self.bootstrap:
+            return np.arange(self._n_samples, dtype=np.int32)
+        n_samples_bootstrap = cast('int', self._n_samples_bootstrap)
+        return _generate_sample_indices(seed, self._n_samples, n_samples_bootstrap, self._sample_weight)
+
+    def _grow_one(
+        self,
+        params: TreeParams,
+        X: FloatNDArray,
+        y: IntNDArray,
+        records: FloatNDArray,
+        seed: int,
+    ) -> CostTree:
+        sample_weight: FloatNDArray | None
+        if self.bootstrap:
+            indices = self._drawn_samples(seed)
+            # The bootstrap counts are the sample weights: a sample drawn twice weighs two.
+            sample_weight = np.bincount(indices, minlength=self._n_samples).astype(np.float64)
+            if self.class_weight == 'balanced_subsample':
+                sample_weight = sample_weight * compute_sample_weight('balanced', y, indices=indices)
+        else:
+            sample_weight = self._sample_weight
+        return grow_tree(params, X, records, sample_weight, np.random.RandomState(seed))
+
+    def _set_oob_attributes(
+        self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, n_new_trees: int, **loss_params: Any
+    ) -> None:
+        """Set the out-of-bag score and decision function, and the trees' out-of-bag voting weights."""
+        n_samples = y.shape[0]
+        oob_proba = np.zeros((n_samples, 2), dtype=np.float64)
+        n_oob = np.zeros(n_samples, dtype=np.int64)
+        losses = np.empty(len(self.estimators_), dtype=np.float64)
+        for i, tree in enumerate(self.estimators_):
+            drawn = self._drawn_samples(cast('int', tree.random_state))
+            unsampled = np.flatnonzero(np.bincount(drawn, minlength=n_samples) == 0)
+            proba = tree.tree_.predict_proba(X[unsampled])
+            oob_proba[unsampled] += proba
+            n_oob[unsampled] += 1
+            if self.combination == 'weighted_voting':
+                oob_params = subset_loss_params(loss_params, unsampled, n_samples)
+                losses[i] = loss._loss(y[unsampled], proba[:, 1], validate=False, **oob_params)
 
         if self.combination == 'weighted_voting':
-            self.estimator_weights_ = self._get_oob_weights(loss, X, y, **loss_params)
+            self.estimator_weights_ = goodness_weights(losses)
 
-        # Each tree's leaves decide by the costs of the samples that tree drew.
-        leaves = self.estimator_.apply(X)
-        self._positive_leaves = [
-            positive_leaves(
-                tree.tree_,
-                leaves[:, i],
-                y,
-                tp_cost,
-                tn_cost,
-                fp_cost,
-                fn_cost,
-                counts=np.bincount(drawn, minlength=n_samples),
-            )
-            for i, (tree, drawn) in enumerate(zip(self.estimators_, self.estimator_.estimators_samples_, strict=True))
-        ]
-        return self
+        if self.oob_score and (n_new_trees > 0 or not hasattr(self, 'oob_score_')):
+            if (n_oob == 0).any():
+                warnings.warn(
+                    'Some inputs do not have OOB scores. This probably means too few trees were used to '
+                    'compute any reliable OOB estimates.',
+                    UserWarning,
+                    stacklevel=3,
+                )
+                n_oob[n_oob == 0] = 1
+            self.oob_decision_function_ = oob_proba / n_oob[:, None]
+            scoring_function = self.oob_score if callable(self.oob_score) else accuracy_score
+            self.oob_score_ = scoring_function(y, np.argmax(self.oob_decision_function_, axis=1))
+
+    def _validate_X_predict(self, X: FloatArrayLike) -> FloatNDArray:
+        check_is_fitted(self)
+        return as_float32(validate_data(self, X, reset=False))
+
+    def _tree_weights(self) -> FloatNDArray:
+        if self.combination == 'weighted_voting':
+            return np.asarray(self.estimator_weights_, dtype=np.float64)
+        return np.ones(len(self.estimators_), dtype=np.float64)
+
+    def _accumulate(self, X: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+        """Sum every tree's weighted class fractions and decisions, in parallel over chunks of trees."""
+        weights = self._tree_weights()
+        n_jobs = min(effective_n_jobs(self.n_jobs), len(self.estimators_))
+        chunks = np.array_split(np.arange(len(self.estimators_)), n_jobs)
+
+        def accumulate(chunk: IntNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+            proba = np.zeros((X.shape[0], 2), dtype=np.float64)
+            votes = np.zeros(X.shape[0], dtype=np.float64)
+            for i in chunk:
+                self.estimators_[i].tree_.accumulate(X, weights[i], proba, votes)
+            return proba, votes
+
+        results = Parallel(n_jobs=n_jobs, verbose=self.verbose, prefer='threads')(
+            delayed(accumulate)(chunk) for chunk in chunks
+        )
+        proba = np.zeros((X.shape[0], 2), dtype=np.float64)
+        votes = np.zeros(X.shape[0], dtype=np.float64)
+        for chunk_proba, chunk_votes in results:
+            proba += chunk_proba
+            votes += chunk_votes
+        return proba, votes
 
     def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
@@ -516,26 +606,16 @@ class CSForestClassifier(CostSensitiveClassifier):
         y_pred : ndarray of shape (n_samples,)
             Predicted labels for each sample.
         """
-        check_is_fitted(self)
-        positive = getattr(self, '_positive_leaves', None)
-        if positive is None:  # fitted before leaves predicted their cheapest class
-            return super().predict(X)
-        X = validate_data(self, X, reset=False)
-        leaves = self.estimator_.apply(X)
-        weights = (
-            np.asarray(self.estimator_weights_, dtype=np.float64)
-            if self.combination == 'weighted_voting'
-            else np.ones(len(positive))
-        )
-        votes = np.zeros(leaves.shape[0], dtype=np.float64)
-        for i, (tree_positive, weight) in enumerate(zip(positive, weights, strict=True)):
-            votes += weight * tree_positive[leaves[:, i]]
-        y_pred: NDArray[Any] = self.classes_.take((votes > weights.sum() / 2).astype(np.intp))
+        _, votes = self._accumulate(self._validate_X_predict(X))
+        y_pred: NDArray[Any] = self.classes_.take((votes > self._tree_weights().sum() / 2).astype(np.intp))
         return y_pred
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
         Predict class probabilities of the input samples X.
+
+        The class fractions of the leaves the sample falls in, averaged over the trees, or with
+        ``combination="weighted_voting"``, weighted by the trees' out-of-bag weights.
 
         Parameters
         ----------
@@ -547,15 +627,10 @@ class CSForestClassifier(CostSensitiveClassifier):
         prob : array of shape = [n_samples, 2]
             The class probabilities of the input samples.
         """
-        check_is_fitted(self)
-        X: FloatNDArray = validate_data(self, X, reset=False)
-
-        if self.combination == 'weighted_voting':
-            y_proba: FloatNDArray = self._predict_weighted_proba(X)
-        else:
-            y_proba = self.estimator_.predict_proba(X)
-
-        return y_proba
+        proba, _ = self._accumulate(self._validate_X_predict(X))
+        if self.combination != 'weighted_voting':
+            proba = proba / len(self.estimators_)
+        return proba
 
     def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
@@ -566,20 +641,18 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to ``dtype=np.float32``.
 
         Returns
         -------
-        p : ndarray of shape (n_samples, n_classes), or a list of such arrays
+        p : ndarray of shape (n_samples, n_classes)
             The class probabilities of the input samples. The order of the
             classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
-        check_is_fitted(self)
-        y_proba = self.predict_proba(X)
-        return np.log(y_proba)
+        with np.errstate(divide='ignore'):
+            y_log_proba: FloatNDArray = np.log(self.predict_proba(X))
+        return y_log_proba
 
     def apply(self, X: FloatArrayLike) -> IntNDArray:
         """
@@ -587,10 +660,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to ``dtype=np.float32``.
 
         Returns
         -------
@@ -598,9 +669,11 @@ class CSForestClassifier(CostSensitiveClassifier):
             For each datapoint x in X and for each tree in the forest,
             return the index of the leaf x ends up in.
         """
-        check_is_fitted(self)
-        X_leaves: IntNDArray = self.estimator_.apply(X)
-        return X_leaves
+        X = self._validate_X_predict(X)
+        leaves = Parallel(n_jobs=self.n_jobs, verbose=self.verbose, prefer='threads')(
+            delayed(tree.tree_.apply)(X) for tree in self.estimators_
+        )
+        return np.array(leaves).T
 
     def decision_path(self, X: FloatArrayLike) -> tuple[csr_matrix, IntNDArray]:
         """
@@ -608,10 +681,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to ``dtype=np.float32``.
 
         Returns
         -------
@@ -624,69 +695,55 @@ class CSForestClassifier(CostSensitiveClassifier):
             The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]]
             gives the indicator value for the i-th estimator.
         """
-        check_is_fitted(self)
-        indicator: csr_matrix
-        n_nodes_ptr: IntNDArray
-        indicator, n_nodes_ptr = self.estimator_.decision_path(X)
-        return indicator, n_nodes_ptr
-
-    def _get_oob_weights(self, loss: BaseMetric, X: FloatNDArray, y: IntNDArray, **kwargs: Any) -> FloatNDArray:
-        # Prediction requires X to be in CSR format
-        if issparse(X):
-            X = X.tocsr()  # type: ignore[attr-defined]
-        X = X.astype(np.float32)
-
-        n_samples = y.shape[0]
-        n_samples_bootstrap = self.estimator_._n_samples_bootstrap
-
-        losses = np.empty(self.n_estimators, dtype=np.float64)
-        for i, estimator in enumerate(self.estimators_):
-            unsampled_indices = _generate_unsampled_indices(
-                estimator.random_state,
-                n_samples,
-                n_samples_bootstrap,
-            )
-
-            y_pred = self.estimator_._get_oob_predictions(estimator, X[unsampled_indices, :])
-            oob_kwargs = subset_loss_params(kwargs, unsampled_indices, n_samples)
-            losses[i] = loss._loss(y[unsampled_indices], y_pred[:, 1, 0], validate=False, **oob_kwargs)
-
-        weights: FloatNDArray = goodness_weights(losses)
-        return weights
-
-    def _predict_weighted_proba(self, X: FloatArrayLike) -> FloatNDArray:
-        X: FloatNDArray = self.estimator_._validate_X_predict(X)
-
-        # Assign chunk of trees to jobs
-        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
-
-        # avoid storing the output of every estimator by summing them here
-        all_proba = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64)  # type: ignore[arg-type, type-var]
-        lock = threading.Lock()
-        Parallel(n_jobs=n_jobs, verbose=self.verbose, require='sharedmem')(
-            delayed(accumulate_weighted_prediction)(
-                partial(e.predict_proba, check_input=False), X, all_proba, weight, lock
-            )
-            for e, weight in zip(self.estimators_, self.estimator_weights_, strict=True)
+        X = self._validate_X_predict(X)
+        indicators = Parallel(n_jobs=self.n_jobs, verbose=self.verbose, prefer='threads')(
+            delayed(tree.tree_.decision_path)(X) for tree in self.estimators_
         )
-
-        return all_proba
-
-
-def _generate_unsampled_indices(random_state: int, n_samples: int, n_samples_bootstrap: int) -> IntNDArray:
-    """Private function used to forest._set_oob_score function."""
-    sample_indices = _generate_sample_indices(random_state, n_samples, n_samples_bootstrap)
-    sample_counts = np.bincount(sample_indices, minlength=n_samples)
-    unsampled_mask = sample_counts == 0
-    indices_range = np.arange(n_samples)
-    unsampled_indices: IntNDArray = indices_range[unsampled_mask]
-
-    return unsampled_indices
+        n_nodes_ptr = np.cumsum([0] + [indicator.shape[1] for indicator in indicators])
+        return sparse_hstack(indicators).tocsr(), n_nodes_ptr
 
 
-def _generate_sample_indices(random_state: int, n_samples: int, n_samples_bootstrap: int) -> IntNDArray:
-    """Private function used to _parallel_build_trees function."""
-    random_instance = check_random_state(random_state)
-    sample_indices: IntNDArray = random_instance.randint(0, n_samples, n_samples_bootstrap, dtype=np.int32)
+def _fitted_tree(tree: CostTree, seed: int, params: TreeParams, n_features: int, criterion: str) -> CSTreeClassifier:
+    """Wrap a grown tree in a fitted :class:`CSTreeClassifier`, without fitting it again."""
+    estimator = CSTreeClassifier(
+        criterion=criterion,  # type: ignore[arg-type]
+        max_depth=None if params.max_depth == np.iinfo(np.int32).max else params.max_depth,
+        min_samples_split=params.min_samples_split,
+        min_samples_leaf=params.min_samples_leaf,
+        min_weight_fraction_leaf=params.min_weight_fraction_leaf,
+        max_features=params.max_features,
+        max_leaf_nodes=None if params.max_leaf_nodes < 0 else params.max_leaf_nodes,
+        min_impurity_decrease=params.min_impurity_decrease,
+        ccp_alpha=params.ccp_alpha,
+        random_state=seed,
+    )
+    estimator.tree_ = tree
+    estimator.classes_ = np.array([0, 1])
+    estimator.n_features_in_ = n_features
+    estimator.max_features_ = params.max_features
+    estimator.min_impurity_decrease_ = params.min_impurity_decrease
+    return estimator
 
-    return sample_indices
+
+def _generate_sample_indices(
+    seed: int, n_samples: int, n_samples_bootstrap: int, sample_weight: FloatNDArray | None
+) -> IntNDArray:
+    """Draw a bootstrap sample, with probability proportional to ``sample_weight`` when given."""
+    random_instance = np.random.RandomState(seed)
+    if sample_weight is None:
+        sample_indices = random_instance.randint(0, n_samples, n_samples_bootstrap)
+    else:
+        sample_indices = random_instance.choice(
+            n_samples, n_samples_bootstrap, replace=True, p=sample_weight / np.sum(sample_weight)
+        )
+    return sample_indices.astype(np.int32)  # type: ignore[no-any-return]
+
+
+def _get_n_samples_bootstrap(n_samples: int, max_samples: float | None, sample_weight: FloatNDArray | None) -> int:
+    """Return the number of samples each bootstrap sample draws."""
+    if max_samples is None:
+        return n_samples
+    if isinstance(max_samples, numbers.Integral):
+        return int(max_samples)
+    weighted_n_samples = n_samples if sample_weight is None else float(np.sum(sample_weight))
+    return max(int(max_samples * weighted_n_samples), 1)

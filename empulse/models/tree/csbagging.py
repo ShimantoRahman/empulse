@@ -7,17 +7,16 @@ from sklearn import config_context
 from sklearn.base import clone
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble._base import _partition_estimators
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils._available_if import available_if
-from sklearn.utils._mask import indices_to_mask
 from sklearn.utils._param_validation import StrOptions
-from sklearn.utils.validation import _estimator_has, check_is_fitted, validate_data
+from sklearn.utils.metaestimators import available_if
+from sklearn.utils.validation import check_is_fitted
 
+from ..._common._metaestimators import estimator_has
+from ..._common._sklearn_compat import indices_to_mask, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
-from ._impurity import CostImpurity
 from .cstree import CSTreeClassifier
 
 
@@ -171,8 +170,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     base_estimator_ : estimator
         The estimator that each ensemble member is a clone of: the ``estimator`` passed
-        to the constructor, or a :class:`~empulse.models.CSTreeClassifier` with a
-        cost-sensitive impurity criterion when ``estimator`` is ``None``.
+        to the constructor, or a fully grown :class:`~empulse.models.CSTreeClassifier`
+        (``min_impurity_decrease=0.0``) when ``estimator`` is ``None``.
 
     estimators_ : list of estimators
         The collection of fitted base estimators.
@@ -214,10 +213,10 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     }
 
     @property
-    def estimators_(self) -> list[DecisionTreeClassifier]:
+    def estimators_(self) -> list[Any]:
         """The collection of fitted sub-estimators."""
         check_is_fitted(self)
-        estimators: list[DecisionTreeClassifier] = self.estimator_.estimators_
+        estimators: list[Any] = self.estimator_.estimators_
         return estimators
 
     @property
@@ -334,32 +333,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
 
         if self.estimator is None:
-            criterion = CostImpurity(
-                n_outputs=1,
-                n_classes=np.array([2], dtype=np.intp),
-            )
-            criterion.set_costs(
-                tp_cost=tp_cost if not isinstance(tp_cost, np.ndarray) else 0.0,
-                tn_cost=tn_cost if not isinstance(tn_cost, np.ndarray) else 0.0,
-                fp_cost=fp_cost if not isinstance(fp_cost, np.ndarray) else 0.0,
-                fn_cost=fn_cost if not isinstance(fn_cost, np.ndarray) else 0.0,
-            )
-            criterion.set_array_costs(
-                tp_cost=tp_cost.reshape(-1).astype(np.float64)
-                if isinstance(tp_cost, np.ndarray)
-                else np.array([], dtype=np.float64),
-                tn_cost=tn_cost.reshape(-1).astype(np.float64)
-                if isinstance(tn_cost, np.ndarray)
-                else np.array([], dtype=np.float64),
-                fp_cost=fp_cost.reshape(-1).astype(np.float64)
-                if isinstance(fp_cost, np.ndarray)
-                else np.array([], dtype=np.float64),
-                fn_cost=fn_cost.reshape(-1).astype(np.float64)
-                if isinstance(fn_cost, np.ndarray)
-                else np.array([], dtype=np.float64),
-                n_samples=n_samples,
-            )
-            self.base_estimator_ = CSTreeClassifier(criterion=criterion, min_impurity_decrease=0.0)
+            # Fully grown trees: bagging averages their variance away.
+            self.base_estimator_ = CSTreeClassifier(min_impurity_decrease=0.0)
         else:
             self.base_estimator_ = clone(self.estimator)
 
@@ -490,7 +465,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         y_proba = self.predict_proba(X)
         return np.log(y_proba)
 
-    @available_if(_estimator_has('decision_function', delegates=('base_estimator_', 'estimator')))
+    @available_if(estimator_has('decision_function', delegates=('base_estimator_', 'estimator')))
     def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
         """
         Average of the decision functions of the base classifiers.

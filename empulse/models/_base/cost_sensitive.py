@@ -5,12 +5,10 @@ from typing import Any, ClassVar, Protocol, Self
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
-from sklearn.utils import Tags
-from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import validate_data
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
+from ..._common._sklearn_compat import Tags, type_of_target, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, Cost, MetricStrategy
 from ...metrics.metric.prebuilt_metrics import make_generic_metric

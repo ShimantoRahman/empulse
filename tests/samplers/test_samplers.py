@@ -5,11 +5,13 @@ import pytest
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.estimator_checks import parametrize_with_checks
+from sklearn.utils.fixes import parse_version
 
+from empulse._common._sklearn_compat import sklearn_version
 from empulse.samplers import BiasRelabler, BiasResampler, CostSensitiveSampler
 
 from .._estimator_common import iter_invalid_params
-from .sampler_checks import parametrize_with_checks_samplers
+from .sampler_checks import _check_name, parametrize_with_checks_samplers
 
 ESTIMATORS = (
     BiasResampler(random_state=42),
@@ -29,6 +31,10 @@ FIT_PARAMS = (
 @parametrize_with_checks(ESTIMATORS)
 def test_estimators(estimator, check):
     """Check the compatibility with scikit-learn API."""
+    if sklearn_version < parse_version('1.6') and _check_name(check) == 'check_parameters_default_constructible':
+        # Before 1.6 the check builds a class that requires an argument through the legacy
+        # `_required_parameters` hook, which Empulse does not declare.
+        pytest.skip('scikit-learn < 1.6 cannot construct a sampler with a required `estimator`')
     check(estimator)
 
 

@@ -70,7 +70,7 @@ RANKING_MODELS = [
     ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=50, population_size=50, random_state=0)),
     ProfTreeClassifier(max_depth=3, max_iter=50, population_size=50, random_state=0),
     ProfMEMPMClassifier(),
-    ProfSRClassifier(generations=5, population_size=100, random_state=0),
+    ProfSRClassifier(max_iter=10, population_size=200, random_state=0),
 ]
 
 # The models that train on per-sample costs. The decision-rule models are left out because they

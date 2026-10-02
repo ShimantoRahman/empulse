@@ -76,10 +76,14 @@ if __name__ == '__main__':
             'empulse.metrics._cy_max_profit.piecewise',
             ['empulse/metrics/_cy_max_profit/*.pyx'],
         ),
+        # CSTree / CSForest modules
         Extension(
-            'empulse.models.tree._impurity.cost_impurity',
-            ['empulse/models/tree/_impurity/*.pyx'],
-            include_dirs=[np.get_include(), 'sklearn.utils._typedefs', 'sklearn.tree._criterion'],
+            'empulse.models.tree._cstree._splitter',
+            ['empulse/models/tree/_cstree/_splitter.pyx'],
+        ),
+        Extension(
+            'empulse.models.tree._cstree._tree',
+            ['empulse/models/tree/_cstree/_tree.pyx'],
         ),
         # ProfTree modules
         Extension(

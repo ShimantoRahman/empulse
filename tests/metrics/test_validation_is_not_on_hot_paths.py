@@ -16,6 +16,7 @@ path                          calls before the opt-outs were added
 CSBoost + LogCost/MaxProfit   one per boosting round
 CSBoost + CatBoost            one per evaluation period
 ProfTree + a non-MaxProfit    one per candidate tree per generation
+ProfSR + any strategy         one per candidate expression per generation
 ============================  ==========================================
 
 The last section checks the other side of ``validate=False``: skipping the label checks must never
@@ -47,7 +48,13 @@ from empulse.metrics import (
     Savings,
 )
 from empulse.metrics.metric import metric as metric_module
-from empulse.models import CSBaggingClassifier, CSBoostClassifier, CSForestClassifier, ProfTreeClassifier
+from empulse.models import (
+    CSBaggingClassifier,
+    CSBoostClassifier,
+    CSForestClassifier,
+    ProfSRClassifier,
+    ProfTreeClassifier,
+)
 
 pytestmark = pytest.mark.filterwarnings('ignore::UserWarning')
 
@@ -125,6 +132,33 @@ def test_proftree_validates_once_regardless_of_population(training_data, populat
     model = ProfTreeClassifier(
         max_iter=generations,
         population_size=population_size,
+        random_state=42,
+        loss=instance_dependent_metric(Cost()),
+    )
+    assert count_validating_calls(model, X, y, c=clv, d=10.0) == 1
+
+
+@pytest.mark.parametrize(
+    ('population_size', 'max_iter', 'max_samples', 'n_tuned_programs'),
+    [(10, 3, 1.0, 0), (20, 6, 1.0, 5), (20, 6, 0.5, 5)],
+    ids=['small', 'larger_with_tuning', 'larger_with_batches_and_tuning'],
+)
+def test_profsr_validates_once_regardless_of_search_effort(
+    training_data, population_size, max_iter, max_samples, n_tuned_programs
+):
+    """
+    ProfSR scores every candidate expression, every tuning step and every batch through the metric.
+
+    Tuning and batches also re-slice the per-sample costs, so they are parametrised too: none of them
+    may revalidate the values.
+    """
+    X, y, clv = training_data
+    model = ProfSRClassifier(
+        max_iter=max_iter,
+        population_size=population_size,
+        max_samples=max_samples,
+        n_tuned_programs=n_tuned_programs,
+        tuning_interval=1,
         random_state=42,
         loss=instance_dependent_metric(Cost()),
     )

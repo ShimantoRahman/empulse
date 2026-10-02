@@ -3,11 +3,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.utils import ClassifierTags, Tags, check_random_state
+from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, Real, StrOptions
 
 from .._common import Parameter
 from .._common._cost_routing import RoutesLossParameters
+from .._common._sklearn_compat import ClassifierTags, Tags
 from .._types import FloatArrayLike, IntNDArray, ParameterConstraint
 from ..metrics import BaseMetric
 
@@ -162,6 +163,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         return {
             'binary_only': True,
             'poor_score': True,
+            'sample_indices': True,
         }
 
     def __sklearn_tags__(self) -> Tags:

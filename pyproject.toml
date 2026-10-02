@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80.9.0", "wheel", "Cython==3.2.5", "numpy", "scipy>=1.15.3", "scikit-learn"]
+requires = ["setuptools>=80.9.0", "wheel", "Cython>=3.1", "numpy", "scipy>=1.15.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -37,7 +37,11 @@ requires-python = ">= 3.11"
 dependencies = [
     "numpy>=1.25.2; python_version < '3.13'",
     "numpy>=2.0.0; python_version >= '3.13'",
-    "scikit-learn>=1.9.0",
+    # 1.5.2 is the first release with Python 3.13 wheels and numpy 2 support; 1.7.2 the first with
+    # Python 3.14 wheels. imbalanced-learn would allow 1.4.2, but CSBaggingClassifier needs the
+    # `**fit_params` that BaggingClassifier.fit only has from 1.5.
+    "scikit-learn>=1.5.2; python_version < '3.14'",
+    "scikit-learn>=1.7.2; python_version >= '3.14'",
     "imbalanced-learn>=0.14.2",
     "scipy>=1.15.3",
     "joblib>=1.4.0",
@@ -52,8 +56,6 @@ issue-tracker = "https://github.com/ShimantoRahman/empulse/issues"
 changelog = "https://empulse.readthedocs.io/en/stable/project/changelog.html"
 
 [project.optional-dependencies]
-symbolic = ["gplearn>=0.4.3"]
-
 boosting = [
     "xgboost>=1.7.4",
     "lightgbm>=4.6.0",
@@ -64,17 +66,16 @@ boosting = [
 
 # Every optional dependency at once. Add new extras here as well as above, so that
 # `pip install empulse[optional]` keeps meaning "all of them".
-optional = ["empulse[boosting, symbolic]"]
+optional = ["empulse[boosting]"]
 
 [dependency-groups]
 test = [
     "empulse[optional]",
-    "scikit-learn>=1.9.0",
     "pytest>=7.4.4",
     "pytest-cov>=4.1.0",
     "pytest-xdist>=3.8.0",
     "tox>=4.13.0",
-    "cython==3.2.5",
+    "cython>=3.1",
     "tox-uv>=1.25.0",
     "setuptools>=80.9.0",
     "pandas>=2.2.0",
@@ -158,6 +159,8 @@ omit = [
     # module is what gets imported, so the `.py` never executes and always reports 0%.
     "empulse/metrics/_loss/*",
     "empulse/models/tree/_cy_proftree/*",
+    # Vendored from sklearn-compat; which branches run depends on the installed scikit-learn.
+    "empulse/_common/_sklearn_compat.py",
 ]
 
 [tool.coverage.report]
@@ -171,6 +174,8 @@ exclude_lines = [
 [tool.ruff]
 line-length = 120
 exclude = ["docs", "notebooks", "examples"]
+# Vendored upstream, refreshed rather than edited.
+extend-exclude = ["empulse/_common/_sklearn_compat.py"]
 
 [tool.ruff.format]
 quote-style = "single"

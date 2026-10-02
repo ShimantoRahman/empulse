@@ -37,11 +37,6 @@ upload: build
 compile:
     uv sync --reinstall-package empulse
 
-# Check that the installed Cython matches the Cython scikit-learn's extensions were built with
-[group('test')]
-check-cython-abi:
-    uv run python scripts/check_cython_abi.py
-
 # Run pytest tests (optionally specify: models, metrics, or run all by default)
 [group('test')]
 test target='':
@@ -82,7 +77,7 @@ bench *cases:
 # Run doctests
 [group('test')]
 doctest:
-    uv run pytest --doctest-modules empulse/ --ignore=empulse/metrics/_loss --ignore=empulse/metrics/_cy_convex_hull --ignore=empulse/models/tree/_impurity --ignore=empulse/models/tree/_cy_proftree
+    uv run pytest --doctest-modules empulse/ --ignore=empulse/metrics/_loss --ignore=empulse/metrics/_cy_convex_hull --ignore=empulse/models/tree/_cstree --ignore=empulse/models/tree/_cy_proftree
 
 # Run tox tests
 [group('test')]
@@ -160,4 +155,4 @@ verify-version:
 # Run all preflight checks before deployment
 [windows]
 [group('deploy')]
-preflight: verify-version check-cython-abi html-strict linkcheck tox update-sklearn-compat sklearn-compat
+preflight: verify-version html-strict linkcheck tox update-sklearn-compat sklearn-compat

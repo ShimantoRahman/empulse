@@ -5,7 +5,6 @@ import sympy.stats
 
 from empulse.metrics import CostMatrix, MaxProfit, Metric
 from empulse.models import CSTreeClassifier
-from empulse.models.tree._impurity import CostImpurity, GiniCostImpurity
 
 
 @pytest.mark.parametrize('criterion', ['cost', 'gini', 'entropy'])
@@ -14,57 +13,25 @@ def test_cstree_criteria(classification_data, criterion):
     model = CSTreeClassifier(criterion=criterion)
     model.fit(X, y, fp_cost=1, fn_cost=1)
     y_proba = model.predict_proba(X)
-    assert hasattr(model, 'estimator_')
+    assert hasattr(model, 'tree_')
     assert y_proba.shape == (100, 2)
     assert np.allclose(y_proba.sum(axis=1), 1)
 
 
-class TestCustomCriterionNotMutated:
-    """Regression tests: a user-supplied CostImpurity instance used to be stored (and mutated) directly.
+def test_criterion_must_be_a_name(classification_data):
+    """Only the named criteria are accepted; there is no criterion object to pass in."""
+    from sklearn.utils._param_validation import InvalidParameterError
 
-    `_fit` calls `set_costs()`/`set_array_costs()` on whatever ends up in `self.criterion_`; storing
-    the user's instance there directly meant fitting mutated an `__init__` parameter in place,
-    corrupting sklearn's clone()/get_params() contract and silently sharing state between any two
-    estimators (or two `fit()` calls) given the same criterion instance.
-    """
+    from empulse.metrics import expected_cost_loss
 
-    @pytest.mark.parametrize('criterion_cls', [CostImpurity, GiniCostImpurity])
-    def test_shared_criterion_instance_across_two_estimators(self, classification_data, criterion_cls):
-        X, y = classification_data
-        shared_criterion = criterion_cls(n_outputs=1, n_classes=np.array([2], dtype=np.intp))
+    X, y = classification_data
+    with pytest.raises(InvalidParameterError, match="The 'criterion' parameter"):
+        CSTreeClassifier(criterion=expected_cost_loss).fit(X, y, fp_cost=1.0, fn_cost=5.0)
 
-        model1 = CSTreeClassifier(criterion=shared_criterion)
-        model1.fit(X, y, fp_cost=1.0, fn_cost=5.0)
-        model2 = CSTreeClassifier(criterion=shared_criterion)
-        model2.fit(X, y, fp_cost=10.0, fn_cost=1.0)
 
-        # The __init__ parameter itself must be untouched (sklearn's clone()/get_params()
-        # contract): both models still reference the exact same original object.
-        assert model1.criterion is shared_criterion
-        assert model2.criterion is shared_criterion
-        # But the object actually used for fitting must be an independent instance per model,
-        # not the shared original and not shared between the two models.
-        assert model1.criterion_ is not shared_criterion
-        assert model2.criterion_ is not shared_criterion
-        assert model1.criterion_ is not model2.criterion_
-
-        # Both fits must succeed independently without raising or corrupting each other.
-        assert model1.predict_proba(X).shape == (100, 2)
-        assert model2.predict_proba(X).shape == (100, 2)
-
-    def test_fresh_uninitialized_criterion_does_not_crash(self, classification_data):
-        """A freshly constructed (never fit) CostImpurity must be usable without crashing.
-
-        `CostImpurity`'s C-level cost buffers are uninitialized until `set_array_costs()` is
-        called; a naive `copy.deepcopy()` of the user-supplied instance dereferences those
-        buffers unconditionally and crashes (compiled with `initializedcheck=False`), so the fix
-        must not deep-copy an instance in this state.
-        """
-        X, y = classification_data
-        criterion = CostImpurity(n_outputs=1, n_classes=np.array([2], dtype=np.intp))
-        model = CSTreeClassifier(criterion=criterion).fit(X, y, fp_cost=1.0, fn_cost=5.0)
-        y_proba = model.predict_proba(X)
-        assert y_proba.shape == (100, 2)
+def test_monotonic_cst_is_not_a_parameter():
+    with pytest.raises(TypeError, match='monotonic_cst'):
+        CSTreeClassifier(monotonic_cst=[1, 0])
 
 
 def test_cstree_with_stochastic_maxprofit_metric(classification_data):
@@ -85,10 +52,8 @@ def test_cstree_with_stochastic_maxprofit_metric(classification_data):
     assert y_proba.shape == (100, 2)
 
 
-class TestSklearnDelegation:
-    """CSTreeClassifier delegates most of the DecisionTreeClassifier introspection API straight
-    to `self.estimator_`; these thin wrappers had no test coverage at all.
-    """
+class TestInspection:
+    """The introspection API of scikit-learn's DecisionTreeClassifier, served by the fitted ``tree_``."""
 
     @pytest.fixture
     def model(self, classification_data):
@@ -100,49 +65,59 @@ class TestSklearnDelegation:
         importances = model.feature_importances_
         assert importances.shape == (X.shape[1],)
         assert np.isclose(importances.sum(), 1.0)
-        np.testing.assert_array_equal(importances, model.estimator_.feature_importances_)
+        np.testing.assert_array_equal(importances, model.tree_.compute_feature_importances())
+
+    def test_feature_importances_are_the_weighted_impurity_decreases(self, model):
+        tree = model.tree_
+        internal = np.flatnonzero(tree.children_left != -1)
+        weighted = tree.weighted_n_node_samples * tree.impurity
+        decrease = weighted[internal] - weighted[tree.children_left[internal]] - weighted[tree.children_right[internal]]
+        expected = np.bincount(tree.feature[internal], weights=decrease, minlength=model.n_features_in_)
+        np.testing.assert_allclose(model.feature_importances_, expected / expected.sum())
 
     def test_max_features(self, model):
-        assert model.max_features_ == model.estimator_.max_features_
+        assert model.max_features_ == model.n_features_in_
 
     def test_n_classes(self, model):
-        assert model.n_classes_ == model.estimator_.n_classes_ == 2
+        assert model.n_classes_ == 2
 
     def test_n_outputs(self, model):
-        assert model.n_outputs_ == model.estimator_.n_outputs_ == 1
+        assert model.n_outputs_ == 1
 
     def test_tree_(self, model):
-        from sklearn.tree._tree import Tree
+        from empulse.models.tree._cstree import CostTree
 
-        assert isinstance(model.tree_, Tree)
-        assert model.tree_ is model.estimator_.tree_
+        assert isinstance(model.tree_, CostTree)
 
     def test_get_depth(self, model):
-        assert model.get_depth() == model.estimator_.get_depth()
+        assert model.get_depth() == model.tree_.max_depth
         assert model.get_depth() <= 3
 
     def test_get_n_leaves(self, model):
-        assert model.get_n_leaves() == model.estimator_.get_n_leaves()
+        assert model.get_n_leaves() == np.sum(model.tree_.children_left == -1)
         assert model.get_n_leaves() > 0
 
     def test_apply(self, model, classification_data):
         X, _ = classification_data
         leaves = model.apply(X)
-        np.testing.assert_array_equal(leaves, model.estimator_.apply(X))
         assert leaves.shape == (X.shape[0],)
+        assert np.all(model.tree_.children_left[leaves] == -1)
 
     def test_cost_complexity_pruning_path(self, model, classification_data):
         X, y = classification_data
-        path = model.cost_complexity_pruning_path(X, y)
+        path = model.cost_complexity_pruning_path(X, y, fp_cost=1.0, fn_cost=1.0)
         assert 'ccp_alphas' in path
         assert 'impurities' in path
         assert len(path.ccp_alphas) == len(path.impurities)
 
     def test_decision_path(self, model, classification_data):
         X, _ = classification_data
-        indicator = model.decision_path(X)
-        assert indicator.shape[0] == X.shape[0]
-        np.testing.assert_array_equal(indicator.toarray(), model.estimator_.decision_path(X).toarray())
+        indicator = model.decision_path(X).toarray()
+        assert indicator.shape == (X.shape[0], model.tree_.node_count)
+        # Every path runs from the root to the leaf the sample lands in.
+        assert np.all(indicator[:, 0] == 1)
+        np.testing.assert_array_equal(indicator[np.arange(X.shape[0]), model.apply(X)], 1)
+        assert np.all(indicator.sum(axis=1) <= model.get_depth() + 1)
 
     def test_not_fitted_raises(self, classification_data):
         from sklearn.exceptions import NotFittedError
@@ -155,7 +130,7 @@ class TestSklearnDelegation:
         with pytest.raises(NotFittedError):
             model.get_n_leaves()
         with pytest.raises(NotFittedError):
-            _ = model.tree_
+            model.predict(classification_data[0])
 
 
 @pytest.mark.parametrize(
@@ -226,9 +201,7 @@ class TestSplitsMustLowerTheCost:
         fn_cost = np.random.default_rng(0).uniform(2, 20, y.size)
         expensive = CSTreeClassifier(random_state=0).fit(X, y, fp_cost=1000.0, fn_cost=1000.0 * fn_cost)
 
-        assert expensive.estimator_.min_impurity_decrease == pytest.approx(
-            1000 * cheap.estimator_.min_impurity_decrease
-        )
+        assert expensive.min_impurity_decrease_ == pytest.approx(1000 * cheap.min_impurity_decrease_)
         # Scaling every cost by the same factor does not change which splits lower the cost.
         assert expensive.get_depth() == cheap.get_depth()
         assert expensive.get_n_leaves() == cheap.get_n_leaves()
@@ -236,11 +209,11 @@ class TestSplitsMustLowerTheCost:
     @pytest.mark.parametrize('criterion', ['gini', 'entropy'])
     def test_other_criteria_keep_scikit_learns_default(self, make_data, seeded_rng, criterion):
         model = self._fit(make_data, seeded_rng, criterion=criterion)
-        assert model.estimator_.min_impurity_decrease == 0.0
+        assert model.min_impurity_decrease_ == 0.0
 
     def test_an_explicit_value_is_used_as_is(self, make_data, seeded_rng):
         model = self._fit(make_data, seeded_rng, min_impurity_decrease=0.01)
-        assert model.estimator_.min_impurity_decrease == 0.01
+        assert model.min_impurity_decrease_ == 0.01
 
 
 def _cheapest_class_per_leaf(leaves, y, weights, tp, tn, fp, fn):
@@ -273,10 +246,8 @@ class TestPredictDecidesByCost:
         model = CSTreeClassifier(max_depth=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
         zeros = np.zeros(y.size)
-        expected = _cheapest_class_per_leaf(
-            model.estimator_.apply(X), y, np.ones(y.size), zeros, zeros, fp_cost, fn_cost
-        )
-        leaves = model.estimator_.apply(X)
+        leaves = model.apply(X)
+        expected = _cheapest_class_per_leaf(leaves, y, np.ones(y.size), zeros, zeros, fp_cost, fn_cost)
         np.testing.assert_array_equal(model.predict(X), [expected[leaf] for leaf in leaves])
 
     def test_predicts_the_costly_class_where_it_is_the_minority(self, make_data, seeded_rng):
@@ -303,7 +274,7 @@ class TestPredictDecidesByCost:
         )
 
         zeros = np.zeros(y.size)
-        leaves = model.estimator_.apply(X)
+        leaves = model.apply(X)
         expected = _cheapest_class_per_leaf(
             leaves, y, compute_sample_weight(class_weight, y), zeros, zeros, fp_cost, fn_cost
         )

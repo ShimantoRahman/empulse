@@ -2,8 +2,8 @@
 Smoke-test an installed Empulse wheel.
 
 Run by cibuildwheel (``CIBW_TEST_COMMAND``) against each built wheel, in a fresh environment with
-only the runtime dependencies installed. It is deliberately import-light: the boosting and symbolic
-extras are not installed there, so nothing here may touch them.
+only the runtime dependencies installed. It is deliberately import-light: the boosting extra is
+not installed there, so nothing here may touch it.
 
 Its most important job is the free-threading assertion. A Cython extension built without the
 ``freethreading_compatible`` directive re-enables the GIL process-wide the moment it is imported,

@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 import numpy as np
 from joblib import effective_n_jobs
 from sklearn.utils._param_validation import Interval, RealNotInt
-from sklearn.utils.validation import check_is_fitted, check_random_state, validate_data
+from sklearn.utils.validation import check_is_fitted, check_random_state
 
+from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
 from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory

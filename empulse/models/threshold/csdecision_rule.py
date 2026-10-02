@@ -3,7 +3,6 @@ from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
-import sklearn
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone
 from sklearn.base import BaseEstimator, MetaEstimatorMixin
@@ -14,15 +13,15 @@ from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
 from sklearn.utils.metaestimators import available_if
-from sklearn.utils.validation import _estimator_has, check_is_fitted, indexable
+from sklearn.utils.validation import check_is_fitted, indexable
 
 from ..._common import Parameter
+from ..._common._metaestimators import estimator_has
+from ..._common._sklearn_compat import sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base.cost_sensitive import CostSensitiveClassifier
-
-sklearn_version = parse_version(parse_version(sklearn.__version__).base_version)
 
 
 def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
@@ -443,7 +442,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         return self._apply_decision(y_score, decision)
 
-    @available_if(_estimator_has('predict_proba'))
+    @available_if(estimator_has('predict_proba'))
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict class probabilities for `X` using the fitted estimator.
 
@@ -463,7 +462,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         y_proba: FloatNDArray = estimator.predict_proba(X)
         return y_proba
 
-    @available_if(_estimator_has('predict_log_proba'))
+    @available_if(estimator_has('predict_log_proba'))
     def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """Predict logarithm class probabilities for `X` using the fitted estimator.
 
@@ -483,7 +482,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         y_log_proba: FloatNDArray = estimator.predict_log_proba(X)
         return y_log_proba
 
-    @available_if(_estimator_has('decision_function'))
+    @available_if(estimator_has('decision_function'))
     def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
         """Decision function for samples in `X` using the fitted estimator.
 

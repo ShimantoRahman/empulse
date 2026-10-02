@@ -3,21 +3,17 @@ from typing import Any, ClassVar, Literal, Self
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.tree._tree import Tree
-from sklearn.utils import Bunch
-from sklearn.utils._param_validation import Hidden, StrOptions
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.base import clone
+from sklearn.utils import Bunch, check_random_state, compute_sample_weight
+from sklearn.utils._param_validation import StrOptions
+from sklearn.utils.validation import check_is_fitted
 
+from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
-from ._impurity import CostImpurity, build_cost_criterion
-from ._leaf_decisions import positive_leaves
-
-TREE_PARAM_CONSTRAINTS = DecisionTreeClassifier._parameter_constraints.copy()
-TREE_PARAM_CONSTRAINTS.pop('criterion')
-TREE_PARAM_CONSTRAINTS['min_impurity_decrease'] = [*TREE_PARAM_CONSTRAINTS['min_impurity_decrease'], None]
+from ._cstree import CostTree, ccp_pruning_path, cost_records
+from ._cstree._grow import TREE_PARAM_CONSTRAINTS, TreeParams, as_float32, grow_tree, resolve_tree_params
 
 # The smallest decrease of the training cost per sample, relative to the average cost per sample,
 # that `min_impurity_decrease=None` counts as a decrease rather than rounding. On a million samples,
@@ -191,39 +187,20 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         The "balanced" mode uses the values of y to automatically adjust
         weights inversely proportional to class frequencies in the input data
-        as ``n_samples / (n_classes * np.bincount(y))``
-
-        Note that these weights will be multiplied with sample_weight (passed
-        through the fit method) if sample_weight is specified.
+        as ``n_samples / (n_classes * np.bincount(y))``.
 
     ccp_alpha : non-negative float, default=0.0
         Complexity parameter used for Minimal Cost-Complexity Pruning. The
         subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`sklearn:minimal_cost_complexity_pruning` for details. See
-        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_cost_complexity_pruning.py`
-        for an example of such pruning.
+        :ref:`sklearn:minimal_cost_complexity_pruning` for details.
 
-    monotonic_cst : array-like of int of shape (n_features), default=None
-        Indicates the monotonicity constraint to enforce on each feature.
-          - 1: monotonic increase
-          - 0: no constraint
-          - -1: monotonic decrease
-
-        If monotonic_cst is None, no constraints are applied.
-
-        Monotonicity constraints are not supported for classifications trained on
-        data with missing values.
-
-        The constraints hold over the probability of the positive class.
-
-        Read more in the :ref:`Sklearn User Guide <sklearn:monotonic_cst_gbdt>`.
+        With ``criterion="cost"``, the impurities summed over the leaves are the
+        cost of the training samples per unit of training weight, so ``ccp_alpha``
+        is the smallest decrease of that cost an extra leaf has to bring.
 
     Attributes
     ----------
-    estimator_ : :class:`~sklearn.tree.DecisionTreeClassifier`
-        The underlying DecisionTreeClassifier estimator.
-
     classes_ : ndarray of shape (2,)
         The class labels.
 
@@ -255,11 +232,14 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         The number of outputs when ``fit`` is performed. Always ``1`` for this
         binary classifier; kept for scikit-learn compatibility.
 
-    tree_ : Tree instance
-        The underlying Tree object. Please refer to
-        ``help(sklearn.tree._tree.Tree)`` for attributes of Tree object and
-        :ref:`sklearn:sphx_glr_auto_examples_tree_plot_unveil_tree_structure.py`
-        for basic usage of these attributes.
+    tree_ : CostTree
+        The fitted tree, as parallel arrays indexed by node. Its attributes carry
+        the names of scikit-learn's ``Tree`` (``children_left``, ``feature``,
+        ``threshold``, ``impurity``, ``value``, ...), so
+        :func:`sklearn.tree.plot_tree` and :func:`sklearn.tree.export_graphviz`
+        accept the fitted classifier. ``tree_.positive`` holds the decision of
+        every node: whether predicting it positive costs least on its training
+        samples.
 
     References
     ----------
@@ -273,10 +253,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **TREE_PARAM_CONSTRAINTS,
         **CostSensitiveClassifier._parameter_constraints,
-        'criterion': [
-            StrOptions({'cost', 'log_loss', 'gini', 'entropy'}),
-            Hidden(CostImpurity),
-        ],
+        'splitter': [StrOptions({'best', 'random'})],
+        'class_weight': [dict, list, StrOptions({'balanced'}), None],
     }
 
     def __init__(
@@ -299,7 +277,6 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         min_impurity_decrease: float | None = None,
         class_weight: dict[int, float] | Literal['balanced'] | None = None,
         ccp_alpha: float = 0.0,
-        monotonic_cst: IntArrayLike | None = None,
     ):
         self.criterion = criterion
         self.splitter = splitter
@@ -313,54 +290,36 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self.min_impurity_decrease = min_impurity_decrease
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
-        self.monotonic_cst = monotonic_cst
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     @property
     def feature_importances_(self) -> FloatNDArray:
-        """The feature importances."""
+        """The impurity-based feature importances."""
         check_is_fitted(self)
-        importances: FloatNDArray = self.estimator_.feature_importances_
+        importances: FloatNDArray = self.tree_.compute_feature_importances()
         return importances
-
-    @property
-    def max_features_(self) -> int:
-        """The inferred value of max_features."""
-        check_is_fitted(self)
-        max_features: int = self.estimator_.max_features_
-        return max_features
 
     @property
     def n_classes_(self) -> int:
         """The number of classes."""
         check_is_fitted(self)
-        n_classes: int = self.estimator_.n_classes_
-        return n_classes
+        return 2
 
     @property
     def n_outputs_(self) -> int:
         """The number of outputs when ``fit`` is performed."""
         check_is_fitted(self)
-        n_outputs: int = self.estimator_.n_outputs_
-        return n_outputs
-
-    @property
-    def tree_(self) -> Tree:
-        """The underlying Tree object."""
-        check_is_fitted(self)
-        return self.estimator_.tree_
+        return 1
 
     def get_depth(self) -> int:
         """Return the depth of the decision tree."""
         check_is_fitted(self)
-        depth: int = self.estimator_.get_depth()
-        return depth
+        return int(self.tree_.max_depth)
 
     def get_n_leaves(self) -> int:
         """Return the number of leaves of the decision tree."""
         check_is_fitted(self)
-        n_leaves: int = self.estimator_.get_n_leaves()
-        return n_leaves
+        return int(self.tree_.n_leaves)
 
     def _fit(
         self,
@@ -392,38 +351,38 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             Returns self.
         """
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+        y = np.asarray(y).reshape(-1)
+        records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        sample_weight = None if self.class_weight is None else compute_sample_weight(self.class_weight, y)
 
-        n_samples = X.shape[0]
-        self.criterion_ = build_cost_criterion(
-            self.criterion,
-            tp_cost=tp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            fp_cost=fp_cost,
-            n_samples=n_samples,
+        self.min_impurity_decrease_ = self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost)
+        params = self._tree_params(n_samples=X.shape[0], n_features=X.shape[1])
+        self.max_features_ = params.max_features
+        self.tree_: CostTree = grow_tree(
+            params,
+            as_float32(X, fortran=True),
+            records,
+            sample_weight,
+            check_random_state(self.random_state),
         )
+        return self
 
-        self.estimator_ = DecisionTreeClassifier(
-            criterion=self.criterion_,
+    def _tree_params(self, *, n_samples: int, n_features: int) -> TreeParams:
+        """Resolve the hyperparameters against data of the given shape, once ``min_impurity_decrease_`` is set."""
+        return resolve_tree_params(
+            n_samples=n_samples,
+            n_features=n_features,
+            criterion=self.criterion,
             splitter=self.splitter,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
             min_weight_fraction_leaf=self.min_weight_fraction_leaf,
             max_features=self.max_features,
-            random_state=self.random_state,
             max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost),
-            class_weight=self.class_weight,
+            min_impurity_decrease=self.min_impurity_decrease_,
             ccp_alpha=self.ccp_alpha,
-            monotonic_cst=self.monotonic_cst,
         )
-        self.estimator_.fit(X, y)
-        self._positive_leaves = positive_leaves(
-            self.estimator_.tree_, self.estimator_.apply(X), y, tp_cost, tn_cost, fp_cost, fn_cost
-        )
-
-        return self
 
     def _resolve_min_impurity_decrease(
         self,
@@ -436,7 +395,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         """Return ``min_impurity_decrease``, resolving ``None`` as its docstring describes."""
         if self.min_impurity_decrease is not None:
             return float(self.min_impurity_decrease)
-        if not (isinstance(self.criterion, str) and self.criterion == 'cost'):
+        if self.criterion != 'cost':
             return 0.0
         is_positive = np.asarray(y).reshape(-1) == 1
         # The cost of predicting each sample positive, and negative.
@@ -444,6 +403,12 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         negative_cost = np.where(is_positive, fn_cost, tn_cost)
         cost_scale = float(np.mean(np.abs(positive_cost)) + np.mean(np.abs(negative_cost)))
         return _RELATIVE_MIN_COST_DECREASE * cost_scale
+
+    def _validate_X_predict(self, X: FloatArrayLike, check_input: bool) -> FloatNDArray:
+        check_is_fitted(self)
+        if check_input:
+            X = validate_data(self, X, reset=False)
+        return as_float32(X)
 
     def predict(self, X: FloatArrayLike, check_input: bool = True) -> NDArray[Any]:
         """
@@ -458,10 +423,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, it will be converted to ``dtype=np.float32``.
 
         check_input : bool, default=True
             Allow to bypass several input checking.
@@ -472,14 +435,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         y : array-like of shape (n_samples,)
             The predicted classes.
         """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-        # The inner tree is fitted on the 0/1-encoded target, so map its predictions back.
-        positive = getattr(self, '_positive_leaves', None)
-        if positive is None:  # fitted before leaves predicted their cheapest class
-            encoded = self.estimator_.predict(X, check_input=check_input).astype(np.intp)
-        else:
-            encoded = positive[self.estimator_.apply(X, check_input=check_input)].astype(np.intp)
+        X = self._validate_X_predict(X, check_input)
+        encoded = self.tree_.predict_positive(X).astype(np.intp)
         y_pred: NDArray[Any] = self.classes_.take(encoded)
         return y_pred
 
@@ -491,10 +448,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, it will be converted to ``dtype=np.float32``.
 
         check_input : bool, default=True
             Allow to bypass several input checking.
@@ -506,9 +461,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             The class probabilities of the input samples. The order of the
             classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-        y_proba: FloatNDArray = self.estimator_.predict_proba(X, check_input=check_input)
+        X = self._validate_X_predict(X, check_input)
+        y_proba: FloatNDArray = self.tree_.predict_proba(X)
         return y_proba
 
     def predict_log_proba(self, X: FloatArrayLike) -> FloatNDArray:
@@ -517,10 +471,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, it will be converted to ``dtype=np.float32``.
 
         Returns
         -------
@@ -528,8 +480,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             The class log-probabilities of the input samples. The order of the
             classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
-        check_is_fitted(self)
-        y_log_proba: FloatNDArray = self.estimator_.predict_log_proba(X)
+        with np.errstate(divide='ignore'):
+            y_log_proba: FloatNDArray = np.log(self.predict_proba(X))
         return y_log_proba
 
     def apply(self, X: FloatArrayLike, check_input: bool = True) -> IntNDArray:
@@ -538,10 +490,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, it will be converted to ``dtype=np.float32``.
 
         check_input : bool, default=True
             Allow to bypass several input checking.
@@ -555,34 +505,28 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             ``[0; self.tree_.node_count)``, possibly with gaps in the
             numbering.
         """
-        check_is_fitted(self)
-        X_leaves: IntNDArray = self.estimator_.apply(X, check_input=check_input)
+        X = self._validate_X_predict(X, check_input)
+        X_leaves: IntNDArray = self.tree_.apply(X)
         return X_leaves
 
-    def cost_complexity_pruning_path(
-        self, X: FloatArrayLike, y: IntArrayLike, sample_weight: FloatArrayLike | None = None
-    ) -> Bunch:
+    def cost_complexity_pruning_path(self, X: FloatArrayLike, y: IntArrayLike, **fit_params: Any) -> Bunch:
         """
         Compute the pruning path during Minimal Cost-Complexity Pruning.
 
-        See :ref:`sklearn:minimal_cost_complexity_pruning` for details on the pruning process.
+        Fits an unpruned copy of this classifier (``ccp_alpha=0``) on ``X`` and ``y``, and returns
+        its pruning path. See :ref:`sklearn:minimal_cost_complexity_pruning` for details on the
+        pruning process.
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The training input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csc_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
 
-        y : array-like of shape (n_samples,) or (n_samples, n_outputs)
-            The target values (class labels) as integers or strings.
+        y : array-like of shape (n_samples,)
+            The target values (class labels).
 
-        sample_weight : array-like of shape (n_samples,), default=None
-            Sample weights. If None, then samples are equally weighted. Splits
-            that would create child nodes with net zero or negative weight are
-            ignored while searching for a split in each node. Splits are also
-            ignored if they would result in any single class carrying a
-            negative weight in either child node.
+        **fit_params : dict
+            Passed on to :meth:`fit`, such as instance-dependent costs.
 
         Returns
         -------
@@ -596,7 +540,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
                 Sum of the impurities of the subtree leaves for the
                 corresponding alpha value in ``ccp_alphas``.
         """
-        return self.estimator_.cost_complexity_pruning_path(X, y, sample_weight=sample_weight)
+        unpruned = clone(self).set_params(ccp_alpha=0.0).fit(X, y, **fit_params)
+        return Bunch(**ccp_pruning_path(unpruned.tree_))
 
     def decision_path(self, X: FloatArrayLike, check_input: bool = True) -> csr_matrix:
         """
@@ -604,10 +549,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, it will be converted to
-            ``dtype=np.float32`` and if a sparse matrix is provided
-            to a sparse ``csr_matrix``.
+        X : array-like of shape (n_samples, n_features)
+            The input samples. Internally, it will be converted to ``dtype=np.float32``.
 
         check_input : bool, default=True
             Allow to bypass several input checking.
@@ -619,4 +562,6 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             Return a node indicator CSR matrix where non zero elements
             indicates that the samples goes through the nodes.
         """
-        return self.estimator_.decision_path(X, check_input=check_input)  # type: ignore[no-any-return]
+        X = self._validate_X_predict(X, check_input)
+        indicator: csr_matrix = self.tree_.decision_path(X)
+        return indicator

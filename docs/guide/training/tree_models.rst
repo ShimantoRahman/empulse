@@ -103,8 +103,9 @@ Cost-Sensitive Decision Tree (CSTreeClassifier)
 
 :class:`~empulse.models.CSTreeClassifier` is a single decision tree whose
 splitting criterion directly maximises cost savings at each node [1]_.
-It wraps scikit-learn's :class:`~sklearn.tree.DecisionTreeClassifier` and
-exposes the same tree structure, pruning utilities, and feature importances.
+It takes the hyperparameters of scikit-learn's :class:`~sklearn.tree.DecisionTreeClassifier`
+and offers the same tree structure, pruning utilities, and feature importances.
+Each leaf predicts the class that costs least on the training samples that reach it.
 
 Split criterion
 ---------------
@@ -156,7 +157,9 @@ Post-training pruning via ``ccp_alpha``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Minimal Cost-Complexity Pruning is available through the ``ccp_alpha`` parameter.
-To find a good value, inspect the pruning path first:
+With the ``"cost"`` criterion, the impurities summed over a tree's leaves are the cost of the
+training samples per sample, so ``ccp_alpha`` is the least that cost has to drop for every leaf
+a branch adds. To find a good value, inspect the pruning path first:
 
 .. code-block:: python
 
@@ -176,8 +179,10 @@ To find a good value, inspect the pruning path first:
 Inspecting the tree
 -------------------
 
-:class:`~empulse.models.CSTreeClassifier` exposes the underlying sklearn tree
-object and several inspection helpers:
+:class:`~empulse.models.CSTreeClassifier` exposes the fitted tree as ``tree_``, a set of arrays
+indexed by node whose names follow scikit-learn's tree (``children_left``, ``feature``,
+``threshold``, ``impurity``, ``value``, ...), so :func:`sklearn.tree.export_graphviz` draws it.
+``tree_.positive`` holds every node's decision. It also has several inspection helpers:
 
 .. code-block:: python
 
@@ -186,7 +191,8 @@ object and several inspection helpers:
     print(tree.get_depth())          # maximum depth reached
     print(tree.get_n_leaves())       # number of leaf nodes
     print(tree.feature_importances_) # impurity-based importances
-    print(tree.tree_)                # the raw sklearn Tree object
+    print(tree.tree_.node_count)     # number of nodes
+    print(tree.tree_.positive)       # whether each node decides positive
 
     # Leaf indices for each sample
     leaf_idx = tree.apply(X)
@@ -200,8 +206,8 @@ Cost-Sensitive Random Forest (CSForestClassifier)
 
 :class:`~empulse.models.CSForestClassifier` builds an ensemble of
 :class:`~empulse.models.CSTreeClassifier` trees using bootstrap sampling and
-random feature subsets, identical to scikit-learn's
-:class:`~sklearn.ensemble.RandomForestClassifier` except each tree is grown
+random feature subsets, like scikit-learn's
+:class:`~sklearn.ensemble.RandomForestClassifier`, except each tree is grown
 with a cost-sensitive splitting criterion [1]_.
 
 Number of estimators
@@ -229,7 +235,8 @@ aggregated into a single ensemble prediction:
    * - ``"majority_voting"`` *(default)*
      - Each tree casts one vote, for the class that costs least in the sample's leaf; the majority class wins.
    * - ``"weighted_voting"``
-     - Trees are weighted by their out-of-bag (OOB) score; requires ``oob_score=True``.
+     - Trees are weighted by their loss on the samples they left out of their bootstrap
+       sample; requires ``bootstrap=True``.
 
 .. code-block:: python
 
@@ -277,7 +284,7 @@ Feature importances
 
 .. code-block:: python
 
-    forest.fit(X, y)
+    forest = CSForestClassifier(n_estimators=50, fp_cost=5, fn_cost=1).fit(X, y)
     importances = forest.feature_importances_   # shape (n_features,)
 
     # For a more reliable estimate use permutation importances

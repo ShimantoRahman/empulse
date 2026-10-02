@@ -7,8 +7,9 @@ import numpy as np
 from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
-from sklearn.utils.validation import check_is_fitted, validate_data
+from sklearn.utils.validation import check_is_fitted
 
+from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from ...optimizers import Optimizer

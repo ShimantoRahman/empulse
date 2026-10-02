@@ -123,9 +123,7 @@ def build_matrix(shared: list[str]) -> list[dict[str, str]]:
     """Build the GitHub Actions matrix legs for the interpreters both projects support.
 
     Brackets the shared range rather than covering all of it: the oldest and newest interpreters are
-    where a release's support window moves, and the legs in between rarely fail alone. Windows earns
-    a leg of its own because the Cython ABI mismatch this package is exposed to surfaces there as an
-    access violation rather than as a Python exception.
+    where a release's support window moves, and the legs in between rarely fail alone.
     """
     if not shared:
         return []
@@ -137,7 +135,6 @@ def build_matrix(shared: list[str]) -> list[dict[str, str]]:
     matrix = [leg('ubuntu-latest', oldest)]
     if newest != oldest:
         matrix.append(leg('ubuntu-latest', newest))
-    matrix.append(leg('windows-latest', newest))
     return matrix
 
 

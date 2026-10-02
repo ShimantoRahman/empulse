@@ -50,7 +50,8 @@ class TestGilStaysDisabled:
         [
             'empulse.metrics._loss.loss',
             'empulse.metrics._cy_convex_hull.convex_hull',
-            'empulse.models.tree._impurity.cost_impurity',
+            'empulse.models.tree._cstree._splitter',
+            'empulse.models.tree._cstree._tree',
             'empulse.models.tree._cy_proftree.random',
             'empulse.models.tree._cy_proftree.node',
             'empulse.models.tree._cy_proftree.tree',
@@ -104,8 +105,8 @@ class TestConcurrentFitsAreIndependent:
             np.testing.assert_allclose(actual, expected)
 
     def test_csforest_fits_are_independent(self, data):
-        # CSForest hands one CostImpurity instance to sklearn, which deep-copies it per tree.
-        # That per-tree isolation is what keeps its mutable C buffers from being shared.
+        # The trees of a forest share its training data and cost records read-only; each owns its
+        # splitter, so trees growing on threads of their own do not perturb one another.
         X, y = data
 
         def fit(seed):
