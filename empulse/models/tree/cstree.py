@@ -8,12 +8,19 @@ from sklearn.utils import Bunch, check_random_state, compute_sample_weight
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.validation import check_is_fitted
 
-from ..._common._sklearn_compat import validate_data
+from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._cstree import CostTree, ccp_pruning_path, cost_records
-from ._cstree._grow import TREE_PARAM_CONSTRAINTS, TreeParams, as_float32, grow_tree, resolve_tree_params
+from ._cstree._grow import (
+    TREE_PARAM_CONSTRAINTS,
+    TreeParams,
+    as_float32,
+    grow_tree,
+    missing_feature_mask,
+    resolve_tree_params,
+)
 
 # The smallest cost decrease per sample, relative to the average cost per sample, that
 # `min_impurity_decrease=None` counts as a real decrease. On a million samples, rounding errors
@@ -25,7 +32,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     """
     Cost-sensitive decision tree classifier.
 
-    Trees are split based on a cost-sensitive impurity measure.
+    Trees are split based on a cost-sensitive impurity measure. Missing values (``NaN``) in ``X``
+    are supported: each split sends them to whichever child lowers the impurity most.
 
     Read more in the :ref:`User Guide <cstree>`.
 
@@ -238,7 +246,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         :func:`sklearn.tree.plot_tree` and :func:`sklearn.tree.export_graphviz`
         accept the fitted classifier. ``tree_.positive`` holds the decision of
         every node: whether predicting it positive costs least on its training
-        samples.
+        samples, and ``tree_.missing_go_to_left`` where it sends a missing value.
 
     References
     ----------
@@ -290,6 +298,11 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        return tags
 
     @property
     def feature_importances_(self) -> FloatNDArray:
@@ -357,12 +370,14 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self.min_impurity_decrease_ = self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost)
         params = self._tree_params(n_samples=X.shape[0], n_features=X.shape[1])
         self.max_features_ = params.max_features
+        X = as_float32(X, fortran=True)
         self.tree_: CostTree = grow_tree(
             params,
-            as_float32(X, fortran=True),
+            X,
             records,
             sample_weight,
             check_random_state(self.random_state),
+            missing_feature_mask(X),
         )
         return self
 
@@ -406,7 +421,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     def _validate_X_predict(self, X: FloatArrayLike, check_input: bool) -> FloatNDArray:
         check_is_fitted(self)
         if check_input:
-            X = validate_data(self, X, reset=False)
+            X = validate_data(self, X, reset=False, ensure_all_finite='allow-nan')
         return as_float32(X)
 
     def predict(self, X: FloatArrayLike, check_input: bool = True) -> NDArray[Any]:

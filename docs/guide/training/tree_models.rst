@@ -176,6 +176,26 @@ a branch adds. To find a good value, inspect the pruning path first:
     # Apply pruning with a chosen alpha
     pruned_tree = CSTreeClassifier(fp_cost=5, fn_cost=1, ccp_alpha=0.01).fit(X, y)
 
+Missing values
+--------------
+
+:class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier` accept
+missing values (``NaN``) in ``X``, as scikit-learn's trees do. When a split's feature is missing for
+some of a node's samples, the split search tries them in either child and keeps whichever scores
+best; splitting the missing samples off from the rest is a candidate too. A sample missing a feature
+that no training sample of the node missed goes to the child that received more training samples.
+
+.. code-block:: python
+
+    import numpy as np
+    from empulse.models import CSTreeClassifier
+    from sklearn.datasets import make_classification
+
+    X_missing, y_missing = make_classification(n_samples=500, random_state=0)
+    X_missing[np.random.default_rng(0).random(X_missing.shape) < 0.1] = np.nan
+    missing_tree = CSTreeClassifier(fp_cost=5, fn_cost=1).fit(X_missing, y_missing)
+    print(missing_tree.tree_.missing_go_to_left)  # where each node sends a missing value
+
 Inspecting the tree
 -------------------
 

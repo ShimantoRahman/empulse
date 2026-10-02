@@ -4,13 +4,14 @@ Find the best split of a node of a cost-sensitive decision tree.
 
 The split search is ported from scikit-learn's ``node_split_best`` and ``node_split_random``
 (sklearn/tree/_splitter.pyx and sklearn/tree/_partitioner.pyx), Copyright (c) the scikit-learn
-developers, BSD-3-Clause license. It keeps their feature sampling, constant-feature bookkeeping and
-tie handling. Missing values, sparse input and monotonic constraints are not supported. The
-criterion's running sums are inline (see ``_criterion.pxd``), and every sample's costs are read from
-a single record.
+developers, BSD-3-Clause license. It keeps their feature sampling, constant-feature bookkeeping,
+tie handling and treatment of missing values: a split sends the samples missing its feature (NaN)
+to whichever child scores best, and when the node has none, to the child with more samples. Sparse
+input and monotonic constraints are not supported. The criterion's running sums are inline (see
+``_criterion.pxd``), and every sample's costs are read from a single record.
 """
 
-from libc.math cimport INFINITY, fmin
+from libc.math cimport INFINITY, fmin, isnan
 from libc.string cimport memcpy
 
 import numpy as np
@@ -38,6 +39,7 @@ cdef inline void _init_split(SplitRecord* split, intp_t start_pos) noexcept nogi
     split.pos = start_pos
     split.feature = 0
     split.threshold = 0.0
+    split.missing_go_to_left = False
     split.improvement = -INFINITY
 
 
@@ -64,6 +66,8 @@ cdef class Splitter:
         Seed of the feature and threshold draws.
     track_oracle : bool
         Sum the cheapest cost of every sample of a node, which ``max_cost_decrease`` needs.
+    missing_mask : ndarray of shape (n_features,), dtype uint8, or None
+        Whether any row misses each feature (is NaN). ``None`` when no row misses any.
     """
 
     def __cinit__(
@@ -78,10 +82,12 @@ cdef class Splitter:
         float64_t min_weight_leaf,
         uint32_t seed,
         bint track_oracle,
+        object missing_mask=None,
     ):
         cdef const float32_t[::1, :] X_view = X
         cdef const float64_t[:, ::1] cost_view = cost
         cdef const float64_t[::1] weight_view
+        cdef const uint8_t[::1] missing_view
         if cost_view.shape[0] != X_view.shape[0] or cost_view.shape[1] != 4:
             raise ValueError('cost must have shape (n_rows, 4)')
 
@@ -92,6 +98,15 @@ cdef class Splitter:
         self.n_features = X_view.shape[1]
         self.X = &X_view[0, 0]
         self.cost = &cost_view[0, 0]
+
+        self._missing_ref = missing_mask
+        if missing_mask is None:
+            self.missing_mask = NULL
+        else:
+            missing_view = missing_mask
+            if missing_view.shape[0] != self.n_features:
+                raise ValueError('missing_mask must have shape (n_features,)')
+            self.missing_mask = &missing_view[0]
 
         if weight is None:
             self.weight = NULL
@@ -143,6 +158,8 @@ cdef class Splitter:
         self.start = start
         self.end = end
         self.total = total
+        self.scan_end = end
+        self.scan_total = total
         self.oracle = oracle
         _reset(self)
         weighted_n_node_samples[0] = total.w
@@ -193,6 +210,9 @@ cdef class Splitter:
         cdef ClassSums right
         cdef const float32_t* Xf
         cdef float32_t value, min_feature_value, max_feature_value
+        cdef const uint8_t* missing_mask = self.missing_mask
+        cdef intp_t n_missing
+        cdef bint missing_go_to_left
 
         cdef intp_t f_i = n_features
         cdef intp_t f_j, p, p_prev
@@ -228,10 +248,16 @@ cdef class Splitter:
             current_split.feature = features[f_j]
             Xf = self.X + current_split.feature * self.n_rows
 
+            n_missing = 0
             if not self.random:
-                _sort_node(self, Xf)
-                min_feature_value = feature_values[start]
-                max_feature_value = feature_values[end - 1]
+                if missing_mask != NULL and missing_mask[current_split.feature]:
+                    n_missing = _move_missing_to_end(self, Xf)
+                if n_missing < end - start:
+                    _sort_node(self, Xf, start, end - n_missing)
+                    min_feature_value = feature_values[start]
+                    max_feature_value = feature_values[end - n_missing - 1]
+            elif missing_mask != NULL and missing_mask[current_split.feature]:
+                n_missing = _gather_values(self, Xf, &min_feature_value, &max_feature_value)
             else:
                 min_feature_value = Xf[samples[start]]
                 max_feature_value = min_feature_value
@@ -243,7 +269,10 @@ cdef class Splitter:
                     elif value > max_feature_value:
                         max_feature_value = value
 
-            if max_feature_value <= min_feature_value + FEATURE_THRESHOLD:
+            # Constant: every value missing, or none missing and the values equal.
+            if n_missing == end - start or (
+                n_missing == 0 and max_feature_value <= min_feature_value + FEATURE_THRESHOLD
+            ):
                 features[f_j], features[n_total_constants] = features[n_total_constants], features[f_j]
                 n_found_constants += 1
                 n_total_constants += 1
@@ -252,7 +281,9 @@ cdef class Splitter:
             f_i -= 1
             features[f_i], features[f_j] = features[f_j], features[f_i]
 
-            if not self.random:
+            if not self.random and n_missing > 0:
+                _search_with_missing(self, end - n_missing, &current_split, &best_split, &best_proxy_improvement)
+            elif not self.random:
                 # Try every position between two distinct values.
                 _reset(self)
                 p = start
@@ -277,13 +308,15 @@ cdef class Splitter:
                         best_proxy_improvement = current_proxy_improvement
                         # The sum of halves avoids overflowing to infinity.
                         current_split.threshold = feature_values[p_prev] / 2.0 + feature_values[p] / 2.0
+                        current_split.missing_go_to_left = p - start > end - p
                         best_split = current_split
             else:
-                # Try one random threshold.
+                # Try one random threshold, sending the missing values to a random side.
                 current_split.threshold = rand_uniform(min_feature_value, max_feature_value, random_state)
+                missing_go_to_left = n_missing > 0 and rand_int(0, 2, random_state)
                 if current_split.threshold == max_feature_value:
                     current_split.threshold = min_feature_value
-                current_split.pos = _partition_values(self, current_split.threshold)
+                current_split.pos = _partition_values(self, current_split.threshold, missing_go_to_left)
                 if current_split.pos - start < min_samples_leaf or end - current_split.pos < min_samples_leaf:
                     continue
 
@@ -296,12 +329,16 @@ cdef class Splitter:
                 current_proxy_improvement = proxy_improvement(kind, &self.left, &right)
                 if current_proxy_improvement > best_proxy_improvement:
                     best_proxy_improvement = current_proxy_improvement
+                    if n_missing > 0:
+                        current_split.missing_go_to_left = missing_go_to_left
+                    else:
+                        current_split.missing_go_to_left = current_split.pos - start > end - current_split.pos
                     best_split = current_split
 
         if best_split.pos < end:
             # The random search left the samples partitioned by the last feature it drew.
             if not self.random or current_split.feature != best_split.feature:
-                _partition(self, best_split.feature, best_split.threshold)
+                _partition(self, best_split.feature, best_split.threshold, best_split.missing_go_to_left)
             _finish_split(self, impurity, &best_split)
 
         # The leading known constant features must keep their order for sibling and child nodes.
@@ -326,7 +363,7 @@ cdef inline void _update(Splitter self, intp_t new_pos) noexcept nogil:
     cdef const float64_t* cost = self.cost
     cdef const float64_t* weight = self.weight
     cdef ClassSums left
-    if (new_pos - self.pos) <= (self.end - new_pos):
+    if (new_pos - self.pos) <= (self.scan_end - new_pos):
         left = self.left
         if weight == NULL:
             for p in range(self.pos, new_pos):
@@ -335,21 +372,19 @@ cdef inline void _update(Splitter self, intp_t new_pos) noexcept nogil:
             for p in range(self.pos, new_pos):
                 sums_add(&left, cost + 4 * samples[p], weight[samples[p]])
     else:
-        left = self.total
+        left = self.scan_total
         if weight == NULL:
-            for p in range(self.end - 1, new_pos - 1, -1):
+            for p in range(self.scan_end - 1, new_pos - 1, -1):
                 sums_remove(&left, cost + 4 * samples[p], 1.0)
         else:
-            for p in range(self.end - 1, new_pos - 1, -1):
+            for p in range(self.scan_end - 1, new_pos - 1, -1):
                 sums_remove(&left, cost + 4 * samples[p], weight[samples[p]])
     self.left = left
     self.pos = new_pos
 
 
-cdef inline void _sort_node(Splitter self, const float32_t* Xf) noexcept nogil:
+cdef inline void _sort_node(Splitter self, const float32_t* Xf, intp_t start, intp_t end) noexcept nogil:
     """Sort samples[start:end] by their value of feature ``Xf``, into feature_values[start:end]."""
-    cdef intp_t start = self.start
-    cdef intp_t end = self.end
     cdef intp_t p
     cdef intp_t* samples = &self.samples[0]
     cdef float32_t* feature_values = &self.feature_values[0]
@@ -367,18 +402,29 @@ cdef inline void _sort_node(Splitter self, const float32_t* Xf) noexcept nogil:
             feature_values[p] = key_to_float(keys[p])
 
 
-cdef inline void _partition(Splitter self, intp_t feature, float64_t threshold) noexcept nogil:
+cdef inline void _partition(
+    Splitter self, intp_t feature, float64_t threshold, bint missing_go_to_left
+) noexcept nogil:
     """Reorder samples[start:end] so those going left by the given rule come first."""
     cdef intp_t partition_start = self.start
     cdef intp_t partition_end = self.end
     cdef intp_t* samples = &self.samples[0]
     cdef const float32_t* Xf = self.X + feature * self.n_rows
-    while partition_start < partition_end:
-        if Xf[samples[partition_start]] <= threshold:
-            partition_start += 1
-        else:
-            partition_end -= 1
-            samples[partition_start], samples[partition_end] = samples[partition_end], samples[partition_start]
+    # A NaN fails every comparison: `<=` sends it right, `not >` left.
+    if missing_go_to_left:
+        while partition_start < partition_end:
+            if not Xf[samples[partition_start]] > threshold:
+                partition_start += 1
+            else:
+                partition_end -= 1
+                samples[partition_start], samples[partition_end] = samples[partition_end], samples[partition_start]
+    else:
+        while partition_start < partition_end:
+            if Xf[samples[partition_start]] <= threshold:
+                partition_start += 1
+            else:
+                partition_end -= 1
+                samples[partition_start], samples[partition_end] = samples[partition_end], samples[partition_start]
 
 
 cdef inline void _finish_split(Splitter self, float64_t impurity_parent, SplitRecord* split) noexcept nogil:
@@ -400,14 +446,16 @@ cdef inline void _finish_split(Splitter self, float64_t impurity_parent, SplitRe
     )
 
 
-cdef inline intp_t _partition_values(Splitter self, float64_t threshold) noexcept nogil:
-    """Partition samples[start:end] and their feature_values by ``value <= threshold``."""
+cdef inline intp_t _partition_values(Splitter self, float64_t threshold, bint missing_go_to_left) noexcept nogil:
+    """Partition samples[start:end] and their feature_values by ``value <= threshold``, NaN as given."""
     cdef intp_t partition_start = self.start
     cdef intp_t partition_end = self.end
     cdef intp_t* samples = &self.samples[0]
     cdef float32_t* feature_values = &self.feature_values[0]
+    cdef float32_t value
     while partition_start < partition_end:
-        if feature_values[partition_start] <= threshold:
+        value = feature_values[partition_start]
+        if value <= threshold or (missing_go_to_left and isnan(value)):
             partition_start += 1
         else:
             partition_end -= 1
@@ -415,6 +463,137 @@ cdef inline intp_t _partition_values(Splitter self, float64_t threshold) noexcep
                 feature_values[partition_end], feature_values[partition_start])
             samples[partition_start], samples[partition_end] = samples[partition_end], samples[partition_start]
     return partition_end
+
+
+cdef inline intp_t _move_missing_to_end(Splitter self, const float32_t* Xf) noexcept nogil:
+    """Move the samples of the node missing feature ``Xf`` to its end, and return how many there are."""
+    cdef intp_t* samples = &self.samples[0]
+    cdef intp_t p = self.start
+    cdef intp_t end = self.end
+    while p < end:
+        if isnan(Xf[samples[p]]):
+            end -= 1
+            samples[p], samples[end] = samples[end], samples[p]
+        else:
+            p += 1
+    return self.end - end
+
+
+cdef inline intp_t _gather_values(
+    Splitter self, const float32_t* Xf, float32_t* min_value, float32_t* max_value
+) noexcept nogil:
+    """
+    Copy the node's values of feature ``Xf`` into feature_values, and return how many are missing.
+
+    ``min_value`` and ``max_value`` receive the extremes of the values that are not.
+    """
+    cdef const intp_t* samples = &self.samples[0]
+    cdef float32_t* feature_values = &self.feature_values[0]
+    cdef intp_t p
+    cdef intp_t n_missing = 0
+    cdef bint seen = False
+    cdef float32_t value
+    cdef float32_t low = 0.0
+    cdef float32_t high = 0.0
+    for p in range(self.start, self.end):
+        value = Xf[samples[p]]
+        feature_values[p] = value
+        if isnan(value):
+            n_missing += 1
+        elif not seen:
+            low = value
+            high = value
+            seen = True
+        elif value < low:
+            low = value
+        elif value > high:
+            high = value
+    min_value[0] = low
+    max_value[0] = high
+    return n_missing
+
+
+cdef inline void _search_with_missing(
+    Splitter self,
+    intp_t end_non_missing,
+    SplitRecord* current_split,
+    SplitRecord* best_split,
+    float64_t* best_proxy_improvement,
+) noexcept nogil:
+    """
+    Try every position between two distinct values of a feature that some samples of the node miss.
+
+    samples[start:end_non_missing] hold the samples that have it, sorted into feature_values, and the
+    rest hold those that miss it. Every position is tried with the missing samples on either side,
+    and so is splitting the missing samples off from the rest, with an infinite threshold.
+    """
+    cdef intp_t start = self.start
+    cdef intp_t end = self.end
+    cdef intp_t n_missing = end - end_non_missing
+    cdef intp_t min_samples_leaf = self.min_samples_leaf
+    cdef float64_t min_weight_leaf = self.min_weight_leaf
+    cdef CriterionKind kind = self.kind
+    cdef const float32_t* feature_values = &self.feature_values[0]
+    cdef intp_t p = start
+    cdef intp_t p_prev
+    cdef float64_t current_proxy_improvement
+    cdef ClassSums missing, left, right
+
+    _sum_samples(self, end_non_missing, end, &missing)
+    self.scan_end = end_non_missing
+    sums_subtract(&self.scan_total, &self.total, &missing)
+    _reset(self)
+    while p < end_non_missing:
+        p += 1
+        while p < end_non_missing and feature_values[p] <= feature_values[p - 1] + FEATURE_THRESHOLD:
+            p += 1
+        p_prev = p - 1
+        _update(self, p)  # self.left: the samples left of p that have the feature
+
+        # The missing samples go right.
+        if p - start >= min_samples_leaf and end - p >= min_samples_leaf:
+            sums_subtract(&right, &self.total, &self.left)
+            if self.left.w >= min_weight_leaf and right.w >= min_weight_leaf:
+                current_proxy_improvement = proxy_improvement(kind, &self.left, &right)
+                if current_proxy_improvement > best_proxy_improvement[0]:
+                    best_proxy_improvement[0] = current_proxy_improvement
+                    current_split.pos = p
+                    if p == end_non_missing:
+                        current_split.threshold = INFINITY
+                    else:
+                        current_split.threshold = feature_values[p_prev] / 2.0 + feature_values[p] / 2.0
+                    current_split.missing_go_to_left = False
+                    best_split[0] = current_split[0]
+
+        # The missing samples go left.
+        if (p < end_non_missing and p - start + n_missing >= min_samples_leaf
+                and end_non_missing - p >= min_samples_leaf):
+            sums_subtract(&right, &self.scan_total, &self.left)
+            sums_subtract(&left, &self.total, &right)
+            if left.w >= min_weight_leaf and right.w >= min_weight_leaf:
+                current_proxy_improvement = proxy_improvement(kind, &left, &right)
+                if current_proxy_improvement > best_proxy_improvement[0]:
+                    best_proxy_improvement[0] = current_proxy_improvement
+                    current_split.pos = p + n_missing
+                    current_split.threshold = feature_values[p_prev] / 2.0 + feature_values[p] / 2.0
+                    current_split.missing_go_to_left = True
+                    best_split[0] = current_split[0]
+
+    self.scan_end = end
+    self.scan_total = self.total
+
+
+cdef inline void _sum_samples(Splitter self, intp_t start, intp_t end, ClassSums* out) noexcept nogil:
+    """Sum the costs of samples[start:end] into ``out``."""
+    cdef const intp_t* samples = &self.samples[0]
+    cdef intp_t p
+    sums_clear(out)
+    if self.weight == NULL:
+        for p in range(start, end):
+            sums_add(out, self.cost + 4 * samples[p], 1.0)
+    else:
+        for p in range(start, end):
+            sums_add(out, self.cost + 4 * samples[p], self.weight[samples[p]])
 
 
 cdef float64_t _sum_in_order(const float64_t[::1] values) noexcept:

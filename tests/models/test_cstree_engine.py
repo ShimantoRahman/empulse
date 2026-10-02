@@ -5,8 +5,9 @@ from itertools import pairwise
 
 import numpy as np
 import pytest
+from empulse.models.tree._cstree._tree import prune_tree
 
-from empulse.models import CSTreeClassifier
+from empulse.models import CSForestClassifier, CSTreeClassifier
 from empulse.models.tree._cstree import CostTree, Splitter, build_tree, cost_records, criterion_kind
 
 
@@ -58,6 +59,168 @@ class TestBestSplit:
         feature, threshold = _best_root_split(X, y, a, b, criterion)
         assert model.tree_.feature[0] == feature
         assert model.tree_.threshold[0] == threshold
+
+
+def _best_root_split_with_missing(X, y, a, b, criterion):
+    """
+    Reference: try every threshold of every feature with its missing values on either side.
+
+    Also tries splitting the missing values off from the rest, which the tree records as an infinite
+    threshold with the missing values going right. A feature no sample misses sends missing values to
+    the child with more samples.
+    """
+    X = X.astype(np.float32)
+    best = (np.inf, None, None, None)
+    for feature in range(X.shape[1]):
+        missing = np.isnan(X[:, feature])
+        values = np.unique(X[~missing, feature])
+        directions = (False, True) if missing.any() else (None,)
+        candidates = [
+            (np.float64(low) / 2.0 + np.float64(high) / 2.0, go_left)
+            for low, high in pairwise(values)
+            for go_left in directions
+        ]
+        if missing.any():
+            candidates.append((np.inf, False))
+        for threshold, go_left in candidates:
+            left = (X[:, feature] <= threshold) | (missing & bool(go_left))
+            if left.all() or not left.any():
+                continue
+            if go_left is None:
+                go_left = left.sum() > (~left).sum()
+            child_impurity = 0.0
+            for side in (left, ~left):
+                child_impurity += _weighted_impurity(
+                    criterion, a[side].sum(), b[side].sum(), np.sum(y[side] == 1), np.sum(y[side] == 0)
+                )
+            if child_impurity < best[0]:
+                best = (child_impurity, feature, threshold, go_left)
+    return best[1:]
+
+
+def _with_missing(X, rng, fraction=0.2):
+    """``X`` with ``fraction`` of the values of its first two features missing."""
+    X = X.copy()
+    for feature in (0, 1):
+        X[rng.random(X.shape[0]) < fraction, feature] = np.nan
+    return X
+
+
+class TestMissingValues:
+    """Samples missing a feature (NaN) go to whichever child of a split scores best."""
+
+    @pytest.mark.parametrize('criterion', ['cost', 'gini', 'entropy'])
+    @pytest.mark.parametrize('n_samples', [150, 1000], ids=['introsort', 'radix_sort'])
+    def test_root_split_matches_brute_force(self, make_data, seeded_rng, criterion, n_samples):
+        X, y = make_data(n_samples=n_samples, n_features=4, n_informative=3, n_redundant=0, flip_y=0.2)
+        X = _with_missing(X, seeded_rng)
+        # Make missingness itself informative, so the best split may send it either way.
+        X[(y == 1) & (seeded_rng.random(y.size) < 0.3), 2] = np.nan
+        fp_cost = seeded_rng.uniform(0.5, 2, y.size)
+        fn_cost = seeded_rng.uniform(1, 10, y.size)
+        model = CSTreeClassifier(criterion=criterion, max_depth=1, min_impurity_decrease=0.0, random_state=0)
+        model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        a = np.where(y == 1, 0.0, fp_cost)
+        b = np.where(y == 1, fn_cost, 0.0)
+        feature, threshold, go_left = _best_root_split_with_missing(X, y, a, b, criterion)
+        assert model.tree_.feature[0] == feature
+        assert model.tree_.threshold[0] == threshold
+        assert model.tree_.missing_go_to_left[0] == go_left
+
+    @pytest.mark.parametrize('splitter', ['best', 'random'])
+    def test_children_partition_their_parent(self, make_data, seeded_rng, splitter):
+        X, y = make_data(n_samples=600, n_features=5)
+        X = _with_missing(X, seeded_rng, fraction=0.4)
+        model = CSTreeClassifier(splitter=splitter, min_impurity_decrease=0.0, random_state=0)
+        tree = model.fit(X, y, fp_cost=1.0, fn_cost=5.0).tree_
+        internal = np.flatnonzero(tree.children_left != -1)
+        children = (
+            tree.n_node_samples[tree.children_left[internal]] + tree.n_node_samples[tree.children_right[internal]]
+        )
+        np.testing.assert_array_equal(children, tree.n_node_samples[internal])
+        # Grown to purity, every training sample lands in a leaf of its own class.
+        assert np.all(model.predict_proba(X)[np.arange(y.size), y] == 1.0)
+
+    def test_missingness_alone_is_learned(self, seeded_rng):
+        y = seeded_rng.integers(0, 2, 400)
+        X = seeded_rng.normal(size=(400, 1))
+        X[y == 1, 0] = np.nan
+        model = CSTreeClassifier(max_depth=1, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        np.testing.assert_array_equal(model.predict(X), y)
+        assert model.tree_.threshold[0] == np.inf
+
+    def test_unseen_missing_values_go_to_the_larger_child(self, make_data):
+        X, y = make_data(n_samples=500, n_features=4)
+        model = CSTreeClassifier(max_depth=1, min_impurity_decrease=0.0, random_state=0)
+        tree = model.fit(X, y, fp_cost=1.0, fn_cost=5.0).tree_
+        larger = max(tree.children_left[0], tree.children_right[0], key=lambda node: tree.n_node_samples[node])
+        X_missing = X[:3].copy()
+        X_missing[:, tree.feature[0]] = np.nan
+        np.testing.assert_array_equal(model.apply(X_missing), larger)
+
+    def test_random_splitter_is_seeded(self, make_data, seeded_rng):
+        X, y = make_data(n_samples=500, n_features=5)
+        X = _with_missing(X, seeded_rng)
+
+        def fit():
+            return CSTreeClassifier(splitter='random', random_state=3).fit(X, y, fp_cost=1.0, fn_cost=5.0).tree_
+
+        np.testing.assert_array_equal(fit().nodes_array, fit().nodes_array)
+
+    def test_mask_without_missing_features_changes_nothing(self, make_data):
+        X, y = make_data(n_samples=800, n_features=5)
+        records = cost_records(y, tp_cost=0.0, tn_cost=0.0, fn_cost=5.0, fp_cost=1.0)
+        x_fortran = np.asfortranarray(X, dtype=np.float32)
+
+        def grow(random, missing_mask):
+            splitter = Splitter(
+                x_fortran, records, None, criterion_kind('cost'), random, X.shape[1], 1, 0.0, 7, False, missing_mask
+            )
+            tree = CostTree(X.shape[1])
+            build_tree(tree, splitter, 2, 1, 0.0, 8, -1, 0.0, False)
+            return tree
+
+        for random in (False, True):
+            unmasked = grow(random, None).nodes_array
+            masked = grow(random, np.ones(X.shape[1], dtype=np.uint8)).nodes_array
+            np.testing.assert_array_equal(unmasked, masked)
+
+    def test_pickle_pruning_and_decision_path_keep_the_missing_direction(self, make_data, seeded_rng):
+        X, y = make_data(n_samples=600, n_features=5)
+        X = _with_missing(X, seeded_rng, fraction=0.4)
+        model = CSTreeClassifier(random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        tree = model.tree_
+        assert tree.missing_go_to_left.any()
+        x32 = np.asarray(X, dtype=np.float32)
+
+        restored = pickle.loads(pickle.dumps(tree))
+        np.testing.assert_array_equal(restored.missing_go_to_left, tree.missing_go_to_left)
+        np.testing.assert_array_equal(restored.apply(x32), tree.apply(x32))
+
+        unpruned = prune_tree(tree, -1.0)
+        np.testing.assert_array_equal(unpruned.nodes_array, tree.nodes_array)
+
+        path = model.decision_path(X)
+        last_node = np.array([row.indices.max() for row in path])
+        np.testing.assert_array_equal(last_node, model.apply(X))
+
+    def test_infinity_is_still_rejected(self, make_data):
+        X, y = make_data(n_samples=100)
+        X[0, 0] = np.inf
+        with pytest.raises(ValueError, match='infinity'):
+            CSTreeClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+    def test_forest(self, make_data, seeded_rng):
+        X, y = make_data(n_samples=500, n_features=5)
+        X = _with_missing(X, seeded_rng)
+        X[:, 4] = np.nan  # a feature no sample has
+        forest = CSForestClassifier(n_estimators=25, oob_score=True, random_state=0)
+        forest.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        proba = forest.predict_proba(X)
+        assert np.all(np.isfinite(proba))
+        assert np.all(np.isfinite(forest.oob_decision_function_))
+        assert forest.feature_importances_[4] == 0.0
 
 
 class TestCostRecords:

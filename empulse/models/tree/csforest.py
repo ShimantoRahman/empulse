@@ -14,13 +14,20 @@ from sklearn.utils import check_random_state, compute_sample_weight
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils.validation import check_is_fitted
 
-from ..._common._sklearn_compat import validate_data
+from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import goodness_weights, subset_loss_params
 from ._cstree import CostTree, cost_records
-from ._cstree._grow import TREE_PARAM_CONSTRAINTS, TreeParams, as_float32, grow_tree, resolve_tree_params
+from ._cstree._grow import (
+    TREE_PARAM_CONSTRAINTS,
+    TreeParams,
+    as_float32,
+    grow_tree,
+    missing_feature_mask,
+    resolve_tree_params,
+)
 from .cstree import CSTreeClassifier
 
 # The largest tree seed, as scikit-learn's forests draw them.
@@ -31,7 +38,8 @@ class CSForestClassifier(CostSensitiveClassifier):
     """
     Cost-sensitive random forest classifier.
 
-    A forest of cost-sensitive decision trees.
+    A forest of cost-sensitive decision trees. Missing values (``NaN``) in ``X`` are supported,
+    as in :class:`~empulse.models.CSTreeClassifier`.
 
     Read more in the :ref:`User Guide <csforest>`.
 
@@ -360,6 +368,11 @@ class CSForestClassifier(CostSensitiveClassifier):
         self.max_samples = max_samples
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        return tags
+
     @property
     def n_classes_(self) -> int:
         """The number of classes seen during :term:`fit <sklearn:fit>`."""
@@ -469,8 +482,9 @@ class CSForestClassifier(CostSensitiveClassifier):
 
             # Shared, read-only, by every tree.
             X_fortran = as_float32(X, fortran=True)
+            missing_mask = missing_feature_mask(X_fortran)
             trees = Parallel(n_jobs=self.n_jobs, verbose=self.verbose, prefer='threads')(
-                delayed(self._grow_one)(params, X_fortran, y, records, seed) for seed in seeds
+                delayed(self._grow_one)(params, X_fortran, y, records, missing_mask, seed) for seed in seeds
             )
             self.estimators_.extend(
                 _fitted_tree(tree, seed, params, n_features, self.criterion)
@@ -504,6 +518,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         X: FloatNDArray,
         y: IntNDArray,
         records: FloatNDArray,
+        missing_mask: NDArray[np.uint8] | None,
         seed: int,
     ) -> CostTree:
         sample_weight: FloatNDArray | None
@@ -515,7 +530,7 @@ class CSForestClassifier(CostSensitiveClassifier):
                 sample_weight = sample_weight * compute_sample_weight('balanced', y, indices=indices)
         else:
             sample_weight = self._sample_weight
-        return grow_tree(params, X, records, sample_weight, np.random.RandomState(seed))
+        return grow_tree(params, X, records, sample_weight, np.random.RandomState(seed), missing_mask)
 
     def _set_oob_attributes(
         self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, n_new_trees: int, **loss_params: Any
@@ -553,7 +568,7 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     def _validate_X_predict(self, X: FloatArrayLike) -> FloatNDArray:
         check_is_fitted(self)
-        return as_float32(validate_data(self, X, reset=False))
+        return as_float32(validate_data(self, X, reset=False, ensure_all_finite='allow-nan'))
 
     def _tree_weights(self) -> FloatNDArray:
         if self.combination == 'weighted_voting':

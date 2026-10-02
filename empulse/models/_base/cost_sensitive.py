@@ -8,7 +8,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fi
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
-from ..._common._sklearn_compat import Tags, type_of_target, validate_data
+from ..._common._sklearn_compat import Tags, get_tags, type_of_target, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, Cost, MetricStrategy
 from ...metrics.metric.prebuilt_metrics import make_generic_metric
@@ -108,7 +108,7 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         self
             Fitted estimator.
         """
-        X, y = validate_data(self, X, y)
+        X, y = validate_data(self, X, y, ensure_all_finite='allow-nan' if get_tags(self).input_tags.allow_nan else True)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(

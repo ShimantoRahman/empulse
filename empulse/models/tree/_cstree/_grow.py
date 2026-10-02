@@ -7,6 +7,7 @@ from numbers import Integral, Real
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 
 from ...._types import FloatNDArray
@@ -128,6 +129,7 @@ def grow_tree(
     records: FloatNDArray,
     sample_weight: FloatNDArray | None,
     random_state: np.random.RandomState,
+    missing_mask: NDArray[np.uint8] | None,
 ) -> CostTree:
     """
     Grow one tree.
@@ -144,6 +146,8 @@ def grow_tree(
         The weight of each sample in this tree. Samples weighing zero take no part.
     random_state : RandomState
         Draws the seed of the tree's feature and threshold draws.
+    missing_mask : ndarray of shape (n_features,), dtype uint8, or None
+        The :func:`missing_feature_mask` of ``X``.
     """
     n_samples, n_features = X.shape
     splitter = Splitter(
@@ -157,6 +161,7 @@ def grow_tree(
         params.min_weight_leaf(n_samples, sample_weight),
         random_state.randint(0, RAND_R_MAX),
         params.cost_bound,
+        missing_mask,
     )
     tree = CostTree(n_features)
     build_tree(
@@ -180,3 +185,15 @@ def as_float32(X: Any, *, fortran: bool = False) -> FloatNDArray:
     if fortran:
         return np.asfortranarray(X, dtype=np.float32)
     return np.ascontiguousarray(X, dtype=np.float32)
+
+
+def missing_feature_mask(X: FloatNDArray) -> NDArray[np.uint8] | None:
+    """Return whether each feature of ``X`` has a missing (NaN) value, or ``None`` when none has."""
+    with np.errstate(over='ignore', invalid='ignore'):
+        # A sum overflowing to +inf and -inf also gives NaN; the exact check below sorts that out.
+        if not np.isnan(np.sum(X)):
+            return None
+    mask = np.asarray(np.isnan(X).any(axis=0), dtype=np.uint8)
+    if not mask.any():
+        return None
+    return mask

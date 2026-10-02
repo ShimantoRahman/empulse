@@ -20,7 +20,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 from ._splitter cimport Splitter, SplitRecord
-from ._utils cimport float32_t
+from ._utils cimport float32_t, int32_t
 
 TREE_LEAF = -1
 TREE_UNDEFINED = -2
@@ -92,6 +92,7 @@ cdef class CostTree:
         bint is_leaf,
         intp_t feature,
         float64_t threshold,
+        bint missing_go_to_left,
         float64_t impurity,
         intp_t n_node_samples,
         float64_t weighted_n_node_samples,
@@ -110,6 +111,7 @@ cdef class CostTree:
             is_leaf,
             feature,
             threshold,
+            missing_go_to_left,
             impurity,
             n_node_samples,
             weighted_n_node_samples,
@@ -160,6 +162,11 @@ cdef class CostTree:
     @property
     def threshold(self):
         return self.nodes_array['threshold']
+
+    @property
+    def missing_go_to_left(self):
+        """Whether a sample missing the node's feature goes to the left child, of shape ``(node_count,)``."""
+        return self.nodes_array['missing_go_to_left'].astype(bool)
 
     @property
     def impurity(self):
@@ -255,6 +262,7 @@ cdef class CostTree:
         cdef intp_t[::1] indices = np.zeros(n_samples * (1 + self.max_depth), dtype=np.intp)
         cdef intp_t i, node_id
         cdef Node* node
+        cdef float32_t value
         with nogil:
             for i in range(n_samples):
                 indptr[i + 1] = indptr[i]
@@ -263,7 +271,10 @@ cdef class CostTree:
                 while node.left_child != _TREE_LEAF:
                     indices[indptr[i + 1]] = node_id
                     indptr[i + 1] += 1
-                    if X_view[i, node.feature] <= node.threshold:
+                    value = X_view[i, node.feature]
+                    if isnan(value):
+                        node_id = node.left_child if node.missing_go_to_left else node.right_child
+                    elif value <= node.threshold:
                         node_id = node.left_child
                     else:
                         node_id = node.right_child
@@ -366,18 +377,20 @@ cdef inline intp_t _find_leaf(const Node* nodes, const float32_t* row) noexcept 
     """
     The leaf the sample with features ``row`` ends up in.
 
-    The NaN test never passes, as inputs are validated to be finite, and sends a NaN where the
-    comparison would anyway. It is there for the compiler: without it, MSVC turns the choice of child
-    into a conditional move, so every level waits for the comparison before the next node loads,
-    where a branch lets the processor predict the way and load ahead. On a 300,000-sample tree that
-    made traversal 2.8 times slower.
+    Keep the three-way branch: with only the comparison, MSVC turns the choice of child into a
+    conditional move, so every level waits for the comparison before the next node loads, where a
+    branch lets the processor predict the way and load ahead. On a 300,000-sample tree that made
+    traversal 2.8 times slower.
     """
     cdef const Node* node = nodes
     cdef float32_t value
     while node.left_child != LEAF:
         value = row[node.feature]
         if isnan(value):
-            node = &nodes[node.right_child]
+            if node.missing_go_to_left:
+                node = &nodes[node.left_child]
+            else:
+                node = &nodes[node.right_child]
         elif value <= node.threshold:
             node = &nodes[node.left_child]
         else:
@@ -392,6 +405,7 @@ cdef intp_t _append_node(
     bint is_leaf,
     intp_t feature,
     float64_t threshold,
+    bint missing_go_to_left,
     float64_t impurity,
     intp_t n_node_samples,
     float64_t weighted_n_node_samples,
@@ -415,10 +429,12 @@ cdef intp_t _append_node(
         node.right_child = _TREE_LEAF
         node.feature = _TREE_UNDEFINED
         node.threshold = _TREE_UNDEFINED
+        node.missing_go_to_left = 0
     else:
         # The children register themselves when they are added.
-        node.feature = feature
+        node.feature = <int32_t> feature
         node.threshold = threshold
+        node.missing_go_to_left = missing_go_to_left
 
     tree.impurity_[node_id] = impurity
     tree.n_node_samples_[node_id] = n_node_samples
@@ -436,6 +452,7 @@ cdef inline void _make_leaf(CostTree tree, intp_t node_id) noexcept nogil:
     node.right_child = _TREE_LEAF
     node.feature = _TREE_UNDEFINED
     node.threshold = _TREE_UNDEFINED
+    node.missing_go_to_left = 0
 
 
 # ------------------------------------------------------------------------------------------------
@@ -583,7 +600,7 @@ cdef void _build_depth_first(CostTree tree, Splitter splitter, const BuildParams
                 is_leaf = split.pos >= end or split.improvement + EPSILON < params.min_impurity_decrease
 
             node_id = tree._add_node(
-                parent, is_left, is_leaf, split.feature, split.threshold, impurity,
+                parent, is_left, is_leaf, split.feature, split.threshold, split.missing_go_to_left, impurity,
                 n_node_samples, weighted_n_node_samples, &splitter.total,
             )
 
@@ -691,7 +708,7 @@ cdef int _add_split_node(
         is_leaf = split.pos >= end or split.improvement + EPSILON < params.min_impurity_decrease
 
     node_id = tree._add_node(
-        parent, is_left, is_leaf, split.feature, split.threshold, impurity,
+        parent, is_left, is_leaf, split.feature, split.threshold, split.missing_go_to_left, impurity,
         n_node_samples, weighted_n_node_samples, &splitter.total,
     )
 
@@ -887,6 +904,7 @@ cdef CostTree _build_pruned_tree(CostTree orig, object leaves_in_subtree):
                 is_leaf,
                 node.feature,
                 node.threshold,
+                node.missing_go_to_left,
                 orig.impurity_[orig_node_id],
                 orig.n_node_samples_[orig_node_id],
                 orig.weighted_n_node_samples_[orig_node_id],
