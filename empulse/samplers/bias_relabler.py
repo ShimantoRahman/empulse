@@ -1,17 +1,15 @@
-import warnings
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 import numpy as np
 from imblearn.base import BaseSampler
 from numpy.typing import ArrayLike, NDArray
-from sklearn.base import clone
-from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, StrOptions
 
+from .._common._bias_sampling import RELABEL_STRATEGIES, PairsStrategyFn, relabel
 from .._common._sklearn_compat import ClassifierTags, Tags, type_of_target
 from .._common._strategies import Strategy
-from .._types import FloatNDArray, IntNDArray, ParameterConstraint
+from .._types import IntNDArray, ParameterConstraint
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
@@ -21,34 +19,6 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     _XT = TypeVar('_XT', NDArray[Any], ArrayLike)
     _YT = TypeVar('_YT', NDArray[Any], ArrayLike)
-
-StrategyFn = Callable[[NDArray[Any], NDArray[Any]], int]
-
-
-def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> int:
-    """Determine promotion and demotion pairs so that y is statistically independent of sensitive feature."""
-    sensitive_indices = np.where(sensitive_feature == 0)[0]
-    not_sensitive_indices = np.where(sensitive_feature == 1)[0]
-    n_sensitive = len(sensitive_indices)
-    n_not_sensitive = len(not_sensitive_indices)
-    n = n_sensitive + n_not_sensitive
-
-    # no swapping needed if one of the groups is empty
-    if n_sensitive == 0 or n_not_sensitive == 0:
-        warnings.warn(
-            'sensitive_feature only contains one class, no relabeling is performed.',
-            UserWarning,
-            stacklevel=2,
-        )
-        return 0
-
-    pos_ratio_sensitive = np.sum(_safe_indexing(y_true, sensitive_indices)) / n_sensitive
-    pos_ratio_not_sensitive = np.sum(_safe_indexing(y_true, not_sensitive_indices)) / n_not_sensitive
-
-    discrimination = pos_ratio_not_sensitive - pos_ratio_sensitive
-
-    # number of pairs to swap label
-    return int(abs(round((discrimination * n_sensitive * n_not_sensitive) / n)))
 
 
 class BiasRelabler(BaseSampler):  # type: ignore[misc]
@@ -171,10 +141,7 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         'strategy': [StrOptions({'statistical parity', 'demographic parity'}), callable],
         'transform_feature': [callable, None],
     }
-    _strategy_mapping: ClassVar[dict[Strategy, StrategyFn]] = {
-        'statistical parity': _independent_pairs,
-        'demographic parity': _independent_pairs,
-    }
+    _strategy_mapping: ClassVar[dict[Strategy, PairsStrategyFn]] = RELABEL_STRATEGIES
 
     if TYPE_CHECKING:  # pragma: no cover
         # BaseEstimator should dynamically generate the method signature at runtime
@@ -185,7 +152,7 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         self,
         estimator: Any,
         *,
-        strategy: StrategyFn | Strategy = 'statistical parity',
+        strategy: PairsStrategyFn | Strategy = 'statistical parity',
         transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
     ):
         super().__init__()
@@ -258,64 +225,13 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         self.classes_: NDArray[np.int64] = np.unique(y)
         if len(self.classes_) == 1:
             return X, y
-        y_binarized = np.where(y == self.classes_[1], 1, 0)
-
-        if self.transform_feature is not None:
-            sensitive_feature = self.transform_feature(sensitive_feature)
-
-        self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X, y)
-        y_pred = self.estimator_.predict_proba(X)[:, 1]
-
-        strategy = self._strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
-        n_pairs = strategy(y_binarized, sensitive_feature)
-        if n_pairs <= 0:
-            return X, np.asarray(y)
-
-        sensitive_indices = np.where(sensitive_feature == 0)[0]
-        non_sensitive = np.where(sensitive_feature == 1)[0]
-        probas_non_sensitive = y_pred[non_sensitive]
-        probas_sensitive = y_pred[sensitive_indices]
-
-        # Candidates are chosen on the 0/1-encoded target, and relabelled with the original labels.
-        demotion_candidates = _get_demotion_candidates(probas_non_sensitive, y_binarized[non_sensitive], n_pairs)
-        promotion_candidates = _get_promotion_candidates(probas_sensitive, y_binarized[sensitive_indices], n_pairs)
-        negative_label, positive_label = self.classes_
-
-        # map promotion and demotion candidates to original indices
-        indices = np.arange(len(y))
-        demotion_candidates = indices[non_sensitive][demotion_candidates]
-        promotion_candidates = indices[sensitive_indices][promotion_candidates]
-
-        # relabel the data
-        if hasattr(y, 'copy'):
-            relabeled_y = y.copy()
-        elif hasattr(y, 'clone'):
-            relabeled_y = y.clone()
-        else:
-            relabeled_y = np.copy(y)
-
-        if hasattr(relabeled_y, 'loc'):
-            relabeled_y.loc[demotion_candidates] = negative_label
-            relabeled_y.loc[promotion_candidates] = positive_label
-        else:
-            relabeled_y[demotion_candidates] = negative_label
-            relabeled_y[promotion_candidates] = positive_label
-
-        return X, relabeled_y
-
-
-def _get_demotion_candidates(y_pred: FloatNDArray, y_true: FloatNDArray, n_pairs: int) -> FloatNDArray:
-    """Return the n_pairs instances with the lowest probability of being positive class label."""
-    positive_indices = np.where(y_true == 1)[0]
-    positive_predictions = y_pred[positive_indices]
-    demotion_candidates: FloatNDArray = positive_indices[np.argsort(positive_predictions)[:n_pairs]]
-    return demotion_candidates
-
-
-def _get_promotion_candidates(y_pred: FloatNDArray, y_true: FloatNDArray, n_pairs: int) -> FloatNDArray:
-    """Return the n_pairs instances with the lowest probability of being negative class label."""
-    negative_indices = np.where(y_true == 0)[0]
-    negative_predictions = y_pred[negative_indices]
-    promotion_candidates: FloatNDArray = negative_indices[np.argsort(negative_predictions)[-n_pairs:]]
-    return promotion_candidates
+        y, self.estimator_ = relabel(
+            X,
+            y,
+            sensitive_feature,
+            self.classes_,
+            estimator=self.estimator,
+            strategy=self.strategy,
+            transform_feature=self.transform_feature,
+        )
+        return X, y

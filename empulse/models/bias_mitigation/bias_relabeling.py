@@ -1,9 +1,10 @@
 from typing import Any
 
+import numpy as np
 from sklearn.base import clone
 
+from ..._common._bias_sampling import relabel
 from ..._types import FloatNDArray, IntNDArray
-from ...samplers import BiasRelabler
 from .._base.bias import BaseBiasMitigationClassifier
 
 
@@ -129,10 +130,15 @@ class BiasRelabelingClassifier(BaseBiasMitigationClassifier):
     """
 
     def _fit_mitigated(self, X: FloatNDArray, y: IntNDArray, sensitive_feature: IntNDArray, **fit_params: Any) -> Any:
-        sampler = BiasRelabler(
-            estimator=self.estimator, strategy=self.strategy, transform_feature=self.transform_feature
+        y, _ = relabel(
+            X,
+            y,
+            sensitive_feature,
+            np.unique(y),
+            estimator=self.estimator,
+            strategy=self.strategy,
+            transform_feature=self.transform_feature,
         )
-        X, y = sampler.fit_resample(X, y, sensitive_feature=sensitive_feature)
         estimator_ = clone(self.estimator)
         estimator_.fit(X, y, **fit_params)
         return estimator_

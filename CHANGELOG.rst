@@ -481,6 +481,12 @@ Packaging and dependencies
 - |Enhancement| Empulse's compiled extensions no longer build against scikit-learn, so a
   scikit-learn release no longer needs a matching Empulse release, and Cython is no longer pinned
   to the version scikit-learn's wheels were built with (any Cython 3.1 or later builds Empulse).
+- |API| ``imbalanced-learn`` is no longer a required dependency. It is only needed by
+  :mod:`empulse.samplers`, and is installed by the new ``sampling`` extra
+  (``pip install empulse[sampling]``), which ``empulse[optional]`` includes. Importing
+  :mod:`empulse.samplers` without it raises an error naming the extra.
+  :class:`~empulse.models.BiasRelabelingClassifier` and
+  :class:`~empulse.models.BiasResamplingClassifier` work without it.
 - |Enhancement| Empulse works with scikit-learn 1.5.2 and later (1.7.2 and later on Python 3.14),
   where it used to need 1.9. Everything is tested against 1.5.2, 1.6.1, 1.7.2, 1.8.0 and 1.9.1.
 - |Fix| The source distribution no longer contains the test modules at the top of ``tests/``.

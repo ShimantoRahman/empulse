@@ -7,14 +7,9 @@ Their scikit-learn and imbalanced-learn conformance is checked in ``test_sampler
 import numpy as np
 import pytest
 
+from empulse._common._bias_sampling import _get_demotion_candidates, _get_promotion_candidates, _independent_pairs
 from empulse._common._strategies import _independent_weights
-from empulse.samplers.bias_relabler import (
-    BiasRelabler,
-    _get_demotion_candidates,
-    _get_promotion_candidates,
-    _independent_pairs,
-)
-from empulse.samplers.bias_resampler import BiasResampler
+from empulse.samplers import BiasRelabler, BiasResampler
 
 
 def test_independent_weights():

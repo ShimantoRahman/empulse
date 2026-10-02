@@ -773,7 +773,6 @@ wheels = [
 name = "empulse"
 source = { editable = "." }
 dependencies = [
-    { name = "imbalanced-learn" },
     { name = "joblib" },
     { name = "narwhals" },
     { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -793,8 +792,12 @@ boosting = [
 optional = [
     { name = "catboost", version = "1.2.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "catboost", version = "1.2.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "imbalanced-learn" },
     { name = "lightgbm" },
     { name = "xgboost" },
+]
+sampling = [
+    { name = "imbalanced-learn" },
 ]
 
 [package.dev-dependencies]
@@ -867,8 +870,8 @@ requires-dist = [
     { name = "catboost", marker = "python_full_version == '3.13.*' and extra == 'boosting'", specifier = ">=1.2.8" },
     { name = "catboost", marker = "python_full_version < '3.13' and extra == 'boosting'", specifier = ">=1.2.7" },
     { name = "catboost", marker = "python_full_version >= '3.14' and extra == 'boosting'", specifier = ">=1.2.9" },
-    { name = "empulse", extras = ["boosting"], marker = "extra == 'optional'" },
-    { name = "imbalanced-learn", specifier = ">=0.14.2" },
+    { name = "empulse", extras = ["boosting", "sampling"], marker = "extra == 'optional'" },
+    { name = "imbalanced-learn", marker = "extra == 'sampling'", specifier = ">=0.14.2" },
     { name = "joblib", specifier = ">=1.4.0" },
     { name = "lightgbm", marker = "extra == 'boosting'", specifier = ">=4.6.0" },
     { name = "narwhals", specifier = ">=2.21.0" },
@@ -880,7 +883,7 @@ requires-dist = [
     { name = "sympy", specifier = ">=1.14.0" },
     { name = "xgboost", marker = "extra == 'boosting'", specifier = ">=1.7.4" },
 ]
-provides-extras = ["boosting", "optional"]
+provides-extras = ["boosting", "sampling", "optional"]
 
 [package.metadata.requires-dev]
 dev = [

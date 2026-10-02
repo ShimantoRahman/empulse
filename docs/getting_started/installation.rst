@@ -10,12 +10,12 @@ Empulse requires **Python 3.11 or higher**.
 
     pip install empulse
 
-That gives you every metric, the linear and tree-based models, the samplers and the optimizers.
+That gives you every metric, the linear and tree-based models and the optimizers.
 
 Optional extras
 ===============
 
-The boosting models need extra dependencies, installable as an extra:
+The boosting models and the samplers need extra dependencies, each installable as an extra:
 
 .. list-table::
     :widths: 22 30 48
@@ -29,6 +29,9 @@ The boosting models need extra dependencies, installable as an extra:
       - XGBoost, LightGBM and CatBoost, the backends behind
         :class:`~empulse.models.CSBoostClassifier` and
         :class:`~empulse.models.B2BoostClassifier`.
+    * - ``sampling``
+      - ``pip install empulse[sampling]``
+      - imbalanced-learn, which the samplers in :mod:`empulse.samplers` build on.
 
 To install everything, use the ``optional`` extra, which pulls in every extra:
 
