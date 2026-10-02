@@ -4,454 +4,165 @@
 Metrics
 -------
 
-- |API| :class:`~empulse.metrics.Capability` has a new ``RANKING`` member: the metric depends on
-  the scores only through how they rank the samples, so any strictly increasing transformation of
-  them (e.g. logits instead of probabilities) gives the same value. :class:`~empulse.metrics.MaxProfit`,
-  :class:`~empulse.metrics.MinCost`, :class:`~empulse.metrics.EmpiricalMaxProfit`,
-  :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC` declare it, and a
-  :class:`~empulse.metrics.MixtureMetric` has it when all of its components do.
-- |Efficiency| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
-  :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score` and the other prebuilt
-  maximum profit metrics without a stochastic variable) now find the highest profit in a single
-  compiled pass over the ranked samples. Scoring the candidate models of
-  :class:`~empulse.models.ProfLogitClassifier` is about twice as fast, and the pass releases the GIL.
-  Thresholds with exactly the same profit now resolve to the one targeting the fewest samples, so
-  :meth:`~empulse.metrics.Metric.optimal_rate` can differ from before for a cost matrix under which
-  several thresholds tie. Before, rounding in the order the profit was computed decided the tie.
-- |Efficiency| Cloning an estimator whose ``loss`` is a :class:`~empulse.metrics.Metric`, as grid
-  search and cross-validation do for every candidate and fold, is about seven times faster. Copying
-  a metric recompiled each of its expressions, and it now shares them. Metrics unpickled in a
-  parallel worker also reuse expressions that are already compiled in that process.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` now
-  honours ``random_state`` with NumPy 1.x. :class:`~empulse.metrics.Metric` copies its strategy,
-  and before NumPy 2.0 copying a random generator discarded its seed sequence, from which SciPy's
-  quasi-Monte Carlo sampler draws: every metric, and every run, sampled differently. Pickled
-  metrics are affected the same way and are fixed too.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with two or more stochastic variables now gives the
-  same result in every Python process for a given ``random_state``. Which variable was assigned
-  which dimension of the quasi-Monte Carlo samples, or which Monte Carlo draw, followed an order
-  that changed with Python's per-process string hash seed, so the score varied from run to run
-  (in one two-variable example with ``2**14`` samples, by about 1e-6 relative with quasi-Monte
-  Carlo and 4e-3 with Monte Carlo). The variables are now ordered by name, so a given ``random_state`` may give a
-  slightly different result than before, once. The order of the integrals in the metric's LaTeX
-  representation is fixed the same way.
-- |Fix| :class:`~empulse.metrics.MaxProfit` now integrates a stochastic variable, and asks for a
-  parameter, that cancels out when the four cost matrix terms are added up, such as ``v`` in
-  ``tp_benefit = clv - v`` and ``fp_cost = v``. The profit weighs those terms differently, so the
-  variable still matters, but it was looked for in their sum, and scoring such a metric failed.
-- |Fix| :class:`~empulse.metrics.AUEPC` and :func:`~empulse.metrics.auepc_score` now work with
-  NumPy 1.x. They called ``numpy.trapezoid``, which only exists from NumPy 2.0.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` with a :class:`~empulse.metrics.Cost` or
-  :class:`~empulse.metrics.Savings` component no longer applies the elastic-net penalty twice when
-  it is the loss of :class:`~empulse.models.CSLogitClassifier` or
-  :class:`~empulse.models.ProfLogitClassifier`. The mixture replaces its components' penalties with
-  a single one of its own, but those components kept applying theirs, so models fitted on such a
-  mixture were regularized more strongly than ``C`` asks for.
-- |Fix| A :class:`~empulse.metrics.MaxProfit` loss of :class:`~empulse.models.ProfLogitClassifier`,
-  or of :class:`~empulse.models.CSLogitClassifier` with an optimizer that uses only the objective's
-  value, now ranks the samples by the model's linear predictions rather than by their
-  probabilities. Rounding makes all probabilities of predictions above about 37 exactly 1.0, and
-  those above about 30 barely distinguishable, so the objective scored such samples as ties. A
-  model's predictions rarely get this large at the optimum, but the genetic algorithm's candidates
-  often do, and it compared them on slightly wrong values.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now works when the metric's
-  symbols were declared with assumptions, e.g. ``sympy.symbols('a b', positive=True)``. Parameter
-  values were substituted into the expressions by name, which sympy turns into symbols without
-  assumptions that do not match the metric's own, so they were left in place. Depending on the
-  integration method, this raised a ``TypeError`` for a distribution whose support depends on its
-  parameters (such as a uniform one), for the ``'quad'``, ``'monte-carlo'`` and
-  ``'quasi-monte-carlo'`` integration methods, and for profits that are not polynomial in the
-  stochastic variable. Distribution parameters with assumptions also skipped part of their
-  validation.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now accepts distributions
-  whose parameters are expressions, e.g. ``sympy.stats.Beta('v', 2 * a, b)``. Each argument of the
-  distribution was treated as the name of a parameter, so the metric raised
-  ``ValueError: Metric expected a value for 2*a`` whatever values were passed. It now asks for the
-  symbols the arguments are built from (here ``a`` and ``b``).
-- |Fix| :class:`~empulse.metrics.MaxProfit` with a single stochastic variable and the default
-  ``integration_method='auto'`` no longer raises ``KeyError`` when a parameter of the variable's
-  distribution also appears elsewhere in the cost matrix, e.g.
-  ``sympy.stats.Gamma('v', a, b) * clv - a``. The distribution's parameters were removed from the
-  values used for the rest of the profit.
-- |Fix| Deterministic :class:`~empulse.metrics.MaxProfit` metrics (and so
-  :func:`~empulse.metrics.mpc_score`, :func:`~empulse.metrics.mpa_score`,
-  :func:`~empulse.metrics.mpcs_score` and :func:`~empulse.metrics.empcs_score`) no longer return
-  ``nan`` on data with a single class. Their score is now the better of targeting no one and
-  targeting everyone, and their optimal rate and threshold follow from it.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
-  :func:`~empulse.metrics.empc_score` and :func:`~empulse.metrics.empa_score`) now scores data with
-  a single class as the better of targeting no one and targeting everyone. It only considered
-  targeting no one, so e.g. :func:`~empulse.metrics.empc_score` scored ``0.0`` rather than ``56.0``
-  when every customer churns.
+- |API| :class:`~empulse.metrics.Capability` has a new ``RANKING`` member for metrics that depend
+  on the scores only through how they rank the samples, so logits give the same value as
+  probabilities. :class:`~empulse.metrics.MaxProfit`, :class:`~empulse.metrics.MinCost`,
+  :class:`~empulse.metrics.EmpiricalMaxProfit`, :class:`~empulse.metrics.EmpiricalMinCost`,
+  :class:`~empulse.metrics.AUEPC`, and a :class:`~empulse.metrics.MixtureMetric` whose components
+  all have it, declare it.
+- |Enhancement| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` is
+  10-50x more accurate for the same number of samples, by using the stochastic variables as control
+  variates. Results for a given ``random_state`` change.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` is much faster: deterministic metrics (such as
+  :func:`~empulse.metrics.mpc_score`) about 2x, and with stochastic variables (such as
+  :func:`~empulse.metrics.empc_score`) 8-25x for the ROC convex hull and its expected profit,
+  about 20x with ``integration_method='quasi-monte-carlo'`` or ``'monte-carlo'``, and 6-85x with
+  ``'quad'``. Monte Carlo integration now uses at most 32 MiB of memory. When several thresholds
+  give exactly the same profit, the one targeting the fewest samples is chosen.
+- |Efficiency| Calling a :class:`~empulse.metrics.Metric` is 10-40% faster, and with
+  ``validate=False`` (as models do during training) it skips label checks too, making metric
+  evaluations inside training loops 1.7-3.8x faster. Cloning an estimator whose ``loss`` is a
+  :class:`~empulse.metrics.Metric`, as grid search and cross-validation do, is about 7x faster.
+- |Efficiency| The logistic losses of :class:`~empulse.metrics.Cost` and
+  :class:`~empulse.metrics.LogCost`, used by :class:`~empulse.models.CSLogitClassifier`,
+  :class:`~empulse.models.ProfLogitClassifier` and :class:`~empulse.models.CSBoostClassifier`, are
+  1.3-6.6x faster, and their values and derivatives are now exact when the predicted probability
+  is close to 1.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now gives reproducible results
+  for a given ``random_state``: with NumPy 1.x and ``integration_method='quasi-monte-carlo'``, and
+  across Python processes with two or more stochastic variables. Results for a given
+  ``random_state`` may change once.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now handles distribution
+  parameters that are expressions (e.g. ``Beta('v', 2 * a, b)``), mix numbers and symbols, are equal
+  numbers, carry sympy assumptions (e.g. ``positive=True``), or also appear elsewhere in the cost
+  matrix, and stochastic variables that cancel out of the sum of the cost matrix terms. These
+  raised errors or were ignored.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` samples
+  :func:`~sympy.stats.Arcsin` and :func:`~sympy.stats.PowerFunction` variables over their correct
+  support, and with ``integration_method='quad'`` and four or more stochastic variables integrates
+  each over its own support.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
   :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
-  :func:`~empulse.metrics.empcs_score`) now raises a ``ValueError`` when ``y_true`` and ``y_score``
-  are empty or differ in length. Empty inputs crashed the Python interpreter with a segmentation
-  fault, and inputs of different lengths raised an unhelpful ``IndexError``.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables (and so
-  :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
-  :func:`~empulse.metrics.empcs_score`) no longer underestimates the maximum profit on large
-  datasets. The ROC convex hull it integrates over treated any turn of the curve smaller than a fixed
-  tolerance as a straight line, but the points of a curve of n samples lie about 1/n apart, so from
-  roughly 10,000 samples on it dropped vertices of the hull: scores on 100,000 samples could come out
-  about 1% too low. The hull is now computed exactly from the integer counts of the curve. This also
-  affects the optimal rate and threshold of these metrics, the training objectives of
-  :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.CSBoostClassifier` with
-  them, and :class:`~empulse.models.ProfTreeClassifier` with a stochastic
-  :class:`~empulse.metrics.MaxProfit` loss. Results on smaller datasets are normally unchanged.
+  :func:`~empulse.metrics.empcs_score`) no longer underestimates the maximum profit on datasets of
+  roughly 10,000 samples or more (by about 1% on 100,000 samples). This also affects the models
+  trained with these metrics.
+- |Fix| :class:`~empulse.metrics.MaxProfit` metrics on data with a single class now score the
+  better of targeting no one and targeting everyone. Deterministic metrics returned ``nan`` and
+  stochastic ones only considered targeting no one.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables raises a ``ValueError`` for
+  empty or mismatched ``y_true`` and ``y_score``, instead of crashing the interpreter or raising an
+  ``IndexError``.
 - |Fix| :class:`~empulse.metrics.EmpiricalMaxProfit`, :class:`~empulse.metrics.EmpiricalMinCost`
   and :class:`~empulse.metrics.AUEPC` (and so :func:`~empulse.metrics.empb_score` and
-  :func:`~empulse.metrics.auepc_score`) now handle tied scores. No threshold can separate samples
-  with equal scores, so each group of ties is now targeted all at once, as
-  :class:`~empulse.metrics.MaxProfit` already did. Previously the profit curve was accumulated one
-  sample at a time, so the result depended on the order the tied samples happened to be in: the
-  same data could score 84.0 or 9.0 with :func:`~empulse.metrics.empb_score`. AUEPC now scores the
-  expected profit curve under random tie-breaking. Scores on data with ties change as a result;
-  scores on data without ties are unchanged.
-- |Fix| :func:`~empulse.metrics.auepc_score` and :class:`~empulse.metrics.AUEPC` no longer raise
-  ``ZeroDivisionError`` when the oracle's cumulative profit turns negative after its first sample.
-  A curve of a single point now scores that point's ratio. The curve also stops where the oracle's
-  profit reaches exactly zero, rather than dividing by that zero, and a dataset in which no sample
-  is profitable scores ``0.0``.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with a single stochastic variable no longer raises
-  ``IndexError`` when the variable's distribution mixes numeric and symbolic parameters (e.g.
-  ``sympy.stats.Beta('gamma', 6, beta)``) or has two equal numeric parameters (e.g.
-  ``sympy.stats.Beta('gamma', 6, 6)``). This affected the score, the optimal rate and threshold,
-  and the training objectives of :class:`~empulse.models.CSLogitClassifier` and
-  :class:`~empulse.models.CSBoostClassifier`.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'`` now
-  samples :func:`~sympy.stats.Arcsin` and :func:`~sympy.stats.PowerFunction` random variables over
-  their correct support. Their upper bound was passed to SciPy as the width of the support, so
-  ``Arcsin('x', 2, 5)`` was sampled on ``[2, 7]`` instead of ``[2, 5]``.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quad'`` and four or more
-  stochastic variables now integrates each variable over its own support. The variables were
-  paired with the supports in reverse order.
+  :func:`~empulse.metrics.auepc_score`) now handle tied scores, which made the result depend on the
+  order of the samples. Scores on data with ties change.
+- |Fix| :class:`~empulse.metrics.AUEPC` and :func:`~empulse.metrics.auepc_score` now work with
+  NumPy 1.x and no longer raise ``ZeroDivisionError`` when the oracle's cumulative profit turns
+  non-positive. Their documentation no longer lists ``optimal_threshold`` and ``optimal_rate``.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` with a :class:`~empulse.metrics.Cost` or
+  :class:`~empulse.metrics.Savings` component no longer applies the elastic-net penalty twice when
+  used as the loss of :class:`~empulse.models.CSLogitClassifier` or
+  :class:`~empulse.models.ProfLogitClassifier`. :class:`~empulse.metrics.MixtureMetric` also passes
+  ``validate`` on to its components.
 - |Fix| :func:`~empulse.metrics.lift_score` no longer raises ``ZeroDivisionError`` when
-  ``fraction * n_samples`` rounds to zero; the top fraction now always contains at least one
-  sample. ``fraction=0`` is now rejected with a ``ValueError``.
-- |Fix| :meth:`~empulse.metrics.MixtureMetric.__call__`,
-  :meth:`~empulse.metrics.MixtureMetric.optimal_rate` and
-  :meth:`~empulse.metrics.MixtureMetric.optimal_threshold` now pass ``validate`` on to their
-  component metrics, which previously re-validated their parameters on every call.
-- |Fix| The documentation of :func:`~empulse.metrics.auepc_score` no longer lists
-  ``optimal_threshold`` and ``optimal_rate``, which AUEPC does not support. Use
-  :func:`~empulse.metrics.empb_score`'s methods instead.
-- |Efficiency| A compiled cost expression no longer re-derives the names of its free symbols every
-  time it is evaluated; they are computed once per expression. This matters where the rest of an
-  evaluation is cheap, such as scoring a :class:`~empulse.models.ProfTreeClassifier` tree from its
-  leaves with a stochastic :class:`~empulse.metrics.MaxProfit` metric (about 10% faster).
-- |Efficiency| The ROC convex hull behind :class:`~empulse.metrics.MaxProfit` with stochastic
-  variables (and so :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
-  :func:`~empulse.metrics.empcs_score`) is computed 8-16x faster: in about 3 ms instead of 27 ms on
-  100,000 samples, and in about 1.5 us instead of 22 us on 20. It no longer sorts the curve's points
-  a second and third time, sorts the samples with an unstable sort, and runs in C++ without calling
-  back into NumPy except to sort large inputs. The hull took nearly all the time of these scores on
-  large datasets and up to a fifth of each gradient boosting round of
-  :class:`~empulse.models.CSBoostClassifier` with them; a
-  :class:`~empulse.models.ProfTreeClassifier` generation with them is about 5% faster.
-- |Efficiency| :class:`~empulse.metrics.MaxProfit` with one stochastic variable (and so
-  :func:`~empulse.metrics.empc_score`, :func:`~empulse.metrics.empa_score` and
-  :func:`~empulse.metrics.empcs_score`) scores a ROC convex hull 10-25x faster, in about 15 us
-  instead of 150-400 us for a hull of 20 points. Splitting the variable's support into the regions
-  where one threshold is optimal and integrating the profit over each now runs in C++, for the ten
-  distributions with closed-form partial moments and profits up to quadratic in the variable; other
-  profits and distributions are scored as before. Scoring the hull took most of the time of fitting
-  a :class:`~empulse.models.ProfTreeClassifier` with such a metric, which is now about 3x faster.
-- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quasi-monte-carlo'``
-  or ``'monte-carlo'`` (what ``'auto'`` uses for most metrics with two or more stochastic
-  variables) scores and finds the
-  optimal rate about 20x faster, in about 7 ms instead of 150 ms for a ROC convex hull of 85 points
-  and 16,384 samples, with identical results. The profit function is compiled once instead of once
-  per hull point on every call, its values over the samples are reused while the parameters stay the
-  same, and all hull points are evaluated at once. Memory use is now bounded: at most 32 MiB of
-  intermediate values, however large the hull and the number of samples.
-- |Efficiency| :class:`~empulse.metrics.MaxProfit` with ``integration_method='quad'`` (what
-  ``'auto'`` uses for two stochastic variables when one of them cannot be sampled by quasi-Monte
-  Carlo) scores 6-85x faster and finds the optimal rate 8-30x faster, with identical results: two
-  stochastic variables and a ROC convex hull of 85 points take 0.9 s instead of 77 s. The profit
-  function and the density are compiled once instead of once per hull point on every call, the
-  density is evaluated once per point of the integration instead of once per hull point, and the
-  hull point with the highest profit is found by bisection instead of by evaluating the profit at
-  every hull point.
-- |Enhancement| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` (what
-  ``'auto'`` uses for three or more stochastic variables when one of them cannot be sampled by
-  quasi-Monte Carlo) is 10-50x more accurate for the same number of samples, and so gives a
-  different result than before for a given ``random_state``. Every stochastic variable with a SciPy
-  counterpart and a finite mean and variance now serves as a control variate: the score is the
-  intercept of regressing each sample's maximum profit on those variables, whose means are known
-  exactly, rather than the plain mean over the samples. The optimal rate improves about 2x. Other
-  variables are left out, because sympy's own expectation is wrong or does not finish for some
-  distributions.
-- |Efficiency| A :class:`~empulse.metrics.Metric` now finds the names of its parameters once rather
-  than on every call, which walked all four cost expressions each time. Calls on 1,000 samples are
-  about 10-40% faster; the names are found again if the metric's cost matrix is changed.
-- |Efficiency| A :class:`~empulse.metrics.Metric` called with ``validate=False`` now also skips the
-  checks of the labels, which the models that pass it have already checked when they were fitted,
-  and only checks that the scores are finite. This makes the metric evaluations inside training
-  loops (such as :class:`~empulse.models.ProfTreeClassifier`, :class:`~empulse.models.ProfSRClassifier`
-  and the out-of-bag weighting of :class:`~empulse.models.CSForestClassifier` and
-  :class:`~empulse.models.CSBaggingClassifier`) 1.7-3.8x faster on up to 10,000 samples, together
-  with the entry above. Results are unchanged, and scores that are ``nan`` or infinite still raise.
-- |Efficiency| The compiled logistic losses behind cost metrics are 1.3-6.6x faster. They drive
-  :class:`~empulse.models.CSLogitClassifier`, :class:`~empulse.models.ProfLogitClassifier` with a
-  cost loss, and the gradient boosting of :class:`~empulse.models.CSBoostClassifier`. Their matrix
-  products now go to BLAS, and their exponentials are computed by numpy's vectorized ``exp`` for
-  all samples at once. Fitting ``CSLogitClassifier`` on 100,000 samples with 50 features went from
-  0.81 to 0.25 seconds, and ``ProfLogitClassifier`` on 10,000 samples with 20 features from 2.3 to
-  1.1 seconds. The derivatives are also exact where the predicted probability is close to 1. They
-  used to be computed as ``p * (1 - p)``, which rounds to 0 once the margin exceeds about 37.
-- |Efficiency| :class:`~empulse.metrics.LogCost`'s logistic regression objective and gradient
-  boosting gradient now run in compiled kernels, like those of :class:`~empulse.metrics.Cost`,
-  which are 1.4-3.6x faster than the numpy code they replace. Fitting
-  :class:`~empulse.models.CSLogitClassifier` with a log-cost loss on 100,000 samples with 50
-  features went from 1.0 to 0.23 seconds, and :class:`~empulse.models.ProfLogitClassifier` on
-  10,000 samples with 20 features from 3.2 to 1.5 seconds. The loss is also exact where the
-  predicted probability is close to 1. Its ``log(1 - p)`` was computed from the rounded
-  probability, which was off by up to 0.1% (relative) once the margin exceeds about 14, and the
-  boosting hessian's ``p * (1 - p)`` rounded to 0 once it exceeds about 37.
+  ``fraction * n_samples`` rounds to zero, and rejects ``fraction=0``.
 
 Models
 ------
 
 - |MajorFeature| :class:`~empulse.models.CSTreeClassifier` and
-  :class:`~empulse.models.CSForestClassifier` are grown by Empulse's own compiled tree builder
-  instead of scikit-learn's :class:`~sklearn.tree.DecisionTreeClassifier` and
-  :class:`~sklearn.ensemble.RandomForestClassifier`. The builder is ported from scikit-learn's and
-  specialized for binary cost-sensitive trees, and Empulse's wheels no longer depend on the binary
-  layout of a particular scikit-learn release.
-- |Efficiency| Fitting :class:`~empulse.models.CSTreeClassifier` and
-  :class:`~empulse.models.CSForestClassifier` is about three times faster, growing the same trees,
-  and a forest needs about 30% less memory (100,000 samples, 50 trees: 86 s instead of 278 s on one
-  core, 23 s instead of 81 s on four). Large nodes are sorted by a radix sort, each sample's costs
-  are read from a single record, and leaves record their cheapest class while the tree grows, so
-  fitting no longer passes the training data through every tree again. A forest's ``predict`` and
-  ``predict_proba`` add up the trees' votes without storing every tree's leaf for every sample.
-  With ``criterion="cost"`` and the default ``min_impurity_decrease=None``, nodes whose samples all
-  cost least under the same decision become leaves without a split search. Fitted trees can differ
-  from before where two splits tie up to rounding, as the radix sort orders equal feature values
-  differently.
-- |API| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
-  no longer have an ``estimator_`` attribute holding a scikit-learn estimator, nor a
-  ``criterion_``. ``tree_`` is now an Empulse ``CostTree``, whose attributes carry the names of
-  scikit-learn's tree, and a forest's ``estimators_`` are :class:`~empulse.models.CSTreeClassifier`
-  instances. :func:`sklearn.tree.export_graphviz` accepts a fitted
-  :class:`~empulse.models.CSTreeClassifier`; :func:`sklearn.tree.plot_tree` and
-  :func:`sklearn.tree.export_text` only accept scikit-learn's own trees. Models pickled with an
-  earlier release do not load.
-- |API| The ``monotonic_cst`` parameter of :class:`~empulse.models.CSTreeClassifier` and
-  :class:`~empulse.models.CSForestClassifier` is removed, and their ``criterion`` no longer accepts
-  a criterion object, only ``"cost"``, ``"gini"``, ``"entropy"`` or ``"log_loss"``.
-- |API| :meth:`CSTreeClassifier.cost_complexity_pruning_path
+  :class:`~empulse.models.CSForestClassifier` are grown by Empulse's own tree builder instead of
+  scikit-learn's, about 3x faster and with about 30% less memory for a forest. Fitted trees can
+  differ where two splits tie up to rounding.
+- |API| As a consequence, :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` lose their ``estimator_`` and ``criterion_``
+  attributes and their ``monotonic_cst`` parameter, ``tree_`` is an Empulse ``CostTree`` with the
+  attribute names of scikit-learn's tree, a forest's ``estimators_`` are
+  :class:`~empulse.models.CSTreeClassifier` instances, and ``criterion`` only accepts ``"cost"``,
+  ``"gini"``, ``"entropy"`` or ``"log_loss"``. :func:`sklearn.tree.export_graphviz` accepts a
+  fitted :class:`~empulse.models.CSTreeClassifier`; :func:`sklearn.tree.plot_tree` and
+  :func:`sklearn.tree.export_text` do not. :meth:`CSTreeClassifier.cost_complexity_pruning_path
   <empulse.models.CSTreeClassifier.cost_complexity_pruning_path>` takes the keyword arguments of
-  ``fit``, such as instance-dependent costs, instead of ``sample_weight``, and fits an unpruned copy
-  of the classifier with them.
-- |Fix| :class:`~empulse.models.CSForestClassifier` with ``warm_start=True`` now adds trees to the
-  fitted forest. It refitted the whole forest on every call.
-- |Fix| :class:`~empulse.models.CSForestClassifier` with ``combination="weighted_voting"`` and a
-  ``class_weight`` now weighs each tree by its loss on the samples it left out. Bootstrap samples are
-  drawn in proportion to the class weights, and the weights were computed on samples drawn without
-  them.
-- |API| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns, for
-  each leaf, the class that costs least on the training samples in it, instead of the leaf's
-  majority class. With imbalanced classes the majority is usually negative even where a positive
-  prediction is cheaper, so ``predict`` ignored the costs the tree was grown to lower: on the bank
-  telemarketing data it saved -0.57 of the cost of the best single decision, and now saves 0.45. A
-  leaf where both classes cost the same still predicts its majority class. ``predict_proba`` is
-  unchanged. :class:`~empulse.models.CSForestClassifier` and
-  :class:`~empulse.models.CSBaggingClassifier` (with its default base trees) now predict by a
-  majority, or out-of-bag weighted, vote of their trees' cheapest classes, instead of the class with
-  the highest average probability. With instance-dependent costs, these decisions use the training
-  samples' costs; threshold ``predict_proba`` (e.g. with :class:`~empulse.models.CSThresholdClassifier`)
-  to decide each sample by its own.
-- |API| :class:`~empulse.models.CSTreeClassifier` with ``criterion="cost"`` now only splits a
-  node if the split lowers the cost of the training samples. The new default
-  ``min_impurity_decrease=None`` resolves to ``1e-12`` times the average cost per sample; pass
-  ``min_impurity_decrease=0.0`` for the previous trees. The cost impurity is the cost of a node's
-  best decision, so a split whose children both keep that decision leaves it unchanged, and such
-  splits were made anyway until every leaf held one class. On the four bundled datasets and two
-  synthetic ones, those trees were 30 to 300 levels deep. The new trees are 3 to 15 times
-  shallower, fit up to 3 times faster, and, deciding each leaf by its cost-optimal threshold, save
-  as much or more on held-out data: from -0.33 to 0.46 on the bank telemarketing data, and from
-  0.21 to 0.33 on the VUB credit scoring data. :class:`~empulse.models.CSForestClassifier` is
-  unchanged: averaging over many trees makes deep trees worthwhile there, and no single setting
-  did better on every dataset.
-- |Efficiency| :class:`~empulse.models.ProfSRClassifier` with a loss that has
-  the ``RANKING`` :class:`~empulse.metrics.Capability` (including its default maximum profit) scores the
-  programs' outputs directly instead of converting them to probabilities first. Fitting is about
-  1.3 times as fast on 10,000 samples and 1.5 times on 50,000. Outputs above about 37, which all
-  rounded to a probability of exactly 1.0, are no longer scored as ties.
-- |Fix| :class:`~empulse.models.ProfSRClassifier` now evolves every generation it is asked for.
-  The search stopped as soon as the best fitness reached 0. The fitness is the loss, and that is
-  negative whenever the model makes a profit, so the evolution stopped after the first generation
-  for nearly every problem. ``n_iter_`` now reports the number of generations actually evolved.
-- |Enhancement| :class:`~empulse.models.ProfSRClassifier` has an ``n_jobs`` parameter to score the
-  population in parallel. The fitted expression does not depend on it.
-- |API| :class:`~empulse.models.ProfSRClassifier` runs its own symbolic regression engine, adapted
-  from gplearn (BSD-3-Clause), instead of depending on gplearn. The ``symbolic`` extra no longer
-  exists and gplearn is not needed. ``generations`` is now ``max_iter``, and the fitted ``model_``
-  is replaced by ``program_`` (the fitted expression, which names the columns of a dataframe),
-  ``pareto_front_`` and ``run_details_``. The defaults follow the profit-driven symbolic regression
-  paper the model implements (a function set with ``exp`` and ``sig``, expressions of at most 20
-  nodes, tuned constants), so a model fitted with the default parameters differs from before.
-- |Feature| :class:`~empulse.models.ProfSRClassifier` limits the size of an expression with
-  ``max_length``, returns the best expression found at every length as ``pareto_front_``, and
-  tunes the constants of its best expressions with the Nelder--Mead simplex method (``n_tuned_programs``,
-  ``tuning_interval`` and ``tuning_max_iter``), as the paper does. Half of the leaves of new expressions
-  are constants (``constant_rate``), so there is something to tune. It can score each expression on a
-  random batch of the samples (``max_samples``), stop early (``patience``, ``tolerance`` and
-  ``max_time``), and has parameters for the operators (``function_set``), the selection
-  (``tournament_size``), the initial expressions (``init_depth``, ``init_method`` and ``const_range``) and the
-  genetic operators (``crossover_rate``, ``mutate_subtree_rate``, ``hoist_rate``, ``mutate_point_rate`` and
-  ``point_replace_rate``).
-- |Efficiency| :class:`~empulse.models.ProfSRClassifier` scores every distinct expression once per
-  fit. A population is full of copies of the expressions it was bred from, and most expressions of a
-  generation had already been scored in an earlier one. Together with less bookkeeping per
-  expression, fitting with the same function set and settings is 3 to 5 times as fast on 1,000 to
-  100,000 samples.
-- |Efficiency| ``import empulse.models`` no longer imports XGBoost, LightGBM and CatBoost, which
-  took about half a second. :class:`~empulse.models.CSBoostClassifier` and
-  :class:`~empulse.models.B2BoostClassifier` import the library they use when they are fitted.
-- |Fix| ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
-  :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model. The regularized
-  formulations had no constraint fixing the scale of the weights, and the worst-case bounds are
-  unchanged by rescaling them, so the penalty shrank the weights towards zero at no cost: the
-  direction of ``coef_``, the worst-case accuracies and every prediction were the same for any
-  ``lambda_reg``, ``penalty='l1'`` never zeroed a coefficient, and a large ``lambda_reg`` collapsed the
-  fit. The regularized models now require each class mean to lie at least one unit inside its own
-  half-space, the margin constraints of the regularized minimax probability machine they extend,
-  so the penalty trades worst-case accuracy for smaller weights and ``'l1'`` selects features.
-- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
-  with a cost loss now fit read-only data, such as the memory-mapped arrays joblib passes to
-  parallel workers in ``GridSearchCV(n_jobs=...)``. With ``fit_intercept=False`` they raised
-  ``ValueError: buffer source array is read-only``.
-- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
-  with a ``CatBoostClassifier`` estimator no longer train on distorted sample weights. The backend
-  passed each row's index as its sample weight, so that the objective could look up that row's
-  costs, but CatBoost also trains on the weights: the first row was ignored, later rows counted
-  progressively more, and the model depended on the order of the training rows. Training now uses
-  an equivalent weighted problem, with each row weighted by how much its costs depend on the
-  prediction. On one example the test-set expected cost fell from 2.02 to 0.83.
-- |Enhancement| :class:`~empulse.models.CSBoostClassifier` now accepts ``sample_weight`` with a
-  ``CatBoostClassifier`` estimator.
-- |API| :class:`~empulse.models.CSBoostClassifier` with a ``CatBoostClassifier`` estimator now
-  raises a ``ValueError`` for :class:`~empulse.metrics.MaxProfit` and
-  :class:`~empulse.metrics.LogCost` losses. CatBoost computes the objective on chunks of the
-  training rows: MaxProfit's gradient depends on every row, so it was computed incorrectly, and
-  LogCost relied on the row indices removed above. Use an ``XGBClassifier`` or ``LGBMClassifier``
-  estimator for these losses. It also raises a ``ValueError`` when the costs make the same
-  prediction strictly cheapest for every training sample, as CatBoost cannot train on a single
-  class.
-- |Fix| :class:`~empulse.models.CSForestClassifier` (with the default ``bootstrap=True``) and
-  :class:`~empulse.models.CSTreeClassifier` (with ``class_weight``) now build correct trees with
-  the cost-sensitive criteria. The criteria ignored sample weights when totalling a node's costs
-  but not when splitting it, so the right child's costs were wrong. Forests pass their bootstrap
-  draws as sample weights, so every bootstrapped tree was affected: a tree fitted on a bootstrap
-  sample disagreed with one fitted on the same rows written out on 80% of its predictions.
+  ``fit`` instead of ``sample_weight``. Models pickled with an earlier release do not load.
+- |API| :class:`~empulse.models.CSTreeClassifier` with ``criterion="cost"`` now only splits a node
+  if that lowers the cost of its training samples, through the new default
+  ``min_impurity_decrease=None``; pass ``0.0`` for the previous behaviour. Trees are 3-15x
+  shallower, fit faster and save as much or more on held-out data.
+- |API| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now predicts
+  the cheapest class of each leaf on its training samples instead of its majority class, and
+  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier` (with
+  its default trees) vote over those classes. ``predict_proba`` is unchanged; threshold it (e.g.
+  with :class:`~empulse.models.CSThresholdClassifier`) to decide each sample by its own costs.
 - |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
-  with ``criterion='entropy'`` or ``criterion='log_loss'`` now grow past a single split. The criterion's child impurities were
-  missing a minus sign and came out negative, and scikit-learn stops splitting any node whose
-  impurity is not positive, so every tree stopped at depth 1 whatever ``max_depth`` was.
+  now build correct trees with the cost-sensitive criteria under sample weights, which affected
+  every bootstrapped forest tree and ``class_weight``, and grow past a single split with
+  ``criterion='entropy'`` or ``'log_loss'``.
+- |Fix| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` returns the
+  original class labels instead of their 0/1 encoding.
+- |Fix| :class:`~empulse.models.CSForestClassifier` with ``warm_start=True`` adds trees instead of
+  refitting the forest; with ``combination="weighted_voting"`` and ``class_weight`` it weighs trees
+  correctly; and it rejects a metric as ``criterion`` at parameter validation.
+- |API| :class:`~empulse.models.ProfSRClassifier` runs its own symbolic regression engine and no
+  longer needs gplearn or the ``symbolic`` extra. ``generations`` is now ``max_iter``, and
+  ``model_`` is replaced by ``program_``, ``pareto_front_`` and ``run_details_``. Its defaults
+  follow the profit-driven symbolic regression paper, so fitted models differ from before.
+- |Feature| :class:`~empulse.models.ProfSRClassifier` gains the paper's expression length limit
+  (``max_length``), Pareto front and Nelder--Mead constant tuning (``n_tuned_programs``,
+  ``tuning_interval``, ``tuning_max_iter``, ``constant_rate``), as well as subsampling
+  (``max_samples``), early stopping (``patience``, ``tolerance``, ``max_time``), parallel scoring
+  (``n_jobs``) and parameters for the function set, selection, initialization and genetic
+  operators.
+- |Fix| :class:`~empulse.models.ProfSRClassifier` evolves every generation asked for, instead of
+  usually stopping after the first.
+- |Efficiency| :class:`~empulse.models.ProfSRClassifier` fits 3-5x faster, and with a ``RANKING``
+  loss such as its default it no longer scores large outputs as ties.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 8x faster with its default
+  maximum profit fitness and about 4x faster with a stochastic
+  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss, to the same trees.
+  It now uses ``n_jobs``, which it ignored, and ``n_jobs`` accepts ``None`` and negative values.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` now minimizes a custom ``loss`` instead of
-  maximizing it. This affected every loss other than a deterministic
-  :class:`~empulse.metrics.MaxProfit` metric, including stochastic MaxProfit metrics such as
-  :func:`~empulse.metrics.empc_score`. With an expected-cost loss, the fitted tree used to be a
-  single leaf predicting the class prior, costing more than predicting 0.5 for every sample.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier` no longer crashes the Python process when a
-  feature has a single distinct value. Drawing a split for such a feature took a random integer
-  modulo zero, which raised a floating-point exception (SIGFPE) in C. Splits are now drawn from the
-  features with at least two distinct values; if there are none, the tree is a single leaf.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier`'s ``alpha`` complexity penalty now counts the
-  tree's actual nodes. The count was updated incrementally and drifted: it grew when a split was
-  refused at ``max_depth`` and did not shrink when nodes were pruned for violating
-  ``min_samples_split`` or ``min_samples_leaf``, so a fitted tree of 5 nodes could be penalized
-  as 25. Fits with the default ``alpha=0`` are unaffected.
-- |Fix| :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>` now returns the
-  original class labels. It returned the 0/1 encoding the inner tree is fitted on, so with labels
-  such as ``'no'``/``'yes'`` or ``-1``/``1`` it predicted ``0`` and ``1``, values not in ``classes_``.
-- |Fix| ``pos_label`` now makes its class the positive class in
-  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`:
-  the class the costs refer to, whose probability is thresholded or ranked, and which is predicted
-  above the threshold or within the targeted fraction. The threshold was computed for
-  ``classes_[1]`` but scores above it were given the ``pos_label`` class, so ``pos_label=classes_[0]``
-  inverted every prediction of :class:`~empulse.models.CSThresholdClassifier`, and
-  :class:`~empulse.models.CSRateClassifier` ignored ``pos_label``. A ``pos_label`` that is not one of
-  the classes now raises a ``ValueError``.
-- |Fix| :class:`~empulse.models.BiasRelabelingClassifier` (and :class:`~empulse.samplers.BiasRelabler`)
-  and :class:`~empulse.models.BiasReweighingClassifier` now work with labels other than ``0``/``1``.
-  The relabeler chose which samples to relabel by comparing the labels to ``0`` and ``1`` and
-  relabelled them with those literal values, so ``-1``/``1`` labels gained a third class ``0`` and
-  ``predict`` raised an ``IndexError``. The reweighing classifier computed its weights from the raw
-  labels, so ``-1``/``1`` labels got different weights and string labels raised a ``TypeError``.
-  Both now work on the 0/1 encoding of the target, with ``classes_[1]`` as the positive class; a
-  custom reweighing ``strategy`` now receives that encoding too.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` now detects outliers in the costs of both
-  classes whatever the labels are. It selected the positive samples with ``y > 0`` and the negative
-  ones with ``y == 0``, so with labels such as ``-1``/``1`` or ``'no'``/``'yes'`` the costs of the
-  negative class (``fp_cost``, ``tn_cost``, and metric parameters that only affect them) were
-  silently never cleaned, and with labels such as ``2``/``5`` every sample counted as positive. The
-  greater of the two labels is now the positive class, as in the cost-sensitive models it wraps.
-- |Fix| :class:`~empulse.models.CSForestClassifier` now rejects a metric passed as ``criterion``
-  during parameter validation, like :class:`~empulse.models.CSTreeClassifier`, instead of accepting
-  it and failing later in ``fit`` with an "Unknown criterion" error. Like
-  :class:`~empulse.models.CSTreeClassifier`, it now also accepts a cost impurity instance.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier`'s early stopping (``patience`` and
-  ``tolerance``) now works when the fitness is negative, as it is with costs but no benefits, or with
-  a custom ``loss``. A new best tree had to beat ``fitness * (1 + tolerance)``, which is below the
-  current best when the fitness is negative, so a tie counted as an improvement, the patience never
-  ran out and every fit ran for ``max_iter`` generations. The tolerance is now scaled by the
-  magnitude of the fitness; fits with a positive fitness are unaffected.
-- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits roughly 8x faster with its default
-  maximum profit fitness (no ``loss``, or a deterministic :class:`~empulse.metrics.MaxProfit`
-  metric). Each candidate tree's maximum profit is now computed from its leaf counts: every sample
-  in a leaf gets the same score, so ranking the leaves gives the same ROC curve as predicting and
-  sorting every training sample, which is what each evaluation did before. Routing samples through
-  the tree also no longer creates a memoryview per sample. The fitted trees are unchanged.
-- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` now uses ``n_jobs``, which it accepted
-  but ignored: each generation's trees are fitted, and with the default maximum profit fitness also
-  evaluated, in parallel over ``n_jobs`` threads (about 3x faster on 4 cores). The random variations
-  are still drawn serially, so the fitted tree does not depend on ``n_jobs``. ``n_jobs`` now also
-  accepts ``None`` and negative values, which count back from the number of processors as in
-  scikit-learn (``-1`` uses all of them). The package falls back to a single thread when it is built
-  without OpenMP; set ``EMPULSE_DISABLE_OPENMP=1`` to build it that way deliberately.
-- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` refits only what changed. Each new tree
-  is a copy of a fitted tree with one subtree changed by crossover, growing or mutating a split, so
-  only the samples that reach that subtree are routed through it again, and pruning a split needs
-  no refit at all. This makes each generation about 1.7x faster; the fitted trees are unchanged.
-- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` with a stochastic
-  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` metric as ``loss`` (e.g.
-  the expected maximum profit) fits about 4x faster. The metric depends on a tree's predictions only
-  through the ROC convex hull and the class prior, which follow from each leaf's numbers of positive
-  and negative samples, so each tree is now scored from its leaves rather than by predicting every
-  training sample. The metric's parameters are also resolved once per fit instead of once per tree,
-  and the labels and predictions are no longer re-validated on every evaluation. The fitted trees
-  are unchanged. Other losses are still evaluated on every sample's prediction.
+  maximizing it, its ``alpha`` penalty counts the tree's actual nodes, its early stopping works
+  when the fitness is negative, and it no longer crashes on a constant feature.
 - |Efficiency| :class:`~empulse.models.ProfLogitClassifier` and
-  :class:`~empulse.models.CSLogitClassifier` with a :class:`~empulse.metrics.MaxProfit` loss no
-  longer compute a gradient for optimizers that do not use it, such as the default
-  :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Each candidate model is now scored by the
-  metric itself: with 10,000 samples, :class:`~empulse.models.ProfLogitClassifier` fits about 2.9x
-  faster with a deterministic metric and 1.9x faster with the expected maximum profit, to the same
-  coefficients.
-- |Enhancement| :class:`~empulse.models.ProfLogitClassifier` (and the logit models with any
-  optimizer that does not use gradients) now supports every :class:`~empulse.metrics.MaxProfit`
-  loss. Losses with a stochastic variable whose distribution is not strictly positive, such as a
-  uniform or normal one, or with several stochastic variables, raised a ``NotImplementedError``,
-  since only the gradient was restricted to the others.
+  :class:`~empulse.models.CSLogitClassifier` with a :class:`~empulse.metrics.MaxProfit` loss and an
+  optimizer that does not use gradients (such as the default of
+  :class:`~empulse.models.ProfLogitClassifier`) fit 1.9-2.9x faster.
+- |Enhancement| :class:`~empulse.models.ProfLogitClassifier` supports every
+  :class:`~empulse.metrics.MaxProfit` loss, including stochastic variables that are not strictly
+  positive and several stochastic variables.
+- |Fix| A :class:`~empulse.metrics.MaxProfit` loss of :class:`~empulse.models.ProfLogitClassifier`,
+  or of :class:`~empulse.models.CSLogitClassifier` with a gradient-free optimizer, ranks samples by
+  the linear predictions, so very confident predictions no longer tie.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  with a cost loss and ``fit_intercept=False`` now fit read-only data, such as the arrays
+  ``GridSearchCV(n_jobs=...)`` passes to its workers.
+- |Fix| ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
+  :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model; it had no effect on the
+  predictions, and ``penalty='l1'`` never zeroed a coefficient.
+- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  with a ``CatBoostClassifier`` no longer train on distorted sample weights, and
+  :class:`~empulse.models.CSBoostClassifier` now accepts ``sample_weight`` with it.
+- |API| :class:`~empulse.models.CSBoostClassifier` with a ``CatBoostClassifier`` raises a
+  ``ValueError`` for :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.LogCost`
+  losses, which it could not train correctly, and when the costs make the same prediction cheapest
+  for every sample. Use XGBoost or LightGBM for these losses.
+- |Fix| ``pos_label`` of :class:`~empulse.models.CSThresholdClassifier` and
+  :class:`~empulse.models.CSRateClassifier` now consistently selects the positive class;
+  ``pos_label=classes_[0]`` inverted every prediction of the former and the latter ignored it. An
+  unknown ``pos_label`` raises a ``ValueError``.
+- |Fix| :class:`~empulse.models.BiasRelabelingClassifier`, :class:`~empulse.samplers.BiasRelabler`,
+  :class:`~empulse.models.BiasReweighingClassifier` and :class:`~empulse.models.RobustCSClassifier`
+  now work with labels other than ``0``/``1``, treating the greater class as positive.
+- |Efficiency| ``import empulse.models`` no longer imports XGBoost, LightGBM and CatBoost.
 
 Optimizers
 ----------
 
 - |Efficiency| ``n_jobs`` of :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` (and
-  :class:`~empulse.optimizers.Generation`) now evaluates the population in threads, one batch per
-  thread, and only evaluates the individuals that changed. Each individual was sent to a separate
-  process with a copy of the training data, which made ``n_jobs=4`` about seven times *slower*
-  than ``n_jobs=1`` for :class:`~empulse.models.ProfLogitClassifier` on 10,000 samples. It is now
-  about twice as fast as ``n_jobs=1``, and the result does not depend on ``n_jobs``.
-- |API| :class:`~empulse.optimizers.Optimizer` has a new ``requires_gradient`` property, which the
-  logit models read to decide whether to build an objective that also computes its gradient. It is
-  ``True`` by default, ``False`` for :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`, and
-  follows ``use_jacobian`` for :class:`~empulse.optimizers.ScipyOptimizer`. A custom optimizer that
-  only calls ``logit_loss`` can return ``False`` to get the faster objective.
+  :class:`~empulse.optimizers.Generation`) now uses threads and only re-evaluates changed
+  individuals. ``n_jobs=4`` was about 7x slower than ``n_jobs=1`` and is now about 2x faster.
+- |API| :class:`~empulse.optimizers.Optimizer` has a new ``requires_gradient`` property. A custom
+  optimizer that returns ``False`` gets a faster objective without a gradient.
 
 Datasets
 --------
@@ -470,34 +181,21 @@ Datasets
 
   :func:`~empulse.datasets.load_vub_credit_scoring` is bundled with the package; the others are
   downloaded on first use and cached.
-- |Fix| The ``fetch_*`` loaders now write a downloaded dataset to their cache atomically. Two
-  processes sharing a data home could previously see the file while it was still being written,
-  and the second one then failed reading a truncated archive instead of waiting for, or repeating,
-  the download.
+- |Fix| The ``fetch_*`` loaders write downloads to their cache atomically, so processes sharing a
+  data home no longer read a partially written file.
 
 Packaging and dependencies
 ---------------------------
 
-- |Enhancement| Empulse's compiled extensions no longer build against scikit-learn, so a
-  scikit-learn release no longer needs a matching Empulse release, and Cython is no longer pinned
-  to the version scikit-learn's wheels were built with (any Cython 3.1 or later builds Empulse).
-- |API| ``imbalanced-learn`` is no longer a required dependency. It is only needed by
-  :mod:`empulse.samplers`, and is installed by the new ``sampling`` extra
-  (``pip install empulse[sampling]``), which ``empulse[optional]`` includes. Importing
-  :mod:`empulse.samplers` without it raises an error naming the extra.
-  :class:`~empulse.models.BiasRelabelingClassifier` and
-  :class:`~empulse.models.BiasResamplingClassifier` work without it.
-- |Enhancement| Empulse works with scikit-learn 1.5.2 and later (1.7.2 and later on Python 3.14),
-  where it used to need 1.9. Everything is tested against 1.5.2, 1.6.1, 1.7.2, 1.8.0 and 1.9.1.
-- |Fix| The source distribution no longer contains the test modules at the top of ``tests/``.
-- |Fix| Raised the minimum versions of four dependencies to ones the package actually works with,
-  now checked by a test run against the lowest version of every dependency: ``numpy>=1.25.2`` on
-  Python 3.11 and 3.12 and ``joblib>=1.4.0``, since ``imbalanced-learn`` and ``scikit-learn``
-  already required those, so the lower minimums could never be installed; ``lightgbm>=4.6.0``,
-  since 4.5 passes an argument scikit-learn 1.8 removed; and ``sympy>=1.14.0``, since earlier
-  releases compile ``Max`` and ``Min`` into code that fails on a mix of per-sample and scalar
-  values, which the bank telemarketing cost matrix is, and reject whole-number floats as a
-  distribution's degrees of freedom.
+- |Enhancement| Empulse works with scikit-learn 1.5.2 and later (1.7.2 and later on Python 3.14)
+  and no longer builds against it, so new scikit-learn releases no longer need a matching Empulse
+  release. Any Cython 3.1 or later builds Empulse.
+- |API| ``imbalanced-learn`` is now optional and only needed by :mod:`empulse.samplers`. Install it
+  with ``pip install empulse[sampling]`` (included in ``empulse[optional]``).
+- |Fix| Raised the minimum versions of dependencies to ones the package works with:
+  ``numpy>=1.25.2`` (Python 3.11 and 3.12), ``joblib>=1.4.0``, ``lightgbm>=4.6.0`` and
+  ``sympy>=1.14.0``.
+- |Fix| The source distribution no longer contains the top-level test modules.
 
 `0.12.0`_ (19-09-2026)
 ======================
