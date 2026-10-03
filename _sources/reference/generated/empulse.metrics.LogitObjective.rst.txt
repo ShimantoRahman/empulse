@@ -1,0 +1,9 @@
+﻿LogitObjective
+==============
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: LogitObjective
+   :members:
+   :inherited-members:
+   :special-members: __call__

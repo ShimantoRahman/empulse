@@ -1,0 +1,9 @@
+﻿EmpiricalMinCost
+================
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: EmpiricalMinCost
+   :members:
+   :inherited-members:
+   :special-members: __call__

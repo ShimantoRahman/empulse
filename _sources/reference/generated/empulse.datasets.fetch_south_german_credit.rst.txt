@@ -1,0 +1,6 @@
+﻿fetch\_south\_german\_credit
+============================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_south_german_credit

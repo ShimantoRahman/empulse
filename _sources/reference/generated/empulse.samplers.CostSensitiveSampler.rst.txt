@@ -1,0 +1,9 @@
+﻿CostSensitiveSampler
+====================
+
+.. currentmodule:: empulse.samplers
+
+.. autoclass:: CostSensitiveSampler
+   :members:
+   :inherited-members:
+   :special-members: __call__

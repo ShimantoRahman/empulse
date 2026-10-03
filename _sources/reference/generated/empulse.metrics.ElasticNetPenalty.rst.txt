@@ -1,0 +1,9 @@
+﻿ElasticNetPenalty
+=================
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: ElasticNetPenalty
+   :members:
+   :inherited-members:
+   :special-members: __call__

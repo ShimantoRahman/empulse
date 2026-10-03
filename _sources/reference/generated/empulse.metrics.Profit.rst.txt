@@ -1,0 +1,9 @@
+﻿Profit
+======
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: Profit
+   :members:
+   :inherited-members:
+   :special-members: __call__

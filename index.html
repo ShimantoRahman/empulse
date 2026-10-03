@@ -1,0 +1,1496 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta content="Empulse is a scikit-learn based Python package for cost-sensitive and value-driven (also known as profit-driven) machine learning. Solve your imbalanced data and other cost-sensitive learning data science problems with a sklearn compatible library." lang="en" name="description" xml:lang="en" />
+
+    <title>Empulse &#8212; Empulse 0.13.0-dev0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=79ce3a0c" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=eedebb8e"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.13.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="_static/favicon.svg"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting Started" href="getting_started.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+  <link rel="stylesheet" type="text/css" href="_static/css/homepage.css" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/empulse_mark_light.svg" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="_static/empulse_mark_dark.svg" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+    <p class="title logo__title">empulse</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+<div class="eds-home">
+
+  
+  <section class="eds-hero eds-windy">
+    <div class="eds-wind" aria-hidden="true">
+  <i class="eds-wind__streak eds-wind__streak--left"
+     style="left: -3%; top: 16%; width: 30%; height: 38px; --eds-drift: 52s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: -3%; top: 7%; width: 44%; height: 22px; --eds-drift: 41s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right"
+     style="right: -5%; top: 21%; width: 56%; height: 40px; --eds-drift: 58s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: 2%; top: 49%; width: 40%; height: 42px; --eds-drift: 47s"></i>
+  <i class="eds-wind__streak eds-wind__streak--left"
+     style="left: -4%; bottom: 3.5%; width: 12%; height: 26px; --eds-drift: 44s"></i>
+  <i class="eds-wind__streak eds-wind__streak--left eds-wind__streak--faint"
+     style="left: 9.5%; bottom: 3.5%; width: 22%; height: 26px; --eds-drift: 61s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: -3%; bottom: 6%; width: 28%; height: 26px; --eds-drift: 50s"></i>
+</div>
+    <div class="eds-wrap eds-hero__grid">
+      <div class="eds-hero__copy">
+        <p class="eds-eyebrow">Cost-sensitive machine learning for scikit-learn</p>
+        <h1 class="eds-hero__motto">Optimize <br class="eds-br-wide">for <span class="eds-nowrap"><em class="eds-hl">value</em>,</span> <br class="eds-br-wide">not stats.</h1>
+        <p class="eds-hero__lead">Accuracy, F1 and AUC price every mistake the same. Your business does not. Write down what each outcome costs, then <strong>evaluate</strong>, <strong>train</strong> and <strong>threshold</strong> your models for profit, with the scikit-learn API you already know.</p>
+
+        <div class="eds-start">
+          <div class="eds-install">
+  <span class="eds-install__prompt" aria-hidden="true">$</span>
+  <code class="eds-install__command">pip install empulse</code>
+  <button type="button" class="eds-copy" data-copy="pip install empulse" aria-label="Copy the install command">
+    <i class="fa-regular fa-copy eds-copy__idle" aria-hidden="true"></i>
+    <i class="fa-solid fa-check eds-copy__done" aria-hidden="true"></i>
+  </button>
+</div>
+          <a class="eds-btn eds-btn--primary" href="getting_started.html">
+            Get started <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+        <p class="eds-hero__note">Python 3.11 or higher. <a href="getting_started/installation.html">Optional extras</a> add samplers and boosting models.</p>
+        <ul class="eds-proof">
+          <li class="eds-proof__item">
+            <a href="https://pepy.tech/projects/empulse">
+              <span class="eds-proof__value">58k</span>
+              <span class="eds-proof__label">downloads</span>
+            </a>
+          </li>
+          <li class="eds-proof__item">
+            <a href="https://github.com/ShimantoRahman/empulse">
+              <span class="eds-proof__value">33</span>
+              <span class="eds-proof__label">GitHub stars</span>
+            </a>
+          </li>
+          <li class="eds-proof__item">
+            <a href="https://pypi.org/project/empulse/">
+              <span class="eds-proof__value">v0.12.0</span>
+              <span class="eds-proof__label">latest release</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <figure class="eds-sig" data-eds-sig>
+        <div class="eds-sig__head">
+          <div>
+            <p class="eds-sig__kicker">Churn retention &middot; 2,814 test customers</p>
+            <p class="eds-sig__title">Same data, same features. More profit.</p>
+          </div>
+          <div class="eds-seg" role="group" aria-label="Decision threshold" data-eds-sig-modes hidden>
+            <button type="button" data-mode="tuned" aria-pressed="true">Tuned threshold</button>
+            <button type="button" data-mode="default" aria-pressed="false">Default 0.5</button>
+          </div>
+        </div>
+
+        <p class="eds-sig__delta" aria-live="polite">
+          <span class="eds-sig__delta-value" data-eds-sig-delta>+€9,064</span>
+          <span class="eds-sig__delta-note" data-eds-sig-note>more profit than the tuned baseline</span>
+        </p>
+
+        <ul class="eds-sig__rows">
+          <li class="eds-sig__row eds-sig__row--baseline" data-eds-sig-row="baseline">
+            <span class="eds-sig__name">LogisticRegression()<small data-eds-sig-meta>threshold 0.07 &middot; 326 contacted</small></span>
+            <span class="eds-sig__value" data-eds-sig-value>€1,287</span>
+            <span class="eds-sig__bar"><i data-eds-sig-bar style="width: 12.4%"></i></span>
+          </li>
+          <li class="eds-sig__row eds-sig__row--cost_sensitive" data-eds-sig-row="cost_sensitive">
+            <span class="eds-sig__name">CSLogitClassifier()<small data-eds-sig-meta>threshold 0.53 &middot; 309 contacted</small></span>
+            <span class="eds-sig__value" data-eds-sig-value>€10,351</span>
+            <span class="eds-sig__bar"><i data-eds-sig-bar style="width: 100.0%"></i></span>
+          </li>
+        </ul>
+
+        <div class="eds-sig__plot" data-eds-sig-plot hidden>
+          <svg class="eds-sig__svg" viewBox="0 0 560 250" role="img" data-eds-sig-svg
+               aria-label="Profit against decision threshold for both models on the same test customers."></svg>
+          <input class="eds-sig__scrub" type="range" min="0" max="100" step="1" aria-label="Decision threshold" data-eds-sig-scrub>
+          <script type="application/json" data-eds-sig-data>{
+  "dataset": "Churn TV Subscriptions",
+  "default_index": 50,
+  "models": {
+    "baseline": {
+      "contacted": [
+        2814,
+        2777,
+        2645,
+        2152,
+        1374,
+        808,
+        516,
+        326,
+        226,
+        156,
+        115,
+        77,
+        61,
+        48,
+        28,
+        21,
+        15,
+        15,
+        15,
+        13,
+        12,
+        10,
+        10,
+        10,
+        10,
+        10,
+        9,
+        8,
+        8,
+        6,
+        5,
+        4,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "label": "LogisticRegression()",
+      "profit": [
+        -56743,
+        -58158,
+        -52312,
+        -24502,
+        4895,
+        8363,
+        7382,
+        1287,
+        -3138,
+        -2712,
+        -6490,
+        -4753,
+        -3567,
+        -2686,
+        -1098,
+        -598,
+        -1202,
+        -1202,
+        -1202,
+        -1108,
+        -1003,
+        -753,
+        -753,
+        -753,
+        -753,
+        -753,
+        -649,
+        -587,
+        -587,
+        -451,
+        -389,
+        -303,
+        -199,
+        -199,
+        -104,
+        -29,
+        -29,
+        -29,
+        -29,
+        -29,
+        -29,
+        -29,
+        -29,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "tuned_index": 7
+    },
+    "cost_sensitive": {
+      "contacted": [
+        2814,
+        454,
+        435,
+        419,
+        412,
+        405,
+        399,
+        395,
+        386,
+        381,
+        378,
+        376,
+        374,
+        370,
+        368,
+        366,
+        362,
+        358,
+        357,
+        355,
+        351,
+        350,
+        348,
+        348,
+        345,
+        342,
+        340,
+        339,
+        336,
+        335,
+        334,
+        334,
+        333,
+        331,
+        330,
+        328,
+        328,
+        328,
+        327,
+        325,
+        324,
+        322,
+        320,
+        319,
+        319,
+        317,
+        317,
+        317,
+        316,
+        313,
+        313,
+        313,
+        311,
+        309,
+        309,
+        309,
+        309,
+        309,
+        308,
+        308,
+        305,
+        303,
+        301,
+        300,
+        298,
+        297,
+        294,
+        291,
+        285,
+        282,
+        280,
+        277,
+        276,
+        271,
+        271,
+        268,
+        268,
+        268,
+        267,
+        266,
+        265,
+        264,
+        262,
+        258,
+        257,
+        252,
+        249,
+        247,
+        245,
+        243,
+        237,
+        233,
+        231,
+        226,
+        223,
+        218,
+        210,
+        201,
+        182,
+        168,
+        7
+      ],
+      "label": "CSLogitClassifier()",
+      "profit": [
+        -56743,
+        14791,
+        12544,
+        13894,
+        10895,
+        11411,
+        11920,
+        12344,
+        11823,
+        10788,
+        11018,
+        11201,
+        11347,
+        11673,
+        11868,
+        12033,
+        12290,
+        12604,
+        12683,
+        12813,
+        11993,
+        12093,
+        12226,
+        12226,
+        12445,
+        12687,
+        12871,
+        11925,
+        12165,
+        12260,
+        12334,
+        12334,
+        12400,
+        12578,
+        12644,
+        12792,
+        12792,
+        12792,
+        12878,
+        13072,
+        13146,
+        13316,
+        12195,
+        11137,
+        11137,
+        11298,
+        11298,
+        11298,
+        11372,
+        10033,
+        10033,
+        10033,
+        10202,
+        10351,
+        10351,
+        10351,
+        10351,
+        10351,
+        10445,
+        10445,
+        10798,
+        10944,
+        11105,
+        11167,
+        11327,
+        11406,
+        10846,
+        9677,
+        10088,
+        10303,
+        10457,
+        10731,
+        10015,
+        10389,
+        10389,
+        10626,
+        10626,
+        10626,
+        10688,
+        10783,
+        10836,
+        10898,
+        11026,
+        11296,
+        11358,
+        11676,
+        11896,
+        10779,
+        9664,
+        9780,
+        10208,
+        10498,
+        10631,
+        11018,
+        9857,
+        9207,
+        9834,
+        6592,
+        6036,
+        6933,
+        1378
+      ],
+      "tuned_index": 53
+    }
+  },
+  "samples": 2814,
+  "thresholds": [
+    0.0,
+    0.01,
+    0.02,
+    0.03,
+    0.04,
+    0.05,
+    0.06,
+    0.07,
+    0.08,
+    0.09,
+    0.1,
+    0.11,
+    0.12,
+    0.13,
+    0.14,
+    0.15,
+    0.16,
+    0.17,
+    0.18,
+    0.19,
+    0.2,
+    0.21,
+    0.22,
+    0.23,
+    0.24,
+    0.25,
+    0.26,
+    0.27,
+    0.28,
+    0.29,
+    0.3,
+    0.31,
+    0.32,
+    0.33,
+    0.34,
+    0.35,
+    0.36,
+    0.37,
+    0.38,
+    0.39,
+    0.4,
+    0.41,
+    0.42,
+    0.43,
+    0.44,
+    0.45,
+    0.46,
+    0.47,
+    0.48,
+    0.49,
+    0.5,
+    0.51,
+    0.52,
+    0.53,
+    0.54,
+    0.55,
+    0.56,
+    0.57,
+    0.58,
+    0.59,
+    0.6,
+    0.61,
+    0.62,
+    0.63,
+    0.64,
+    0.65,
+    0.66,
+    0.67,
+    0.68,
+    0.69,
+    0.7,
+    0.71,
+    0.72,
+    0.73,
+    0.74,
+    0.75,
+    0.76,
+    0.77,
+    0.78,
+    0.79,
+    0.8,
+    0.81,
+    0.82,
+    0.83,
+    0.84,
+    0.85,
+    0.86,
+    0.87,
+    0.88,
+    0.89,
+    0.9,
+    0.91,
+    0.92,
+    0.93,
+    0.94,
+    0.95,
+    0.96,
+    0.97,
+    0.98,
+    0.99,
+    1.0
+  ]
+}</script>
+        </div>
+        <p class="eds-sig__hint" data-eds-sig-hint hidden>
+          <i class="fa-solid fa-arrows-left-right" aria-hidden="true"></i>
+          <span data-eds-sig-hint-text>Drag across the chart to try any threshold</span>
+        </p>
+
+        <figcaption class="eds-sig__foot">Profit is the retention cost saved compared with contacting nobody, using each customer's own costs. Thresholds are chosen on the training split. <a href="tutorial.html">See how in the tutorial&nbsp;&rarr;</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  
+  <section class="eds-band" data-eds-tour>
+    <div class="eds-wrap">
+      <header class="eds-head eds-head--split">
+        <p class="eds-eyebrow">Quick tour</p>
+        <h2>A minute with <span class="eds-nowrap"><em class="eds-hl">empulse</em>.</span></h2>
+        <p>Four scikit-learn steps from a business question to a decision that pays.</p>
+      </header>
+
+      <div class="eds-tour">
+        <div class="eds-steps" role="tablist" aria-label="Quick tour" aria-orientation="vertical">
+          <button type="button"
+                  class="eds-step"
+                  role="tab"
+                  id="eds-tab-1"
+                  aria-controls="eds-panel-1"
+                  aria-selected="true"
+                  tabindex="0"
+                  data-eds-tab="0">
+            <span class="eds-step__index">1</span>
+            <span class="eds-step__title">Define the cost matrix<span class="eds-step__label">Define</span></span>
+            <span class="eds-step__blurb">Assign costs to false positives and false negatives using named variables or fixed amounts.</span>
+          </button>
+          <button type="button"
+                  class="eds-step"
+                  role="tab"
+                  id="eds-tab-2"
+                  aria-controls="eds-panel-2"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-eds-tab="1">
+            <span class="eds-step__index">2</span>
+            <span class="eds-step__title">Turn it into a metric<span class="eds-step__label">Measure</span></span>
+            <span class="eds-step__blurb">A Metric wraps the cost matrix into a scikit-learn scoring function for cross-validation and grid search.</span>
+          </button>
+          <button type="button"
+                  class="eds-step"
+                  role="tab"
+                  id="eds-tab-3"
+                  aria-controls="eds-panel-3"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-eds-tab="2">
+            <span class="eds-step__index">3</span>
+            <span class="eds-step__title">Train on the cost metric<span class="eds-step__label">Train</span></span>
+            <span class="eds-step__blurb">Pass the metric directly as the training loss, so the model minimizes the cost you defined.</span>
+          </button>
+          <button type="button"
+                  class="eds-step"
+                  role="tab"
+                  id="eds-tab-4"
+                  aria-controls="eds-panel-4"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-eds-tab="3">
+            <span class="eds-step__index">4</span>
+            <span class="eds-step__title">Find the optimal threshold<span class="eds-step__label">Decide</span></span>
+            <span class="eds-step__blurb">Find the decision threshold that minimizes expected cost for the trained model.</span>
+          </button>
+        </div>
+
+        <div class="eds-window">
+          <div class="eds-window__bar">
+            <span class="eds-window__file"><i class="fa-brands fa-python" aria-hidden="true"></i>churn.py</span>
+          </div>
+          <div class="eds-panel"
+               role="tabpanel"
+               id="eds-panel-1"
+               aria-labelledby="eds-tab-1"
+               data-eds-panel="0"
+               >
+            <div class="highlight eds-code"><pre><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostMatrix</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="c1"># Assign costs using business variables.</span></span>
+<span class="eds-line" style="--eds-line-index: 3"><span class="n">cost_matrix</span> <span class="o">=</span> <span class="p">(</span></span>
+<span class="eds-line" style="--eds-line-index: 4">    <span class="n">CostMatrix</span><span class="p">()</span></span>
+<span class="eds-line" style="--eds-line-index: 5">    <span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">&#39;incentive&#39;</span><span class="p">)</span>  <span class="c1"># a wasted discount</span></span>
+<span class="eds-line" style="--eds-line-index: 6">    <span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">&#39;clv&#39;</span><span class="p">)</span>        <span class="c1"># a lost customer</span></span>
+<span class="eds-line" style="--eds-line-index: 7">    <span class="o">.</span><span class="n">set_default</span><span class="p">(</span><span class="n">incentive</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">clv</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 8"><span class="p">)</span></span></pre></div>
+            <div class="eds-out">
+              <span class="eds-out__label">Out</span>
+              <code class="eds-out__value">CostMatrix(tp_cost=0, tn_cost=0, fp_cost=incentive, fn_cost=clv)</code>
+              <span class="eds-out__note">Named symbols allow costs to vary per customer. <a href="guide/costs.html#defining-costs">Defining costs&nbsp;&rarr;</a></span>
+            </div>
+          </div>
+          <div class="eds-panel"
+               role="tabpanel"
+               id="eds-panel-2"
+               aria-labelledby="eds-tab-2"
+               data-eds-panel="1"
+               hidden>
+            <div class="highlight eds-code"><pre><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cost</span><span class="p">,</span> <span class="n">Metric</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">expected_cost</span> <span class="o">=</span> <span class="n">Metric</span><span class="p">(</span><span class="n">cost_matrix</span><span class="p">,</span> <span class="n">Cost</span><span class="p">())</span></span>
+<span class="eds-line" style="--eds-line-index: 3"></span>
+<span class="eds-line" style="--eds-line-index: 4"><span class="n">y_score</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span></span>
+<span class="eds-line" style="--eds-line-index: 5"><span class="n">expected_cost</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_score</span><span class="p">)</span></span></pre></div>
+            <div class="eds-out">
+              <span class="eds-out__label">Out</span>
+              <code class="eds-out__value">10.22</code>
+              <span class="eds-out__note">Expected cost in euros per customer for the baseline model. <a href="guide/measuring.html#measuring">Measuring a model&nbsp;&rarr;</a></span>
+            </div>
+          </div>
+          <div class="eds-panel"
+               role="tabpanel"
+               id="eds-panel-3"
+               aria-labelledby="eds-tab-3"
+               data-eds-panel="2"
+               hidden>
+            <div class="highlight eds-code"><pre><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSLogitClassifier</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">model</span> <span class="o">=</span> <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 3"></span>
+<span class="eds-line" style="--eds-line-index: 4"><span class="n">expected_cost</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">])</span></span></pre></div>
+            <div class="eds-out">
+              <span class="eds-out__label">Out</span>
+              <code class="eds-out__value">9.37</code>
+              <span class="eds-out__note">Expected cost drops to 9.37 euros per customer, an 8% reduction over the baseline. <a href="guide/training.html#training">Training a model&nbsp;&rarr;</a></span>
+            </div>
+          </div>
+          <div class="eds-panel"
+               role="tabpanel"
+               id="eds-panel-4"
+               aria-labelledby="eds-tab-4"
+               data-eds-panel="3"
+               hidden>
+            <div class="highlight eds-code"><pre><span class="eds-line" style="--eds-line-index: 0"><span class="kn">from</span><span class="w"> </span><span class="nn">empulse.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSThresholdClassifier</span></span>
+<span class="eds-line" style="--eds-line-index: 1"></span>
+<span class="eds-line" style="--eds-line-index: 2"><span class="n">decider</span> <span class="o">=</span> <span class="n">CSThresholdClassifier</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 3"><span class="n">decider</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></span>
+<span class="eds-line" style="--eds-line-index: 4"></span>
+<span class="eds-line" style="--eds-line-index: 5"><span class="n">decider</span><span class="o">.</span><span class="n">threshold_</span></span></pre></div>
+            <div class="eds-out">
+              <span class="eds-out__label">Out</span>
+              <code class="eds-out__value">0.048</code>
+              <span class="eds-out__note">The cost-optimal decision threshold is 0.048 instead of the default 0.5. <a href="guide/deciding.html#deciding">Making a decision&nbsp;&rarr;</a></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="eds-tour__foot">Picking up after an ordinary <code>train_test_split</code>, with <code>baseline</code> a plain scikit-learn <code>LogisticRegression</code> on a TV-subscription churn dataset.</p>
+    </div>
+  </section>
+
+  
+  <section class="eds-band eds-windy">
+    <div class="eds-wind" aria-hidden="true">
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: -4%; top: 5%; width: 46%; height: 34px; --eds-drift: 55s"></i>
+  <i class="eds-wind__streak eds-wind__streak--left eds-wind__streak--faint"
+     style="left: -3%; top: 11%; width: 22%; height: 24px; --eds-drift: 49s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: -2%; top: 13%; width: 24%; height: 22px; --eds-drift: 43s"></i>
+</div>
+    <div class="eds-wrap">
+      <header class="eds-head">
+        <p class="eds-eyebrow eds-eyebrow--purple">Everything you need</p>
+        <h2>Put a <span class="eds-nowrap"><em class="eds-hl">price</em></span> on every outcome.</h2>
+        <p>One cost matrix carries through evaluation, training and the final decision, so the model you ship is judged by the number your business reports.</p>
+      </header>
+
+      <div class="eds-bento">
+        <div class="eds-cell eds-cell--metrics">
+          <p class="eds-eyebrow">Measure</p>
+          <h3>Metrics that speak in euros</h3>
+          <p>Describe what each outcome costs once. Costs can be fixed amounts, named variables, or a different value for every customer.</p>
+          <div class="eds-matrix" role="table" aria-label="Churn cost matrix: rows are the prediction, columns the actual outcome">
+            <div role="row" class="eds-matrix__row">
+              <span role="columnheader"></span>
+              <span class="eds-matrix__head" role="columnheader">Actual churner</span>
+              <span class="eds-matrix__head" role="columnheader">Actual stayer</span>
+            </div>
+            <div role="row" class="eds-matrix__row">
+              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>churner</span>
+              <span class="eds-matrix__cell" role="cell"><small>tp_cost</small><b>€0</b><em>churner caught</em></span>
+              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fp_cost &middot; incentive</small><b>€10</b><em>discount wasted on a loyal customer</em></span>
+            </div>
+            <div role="row" class="eds-matrix__row">
+              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>stayer</span>
+              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fn_cost &middot; clv</small><b>€200</b><em>lifetime value of a lost customer</em></span>
+              <span class="eds-matrix__cell" role="cell"><small>tn_cost</small><b>€0</b><em>loyal customer left alone</em></span>
+            </div>
+          </div>
+          <p class="eds-results__caption">The same matrix, put to work on the quick tour's 2,814 test customers:</p>
+          <ul class="eds-results">
+            <li class="eds-result">
+              <span class="eds-result__label">Total expected cost</span>
+              <span class="eds-result__value">€28,765</span>
+              <a class="eds-result__model" href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression">LogisticRegression</a>
+            </li>
+            <li class="eds-result">
+              <span class="eds-result__label">Total expected cost</span>
+              <span class="eds-result__value">€26,379</span>
+              <a class="eds-result__model" href="reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier">CSLogitClassifier</a>
+            </li>
+            <li class="eds-result">
+              <span class="eds-result__label">Optimal threshold</span>
+              <span class="eds-result__value">0.048</span>
+              <a class="eds-result__model" href="reference/generated/empulse.models.CSThresholdClassifier.html#empulse.models.CSThresholdClassifier">CSThresholdClassifier</a>
+            </li>
+          </ul>
+          <div class="highlight eds-mini"><pre><span class="n">CostMatrix</span><span class="p">()</span><span class="o">.</span><span class="n">add_fp_cost</span><span class="p">(</span><span class="s1">&#39;incentive&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">add_fn_cost</span><span class="p">(</span><span class="s1">&#39;clv&#39;</span><span class="p">)</span></pre></div>
+          <a class="eds-cell__more" href="guide/measuring.html#measuring">Measuring a model&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--models">
+          <p class="eds-eyebrow eds-eyebrow--purple">Train</p>
+          <p class="eds-big">17<small>estimators</small></p>
+          <p>Linear models, boosting, trees and forests that minimise your costs instead of log-loss.</p>
+          <div class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier">CSLogitClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSBoostClassifier.html#empulse.models.CSBoostClassifier">CSBoostClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.B2BoostClassifier.html#empulse.models.B2BoostClassifier">B2BoostClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier">CSTreeClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSForestClassifier.html#empulse.models.CSForestClassifier">CSForestClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.ProfTreeClassifier.html#empulse.models.ProfTreeClassifier">ProfTreeClassifier</a><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier">ProfLogitClassifier</a><a class="eds-chip" href="reference/models.html">+10 more</a>
+          </div>
+          <a class="eds-cell__more" href="guide/training.html#training">Training a model&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--decide">
+          <p class="eds-eyebrow eds-eyebrow--purple">Decide</p>
+          <h3>Thresholds set by cost, not habit</h3>
+          <p>Wrap any classifier and let the cost matrix pick the cut-off.</p>
+          <div class="eds-threshold" aria-hidden="true">
+            <span class="eds-threshold__track"></span>
+            <span class="eds-threshold__pin eds-threshold__pin--optimal" style="left: 4.8%"><span>0.048</span><i></i></span>
+            <span class="eds-threshold__pin eds-threshold__pin--default" style="left: 50%"><span>0.5</span><i></i></span>
+          </div>
+          <div class="eds-threshold__scale" aria-hidden="true"><span>0</span><span>Cost-optimal threshold vs the default</span><span>1</span></div>
+          <a class="eds-cell__more" href="guide/deciding.html#deciding">Making a decision&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--data">
+          <p class="eds-eyebrow">Datasets</p>
+          <h3>Real problems with real costs attached</h3>
+          <p>Every dataset ships with its cost matrix and per-customer costs, ready for a first experiment. A few to start with:</p>
+          <div class="eds-table-wrap">
+            <table class="eds-table">
+              <thead><tr><th scope="col">Dataset</th><th scope="col">Problem</th><th scope="col">Loader</th><th scope="col">Source</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><a href="guide/datasets/churn_tv_subscriptions.html#churn-tv-subscriptions">TV subscriptions</a></td>
+                  <td>Churn</td>
+                  <td><a href="reference/generated/empulse.datasets.load_churn_tv_subscriptions.html#empulse.datasets.load_churn_tv_subscriptions"><code>load_churn_tv_subscriptions</code></a></td>
+                  <td class="eds-table__source">Bundled</td>
+                </tr>
+                <tr>
+                  <td><a href="guide/datasets/bank_telemarketing.html#upsell-bank-telemarketing">Bank telemarketing</a></td>
+                  <td>Upsell</td>
+                  <td><a href="reference/generated/empulse.datasets.load_upsell_bank_telemarketing.html#empulse.datasets.load_upsell_bank_telemarketing"><code>load_upsell_bank_telemarketing</code></a></td>
+                  <td class="eds-table__source">Bundled</td>
+                </tr>
+                <tr>
+                  <td><a href="guide/datasets/credit_scoring_pakdd.html#credit-scoring-pakdd">PAKDD</a></td>
+                  <td>Credit scoring</td>
+                  <td><a href="reference/generated/empulse.datasets.load_credit_scoring_pakdd.html#empulse.datasets.load_credit_scoring_pakdd"><code>load_credit_scoring_pakdd</code></a></td>
+                  <td class="eds-table__source">Bundled</td>
+                </tr>
+                <tr>
+                  <td><a href="guide/datasets/credit_card_fraud.html#credit-card-fraud">Credit card fraud</a></td>
+                  <td>Fraud</td>
+                  <td><a href="reference/generated/empulse.datasets.fetch_credit_card_fraud.html#empulse.datasets.fetch_credit_card_fraud"><code>fetch_credit_card_fraud</code></a></td>
+                  <td class="eds-table__source">Downloaded</td>
+                </tr>
+                <tr>
+                  <td><a href="guide/datasets/kdd98.html#kdd98">KDD Cup 1998</a></td>
+                  <td>Direct mailing</td>
+                  <td><a href="reference/generated/empulse.datasets.fetch_kdd98.html#empulse.datasets.fetch_kdd98"><code>fetch_kdd98</code></a></td>
+                  <td class="eds-table__source">Downloaded</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <a class="eds-cell__more" href="guide/datasets.html#datasets">All datasets&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--sklearn">
+          <p class="eds-eyebrow">scikit-learn native</p>
+          <h3>Fits where your models already live</h3>
+          <p>Estimators, metrics and samplers follow scikit-learn's conventions, so they slot into the tools you already use:
+            <a href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline"><code>Pipeline</code></a>,
+            <a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV"><code>GridSearchCV</code></a>,
+            <a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_val_score.html#sklearn.model_selection.cross_val_score"><code>cross_val_score</code></a>, and the rest of the ecosystem.</p>
+          <div class="highlight eds-mini"><pre><span class="n">pipe</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span>
+    <span class="n">StandardScaler</span><span class="p">(),</span>
+    <span class="n">CSLogitClassifier</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">expected_cost</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">cross_val_score</span><span class="p">(</span><span class="n">pipe</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></pre></div>
+          <a class="eds-cell__more" href="api.html">API reference&nbsp;&rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="eds-band">
+    <div class="eds-wrap">
+      <header class="eds-head eds-head--split">
+        <p class="eds-eyebrow eds-eyebrow--purple">Built on research</p>
+        <h2>Methods from <span class="eds-nowrap"><em class="eds-hl">peer-reviewed</em></span> papers.</h2>
+        <p>Every estimator and metric implements a published method, with the reference in its docstring. Empulse puts them behind one consistent API.</p>
+      </header>
+      <ol class="eds-papers">
+        <li class="eds-paper">
+          <span class="eds-paper__year">2013</span>
+          <span class="eds-paper__title">A novel profit maximizing metric for measuring classification performance of customer churn prediction models</span>
+          <span class="eds-paper__meta">Verbraken, Verbeke &amp; Baesens &middot; <i>IEEE Transactions on Knowledge and Data Engineering</i></span>
+          <span class="eds-chips"><a class="eds-chip" href="reference/generated/empulse.metrics.empc_score.html#empulse.metrics.empc_score">empc_score</a><a class="eds-chip" href="reference/generated/empulse.metrics.mpc_score.html#empulse.metrics.mpc_score">mpc_score</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2014</span>
+          <span class="eds-paper__title">Development and application of consumer credit scoring models using profit-based classification measures</span>
+          <span class="eds-paper__meta">Verbraken, Bravo, Weber &amp; Baesens &middot; <i>European Journal of Operational Research</i></span>
+          <span class="eds-chips"><a class="eds-chip" href="reference/generated/empulse.metrics.empcs_score.html#empulse.metrics.empcs_score">empcs_score</a><a class="eds-chip" href="reference/generated/empulse.metrics.mpcs_score.html#empulse.metrics.mpcs_score">mpcs_score</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2015</span>
+          <span class="eds-paper__title">Example-dependent cost-sensitive decision trees</span>
+          <span class="eds-paper__meta">Correa Bahnsen, Aouada &amp; Ottersten &middot; <i>Expert Systems with Applications</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSTreeClassifier.html#empulse.models.CSTreeClassifier">CSTreeClassifier</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2017</span>
+          <span class="eds-paper__title">Profit maximizing logistic model for customer churn prediction using genetic algorithms</span>
+          <span class="eds-paper__meta">Stripling, vanden Broucke, Antonio, Baesens &amp; Snoeck &middot; <i>Swarm and Evolutionary Computation</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.ProfLogitClassifier.html#empulse.models.ProfLogitClassifier">ProfLogitClassifier</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2020</span>
+          <span class="eds-paper__title">Profit-based churn prediction based on minimax probability machines</span>
+          <span class="eds-paper__meta">Maldonado, López &amp; Vairetti &middot; <i>European Journal of Operational Research</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.ProfMPMClassifier.html#empulse.models.ProfMPMClassifier">ProfMPMClassifier</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2022</span>
+          <span class="eds-paper__title">Instance-dependent cost-sensitive learning for detecting transfer fraud</span>
+          <span class="eds-paper__meta">Höppner, Baesens, Verbeke &amp; Verdonck &middot; <i>European Journal of Operational Research</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.CSLogitClassifier.html#empulse.models.CSLogitClassifier">CSLogitClassifier</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2022</span>
+          <span class="eds-paper__title">B2Boost: instance-dependent profit-driven modelling of B2B churn</span>
+          <span class="eds-paper__meta">Janssens, Bogaert, Bagué &amp; Van den Poel &middot; <i>Annals of Operations Research</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.B2BoostClassifier.html#empulse.models.B2BoostClassifier">B2BoostClassifier</a><a class="eds-chip" href="reference/generated/empulse.metrics.empb_score.html#empulse.metrics.empb_score">empb_score</a>
+          </span>
+        </li>
+        <li class="eds-paper">
+          <span class="eds-paper__year">2025</span>
+          <span class="eds-paper__title">Profit-driven pre-processing in B2B customer churn modeling using fairness techniques</span>
+          <span class="eds-paper__meta">Rahman, Janssens &amp; Bogaert &middot; <i>Journal of Business Research</i></span>
+          <span class="eds-chips"><a class="eds-chip eds-chip--purple" href="reference/generated/empulse.models.BiasResamplingClassifier.html#empulse.models.BiasResamplingClassifier">BiasResamplingClassifier</a><a class="eds-chip" href="reference/generated/empulse.metrics.auepc_score.html#empulse.metrics.auepc_score">auepc_score</a>
+          </span>
+        </li>
+      </ol>
+      <div class="eds-cite">
+        <p>Using Empulse in a paper? <span>Cite the software through Zenodo.</span></p>
+        <a href="https://doi.org/10.5281/zenodo.11185664"><code>doi:10.5281/zenodo.11185664</code></a>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="eds-band eds-band--last eds-windy">
+    <div class="eds-wind" aria-hidden="true">
+  <i class="eds-wind__streak eds-wind__streak--left eds-wind__streak--faint"
+     style="left: -3%; top: 18%; width: 34%; height: 36px; --eds-drift: 50s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right"
+     style="right: -4%; top: 30%; width: 42%; height: 40px; --eds-drift: 57s"></i>
+  <i class="eds-wind__streak eds-wind__streak--right eds-wind__streak--faint"
+     style="right: 6%; top: 52%; width: 22%; height: 24px; --eds-drift: 45s"></i>
+</div>
+    <div class="eds-wrap">
+      <div class="eds-cta">
+        <h2>Start shipping models that <span class="eds-nowrap"><em class="eds-hl">pay</em>.</span></h2>
+        <div class="eds-cta__side">
+          <div class="eds-install">
+  <span class="eds-install__prompt" aria-hidden="true">$</span>
+  <code class="eds-install__command">pip install empulse</code>
+  <button type="button" class="eds-copy" data-copy="pip install empulse" aria-label="Copy the install command">
+    <i class="fa-regular fa-copy eds-copy__idle" aria-hidden="true"></i>
+    <i class="fa-solid fa-check eds-copy__done" aria-hidden="true"></i>
+  </button>
+</div>
+          <a class="eds-btn eds-btn--primary" href="getting_started.html">Get started in five minutes <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        </div>
+      </div>
+      <nav class="eds-next" aria-label="Where to go next">
+        <a href="getting_started.html">
+          <span class="eds-next__title">Getting Started <span aria-hidden="true">&rarr;</span></span>
+          <span class="eds-next__body">Install Empulse and fit a working cost-sensitive model.</span>
+        </a>
+        <a href="tutorial.html">
+          <span class="eds-next__title">Tutorial <span aria-hidden="true">&rarr;</span></span>
+          <span class="eds-next__body">A churn example comparing baseline and cost-sensitive pipelines.</span>
+        </a>
+        <a href="guide.html">
+          <span class="eds-next__title">User Guide <span aria-hidden="true">&rarr;</span></span>
+          <span class="eds-next__body">Models, metrics, samplers and datasets in depth.</span>
+        </a>
+        <a href="api.html">
+          <span class="eds-next__title">API Reference <span aria-hidden="true">&rarr;</span></span>
+          <span class="eds-next__body">Every class and function, with every parameter documented.</span>
+        </a>
+      </nav>
+    </div>
+  </section>
+
+</div>
+
+<script src="_static/js/homepage.js" defer></script>
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

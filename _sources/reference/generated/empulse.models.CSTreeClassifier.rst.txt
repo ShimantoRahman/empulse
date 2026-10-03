@@ -1,0 +1,9 @@
+﻿CSTreeClassifier
+================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: CSTreeClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

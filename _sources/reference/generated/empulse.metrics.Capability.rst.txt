@@ -1,0 +1,9 @@
+﻿Capability
+==========
+
+.. currentmodule:: empulse.metrics
+
+.. autoclass:: Capability
+   :members:
+   :inherited-members:
+   :special-members: __call__

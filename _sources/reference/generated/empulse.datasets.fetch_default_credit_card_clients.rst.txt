@@ -1,0 +1,6 @@
+﻿fetch\_default\_credit\_card\_clients
+=====================================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_default_credit_card_clients

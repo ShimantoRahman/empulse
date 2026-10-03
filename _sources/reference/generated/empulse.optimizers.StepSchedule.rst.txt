@@ -1,0 +1,9 @@
+﻿StepSchedule
+============
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: StepSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

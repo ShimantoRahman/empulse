@@ -1,0 +1,2508 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>empulse.datasets._remote &#8212; Empulse 0.13.0-dev0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=79ce3a0c" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=eedebb8e"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/empulse/datasets/_remote';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://empulse.readthedocs.io/en/latest/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.13.0-dev0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script src="../../../_static/js/custom-icon.js?v=d6c5daaf"></script>
+    <link rel="icon" href="../../../_static/favicon.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/empulse_mark_light.svg" class="logo__image only-light" alt="empulse homepage"/>
+    <img src="../../../_static/empulse_mark_dark.svg" class="logo__image only-dark pst-js-only" alt="empulse homepage"/>
+  
+  
+    <p class="title logo__title">empulse</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorial.html">
+    Tutorial
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../project_info.html">
+    Project Information
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ShimantoRahman/empulse" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/empulse/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-pypi fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">empulse.datasets._remote</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for empulse.datasets._remote</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Remote cost-sensitive datasets fetched from OpenML and UCI ML Repository.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">zipfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">._base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">get_data_home</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._cost_matrices</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">churn_monthly_charges_cost_matrix</span><span class="p">,</span>
+    <span class="n">churn_retention_cost_matrix</span><span class="p">,</span>
+    <span class="n">churn_retention_monthly_cost_matrix</span><span class="p">,</span>
+    <span class="n">credit_scoring_cost_matrix</span><span class="p">,</span>
+    <span class="n">credit_scoring_known_cl_cost_matrix</span><span class="p">,</span>
+    <span class="n">direct_marketing_cost_matrix</span><span class="p">,</span>
+    <span class="n">fraud_detection_cost_matrix</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_fetch_csv_url</span><span class="p">,</span> <span class="n">_fetch_openml</span><span class="p">,</span> <span class="n">_fetch_uci</span><span class="p">,</span> <span class="n">_fetch_url_bytes</span><span class="p">,</span> <span class="n">_read_csv_columns</span><span class="p">,</span> <span class="n">load_or_fetch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._process</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_GIVE_ME_SOME_CREDIT_FEATURE_ORDER</span><span class="p">,</span>  <span class="c1"># ruff: ignore[unused-import] (re-exported for tests/compat)</span>
+    <span class="n">KDD98_ATTRIBUTES</span><span class="p">,</span>
+    <span class="n">process_cell2cell</span><span class="p">,</span>
+    <span class="n">process_credit_card_fraud</span><span class="p">,</span>
+    <span class="n">process_default_credit_card_clients</span><span class="p">,</span>
+    <span class="n">process_give_me_some_credit</span><span class="p">,</span>
+    <span class="n">process_home_equity</span><span class="p">,</span>
+    <span class="n">process_ieee_fraud_detection</span><span class="p">,</span>
+    <span class="n">process_iranian_churn</span><span class="p">,</span>
+    <span class="n">process_kdd98</span><span class="p">,</span>
+    <span class="n">process_kddcup09_churn</span><span class="p">,</span>
+    <span class="n">process_south_german_credit</span><span class="p">,</span>
+    <span class="n">process_telco_customer_churn</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">_IRANIAN_CHURN_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Iranian Churn Dataset</span>
+<span class="s2">=====================</span>
+
+<span class="s2">A churn dataset from an Iranian telecom company, collected over 12 months.</span>
+
+<span class="s2">The goal is to predict whether a customer will churn.</span>
+<span class="s2">Target variable: 1 = churned, 0 = active.</span>
+
+<span class="s2">Each customer has a ``Customer Value`` column representing their</span>
+<span class="s2">customer lifetime value (CLV), which is used as an instance-dependent</span>
+<span class="s2">cost driver for the retention cost matrix.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Churners                       495</span>
+<span class="s2">Non-churners                  2755</span>
+<span class="s2">Samples                       3150</span>
+<span class="s2">Features                        12</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">UCI Machine Learning Repository — Iranian Churn Dataset (ID 563).</span>
+<span class="s2">https://doi.org/10.24432/C5JW3Z</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Jafari-Marandi, R., Denton, J., Idris, A., Smith, B. K., &amp; Keramati, A.</span>
+<span class="s2">       (2020). Optimum profit-driven churn decision making:</span>
+<span class="s2">       innovative artificial neural networks in telecom industry.</span>
+<span class="s2">       Neural Computing and Applications, 32(18), 14929–14962.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">_GIVE_ME_SOME_CREDIT_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Give Me Some Credit</span>
+<span class="s2">===================</span>
+
+<span class="s2">Originally from the 2011 Kaggle competition hosted by Credit Fusion.</span>
+<span class="s2">The goal is to predict whether a customer will experience serious</span>
+<span class="s2">financial distress in the next two years.</span>
+<span class="s2">Target variable: 1 = defaulted, 0 = no default.</span>
+
+<span class="s2">Only customers with positive monthly income and a debt ratio &lt; 1 are kept.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Defaulters                    7616</span>
+<span class="s2">Non-defaulters              105299</span>
+<span class="s2">Samples                     112915</span>
+<span class="s2">Features                        10</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — GiveMeSomeCredit.</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="s2">       &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="s2">       in Proceedings of the International Conference on Machine Learning</span>
+<span class="s2">       and Applications, 2014.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_iranian_churn">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_iranian_churn.html#empulse.datasets.fetch_iranian_churn">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_iranian_churn</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Iranian Churn dataset from the UCI ML Repository (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a telecom customer will churn.</span>
+<span class="sd">    The target variable is whether the customer churned, 1 = churned, 0 = active.</span>
+
+<span class="sd">    Uses the UCI ML Repository API (stdlib only — no extra dependencies).</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;iranian_churn&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                       495</span>
+<span class="sd">    Non-churners                  2755</span>
+<span class="sd">    Samples                       3150</span>
+<span class="sd">    Features                        12</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;clv&#39;: array}`` — the customer lifetime</span>
+<span class="sd">        value of each customer, extracted from the ``Customer Value`` column.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (deterministic, :math:`\\gamma` treated as a fixed scalar):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_benefit`` :math:`= \\gamma (CLV_i - d \\cdot CLV_i - f) - (1-\\gamma) f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= d \\cdot CLV_i + f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= 0`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``incentive_fraction`` (:math:`d`) = 0.05</span>
+<span class="sd">    - ``contact_cost`` (:math:`f`) = 1</span>
+<span class="sd">    - ``accept_rate`` (:math:`\\gamma`) = 0.3</span>
+
+<span class="sd">    To override these defaults, pass the desired values when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, accept_rate=0.5, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Jafari-Marandi, R., Denton, J., Idris, A., Smith, B. K., &amp; Keramati, A.</span>
+<span class="sd">           (2020). Optimum profit-driven churn decision making.</span>
+<span class="sd">           Neural Computing and Applications, 32(18), 14929–14962.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_iranian_churn</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_iranian_churn(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;iranian_churn.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_uci_iranian_churn_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Iranian Churn dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feature_df</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">clv</span> <span class="o">=</span> <span class="n">process_iranian_churn</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">churn_retention_cost_matrix</span><span class="p">(</span>
+        <span class="n">clv</span><span class="p">,</span>
+        <span class="n">incentive_fraction</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feature_df</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feature_df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Iranian Churn&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_IRANIAN_CHURN_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_uci_iranian_churn_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download the Iranian Churn dataset from UCI and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="n">features</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">_fetch_uci</span><span class="p">(</span><span class="mi">563</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span> <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">arr</span> <span class="ow">in</span> <span class="p">{</span><span class="o">**</span><span class="n">features</span><span class="p">,</span> <span class="o">**</span><span class="n">targets</span><span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>  <span class="c1"># type: ignore[return-value]</span>
+
+
+<div class="viewcode-block" id="fetch_give_me_some_credit">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_give_me_some_credit.html#empulse.datasets.fetch_give_me_some_credit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_give_me_some_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the &quot;Give Me Some Credit&quot; dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will default on a loan in the</span>
+<span class="sd">    next two years.</span>
+<span class="sd">    Target variable: 1 = defaulted, 0 = no default.</span>
+
+<span class="sd">    Downloads data directly from OpenML without requiring scikit-learn.</span>
+<span class="sd">    Downloaded data is cached locally.</span>
+
+<span class="sd">    Only customers with positive monthly income and a debt ratio below 1 are kept.</span>
+
+<span class="sd">    For a full data description and additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;give_me_some_credit&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaulters                    7616</span>
+<span class="sd">    Non-defaulters              105299</span>
+<span class="sd">    Samples                     112915</span>
+<span class="sd">    Features                        10</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains:</span>
+
+<span class="sd">        - ``&#39;cl&#39;``: estimated credit line per client.</span>
+<span class="sd">        - ``&#39;fp_cost&#39;``: precomputed FP cost per client.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` (precomputed, depends on dataset-level statistics)</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75</span>
+
+<span class="sd">    The following parameters are used to precompute per-instance credit lines</span>
+<span class="sd">    and ``fp_cost`` values stored in ``instance_costs``:</span>
+
+<span class="sd">    - ``interest_rate`` = 0.0479 (annual)</span>
+<span class="sd">    - ``fund_cost`` = 0.0294 (annual)</span>
+<span class="sd">    - ``max_credit_line`` = 25000</span>
+<span class="sd">    - ``term_length_months`` = 24</span>
+<span class="sd">    - ``loan_to_income_ratio`` = 3</span>
+
+<span class="sd">    To override the symbolic default, pass the desired value when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, loss_given_default=0.6, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] A. Correa Bahnsen, D.Aouada, B, Ottersten,</span>
+<span class="sd">           &quot;Example-Dependent Cost-Sensitive Logistic Regression for Credit Scoring&quot;,</span>
+<span class="sd">           in Proceedings of the International Conference on Machine Learning</span>
+<span class="sd">           and Applications, 2014.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_give_me_some_credit</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_give_me_some_credit(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;give_me_some_credit.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_give_me_some_credit_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Give Me Some Credit dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">monthly_income_np</span><span class="p">,</span> <span class="n">debt_ratio_np</span><span class="p">,</span> <span class="n">target_np</span> <span class="o">=</span> <span class="n">process_give_me_some_credit</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">credit_scoring_cost_matrix</span><span class="p">(</span>
+        <span class="n">monthly_income_np</span><span class="p">,</span>
+        <span class="n">debt_ratio</span><span class="o">=</span><span class="n">debt_ratio_np</span><span class="p">,</span>
+        <span class="n">target_np</span><span class="o">=</span><span class="n">target_np</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.0479</span><span class="p">,</span>
+        <span class="n">fund_cost</span><span class="o">=</span><span class="mf">0.0294</span><span class="p">,</span>
+        <span class="n">cl_max</span><span class="o">=</span><span class="mi">25000</span><span class="p">,</span>
+        <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">term_length_months</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">loan_to_income_ratio</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Give Me Some Credit&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_GIVE_ME_SOME_CREDIT_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_give_me_some_credit_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download Give Me Some Credit from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;GiveMeSomeCredit&#39;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to download the GiveMeSomeCredit dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_TELCO_CUSTOMER_CHURN_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Kaggle Telco Customer Churn</span>
+<span class="s2">===========================</span>
+
+<span class="s2">Customer churn dataset from IBM Sample Data Sets, hosted on Kaggle and OpenML.</span>
+<span class="s2">The goal is to predict whether a customer will churn.</span>
+<span class="s2">Target variable: 1 = churned, 0 = active.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Churners                      1869</span>
+<span class="s2">Non-churners                  5163</span>
+<span class="s2">Samples                       7032</span>
+<span class="s2">Features                        19</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — telco-customer-churn (ID: 42178).</span>
+<span class="s2">https://www.openml.org/d/42178</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Petrides, G., &amp; Verbeke, W. (2021). Cost-sensitive ensemble learning:</span>
+<span class="s2">       a unifying framework. Data Mining and Knowledge Discovery, 1–28.</span>
+<span class="s2">.. [2] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="s2">       Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="s2">       of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_telco_customer_churn">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_telco_customer_churn.html#empulse.datasets.fetch_telco_customer_churn">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_telco_customer_churn</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Telco Customer Churn dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will churn or not.</span>
+<span class="sd">    The target variable is whether the customer churned, 1 = churned, 0 = active.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;telco_customer_churn&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                      1869</span>
+<span class="sd">    Non-churners                  5163</span>
+<span class="sd">    Samples                       7032</span>
+<span class="sd">    Features                        19</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;monthly_charges&#39;: array}`` — the customer&#39;s</span>
+<span class="sd">        monthly bill amount, which scales the false-negative and false-positive costs.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Petrides &amp; Verbeke 2021, Vanderschueren et al. 2022):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` :math:`= fp\\_months \\cdot monthly\\_charges_i`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= fn\\_months \\cdot monthly\\_charges_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``fn_months`` = 12.0 (annual revenue lost upon churn)</span>
+<span class="sd">    - ``fp_months`` = 2.0 (two months of retention offer cost)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Petrides, G., &amp; Verbeke, W. (2021). Cost-sensitive ensemble learning:</span>
+<span class="sd">           a unifying framework. Data Mining and Knowledge Discovery, 1–28.</span>
+<span class="sd">    .. [2] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="sd">           Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="sd">           of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_telco_customer_churn</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_telco_customer_churn(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;telco_customer_churn.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_telco_customer_churn_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Telco Customer Churn dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">monthly_charges</span> <span class="o">=</span> <span class="n">process_telco_customer_churn</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">churn_monthly_charges_cost_matrix</span><span class="p">(</span>
+        <span class="n">monthly_charges</span><span class="p">,</span>
+        <span class="n">fn_months</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span>
+        <span class="n">fp_months</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Telco Customer Churn&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_TELCO_CUSTOMER_CHURN_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_telco_customer_churn_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download Telco Customer Churn from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">42178</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the Telco Customer Churn dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_DEFAULT_CREDIT_CARD_CLIENTS_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Default of Credit Card Clients</span>
+<span class="s2">==============================</span>
+
+<span class="s2">Credit card default dataset from Taiwan (Yeh &amp; Lien, 2009), hosted on the UCI</span>
+<span class="s2">ML Repository and OpenML.</span>
+<span class="s2">The goal is to predict whether a customer will default on credit card payments.</span>
+<span class="s2">Target variable: 1 = default, 0 = no default.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Defaulters                    6636</span>
+<span class="s2">Non-defaulters               23364</span>
+<span class="s2">Samples                      30000</span>
+<span class="s2">Features                        23</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — default-of-credit-card-clients (ID: 42477).</span>
+<span class="s2">https://www.openml.org/d/42477</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Yeh, I. C., &amp; Lien, C. H. (2009). The comparisons of data mining techniques</span>
+<span class="s2">       for the predictive accuracy of probability of default of credit card clients.</span>
+<span class="s2">       Expert Systems with Applications, 36(2), 2473–2480.</span>
+<span class="s2">.. [2] Bahnsen, A. C., Aouada, D., &amp; Ottersten, B. (2014).</span>
+<span class="s2">       Example-dependent cost-sensitive logistic regression for credit scoring.</span>
+<span class="s2">       In 2014 13th International Conference on Machine Learning and Applications (pp. 263-269).</span>
+<span class="s2">.. [3] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="s2">       Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="s2">       of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_default_credit_card_clients">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_default_credit_card_clients.html#empulse.datasets.fetch_default_credit_card_clients">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_default_credit_card_clients</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Default of Credit Card Clients dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a client will default on their credit card payment.</span>
+<span class="sd">    Target variable: 1 = default, 0 = no default.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;default_credit_card_clients&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaulters                    6636</span>
+<span class="sd">    Non-defaulters               23364</span>
+<span class="sd">    Samples                      30000</span>
+<span class="sd">    Features                        23</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains:</span>
+
+<span class="sd">        - ``&#39;cl&#39;``: credit limit (``limit_bal``) per client.</span>
+<span class="sd">        - ``&#39;fp_cost&#39;``: precomputed FP cost per client following Bahnsen et al. (2014).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Bahnsen et al. 2014, Vanderschueren et al. 2022):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` (precomputed per client)</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Yeh, I. C., &amp; Lien, C. H. (2009). The comparisons of data mining techniques</span>
+<span class="sd">           for the predictive accuracy of probability of default of credit card clients.</span>
+<span class="sd">           Expert Systems with Applications, 36(2), 2473–2480.</span>
+<span class="sd">    .. [2] Bahnsen, A. C., Aouada, D., &amp; Ottersten, B. (2014).</span>
+<span class="sd">           Example-dependent cost-sensitive logistic regression for credit scoring.</span>
+<span class="sd">           In 2014 13th International Conference on Machine Learning and Applications (pp. 263-269).</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_default_credit_card_clients</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_default_credit_card_clients(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;default_of_credit_card_clients.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_default_credit_card_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Default of Credit Card Clients dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">credit_line</span><span class="p">,</span> <span class="n">target_np</span> <span class="o">=</span> <span class="n">process_default_credit_card_clients</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">credit_scoring_known_cl_cost_matrix</span><span class="p">(</span>
+        <span class="n">credit_line</span><span class="p">,</span>
+        <span class="n">target_np</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.0479</span><span class="p">,</span>
+        <span class="n">fund_cost</span><span class="o">=</span><span class="mf">0.0294</span><span class="p">,</span>
+        <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">term_length_months</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Default of Credit Card Clients&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_DEFAULT_CREDIT_CARD_CLIENTS_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_default_credit_card_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download Default of Credit Card Clients from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">42477</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the Default of Credit Card Clients dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_IEEE_FRAUD_DETECTION_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">IEEE-CIS Fraud Detection</span>
+<span class="s2">========================</span>
+
+<span class="s2">Real-world e-commerce fraud detection dataset from Vesta Corporation,</span>
+<span class="s2">originally hosted on Kaggle and available on OpenML.</span>
+<span class="s2">The goal is to predict whether a transaction is fraudulent.</span>
+<span class="s2">Target variable: 1 = fraud, 0 = not fraud.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Frauds                       20663</span>
+<span class="s2">Legitimate                  569877</span>
+<span class="s2">Samples                     590540</span>
+<span class="s2">Features                       431</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — IEEE-CIS_Fraud_Detection (ID: 46858).</span>
+<span class="s2">https://www.openml.org/d/46858</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="s2">       Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="s2">       European Journal of Operational Research, 297(1), 291–300.</span>
+<span class="s2">.. [2] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="s2">       Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="s2">       of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_ieee_fraud_detection">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_ieee_fraud_detection.html#empulse.datasets.fetch_ieee_fraud_detection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_ieee_fraud_detection</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the IEEE-CIS Fraud Detection dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether an e-commerce transaction is fraudulent.</span>
+<span class="sd">    Target variable: 1 = fraud, 0 = not fraud.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;ieee_fraud_detection&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Frauds                       20663</span>
+<span class="sd">    Legitimate                  569877</span>
+<span class="sd">    Samples                     590540</span>
+<span class="sd">    Features                       431</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;amount&#39;: array}`` — the transaction amount</span>
+<span class="sd">        representing the loss if a fraudulent transaction is missed (false negative).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Höppner et al. 2022, Vanderschueren et al. 2022):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= c_f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= c_f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= amount_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``investigation_cost`` (:math:`c_f`) = 10.0 (cost of investigating an alert)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291–300.</span>
+<span class="sd">    .. [2] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="sd">           Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="sd">           of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_ieee_fraud_detection</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_ieee_fraud_detection(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;ieee_fraud_detection.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_ieee_fraud_detection_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;IEEE-CIS Fraud Detection dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">amount</span> <span class="o">=</span> <span class="n">process_ieee_fraud_detection</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">fraud_detection_cost_matrix</span><span class="p">(</span>
+        <span class="n">amount</span><span class="p">,</span>
+        <span class="n">investigation_cost</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;legitimate&#39;</span><span class="p">,</span> <span class="s1">&#39;fraud&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;IEEE-CIS Fraud Detection&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_IEEE_FRAUD_DETECTION_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_ieee_fraud_detection_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download IEEE-CIS Fraud Detection from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">46858</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the IEEE-CIS Fraud Detection dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_KDD98_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">KDD Cup 1998 Direct Mailing</span>
+<span class="s2">===========================</span>
+
+<span class="s2">Direct marketing dataset from the KDD Cup 1998 competition, hosted on the UCI KDD</span>
+<span class="s2">Archive. It records a mailing campaign by a veterans&#39; charity asking lapsed donors</span>
+<span class="s2">for a new donation. The learning and validation sets are combined, as in</span>
+<span class="s2">Vanderschueren et al. (2022).</span>
+<span class="s2">The goal is to predict whether a recipient will respond to a donation mailing.</span>
+<span class="s2">Target variable: 1 = donated, 0 = did not donate.</span>
+
+<span class="s2">Only the 22 attributes selected by Petrides &amp; Verbeke (2021) are kept. The donation</span>
+<span class="s2">amount (``TARGET_D``) is not a feature: it is the false-negative cost.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Donors                        9716</span>
+<span class="s2">Non-donors                  182063</span>
+<span class="s2">Samples                     191779</span>
+<span class="s2">Features                        22</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">UCI KDD Archive — KDD Cup 1998 Data.</span>
+<span class="s2">https://kdd.ics.uci.edu/databases/kddcup98/kddcup98.html</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Zadrozny, B., Langford, J., &amp; Abe, N. (2003). Cost-sensitive learning by</span>
+<span class="s2">       cost-proportionate example weighting. In Third IEEE International Conference</span>
+<span class="s2">       on Data Mining (pp. 435-442).</span>
+<span class="s2">.. [2] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="s2">       Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="s2">       of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_kdd98">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_kdd98.html#empulse.datasets.fetch_kdd98">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_kdd98</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the KDD Cup 1998 Direct Mailing dataset from the UCI KDD Archive (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a recipient will donate in response to a direct mailing.</span>
+<span class="sd">    Target variable: 1 = donated, 0 = did not donate.</span>
+
+<span class="sd">    The learning (``cup98LRN``) and validation (``cup98VAL`` + ``valtargt``) sets are</span>
+<span class="sd">    downloaded and combined, as in Vanderschueren et al. (2022). Only the 22 attributes</span>
+<span class="sd">    selected by Petrides &amp; Verbeke (2021) are kept. The download is about 75 MB and is</span>
+<span class="sd">    cached locally.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;kdd98&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Donors                        9716</span>
+<span class="sd">    Non-donors                  182063</span>
+<span class="sd">    Samples                     191779</span>
+<span class="sd">    Features                        22</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;amount&#39;: array}`` — the donation amount</span>
+<span class="sd">        (``TARGET_D``), which is lost when a donor is not mailed. It is 0 for</span>
+<span class="sd">        non-donors, for whom the false-negative cost never applies.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Zadrozny et al. 2003, Vanderschueren et al. 2022):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= c_f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= c_f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= amount_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``contact_cost`` (:math:`c_f`) = 0.68 (cost of one mailing, in dollars)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Zadrozny, B., Langford, J., &amp; Abe, N. (2003). Cost-sensitive learning by</span>
+<span class="sd">           cost-proportionate example weighting. In Third IEEE International Conference</span>
+<span class="sd">           on Data Mining (pp. 435-442).</span>
+<span class="sd">    .. [2] Petrides, G., &amp; Verbeke, W. (2021). Cost-sensitive ensemble learning:</span>
+<span class="sd">           a unifying framework. Data Mining and Knowledge Discovery, 1–28.</span>
+<span class="sd">    .. [3] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="sd">           Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="sd">           of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_kdd98</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_kdd98(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;kdd98.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_uci_kdd98_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;KDD Cup 1998 Direct Mailing dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">amount</span> <span class="o">=</span> <span class="n">process_kdd98</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">direct_marketing_cost_matrix</span><span class="p">(</span>
+        <span class="n">amount</span><span class="p">,</span>
+        <span class="n">contact_cost</span><span class="o">=</span><span class="mf">0.68</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no donation&#39;</span><span class="p">,</span> <span class="s1">&#39;donated&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;KDD Cup 1998 Direct Mailing&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_KDD98_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="n">_KDD98_URL</span> <span class="o">=</span> <span class="s1">&#39;https://kdd.ics.uci.edu/databases/kddcup98/epsilon_mirror/&#39;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_uci_kdd98_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download the KDD Cup 1998 learning and validation sets and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;TARGET_B&#39;</span><span class="p">,</span> <span class="s1">&#39;TARGET_D&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">learning</span> <span class="o">=</span> <span class="n">_read_csv_columns</span><span class="p">(</span>
+            <span class="n">_fetch_url_bytes</span><span class="p">(</span><span class="n">_KDD98_URL</span> <span class="o">+</span> <span class="s1">&#39;cup98lrn.zip&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="o">*</span><span class="n">KDD98_ATTRIBUTES</span><span class="p">,</span> <span class="o">*</span><span class="n">targets</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">validation</span> <span class="o">=</span> <span class="n">_read_csv_columns</span><span class="p">(</span>
+            <span class="n">_fetch_url_bytes</span><span class="p">(</span><span class="n">_KDD98_URL</span> <span class="o">+</span> <span class="s1">&#39;cup98val.zip&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;CONTROLN&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">KDD98_ATTRIBUTES</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">validation_targets</span> <span class="o">=</span> <span class="n">_read_csv_columns</span><span class="p">(</span>
+            <span class="n">_fetch_url_bytes</span><span class="p">(</span><span class="n">_KDD98_URL</span> <span class="o">+</span> <span class="s1">&#39;valtargt.txt&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;CONTROLN&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">targets</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to download the KDD Cup 1998 dataset. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="c1"># The validation labels ship in a separate file, keyed on the donor id.</span>
+    <span class="n">target_rows</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">control</span><span class="p">:</span> <span class="p">(</span><span class="n">target_b</span><span class="p">,</span> <span class="n">target_d</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">control</span><span class="p">,</span> <span class="n">target_b</span><span class="p">,</span> <span class="n">target_d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">validation_targets</span><span class="p">[</span><span class="s1">&#39;CONTROLN&#39;</span><span class="p">],</span>
+            <span class="n">validation_targets</span><span class="p">[</span><span class="s1">&#39;TARGET_B&#39;</span><span class="p">],</span>
+            <span class="n">validation_targets</span><span class="p">[</span><span class="s1">&#39;TARGET_D&#39;</span><span class="p">],</span>
+            <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">}</span>
+    <span class="n">validation_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_rows</span><span class="p">[</span><span class="n">control</span><span class="p">]</span> <span class="k">for</span> <span class="n">control</span> <span class="ow">in</span> <span class="n">validation</span><span class="p">[</span><span class="s1">&#39;CONTROLN&#39;</span><span class="p">]]</span>
+    <span class="n">validation</span><span class="p">[</span><span class="s1">&#39;TARGET_B&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_b</span> <span class="k">for</span> <span class="n">target_b</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">validation_labels</span><span class="p">]</span>
+    <span class="n">validation</span><span class="p">[</span><span class="s1">&#39;TARGET_D&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_d</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">target_d</span> <span class="ow">in</span> <span class="n">validation_labels</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">learning</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">+</span> <span class="n">validation</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">KDD98_ATTRIBUTES</span><span class="p">,</span> <span class="o">*</span><span class="n">targets</span><span class="p">)}</span>  <span class="c1"># type: ignore[misc]</span>
+
+
+<span class="n">_CREDIT_CARD_FRAUD_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Credit Card Fraud Detection (ULB MLG)</span>
+<span class="s2">=====================================</span>
+
+<span class="s2">Transactions made by European cardholders in September 2013, collected during a</span>
+<span class="s2">research collaboration between Worldline and the Machine Learning Group (MLG) of ULB.</span>
+<span class="s2">The dataset is highly imbalanced: 492 frauds out of 284,807 transactions.</span>
+<span class="s2">Following Hoppner et al. (2022) and Vanderschueren et al. (2022), transactions with</span>
+<span class="s2">zero amount are filtered out, leaving 282,982 samples (465 frauds).</span>
+
+<span class="s2">Target variable: 1 = fraud, 0 = legitimate.</span>
+
+<span class="s2">Features:</span>
+<span class="s2">- ``V1``–``V28``: Principal components obtained with PCA (due to confidentiality).</span>
+<span class="s2">- ``Amount``: Transaction amount in euros.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Frauds                         465</span>
+<span class="s2">Legitimate                  282517</span>
+<span class="s2">Samples                     282982</span>
+<span class="s2">Features                        29</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — creditcard (ID: 1597).</span>
+<span class="s2">https://www.openml.org/d/1597</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Dal Pozzolo, A., Caelen, O., Johnson, R. A., &amp; Bontempi, G. (2015).</span>
+<span class="s2">       Calibrating probability with undersampling for unbalanced classification.</span>
+<span class="s2">       In 2015 IEEE Symposium Series on Computational Intelligence (pp. 159-166).</span>
+<span class="s2">.. [2] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="s2">       Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="s2">       European Journal of Operational Research, 297(1), 291–300.</span>
+<span class="s2">.. [3] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="s2">       Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="s2">       of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="s2">.. [4] De Vos, S., Vanderschueren, T., Verdonck, T., &amp; Verbeke, W. (2023).</span>
+<span class="s2">       Robust instance-dependent cost-sensitive classification.</span>
+<span class="s2">       Advances in Data Analysis and Classification, 1–23.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_credit_card_fraud">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_credit_card_fraud.html#empulse.datasets.fetch_credit_card_fraud">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_credit_card_fraud</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Kaggle Credit Card Fraud (ULB MLG) dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a credit card transaction is fraudulent.</span>
+<span class="sd">    Target variable: 1 = fraud, 0 = legitimate.</span>
+
+<span class="sd">    Transactions with zero amount are filtered out following Höppner et al. (2022)</span>
+<span class="sd">    and Vanderschueren et al. (2022), resulting in 282,982 samples.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;credit_card_fraud&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Frauds                         465</span>
+<span class="sd">    Legitimate                  282517</span>
+<span class="sd">    Samples                     282982</span>
+<span class="sd">    Features                        29</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;amount&#39;: array}`` — the transaction amount</span>
+<span class="sd">        representing the loss if a fraudulent transaction is missed (false negative).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Höppner et al. 2022, Vanderschueren et al. 2022):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= c_f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= c_f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= amount_i`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``investigation_cost`` (:math:`c_f`) = 10.0 (cost of investigating an alert)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Dal Pozzolo, A., Caelen, O., Johnson, R. A., &amp; Bontempi, G. (2015).</span>
+<span class="sd">           Calibrating probability with undersampling for unbalanced classification.</span>
+<span class="sd">           In 2015 IEEE Symposium Series on Computational Intelligence (pp. 159-166).</span>
+<span class="sd">    .. [2] Höppner, S., Baesens, B., Verbeke, W., &amp; Verdonck, T. (2022).</span>
+<span class="sd">           Instance-dependent cost-sensitive learning for detecting transfer fraud.</span>
+<span class="sd">           European Journal of Operational Research, 297(1), 291–300.</span>
+<span class="sd">    .. [3] Vanderschueren, T., Verdonck, T., Baesens, B., &amp; Verbeke, W. (2022).</span>
+<span class="sd">           Predict-then-optimize or predict-and-optimize? An empirical evaluation</span>
+<span class="sd">           of cost-sensitive learning strategies. Information Sciences, 594, 400–415.</span>
+<span class="sd">    .. [4] De Vos, S., Vanderschueren, T., Verdonck, T., &amp; Verbeke, W. (2023).</span>
+<span class="sd">           Robust instance-dependent cost-sensitive classification.</span>
+<span class="sd">           Advances in Data Analysis and Classification, 1–23.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_credit_card_fraud</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_credit_card_fraud(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;credit_card_fraud.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_credit_card_fraud_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Credit Card Fraud Detection dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">amount</span> <span class="o">=</span> <span class="n">process_credit_card_fraud</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">fraud_detection_cost_matrix</span><span class="p">(</span>
+        <span class="n">amount</span><span class="p">,</span>
+        <span class="n">investigation_cost</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;legitimate&#39;</span><span class="p">,</span> <span class="s1">&#39;fraud&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Credit Card Fraud Detection&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_CREDIT_CARD_FRAUD_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_credit_card_fraud_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download Credit Card Fraud Detection from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">1597</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the Credit Card Fraud Detection dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_HOME_EQUITY_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Home Equity (HMEQ) Dataset</span>
+<span class="s2">==========================</span>
+
+<span class="s2">Baseline and loan performance information for 5,960 recent home equity loans,</span>
+<span class="s2">used to automate loan approval decisions following the Equal Credit Opportunity Act.</span>
+<span class="s2">The goal is to predict whether an applicant will default or be seriously delinquent</span>
+<span class="s2">(target: 1 = default, 0 = good credit).</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Defaults                      1189</span>
+<span class="s2">Non-defaults                  4771</span>
+<span class="s2">Samples                       5960</span>
+<span class="s2">Features                        12</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — HMEQ_Data (ID: 43337).</span>
+<span class="s2">https://www.openml.org/d/43337</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Baesens, B., Roesch, D., &amp; Scheule, H. (2016). Credit risk analytics:</span>
+<span class="s2">       Measurement techniques, applications, and examples in SAS. John Wiley &amp; Sons.</span>
+<span class="s2">.. [2] Ballegeer, M., Bogaert, M., &amp; Benoit, D. F. (2025). Evaluating the stability</span>
+<span class="s2">       of model explanations in instance-dependent cost-sensitive credit scoring.</span>
+<span class="s2">       European Journal of Operational Research, 326(2), 630–640.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_home_equity">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_home_equity.html#empulse.datasets.fetch_home_equity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_home_equity</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Home Equity (HMEQ) dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a home equity loan applicant will default</span>
+<span class="sd">    or be seriously delinquent.</span>
+<span class="sd">    Target variable: 1 = default, 0 = no default.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;home_equity&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Defaults                      1189</span>
+<span class="sd">    Non-defaults                  4771</span>
+<span class="sd">    Samples                       5960</span>
+<span class="sd">    Features                        12</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains:</span>
+
+<span class="sd">        - ``&#39;cl&#39;``: loan amount per borrower (``LOAN``).</span>
+<span class="sd">        - ``&#39;fp_cost&#39;``: precomputed false positive cost per borrower.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Bahnsen et al. 2014, Ballegeer et al. 2025):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` (precomputed per borrower)</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Baesens, B., Roesch, D., &amp; Scheule, H. (2016). Credit risk analytics:</span>
+<span class="sd">           Measurement techniques, applications, and examples in SAS. John Wiley &amp; Sons.</span>
+<span class="sd">    .. [2] Ballegeer, M., Bogaert, M., &amp; Benoit, D. F. (2025). Evaluating the stability</span>
+<span class="sd">           of model explanations in instance-dependent cost-sensitive credit scoring.</span>
+<span class="sd">           European Journal of Operational Research, 326(2), 630–640.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_home_equity</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_home_equity(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;home_equity.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_home_equity_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Home Equity (HMEQ) dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">amounts</span><span class="p">,</span> <span class="n">target_np</span> <span class="o">=</span> <span class="n">process_home_equity</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">credit_scoring_known_cl_cost_matrix</span><span class="p">(</span>
+        <span class="n">amounts</span><span class="p">,</span>
+        <span class="n">target_np</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.0479</span><span class="p">,</span>
+        <span class="n">fund_cost</span><span class="o">=</span><span class="mf">0.0294</span><span class="p">,</span>
+        <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">term_length_months</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no default&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Home Equity (HMEQ)&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_HOME_EQUITY_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_home_equity_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download Home Equity from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">43337</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the Home Equity dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_SOUTH_GERMAN_CREDIT_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">South German Credit</span>
+<span class="s2">===================</span>
+
+<span class="s2">Credit scoring dataset of 1,000 consumer loans from a southern German bank</span>
+<span class="s2">(1973–1975), in the corrected version published by Grömping (2019). The widely used</span>
+<span class="s2">Statlog &quot;German Credit&quot; data has the same origin but wrongly coded variables;</span>
+<span class="s2">this dataset replaces it.</span>
+<span class="s2">The goal is to predict whether a loan is a bad credit risk (target: 1 = bad, 0 = good).</span>
+<span class="s2">Bad credits are oversampled in the data, so the 30</span><span class="si">% d</span><span class="s2">efault rate is not the</span>
+<span class="s2">bank&#39;s actual default rate.</span>
+
+<span class="s2">Every feature except ``duration``, ``amount`` and ``age`` is an integer category</span>
+<span class="s2">code; the code tables are in Grömping (2019).</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Bad credit                     300</span>
+<span class="s2">Good credit                    700</span>
+<span class="s2">Samples                       1000</span>
+<span class="s2">Features                        20</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">UCI Machine Learning Repository — South German Credit (ID 522).</span>
+<span class="s2">https://archive.ics.uci.edu/dataset/522/south+german+credit</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Grömping, U. (2019). South German Credit Data: Correcting a widely used data set.</span>
+<span class="s2">       Reports in Mathematics, Physics and Chemistry, Report 4/2019, Department II,</span>
+<span class="s2">       Beuth University of Applied Sciences Berlin.</span>
+<span class="s2">.. [2] Ballegeer, M., Bogaert, M., &amp; Benoit, D. F. (2025). Evaluating the stability</span>
+<span class="s2">       of model explanations in instance-dependent cost-sensitive credit scoring.</span>
+<span class="s2">       European Journal of Operational Research, 326(2), 630–640.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_south_german_credit">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_south_german_credit.html#empulse.datasets.fetch_south_german_credit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_south_german_credit</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the South German Credit dataset from the UCI ML Repository (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a loan is a bad credit risk.</span>
+<span class="sd">    Target variable: 1 = bad credit, 0 = good credit.</span>
+
+<span class="sd">    This is the corrected version of the Statlog &quot;German Credit&quot; data published by</span>
+<span class="sd">    Grömping (2019), as used by Ballegeer et al. (2025). Every feature except</span>
+<span class="sd">    ``duration``, ``amount`` and ``age`` is an integer category code; the code tables</span>
+<span class="sd">    are in Grömping (2019).</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;south_german_credit&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Bad credit                     300</span>
+<span class="sd">    Good credit                    700</span>
+<span class="sd">    Samples                       1000</span>
+<span class="sd">    Features                        20</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains:</span>
+
+<span class="sd">        - ``&#39;cl&#39;``: credit amount per borrower (``amount``, in Deutsche Mark).</span>
+<span class="sd">        - ``&#39;fp_cost&#39;``: precomputed false positive cost per borrower.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Ballegeer et al. 2025, following Bahnsen et al. 2014):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_cost`` :math:`= 0`</span>
+<span class="sd">          - ``fp_cost`` (precomputed per borrower)</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= Cl_i \\cdot L_{gd}`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``loss_given_default`` (:math:`L_{gd}`) = 0.75</span>
+
+<span class="sd">    The false positive cost is precomputed with an annual interest rate of 4.79%,</span>
+<span class="sd">    an annual cost of funds of 2.94% and a 24-month term.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Grömping, U. (2019). South German Credit Data: Correcting a widely used data set.</span>
+<span class="sd">           Reports in Mathematics, Physics and Chemistry, Report 4/2019, Department II,</span>
+<span class="sd">           Beuth University of Applied Sciences Berlin.</span>
+<span class="sd">    .. [2] Ballegeer, M., Bogaert, M., &amp; Benoit, D. F. (2025). Evaluating the stability</span>
+<span class="sd">           of model explanations in instance-dependent cost-sensitive credit scoring.</span>
+<span class="sd">           European Journal of Operational Research, 326(2), 630–640.</span>
+<span class="sd">    .. [3] Bahnsen, A. C., Aouada, D., &amp; Ottersten, B. (2014). Example-dependent</span>
+<span class="sd">           cost-sensitive logistic regression for credit scoring. In 2014 13th International</span>
+<span class="sd">           Conference on Machine Learning and Applications (pp. 263–269).</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_south_german_credit</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_south_german_credit(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;south_german_credit.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_uci_south_german_credit_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;South German Credit dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">amounts</span><span class="p">,</span> <span class="n">target_np</span> <span class="o">=</span> <span class="n">process_south_german_credit</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">credit_scoring_known_cl_cost_matrix</span><span class="p">(</span>
+        <span class="n">amounts</span><span class="p">,</span>
+        <span class="n">target_np</span><span class="p">,</span>
+        <span class="n">interest_rate</span><span class="o">=</span><span class="mf">0.0479</span><span class="p">,</span>
+        <span class="n">fund_cost</span><span class="o">=</span><span class="mf">0.0294</span><span class="p">,</span>
+        <span class="n">loss_given_default</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+        <span class="n">term_length_months</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;good credit&#39;</span><span class="p">,</span> <span class="s1">&#39;bad credit&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;South German Credit&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_SOUTH_GERMAN_CREDIT_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="n">_SOUTH_GERMAN_CREDIT_URL</span> <span class="o">=</span> <span class="s1">&#39;https://archive.ics.uci.edu/static/public/522/south+german+credit.zip&#39;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_uci_south_german_credit_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download South German Credit from the UCI archive and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">archive_bytes</span> <span class="o">=</span> <span class="n">_fetch_url_bytes</span><span class="p">(</span><span class="n">_SOUTH_GERMAN_CREDIT_URL</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">archive_bytes</span><span class="p">))</span> <span class="k">as</span> <span class="n">archive</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s1">&#39;SouthGermanCredit.asc&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;latin-1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">BadZipFile</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to download the South German Credit dataset. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+    <span class="n">header</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rows</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">body</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">header</span><span class="p">)}</span>
+
+
+<span class="n">_KDDCUP09_CHURN_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">KDD Cup 2009 / Orange Customer Churn</span>
+<span class="s2">====================================</span>
+
+<span class="s2">Customer relationship management data provided by the French telecom operator</span>
+<span class="s2">Orange for the ACM KDD Cup 2009 (small version).</span>
+<span class="s2">Contains 50,000 customers described by 230 anonymised variables: Var1–Var190 are</span>
+<span class="s2">numeric and Var191–Var229 are nominal (Var209 and Var230 are empty).</span>
+<span class="s2">The goal is to predict customer churn (target: 1 = churn, 0 = no churn).</span>
+
+<span class="s2">The variables are anonymised and include no revenue or customer value, so the cost</span>
+<span class="s2">matrix uses the average customer lifetime value of Verbeke et al. (2012) and is the</span>
+<span class="s2">same for every customer.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Churners                      3672</span>
+<span class="s2">Non-churners                 46328</span>
+<span class="s2">Samples                      50000</span>
+<span class="s2">Features                       230</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">OpenML — KDDCup09_churn (ID: 1112).</span>
+<span class="s2">https://www.openml.org/d/1112</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Verbeke, W., Dejaeger, K., Martens, D., Hur, J., &amp; Baesens, B. (2012).</span>
+<span class="s2">       New insights into churn prediction in the telecommunication sector:</span>
+<span class="s2">       A profit driven data mining approach.</span>
+<span class="s2">       European Journal of Operational Research, 218(1), 211–229.</span>
+<span class="s2">.. [2] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B., &amp; Snoeck, M. (2018).</span>
+<span class="s2">       Profit maximizing logistic model for customer churn prediction using genetic algorithms.</span>
+<span class="s2">       Swarm and Evolutionary Computation, 40, 116–130.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_kddcup09_churn">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_kddcup09_churn.html#empulse.datasets.fetch_kddcup09_churn">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_kddcup09_churn</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch the KDD Cup 2009 / Orange Customer Churn dataset from OpenML (binary classification).</span>
+
+<span class="sd">    The goal is to predict customer churn (target: 1 = churn, 0 = no churn).</span>
+
+<span class="sd">    The 230 variables are anonymised and include no revenue or customer value, so the</span>
+<span class="sd">    cost matrix uses the average customer lifetime value of Verbeke et al. (2012) and</span>
+<span class="sd">    is the same for every customer.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;kddcup09_churn&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                      3672</span>
+<span class="sd">    Non-churners                 46328</span>
+<span class="sd">    Samples                      50000</span>
+<span class="sd">    Features                       230</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;clv&#39;: array}`` — the customer lifetime value,</span>
+<span class="sd">        200 for every customer.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Verbraken et al. 2013, with the parameters of Verbeke et al. 2012;</span>
+<span class="sd">    :math:`\\gamma` treated as a fixed scalar):</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_benefit`` :math:`= \\gamma (CLV_i - d \\cdot CLV_i - f) - (1-\\gamma) f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= d \\cdot CLV_i + f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= 0`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``incentive_fraction`` (:math:`d`) = 0.05 (an incentive of 10 on a CLV of 200)</span>
+<span class="sd">    - ``contact_cost`` (:math:`f`) = 1</span>
+<span class="sd">    - ``accept_rate`` (:math:`\\gamma`) = 0.3 (the mean of the Beta(6, 14)</span>
+<span class="sd">      distribution used by the expected maximum profit measure)</span>
+
+<span class="sd">    To override these defaults, pass the desired values when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, accept_rate=0.5, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Verbeke, W., Dejaeger, K., Martens, D., Hur, J., &amp; Baesens, B. (2012).</span>
+<span class="sd">           New insights into churn prediction in the telecommunication sector:</span>
+<span class="sd">           A profit driven data mining approach.</span>
+<span class="sd">           European Journal of Operational Research, 218(1), 211–229.</span>
+<span class="sd">    .. [2] Verbraken, T., Verbeke, W., &amp; Baesens, B. (2013). A novel profit maximizing</span>
+<span class="sd">           metric for measuring classification performance of customer churn prediction</span>
+<span class="sd">           models. IEEE Transactions on Knowledge and Data Engineering, 25(5), 961–973.</span>
+<span class="sd">    .. [3] Stripling, E., vanden Broucke, S., Antonio, K., Baesens, B., &amp; Snoeck, M. (2018).</span>
+<span class="sd">           Profit maximizing logistic model for customer churn prediction using genetic algorithms.</span>
+<span class="sd">           Swarm and Evolutionary Computation, 40, 116–130.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_kddcup09_churn</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_kddcup09_churn(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;kddcup09_churn.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_openml_kddcup09_churn_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;KDD Cup 2009 / Orange Customer Churn dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span> <span class="o">=</span> <span class="n">process_kddcup09_churn</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">churn_retention_cost_matrix</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span> <span class="mf">200.0</span><span class="p">),</span>
+        <span class="n">incentive_fraction</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;KDD Cup 2009 Orange Churn&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_KDDCUP09_CHURN_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_openml_kddcup09_churn_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download KDD Cup 2009 Churn from OpenML and return a flat string dict.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_openml</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="mi">1112</span><span class="p">)</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the KDD Cup 2009 Churn dataset from OpenML. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="n">_CELL2CELL_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">Cell2Cell Customer Churn</span>
+<span class="s2">========================</span>
+
+<span class="s2">Customer churn data of the US wireless operator Cell2Cell, released for the churn</span>
+<span class="s2">modelling tournament of the Teradata Center for Customer Relationship Management</span>
+<span class="s2">at Duke University. It is the &quot;Duke&quot; data used throughout the</span>
+<span class="s2">profit-driven churn literature (e.g. Verbeke et al. 2012; Höppner et al. 2020;</span>
+<span class="s2">Maldonado et al. 2020).</span>
+<span class="s2">The goal is to predict whether a customer will churn.</span>
+<span class="s2">Target variable: 1 = churned, 0 = active.</span>
+
+<span class="s2">The Duke center no longer distributes the data. This loader downloads the</span>
+<span class="s2">``cell2celltrain.csv`` file from a public GitHub mirror, pinned to a fixed commit,</span>
+<span class="s2">and drops the 156 customers without a ``MonthlyRevenue``.</span>
+
+<span class="s2">The data records monthly revenue but not customer lifetime value, so the CLV of the</span>
+<span class="s2">churn cost matrix is approximated as a number of months of revenue.</span>
+
+<span class="s2">=================   ==============</span>
+<span class="s2">Classes                          2</span>
+<span class="s2">Churners                     14641</span>
+<span class="s2">Non-churners                 36250</span>
+<span class="s2">Samples                      50891</span>
+<span class="s2">Features                        56</span>
+<span class="s2">=================   ==============</span>
+
+<span class="s2">Source</span>
+<span class="s2">------</span>
+<span class="s2">Teradata Center for Customer Relationship Management, Duke University,</span>
+<span class="s2">via https://github.com/janebunr/Cell2Cell.</span>
+
+<span class="s2">References</span>
+<span class="s2">----------</span>
+<span class="s2">.. [1] Verbeke, W., Dejaeger, K., Martens, D., Hur, J., &amp; Baesens, B. (2012).</span>
+<span class="s2">       New insights into churn prediction in the telecommunication sector:</span>
+<span class="s2">       A profit driven data mining approach.</span>
+<span class="s2">       European Journal of Operational Research, 218(1), 211–229.</span>
+<span class="s2">.. [2] Verbraken, T., Verbeke, W., &amp; Baesens, B. (2013). A novel profit maximizing</span>
+<span class="s2">       metric for measuring classification performance of customer churn prediction</span>
+<span class="s2">       models. IEEE Transactions on Knowledge and Data Engineering, 25(5), 961–973.</span>
+<span class="s2">.. [3] Höppner, S., Stripling, E., Baesens, B., vanden Broucke, S., &amp; Verdonck, T. (2020).</span>
+<span class="s2">       Profit driven decision trees for churn prediction.</span>
+<span class="s2">       European Journal of Operational Research, 284(3), 920–933.</span>
+<span class="s2">.. [4] Maldonado, S., López, J., &amp; Vairetti, C. (2020). Profit-based churn</span>
+<span class="s2">       prediction based on Minimax Probability Machines. European Journal of</span>
+<span class="s2">       Operational Research, 284(1), 273–284.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fetch_cell2cell">
+<a class="viewcode-back" href="../../../reference/generated/empulse.datasets.fetch_cell2cell.html#empulse.datasets.fetch_cell2cell">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_cell2cell</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">data_home</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">download_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch the Cell2Cell Customer Churn dataset (binary classification).</span>
+
+<span class="sd">    The goal is to predict whether a customer will churn or not.</span>
+<span class="sd">    The target variable is whether the customer churned: 1 = churned, 0 = active.</span>
+
+<span class="sd">    This is the &quot;Duke&quot; churn data of the Teradata Center for Customer Relationship</span>
+<span class="sd">    Management tournament. The Duke center no longer distributes it, so it is</span>
+<span class="sd">    downloaded from a public GitHub mirror pinned to a fixed commit. The 156 customers</span>
+<span class="sd">    without a ``MonthlyRevenue`` are dropped.</span>
+
+<span class="sd">    For additional information about the dataset,</span>
+<span class="sd">    consult the :ref:`User Guide &lt;cell2cell&gt;`.</span>
+
+<span class="sd">    =================   ==============</span>
+<span class="sd">    Classes                          2</span>
+<span class="sd">    Churners                     14641</span>
+<span class="sd">    Non-churners                 36250</span>
+<span class="sd">    Samples                      50891</span>
+<span class="sd">    Features                        56</span>
+<span class="sd">    =================   ==============</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    backend : module</span>
+<span class="sd">        Dataframe library to use for ``data`` and ``target``.</span>
+<span class="sd">        Pass the library module directly, e.g. ``backend=polars`` or</span>
+<span class="sd">        ``backend=pandas``.</span>
+<span class="sd">    data_home : str or Path, optional</span>
+<span class="sd">        Directory used for caching downloaded data.</span>
+<span class="sd">        Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).</span>
+<span class="sd">    download_if_missing : bool, default=True</span>
+<span class="sd">        If False, raise an ``OSError`` when the data is not cached locally.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dataset : :class:`~empulse.datasets.Dataset`</span>
+<span class="sd">        ``instance_costs`` contains ``{&#39;monthly_revenue&#39;: array}`` — each customer&#39;s</span>
+<span class="sd">        average monthly revenue, from which their lifetime value is approximated. The 3</span>
+<span class="sd">        negative revenues are set to 0: a customer who costs money has no value to retain.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Cost matrix (Verbraken et al. 2013, :math:`\\gamma` treated as a fixed scalar).</span>
+<span class="sd">    The data has no customer lifetime value, so it is approximated by</span>
+<span class="sd">    :math:`CLV_i = m \\cdot MonthlyRevenue_i`:</span>
+
+<span class="sd">    .. list-table::</span>
+
+<span class="sd">        * -</span>
+<span class="sd">          - Actual positive :math:`y_i = 1`</span>
+<span class="sd">          - Actual negative :math:`y_i = 0`</span>
+<span class="sd">        * - Predicted positive :math:`\\hat{y}_i = 1`</span>
+<span class="sd">          - ``tp_benefit`` :math:`= \\gamma (CLV_i - d \\cdot CLV_i - f) - (1-\\gamma) f`</span>
+<span class="sd">          - ``fp_cost`` :math:`= d \\cdot CLV_i + f`</span>
+<span class="sd">        * - Predicted negative :math:`\\hat{y}_i = 0`</span>
+<span class="sd">          - ``fn_cost`` :math:`= 0`</span>
+<span class="sd">          - ``tn_cost`` :math:`= 0`</span>
+
+<span class="sd">    The cost matrix uses symbolic parameters with the following defaults:</span>
+
+<span class="sd">    - ``clv_months`` (:math:`m`) = 12 (months of revenue counted as lifetime value)</span>
+<span class="sd">    - ``incentive_fraction`` (:math:`d`) = 0.05 (as an incentive of 10 on a CLV of 200</span>
+<span class="sd">      in Verbeke et al. 2012)</span>
+<span class="sd">    - ``contact_cost`` (:math:`f`) = 1</span>
+<span class="sd">    - ``accept_rate`` (:math:`\\gamma`) = 0.3 (the mean of the Beta(6, 14)</span>
+<span class="sd">      distribution used by the expected maximum profit measure)</span>
+
+<span class="sd">    To override these defaults, pass the desired values when evaluating the metric::</span>
+
+<span class="sd">        metric(dataset.target, y_score, clv_months=24, **dataset.instance_costs)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Verbeke, W., Dejaeger, K., Martens, D., Hur, J., &amp; Baesens, B. (2012).</span>
+<span class="sd">           New insights into churn prediction in the telecommunication sector:</span>
+<span class="sd">           A profit driven data mining approach.</span>
+<span class="sd">           European Journal of Operational Research, 218(1), 211–229.</span>
+<span class="sd">    .. [2] Verbraken, T., Verbeke, W., &amp; Baesens, B. (2013). A novel profit maximizing</span>
+<span class="sd">           metric for measuring classification performance of customer churn prediction</span>
+<span class="sd">           models. IEEE Transactions on Knowledge and Data Engineering, 25(5), 961–973.</span>
+<span class="sd">    .. [3] Höppner, S., Stripling, E., Baesens, B., vanden Broucke, S., &amp; Verdonck, T. (2020).</span>
+<span class="sd">           Profit driven decision trees for churn prediction.</span>
+<span class="sd">           European Journal of Operational Research, 284(3), 920–933.</span>
+<span class="sd">    .. [4] Maldonado, S., López, J., &amp; Vairetti, C. (2020). Profit-based churn</span>
+<span class="sd">           prediction based on Minimax Probability Machines. European Journal of</span>
+<span class="sd">           Operational Research, 284(1), 273–284.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import numpy as np</span>
+<span class="sd">        import pandas as pd</span>
+<span class="sd">        from empulse.datasets import fetch_cell2cell</span>
+<span class="sd">        from empulse.metrics import Metric, Cost</span>
+
+<span class="sd">        dataset = fetch_cell2cell(backend=pd)</span>
+
+<span class="sd">        # replace with your own model&#39;s predicted probabilities</span>
+<span class="sd">        y_score = np.random.default_rng(0).uniform(size=len(dataset.target))</span>
+
+<span class="sd">        metric = Metric(dataset.cost_matrix, Cost())</span>
+<span class="sd">        score = metric(dataset.target, y_score, **dataset.instance_costs)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">get_data_home</span><span class="p">(</span><span class="n">data_home</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;cell2cell.csv.gz&#39;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">load_or_fetch</span><span class="p">(</span>
+        <span class="n">cache_file</span><span class="p">,</span>
+        <span class="n">_fetch_cell2cell_raw</span><span class="p">,</span>
+        <span class="n">download_if_missing</span><span class="o">=</span><span class="n">download_if_missing</span><span class="p">,</span>
+        <span class="n">dataset_name</span><span class="o">=</span><span class="s1">&#39;Cell2Cell Customer Churn dataset&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">feat</span><span class="p">,</span> <span class="n">target_series</span><span class="p">,</span> <span class="n">monthly_revenue</span> <span class="o">=</span> <span class="n">process_cell2cell</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">backend</span><span class="p">)</span>
+    <span class="n">cost_matrix</span><span class="p">,</span> <span class="n">instance_costs</span> <span class="o">=</span> <span class="n">churn_retention_monthly_cost_matrix</span><span class="p">(</span>
+        <span class="c1"># 9 customers have a zero or negative revenue (net credits); they have no value to retain</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">monthly_revenue</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">clv_months</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+        <span class="n">incentive_fraction</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">contact_cost</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">accept_rate</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">feat</span><span class="p">),</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">to_native</span><span class="p">(</span><span class="n">target_series</span><span class="p">),</span>
+        <span class="n">cost_matrix</span><span class="o">=</span><span class="n">cost_matrix</span><span class="p">,</span>
+        <span class="n">instance_costs</span><span class="o">=</span><span class="n">instance_costs</span><span class="p">,</span>
+        <span class="n">feature_names</span><span class="o">=</span><span class="n">feat</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">target_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;no churn&#39;</span><span class="p">,</span> <span class="s1">&#39;churn&#39;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Cell2Cell Customer Churn&#39;</span><span class="p">,</span>
+        <span class="n">DESCR</span><span class="o">=</span><span class="n">_CELL2CELL_DESCRIPTION</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="n">_CELL2CELL_URL</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s1">&#39;https://raw.githubusercontent.com/janebunr/Cell2Cell/&#39;</span>
+    <span class="s1">&#39;d646177d0c23e7dd7cde532ee7a5162c768fe963/Data</span><span class="si">%20f</span><span class="s1">iles/cell2celltrain.csv&#39;</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_cell2cell_raw</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download the Cell2Cell training data from a pinned GitHub mirror.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_fetch_csv_url</span><span class="p">(</span><span class="n">_CELL2CELL_URL</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Failed to download the Cell2Cell dataset. Original error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item">
+<div class="prev-next-area">
+</div></div>
+  
+</div>
+                </footer>
+              
+              
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024 - 2026, Shimanto Rahman (AGPLv3 License).
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+  </body>
+</html>

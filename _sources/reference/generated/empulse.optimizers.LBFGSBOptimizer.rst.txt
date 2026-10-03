@@ -1,0 +1,9 @@
+﻿LBFGSBOptimizer
+===============
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: LBFGSBOptimizer
+   :members:
+   :inherited-members:
+   :special-members: __call__

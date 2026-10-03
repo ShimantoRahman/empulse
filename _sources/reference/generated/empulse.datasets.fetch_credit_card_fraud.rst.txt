@@ -1,0 +1,6 @@
+﻿fetch\_credit\_card\_fraud
+==========================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_credit_card_fraud

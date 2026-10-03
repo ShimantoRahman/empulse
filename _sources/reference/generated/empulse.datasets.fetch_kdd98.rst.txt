@@ -1,0 +1,6 @@
+﻿fetch\_kdd98
+============
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_kdd98

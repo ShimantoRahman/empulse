@@ -1,0 +1,9 @@
+﻿B2BoostClassifier
+=================
+
+.. currentmodule:: empulse.models
+
+.. autoclass:: B2BoostClassifier
+   :members:
+   :inherited-members:
+   :special-members: __call__

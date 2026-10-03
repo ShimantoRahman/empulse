@@ -1,0 +1,6 @@
+﻿fetch\_telco\_customer\_churn
+=============================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_telco_customer_churn

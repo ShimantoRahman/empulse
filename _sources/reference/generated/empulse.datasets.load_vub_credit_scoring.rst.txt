@@ -1,0 +1,6 @@
+﻿load\_vub\_credit\_scoring
+==========================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: load_vub_credit_scoring

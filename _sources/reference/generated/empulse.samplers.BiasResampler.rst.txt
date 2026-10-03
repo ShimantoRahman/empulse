@@ -1,0 +1,9 @@
+﻿BiasResampler
+=============
+
+.. currentmodule:: empulse.samplers
+
+.. autoclass:: BiasResampler
+   :members:
+   :inherited-members:
+   :special-members: __call__

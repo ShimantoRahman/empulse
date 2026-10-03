@@ -1,0 +1,9 @@
+﻿WarmupSchedule
+==============
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: WarmupSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

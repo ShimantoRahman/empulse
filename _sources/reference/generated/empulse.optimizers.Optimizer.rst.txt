@@ -1,0 +1,9 @@
+﻿Optimizer
+=========
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: Optimizer
+   :members:
+   :inherited-members:
+   :special-members: __call__

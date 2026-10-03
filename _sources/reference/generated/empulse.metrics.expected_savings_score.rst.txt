@@ -1,0 +1,7 @@
+﻿expected\_savings\_score
+========================
+
+.. currentmodule:: empulse.metrics
+
+.. autodata:: expected_savings_score
+   :no-value:

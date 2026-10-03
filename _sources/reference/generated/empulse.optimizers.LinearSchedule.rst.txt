@@ -1,0 +1,9 @@
+﻿LinearSchedule
+==============
+
+.. currentmodule:: empulse.optimizers
+
+.. autoclass:: LinearSchedule
+   :members:
+   :inherited-members:
+   :special-members: __call__

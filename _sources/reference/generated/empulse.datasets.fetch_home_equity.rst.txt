@@ -1,0 +1,6 @@
+﻿fetch\_home\_equity
+===================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_home_equity

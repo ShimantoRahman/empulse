@@ -1,0 +1,6 @@
+﻿fetch\_cell2cell
+================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_cell2cell

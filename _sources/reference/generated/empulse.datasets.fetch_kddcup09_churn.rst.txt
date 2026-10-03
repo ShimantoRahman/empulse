@@ -1,0 +1,6 @@
+﻿fetch\_kddcup09\_churn
+======================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_kddcup09_churn

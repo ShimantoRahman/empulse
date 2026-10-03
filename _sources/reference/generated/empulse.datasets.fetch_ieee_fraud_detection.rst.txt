@@ -1,0 +1,6 @@
+﻿fetch\_ieee\_fraud\_detection
+=============================
+
+.. currentmodule:: empulse.datasets
+
+.. autofunction:: fetch_ieee_fraud_detection
