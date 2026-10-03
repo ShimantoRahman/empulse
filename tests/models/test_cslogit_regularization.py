@@ -68,51 +68,27 @@ class TestLearnsWithMirroredCosts:
 class TestScaleInvariance:
     """``C`` is scaled by the objective magnitude, so rescaling the costs must not change the fit."""
 
+    @pytest.mark.parametrize('tolerance', [1e-2, 1e-4, 1e-8])
     @pytest.mark.parametrize('C', [0.01, 0.1, 1.0])
-    def test_regularisation_path_survives_rescaling_the_costs(self, standardised_data, C):
-        """Rescaling every cost by a constant must select the same model.
+    def test_regularisation_path_survives_rescaling_the_costs(self, standardised_data, C, tolerance):
+        """Rescaling every cost by a constant must select the same model, up to rounding.
 
-        Only approximately at the default tolerance: the penalty scaling is exactly invariant, but
-        L-BFGS-B still stops at a slightly different point, which is what
-        :meth:`test_rescaling_difference_is_only_the_stopping_point` pins down.
+        The optimizer steps on the objective divided by its scale, so the rescaled problems take the
+        same path and stop at the same point, at any tolerance.
         """
         X, y = standardised_data
         fits = {
-            scale: CSLogitClassifier(fp_cost=scale, fn_cost=scale, l1_ratio=1.0, C=C).fit(X, y).coef_
+            scale: CSLogitClassifier(
+                fp_cost=scale, fn_cost=scale, l1_ratio=1.0, C=C, optimizer=LBFGSBOptimizer(tolerance=tolerance)
+            ).fit(X, y)
             for scale in (1.0, 10.0, 1000.0)
         }
         reference = fits[10.0]
-        for scale, coef in fits.items():
+        for scale, clf in fits.items():
+            assert clf.n_iter_ == reference.n_iter_
             np.testing.assert_allclose(
-                coef, reference, atol=5e-2, err_msg=f'coefficients differ at cost magnitude {scale}'
+                clf.coef_, reference.coef_, atol=1e-10, err_msg=f'coefficients differ at cost magnitude {scale}'
             )
-
-    def test_rescaling_difference_is_only_the_stopping_point(self, standardised_data):
-        """Tightening the tolerance must drive the remaining difference to zero.
-
-        If rescaling the costs changed the regularization itself, the gap would be a fixed property
-        of the problem and would not shrink. It falls by roughly four orders of magnitude, which is
-        what identifies it as a stopping criterion artifact.
-        """
-        X, y = standardised_data
-
-        def worst_gap(tolerance: float) -> float:
-            coefs = [
-                CSLogitClassifier(
-                    fp_cost=scale,
-                    fn_cost=scale,
-                    l1_ratio=1.0,
-                    C=1.0,
-                    optimizer=LBFGSBOptimizer(tolerance=tolerance),
-                )
-                .fit(X, y)
-                .coef_
-                for scale in (1.0, 10.0, 1000.0)
-            ]
-            return max(float(np.max(np.abs(coef - coefs[1]))) for coef in coefs)
-
-        assert worst_gap(1e-8) < 1e-4
-        assert worst_gap(1e-8) < worst_gap(1e-4)
 
     def test_coefficients_survive_rescaling_the_costs(self, standardised_data):
         X, y = standardised_data
