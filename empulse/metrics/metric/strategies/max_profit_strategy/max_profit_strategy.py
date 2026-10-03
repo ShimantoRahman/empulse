@@ -27,7 +27,9 @@ from .deterministic import (
 from .gradient_piecewise import MaxProfitBoostGradientPiecewise, MaxProfitLogitGradientPiecewise
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import (
+    BaseMaxProfitScorePiecewise,
     BasePositiveDistribution,
+    ClosedFormExpectedMaxProfit,
     _build_max_profit_rate_piecewise,
     _build_max_profit_score_piecewise,
 )
@@ -422,6 +424,20 @@ class MaxProfit(MetricStrategy):
         if not isinstance(self._score_function, _HullScoreFunction):
             return None
         return self._score_function._count_scorer(**_aggregate_instance_parameters(parameters))
+
+    def _closed_form_expected_max_profit(
+        self, n_positives: int, n_negatives: int, **parameters: FloatNDArray | float
+    ) -> ClosedFormExpectedMaxProfit | None:
+        """
+        Return what the compiled expected maximum profit needs for samples with these class counts.
+
+        ``None`` unless the profit has a single stochastic variable whose expectation the compiled
+        code computes in closed form. The expected maximum profit is the score of :class:`MaxProfit`
+        and the negated score of :class:`MinCost`.
+        """
+        if not isinstance(self._score_function, BaseMaxProfitScorePiecewise):
+            return None
+        return self._score_function._closed_form(n_positives, n_negatives, **_aggregate_instance_parameters(parameters))
 
     def optimal_threshold(
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float

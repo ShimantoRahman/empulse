@@ -6,6 +6,8 @@ cdef struct Node:
     int feature_index
     int n_samples
     int n_positive_samples
+    # Where the node's samples begin in its tree's ``samples``, when the tree keeps them.
+    int start
 
 cdef Node* create_node() noexcept nogil
 cdef Node* copy_node(Node* node, Node* parent = *) noexcept nogil

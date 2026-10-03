@@ -127,6 +127,14 @@ Models
   :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss, or 9-14x when its
   expected profit has a closed form (such as :func:`~empulse.metrics.empc_score`), to the same trees.
   It now uses ``n_jobs``, which it ignored, and ``n_jobs`` accepts ``None`` and negative values.
+- |Feature| :class:`~empulse.models.ProfTreeClassifier` has a ``cache_samples`` parameter, on by
+  default. Every tree keeps which training samples reach each of its nodes, so a tree changed below
+  one node is refit from that node's samples alone, making fits up to 1.7x faster for
+  ``8 * population_size * n_samples`` bytes of memory. The fitted trees are the same either way.
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` with a stochastic
+  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss whose expected
+  profit has a closed form (such as :func:`~empulse.metrics.empc_score`) scores its trees in
+  compiled code, in parallel over ``n_jobs``, rather than through Python one tree at a time.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` now minimizes a custom ``loss`` instead of
   maximizing it, its ``alpha`` penalty counts the tree's actual nodes, its early stopping works
   when the fitness is negative, and it no longer crashes on a constant feature.

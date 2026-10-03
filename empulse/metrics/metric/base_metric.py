@@ -211,6 +211,17 @@ class BaseMetric(ABC):
         """
         return None
 
+    def _closed_form_expected_max_profit(
+        self, *, n_positives: int, n_negatives: int, validate: bool = True, **parameters: FloatArrayLike | float
+    ) -> Any:
+        """
+        Return what compiled code needs to compute this metric's expected maximum profit, or ``None``.
+
+        Only a metric whose value is (up to its sign) an expected maximum profit computed in closed
+        form returns something, a ``ClosedFormExpectedMaxProfit`` for samples with these class counts.
+        """
+        return None
+
     @abstractmethod
     def optimal_rate(
         self,

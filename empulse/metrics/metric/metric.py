@@ -558,6 +558,16 @@ class Metric(BaseMetric):
 
         return loss
 
+    def _closed_form_expected_max_profit(
+        self, *, n_positives: int, n_negatives: int, validate: bool = True, **parameters: FloatArrayLike | float
+    ) -> Any:
+        """See :meth:`BaseMetric._closed_form_expected_max_profit`."""
+        closed_form = getattr(self.strategy, '_closed_form_expected_max_profit', None)
+        if closed_form is None:
+            return None
+        prepared = self._prepare_parameters(n_samples=n_positives + n_negatives, validate=validate, **parameters)
+        return closed_form(n_positives, n_negatives, **prepared)
+
     def optimal_threshold(
         self,
         y_true: FloatArrayLike,

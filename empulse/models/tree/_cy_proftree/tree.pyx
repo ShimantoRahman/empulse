@@ -3,6 +3,7 @@
 import numpy as np
 cimport numpy as cnp
 from libc.stdlib cimport malloc, free
+from libc.string cimport memcpy
 from libcpp.vector cimport vector
 
 from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, reset_node
@@ -14,10 +15,19 @@ cdef struct Tree:
     int n_nodes
     # Root of the only subtree whose sample counts may be out of date, or NULL if all are current.
     Node* stale
+    # The training samples, ordered so that every node's are samples[node.start : node.start +
+    # node.n_samples], a left child's before a right child's; NULL when the tree does not keep them.
+    int* samples
+    int n_samples
+    # The parent's samples, which an offspring copies when it is refit, unless it is refit whole.
+    const int* samples_source
 
 cdef Tree* create_tree(bint with_root = True) noexcept nogil:
     cdef Tree* tree = <Tree*>malloc(sizeof(Tree))
     tree.stale = NULL
+    tree.samples = NULL
+    tree.n_samples = 0
+    tree.samples_source = NULL
     if with_root:
         tree.root = create_node()
         tree.n_nodes = 1
@@ -27,7 +37,7 @@ cdef Tree* create_tree(bint with_root = True) noexcept nogil:
     tree.fitness = -1.0
     return tree
 
-cdef Tree* copy_tree(Tree* tree) noexcept nogil:
+cdef Tree* copy_tree(Tree* tree, bint with_samples = True) noexcept nogil:
     cdef Tree* new_tree = <Tree*>malloc(sizeof(Tree))
     new_tree.root = copy_node(tree.root, NULL)
     new_tree.fitness = tree.fitness
@@ -36,12 +46,20 @@ cdef Tree* copy_tree(Tree* tree) noexcept nogil:
     new_tree.stale = NULL
     if tree.stale is not NULL:
         new_tree.stale = new_tree.root
+    new_tree.samples = NULL
+    new_tree.n_samples = 0
+    new_tree.samples_source = NULL
+    if with_samples and tree.samples is not NULL:
+        new_tree.samples = <int*>malloc(tree.n_samples * sizeof(int))
+        memcpy(new_tree.samples, tree.samples, tree.n_samples * sizeof(int))
+        new_tree.n_samples = tree.n_samples
     return new_tree
 
 cdef void free_tree(Tree* tree) noexcept nogil:
     if tree is NULL:
         return
     free_node(tree.root)
+    free(tree.samples)
     free(tree)
 
 cdef void reset_tree(Tree* tree) noexcept nogil:
@@ -100,6 +118,9 @@ cdef Tree* deserialize_tree(object tree_data) noexcept:
     tree.fitness = tree_data['fitness']
     tree.n_nodes = tree_data['n_nodes']
     tree.stale = NULL  # the counts are restored with the nodes
+    tree.samples = NULL
+    tree.n_samples = 0
+    tree.samples_source = NULL
 
     return tree
 
@@ -113,13 +134,18 @@ cdef Node* get_leaf(Node* start_node, const float* x) noexcept nogil:
     return node
 
 cdef void sum_counts(Node* node) noexcept nogil:
-    """Set the counts of every internal node from ``node`` down to the sums of its children's."""
+    """
+    Set the counts of every internal node from ``node`` down to the sums of its children's.
+
+    Also sets where its samples begin, which is where its left child's do.
+    """
     if is_leaf(node):
         return
     sum_counts(node.left)
     sum_counts(node.right)
     node.n_samples = node.left.n_samples + node.right.n_samples
     node.n_positive_samples = node.left.n_positive_samples + node.right.n_positive_samples
+    node.start = node.left.start
 
 # Samples are routed through a flat copy of the nodes in which every leaf is its own child, so each
 # sample takes the same number of steps and picks the next node by indexing rather than branching.
@@ -216,9 +242,85 @@ cdef void count_samples(
             nodes[k].n_positive_samples = <int>(counts[k] >> 32)
     sum_counts(subtree)
 
-cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samples) noexcept nogil:
-    cdef vector[FlatNode] no_path
-    count_samples(tree.root, no_path, X, y, n_samples)
+cdef void count_and_sort_samples(
+    Node* subtree,
+    const float[:, ::1] X,
+    const int[:] y,
+    int* samples,
+    int n_samples,
+    bint every_sample,
+    int* scratch,
+) noexcept nogil:
+    """
+    Count the samples of ``subtree`` in its leaves, and sort them by the leaf they reach.
+
+    ``samples`` holds the ``n_samples`` samples reaching ``subtree``; with ``every_sample`` they are
+    all of X, in order, and ``samples`` is only written. Afterwards ``samples`` lists the leaves'
+    samples from left to right, and every node of the subtree knows where its own begin.
+    ``scratch`` has room for twice ``n_samples`` integers.
+    """
+    cdef vector[FlatNode] flat
+    cdef vector[Node*] nodes
+    cdef int depth = 0
+    flatten(subtree, flat, nodes, 0, &depth)
+
+    cdef vector[unsigned long long] packed_counts  # as in count_samples
+    packed_counts.resize(flat.size(), 0)
+    cdef unsigned long long* counts = packed_counts.data()
+    cdef const FlatNode* nodes_ = flat.data()
+    cdef int* leaf_of = scratch
+    cdef int* unsorted = scratch + n_samples
+    cdef const float* rows[LANES]
+    cdef int lanes[LANES]
+    cdef int sample[LANES]
+    cdef Py_ssize_t i = 0
+    cdef int step, lane, n, s
+    while i + LANES <= n_samples:
+        for lane in range(LANES):
+            sample[lane] = <int>(i + lane) if every_sample else samples[i + lane]
+            rows[lane] = &X[sample[lane], 0]
+            lanes[lane] = 0
+        for step in range(depth):
+            for lane in range(LANES):
+                n = lanes[lane]
+                lanes[lane] = nodes_[n].children[not (rows[lane][nodes_[n].feature_index] <= nodes_[n].split_value)]
+        for lane in range(LANES):
+            counts[lanes[lane]] += 1 + (<unsigned long long>y[sample[lane]] << 32)
+            leaf_of[i + lane] = lanes[lane]
+        i += LANES
+    cdef const float* x
+    while i < n_samples:
+        s = <int>i if every_sample else samples[i]
+        x = &X[s, 0]
+        n = 0
+        for step in range(depth):
+            n = nodes_[n].children[not (x[nodes_[n].feature_index] <= nodes_[n].split_value)]
+        counts[n] += 1 + (<unsigned long long>y[s] << 32)
+        leaf_of[i] = n
+        i += 1
+
+    # The flat nodes are in depth-first order, so their leaves come from left to right.
+    cdef vector[int] next_position
+    next_position.resize(flat.size(), 0)
+    cdef int position = 0
+    cdef size_t k
+    for k in range(flat.size()):
+        if is_leaf(nodes[k]):
+            nodes[k].n_samples = <int>(<unsigned int>counts[k])
+            nodes[k].n_positive_samples = <int>(counts[k] >> 32)
+            nodes[k].start = subtree.start + position
+            next_position[k] = position
+            position += nodes[k].n_samples
+    if every_sample:
+        for i in range(n_samples):
+            samples[next_position[leaf_of[i]]] = <int>i
+            next_position[leaf_of[i]] += 1
+    else:
+        memcpy(unsorted, samples, n_samples * sizeof(int))
+        for i in range(n_samples):
+            samples[next_position[leaf_of[i]]] = unsorted[i]
+            next_position[leaf_of[i]] += 1
+    sum_counts(subtree)
 
 cdef void refit_tree(
     Tree* tree,
@@ -227,22 +329,44 @@ cdef void refit_tree(
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
+    bint cache_samples,
+    int* scratch,
 ) noexcept nogil:
     """
     Bring the tree's sample counts up to date after a variation operator changed it, then prune it.
 
     An operator only changes the subtree below one node (``tree.stale``): the samples reaching that
-    node, and the counts everywhere outside its subtree, stay the same. So only the samples that
-    follow the path from the root to the stale node are counted again, and only in its subtree.
+    node, and the counts everywhere outside its subtree, stay the same. So only those samples are
+    counted again, and only in its subtree. With ``cache_samples`` the tree keeps every node's
+    samples (and ``scratch`` has room for twice ``n_samples`` integers); without, they are found by
+    routing every sample along the path from the root to the stale node.
     The rest of the tree was already pruned when its counts were last computed, and pruning only
     looks at counts, so it is revisited only below the stale node too.
     """
     cdef Node* stale = tree.stale
+    if cache_samples and tree.samples is NULL and tree.samples_source is not NULL and stale is not tree.root:
+        tree.samples = <int*>malloc(n_samples * sizeof(int))
+        memcpy(tree.samples, tree.samples_source, n_samples * sizeof(int))
+        tree.n_samples = n_samples
+    tree.samples_source = NULL
     if stale is NULL:
         return
     tree.stale = NULL
+    cdef vector[FlatNode] no_path
+    if cache_samples and (stale is tree.root or tree.samples is NULL):
+        if tree.samples is NULL:
+            tree.samples = <int*>malloc(n_samples * sizeof(int))
+            tree.n_samples = n_samples
+        tree.root.start = 0
+        count_and_sort_samples(tree.root, X, y, tree.samples, n_samples, True, scratch)
+        prune_illegal_nodes(tree, tree.root, min_samples_split, min_samples_leaf)
+        return
+    if cache_samples:
+        count_and_sort_samples(stale, X, y, tree.samples + stale.start, stale.n_samples, False, scratch)
+        prune_illegal_nodes(tree, stale, min_samples_split, min_samples_leaf)
+        return
     if stale is tree.root:
-        fit_tree(tree, X, y, n_samples)
+        count_samples(tree.root, no_path, X, y, n_samples)
         prune_illegal_nodes(tree, tree.root, min_samples_split, min_samples_leaf)
         return
 

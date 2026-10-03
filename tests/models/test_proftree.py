@@ -1,5 +1,6 @@
 import warnings
 from typing import ClassVar
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -7,8 +8,9 @@ import sympy
 import sympy.stats
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, max_profit_score
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, MinCost, max_profit_score
 from empulse.models import ProfTreeClassifier
+from empulse.models.tree import proftree as proftree_module
 
 
 @pytest.fixture(scope='module')
@@ -17,11 +19,12 @@ def data(make_data):
 
 
 class TestFitDispatch:
-    """The four `_fit` code paths.
+    """The `_fit` code paths.
 
     `_prepare_class_costs` is shared between the "no custom loss" and "deterministic MaxProfit
-    metric" cases (both use `fit_max_profit`); a stochastic MaxProfit metric or any other strategy
-    falls through to the generic `fit_custom` fitness-function path.
+    metric" cases (both use `fit_max_profit`). A stochastic MaxProfit metric whose expected profit
+    has a closed form is scored natively through `fit_max_profit` too; any other stochastic metric or
+    strategy falls through to the generic `fit_custom` fitness-function path.
     """
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
@@ -44,7 +47,7 @@ class TestFitDispatch:
         assert y_pred.shape == y.shape
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
-    def test_stochastic_maxprofit_metric_uses_fit_custom(self, data):
+    def test_stochastic_maxprofit_metric_is_scored_natively(self, data):
         """A stochastic MaxProfit metric must not be routed through `_prepare_class_costs`."""
         X, y = data
         clv_rv = sympy.stats.Beta('clv', 2, 5)
@@ -449,3 +452,89 @@ class TestLeafLevelCustomLoss:
         np.testing.assert_array_equal(from_leaves.predict_proba(X), from_samples.predict_proba(X))
         assert from_leaves.n_iter_ == from_samples.n_iter_
         assert from_leaves.tree_._serialize_tree()['fitness'] == from_samples.tree_._serialize_tree()['fitness']
+
+
+def _stochastic_metric(strategy=None, distribution='beta'):
+    clv, cost, a, b = sympy.symbols('clv cost a b')
+    gamma = {
+        'beta': sympy.stats.Beta('gamma', a, b),
+        'gamma': sympy.stats.Gamma('gamma', a, b),
+        'normal': sympy.stats.Normal('gamma', a, b),
+    }[distribution]
+    matrix = CostMatrix().add_tp_benefit(gamma * clv).add_fp_cost(cost)
+    return Metric(matrix, strategy if strategy is not None else MaxProfit())
+
+
+STOCHASTIC_PARAMETERS = {
+    'beta': {'clv': 100.0, 'cost': 1.0, 'a': 6.0, 'b': 14.0},
+    'gamma': {'clv': 100.0, 'cost': 1.0, 'a': 2.0, 'b': 0.2},
+    'normal': {'clv': 100.0, 'cost': 1.0, 'a': 0.3, 'b': 0.1},
+}
+
+
+class TestSampleCache:
+    """``cache_samples`` changes how trees are refit, never which trees are found."""
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('n_jobs', [1, 3])
+    @pytest.mark.parametrize('loss', ['max_profit', 'custom_loss', 'expected_max_profit', 'min_cost', 'monte_carlo'])
+    def test_cache_does_not_change_the_fit(self, loss, n_jobs):
+        X, y = make_classification(n_samples=600, n_features=6, weights=[0.7], random_state=0)
+        fit_params = {'fn_cost': 5.0, 'fp_cost': 1.0}
+        if loss == 'custom_loss':
+            fn, fp = sympy.symbols('fn fp')
+            loss_, fit_params = Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()), {'fn': 5.0, 'fp': 1.0}
+        elif loss == 'expected_max_profit':
+            loss_, fit_params = _stochastic_metric(), STOCHASTIC_PARAMETERS['beta']
+        elif loss == 'min_cost':
+            loss_, fit_params = _stochastic_metric(MinCost()), STOCHASTIC_PARAMETERS['beta']
+        elif loss == 'monte_carlo':
+            loss_ = _stochastic_metric(MaxProfit(integration_method='monte-carlo', random_state=0))
+            fit_params = STOCHASTIC_PARAMETERS['beta']
+        else:
+            loss_ = None
+
+        def fit(cache_samples):
+            model = ProfTreeClassifier(
+                loss=loss_, max_iter=30, population_size=20, n_jobs=n_jobs, cache_samples=cache_samples, random_state=0
+            )
+            return model.fit(X, y, **fit_params)
+
+        cached, uncached = fit(True), fit(False)
+        assert cached.tree_._serialize_tree() == uncached.tree_._serialize_tree()
+        assert cached.n_iter_ == uncached.n_iter_
+
+
+class TestNativeExpectedMaxProfit:
+    """A stochastic MaxProfit or MinCost loss with a closed form scores every tree in compiled code.
+
+    It must find the same trees as scoring each tree through the loss's Python count scorer, which is
+    what it falls back to without the compiled kernel.
+    """
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('distribution', ['beta', 'gamma', 'normal'])
+    @pytest.mark.parametrize('strategy', [MaxProfit, MinCost])
+    def test_native_scores_match_the_python_scores(self, distribution, strategy):
+        X, y = make_classification(n_samples=600, n_features=6, weights=[0.7], random_state=0)
+        loss = _stochastic_metric(strategy(), distribution)
+
+        def fit():
+            model = ProfTreeClassifier(loss=loss, max_iter=30, population_size=20, n_jobs=2, random_state=0)
+            return model.fit(X, y, **STOCHASTIC_PARAMETERS[distribution])
+
+        native = fit()
+        with mock.patch.object(proftree_module, '_expected_max_profit_of_groups_address', None):
+            python = fit()
+        assert native.tree_._serialize_tree() == python.tree_._serialize_tree()
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    def test_trees_are_not_scored_in_python(self):
+        X, y = make_classification(n_samples=300, n_features=4, random_state=0)
+        with mock.patch.object(
+            proftree_module, '_negated_count_loss', wraps=proftree_module._negated_count_loss
+        ) as count_loss:
+            ProfTreeClassifier(loss=_stochastic_metric(), max_iter=10, population_size=10, random_state=0).fit(
+                X, y, **STOCHASTIC_PARAMETERS['beta']
+            )
+        assert count_loss.call_count == 1  # the check of the loss before the fit

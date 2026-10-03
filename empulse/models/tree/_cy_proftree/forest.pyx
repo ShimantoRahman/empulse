@@ -4,7 +4,7 @@ import numpy as np
 cimport numpy as cnp
 from libc.stdlib cimport malloc, free
 
-from .tree cimport Tree, free_tree, copy_tree
+from .tree cimport Tree, free_tree
 from .random cimport RandState, rand_int
 
 cdef struct Forest:
@@ -27,14 +27,14 @@ cdef void free_forest(Forest* forest) noexcept nogil:
     free(forest)
 
 cdef Tree* choose_different_tree(RandState* rng, Forest* population, int current_index) noexcept nogil:
-    """Choose a random tree from population that is different from the current index."""
+    """Choose a random tree of the population other than the one at ``current_index``, not a copy."""
     cdef int partner_index
 
     if population.n_trees <= 1:
-        return copy_tree(population.trees[0])
+        return population.trees[0]
 
     partner_index = rand_int(rng, 0, population.n_trees)
     while partner_index == current_index:
         partner_index = rand_int(rng, 0, population.n_trees)
 
-    return copy_tree(population.trees[partner_index])
+    return population.trees[partner_index]

@@ -2,7 +2,9 @@ import numpy as np
 cimport numpy as cnp
 
 from .tree cimport Tree, free_tree, predict_proba_tree, predict_labels_tree, serialize_tree, deserialize_tree
-from .evolution cimport evolve_forest_stochastic, evolve_forest_deterministic, EvolutionResult
+from .evolution cimport (
+    evolve_forest_stochastic, evolve_forest_native, EvolutionResult, ExpectedMaxProfitOfGroups, NativeFitness
+)
 
 cdef class EvolutionaryTree:
     cdef Tree* tree
@@ -33,6 +35,7 @@ cdef class EvolutionaryTree:
         int random_state=-1,
         int n_jobs=1,
         bint fitness_from_leaves=False,
+        bint cache_samples=True,
     ):
         if self.tree is not NULL:
             free_tree(self.tree)
@@ -64,6 +67,7 @@ cdef class EvolutionaryTree:
             random_state,
             n_jobs,
             fitness_from_leaves,
+            cache_samples,
         )
         self.tree = result.tree
         self.n_generations = result.n_generations
@@ -72,10 +76,10 @@ cdef class EvolutionaryTree:
         self,
         cnp.ndarray[cnp.float32_t, ndim=2] X,
         cnp.ndarray[cnp.int32_t, ndim=1] y,
-        float tp_benefit,
-        float tn_benefit,
-        float fp_cost,
-        float fn_cost,
+        float tp_benefit=0.0,
+        float tn_benefit=0.0,
+        float fp_cost=0.0,
+        float fn_cost=0.0,
         int pop_size=100,
         float crossover_rate=0.2,
         float grow_rate=0.2,
@@ -91,20 +95,45 @@ cdef class EvolutionaryTree:
         float tol=1e-3,
         int random_state=-1,
         int n_jobs=1,
+        bint cache_samples=True,
+        object closed_form=None,
+        size_t expected_max_profit_of_groups=0,
     ):
+        """
+        Evolve trees whose fitness is computed natively: the maximum profit for the four class values,
+        or, given ``closed_form`` and the address of the compiled ``expected_max_profit_of_groups``,
+        the expected maximum profit that ``closed_form`` (a ``ClosedFormExpectedMaxProfit``) describes.
+        """
         if self.tree is not NULL:
             free_tree(self.tree)
 
         # Samples are routed through the tree by pointer to their row, so rows must be contiguous.
         X = np.ascontiguousarray(X)
 
-        cdef EvolutionResult result = evolve_forest_deterministic(
+        cdef NativeFitness fitness
+        fitness.tp_benefit = tp_benefit
+        fitness.tn_benefit = tn_benefit
+        fitness.fp_cost = fp_cost
+        fitness.fn_cost = fn_cost
+        fitness.expected_max_profit = NULL
+        # Kept alive for the whole fit, which reads them through pointers.
+        cdef const double[:, ::1] coefficient_parts
+        cdef const double[::1] distribution_parameters
+        if closed_form is not None:
+            coefficient_parts = closed_form.coefficient_parts
+            distribution_parameters = closed_form.distribution_parameters
+            fitness.expected_max_profit = <ExpectedMaxProfitOfGroups><void*>expected_max_profit_of_groups
+            fitness.coefficient_parts = &coefficient_parts[0, 0]
+            fitness.n_powers = coefficient_parts.shape[1]
+            fitness.lower_bound = closed_form.lower_bound
+            fitness.upper_bound = closed_form.upper_bound
+            fitness.distribution = closed_form.distribution
+            fitness.distribution_parameters = &distribution_parameters[0]
+
+        cdef EvolutionResult result = evolve_forest_native(
             X,
             y,
-            tp_benefit,
-            tn_benefit,
-            fp_cost,
-            fn_cost,
+            fitness,
             pop_size,
             max_depth,
             max_generations,
@@ -120,6 +149,7 @@ cdef class EvolutionaryTree:
             alpha,
             random_state,
             n_jobs,
+            cache_samples,
         )
         self.tree = result.tree
         self.n_generations = result.n_generations

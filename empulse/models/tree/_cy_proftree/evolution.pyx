@@ -3,12 +3,12 @@
 import numpy as np
 cimport numpy as cnp
 from libc.math cimport fabs
-from libc.stdlib cimport free
-from cython.parallel cimport prange
+from libc.stdlib cimport free, malloc
+from cython.parallel cimport prange, threadid
 
 from .tree cimport (Tree, SplitValues, create_tree, copy_tree, free_tree,
                     compute_split_values, free_split_values, reset_tree,
-                    fit_tree, refit_tree, predict_proba_tree, split, prune_illegal_nodes)
+                    refit_tree, predict_proba_tree, split, prune_illegal_nodes)
 from .forest cimport Forest, create_forest, free_forest, choose_different_tree
 from .operators cimport count_nodes, crossover, grow, prune_internal, mutate_split_feature, mutate_split_value
 from .random cimport RandState, rand_fraction, seed_rand
@@ -24,7 +24,7 @@ cdef Tree* find_best_tree(Forest* population) noexcept:
     for i in range(1, population.n_trees):
         if population.trees[i].fitness > best_tree.fitness:
             best_tree = population.trees[i]
-    return copy_tree(best_tree)
+    return copy_tree(best_tree, with_samples=False)
 
 cdef Forest* random_population(
     RandState* rng,
@@ -44,7 +44,24 @@ cdef Forest* random_population(
 
 # Fitting the trees is the bulk of every generation and each tree is fitted independently, so it runs
 # in parallel over the population. Only the variation operators draw random numbers, and they run
-# serially beforehand, so the fit does not depend on the number of threads.
+# serially beforehand, so the fit does not depend on the number of threads. With cached samples,
+# each thread sorts them in a scratch buffer of its own, allocated once per fit (a buffer this large
+# is mapped afresh by every allocation on Windows).
+
+cdef int** create_scratch(int n_threads, int n_samples) noexcept nogil:
+    cdef int** scratch = <int**>malloc(n_threads * sizeof(int*))
+    cdef int i
+    for i in range(n_threads):
+        scratch[i] = <int*>malloc(2 * <size_t>n_samples * sizeof(int))
+    return scratch
+
+cdef void free_scratch(int** scratch, int n_threads) noexcept nogil:
+    if scratch is NULL:
+        return
+    cdef int i
+    for i in range(n_threads):
+        free(scratch[i])
+    free(scratch)
 
 cdef void fit_population(
     Forest* population,
@@ -53,35 +70,45 @@ cdef void fit_population(
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
+    int** scratch,
     int n_threads,
 ) noexcept nogil:
+    """Fit every tree; ``scratch`` holds a buffer per thread to cache samples with, or is NULL."""
     cdef int i
     for i in prange(
         population.n_trees, schedule='dynamic', num_threads=n_threads, use_threads_if=n_threads > 1
     ):
-        refit(X, y, population.trees[i], n_samples, min_samples_split, min_samples_leaf)
+        refit_tree(
+            population.trees[i], X, y, n_samples, min_samples_split, min_samples_leaf,
+            scratch is not NULL, scratch[threadid()] if scratch is not NULL else NULL,
+        )
 
-cdef void fit_population_max_profit(
+cdef void fit_population_native(
     Forest* population,
     const float[:, ::1] X,
     const int[:] y,
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
-    float tp_benefit,
-    float tn_benefit,
-    float fp_cost,
-    float fn_cost,
+    const NativeFitness* fitness,
     float alpha,
+    int** scratch,
     int n_threads,
 ) noexcept nogil:
-    """Fit every tree and set its fitness, which needs nothing but the tree's own leaf counts."""
+    """
+    Fit every tree and set its fitness, which needs nothing but the tree's own leaf counts.
+
+    ``scratch`` holds a buffer per thread to cache samples with, or is NULL.
+    """
     cdef int i
     for i in prange(
         population.n_trees, schedule='dynamic', num_threads=n_threads, use_threads_if=n_threads > 1
     ):
-        refit(X, y, population.trees[i], n_samples, min_samples_split, min_samples_leaf)
-        evaluate_max_profit(population.trees[i], tp_benefit, tn_benefit, fp_cost, fn_cost, alpha)
+        refit_tree(
+            population.trees[i], X, y, n_samples, min_samples_split, min_samples_leaf,
+            scratch is not NULL, scratch[threadid()] if scratch is not NULL else NULL,
+        )
+        evaluate_native(population.trees[i], fitness, alpha)
 
 cdef void evaluate_population(
     Forest* population,
@@ -124,14 +151,16 @@ cdef Tree* evolve_tree(
     int index,
 ) noexcept nogil:
     cdef float probability = rand_fraction(rng)
-    cdef Tree* tree = copy_tree(population.trees[index])
+    # The samples are copied when the offspring is refit, in parallel, and only if it is not refit whole.
+    cdef Tree* tree = copy_tree(population.trees[index], with_samples=False)
+    tree.samples_source = population.trees[index].samples
     cdef Tree* partner
     cdef Tree* child
 
     if probability < crossover_rate:
+        # The partner is only read, so it need not be copied.
         partner = choose_different_tree(rng, population, index)
         tree = crossover(rng, tree, partner, max_depth=max_depth)
-        free_tree(partner)
     elif probability < grow_rate:
         grow(rng, tree, split_values=split_values, n_features=n_features, max_depth=max_depth)
     elif probability < prune_rate:
@@ -158,17 +187,6 @@ cdef inline void insert_offspring(Forest* population, Forest* offspring, int i) 
     else:
         free_tree(child)
         offspring.trees[i] = NULL  # Already freed, set to NULL
-
-cdef inline void refit(
-    const float[:, ::1] X,
-    const int[:] y,
-    Tree* tree,
-    int n_samples,
-    int min_samples_split,
-    int min_samples_leaf,
-) noexcept nogil:
-    refit_tree(tree, X, y, n_samples, min_samples_split, min_samples_leaf)
-
 
 cdef inline void evaluate(
     Tree* tree,
@@ -201,23 +219,41 @@ cdef inline void evaluate_leaves(Tree* tree, object fitness_function, float alph
     tree.n_nodes = count_nodes(tree.root)
     tree.fitness -= alpha * tree.n_nodes
 
-cdef inline void evaluate_max_profit(
-    Tree* tree,
-    float tp_benefit,
-    float tn_benefit,
-    float fp_cost,
-    float fn_cost,
-    float alpha,
-) noexcept nogil:
+cdef inline void evaluate_native(Tree* tree, const NativeFitness* fitness, float alpha) noexcept nogil:
     # Computed from the leaf counts that fitting left in the tree, not from per-sample predictions.
-    cdef float fitness = max_profit_score(
-        tree.root,
-        tp_benefit=tp_benefit,
-        tn_benefit=tn_benefit,
-        fp_cost=fp_cost,
-        fn_cost=fn_cost,
-    )
-    tree.fitness = fitness
+    cdef vector[Leaf] leaves
+    cdef vector[double] scores
+    cdef vector[long long] n_positive, n_negative
+    cdef size_t i
+    if fitness.expected_max_profit is NULL:
+        tree.fitness = max_profit_score(
+            tree.root,
+            tp_benefit=fitness.tp_benefit,
+            tn_benefit=fitness.tn_benefit,
+            fp_cost=fitness.fp_cost,
+            fn_cost=fitness.fn_cost,
+        )
+    else:
+        collect_leaves(tree.root, leaves)
+        scores.resize(leaves.size())
+        n_positive.resize(leaves.size())
+        n_negative.resize(leaves.size())
+        for i in range(leaves.size()):
+            scores[i] = leaves[i].score
+            n_positive[i] = leaves[i].n_positive
+            n_negative[i] = leaves[i].n_negative
+        tree.fitness = <float>fitness.expected_max_profit(
+            scores.data(),
+            n_positive.data(),
+            n_negative.data(),
+            <Py_ssize_t>leaves.size(),
+            fitness.coefficient_parts,
+            fitness.n_powers,
+            fitness.lower_bound,
+            fitness.upper_bound,
+            fitness.distribution,
+            fitness.distribution_parameters,
+        )
     # Counted afresh: the variation operators and prune_illegal_nodes change the tree's shape.
     tree.n_nodes = count_nodes(tree.root)
     tree.fitness -= alpha * tree.n_nodes
@@ -263,6 +299,7 @@ cdef EvolutionResult evolve_forest_stochastic(
     int random_state = -1,
     int n_threads = 1,
     bint fitness_from_leaves = False,
+    bint cache_samples = True,
 ):
     # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
     # concurrent fits neither interleave draws nor reseed one another.
@@ -277,7 +314,8 @@ cdef EvolutionResult evolve_forest_stochastic(
     cdef SplitValues* split_values = compute_split_values(X)
 
     cdef Forest* population = random_population(&rng, pop_size, n_features, split_values, max_depth)
-    fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
+    cdef int** scratch = create_scratch(n_threads, n_samples) if cache_samples else NULL
+    fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, scratch, n_threads)
     evaluate_population(population, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
 
     cdef int stagnation_counter = 0
@@ -313,7 +351,7 @@ cdef EvolutionResult evolve_forest_stochastic(
 
         # Each offspring is fitted and scored before it competes with its parent: until then it
         # carries its parent's fitness, or NaN after a crossover.
-        fit_population(offspring, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
+        fit_population(offspring, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, scratch, n_threads)
         evaluate_population(offspring, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
@@ -329,6 +367,7 @@ cdef EvolutionResult evolve_forest_stochastic(
             generation += 1
             break
 
+    free_scratch(scratch, n_threads)
     free_split_values(split_values)
     free_forest(population)
     free(offspring.trees)
@@ -339,13 +378,10 @@ cdef EvolutionResult evolve_forest_stochastic(
     return result
 
 
-cdef EvolutionResult evolve_forest_deterministic(
+cdef EvolutionResult evolve_forest_native(
     cnp.ndarray[cnp.float32_t, ndim=2] X,
     cnp.ndarray[cnp.int32_t, ndim=1] y,
-    float tp_benefit,
-    float tn_benefit,
-    float fp_cost,
-    float fn_cost,
+    NativeFitness fitness,
     int pop_size = 100,
     int max_depth = 9,
     int max_generations = 10_000,
@@ -361,6 +397,7 @@ cdef EvolutionResult evolve_forest_deterministic(
     float alpha = 0.0,
     int random_state = -1,
     int n_threads = 1,
+    bint cache_samples = True,
 ):
     # The RNG state lives on this stack frame: nothing outside this fit can reach it, so two
     # concurrent fits neither interleave draws nor reseed one another.
@@ -375,9 +412,10 @@ cdef EvolutionResult evolve_forest_deterministic(
     cdef SplitValues* split_values = compute_split_values(X)
 
     cdef Forest* population = random_population(&rng, pop_size, n_features, split_values, max_depth)
-    fit_population_max_profit(
+    cdef int** scratch = create_scratch(n_threads, n_samples) if cache_samples else NULL
+    fit_population_native(
         population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
-        tp_benefit, tn_benefit, fp_cost, fn_cost, alpha, n_threads,
+        &fitness, alpha, scratch, n_threads,
     )
 
     cdef int stagnation_counter = 0
@@ -413,9 +451,9 @@ cdef EvolutionResult evolve_forest_deterministic(
 
         # Each offspring is fitted and scored before it competes with its parent: until then it
         # carries its parent's fitness, or NaN after a crossover.
-        fit_population_max_profit(
+        fit_population_native(
             offspring, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
-            tp_benefit, tn_benefit, fp_cost, fn_cost, alpha, n_threads,
+            &fitness, alpha, scratch, n_threads,
         )
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
@@ -431,6 +469,7 @@ cdef EvolutionResult evolve_forest_deterministic(
             generation += 1
             break
 
+    free_scratch(scratch, n_threads)
     free_split_values(split_values)
     free_forest(population)
     free(offspring.trees)

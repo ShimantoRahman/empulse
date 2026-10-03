@@ -73,6 +73,9 @@ cdef Tree* crossover(RandState* rng, Tree* mother, Tree* father, int max_depth) 
         else:
             parent_node.right = NULL  # detach before free
 
+        # The samples reaching the replaced node are the ones that reach the new subtree.
+        new_subtree.start = mother_node.start
+        new_subtree.n_samples = mother_node.n_samples
         free_node(mother_node)
 
         new_subtree.parent = parent_node

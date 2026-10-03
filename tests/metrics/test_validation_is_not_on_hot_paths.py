@@ -187,8 +187,9 @@ def test_proftree_prepares_a_stochastic_max_profit_once(training_data, populatio
     model = ProfTreeClassifier(max_iter=generations, population_size=population_size, random_state=42, loss=loss)
     with mock.patch.object(metric_module.Metric, '_prepare_parameters', counting):
         model.fit(X, y, c=clv, d=10.0)
-    # Once to validate the fit's parameters, once to prepare the leaf-level loss.
-    assert calls == 2
+    # Once to validate the fit's parameters, once to prepare the leaf-level loss, and once to prepare
+    # the closed form the trees are scored with natively.
+    assert calls == 3
 
 
 @pytest.mark.parametrize('n_estimators', [3, 6], ids=['3_estimators', '6_estimators'])

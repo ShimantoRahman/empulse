@@ -10,6 +10,7 @@ from sklearn.utils.validation import check_is_fitted, check_random_state
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
+from ...metrics._cy_max_profit import _expected_max_profit_of_groups_address
 from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 from ._cy_proftree.evolutionary_tree import EvolutionaryTree
 
@@ -175,14 +176,26 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
         All probabilities must sum to 1.
 
+    cache_samples : bool, default=True
+        Whether every tree in the population keeps which training samples reach each of its nodes.
+        A tree that a variation operator changed below one node is then refit from that node's
+        samples alone, rather than by routing every training sample through the tree, which makes
+        fitting faster. This takes four bytes per training sample for every tree in the population
+        and every offspring, i.e. ``8 * population_size * n_samples`` bytes; turn it off when that
+        does not fit in memory. With many threads on a large data set (about 100,000 samples or
+        more), the threads compete for memory bandwidth and caching no longer pays off.
+        The fitted tree is the same either way.
+
     n_jobs : int or None, default=1
         Number of threads that fit the population's trees in parallel each generation.
         ``None`` means 1 and ``-1`` means using all processors.
         The fitted tree does not depend on ``n_jobs``.
 
-        When the fitness is a Python function (any ``loss`` other than a deterministic
-        :class:`~empulse.metrics.MaxProfit` metric), only fitting the trees runs in parallel: the
-        loss itself is evaluated one tree at a time.
+        When the fitness is a Python function, only fitting the trees runs in parallel: the loss
+        itself is evaluated one tree at a time. That is any ``loss`` other than a
+        :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` metric that is
+        deterministic, or has a single stochastic variable whose expected profit has a closed form
+        (such as :func:`~empulse.metrics.empc_score`).
         Builds without OpenMP support always run single-threaded.
 
     random_state : np.random.RandomState, int or None, default=None
@@ -232,6 +245,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         'prune_rate': [Interval(Real, 0, 1, closed='both')],
         'mutate_split_rate': [Interval(Real, 0, 1, closed='both')],
         'mutate_value_rate': [Interval(Real, 0, 1, closed='both')],
+        'cache_samples': ['boolean'],
         'n_jobs': [Interval(Integral, 1, None, closed='left'), Interval(Integral, None, -1, closed='right'), None],
         'random_state': ['random_state'],
     }
@@ -258,6 +272,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         prune_rate: float = 0.2,
         mutate_split_rate: float = 0.2,
         mutate_value_rate: float = 0.2,
+        cache_samples: bool = True,
         n_jobs: int | None = 1,
         random_state: np.random.RandomState | int | None = None,
     ):
@@ -275,6 +290,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         self.mutate_split_rate = mutate_split_rate
         self.mutate_value_rate = mutate_value_rate
         self.random_state = random_state
+        self.cache_samples = cache_samples
         self.n_jobs = n_jobs
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
@@ -349,6 +365,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             'tol': float(self.tolerance),
             'random_state': random_state,
             'n_jobs': effective_n_jobs(self.n_jobs),
+            'cache_samples': bool(self.cache_samples),
         }
 
         # `fit_max_profit` handles only the default loss and deterministic MaxProfit metrics. Any other
@@ -381,9 +398,24 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 fitness_fn(*probe)
             except (TypeError, ValueError) as e:
                 raise ValueError(f'The loss function {loss_} threw an error when evaluating the function.') from e
-            self.tree_.fit_custom(
-                **common_kwargs, fitness_function=fitness_fn, fitness_from_leaves=count_loss is not None
-            )
+
+            # An expected maximum profit with a closed form is computed natively, and so in parallel.
+            closed_form = None
+            if count_loss is not None and _expected_max_profit_of_groups_address is not None:
+                n_positives = int(np.count_nonzero(y))
+                closed_form = loss_._closed_form_expected_max_profit(
+                    n_positives=n_positives, n_negatives=y.size - n_positives, validate=False, **loss_params
+                )
+            if closed_form is not None:
+                self.tree_.fit_max_profit(
+                    **common_kwargs,
+                    closed_form=closed_form,
+                    expected_max_profit_of_groups=_expected_max_profit_of_groups_address(),
+                )
+            else:
+                self.tree_.fit_custom(
+                    **common_kwargs, fitness_function=fitness_fn, fitness_from_leaves=count_loss is not None
+                )
 
         self.n_iter_ = self.tree_.n_generations
 

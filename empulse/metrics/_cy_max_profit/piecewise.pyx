@@ -641,32 +641,91 @@ def expected_max_profit_from_counts(
         )
     _check_profit_and_distribution(n_powers, distribution, distribution_parameters)
 
-    # The rates as convex_hull_from_counts computes them, including its diagonal for a single class.
-    cdef vector[double] true_positive_rates, false_positive_rates
     cdef double total
     with nogil:
-        if n_positives == 0 or n_negatives == 0:
-            true_positive_rates.push_back(0.0)
-            true_positive_rates.push_back(1.0)
-            false_positive_rates.push_back(0.0)
-            false_positive_rates.push_back(1.0)
-        else:
-            true_positive_rates.resize(hull.size())
-            false_positive_rates.resize(hull.size())
-            for i in range(<Py_ssize_t>hull.size()):
-                true_positive_rates[i] = hull[i].n_positive / <double>n_positives
-                false_positive_rates[i] = hull[i].n_negative / <double>n_negatives
-        total = _expected_max_profit(
-            true_positive_rates.data(),
-            false_positive_rates.data(),
-            <Py_ssize_t>true_positive_rates.size(),
-            &parts[0, 0],
-            &parts[1, 0],
-            &parts[2, 0],
-            n_powers,
-            lower_bound,
-            upper_bound,
-            distribution,
-            &distribution_parameters[0],
+        total = _expected_max_profit_of_hull(
+            hull, &parts[0, 0], n_powers, lower_bound, upper_bound, distribution, &distribution_parameters[0]
         )
     return total
+
+
+cdef double _expected_max_profit_of_hull(
+    const vector[Point]& hull,
+    const double* parts,
+    Py_ssize_t n_powers,
+    double lower_bound,
+    double upper_bound,
+    Distribution distribution,
+    const double* p,
+) noexcept nogil:
+    """The expected maximum profit of a hull of counts, with ``parts`` as the rows of a (3, n_powers) array."""
+    cdef long long n_positives = hull.back().n_positive, n_negatives = hull.back().n_negative
+    cdef vector[double] true_positive_rates, false_positive_rates
+    cdef Py_ssize_t i
+    # The rates as convex_hull_from_counts computes them, including its diagonal for a single class.
+    if n_positives == 0 or n_negatives == 0:
+        true_positive_rates.push_back(0.0)
+        true_positive_rates.push_back(1.0)
+        false_positive_rates.push_back(0.0)
+        false_positive_rates.push_back(1.0)
+    else:
+        true_positive_rates.resize(hull.size())
+        false_positive_rates.resize(hull.size())
+        for i in range(<Py_ssize_t>hull.size()):
+            true_positive_rates[i] = hull[i].n_positive / <double>n_positives
+            false_positive_rates[i] = hull[i].n_negative / <double>n_negatives
+    return _expected_max_profit(
+        true_positive_rates.data(),
+        false_positive_rates.data(),
+        <Py_ssize_t>true_positive_rates.size(),
+        parts,
+        parts + n_powers,
+        parts + 2 * n_powers,
+        n_powers,
+        lower_bound,
+        upper_bound,
+        distribution,
+        p,
+    )
+
+
+cdef double _expected_max_profit_of_groups(
+    const double* y_score,
+    const long long* n_positive,
+    const long long* n_negative,
+    Py_ssize_t n_groups,
+    const double* parts,
+    Py_ssize_t n_powers,
+    double lower_bound,
+    double upper_bound,
+    int distribution,
+    const double* distribution_parameters,
+) noexcept nogil:
+    """
+    :func:`expected_max_profit_from_counts` without the GIL, for coefficient parts known in advance.
+
+    For a caller that has validated its arguments once, such as a model scoring many candidates on the
+    same training samples, whose class priors (and so coefficient parts) never change.
+    """
+    cdef vector[Group] groups
+    cdef vector[Point] hull
+    cdef Py_ssize_t i
+    groups.resize(n_groups)
+    for i in range(n_groups):
+        groups[i] = Group(y_score[i], n_positive[i], n_negative[i])
+    hull.reserve(n_groups + 1)
+    hull.push_back(Point(0, 0))  # targeting no one
+    _add_groups_to_hull(groups, hull)
+    return _expected_max_profit_of_hull(
+        hull, parts, n_powers, lower_bound, upper_bound, <Distribution>distribution, distribution_parameters
+    )
+
+
+def _expected_max_profit_of_groups_address() -> int:
+    """
+    The address of ``_expected_max_profit_of_groups``, for compiled callers to call it without the GIL.
+
+    Passed around as a number rather than cimported, so that a compiled caller still imports when this
+    extension cannot (see ``__init__.py``) and can fall back to the Python score instead.
+    """
+    return <size_t><void*>_expected_max_profit_of_groups

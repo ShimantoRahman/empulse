@@ -5,6 +5,36 @@ from .tree cimport Tree, SplitValues
 from .forest cimport Forest
 from .random cimport RandState
 
+# The compiled expected maximum profit of samples grouped by score, given the coefficient parts of
+# the profit (see empulse.metrics._cy_max_profit.piecewise._expected_max_profit_of_groups).
+ctypedef double (*ExpectedMaxProfitOfGroups)(
+    const double* y_score,
+    const long long* n_positive,
+    const long long* n_negative,
+    Py_ssize_t n_groups,
+    const double* parts,
+    Py_ssize_t n_powers,
+    double lower_bound,
+    double upper_bound,
+    int distribution,
+    const double* distribution_parameters,
+) noexcept nogil
+
+cdef struct NativeFitness:
+    # The maximum profit for these class values, unless expected_max_profit is set.
+    float tp_benefit
+    float tn_benefit
+    float fp_cost
+    float fn_cost
+    # The expected maximum profit, computed in closed form.
+    ExpectedMaxProfitOfGroups expected_max_profit
+    const double* coefficient_parts
+    Py_ssize_t n_powers
+    double lower_bound
+    double upper_bound
+    int distribution
+    const double* distribution_parameters
+
 cdef Tree* find_best_tree(Forest* population) noexcept
 
 cdef Forest* random_population(
@@ -22,21 +52,20 @@ cdef void fit_population(
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
+    int** scratch,
     int n_threads,
 ) noexcept nogil
 
-cdef void fit_population_max_profit(
+cdef void fit_population_native(
     Forest* population,
     const float[:, ::1] X,
     const int[:] y,
     int n_samples,
     int min_samples_split,
     int min_samples_leaf,
-    float tp_benefit,
-    float tn_benefit,
-    float fp_cost,
-    float fn_cost,
+    const NativeFitness* fitness,
     float alpha,
+    int** scratch,
     int n_threads,
 ) noexcept nogil
 
@@ -64,15 +93,6 @@ cdef Tree* evolve_tree(
 ) noexcept nogil
 
 cdef inline void insert_offspring(Forest* population, Forest* offspring, int i) noexcept nogil
-
-cdef inline void refit(
-    const float[:, ::1] X,
-    const int[:] y,
-    Tree* tree,
-    int n_samples,
-    int min_samples_split,
-    int min_samples_leaf,
-) noexcept nogil
 
 cdef inline void evaluate(
     Tree* tree,
@@ -114,15 +134,13 @@ cdef EvolutionResult evolve_forest_stochastic(
     int random_state = *,
     int n_threads = *,
     bint fitness_from_leaves = *,
+    bint cache_samples = *,
 )
 
-cdef EvolutionResult evolve_forest_deterministic(
+cdef EvolutionResult evolve_forest_native(
     cnp.ndarray[cnp.float32_t, ndim=2] X,
     cnp.ndarray[cnp.int32_t, ndim=1] y,
-    float tp_benefit,
-    float tn_benefit,
-    float fp_cost,
-    float fn_cost,
+    NativeFitness fitness,
     int pop_size = *,
     int max_depth = *,
     int max_generations = *,
@@ -138,4 +156,5 @@ cdef EvolutionResult evolve_forest_deterministic(
     float alpha = *,
     int random_state = *,
     int n_threads = *,
+    bint cache_samples = *,
 )

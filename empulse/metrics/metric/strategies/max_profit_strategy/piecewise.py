@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from itertools import pairwise
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, NamedTuple, Self
 
 import numpy as np
 import scipy.special as sp
@@ -355,6 +355,21 @@ class _AffineCoefficients:
         values = {'pi_0': positive_class_prior, 'pi_1': negative_class_prior, **parameters}
         parts = self.function(*[values[name] for name in self.names])
         return np.asarray(parts, dtype=np.float64).reshape(3, self.n_powers)
+
+
+class ClosedFormExpectedMaxProfit(NamedTuple):
+    """
+    Everything the compiled expected maximum profit needs besides the samples, for fixed class priors.
+
+    ``coefficient_parts`` holds the profit's constant, TPR slope and FPR slope as the rows of a
+    C-contiguous ``(3, degree + 1)`` array (see :func:`~empulse.metrics._cy_max_profit.expected_max_profit`).
+    """
+
+    coefficient_parts: FloatNDArray
+    lower_bound: float
+    upper_bound: float
+    distribution: int
+    distribution_parameters: FloatNDArray
 
 
 class _PiecewiseBase:
@@ -765,10 +780,7 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         if self._compiled is None or expected_max_profit_from_counts is None:
             return super()._count_scorer(**kwargs)
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-        affine, distribution = self._compiled
-        distribution_parameters, parameters = self._resolve_distribution_parameters(dict(kwargs))
-        lower_bound, upper_bound = self._support(distribution_parameters)
-        distribution_values = np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64)
+        affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
         last_parts: tuple[int, int, FloatNDArray] | None = None
 
         def coefficient_parts(n_positives: int, n_negatives: int) -> FloatNDArray:
@@ -794,6 +806,37 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
             )
 
         return score
+
+    def _closed_form(self, n_positives: int, n_negatives: int, **kwargs: Any) -> ClosedFormExpectedMaxProfit | None:
+        """
+        Return what the compiled score needs for samples with these class counts, or None without it.
+
+        For a caller that scores many groupings of the same samples in compiled code, such as the
+        trees of a ProfTree population, whose leaves always hold every training sample.
+        """
+        if self._compiled is None or expected_max_profit_from_counts is None:
+            return None
+        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+        affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
+        positive_class_prior = n_positives / (n_positives + n_negatives)
+        return ClosedFormExpectedMaxProfit(
+            np.ascontiguousarray(affine(positive_class_prior, 1 - positive_class_prior, parameters)),
+            lower_bound,
+            upper_bound,
+            distribution,
+            distribution_values,
+        )
+
+    def _resolve_compiled(
+        self, kwargs: dict[str, Any]
+    ) -> tuple['_AffineCoefficients', int, dict[str, Any], float, float, FloatNDArray]:
+        """Resolve the parts of the compiled score that depend only on the parameters."""
+        assert self._compiled is not None
+        affine, distribution = self._compiled
+        distribution_parameters, parameters = self._resolve_distribution_parameters(dict(kwargs))
+        lower_bound, upper_bound = self._support(distribution_parameters)
+        distribution_values = np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64)
+        return affine, distribution, parameters, lower_bound, upper_bound, distribution_values
 
     def _integrate(
         self,
