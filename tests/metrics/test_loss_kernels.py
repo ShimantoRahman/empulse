@@ -117,8 +117,8 @@ def test_boost_gradient_and_hessian_are_exact_to_double_precision(dtype, seeded_
     exact = np.array([_exact_expit_derivatives(margin) for margin in margins]) * np.abs(grad_const)[:, None]
     np.testing.assert_allclose(np.abs(gradient), exact[:, 0], rtol=1e-14)
     np.testing.assert_allclose(np.sign(gradient), np.sign(grad_const) * (exact[:, 0] > 0))
-    # |1 - 2p| loses its relative precision near p = 1/2, as it would however it was computed.
-    np.testing.assert_allclose(hessian, exact[:, 1], rtol=1e-13, atol=1e-16)
+    # The hessian is the curvature of the logistic link, |grad_const| * p * (1 - p).
+    np.testing.assert_array_equal(hessian, np.abs(gradient))
 
 
 def test_logit_kernels_propagate_nan():

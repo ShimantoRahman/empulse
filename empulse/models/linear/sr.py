@@ -12,6 +12,7 @@ from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
 from .._base import CostSensitiveClassifier, MetricStrategyFactory
+from .._base.cost_scale import decision_cost_scale
 from .._base.ensemble_weighting import subset_loss_params
 from ._symbolic import ParetoPoint, Program, ProgramSpace, SearchSettings, evolve, get_function
 
@@ -106,11 +107,12 @@ class ProfSRClassifier(CostSensitiveClassifier):
 
     patience : int or None, default=None
         Number of consecutive generations whose best loss improved by less than ``tolerance``
-        (relative to the best loss so far) after which the search stops.
+        after which the search stops.
         If ``None``, the search runs for ``max_iter`` generations.
 
     tolerance : float, default=1e-4
-        Relative improvement below which a generation counts towards ``patience``.
+        Improvement of the best loss below which a generation counts towards ``patience``, as a
+        fraction of the average cost of a wrong decision on the training data.
 
     max_time : float or None, default=None
         Number of seconds after which the search stops once the current generation has finished.
@@ -144,9 +146,11 @@ class ProfSRClassifier(CostSensitiveClassifier):
         Expressions that would become longer are never created.
         If ``None``, the length is only discouraged by ``parsimony_coefficient``.
 
-    parsimony_coefficient : float, default=0.01
+    parsimony_coefficient : float, default=0.0003
         Constant that penalizes the length of an expression when selecting parents:
-        the regularized loss is the loss plus ``parsimony_coefficient`` times the number of nodes.
+        the regularized loss is the loss plus ``parsimony_coefficient`` times the number of nodes,
+        times the average cost of a wrong decision on the training data, so that the penalty does not
+        depend on the units of the costs.
         Larger values favour shorter expressions. The same penalty selects the fitted expression from the
         Pareto front.
 
@@ -317,7 +321,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         tournament_size: int = 20,
         function_set: Sequence[str] = ('add', 'sub', 'mul', 'div', 'exp', 'log', 'sig'),
         max_length: int | None = 20,
-        parsimony_coefficient: float = 0.01,
+        parsimony_coefficient: float = 0.0003,
         init_depth: tuple[int, int] = (2, 6),
         init_method: str = 'half_and_half',
         const_range: tuple[float, float] | None = (-1.0, 1.0),
@@ -428,6 +432,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
             tolerance=self.tolerance,
             max_time=self.max_time,
             n_jobs=effective_n_jobs(self.n_jobs),
+            loss_scale=decision_cost_scale(loss, y, **loss_params),
         )
         result = evolve(X, fitness, space, settings, self.random_state)
 

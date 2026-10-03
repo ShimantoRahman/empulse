@@ -179,6 +179,9 @@ class RoutesLossParameters:
         checked: dict[str, FloatNDArray | float] = {
             name: value if isinstance(value, Real) else np.asarray(value) for name, value in resolved.items()
         }
+        for name, value in checked.items():
+            if not np.isfinite(value).all():
+                raise ValueError(f'{name} must be finite, but contains NaN or infinite values.')
         return checked
 
     def _route_costs_to_loss(

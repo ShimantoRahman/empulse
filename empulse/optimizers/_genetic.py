@@ -7,7 +7,7 @@ from scipy.optimize import OptimizeResult
 
 from .._types import FloatNDArray
 from ..metrics import LogitObjective
-from ._base import Optimizer
+from ._base import Optimizer, objective_scale
 from .generation import Generation, LamarckianGeneration
 
 
@@ -40,7 +40,9 @@ class GeneticAlgorithmOptimizer(Optimizer):
     max_iter : int, default=1000
         Maximum number of GA generations.
     tolerance : float, default=1e-4
-        Relative improvement below which the counter towards *patience* is incremented.
+        Improvement of the loss below which the counter towards *patience* is incremented, relative to
+        the scale of the cost matrix (the average cost of a wrong decision), so that it does not depend
+        on the units of the costs.
     patience : int, default=250
         Number of consecutive generations with improvement < *tolerance* before stopping.
     bounds : tuple of (float, float), default=(-5, 5)
@@ -146,18 +148,17 @@ class GeneticAlgorithmOptimizer(Optimizer):
 
         previous_loss: float | None = None
         iter_stagnant = 0
+        # Improvements are measured against the cost matrix's scale rather than the loss itself, which
+        # constants added to the costs would change without changing any decision.
+        scale = objective_scale(objective)
 
         for _ in islice(rga.optimize(fitness, bounds_per_feature), self.max_iter):
             fitness_value = rga.result.fun  # type: ignore[attr-defined]
             loss = -fitness_value
-            if previous_loss is not None:
-                denominator = max(abs(previous_loss), 1e-12)
-                relative_improvement = (previous_loss - loss) / denominator
-            else:
-                relative_improvement = np.inf
+            improvement = np.inf if previous_loss is None else (previous_loss - loss) / scale
             previous_loss = loss
 
-            if relative_improvement < self.tolerance:
+            if improvement < self.tolerance:
                 iter_stagnant += 1
                 if iter_stagnant >= self.patience:
                     rga.result.message = 'Converged.'  # type: ignore[attr-defined]
@@ -201,7 +202,8 @@ class MemeticOptimizer(Optimizer):
         Stop early when the best fitness has not improved by more than ``tol``
         over the last ``patience`` generations.
     tol : float, default=1e-6
-        Convergence tolerance for the patience criterion.
+        Convergence tolerance for the patience criterion, relative to the scale of the cost matrix
+        (the average cost of a wrong decision).
     crossover_rate : float, default=0.8
         Crossover probability (passed to :class:`LamarckianGeneration`).
     mutation_rate : float, default=0.1
@@ -309,6 +311,7 @@ class MemeticOptimizer(Optimizer):
         # Generation.optimize() maximizes, but objective.logit_loss is a loss to minimize. The Lamarckian
         # local search descends the true loss through `_grad_objective.logit_gradient_steps()`.
         fitness = _as_generation_fitness(objective.logit_loss)
+        scale = objective_scale(objective)
 
         last_gen: Generation | None = None
         for i, last_gen in enumerate(gen.optimize(fitness, bounds_list)):
@@ -316,7 +319,7 @@ class MemeticOptimizer(Optimizer):
                 break
             if len(last_gen.fx_best) >= self.patience:
                 recent = last_gen.fx_best[-self.patience :]
-                if max(recent) - min(recent) < self.tol:
+                if max(recent) - min(recent) < self.tol * scale:
                     break
 
         # optimize() is an infinite generator, so last_gen is set after the first iteration.

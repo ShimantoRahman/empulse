@@ -210,9 +210,23 @@ class TestSplitsMustLowerTheCost:
         model = self._fit(make_data, seeded_rng, criterion=criterion)
         assert model.min_impurity_decrease_ == 0.0
 
-    def test_an_explicit_value_is_used_as_is(self, make_data, seeded_rng):
-        model = self._fit(make_data, seeded_rng, min_impurity_decrease=0.01)
-        assert model.min_impurity_decrease_ == 0.01
+    def test_an_explicit_value_is_relative_to_the_cost_of_a_wrong_decision(self, make_data, seeded_rng):
+        X, y = make_data(n_samples=2000, n_features=10, weights=[0.9], flip_y=0.1)
+        fn_cost = seeded_rng.uniform(2, 20, y.size)
+        model = CSTreeClassifier(min_impurity_decrease=0.01, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=fn_cost)
+
+        average_wrong_decision = np.mean(np.where(y == 1, fn_cost, 1.0))
+        assert model.min_impurity_decrease_ == pytest.approx(0.01 * average_wrong_decision)
+
+    @pytest.mark.parametrize('parameter', ['min_impurity_decrease', 'ccp_alpha'])
+    def test_explicit_thresholds_do_not_depend_on_the_cost_units(self, make_data, seeded_rng, parameter):
+        X, y = make_data(n_samples=2000, n_features=10, weights=[0.9], flip_y=0.1)
+        fn_cost = seeded_rng.uniform(2, 20, y.size)
+        model = CSTreeClassifier(random_state=0, **{parameter: 0.01})
+        reference = model.fit(X, y, fp_cost=1.0, fn_cost=fn_cost).predict_proba(X)
+        rescaled = model.fit(X, y, fp_cost=64.0, fn_cost=64.0 * fn_cost).predict_proba(X)
+
+        np.testing.assert_array_equal(rescaled, reference)
 
 
 def _cheapest_class_per_leaf(leaves, y, weights, tp, tn, fp, fn):

@@ -7,7 +7,7 @@ import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.datasets import make_classification
 
-from empulse.models import CSBaggingClassifier, CSForestClassifier
+from empulse.models import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier
 from empulse.models._base.ensemble_weighting import (
     accumulate_weighted_prediction,
     goodness_weights,
@@ -394,6 +394,14 @@ class TestPredictVotesCheapestClasses:
         model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
         assert all(tree.min_impurity_decrease_ == 0.0 for tree in model.estimator_.estimators_)
+
+    def test_bagging_an_explicit_cost_sensitive_tree_votes_like_the_default(self):
+        X, y, fp_cost, fn_cost = self._data()
+        default = CSBaggingClassifier(n_estimators=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+        explicit = CSBaggingClassifier(CSTreeClassifier(min_impurity_decrease=0.0), n_estimators=5, random_state=0)
+        explicit.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        np.testing.assert_array_equal(explicit.predict(X), default.predict(X))
 
     def test_bagging_a_custom_estimator_still_averages_probabilities(self):
         from empulse.models import CSLogitClassifier

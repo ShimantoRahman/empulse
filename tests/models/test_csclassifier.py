@@ -239,6 +239,44 @@ def test_only_the_named_cost_is_overridden_at_fit_time(make_estimator, cost_data
     assert np.allclose(partial.predict_proba(X), explicit.predict_proba(X))
 
 
+@pytest.mark.parametrize('make_estimator', COST_TAKING_ESTIMATORS[:2])
+def test_an_unknown_fit_argument_is_rejected(make_estimator, cost_data):
+    """``sample_weight`` (or a misspelt cost) must not be dropped silently by a model that cannot use it."""
+    X, y = cost_data
+    with pytest.raises(TypeError, match='sample_weight'):
+        make_estimator().fit(X, y, fp_cost=1.0, fn_cost=1.0, sample_weight=np.ones(len(y)))
+    with pytest.raises(TypeError, match='fn_csot'):
+        make_estimator().fit(X, y, fp_cost=1.0, fn_csot=5.0)
+
+
+def test_robust_cs_passes_fit_arguments_to_its_estimator(cost_data):
+    X, y = cost_data
+    model = RobustCSClassifier(estimator=CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=5)))
+    with pytest.raises(TypeError, match='sample_weight'):
+        model.fit(X, y, fp_cost=1.0, fn_cost=1.0, sample_weight=np.ones(len(y)))
+
+
+@pytest.mark.parametrize('make_estimator', COST_TAKING_ESTIMATORS)
+@pytest.mark.parametrize('where', ['fit', 'constructor'])
+def test_non_finite_costs_are_rejected(make_estimator, where, cost_data):
+    """A NaN or infinite cost would poison every sum it enters, so it must not reach training."""
+    X, y = cost_data
+    fn_cost = np.r_[np.nan, np.ones(len(y) - 1)]
+    if where == 'fit':
+        estimator, fit_costs = make_estimator(), {'fp_cost': 1.0, 'fn_cost': fn_cost}
+    else:
+        estimator, fit_costs = make_estimator(fp_cost=1.0, fn_cost=fn_cost), {}
+    with pytest.raises(ValueError, match='fn_cost must be finite'):
+        estimator.fit(X, y, **fit_costs)
+
+
+def test_non_finite_metric_parameters_are_rejected(cost_data):
+    X, y = cost_data
+    loss = Metric(CostMatrix().add_fp_cost('c').add_fn_cost(1.0), Cost())
+    with pytest.raises(ValueError, match='c must be finite'):
+        _cslogit(loss=loss).fit(X, y, c=np.inf)
+
+
 # --- Cost shape validation ----------------------------------------------------------------------
 
 

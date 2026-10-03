@@ -32,6 +32,9 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         'loss': [BaseMetric, None],
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = Cost
+    # Keyword arguments of ``fit`` that ``_fit`` consumes besides the loss's parameters. ``None``
+    # means ``_fit`` forwards any keyword argument, so none is rejected.
+    _extra_fit_params: ClassVar[frozenset[str] | None] = frozenset()
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -145,6 +148,14 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
         known = loss._all_parameters
+        if self._extra_fit_params is not None:
+            unknown = sorted(set(loss_params) - known - self._extra_fit_params)
+            if unknown:
+                raise TypeError(
+                    f'{type(self).__name__}.fit() got unexpected keyword argument(s) {", ".join(map(repr, unknown))}. '
+                    f'Besides X and y it accepts the costs and the parameters of its loss: '
+                    f'{", ".join(sorted(known | self._extra_fit_params))}.'
+                )
         loss._validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
 
         return self._fit(X, y, loss=loss, **loss_params)

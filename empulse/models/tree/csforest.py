@@ -17,6 +17,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
+from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import goodness_weights, subset_loss_params
 from ._cstree import CostTree, cost_records
@@ -168,7 +169,8 @@ class CSForestClassifier(CostSensitiveClassifier):
 
     min_impurity_decrease : float, default=0.0
         A node will be split if this split induces a decrease of the impurity
-        greater than or equal to this value.
+        greater than or equal to this value, times the average cost of a wrong decision on the
+        training data, so that it does not depend on the units of the costs.
 
         The weighted impurity decrease equation is the following::
 
@@ -233,7 +235,8 @@ class CSForestClassifier(CostSensitiveClassifier):
         Complexity parameter used for Minimal Cost-Complexity Pruning of every tree.
         The subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`sklearn:minimal_cost_complexity_pruning` for details.
+        :ref:`sklearn:minimal_cost_complexity_pruning` for details. Like ``min_impurity_decrease``,
+        it is measured in units of the average cost of a wrong decision on the training data.
 
     max_samples : int or float, default=None
         If bootstrap is True, the number of samples to draw from X
@@ -441,6 +444,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         y = np.asarray(y).reshape(-1)
         n_samples, n_features = X.shape
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+        cost_scale = decision_cost_scale(loss, y, **loss_params)
 
         self._n_samples = n_samples
         self._sample_weight = self._class_sample_weight(y)
@@ -458,8 +462,8 @@ class CSForestClassifier(CostSensitiveClassifier):
             min_weight_fraction_leaf=self.min_weight_fraction_leaf,
             max_features=self.max_features,
             max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self.min_impurity_decrease,
-            ccp_alpha=self.ccp_alpha,
+            min_impurity_decrease=self.min_impurity_decrease * cost_scale,
+            ccp_alpha=self.ccp_alpha * cost_scale,
         )
 
         random_state = check_random_state(self.random_state)
@@ -487,7 +491,7 @@ class CSForestClassifier(CostSensitiveClassifier):
                 delayed(self._grow_one)(params, X_fortran, y, records, missing_mask, seed) for seed in seeds
             )
             self.estimators_.extend(
-                _fitted_tree(tree, seed, params, n_features, self.criterion)
+                _fitted_tree(tree, seed, params, n_features, self, cost_scale)
                 for tree, seed in zip(trees, seeds, strict=True)
             )
 
@@ -718,20 +722,23 @@ class CSForestClassifier(CostSensitiveClassifier):
         return sparse_hstack(indicators).tocsr(), n_nodes_ptr
 
 
-def _fitted_tree(tree: CostTree, seed: int, params: TreeParams, n_features: int, criterion: str) -> CSTreeClassifier:
+def _fitted_tree(
+    tree: CostTree, seed: int, params: TreeParams, n_features: int, forest: 'CSForestClassifier', cost_scale: float
+) -> CSTreeClassifier:
     """Wrap a grown tree in a fitted :class:`CSTreeClassifier`, without fitting it again."""
     estimator = CSTreeClassifier(
-        criterion=criterion,  # type: ignore[arg-type]
+        criterion=forest.criterion,
         max_depth=None if params.max_depth == np.iinfo(np.int32).max else params.max_depth,
         min_samples_split=params.min_samples_split,
         min_samples_leaf=params.min_samples_leaf,
         min_weight_fraction_leaf=params.min_weight_fraction_leaf,
         max_features=params.max_features,
         max_leaf_nodes=None if params.max_leaf_nodes < 0 else params.max_leaf_nodes,
-        min_impurity_decrease=params.min_impurity_decrease,
-        ccp_alpha=params.ccp_alpha,
+        min_impurity_decrease=forest.min_impurity_decrease,
+        ccp_alpha=forest.ccp_alpha,
         random_state=seed,
     )
+    estimator._cost_scale = cost_scale
     estimator.tree_ = tree
     estimator.classes_ = np.array([0, 1])
     estimator.n_features_in_ = n_features

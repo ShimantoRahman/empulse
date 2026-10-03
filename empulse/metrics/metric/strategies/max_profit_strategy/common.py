@@ -418,6 +418,23 @@ class _BaseMaxProfitLogitObjective(LogitObjective):
             return np.zeros_like(coef_f)
         return penalty.l1_weight * np.sign(coef_f) + penalty.l2_gradient(coef_f)
 
+    def data_loss_gradient(self, weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+        """Return the negated MaxProfit and its gradient without the penalty, for solvers that apply it themselves."""
+        w = np.asarray(weights, dtype=np.float64)
+        value, gradient = self.logit_loss_gradient(w)
+        coef = w[self._start_coef :]
+        data_gradient = np.array(gradient, dtype=np.float64)
+        data_gradient[self._start_coef :] -= self._regularization_gradient(coef)
+        return value - self._regularization_value(coef), data_gradient
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Return the negated MaxProfit without the penalty."""
+        return self.data_loss_gradient(weights)[0]
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Return the gradient of the negated MaxProfit without the penalty."""
+        return self.data_loss_gradient(weights)[1]
+
     def with_indices(self, indices: FloatNDArray) -> Self:
         """Return a shallow copy of this objective restricted to *indices*.
 

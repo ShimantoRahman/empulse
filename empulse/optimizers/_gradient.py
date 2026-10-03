@@ -6,7 +6,7 @@ from scipy.optimize import OptimizeResult
 
 from .._types import FloatNDArray
 from ..metrics import LogitObjective
-from ._base import Optimizer
+from ._base import Optimizer, objective_scale
 from ._schedules import Schedule
 
 
@@ -38,7 +38,9 @@ class _IterativeGradientOptimizer(Optimizer):
 
     Subclasses implement :meth:`_init_state` and :meth:`_step`.
 
-    Convergence is declared when *either* condition holds:
+    The steps and both convergence conditions see the objective divided by the scale of its cost
+    matrix, so that the same costs in other units lead to the same model. Convergence is declared
+    when *either* condition holds for that scaled objective:
 
     * ``||gradient||_inf < tolerance``, or
     * the loss range (max - min) over the last ``patience`` iterations is
@@ -124,6 +126,7 @@ class _IterativeGradientOptimizer(Optimizer):
             effective_batch = min(self.batch_size, n_samples)
 
         base_lr: float = getattr(self, 'lr', 1.0)
+        scale = objective_scale(objective)
 
         loss_history: list[float] = []
         loss: float = np.inf
@@ -150,14 +153,14 @@ class _IterativeGradientOptimizer(Optimizer):
 
             loss, gradient = step_objective.logit_loss_gradient(weights)
             nfev += 1
-            loss_history.append(float(loss))
+            loss_history.append(float(loss) / scale)
 
             if loss < best_loss:
                 best_loss = loss
                 best_weights = weights.copy()
                 best_gradient = gradient.copy()
 
-            if float(np.max(np.abs(gradient))) < self.tolerance:
+            if float(np.max(np.abs(gradient))) < self.tolerance * scale:
                 return _make_result(
                     best_weights,
                     best_loss,
@@ -185,7 +188,7 @@ class _IterativeGradientOptimizer(Optimizer):
                         status=0,
                     )
 
-            weights, state = self._step(weights, gradient, state, t, effective_lr)
+            weights, state = self._step(weights, np.asarray(gradient, dtype=np.float64) / scale, state, t, effective_lr)
 
         return _make_result(
             best_weights,

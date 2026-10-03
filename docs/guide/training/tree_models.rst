@@ -159,7 +159,10 @@ Post-training pruning via ``ccp_alpha``
 Minimal Cost-Complexity Pruning is available through the ``ccp_alpha`` parameter.
 With the ``"cost"`` criterion, the impurities summed over a tree's leaves are the cost of the
 training samples per sample, so ``ccp_alpha`` is the least that cost has to drop for every leaf
-a branch adds. To find a good value, inspect the pruning path first:
+a branch adds. It is measured in units of the average cost of a wrong decision on the training
+data, so the same value prunes the same tree whatever currency the costs are in, and so is
+``min_impurity_decrease``. To find a good value, inspect the pruning path first, whose alphas are
+in those units too:
 
 .. code-block:: python
 

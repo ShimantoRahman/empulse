@@ -41,6 +41,9 @@ def _validate_input(
             fn_cost = np.asarray(fn_cost)
             arrays.append(fn_cost)
         _check_consistent_length(*arrays)
+        for name, cost in (('tp_cost', tp_cost), ('fp_cost', fp_cost), ('tn_cost', tn_cost), ('fn_cost', fn_cost)):
+            if not np.isfinite(cost).all():
+                raise ValueError(f'{name} must be finite, but contains NaN or infinite values.')
         if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
             raise ValueError('All costs are zero. At least one cost must be non-zero.')
         return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost

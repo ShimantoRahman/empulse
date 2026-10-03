@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
+from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._cstree import CostTree, ccp_pruning_path, cost_records
 from ._cstree._grow import (
@@ -167,7 +168,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
     min_impurity_decrease : float or None, default=None
         A node will be split if this split induces a decrease of the impurity
-        greater than or equal to this value.
+        greater than or equal to this value, times the average cost of a wrong decision on the
+        training data, so that it does not depend on the units of the costs.
 
         ``None`` means that with ``criterion="cost"`` a node is only split if the split lowers the
         cost of the training samples, and otherwise means ``0.0``. The cost impurity is the cost of
@@ -204,7 +206,10 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
 
         With ``criterion="cost"``, the impurities summed over the leaves are the
         cost of the training samples per unit of training weight, so ``ccp_alpha``
-        is the smallest decrease of that cost an extra leaf has to bring.
+        is the smallest decrease of that cost an extra leaf has to bring. It is measured in units
+        of the average cost of a wrong decision on the training data, like the alphas
+        :meth:`cost_complexity_pruning_path` returns, so that it does not depend on the units of
+        the costs.
 
     Attributes
     ----------
@@ -367,6 +372,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         sample_weight = None if self.class_weight is None else compute_sample_weight(self.class_weight, y)
 
+        self._cost_scale = decision_cost_scale(loss, y, **loss_params)
         self.min_impurity_decrease_ = self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost)
         params = self._tree_params(n_samples=X.shape[0], n_features=X.shape[1])
         self.max_features_ = params.max_features
@@ -395,7 +401,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             max_features=self.max_features,
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease_,
-            ccp_alpha=self.ccp_alpha,
+            ccp_alpha=self.ccp_alpha * self._cost_scale,
         )
 
     def _resolve_min_impurity_decrease(
@@ -408,7 +414,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
     ) -> float:
         """Return ``min_impurity_decrease``, resolving ``None`` as its docstring describes."""
         if self.min_impurity_decrease is not None:
-            return float(self.min_impurity_decrease)
+            return float(self.min_impurity_decrease) * self._cost_scale
         if self.criterion != 'cost':
             return 0.0
         is_positive = np.asarray(y).reshape(-1) == 1
@@ -548,14 +554,16 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             Dictionary-like object, with the following attributes.
 
             ccp_alphas : ndarray
-                Effective alphas of subtree during pruning.
+                Effective alphas of subtree during pruning, in the units ``ccp_alpha`` takes:
+                multiples of the average cost of a wrong decision on the training data.
 
             impurities : ndarray
                 Sum of the impurities of the subtree leaves for the
-                corresponding alpha value in ``ccp_alphas``.
+                corresponding alpha value in ``ccp_alphas``, in the same units.
         """
         unpruned = clone(self).set_params(ccp_alpha=0.0).fit(X, y, **fit_params)
-        return Bunch(**ccp_pruning_path(unpruned.tree_))
+        path = ccp_pruning_path(unpruned.tree_)
+        return Bunch(**{name: np.asarray(values) / unpruned._cost_scale for name, values in path.items()})
 
     def decision_path(self, X: FloatArrayLike, check_input: bool = True) -> csr_matrix:
         """

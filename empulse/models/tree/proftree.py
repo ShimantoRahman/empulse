@@ -11,6 +11,7 @@ from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
 from ...metrics._cy_max_profit import _expected_max_profit_of_groups_address
+from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 from ._cy_proftree.evolutionary_tree import EvolutionaryTree
 
@@ -100,13 +101,16 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         Complexity penalty for the fitness function. A way to control overfitting.
 
         When ``alpha`` is 0.0, the fitness function is not penalized for the amount of nodes in the tree.
-        When ``alpha`` is greater than 0.0, the fitness function is penalized for the amount of nodes in the tree.
+        When ``alpha`` is greater than 0.0, the fitness is lowered by ``alpha`` times the number of nodes,
+        times the average cost of a wrong decision on the training data, so that the penalty does not
+        depend on the units of the costs.
 
     patience : int, default=100
         Number of iterations to wait for improvement before stopping early.
 
     tolerance : float, default=1e-4
-        Minimum relative improvement in fitness required to consider a solution better.
+        Minimum improvement in fitness required to consider a solution better, as a fraction of the
+        average cost of a wrong decision on the training data.
 
     max_depth : int or None, default=10
         Maximum depth of the tree.
@@ -341,6 +345,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         mutate_value_rate = self.mutate_value_rate / total_probability
 
         random_state = int(check_random_state(self.random_state).randint(low=0, high=2**31 - 1))
+        cost_scale = decision_cost_scale(loss, y, **loss_params)
 
         self.tree_ = EvolutionaryTree()
         loss_ = self._get_metric_loss()
@@ -359,10 +364,10 @@ class ProfTreeClassifier(CostSensitiveClassifier):
             'max_depth': int(self.max_depth) if self.max_depth is not None else MAX_INT,
             'min_samples_split': int(min_samples_split),
             'min_samples_leaf': int(min_samples_leaf),
-            'alpha': float(self.alpha),
+            'alpha': float(self.alpha * cost_scale),
             'max_generations': int(self.max_iter),
             'patience': int(self.patience),
-            'tol': float(self.tolerance),
+            'tol': float(self.tolerance * cost_scale),
             'random_state': random_state,
             'n_jobs': effective_n_jobs(self.n_jobs),
             'cache_samples': bool(self.cache_samples),

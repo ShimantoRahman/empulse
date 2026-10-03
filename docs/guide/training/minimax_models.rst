@@ -227,7 +227,8 @@ one. Each point shows what the extra symbols bought:
         print(point.length, round(point.loss, 3), point.program)
 
 ``program_`` is the point on the front with the lowest loss plus ``parsimony_coefficient`` times its
-length. Pick another point of the front if a shorter or a more accurate formula suits the application
+length, times the average cost of a wrong decision on the training data (so the penalty does not
+depend on the units of the costs). Pick another point of the front if a shorter or a more accurate formula suits the application
 better; its ``program.execute(X)`` gives the scores that expression assigns to ``X``.
 
 Unlike the minimax models, :class:`~empulse.models.ProfSRClassifier` accepts any strategy, since

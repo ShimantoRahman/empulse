@@ -15,6 +15,11 @@ objective: it learns a ranking meant to be cut at its most profitable fraction, 
 probability of one half is not what it optimises, so it is judged by the maximum profit of its
 scores instead.
 
+The same models must also be indifferent to what does not change a decision: the units the costs are
+in, and constants added to the costs of one class. A model that measures a tolerance, a
+regularisation strength or a penalty in absolute units fails these, which is how a booster ended up
+predicting a constant once the costs were in hundreds of euros instead of single ones.
+
 ``ProfMPMClassifier`` is deliberately absent. It forces both classes to share one worst-case accuracy
 bound (Maldonado, Lopez & Vairetti, 2020, Section 4.2), so its objective is that bound times the
 *sum* of the class weights: no ratio of false-positive to false-negative cost can favour either
@@ -29,7 +34,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
-from empulse.metrics import CostMatrix, MaxProfit, Metric, cost_loss, expected_cost_loss_churn
+from empulse.metrics import CostMatrix, MaxProfit, Metric, cost_loss, empc_score, expected_cost_loss_churn
 from empulse.models import (
     B2BoostClassifier,
     CSBaggingClassifier,
@@ -41,11 +46,12 @@ from empulse.models import (
     CSTreeClassifier,
     ProfLogitClassifier,
     ProfMEMPMClassifier,
+    ProfMPMClassifier,
     ProfSRClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
-from empulse.optimizers import GeneticAlgorithmOptimizer
+from empulse.optimizers import SGD, Adam, GeneticAlgorithmOptimizer, MemeticOptimizer, RMSProp, ScipyOptimizer
 
 from .estimator_inventory import estimator_id
 
@@ -167,3 +173,141 @@ def test_per_sample_costs_steer_the_model(estimator, split):
     expensive_misses = X_test[:, 2] > 0
     # At these costs the optimal threshold is 0.1 on one half and 0.9 on the other.
     assert y_pred[expensive_misses].mean() - y_pred[~expensive_misses].mean() > 0.5
+
+
+# A fully grown cost tree splits nodes that no split improves, and which of the tied splits it takes
+# depends on rounding, which a change of units by a power of two leaves alone.
+UNIT_INVARIANT_MODELS = [*DECISION_MODELS, *RANKING_MODELS, CSTreeClassifier(min_impurity_decrease=0.0, random_state=0)]
+
+# Shifting the costs changes rounding, so the models above whose fit turns on rounding are left out:
+# fully grown trees break ties by it, and ProfTree keeps its fitness in single precision.
+SHIFT_INVARIANT_MODELS = [
+    model
+    for model in [*DECISION_MODELS, *RANKING_MODELS]
+    if not isinstance(model, CSForestClassifier | CSBaggingClassifier | ProfTreeClassifier)
+]
+
+
+@pytest.mark.parametrize('estimator', UNIT_INVARIANT_MODELS, ids=estimator_id)
+@pytest.mark.parametrize('unit', [1 / 64, 64])
+def test_decisions_do_not_depend_on_the_cost_units(estimator, unit, split):
+    X_train, X_test, y_train, _ = split
+    in_units = {name: cost * unit for name, cost in MISSES_EXPENSIVE.items()}
+    reference = clone(estimator).fit(X_train, y_train, **MISSES_EXPENSIVE)
+    rescaled = clone(estimator).fit(X_train, y_train, **in_units)
+
+    np.testing.assert_array_equal(rescaled.predict(X_test), reference.predict(X_test))
+    assert np.std(rescaled.predict_proba(X_test)[:, 1]) > 0, 'the model learned nothing'
+
+
+def _booster(library, classifier_name, **kwargs):
+    return lambda: getattr(pytest.importorskip(library), classifier_name)(n_estimators=10, **kwargs)
+
+
+_GA = {'max_iter': 30, 'population_size': 30, 'random_state': 0}
+_WITH_BENEFIT = {'tp_cost': -1.0, 'fp_cost': 1.0, 'fn_cost': 4.0}
+_MATRIX = CostMatrix().add_tp_cost('tp').add_fp_cost('fp').add_fn_cost('fn')
+_CHURN = {'clv': 200.0, 'incentive_cost': 10.0, 'contact_cost': 1.0}
+
+# Configurations beyond the defaults above, each with the parameters to fit it with: every one is
+# in money, so all of them are rescaled together.
+UNIT_INVARIANT_CONFIGURATIONS = [
+    pytest.param(ProfMPMClassifier, _WITH_BENEFIT, id='ProfMPM'),
+    pytest.param(lambda: CSLogitClassifier(l1_ratio=0.0), _WITH_BENEFIT, id='CSLogit-l2'),
+    pytest.param(lambda: CSLogitClassifier(optimizer=SGD()), _WITH_BENEFIT, id='CSLogit-SGD'),
+    pytest.param(lambda: CSLogitClassifier(optimizer=Adam()), _WITH_BENEFIT, id='CSLogit-Adam'),
+    pytest.param(lambda: CSLogitClassifier(optimizer=RMSProp()), _WITH_BENEFIT, id='CSLogit-RMSProp'),
+    pytest.param(
+        lambda: CSLogitClassifier(l1_ratio=0.0, optimizer=ScipyOptimizer(method='BFGS')),
+        _WITH_BENEFIT,
+        id='CSLogit-ScipyOptimizer',
+    ),
+    pytest.param(
+        lambda: ProfLogitClassifier(optimizer=MemeticOptimizer(max_iter=5, random_state=0)),
+        _WITH_BENEFIT,
+        id='ProfLogit-MemeticOptimizer',
+    ),
+    pytest.param(lambda: CSTreeClassifier(ccp_alpha=0.01, random_state=0), _WITH_BENEFIT, id='CSTree-ccp_alpha'),
+    pytest.param(
+        lambda: CSTreeClassifier(min_impurity_decrease=0.01, random_state=0),
+        _WITH_BENEFIT,
+        id='CSTree-min_impurity_decrease',
+    ),
+    pytest.param(
+        lambda: CSForestClassifier(n_estimators=5, ccp_alpha=0.005, min_impurity_decrease=0.001, random_state=0),
+        _WITH_BENEFIT,
+        id='CSForest-pruned',
+    ),
+    pytest.param(
+        lambda: CSLogitClassifier(loss=Metric(_MATRIX, MaxProfit())),
+        {'tp': -1.0, 'fp': 1.0, 'fn': 4.0},
+        id='CSLogit-MaxProfit',
+    ),
+    pytest.param(lambda: CSLogitClassifier(loss=empc_score), _CHURN, id='CSLogit-empc'),
+    pytest.param(
+        lambda: ProfLogitClassifier(loss=empc_score, optimizer=GeneticAlgorithmOptimizer(**_GA)),
+        _CHURN,
+        id='ProfLogit-empc',
+    ),
+    pytest.param(
+        lambda: CSBoostClassifier(_booster('lightgbm', 'LGBMClassifier', verbosity=-1)()),
+        _WITH_BENEFIT,
+        id='CSBoost-LightGBM',
+    ),
+    pytest.param(
+        lambda: CSBoostClassifier(
+            _booster('catboost', 'CatBoostClassifier', verbose=False, random_seed=0, allow_writing_files=False)()
+        ),
+        _WITH_BENEFIT,
+        id='CSBoost-CatBoost',
+    ),
+    pytest.param(
+        lambda: B2BoostClassifier(XGBClassifier(n_estimators=10)), {'clv': 200.0, 'contact_cost': 1.0}, id='B2Boost'
+    ),
+    pytest.param(
+        lambda: CSTreeClassifier(criterion='gini', max_depth=4, random_state=0), _WITH_BENEFIT, id='CSTree-gini'
+    ),
+    pytest.param(
+        lambda: CSTreeClassifier(class_weight='balanced', random_state=0), _WITH_BENEFIT, id='CSTree-class_weight'
+    ),
+    pytest.param(
+        lambda: CSForestClassifier(n_estimators=5, combination='weighted_voting', random_state=0),
+        _WITH_BENEFIT,
+        id='CSForest-weighted_voting',
+    ),
+    pytest.param(
+        lambda: ProfTreeClassifier(alpha=0.01, max_iter=30, population_size=30, random_state=0),
+        _WITH_BENEFIT,
+        id='ProfTree-alpha',
+    ),
+    pytest.param(
+        lambda: ProfTreeClassifier(loss=empc_score, max_iter=30, population_size=30, random_state=0),
+        _CHURN,
+        id='ProfTree-empc',
+    ),
+]
+
+
+@pytest.mark.parametrize(('make_estimator', 'params'), UNIT_INVARIANT_CONFIGURATIONS)
+def test_configurations_do_not_depend_on_the_cost_units(make_estimator, params, split):
+    X_train, X_test, y_train, _ = split
+    reference = make_estimator().fit(X_train, y_train, **params).predict_proba(X_test)
+    for unit in (1 / 64, 64):
+        rescaled = make_estimator().fit(X_train, y_train, **{name: value * unit for name, value in params.items()})
+        np.testing.assert_array_equal(rescaled.predict_proba(X_test), reference)
+
+
+@pytest.mark.parametrize('estimator', SHIFT_INVARIANT_MODELS, ids=estimator_id)
+def test_decisions_do_not_depend_on_constants_added_to_a_class(estimator, split):
+    """Adding a constant to both costs of positives, and another to both costs of negatives, changes no decision."""
+    X_train, X_test, y_train, _ = split
+    on_positives, on_negatives = -3.0, 2.0
+    shifted = {
+        'tp_cost': on_positives,
+        'fn_cost': MISSES_EXPENSIVE['fn_cost'] + on_positives,
+        'tn_cost': on_negatives,
+        'fp_cost': MISSES_EXPENSIVE['fp_cost'] + on_negatives,
+    }
+    reference = clone(estimator).fit(X_train, y_train, **MISSES_EXPENSIVE).predict(X_test)
+
+    np.testing.assert_array_equal(clone(estimator).fit(X_train, y_train, **shifted).predict(X_test), reference)

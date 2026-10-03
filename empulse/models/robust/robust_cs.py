@@ -348,7 +348,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             self.costs_ = self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
             should_fit = self._determine_outlier_costs()
             self._fit_outlier_estimators(X, is_positive, should_fit)
-            estimator_params = {**self.costs_}
+            estimator_params = {**fit_params, **self.costs_}
 
         self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
 

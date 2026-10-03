@@ -55,6 +55,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         'estimator': [HasMethods(['fit', 'predict_proba'])],
         'pos_label': [Real, str, 'boolean', None],
     }
+    # Keyword arguments other than the loss's parameters go to the estimator's fit.
+    _extra_fit_params: ClassVar[frozenset[str] | None] = None
 
     _set_default_costs: ClassVar[bool] = False
     _routed_methods: ClassVar[tuple[str, ...]] = ('fit', 'predict')

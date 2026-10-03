@@ -493,6 +493,8 @@ cdef struct BuildParams:
     intp_t max_depth
     float64_t min_impurity_decrease
     bint cost_bound
+    # EPSILON in the units of the impurities, which scale with the costs.
+    float64_t epsilon
 
 
 def build_tree(
@@ -505,6 +507,7 @@ def build_tree(
     intp_t max_leaf_nodes,
     float64_t min_impurity_decrease,
     bint cost_bound,
+    float64_t tolerance_scale=1.0,
 ):
     """
     Grow ``tree`` on the samples ``splitter`` was created with.
@@ -512,7 +515,9 @@ def build_tree(
     Depth first, or best first (by impurity improvement) when ``max_leaf_nodes`` is positive.
     ``cost_bound`` makes a node a leaf without searching for a split when no split could lower its
     cost by ``min_impurity_decrease`` (see ``Splitter.max_cost_decrease``); it requires the cost
-    criterion and a splitter that tracks the oracle.
+    criterion and a splitter that tracks the oracle. ``tolerance_scale`` is the typical cost of a
+    sample, by which the rounding tolerance of the stopping rules is scaled, so that the same costs
+    in other units grow the same tree.
     """
     cdef BuildParams params
     params.min_samples_split = min_samples_split
@@ -521,6 +526,7 @@ def build_tree(
     params.max_depth = max_depth
     params.min_impurity_decrease = min_impurity_decrease
     params.cost_bound = cost_bound
+    params.epsilon = EPSILON * tolerance_scale
     if splitter.n_samples == 0:
         raise ValueError('No sample has a positive weight.')
     if max_leaf_nodes > 0:
@@ -539,8 +545,8 @@ cdef inline bint _is_unsplittable(
         or n_node_samples < 2 * params.min_samples_leaf
         or weighted_n_node_samples < 2 * params.min_weight_leaf
         # impurity == 0 with tolerance due to rounding errors
-        or impurity <= EPSILON
-        or (params.cost_bound and splitter.max_cost_decrease() + EPSILON < params.min_impurity_decrease)
+        or impurity <= params.epsilon
+        or (params.cost_bound and splitter.max_cost_decrease() + params.epsilon < params.min_impurity_decrease)
     )
 
 
@@ -597,7 +603,7 @@ cdef void _build_depth_first(CostTree tree, Splitter splitter, const BuildParams
             if not is_leaf:
                 splitter.node_split(impurity, &split, &n_constant_features)
                 # A small tolerance keeps splits whose improvement only rounds below the threshold.
-                is_leaf = split.pos >= end or split.improvement + EPSILON < params.min_impurity_decrease
+                is_leaf = split.pos >= end or split.improvement + params.epsilon < params.min_impurity_decrease
 
             node_id = tree._add_node(
                 parent, is_left, is_leaf, split.feature, split.threshold, split.missing_go_to_left, impurity,
@@ -705,7 +711,7 @@ cdef int _add_split_node(
     is_leaf = _is_unsplittable(splitter, params, depth, n_node_samples, weighted_n_node_samples, impurity)
     if not is_leaf:
         splitter.node_split(impurity, &split, &n_constant_features)
-        is_leaf = split.pos >= end or split.improvement + EPSILON < params.min_impurity_decrease
+        is_leaf = split.pos >= end or split.improvement + params.epsilon < params.min_impurity_decrease
 
     node_id = tree._add_node(
         parent, is_left, is_leaf, split.feature, split.threshold, split.missing_go_to_left, impurity,

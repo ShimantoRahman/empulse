@@ -64,6 +64,10 @@ Metrics
   used as the loss of :class:`~empulse.models.CSLogitClassifier` or
   :class:`~empulse.models.ProfLogitClassifier`. :class:`~empulse.metrics.MixtureMetric` also passes
   ``validate`` on to its components.
+- |API| Metrics, :func:`~empulse.metrics.cost_loss`, :func:`~empulse.metrics.savings_score`, every
+  cost-sensitive model and :class:`~empulse.samplers.CostSensitiveSampler` raise a ``ValueError``
+  for a NaN or infinite cost or parameter, which gave NaN scores and predictions or errors from the
+  boosting libraries.
 - |Fix| :func:`~empulse.metrics.lift_score` no longer raises ``ZeroDivisionError`` when
   ``fraction * n_samples`` rounds to zero, and rejects ``fraction=0``.
 
@@ -159,8 +163,7 @@ Models
   :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model; it had no effect on the
   predictions, and ``penalty='l1'`` never zeroed a coefficient.
 - |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
-  with a ``CatBoostClassifier`` no longer train on distorted sample weights, and
-  :class:`~empulse.models.CSBoostClassifier` now accepts ``sample_weight`` with it.
+  with a ``CatBoostClassifier`` no longer train on distorted sample weights.
 - |API| :class:`~empulse.models.CSBoostClassifier` with a ``CatBoostClassifier`` raises a
   ``ValueError`` for :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.LogCost`
   losses, which it could not train correctly, and when the costs make the same prediction cheapest
@@ -173,10 +176,58 @@ Models
   :class:`~empulse.models.BiasReweighingClassifier` and :class:`~empulse.models.RobustCSClassifier`
   now work with labels other than ``0``/``1``, treating the greater class as positive.
 - |Efficiency| ``import empulse.models`` no longer imports XGBoost, LightGBM and CatBoost.
+- |Fix| Every cost-sensitive model trains the same model whatever units the costs are in, and
+  ignores constants added to both costs of a class, which change no decision. Fitted models change
+  wherever the costs are not of the order of one:
+
+  - :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+    divide their gradients by the average cost of a wrong decision, so the booster's own
+    regularization (such as XGBoost's ``min_child_weight``) no longer depends on the cost units.
+    With costs of a few cents, XGBoost predicted a constant.
+  - :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
+    :class:`~empulse.models.CSBaggingClassifier` grow the same trees. With costs in the hundreds,
+    fully grown trees stopped early, and forests made costlier decisions. Their ``ccp_alpha`` and
+    ``min_impurity_decrease`` are relative to the average cost of a wrong decision, and so are the
+    alphas and impurities of :meth:`CSTreeClassifier.cost_complexity_pruning_path
+    <empulse.models.CSTreeClassifier.cost_complexity_pruning_path>`.
+  - The ``parsimony_coefficient`` and ``tolerance`` of :class:`~empulse.models.ProfSRClassifier`,
+    and the ``alpha`` and ``tolerance`` of :class:`~empulse.models.ProfTreeClassifier`, are relative
+    to the average cost of a wrong decision. ``parsimony_coefficient`` now defaults to ``0.0003``,
+    which on 15 of Empulse's datasets keeps expressions as long as before and earns slightly more
+    profit.
+  - :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+    stop their optimizers at the same point for any cost units (see Optimizers).
+- |Enhancement| :class:`~empulse.models.CSBoostClassifier` and
+  :class:`~empulse.models.B2BoostClassifier` with a :class:`~empulse.metrics.Cost` or
+  :class:`~empulse.metrics.Savings` loss use the curvature of the logistic link as hessian, rather
+  than the exact second derivative, which vanishes at the starting prediction and kept the boosters
+  from splitting small nodes. Every backend now starts from a probability of 0.5.
+  Benchmarks on the empulse datasets showed generally better results.
+- |API| Cost-sensitive models raise a ``TypeError`` for a ``fit`` argument they do not use, such as
+  ``sample_weight`` or a misspelt cost, instead of silently ignoring it.
+  :class:`~empulse.models.RobustCSClassifier` passes its extra ``fit`` arguments on to its
+  estimator, instead of dropping them.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  with a :class:`~empulse.metrics.MaxProfit` loss that has stochastic variables (such as
+  :func:`~empulse.metrics.empc_score`) scale their elastic-net penalty by the costs, as with every
+  other loss. It was left unscaled, so ``C`` meant something different in other cost units.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` trains with a :class:`~empulse.metrics.MaxProfit`
+  loss (such as :func:`~empulse.metrics.empc_score`) and an L1 penalty, the default, instead of
+  raising a ``NotImplementedError``.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` with a
+  :class:`~empulse.models.CSTreeClassifier` passed as ``estimator`` votes over the trees' cheapest
+  classes, as it does with its default trees, instead of ignoring the costs.
 
 Optimizers
 ----------
 
+- |Fix| Every optimizer measures its steps and convergence against the objective divided by the
+  scale of the cost matrix, so it finds the same model for costs in any units, and the genetic
+  algorithms also with constants added to the costs. The learning rates of
+  :class:`~empulse.optimizers.SGD`, :class:`~empulse.optimizers.Adam` and
+  :class:`~empulse.optimizers.RMSProp`, and of the local search of
+  :class:`~empulse.optimizers.MemeticOptimizer`, are therefore relative to that scale, and fitted
+  models change wherever it is not one.
 - |Efficiency| ``n_jobs`` of :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` (and
   :class:`~empulse.optimizers.Generation`) now uses threads and only re-evaluates changed
   individuals. ``n_jobs=4`` was about 7x slower than ``n_jobs=1`` and is now about 2x faster.

@@ -174,10 +174,17 @@ def grow_tree(
         params.max_leaf_nodes,
         params.min_impurity_decrease,
         params.cost_bound,
+        cost_scale(records),
     )
     if params.ccp_alpha > 0.0:
         tree = prune_tree(tree, params.ccp_alpha)
     return tree
+
+
+def cost_scale(records: FloatNDArray) -> float:
+    """Return the mean over the samples of the costs of predicting them positive and negative, or 1 if zero."""
+    scale = float(np.mean(np.abs(records[:, 0]) + np.abs(records[:, 1])))
+    return scale if scale > 0.0 else 1.0
 
 
 def as_float32(X: Any, *, fortran: bool = False) -> FloatNDArray:

@@ -183,3 +183,10 @@ class TestCostSensitiveSamplerRouting:
         sampler = CostSensitiveSampler()
         sampler.set_fit_resample_request(fp_cost=True, fn_cost=True)
         assert sampler.get_metadata_routing().fit_resample.requests['fp_cost'] is True
+
+
+@pytest.mark.parametrize('fn_cost', [np.inf, np.nan])
+def test_non_finite_costs_are_rejected(data, fn_cost):
+    X, y = data
+    with pytest.raises(ValueError, match='fn_cost must be finite'):
+        CostSensitiveSampler().fit_resample(X, y, fp_cost=1.0, fn_cost=fn_cost)

@@ -365,6 +365,9 @@ def cy_logit_gradient(
 
 
 def cy_boost_grad_hess(y_true, ScoreType y_score, GradientType grad_const):
+    # The hessian is |grad_const| * p * (1 - p), not the exact second derivative, which carries an
+    # extra |1 - 2p|: that vanishes where boosting starts (p near 1/2), so a booster's minimum child
+    # weight stopped trees from splitting until the predictions had moved away from 1/2.
     cdef Py_ssize_t i
     cdef Py_ssize_t n_rows = grad_const.shape[0]
     cdef double exponential, probability, complement, gradient_i
@@ -387,7 +390,7 @@ def cy_boost_grad_hess(y_true, ScoreType y_score, GradientType grad_const):
             complement = exponential * probability
             gradient_i = complement * probability * grad_const[i]
             gradient_view[i] = gradient_i
-            hessian_view[i] = fabs((complement - probability) * gradient_i)
+            hessian_view[i] = fabs(gradient_i)
 
     return gradient, hessian
 

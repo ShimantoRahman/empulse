@@ -46,6 +46,9 @@ class SearchSettings:
     tolerance: float
     max_time: float | None
     n_jobs: int
+    # The average cost of a wrong decision. The parsimony penalty and the tolerance are measured in
+    # it, so that they mean the same whatever units the costs are in.
+    loss_scale: float = 1.0
 
 
 class ParetoPoint(NamedTuple):
@@ -318,7 +321,7 @@ def evolve(
             _tune_population(population, losses, X, fitness, settings, cache, archive, batch_size, seeds)
 
         lengths = np.array([program.length_ for program in population])
-        penalised = losses + settings.parsimony_coefficient * lengths
+        penalised = losses + settings.parsimony_coefficient * settings.loss_scale * lengths
         parents, parent_fitness = population, penalised
 
         best = int(np.argmin(losses))
@@ -338,7 +341,7 @@ def evolve(
         run_details['n_evaluated'].append(n_evaluated)
 
         if settings.patience is not None:
-            improvement = _relative_improvement(best_so_far, float(losses[best]))
+            improvement = _improvement(best_so_far, float(losses[best]), settings.loss_scale)
             best_so_far = min(best_so_far, float(losses[best]))
             stagnant = stagnant + 1 if improvement < settings.tolerance else 0
             if stagnant >= settings.patience:
@@ -354,16 +357,18 @@ def evolve(
         archive = rescored
     front = _pareto_front(archive)
     if front:
-        chosen = min(front, key=lambda point: point.loss + settings.parsimony_coefficient * point.length).program
+        chosen = min(
+            front, key=lambda point: point.loss + settings.parsimony_coefficient * settings.loss_scale * point.length
+        ).program
     else:
         chosen = last_best
     return EvolutionResult(program=chosen, pareto_front=front, last_best=last_best, run_details=run_details)
 
 
-def _relative_improvement(previous: float, current: float) -> float:
+def _improvement(previous: float, current: float, scale: float) -> float:
     if not np.isfinite(previous):
         return np.inf if np.isfinite(current) else 0.0
-    return (previous - current) / max(abs(previous), 1e-12)
+    return (previous - current) / scale
 
 
 def _tune_population(

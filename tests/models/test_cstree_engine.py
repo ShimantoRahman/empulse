@@ -371,9 +371,28 @@ class TestGrowth:
 
         assert np.all(np.diff(path.ccp_alphas) >= 0)
         assert np.all(np.diff(path.impurities) >= -1e-12)
-        # With the cost criterion, the leaves' summed impurity is the training cost per sample.
+        # With the cost criterion, the leaves' summed impurity is the training cost per sample, in
+        # units of the average cost of a wrong decision.
         training_cost = np.sum(np.where(y == 1, np.where(model.predict(X) == 1, 0, 5.0), model.predict(X) == 1))
-        assert path.impurities[0] == pytest.approx(training_cost / y.size)
+        average_wrong_decision = np.mean(np.where(y == 1, 5.0, 1.0))
+        assert path.impurities[0] == pytest.approx(training_cost / y.size / average_wrong_decision)
+
+    def test_pruning_path_alphas_are_the_ones_ccp_alpha_takes(self, make_data):
+        """Pruning with an alpha from the path must give the subtree the path lists for it."""
+        X, y = make_data(n_samples=800)
+        costs = {'fp_cost': 1.0, 'fn_cost': 5.0}
+        path = CSTreeClassifier(random_state=0).cost_complexity_pruning_path(X, y, **costs)
+        alpha = path.ccp_alphas[len(path.ccp_alphas) // 2]
+        pruned = CSTreeClassifier(ccp_alpha=alpha, random_state=0).fit(X, y, **costs)
+
+        leaf_impurity = (
+            pruned.tree_.impurity * pruned.tree_.weighted_n_node_samples / pruned.tree_.weighted_n_node_samples[0]
+        )
+        is_leaf = pruned.tree_.children_left == -1
+        average_wrong_decision = np.mean(np.where(y == 1, 5.0, 1.0))
+        assert leaf_impurity[is_leaf].sum() / average_wrong_decision == pytest.approx(
+            path.impurities[len(path.ccp_alphas) // 2]
+        )
 
     def test_ccp_alpha_prunes(self, make_data):
         X, y = make_data(n_samples=800)

@@ -516,9 +516,7 @@ def test_csboost_dispatches_log_cost_through_dynamic_gradient_boost_objective(lo
     does not require xgboost/lightgbm/catboost to be installed: it inspects what callable
     ``_get_objective`` builds for the xgboost backend.
     """
-    from functools import partial
-
-    from empulse.models.boosting._backends import BoostingBackend
+    from empulse.models.boosting._backends import BoostingBackend, MetricObjective, ObjectiveScaling
 
     _X, y = log_cost_dataset
     tp, fp = sympy.symbols('tp fp')
@@ -527,10 +525,10 @@ def test_csboost_dispatches_log_cost_through_dynamic_gradient_boost_objective(lo
 
     model = CSBoostClassifier(loss=metric)
     xgboost_backend = BoostingBackend(name='xgboost', classifier=None)
-    objective = model._get_objective(xgboost_backend, y=y, loss=metric, tp=0.0, fp=1.0)
+    objective = model._get_objective(xgboost_backend, y=y, loss=metric, scaling=ObjectiveScaling(), tp=0.0, fp=1.0)
 
-    assert isinstance(objective, partial)
-    assert objective.func == metric._gradient_boost_objective
+    assert isinstance(objective, MetricObjective)
+    assert objective.metric is metric
 
     # Sanity check: the returned objective actually computes finite gradients/hessians.
     y_score = np.zeros_like(y)

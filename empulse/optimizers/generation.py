@@ -9,6 +9,7 @@ from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
 from ..metrics.metric._direction import Direction
+from ._base import objective_scale
 
 if TYPE_CHECKING:
     from ..metrics import LogitObjective
@@ -422,6 +423,9 @@ class LamarckianGeneration(Generation):
     generator.  This cuts hull-reconstruction overhead by a factor of
     ``local_steps``.
 
+    The local search steps along the gradient of the objective divided by the scale of its cost
+    matrix, so ``lr`` and ``grad_clip`` mean the same whatever units the costs are in.
+
     Parameters
     ----------
     grad_objective : LogitObjective
@@ -475,6 +479,7 @@ class LamarckianGeneration(Generation):
         self.eps = eps
         self.grad_clip = grad_clip
         self._grad_objective = grad_objective
+        self._gradient_scale = objective_scale(grad_objective)
 
     def _local_search(self, theta: NDArray[np.float64]) -> NDArray[np.float64]:
         """
@@ -494,7 +499,7 @@ class LamarckianGeneration(Generation):
         grad_gen = self._grad_objective.logit_gradient_steps()
 
         for t in range(1, self.local_steps + 1):
-            grad = grad_gen.send(theta)
+            grad = np.asarray(grad_gen.send(theta), dtype=np.float64) / self._gradient_scale
             grad = np.clip(grad, -self.grad_clip, self.grad_clip)
 
             if self.optimizer == 'sgd':

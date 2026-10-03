@@ -369,7 +369,7 @@ class TestEvolve:
         assert all(b.loss < a.loss for a, b in itertools.pairwise(front))
         assert result.program in [p.program for p in front]
 
-    def test_patience_counts_generations_without_relative_improvement(self, regression_data):
+    def test_patience_counts_generations_without_improvement(self, regression_data):
         X, y = regression_data
         result = evolve(X, mse_fitness(y), make_space(), make_settings(max_iter=30, patience=3, tolerance=1e-4), 3)
 

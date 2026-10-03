@@ -224,6 +224,22 @@ def test_call_accepts_a_row_vector_y_score():
 # --- wrong-length instance-dependent parameters ---------------------------------------
 
 
+@pytest.mark.parametrize('value', [np.inf, -np.inf, np.nan, np.array([1.0, 1.0, np.nan, 1.0, 1.0])])
+def test_non_finite_parameter_raises(value):
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='a must be finite'):
+        metric(Y_TRUE, Y_SCORE, a=value, b=1.0)
+
+
+def test_non_finite_parameter_error_names_the_alias_the_caller_used():
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'})
+    metric = Metric(cost_matrix, Cost())
+
+    with pytest.raises(ValueError, match='my_cost must be finite'):
+        metric(Y_TRUE, Y_SCORE, my_cost=np.inf, b=1.0)
+
+
 def test_wrong_length_array_parameter_raises():
     metric = Metric(COST_MATRIX, Cost())
 

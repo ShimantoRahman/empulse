@@ -7,7 +7,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 from .._types import FloatNDArray
 from ..metrics import ElasticNetPenalty, LogitObjective
-from ._base import Optimizer
+from ._base import Optimizer, objective_scale
 
 
 def _check_optimize_result(result: OptimizeResult, optimizer_name: str = 'scipy') -> None:
@@ -36,6 +36,7 @@ def _minimize_split_variable(
     initial_weights: FloatNDArray,
     penalty: ElasticNetPenalty,
     options: dict[str, Any],
+    scale: float = 1.0,
 ) -> OptimizeResult:
     """
     Minimize a non-smooth elastic-net objective exactly, with L-BFGS-B.
@@ -62,6 +63,8 @@ def _minimize_split_variable(
         The penalty to apply.
     options : dict
         Options forwarded to :func:`scipy.optimize.minimize`.
+    scale : float, default=1.0
+        The solver sees the objective divided by this, so that its tolerances are relative to it.
 
     Returns
     -------
@@ -90,7 +93,7 @@ def _minimize_split_variable(
 
         grad_u = gradient[start:] + l1_weight + l2_gradient
         grad_v = -gradient[start:] + l1_weight - l2_gradient
-        return loss, np.concatenate([gradient[:start], grad_u, grad_v])
+        return loss / scale, np.concatenate([gradient[:start], grad_u, grad_v]) / scale
 
     z0 = np.concatenate([w0[:start], np.maximum(w0[start:], 0.0), np.maximum(-w0[start:], 0.0)])
     bounds: list[tuple[float | None, float | None]] = [(None, None)] * start + [(0.0, None)] * (2 * n_split)
@@ -104,9 +107,9 @@ def _minimize_split_variable(
     # should be exactly zero comes back as noise around 1e-13. Snap it, so the reported sparsity is
     # the real one.
     if n_split:
-        scale = max(1.0, float(np.max(np.abs(weights))))
+        magnitude = max(1.0, float(np.max(np.abs(weights))))
         coef = weights[start:]
-        coef[np.abs(coef) <= 1e-10 * scale] = 0.0
+        coef[np.abs(coef) <= 1e-10 * magnitude] = 0.0
         weights[start:] = coef
 
     return OptimizeResult(  # type: ignore[call-arg]
@@ -135,8 +138,9 @@ class LBFGSBOptimizer(Optimizer):
         Maximum number of L-BFGS-B iterations.
     tolerance : float, default=1e-4
         Gradient infinity-norm convergence tolerance, *relative to the objective magnitude*.
-        The value handed to SciPy as ``gtol`` is this number times the objective scale, so a cost
-        matrix expressed in euros and the same one expressed in cents converge to the same model.
+        SciPy minimizes the objective divided by the scale of its cost matrix, with this as ``gtol``,
+        so a cost matrix expressed in euros and the same one expressed in cents converge to the same
+        model.
     max_line_search_steps : int, default=50
         Maximum number of line-search steps per iteration (``maxls``).
     ftol_scale : float, default=64.0
@@ -204,15 +208,15 @@ class LBFGSBOptimizer(Optimizer):
         """
         initial_weights = self._initial_weights(X)
         penalty = objective.penalty
-        # `gtol` bounds the gradient infinity-norm in absolute terms, but a cost-sensitive objective
-        # is measured in whatever unit the cost matrix uses, so a fixed value stops early on costs
-        # of 1 and late on costs of 1000. Scaling it by the objective magnitude makes convergence --
-        # and therefore the selected model -- invariant to rescaling the costs.
-        gtol = self.tolerance * (penalty.objective_scale if penalty is not None else 1.0)
+        # A cost-sensitive objective is measured in whatever unit the cost matrix uses, while the
+        # solver's `gtol` is absolute and its `ftol` test is absolute for objectives below 1. The solver
+        # therefore sees the objective divided by its scale, which makes convergence -- and so the
+        # selected model -- invariant to rescaling the costs.
+        scale = objective_scale(objective)
         options = {
             'maxiter': self.max_iter,
             'maxls': self.max_line_search_steps,
-            'gtol': gtol,
+            'gtol': self.tolerance,
             'ftol': self.ftol_scale * np.finfo(float).eps,
         }
 
@@ -235,16 +239,24 @@ class LBFGSBOptimizer(Optimizer):
 
         if use_split:
             assert penalty is not None
-            result = _minimize_split_variable(objective, initial_weights, penalty, options)
+            result = _minimize_split_variable(objective, initial_weights, penalty, options, scale)
         else:
+
+            def scaled_loss_gradient(weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+                loss, gradient = objective.logit_loss_gradient(weights)
+                scaled_gradient: FloatNDArray = np.asarray(gradient, dtype=np.float64) / scale
+                return loss / scale, scaled_gradient
+
             result = minimize(  # type: ignore[call-overload]
-                objective.logit_loss_gradient,
+                scaled_loss_gradient,
                 initial_weights,
                 method='L-BFGS-B',
                 jac=True,
                 options=options,
                 **kwargs,
             )
+            result.fun = result.fun * scale
+            result.jac = result.jac * scale
         _check_optimize_result(result, 'L-BFGS-B')
         return result
 
@@ -269,7 +281,8 @@ class ScipyOptimizer(Optimizer):
         Maximum number of iterations (passed as ``options['maxiter']``).
     tolerance : float or None, default=None
         Solver-specific convergence tolerance passed as the ``tol`` argument.
-        ``None`` uses scipy's default per-method tolerance.
+        ``None`` uses scipy's default per-method tolerance. SciPy minimizes the objective divided by
+        the scale of its cost matrix, so tolerances on the objective do not depend on the cost units.
     use_jacobian : bool, default=True
         If ``True``, pass the analytic gradient to scipy (``jac=True``).
         Set to ``False`` for derivative-free methods.
@@ -351,14 +364,25 @@ class ScipyOptimizer(Optimizer):
         initial_weights = self._initial_weights(X)
 
         merged_options = {'maxiter': self.max_iter, **self.options}
+        # SciPy's tolerances are absolute, so it minimizes the objective divided by the scale of its
+        # cost matrix: the same costs in other units then lead to the same model.
+        scale = objective_scale(objective)
 
         fun: Any
         jac: Any
         if self.use_jacobian:
-            fun = objective.logit_loss_gradient
+
+            def fun(weights: FloatNDArray) -> tuple[float, FloatNDArray]:
+                loss, gradient = objective.logit_loss_gradient(weights)
+                scaled_gradient: FloatNDArray = np.asarray(gradient, dtype=np.float64) / scale
+                return loss / scale, scaled_gradient
+
             jac = True
         else:
-            fun = objective.logit_loss
+
+            def fun(weights: FloatNDArray) -> float:
+                return objective.logit_loss(weights) / scale
+
             jac = None
 
         result: OptimizeResult = minimize(  # type: ignore[call-overload]
@@ -370,5 +394,8 @@ class ScipyOptimizer(Optimizer):
             options=merged_options,
             **{**self.scipy_kwargs, **kwargs},
         )
+        result['fun'] = result['fun'] * scale
+        if 'jac' in result:
+            result['jac'] = np.asarray(result['jac']) * scale
         _check_optimize_result(result, self.method)
         return result

@@ -20,7 +20,6 @@ from empulse.metrics import (
     mpc_score,
 )
 from empulse.models import CSBoostClassifier
-from empulse.models.boosting.csboost import _BASE_SCORE_PROBA, _BASE_SCORE_RAW
 
 CLASSIFIERS = [('xgboost', 'XGBClassifier'), ('lightgbm', 'LGBMClassifier'), ('catboost', 'CatBoostClassifier')]
 
@@ -152,68 +151,50 @@ def test_csboost_when_all_libraries_missing(cost_dataset):
 
 
 def test_csboost_fit_does_not_mutate_callers_fit_params_dict(cost_dataset):
-    """`_fit` must not mutate the caller's `fit_params` dict.
-
-    Reusing one `fit_params` dict across two `fit()` calls (or across GridSearchCV folds) must not
-    carry `sample_weight` from the first call into the second. Uses LightGBM rather than XGBoost:
-    XGBoost's custom-objective path does not support `sample_weight` at all.
-    """
-    lightgbm = pytest.importorskip('lightgbm')
+    """Reusing one `fit_params` dict across fits (or GridSearchCV folds) must leave it as it was."""
+    catboost = pytest.importorskip('catboost')
     X, y, fn_cost, fp_cost = cost_dataset
+    shared_fit_params = {'verbose': False}
 
-    shared_fit_params: dict = {}
-    model1 = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=2, max_depth=1, verbosity=-1))
-    model1.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params, sample_weight=np.ones(len(y)))
-
-    # The caller's dict must be untouched - it was empty going in and must still be empty.
-    assert shared_fit_params == {}
-
-    model2 = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=2, max_depth=1, verbosity=-1))
-    # Second call reuses the same (still-empty) dict and passes no sample_weight at all.
-    model2.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params)
-    assert shared_fit_params == {}
+    for _ in range(2):
+        model = CSBoostClassifier(
+            estimator=catboost.CatBoostClassifier(n_estimators=2, depth=1, allow_writing_files=False)
+        )
+        model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, fit_params=shared_fit_params)
+        assert shared_fit_params == {'verbose': False}
 
 
-class TestBaseScoreSpace:
-    """_BASE_SCORE is a probability for XGBoost but a raw score for the other backends.
+@pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
+@pytest.mark.parametrize('through_fit_params', [False, True])
+def test_csboost_rejects_sample_weight(library, classifier_name, through_fit_params, cost_dataset):
+    """The costs already weigh each sample; a sample weight on top of them has no place."""
+    classifier_class = getattr(pytest.importorskip(library), classifier_name)
+    kwargs = {'n_estimators': 2}
+    if library == 'catboost':
+        kwargs.update(verbose=False, allow_writing_files=False)
+    elif library == 'lightgbm':
+        kwargs.update(verbosity=-1)
+    X, y, fn_cost, fp_cost = cost_dataset
+    weights = np.ones(len(y))
+    extra = {'fit_params': {'sample_weight': weights}} if through_fit_params else {'sample_weight': weights}
 
-    XGBoost's `base_score` is documented as a probability; LightGBM's `init_score` and CatBoost's
-    `baseline` are raw (log-odds) scores, and `expit(0.51) != 0.51`. Neither LightGBM nor CatBoost
-    persist that offset into the saved model, so `predict_proba` must add it back manually before
-    `expit`.
-    """
+    with pytest.raises(TypeError, match='sample_weight'):
+        CSBoostClassifier(classifier_class(**kwargs)).fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost, **extra)
 
-    def test_base_score_constants_are_logit_pairs(self):
-        """_BASE_SCORE_RAW must be the logit of _BASE_SCORE_PROBA, not the same literal value."""
-        assert _BASE_SCORE_RAW != _BASE_SCORE_PROBA
-        assert expit(_BASE_SCORE_RAW) == pytest.approx(_BASE_SCORE_PROBA)
 
-    def test_lightgbm_predict_proba_reconstructs_raw_offset(self, cost_dataset):
-        """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
+class TestPredictProbaFromRawScores:
+    """Under a custom objective, LightGBM and CatBoost predict raw scores, so ``predict_proba`` applies the link."""
 
-        LightGBM does not persist `init_score` into the trained model, so the offset used at fit
-        time must be added back manually at predict time.
-        """
+    def test_lightgbm(self, cost_dataset):
         lightgbm = pytest.importorskip('lightgbm')
         X, y, fn_cost, fp_cost = cost_dataset
         model = CSBoostClassifier(estimator=lightgbm.LGBMClassifier(n_estimators=5, max_depth=2, verbosity=-1))
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
         raw_score = model.estimator_.predict_proba(X, raw_score=True)
-        expected_proba = expit(raw_score + _BASE_SCORE_RAW)
-        actual_proba = model.predict_proba(X)[:, 1]
+        np.testing.assert_allclose(model.predict_proba(X)[:, 1], expit(raw_score))
 
-        np.testing.assert_allclose(actual_proba, expected_proba)
-        # Reconstructing without the offset must not match.
-        assert not np.allclose(actual_proba, expit(raw_score))
-
-    def test_catboost_predict_proba_reconstructs_raw_offset(self, cost_dataset):
-        """predict_proba must equal expit(raw_score + _BASE_SCORE_RAW), not expit(raw_score) alone.
-
-        CatBoost does not persist `baseline` into the trained model either, and its predict/
-        predict_proba have no way to resupply it at predict time, so it must be reconstructed
-        manually from the raw formula value.
-        """
+    def test_catboost(self, cost_dataset):
         catboost = pytest.importorskip('catboost')
         X, y, fn_cost, fp_cost = cost_dataset
         model = CSBoostClassifier(
@@ -222,38 +203,27 @@ class TestBaseScoreSpace:
         model.fit(X, y, fn_cost=fn_cost, fp_cost=fp_cost)
 
         raw_score = model.estimator_.predict(X, prediction_type='RawFormulaVal')
-        expected_proba = expit(raw_score + _BASE_SCORE_RAW)
-        actual_proba = model.predict_proba(X)[:, 1]
-
-        np.testing.assert_allclose(actual_proba, expected_proba)
-        assert not np.allclose(actual_proba, expit(raw_score))
+        np.testing.assert_allclose(model.predict_proba(X)[:, 1], expit(raw_score))
 
     @pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
-    def test_predict_proba_starts_near_intended_probability_with_minimal_learning(self, library, classifier_name):
-        """With a near-zero learning rate, every backend's baseline probability should be ~0.51.
-
-        This isolates the `_BASE_SCORE` initialization from each backend's own tree-growing
-        algorithm (which otherwise dominates a three-way comparison and makes it a noisy test):
-        with learning_rate effectively disabling any real tree contribution, predict_proba should
-        reflect (approximately) the shared starting probability, ~0.51, regardless of backend.
-        """
+    def test_every_backend_starts_at_one_half(self, library, classifier_name):
+        """With a near-zero learning rate the trees add nothing, leaving the shared starting probability."""
         classifier_module = pytest.importorskip(library)
         classifier_class = getattr(classifier_module, classifier_name)
         X, y = make_classification(n_samples=100, random_state=0)
 
-        kwargs = {'n_estimators': 3, 'max_depth': 1}
+        kwargs = {'n_estimators': 3, 'max_depth': 1, 'learning_rate': 1e-6}
         if library == 'catboost':
-            kwargs.update(learning_rate=1e-6, verbose=False, allow_writing_files=False)
+            kwargs.update(verbose=False, allow_writing_files=False)
         elif library == 'lightgbm':
-            kwargs.update(learning_rate=1e-6, verbosity=-1)
+            kwargs.update(verbosity=-1)
         else:
-            kwargs.update(learning_rate=1e-6, verbosity=0)
+            kwargs.update(verbosity=0)
 
         model = CSBoostClassifier(estimator=classifier_class(**kwargs))
         model.fit(X, y, fp_cost=1.0, fn_cost=1.0)
-        mean_proba = model.predict_proba(X)[:, 1].mean()
 
-        assert mean_proba == pytest.approx(_BASE_SCORE_PROBA, abs=0.02)
+        assert model.predict_proba(X)[:, 1].mean() == pytest.approx(0.5, abs=0.02)
 
 
 @pytest.fixture(scope='module')
@@ -293,31 +263,6 @@ class TestCatBoostBackend:
         target, weight = _catboost_training_data(np.array([-2.0, 3.0, 0.0, 0.0]), np.array([0, 1, 1, 0]))
         np.testing.assert_array_equal(target, [1, 0, 1, 0])
         np.testing.assert_array_equal(weight, [2.0, 3.0, 0.0, 0.0])
-
-    def test_uses_sample_weight(self, cost_data):
-        """
-        CatBoost trains on sample weights ``|gradient constant|``; a user's ``sample_weight`` multiplies them.
-
-        Before, the backend used ``sample_weight`` to carry row indices and so rejected a user's own.
-        """
-        catboost = pytest.importorskip('catboost')
-        X, y = cost_data
-
-        def fit(**weights):
-            model = CSBoostClassifier(
-                catboost.CatBoostClassifier(
-                    n_estimators=5, depth=2, verbose=False, random_seed=0, allow_writing_files=False
-                ),
-                fp_cost=1,
-                fn_cost=1,
-            )
-            return model.fit(X, y, **weights).predict_proba(X)
-
-        weight = np.where(y == 1, 10.0, 1.0)
-        unweighted, weighted = fit(), fit(sample_weight=weight)
-        assert not np.allclose(unweighted, weighted)
-        # Up-weighting the positives must raise their predicted probability.
-        assert weighted[y == 1, 1].mean() > unweighted[y == 1, 1].mean()
 
     def test_model_does_not_depend_on_row_order(self):
         catboost = pytest.importorskip('catboost')
@@ -387,4 +332,4 @@ class TestCatBoostBackend:
         model = CSBoostClassifier(catboost.CatBoostClassifier(n_estimators=5, verbose=False, allow_writing_files=False))
         y_proba = model.fit(X, y, fp_cost=1.0).predict_proba(X)
         # Only false positives cost anything, so the model must lean negative.
-        assert y_proba[:, 1].mean() < _BASE_SCORE_PROBA
+        assert y_proba[:, 1].mean() < 0.5

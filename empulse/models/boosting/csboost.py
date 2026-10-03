@@ -14,11 +14,11 @@ from ..._common import Parameter
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
+from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
-from ._backends import (  # ruff: ignore[unused-import] (re-exported for tests/models/test_csboost.py)
-    _BASE_SCORE_PROBA,
-    _BASE_SCORE_RAW,
+from ._backends import (
     BoostingBackend,
+    ObjectiveScaling,
     backend_for,
 )
 
@@ -237,6 +237,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         'estimator': [HasMethods(['fit', 'predict_proba']), None],
         **CostSensitiveClassifier._parameter_constraints,
     }
+    _extra_fit_params: ClassVar[frozenset[str] | None] = frozenset({'fit_params'})
 
     def __init__(
         self,
@@ -323,16 +324,19 @@ class CSBoostClassifier(CostSensitiveClassifier):
         **loss_params: Any,
     ) -> Self:
         fit_params = {} if fit_params is None else dict(fit_params)
-        # scikit-learn passes sample_weight as a regular keyword argument; forward it to the booster.
-        if 'sample_weight' in loss_params:
-            fit_params['sample_weight'] = loss_params.pop('sample_weight')
+        if 'sample_weight' in fit_params:
+            raise TypeError(
+                f'{type(self).__name__} does not take sample_weight: the costs of the cost matrix already '
+                'weigh each sample. Fold any extra weight into the costs instead.'
+            )
+        scaling = ObjectiveScaling(scale=decision_cost_scale(loss, y, **loss_params))
 
         if self.estimator is None:
-            backend = self._initialize_default_estimator(y=y, loss=loss, **loss_params)
+            backend = self._initialize_default_estimator(y=y, loss=loss, scaling=scaling, **loss_params)
         else:
-            backend = self._initialize_custom_estimator(y=y, loss=loss, **loss_params)
+            backend = self._initialize_custom_estimator(y=y, loss=loss, scaling=scaling, **loss_params)
 
-        y_fit, fit_kwargs = backend.fit_arguments(y, loss, loss_params, fit_params)
+        y_fit, fit_kwargs = backend.fit_arguments(y, loss, loss_params, fit_params, scaling)
         with warnings.catch_warnings():
             for message, category in backend.warning_filters:
                 warnings.filterwarnings('ignore', message=message, category=category)
@@ -343,6 +347,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         y: FloatNDArray,
         loss: BaseMetric,
+        scaling: ObjectiveScaling,
         **loss_params: Any,
     ) -> BoostingBackend:
         xgb_classifier = _classifier('XGBClassifier')
@@ -354,7 +359,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 'Install the boosting backends through `pip install empulse[boosting]` or '
                 '`pip install xgboost`'
             )
-        objective = self._get_objective(backend, y, loss=loss, **loss_params)
+        objective = self._get_objective(backend, y, loss=loss, scaling=scaling, **loss_params)
         self.estimator_ = backend.build_default(objective)
         return backend
 
@@ -362,12 +367,13 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self,
         y: FloatNDArray,
         loss: BaseMetric,
+        scaling: ObjectiveScaling,
         **loss_params: Any,
     ) -> BoostingBackend:
         backend = _backend_for_estimator(self.estimator)
         if backend is None:
             raise TypeError('Estimator must be an instance of XGBClassifier, LGBMClassifier, or CatBoostClassifier')
-        objective = self._get_objective(backend, y=y, loss=loss, **loss_params)
+        objective = self._get_objective(backend, y=y, loss=loss, scaling=scaling, **loss_params)
         self.estimator_ = backend.apply_objective(clone(self.estimator), objective)
         return backend
 
@@ -376,6 +382,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         backend: BoostingBackend,
         y: FloatNDArray,
         loss: BaseMetric,
+        scaling: ObjectiveScaling,
         **loss_params: Any,
     ) -> Any:
         # MaxProfit thresholds on the current round's predictions, and LogCost's per-sample loss is
@@ -383,7 +390,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         # gradients and hessians from the metric each iteration instead of from precomputed constants.
         capabilities = loss.capabilities
         if Capability.BOOST_OBJECTIVE in capabilities:
-            return backend.wrap_objective(loss, y, loss_params, precomputed=False)
+            return backend.wrap_objective(loss, y, loss_params, precomputed=False, scaling=scaling)
 
         if Capability.PRECOMPUTED_BOOST_OBJECTIVE not in capabilities:
             raise ValueError(
@@ -391,7 +398,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 f"(neither 'boost_objective' nor 'precomputed_boost_objective'; got the "
                 f'{loss.strategy.name!r} strategy).'
             )
-        return backend.wrap_objective(loss, y, loss_params, precomputed=True)
+        return backend.wrap_objective(loss, y, loss_params, precomputed=True, scaling=scaling)
 
     def predict_proba(self, X: ArrayLike) -> FloatNDArray:
         """
@@ -414,7 +421,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         backend = _backend_for_estimator(self.estimator_)
         raw_score = backend.raw_score(self.estimator_, X) if backend is not None else None
         if raw_score is not None:
-            y_proba = expit(raw_score + _BASE_SCORE_RAW)
+            y_proba = expit(raw_score)
             return np.column_stack([1 - y_proba, y_proba])
 
         y_proba = self.estimator_.predict_proba(X)

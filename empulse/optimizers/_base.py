@@ -8,6 +8,19 @@ from .._types import Float64Array, FloatNDArray
 from ..metrics import LogitObjective
 
 
+def objective_scale(objective: LogitObjective) -> float:
+    """
+    Return the scale of the objective's cost matrix (the average cost of a wrong decision), or 1.
+
+    Optimizers measure steps and tolerances against the objective divided by this, so that the same
+    costs in other units lead to the same model.
+    """
+    penalty = getattr(objective, 'penalty', None)
+    if penalty is None or not penalty.objective_scale > 0:
+        return 1.0
+    return float(penalty.objective_scale)
+
+
 class Optimizer(ABC):
     """
     Abstract base class for all logit model optimizers.

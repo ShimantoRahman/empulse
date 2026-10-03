@@ -93,6 +93,8 @@ def test_cost_loss_calibrated_probabilities(y_true, y_pred, tp_cost, fp_cost, tn
         ([1, 0], [1, 1], [1, 2], [1, 2, 3], [1, 2], [1, 2], r'inconsistent numbers of samples'),
         ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2, 3], [1, 2], r'inconsistent numbers of samples'),
         ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2], [1, 2, 3], r'inconsistent numbers of samples'),
+        ([1, 0, 0, 1], [1, 1, 0, 0], 0.0, np.inf, 0.0, 1.0, r'fp_cost must be finite'),
+        ([1, 0], [1, 1], 0.0, 1.0, 0.0, [1.0, np.nan], r'fn_cost must be finite'),
     ],
 )
 def test_cost_loss_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg):
@@ -354,6 +356,8 @@ def test_saving_score(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, expect
         ([1, 0], [1, 1], [1, 2], [1, 2, 3], [1, 2], [1, 2], r'inconsistent numbers of samples'),
         ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2, 3], [1, 2], r'inconsistent numbers of samples'),
         ([1, 0], [1, 1], [1, 2], [1, 2], [1, 2], [1, 2, 3], r'inconsistent numbers of samples'),
+        ([1, 0, 0, 1], [1, 1, 0, 0], 0.0, np.inf, 0.0, 1.0, r'fp_cost must be finite'),
+        ([1, 0], [1, 1], 0.0, 1.0, 0.0, [1.0, np.nan], r'fn_cost must be finite'),
     ],
 )
 def test_saving_score_invalid_input(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg):

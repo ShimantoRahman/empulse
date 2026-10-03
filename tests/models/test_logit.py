@@ -5,7 +5,7 @@ import pytest
 from scipy.optimize import OptimizeResult
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.metrics import CostMatrix, LogCost, Metric, Savings
+from empulse.metrics import CostMatrix, LogCost, MaxProfit, Metric, Savings
 from empulse.models import CSLogitClassifier, ProfLogitClassifier
 from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer
 
@@ -50,6 +50,28 @@ class TestCSLogit:
         assert clf.result_.x.shape == (3,)
         assert isinstance(clf.result_, OptimizeResult)
         assert clf.result_.success is True
+
+    @pytest.mark.parametrize('l1_ratio', [1.0, 0.5])
+    def test_fits_a_max_profit_loss_with_an_l1_penalty(self, X, y, l1_ratio):
+        """L-BFGS-B minimizes an L1 penalty through a reformulation that needs the unpenalized MaxProfit."""
+        loss = Metric(CostMatrix().add_tp_cost('tp').add_fp_cost('fp').add_fn_cost('fn'), MaxProfit())
+        clf = CSLogitClassifier(loss=loss, l1_ratio=l1_ratio).fit(X, y, tp=-1.0, fp=1.0, fn=4.0)
+        objective = loss._logit_objective(
+            features=np.column_stack([np.ones(len(y)), X]),
+            y_true=y,
+            C=1.0,
+            l1_ratio=l1_ratio,
+            fit_intercept=True,
+            tp=-1.0,
+            fp=1.0,
+            fn=4.0,
+        )
+        weights = clf.result_.x
+        value, gradient = objective.logit_loss_gradient(weights)
+        data_value, data_gradient = objective.data_loss_gradient(weights)
+
+        assert data_value + objective.penalty.value(weights) == pytest.approx(value)
+        np.testing.assert_allclose(data_gradient + objective.penalty.gradient(weights), gradient)
 
     def test_explicit_optimizer_is_used_for_fitting(self, X, y):
         clf = CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=3))

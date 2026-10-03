@@ -556,7 +556,9 @@ def _objective(
         contact_cost + incentive_cost + y_true * (accept_rate * incentive_cost - incentive_cost - clv * accept_rate)
     )
     gradient = y_proba * (1 - y_proba) * profits
-    hessian = np.abs((1 - 2 * y_proba) * gradient)
+    # The curvature of the logistic link, |profits| * p * (1 - p), rather than the exact second
+    # derivative, whose extra factor |1 - 2p| vanishes where boosting starts.
+    hessian = np.abs(gradient)
     return gradient, hessian
 
 
@@ -591,7 +593,7 @@ class AECObjectiveChurn:
             + targets * (self.accept_rate * incentive_cost - incentive_cost - clv * self.accept_rate)
         )
         gradient = y_proba * (1 - y_proba) * profits
-        hessian = np.abs((1 - 2 * y_proba) * gradient)
+        hessian = np.abs(gradient)
         return list(zip(-gradient, -hessian, strict=False))
 
 

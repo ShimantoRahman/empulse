@@ -1,7 +1,8 @@
 """
 Checking a supplied parameter value against the domain a cost matrix declares.
 
-Three sources of constraints, checked in :func:`_check_parameter_domains`: a stochastic
+Every value must be finite. Beyond that, three sources of constraints are checked in
+:func:`_check_parameter_domains`: a stochastic
 variable's own shape parameters (via :mod:`_stochastic`'s distribution checks), bounds registered
 with :meth:`~empulse.metrics.CostMatrix.constrain`, and predicates registered the same way. This
 runs only where a value first enters a metric -- see the hot-path note on
@@ -11,6 +12,7 @@ runs only where a value first enters a metric -- see the hot-path note on
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+import numpy as np
 import sympy
 
 from ._stochastic import _check_distribution_parameters, _extremes
@@ -26,7 +28,8 @@ def _check_parameter_domains(
     """
     Raise if a supplied parameter value falls outside the domain the cost matrix defines.
 
-    Three sources of constraints are checked, in the order they are declared:
+    Every value must be finite: a NaN or infinite cost poisons every sum it enters. Then three
+    sources of constraints are checked, in the order they are declared:
 
     1. The shape parameters of every ``sympy.stats`` random variable in `expressions`, validated by
        the distribution's own ``check``. These need no declaration -- a Beta distribution with a
@@ -58,13 +61,20 @@ def _check_parameter_domains(
     Raises
     ------
     ValueError
-        If a distribution rejects its shape parameters, a value falls outside its declared bounds,
-        or a predicate is not satisfied.
+        If a value is NaN or infinite, a distribution rejects its shape parameters, a value falls
+        outside its declared bounds, or a predicate is not satisfied.
     """
     names = caller_names or {}
 
     def display(name: str) -> str:
         return names.get(name, name)
+
+    for name, value in parameters.items():
+        if isinstance(value, str):
+            continue
+        values = np.asarray(value)
+        if np.issubdtype(values.dtype, np.number) and not np.isfinite(values).all():
+            raise ValueError(f'{display(name)} must be finite, but contains NaN or infinite values.')
 
     _check_distribution_parameters(expressions, parameters, display)
 

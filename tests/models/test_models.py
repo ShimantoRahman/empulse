@@ -21,8 +21,6 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
-    ProfMEMPMClassifier,
-    ProfMPMClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
@@ -51,20 +49,6 @@ def expected_failed_checks(estimator):
         return {
             'check_methods_subset_invariance': 'A rate classifier labels the top fraction of the batch it is given, '
             'so a subset can change a decision. Only the data of the check in scikit-learn 1.6 shows it.'
-        }
-    if isinstance(
-        estimator,
-        CSTreeClassifier
-        | CSForestClassifier
-        | CSLogitClassifier
-        | RobustCSClassifier
-        | ProfTreeClassifier
-        | ProfLogitClassifier
-        | ProfMPMClassifier
-        | ProfMEMPMClassifier,
-    ):
-        return {
-            'check_classifiers_one_label_sample_weights': 'Sklearn assumes that the estimator accepts sample weights.'
         }
     return {}
 

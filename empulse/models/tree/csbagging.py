@@ -368,13 +368,13 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         """
         Predict class for X.
 
-        With the default cost-sensitive trees as base estimators, each tree votes for the class that
-        costs least on the training samples in the leaf the sample falls in (see
+        With :class:`~empulse.models.CSTreeClassifier` base estimators (the default), each tree votes
+        for the class that costs least on the training samples in the leaf the sample falls in (see
         :meth:`CSTreeClassifier.predict <empulse.models.CSTreeClassifier.predict>`). With
         ``combination="majority_voting"`` every tree has one vote, and with ``"weighted_voting"`` its
         out-of-bag weight. A tie goes to the negative class.
 
-        With a custom ``estimator``, the predicted class is the one with the highest (weighted) mean
+        With any other ``estimator``, the predicted class is the one with the highest (weighted) mean
         predicted probability.
 
         Parameters
@@ -389,7 +389,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             The predicted classes.
         """
         check_is_fitted(self)
-        if self.estimator is not None:
+        if not isinstance(self.base_estimator_, CSTreeClassifier):
             y_proba = self.predict_proba(X)
             y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
             return y_pred

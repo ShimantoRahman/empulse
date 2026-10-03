@@ -2,12 +2,10 @@
 Per-library dispatch for :class:`~empulse.models.CSBoostClassifier`.
 
 XGBoost, LightGBM and CatBoost each wire up the objective differently (a plain callable, a
-callable object or an ``(objective, metric)`` pair) and treat the shared ``_BASE_SCORE``
-differently: XGBoost's ``base_score`` is a model parameter, while LightGBM's ``init_score`` and
-CatBoost's ``baseline`` only bias training and must be added back in
-:meth:`~empulse.models.CSBoostClassifier.predict_proba`. :class:`BoostingBackend` collects these
-differences as data: which classifier matches, how the estimator is built and fit, and how
-predictions are reconstructed.
+callable object or an ``(objective, metric)`` pair), and under a custom objective LightGBM and
+CatBoost predict raw scores that :meth:`~empulse.models.CSBoostClassifier.predict_proba` must turn
+into probabilities itself. :class:`BoostingBackend` collects these differences as data: which
+classifier matches, how the estimator is built and fit, and how predictions are reconstructed.
 
 :func:`backend_for` receives the classifier classes from ``csboost.py`` instead of importing them,
 because the tests patch ``empulse.models.boosting.csboost.XGBClassifier`` (and the others) to
@@ -21,20 +19,11 @@ from functools import partial
 from typing import Any, Literal, TypeVar
 
 import numpy as np
-from scipy.special import expit, logit
+from scipy.special import expit
 
 from ..._types import FloatNDArray, IntNDArray
 from ...metrics import BaseMetric
 from ...metrics._loss import cy_boost_grad_hess
-
-# The AEC objective's hessian is p * (1 - p), which is 0 at p = 0.5. Starting at 0.5 + 1e-2 gives
-# a non-zero hessian at initialization without noticeably biasing the starting point.
-#
-# XGBoost's `base_score` is a probability, but LightGBM's `init_score` and CatBoost's `baseline`
-# are raw log-odds scores, and expit(0.51) != 0.51. Two constants give every backend the same
-# starting probability.
-_BASE_SCORE_PROBA = 0.5 + 1e-2
-_BASE_SCORE_RAW = float(logit(_BASE_SCORE_PROBA))
 
 _CATBOOST_WARNING_FILTERS: tuple[tuple[str, type[Warning]], ...] = (
     ('Can\'t optimize method "calc_ders_range" because self argument is used', UserWarning),
@@ -77,17 +66,36 @@ class LGBMObjective:
         return gradient, hessian
 
 
-class LGBMMetricObjective:
-    """Metric objective wrapper for lightgbm using dynamic gradient/hessian evaluation."""
+@dataclass(frozen=True)
+class ObjectiveScaling:
+    """
+    How each row's gradient and hessian are scaled before a booster sees them.
 
-    def __init__(self, metric: BaseMetric, **loss_params: FloatNDArray | float):
+    They are divided by ``scale``, the average cost of a wrong decision, so that the booster's own
+    regularization does not depend on the units of the costs. Dividing, rather than multiplying by
+    ``1 / scale``, keeps costs too small for that reciprocal finite.
+    """
+
+    scale: float = 1.0
+
+    def __call__(self, values: FloatNDArray) -> FloatNDArray:
+        """Return *values*, one per row, scaled."""
+        scaled: FloatNDArray = np.asarray(values, dtype=np.float64) / self.scale
+        return scaled
+
+
+class MetricObjective:
+    """Metric objective that evaluates the gradient and hessian from the metric every round."""
+
+    def __init__(self, metric: BaseMetric, scaling: ObjectiveScaling, **loss_params: FloatNDArray | float):
         self.metric = metric
+        self.scaling = scaling
         self.loss_params = loss_params
 
     def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
-        """Compute the gradient and hessian of the metric objective."""
+        """Compute the scaled gradient and hessian of the metric objective."""
         gradient, hessian = self.metric._gradient_boost_objective(y_true, y_score, **self.loss_params)
-        return gradient, hessian
+        return self.scaling(gradient), self.scaling(hessian)
 
 
 def _catboost_training_data(grad_const: FloatNDArray, y: IntNDArray) -> tuple[IntNDArray, FloatNDArray]:
@@ -259,19 +267,25 @@ class BoostingBackend:
         classifier = self.classifier
         if classifier is None:
             raise TypeError(f'{self.name} package is not installed.')
-        return classifier(objective=objective, base_score=_BASE_SCORE_PROBA)
+        return classifier(objective=objective, base_score=0.5)
 
     def apply_objective(self, estimator: Any, objective: Any) -> Any:
         """Set *objective* (as built by :meth:`wrap_objective`) on a cloned user-supplied estimator."""
         if self.name == 'xgboost':
-            return estimator.set_params(objective=objective, base_score=_BASE_SCORE_PROBA)
+            return estimator.set_params(objective=objective, base_score=0.5)
         if self.name == 'lightgbm':
             return estimator.set_params(objective=objective)
         loss_function, eval_metric = objective
         return estimator.set_params(loss_function=loss_function, eval_metric=eval_metric)
 
     def wrap_objective(
-        self, loss: BaseMetric, y: FloatNDArray, loss_params: dict[str, Any], *, precomputed: bool
+        self,
+        loss: BaseMetric,
+        y: FloatNDArray,
+        loss_params: dict[str, Any],
+        *,
+        precomputed: bool,
+        scaling: ObjectiveScaling,
     ) -> Any:
         """
         Build this backend's objective (and, for catboost, metric) callable(s).
@@ -290,6 +304,8 @@ class BoostingBackend:
             recomputed from the current round's predictions every iteration
             (``Capability.BOOST_OBJECTIVE``). The caller has already checked the metric declares
             one of the two.
+        scaling : ObjectiveScaling
+            How each row's gradient and hessian are scaled.
 
         Raises
         ------
@@ -299,10 +315,8 @@ class BoostingBackend:
             (MaxProfit's) nor tell which rows' costs a per-row objective should use (LogCost's).
         """
         if not precomputed:
-            if self.name == 'xgboost':
-                return partial(loss._gradient_boost_objective, **loss_params)
-            if self.name == 'lightgbm':
-                return LGBMMetricObjective(loss, **loss_params)
+            if self.name in {'xgboost', 'lightgbm'}:
+                return MetricObjective(loss, scaling, **loss_params)
             raise ValueError(
                 f'The CatBoost backend does not support the {loss.strategy.name!r} strategy: CatBoost '
                 'computes its objective on chunks of the training rows, which this strategy cannot be '
@@ -314,7 +328,7 @@ class BoostingBackend:
             # The per-row gradient constants reach CatBoost as its targets and sample weights, built
             # by `fit_arguments`; the objective itself needs no parameters.
             return CatBoostObjective(), CatBoostMetric()
-        grad_const = loss._prepare_boost_objective(y, **loss_params).reshape(-1)
+        grad_const = scaling(loss._prepare_boost_objective(y, **loss_params).reshape(-1))
         if self.name == 'xgboost':
             # cy_boost_grad_hess (Cython) requires a float64 memoryview.
             return partial(cy_boost_grad_hess, grad_const=np.asarray(grad_const, dtype=np.float64))
@@ -326,6 +340,7 @@ class BoostingBackend:
         loss: BaseMetric,
         loss_params: dict[str, Any],
         fit_params: dict[str, Any],
+        scaling: ObjectiveScaling,
     ) -> tuple[IntNDArray, dict[str, Any]]:
         """
         Return the target and keyword arguments to pass to this backend's ``fit`` alongside ``X``.
@@ -339,7 +354,10 @@ class BoostingBackend:
         loss_params : dict
             The metric's parameter values for this fit.
         fit_params : dict
-            The caller's extra arguments for the estimator's ``fit``; not modified.
+            The caller's extra arguments for the estimator's ``fit``, without ``sample_weight``;
+            not modified.
+        scaling : ObjectiveScaling
+            How each row's gradient and hessian are scaled, as for :meth:`wrap_objective`.
 
         Returns
         -------
@@ -348,34 +366,32 @@ class BoostingBackend:
         fit_kwargs : dict
             *fit_params* plus whatever this backend adds.
         """
-        if self.name == 'lightgbm':
-            return y, {'init_score': np.full(y.shape, _BASE_SCORE_RAW), **fit_params}
         if self.name == 'catboost':
             fit_kwargs = dict(fit_params)
             grad_const = np.asarray(loss._prepare_boost_objective(y, **loss_params), dtype=np.float64).reshape(-1)
-            y_fit, sample_weight = _catboost_training_data(grad_const, y)
-            if (user_weight := fit_kwargs.pop('sample_weight', None)) is not None:
-                # A weighted AEC scales each row's gradient constant, so the weights just multiply.
-                sample_weight = sample_weight * np.asarray(user_weight, dtype=np.float64).reshape(-1)
+            y_fit, sample_weight = _catboost_training_data(scaling(grad_const), y)
+            if not np.any(sample_weight > 0):
+                raise ValueError(
+                    'With these costs, no training sample is worth deciding either way, so there is '
+                    'nothing for CatBoostClassifier to learn.'
+                )
             if np.unique(y_fit).size < 2:
                 raise ValueError(
                     'With these costs, the same prediction is the cheapest for every training sample, '
                     'so there is nothing for CatBoostClassifier to learn.'
                 )
-            fit_kwargs.update(sample_weight=sample_weight, baseline=np.full(y.shape, _BASE_SCORE_RAW))
+            fit_kwargs['sample_weight'] = sample_weight
             return y_fit, fit_kwargs
         return y, dict(fit_params)
 
     def raw_score(self, estimator: Any, X: Any) -> FloatNDArray | None:
         """
-        Return the raw (pre-offset) score for *X*, or ``None`` when no reconstruction is needed.
+        Return the raw score for *X*, or ``None`` when the estimator's ``predict_proba`` is usable.
 
-        LightGBM's ``init_score`` and CatBoost's ``baseline`` (both set to ``_BASE_SCORE_RAW`` by
-        :meth:`fit_kwargs`) bias training gradients only -- neither library persists them into the
-        saved model, so the caller must add that same offset back before converting to a
-        probability. XGBoost's ``base_score`` has no such issue: it is a genuine model parameter
-        that its own ``predict_proba`` already accounts for, so this returns ``None`` for it (and
-        for any estimator that matches no known backend).
+        Under a custom objective, LightGBM and CatBoost cannot tell what link function the scores
+        go through, so the caller applies the logistic function to their raw scores. XGBoost's own
+        ``predict_proba`` already does, so this returns ``None`` for it (and for any estimator that
+        matches no known backend).
         """
         if self.name == 'lightgbm':
             score: FloatNDArray = estimator.predict_proba(X, raw_score=True)

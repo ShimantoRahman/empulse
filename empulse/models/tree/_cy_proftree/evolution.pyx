@@ -2,7 +2,6 @@
 
 import numpy as np
 cimport numpy as cnp
-from libc.math cimport fabs
 from libc.stdlib cimport free, malloc
 from cython.parallel cimport prange, threadid
 
@@ -261,9 +260,9 @@ cdef inline void evaluate_native(Tree* tree, const NativeFitness* fitness, float
 cdef inline bint stop_evolution(
     Tree* challenger, Tree** champion, int* stagnation_counter, float tolerance, int patience
 ) noexcept:
-    # The tolerance is relative to the champion's magnitude, so the bar also rises when the fitness
-    # is negative (e.g. costs only).
-    if challenger.fitness > champion[0].fitness + tolerance * fabs(champion[0].fitness):
+    # The tolerance is in the units of the fitness: a fraction of the fitness itself would depend on
+    # constants added to the costs, which change no decision.
+    if challenger.fitness > champion[0].fitness + tolerance:
         free_tree(champion[0])
         champion[0] = challenger  # the champion takes ownership
         stagnation_counter[0] = 0

@@ -614,17 +614,12 @@ class MaxProfit(MetricStrategy):
         gradient magnitude. Substituting each random variable by its mean gives the same scale the
         deterministic route would use, which keeps ``C`` comparable between the two.
         """
-        mean_params: dict[str, FloatNDArray | float] = {
-            name: cast('FloatNDArray | float', replace_random_var_with_mean(value)[0])
-            if isinstance(value, sympy.Basic)
-            else value
-            for name, value in parameters.items()
-        }
-        try:
-            tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(mean_params)
-            return _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
-        except (TypeError, ValueError, KeyError):
-            return 1.0
+        mean_terms = replace_random_var_with_mean(self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
+        scalar_params = {name: float(np.mean(value)) for name, value in parameters.items()}
+        tp_val, tn_val, fp_val, fn_val = (
+            float(_safe_run_lambda(_safe_lambdify(term), term, **scalar_params)) for term in mean_terms
+        )
+        return _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
 
     def logit_value_objective(
         self,
