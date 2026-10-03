@@ -304,6 +304,9 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self.ccp_alpha = ccp_alpha
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
+    def _more_tags(self) -> dict[str, bool]:
+        return {'allow_nan': True}
+
     def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
         tags.input_tags.allow_nan = True
