@@ -3,7 +3,6 @@
 import numpy as np
 cimport numpy as cnp
 from libc.stdlib cimport malloc, free
-from libcpp.algorithm cimport reverse
 from libcpp.vector cimport vector
 
 from .node cimport Node, create_node, copy_node, free_node, is_leaf, node_probability, reset_node
@@ -113,31 +112,113 @@ cdef Node* get_leaf(Node* start_node, const float* x) noexcept nogil:
             node = node.right
     return node
 
-cdef Node* visit_leaf(Node* start_node, const float* x, int y) noexcept nogil:
-    """Traverse until the relevant leaf node and update stats."""
-    cdef Node* node = start_node
-    while not is_leaf(node):
-        node.n_samples += 1
-        node.n_positive_samples += y
-        if x[node.feature_index] <= node.split_value:
-            node = node.left
-        else:
-            node = node.right
-    node.n_samples += 1
-    node.n_positive_samples += y
-    return node
+cdef void sum_counts(Node* node) noexcept nogil:
+    """Set the counts of every internal node from ``node`` down to the sums of its children's."""
+    if is_leaf(node):
+        return
+    sum_counts(node.left)
+    sum_counts(node.right)
+    node.n_samples = node.left.n_samples + node.right.n_samples
+    node.n_positive_samples = node.left.n_positive_samples + node.right.n_positive_samples
 
-cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samples) noexcept nogil:
-    # Rows are passed on as pointers: slicing X[i] would create a memoryview per sample, and its
-    # reference counting was a sizeable share of the whole fit.
-    cdef Py_ssize_t i
-    for i in range(n_samples):
-        visit_leaf(tree.root, &X[i, 0], y[i])
+# Samples are routed through a flat copy of the nodes in which every leaf is its own child, so each
+# sample takes the same number of steps and picks the next node by indexing rather than branching.
+# A branch per node is mispredicted about as often as the data is unpredictable. Stopping early at a
+# leaf brings that branch back and was slower, even for deep trees.
 
-cdef struct PathStep:
+cdef enum:
+    LANES = 16
+
+cdef struct FlatNode:
     int feature_index
     float split_value
-    bint goes_left
+    int children[2]  # left, right
+
+cdef int flatten(
+    Node* node, vector[FlatNode]& flat, vector[Node*]& nodes, int depth, int* max_depth
+) noexcept nogil:
+    cdef int index = <int>flat.size()
+    cdef FlatNode flat_node
+    flat_node.feature_index = 0
+    flat_node.split_value = 0.0
+    flat_node.children[0] = index
+    flat_node.children[1] = index
+    if not is_leaf(node):
+        flat_node.feature_index = node.feature_index
+        flat_node.split_value = node.split_value
+    flat.push_back(flat_node)
+    nodes.push_back(node)
+    if is_leaf(node):
+        if depth > max_depth[0]:
+            max_depth[0] = depth
+        return index
+    cdef int left = flatten(node.left, flat, nodes, depth + 1, max_depth)
+    cdef int right = flatten(node.right, flat, nodes, depth + 1, max_depth)
+    flat[index].children[0] = left
+    flat[index].children[1] = right
+    return index
+
+cdef void count_samples(
+    Node* subtree, const vector[FlatNode]& path, const float[:, ::1] X, const int[:] y, int n_samples
+) noexcept nogil:
+    """
+    Count the samples that follow ``path`` in the leaves of ``subtree`` they reach.
+
+    ``path`` holds the split rules from the root down to ``subtree``; its first node is a sink that
+    collects the samples leaving the path and each step's other child points to it.
+    ``sum_counts`` then fills in the internal nodes of ``subtree``.
+    """
+    cdef vector[FlatNode] flat = path
+    cdef vector[Node*] nodes
+    nodes.resize(flat.size(), NULL)
+    cdef int start = 1 if path.size() > 0 else 0
+    cdef int depth = <int>path.size() - start
+    cdef int subtree_depth = 0
+    flatten(subtree, flat, nodes, 0, &subtree_depth)
+    depth += subtree_depth
+
+    # A node's samples in the low 32 bits and its positive samples in the high 32 bits, so that
+    # counting a sample is a single addition.
+    cdef vector[unsigned long long] packed_counts
+    packed_counts.resize(flat.size(), 0)
+    cdef unsigned long long* counts = packed_counts.data()
+    cdef const FlatNode* nodes_ = flat.data()
+    # Samples are routed LANES at a time in lockstep: each step of one sample waits on the previous
+    # one, but the steps of different samples are independent and overlap however deep the tree is.
+    cdef const float* rows[LANES]
+    cdef int lanes[LANES]
+    cdef Py_ssize_t i = 0
+    cdef int step, lane, n
+    while i + LANES <= n_samples:
+        for lane in range(LANES):
+            rows[lane] = &X[i + lane, 0]
+            lanes[lane] = start
+        for step in range(depth):
+            for lane in range(LANES):
+                n = lanes[lane]
+                lanes[lane] = nodes_[n].children[not (rows[lane][nodes_[n].feature_index] <= nodes_[n].split_value)]
+        for lane in range(LANES):
+            counts[lanes[lane]] += 1 + (<unsigned long long>y[i + lane] << 32)
+        i += LANES
+    cdef const float* x
+    while i < n_samples:
+        x = &X[i, 0]
+        n = start
+        for step in range(depth):
+            n = nodes_[n].children[not (x[nodes_[n].feature_index] <= nodes_[n].split_value)]
+        counts[n] += 1 + (<unsigned long long>y[i] << 32)
+        i += 1
+
+    cdef size_t k
+    for k in range(path.size(), flat.size()):
+        if is_leaf(nodes[k]):
+            nodes[k].n_samples = <int>(<unsigned int>counts[k])
+            nodes[k].n_positive_samples = <int>(counts[k] >> 32)
+    sum_counts(subtree)
+
+cdef void fit_tree(Tree* tree, const float[:, ::1] X, const int[:] y, int n_samples) noexcept nogil:
+    cdef vector[FlatNode] no_path
+    count_samples(tree.root, no_path, X, y, n_samples)
 
 cdef void refit_tree(
     Tree* tree,
@@ -152,7 +233,7 @@ cdef void refit_tree(
 
     An operator only changes the subtree below one node (``tree.stale``): the samples reaching that
     node, and the counts everywhere outside its subtree, stay the same. So only the samples that
-    follow the path from the root to the stale node are routed again, and only through its subtree.
+    follow the path from the root to the stale node are counted again, and only in its subtree.
     The rest of the tree was already pruned when its counts were last computed, and pruning only
     looks at counts, so it is revisited only below the stale node too.
     """
@@ -161,35 +242,35 @@ cdef void refit_tree(
         return
     tree.stale = NULL
     if stale is tree.root:
-        reset_node(tree.root)
         fit_tree(tree, X, y, n_samples)
         prune_illegal_nodes(tree, tree.root, min_samples_split, min_samples_leaf)
         return
 
-    # The split rules leading to the stale node, from the root down.
-    cdef vector[PathStep] path
-    cdef Node* child = stale
-    cdef Node* parent = stale.parent
-    while parent is not NULL:
-        path.push_back(PathStep(parent.feature_index, parent.split_value, parent.left is child))
-        child = parent
-        parent = parent.parent
-    reverse(path.begin(), path.end())
+    # The split rules leading to the stale node, from the root down, after the sink at index 0.
+    cdef vector[Node*] ancestors
+    cdef Node* node = stale
+    while node.parent is not NULL:
+        ancestors.push_back(node.parent)
+        node = node.parent
+    cdef vector[FlatNode] path
+    cdef FlatNode step
+    step.feature_index = 0
+    step.split_value = 0.0
+    step.children[0] = 0
+    step.children[1] = 0
+    path.push_back(step)
+    cdef Py_ssize_t k
+    cdef Node* on_path
+    for k in range(<Py_ssize_t>ancestors.size() - 1, -1, -1):
+        node = ancestors[k]
+        on_path = stale if k == 0 else ancestors[k - 1]
+        step.feature_index = node.feature_index
+        step.split_value = node.split_value
+        step.children[0] = <int>path.size() + 1 if node.left is on_path else 0
+        step.children[1] = <int>path.size() + 1 if node.right is on_path else 0
+        path.push_back(step)
 
-    reset_node(stale)
-    cdef Py_ssize_t i
-    cdef size_t step
-    cdef const float* x
-    cdef bint reaches_stale
-    for i in range(n_samples):
-        x = &X[i, 0]
-        reaches_stale = True
-        for step in range(path.size()):
-            if (x[path[step].feature_index] <= path[step].split_value) != path[step].goes_left:
-                reaches_stale = False
-                break
-        if reaches_stale:
-            visit_leaf(stale, x, y[i])
+    count_samples(stale, path, X, y, n_samples)
     prune_illegal_nodes(tree, stale, min_samples_split, min_samples_leaf)
 
 cdef void predict_proba_tree(

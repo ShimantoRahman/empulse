@@ -122,7 +122,7 @@ Models
   usually stopping after the first.
 - |Efficiency| :class:`~empulse.models.ProfSRClassifier` fits 3-5x faster, and with a ``RANKING``
   loss such as its default it no longer scores large outputs as ties.
-- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 8x faster with its default
+- |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 16-24x faster with its default
   maximum profit fitness and about 4x faster with a stochastic
   :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss, to the same trees.
   It now uses ``n_jobs``, which it ignored, and ``n_jobs`` accepts ``None`` and negative values.

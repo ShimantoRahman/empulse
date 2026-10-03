@@ -53,9 +53,6 @@ cdef void reset_node(Node* node) noexcept nogil:
     reset_node(node.left)
     reset_node(node.right)
 
-cdef inline bint is_leaf(Node* node) noexcept nogil:
-    return node.left is NULL and node.right is NULL
-
 cdef float node_probability(Node* node) noexcept nogil:
     if node.n_samples == 0:
         return 0.5
