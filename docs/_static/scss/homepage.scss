@@ -6,12 +6,13 @@
  * rather than redefining any colour: the homepage is a different *layout*, not a different visual
  * language. Blue still marks what you write down and purple what you do with it.
  *
- * Two things here exist nowhere else in the documentation, and are recorded in DESIGN.md as
- * belonging to this marketing surface only:
+ * What exists here and nowhere else in the documentation, recorded in DESIGN.md as belonging to
+ * this surface only:
  *
- *   * the two display sizes above the 44px page title, which the rest of the site has no use for;
- *   * a button component, since the homepage is the first surface that needed one;
- *   * the ambient light behind each section, the one place the system allows a gradient.
+ *   * the two display sizes above the 44px page title;
+ *   * buttons, the install bar and the code window;
+ *   * the emphasis motif, one highlighted word per heading;
+ *   * wind, the soft horizontal streaks behind some bands, and the `tint` canvas they sit on.
  *
  * **Everything below is nested inside `.eds-home`, and that nesting is load-bearing.** Both
  * stylesheets under this one set margins on bare elements, at specificities that a selector of one
@@ -22,118 +23,64 @@
  *   * Sphinx's own basic.css: `:not(li) > ul > li:first-child > :first-child {margin-top: 0}` —
  *     (0,2,3), which reaches inside the *first* item of a list and no other.
  *
- * Between them, three identical cards did not line up: the first one's opening line sat 4px higher
- * than its neighbours'. So every rule here carries the page's own class as an ancestor, which puts
- * it at two classes and above the first of those; and a component that sits directly inside an
- * `<li>` states its top margin explicitly rather than inheriting one of them by accident. Write a
- * rule here without that ancestor and the stylesheets below quietly decide the spacing instead.
+ * So every rule here carries the page's own class as an ancestor. Write a rule without it and the
+ * stylesheets below quietly decide the spacing instead.
  *
- * There are two exceptions, marked where they appear: the rule that unwinds the article column,
- * which has to match an ancestor of this element, and the keyframes, which are global by name.
+ * CSS `clamp()`, `min()` and `max()` are written through interpolation (`#{'...'}`): the docs are
+ * compiled by libsass, which otherwise tries to evaluate them as Sass functions and fails on
+ * mixed units.
+ *
+ * There are two exceptions to the nesting, marked where they appear: the rule that unwinds the
+ * article column, which has to match an ancestor of this element, and the keyframes, which are
+ * global by name.
  */
 
 /* Escaping the article column ---------------------------------------------------------------- */
 
-// The theme lays every page out as a centred 88rem article column between two sidebars. The
-// homepage has no sidebars and wants the full window, so that constraint is unwound here.
-// `:has()` keeps this scoped to the one page without needing a class on `<body>`, which would mean
-// copying the theme's own `body_tag` block and re-copying it at every theme upgrade. Where `:has()`
-// is unsupported the page simply stays inside the article column, which still reads correctly.
-//
-// `.bd-content` and `.bd-article-container` need no reset: they live inside the `docs_main` block
-// that homepage.html replaces outright, so on this page they do not exist at all.
+// The theme lays every page out as a centred article column between two sidebars. The homepage has
+// no sidebars and wants the full window, so that constraint is unwound here. `:has()` keeps this
+// scoped to the one page without a class on `<body>`. Where `:has()` is unsupported the page stays
+// inside the article column, which still reads correctly.
 .bd-container:has(.eds-home) .bd-container__inner {
   max-width: none;
 }
 
-/* Ambient light -------------------------------------------------------------------------------- */
-
-// Two very soft lobes of the palette's accents, laid on the canvas behind a section so the page
-// reads as lit rather than as a flat sheet. The documentation pages have nothing like it, and
-// DESIGN.md records it as belonging to this surface only.
-//
-// It still follows the palette's rule rather than decorating freely: the definition colour leads
-// from the left, on the side where you write the cost matrix down, and the use colour trails to
-// the right, where you decide what to do with it. Both fade to nothing well inside their box, so
-// no section ends on a hard edge.
-//
-// `$strength` scales both lobes at once — the hero carries the full amount and every section after
-// it about half, so the top of the page stays the brightest thing on it. `$definition` and `$use`
-// are each a radial-gradient geometry ("<size> at <position>"), given per section so that no two
-// stretches of the page are lit identically.
-//
-// `color-mix` keeps the tint derived from the same two tokens as everything else rather than
-// restating them as rgba. Where it is unsupported the declaration is simply invalid and the canvas
-// stays flat, which is the pre-existing look.
-
-// How a lobe fades, as (distance from its centre, share of its peak) pairs.
-//
-// A gradient written with two stops ramps its alpha linearly, and the eye reads the kink at each
-// end of that ramp as an edge — which is what makes a soft glow show a distinct circular outline.
-// These stops trace an ease-out curve instead: the falloff has no corner in it, so there is
-// nothing for the eye to catch, and it reaches zero exactly at the edge of the ellipse rather than
-// stopping short of it.
-$eds-falloff: (0 1, 18 0.94, 32 0.84, 45 0.7, 57 0.54, 68 0.38, 78 0.24, 87 0.12, 94 0.05, 100 0);
-
-// The colour stops of one lobe: `$colour` mixed down to nothing along `$eds-falloff`, with every
-// step scaled by the section's `$strength`, so a section's light is one number to tune.
-@function eds-lobe($colour, $peak, $strength) {
-  $stops: '';
-  @each $stop in $eds-falloff {
-    $share: $strength * nth($stop, 2);
-    $stops: $stops + ', color-mix(in srgb, var(' + $colour + ') calc(var(' + $peak + ') * ' + $share +
-      '), transparent) ' + nth($stop, 1) + '%';
+// Global by name, so it cannot be nested.
+@keyframes eds-drift {
+  from {
+    transform: translateX(0);
   }
-  @return $stops;
-}
 
-@mixin eds-ambient($strength, $definition, $use) {
-  background-image:
-    #{'radial-gradient(' + $definition + eds-lobe('--eds-blue-strong', '--eds-glow-definition', $strength) + ')'},
-    #{'radial-gradient(' + $use + eds-lobe('--eds-purple-strong', '--eds-glow-use', $strength) + ')'};
-}
-
-// A section whose light has to be painted behind it rather than on it, because it has no
-// background of its own. Full-bleed, and clipped by `.eds-home` rather than widening the page.
-@mixin eds-ambient-layer($inset) {
-  content: '';
-  inset: $inset;
-  pointer-events: none;
-  position: absolute;
-  z-index: -1;
+  to {
+    transform: translateX(var(--eds-drift-distance, 3%));
+  }
 }
 
 /* The page ------------------------------------------------------------------------------------ */
 
 .eds-home {
-  // Two display steps above the 44px page title. Nothing in the documentation proper is larger
-  // than `h1`; a landing page is the one surface where a headline has to carry across a fold, so
-  // these live here rather than in the site-wide scale. They scale with the viewport so the motto
-  // holds its line count from a phone to a wide monitor.
-  --eds-display-xxl: clamp(2.5rem, 1.35rem + 3.6vw, 4.25rem);
-  --eds-display-xl: clamp(1.875rem, 1.35rem + 1.7vw, 2.75rem);
+  --eds-display-xxl: #{'clamp(3rem, 1.6rem + 5.2vw, 6.5rem)'};
+  --eds-display-xl: #{'clamp(2.25rem, 1.4rem + 2.6vw, 3.875rem)'};
+  --eds-gutter: #{'clamp(1rem, 4vw, 3.5rem)'};
+  --eds-measure: 87.5rem; // 1400px
 
-  --eds-gutter: 1.5rem;
-  --eds-measure: 78rem;
-
-  // How much of each accent colour reaches the canvas at the centre of a lobe. Everything else is
-  // derived from these two: `$eds-falloff` shapes the fade and each section scales it.
-  --eds-glow-definition: 12%;
-  --eds-glow-use: 9%;
+  // Wind sits on a canvas half a step deeper than `surface`, so the near-white streaks have
+  // something to show against. Both tokens belong to this page only.
+  --eds-tint: #edf2f6;
+  --eds-streak: rgba(255, 255, 255, 0.95);
 
   color: var(--eds-ink);
-  // A stacking context of its own, so the glow's negative `z-index` stays behind this page's
-  // content instead of falling behind the page background and disappearing.
-  isolation: isolate;
-  // The glow is sized in `vw`, which counts the scrollbar; `clip` keeps that overshoot from
-  // becoming a horizontal scrollbar. `clip` rather than `hidden` so no scroll container is
-  // created and nothing above the page loses its stickiness.
+  // Wind streaks run off the edge of the window; `clip` rather than `hidden` so no scroll
+  // container is created and nothing above the page loses its stickiness.
   overflow-x: clip;
   width: 100%;
 
-  // Element-level reset: vertical rhythm comes from the component rules below, one at a time, so
-  // the inherited paragraph margins are cleared first. This does not reach the two list-item rules
-  // named at the top of this file — those are handled where they bite, on `.eds-pillar__kicker`.
+  html[data-theme='dark'] & {
+    --eds-tint: #171c23;
+    // The same white at full strength would read as glare on the dark canvas.
+    --eds-streak: rgba(232, 238, 244, 0.045);
+  }
+
   p {
     margin-block: 0;
   }
@@ -142,192 +89,187 @@ $eds-falloff: (0 1, 18 0.94, 32 0.84, 45 0.7, 57 0.54, 68 0.38, 78 0.24, 87 0.12
   h2,
   h3 {
     color: var(--eds-ink);
-    margin-top: 0;
+    margin: 0;
+    text-wrap: balance;
   }
 
   a {
     text-decoration: none;
   }
 
-  // The same tint over a near-black canvas reads as almost nothing, so dark mode carries more of
-  // it. Over paper these values are already at the limit of what stays calm.
-  html[data-theme='dark'] & {
-    --eds-glow-definition: 20%;
-    --eds-glow-use: 15%;
+  code {
+    font-family: var(--pst-font-family-monospace);
   }
 
   .eds-wrap {
     margin-inline: auto;
-    max-width: var(--eds-measure);
+    max-width: calc(var(--eds-measure) + 2 * var(--eds-gutter));
     padding-inline: var(--eds-gutter);
     width: 100%;
   }
 
-  // A full-width band. Surfaces are flat and separated by a rule, never by a shadow, so a band is
-  // a change of fill plus a hairline — the same device the header and footer already use.
-  //
-  // A band has a fill of its own, so its light is painted straight onto it and needs no layer
-  // behind it. The two bands are lit differently — the first leads with the definition lobe high
-  // on the left, the last sits lower and wider — so that the page does not repeat itself.
+  /* Bands ----------------------------------------------------------------------------------- */
+
+  // Full-width bands separated by a hairline, never by a shadow: the same device the header and
+  // footer already use. Bands alternate between plain paper and the tinted canvas with wind.
   .eds-band {
-    @include eds-ambient(0.55, '62rem 36rem at 12% 18%', '52rem 34rem at 90% 82%');
-
-    background-color: var(--eds-surface);
-    border-block: 1px solid var(--eds-rule);
-    margin-top: 5rem;
-    padding-block: 4.5rem;
-
-    + .eds-band {
-      border-top: none;
-      margin-top: 0;
-    }
-  }
-
-  // The hero already ends in generous whitespace of its own, so the first band sits closer.
-  .eds-hero + .eds-band {
-    margin-top: 3rem;
+    background-color: var(--eds-paper);
+    border-top: 1px solid var(--eds-rule);
+    padding-block: #{'clamp(4rem, 9vw, 7.5rem)'};
   }
 
   .eds-band--last {
-    @include eds-ambient(0.55, '66rem 34rem at 24% 80%', '56rem 32rem at 84% 16%');
-
-    border-bottom: none;
     margin-bottom: -1px; // Sit flush against the site footer's own top rule.
   }
 
-  .eds-section-head {
-    margin-bottom: 2.5rem;
-    max-width: 54ch;
+  /* Wind ------------------------------------------------------------------------------------ */
+
+  .eds-windy {
+    background-color: var(--eds-tint);
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+
+    > .eds-wrap {
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  .eds-wind {
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+  }
+
+  // A streak is brightest at the end that runs off the page and fades to nothing along its length.
+  // The fade is a single colour going transparent, never a ramp between two hues.
+  .eds-wind__streak {
+    animation: eds-drift var(--eds-drift, 48s) ease-in-out infinite alternate;
+    background: linear-gradient(90deg, transparent 0%, var(--eds-streak) 72%, var(--eds-streak) 100%);
+    border-radius: 999px;
+    display: block;
+    position: absolute;
+  }
+
+  .eds-wind__streak--right {
+    --eds-drift-distance: -3%;
+
+    background: linear-gradient(270deg, transparent 0%, var(--eds-streak) 72%, var(--eds-streak) 100%);
+  }
+
+  .eds-wind__streak--faint {
+    opacity: 0.55;
+  }
+
+  /* Type devices ---------------------------------------------------------------------------- */
+
+  // Eyebrows name the section in mono, in colour, with nothing in front of them.
+  .eds-eyebrow {
+    color: var(--eds-blue-strong);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .eds-eyebrow--purple {
+    color: var(--eds-purple-strong);
+  }
+
+  // The emphasis motif: one word per heading in blue, finished with a thin underline that fades in
+  // from the left. The colour carries the emphasis; the line only completes it, so it stays thin.
+  .eds-hl {
+    color: var(--eds-blue-strong);
+    display: inline-block;
+    font-style: normal;
+    position: relative;
+
+    &::after {
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--eds-blue-strong) 35%, transparent) 30%,
+        var(--eds-blue-strong) 100%
+      );
+      border-radius: 99px;
+      bottom: -0.04em;
+      content: '';
+      height: #{'max(3px, 0.055em)'};
+      left: 0.04em;
+      position: absolute;
+      right: 0;
+    }
+  }
+
+  // Keeps an emphasised word and the punctuation after it on one line.
+  .eds-nowrap {
+    white-space: nowrap;
+  }
+
+  /* Section heads --------------------------------------------------------------------------- */
+
+  .eds-head {
+    display: grid;
+    gap: 1.125rem;
+    margin-bottom: #{'clamp(2.25rem, 5vw, 3.5rem)'};
+    max-width: 54rem;
 
     h2 {
       font-size: var(--eds-display-xl);
-      font-weight: 400;
-      letter-spacing: -0.45px;
-      line-height: 1.16;
-      margin-bottom: 0.75rem;
-    }
-
-    p {
-      color: var(--eds-ink-muted);
-      font-size: 1.0625rem;
-      line-height: 1.6;
-    }
-  }
-
-  /* Hero -------------------------------------------------------------------------------------- */
-
-  .eds-hero {
-    align-items: center;
-    display: grid;
-    gap: 3.5rem;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    padding-block: 4.5rem 1rem;
-    position: relative;
-
-    // The brightest light on the page, and the only section that carries the full strength.
-    &::before {
-      @include eds-ambient(1, '70rem 44rem at 16% 14%', '58rem 40rem at 86% 56%');
-      @include eds-ambient-layer(-6rem calc(50% - 50vw) -14rem);
-    }
-  }
-
-  // A kicker belongs to the headline under it, so it sits close enough to read as one unit.
-  .eds-eyebrow {
-    color: var(--eds-ink-muted);
-    font-size: 0.875rem;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    margin-bottom: 0.625rem;
-    text-transform: uppercase;
-
-    // A short blue rule instead of a chip: the definition side of the palette, used as structure.
-    &::before {
-      background-color: var(--eds-blue-strong);
-      content: '';
-      display: inline-block;
-      height: 2px;
-      margin-right: 0.75rem;
-      vertical-align: middle;
-      width: 1.75rem;
-    }
-  }
-
-  .eds-hero__motto {
-    font-size: var(--eds-display-xxl);
-    font-weight: 350;
-    letter-spacing: -1.2px;
-    line-height: 1.06;
-    margin-bottom: 1.5rem;
-    text-wrap: balance;
-  }
-
-  .eds-hero__lead {
-    color: var(--eds-ink-muted);
-    font-size: 1.125rem;
-    font-weight: 450;
-    line-height: 1.6;
-    max-width: 54ch;
-
-    strong {
-      color: var(--eds-ink);
       font-weight: 600;
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+    }
+
+    > p:last-child {
+      color: var(--eds-ink-muted);
+      font-size: 1.125rem;
+      line-height: 1.55;
+      max-width: 40em;
     }
   }
 
-  .eds-hero__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 2rem;
+  .eds-head--split {
+    align-items: end;
+    column-gap: 4rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 30em);
+    max-width: none;
+
+    .eds-eyebrow {
+      grid-column: 1 / -1;
+    }
   }
 
-  /* Buttons ----------------------------------------------------------------------------------- */
+  /* Buttons and the install bar ------------------------------------------------------------- */
 
   .eds-btn {
     align-items: center;
     border: 1px solid transparent;
     border-radius: var(--bs-border-radius);
     display: inline-flex;
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 600;
-    gap: 0.5rem;
-    // 44px of touch area at the smallest size the system allows for an interactive control.
-    min-height: 2.75rem;
-    padding: 0.625rem 1.25rem;
-    transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
-
-    &:hover .eds-btn__arrow {
-      transform: translateX(3px);
-    }
+    gap: 0.625rem;
+    justify-content: center;
+    letter-spacing: -0.01em;
+    min-height: 3.5rem;
+    padding: 0 1.5rem;
   }
 
+  // `paper` on `blue-strong`: dark-on-light in one theme, light-on-dark in the other, so the label
+  // never ends up as white on the light dark-mode blue.
   .eds-btn--primary {
     background-color: var(--eds-blue-strong);
-    border-color: var(--eds-blue-strong);
     color: var(--eds-paper);
 
     &:hover,
     &:focus-visible {
       background-color: var(--eds-ink);
-      border-color: var(--eds-ink);
-      // `ink` and `paper` trade places between the themes, so this one declaration reads as
-      // dark-on-light in light mode and light-on-dark in dark mode.
       color: var(--eds-paper);
-    }
-  }
-
-  .eds-btn--ghost {
-    background-color: transparent;
-    border-color: var(--eds-rule);
-    color: var(--eds-ink);
-
-    &:hover,
-    &:focus-visible {
-      border-color: var(--eds-blue-strong);
-      color: var(--eds-blue-link);
     }
   }
 
@@ -335,781 +277,1327 @@ $eds-falloff: (0 1, 18 0.94, 32 0.84, 45 0.7, 57 0.54, 68 0.38, 78 0.24, 87 0.12
     transition: transform 150ms ease;
   }
 
-  /* Install command --------------------------------------------------------------------------- */
+  .eds-btn:hover .eds-btn__arrow {
+    transform: translateX(3px);
+  }
 
   .eds-install {
     align-items: center;
-    background-color: var(--eds-surface);
+    background-color: var(--eds-paper);
     border: 1px solid var(--eds-rule);
     border-radius: var(--bs-border-radius);
-    display: inline-flex;
+    display: flex;
     font-family: var(--pst-font-family-monospace);
-    gap: 0.625rem;
-    margin-top: 1.75rem;
-    max-width: 100%;
-    padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+    font-size: 1rem;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    min-width: 0;
+    padding: 0 0.5rem 0 1.125rem;
   }
 
   .eds-install__prompt {
-    color: var(--eds-ink-muted);
+    color: var(--eds-purple-strong);
     user-select: none;
   }
 
   .eds-install__command {
     background: none;
+    border: none;
     color: var(--eds-ink);
-    font-size: 0.9375rem;
-    overflow-x: auto;
+    font-size: 1rem;
     padding: 0;
     white-space: nowrap;
   }
 
-  .eds-install__copy {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--bs-border-radius-sm);
+  .eds-copy {
+    align-items: center;
+    background: none;
+    border: none;
+    border-radius: 6px;
     color: var(--eds-ink-muted);
     cursor: pointer;
-    display: grid;
-    height: 2rem;
-    place-items: center;
-    transition:
-      background-color 150ms ease,
-      color 150ms ease;
-    width: 2rem;
+    display: inline-flex;
+    height: 2.5rem;
+    justify-content: center;
+    margin-left: auto;
+    width: 2.5rem;
 
-    &:hover,
-    &:focus-visible {
-      background-color: var(--eds-blue-soft);
+    &:hover {
+      background-color: var(--eds-surface);
       color: var(--eds-ink);
     }
+  }
 
-    // The two glyphs are stacked so the button does not resize when it flips to the tick.
-    > span {
-      grid-area: 1 / 1;
+  .eds-copy__done {
+    color: var(--eds-blue-strong);
+    display: none;
+  }
+
+  .eds-copy.is-copied {
+    .eds-copy__idle {
+      display: none;
     }
 
-    &.is-copied {
-      color: var(--eds-purple-strong);
-
-      .eds-install__copy-idle {
-        opacity: 0;
-      }
-
-      .eds-install__copy-done {
-        opacity: 1;
-        transform: none;
-      }
+    .eds-copy__done {
+      display: inline;
     }
   }
 
-  .eds-install__copy-done {
-    opacity: 0;
-    transform: scale(0.7);
-    transition:
-      opacity 120ms ease,
-      transform 120ms ease;
+  /* Hero ------------------------------------------------------------------------------------ */
+
+  .eds-hero {
+    padding-block: #{'clamp(3rem, 7vw, 6rem) clamp(3.5rem, 8vw, 7rem)'};
   }
 
-  .eds-install__copy-idle {
-    transition: opacity 120ms ease;
+  .eds-hero__grid {
+    align-items: center;
+    display: grid;
+    gap: #{'clamp(2.5rem, 5vw, 5.5rem)'};
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
   }
 
-  .eds-install__note {
+  .eds-hero__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    min-width: 0;
+  }
+
+  .eds-hero__motto {
+    font-size: var(--eds-display-xxl);
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+  }
+
+  .eds-hero__lead {
+    color: var(--eds-ink-muted);
+    font-size: #{'clamp(1.125rem, 1.5vw, 1.3125rem)'};
+    line-height: 1.55;
+    max-width: 36em;
+
+    strong {
+      color: var(--eds-ink);
+      font-weight: 600;
+    }
+  }
+
+  .eds-start {
+    align-items: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .eds-hero__note {
     color: var(--eds-ink-muted);
     font-size: 0.875rem;
-    margin-top: 0.75rem;
-    max-width: 48ch;
+    margin-top: -0.875rem;
 
     a {
-      color: var(--eds-blue-link);
-
-      &:hover {
-        color: var(--eds-ink);
-        text-decoration: underline;
-      }
+      font-weight: 500;
     }
   }
 
-  /* Social proof ------------------------------------------------------------------------------ */
-
-  .eds-stats {
+  // Social proof: large numerals in a ruled row, with mono captions.
+  .eds-proof {
     border-top: 1px solid var(--eds-rule);
     display: flex;
     flex-wrap: wrap;
-    gap: 2.25rem;
     list-style: none;
-    margin: 2.5rem 0 0;
-    padding: 1.5rem 0 0;
+    margin: 0.25rem 0 0;
+    padding: 1.375rem 0 0;
   }
 
-  .eds-stat a {
-    color: inherit;
-    display: block;
+  .eds-proof__item {
+    border-right: 1px solid var(--eds-rule);
+    margin: 0 1.75rem 0 0;
+    padding-right: 1.75rem;
 
-    &:hover .eds-stat__value,
-    &:focus-visible .eds-stat__value {
-      color: var(--eds-blue-link);
+    &:last-child {
+      border-right: none;
+      margin-right: 0;
+      padding-right: 0;
+    }
+
+    a {
+      color: var(--eds-ink);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      &:hover .eds-proof__value {
+        color: var(--eds-blue-strong);
+      }
     }
   }
 
-  .eds-stat__value {
-    color: var(--eds-ink);
-    display: block;
-    font-size: 1.5rem;
+  .eds-proof__value {
+    font-size: 1.75rem;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    letter-spacing: -0.2px;
-    line-height: 1.2;
-    transition: color 150ms ease;
+    letter-spacing: -0.03em;
+    line-height: 1;
   }
 
-  .eds-stat__label {
+  .eds-proof__label {
     color: var(--eds-ink-muted);
-    display: block;
-    font-size: 0.8125rem;
-    letter-spacing: 0.1px;
-    margin-top: 0.125rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  /* The hero chart ---------------------------------------------------------------------------- */
+  /* The signature --------------------------------------------------------------------------- */
 
-  .eds-chart {
+  // The one object on the page that should look like it can be picked up: it is interactive and
+  // it carries the page's argument. The only level-2 elevation in the system.
+  .eds-sig {
     background-color: var(--eds-paper);
     border: 1px solid var(--eds-rule);
-    border-radius: var(--bs-border-radius-lg);
-    box-shadow: 0 1px 3px var(--eds-shadow-color);
+    border-radius: 14px;
+    box-shadow:
+      0 1px 2px var(--eds-shadow-color),
+      0 12px 32px -12px var(--eds-shadow-color);
     margin: 0;
-    padding: 1.25rem 1.25rem 1rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
-  .eds-chart__head {
+  .eds-sig__head {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 1.25rem 1.375rem 0;
+  }
+
+  .eds-sig__kicker {
+    color: var(--eds-ink-muted);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.71875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .eds-sig__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-top: 0.5rem;
+  }
+
+  .eds-seg {
+    background-color: var(--eds-surface);
+    border: 1px solid var(--eds-rule);
+    border-radius: var(--bs-border-radius);
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+
+    &[hidden] {
+      display: none;
+    }
+
+    button {
+      background: none;
+      border: none;
+      border-radius: 6px;
+      color: var(--eds-ink-muted);
+      cursor: pointer;
+      font-family: var(--pst-font-family-monospace);
+      font-size: 0.78125rem;
+      font-weight: 500;
+      padding: 0.4375rem 0.6875rem;
+      white-space: nowrap;
+    }
+
+    button[aria-pressed='true'] {
+      background-color: var(--eds-paper);
+      box-shadow: 0 0 0 1px var(--eds-rule);
+      color: var(--eds-ink);
+    }
+  }
+
+  .eds-sig__delta {
     align-items: baseline;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
+    gap: 0.75rem;
+    padding: 1.125rem 1.375rem 0.25rem;
   }
 
-  .eds-chart__title {
-    font-size: 1rem;
-    font-weight: 650;
-    letter-spacing: 0.4px;
-  }
-
-  .eds-chart__source {
-    color: var(--eds-ink-muted);
-    font-size: 0.75rem;
+  .eds-sig__delta-value {
+    color: var(--eds-blue-strong);
+    font-size: #{'clamp(2.25rem, 4vw, 3.25rem)'};
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
   }
 
-  .eds-chart__plot {
+  .eds-sig__delta-note {
+    color: var(--eds-ink-muted);
+    font-size: 0.9375rem;
+  }
+
+  .eds-sig__rows {
+    display: grid;
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 1.375rem 0.375rem;
+  }
+
+  .eds-sig__row {
+    align-items: baseline;
+    display: grid;
+    gap: 0.375rem 1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin: 0;
+  }
+
+  .eds-sig__name {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.2;
+
+    small {
+      color: var(--eds-ink-muted);
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .eds-sig__value {
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-align: right;
+  }
+
+  .eds-sig__bar {
+    background-color: var(--eds-surface);
+    border-radius: 99px;
+    grid-column: 1 / -1;
+    height: 8px;
+    overflow: hidden;
+
+    i {
+      border-radius: inherit;
+      display: block;
+      height: 100%;
+      transition: width 450ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+  }
+
+  // The standard model in muted ink, the cost-sensitive one in blue: what you write down.
+  .eds-sig__row--baseline .eds-sig__bar i {
+    background-color: var(--eds-ink-muted);
+    opacity: 0.55;
+  }
+
+  .eds-sig__row--cost_sensitive {
+    .eds-sig__bar i {
+      background-color: var(--eds-blue-strong);
+    }
+
+    .eds-sig__value {
+      color: var(--eds-blue-strong);
+    }
+  }
+
+  .eds-sig__plot {
+    margin: 0.625rem 1.375rem 0;
     position: relative;
+
+    &[hidden] {
+      display: none;
+    }
   }
 
-  .eds-chart__svg {
+  .eds-sig__svg {
     display: block;
     height: auto;
-    touch-action: pan-y; // Dragging across the threshold must not fight a vertical page scroll.
+    overflow: visible;
     width: 100%;
+  }
 
-    // Named parts of the drawing, so the script stays free of colour values.
-    .eds-chart-axis {
+  // Every mark the script draws carries one of these classes, so the chart follows the theme
+  // switcher without the script naming a colour.
+  .eds-sig__svg {
+    .eds-axis text {
+      fill: var(--eds-ink-muted);
+      font-family: var(--pst-font-family-monospace);
+      font-size: 10.5px;
+    }
+
+    .eds-grid line {
       stroke: var(--eds-rule);
+      stroke-width: 1;
     }
 
-    .eds-chart-tick {
-      fill: var(--eds-ink-muted);
-      font-size: 10px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .eds-chart-curve {
-      fill: none;
-      stroke: var(--eds-blue-strong);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 2.5;
-    }
-
-    // Deciding where to cut is the use side of the palette, so its marker is purple.
-    .eds-chart-optimal-line {
-      stroke: var(--eds-purple-strong);
-      stroke-dasharray: 3 4;
-      stroke-width: 1.5;
-    }
-
-    .eds-chart-optimal-dot {
-      fill: var(--eds-purple-strong);
-      stroke: var(--eds-paper);
-      stroke-width: 2.5;
-    }
-
-    // The default cut-off is not a choice the package makes, so it stays neutral.
-    .eds-chart-default-line {
-      stroke: var(--eds-ink-muted);
-      stroke-dasharray: 3 4;
-      stroke-width: 1.5;
-    }
-
-    .eds-chart-default-dot {
-      fill: var(--eds-paper);
-      stroke: var(--eds-ink-muted);
-      stroke-width: 2.5;
-    }
-
-    .eds-chart-label {
-      fill: var(--eds-ink-muted);
-      font-size: 11px;
-    }
-
-    .eds-chart-label--optimal {
-      fill: var(--eds-purple-strong);
-      font-weight: 650;
-    }
-
-    .eds-chart-value {
-      fill: var(--eds-ink);
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-      font-weight: 650;
-    }
-
-    .eds-chart-hover-line {
+    .eds-zero {
+      opacity: 0.6;
       stroke: var(--eds-ink-muted);
       stroke-width: 1;
     }
 
-    .eds-chart-hover-dot {
-      fill: var(--eds-ink);
-      stroke: var(--eds-paper);
+    .eds-curve--baseline {
+      fill: none;
+      stroke: var(--eds-ink-muted);
+      stroke-dasharray: 5 4;
+      stroke-linejoin: round;
       stroke-width: 2;
+    }
+
+    .eds-curve--cost_sensitive {
+      fill: none;
+      stroke: var(--eds-blue-strong);
+      stroke-linejoin: round;
+      stroke-width: 2.6;
+    }
+
+    .eds-label {
+      font-family: var(--pst-font-family-monospace);
+      font-size: 11px;
+    }
+
+    .eds-label--baseline {
+      fill: var(--eds-ink-muted);
+    }
+
+    .eds-label--cost_sensitive {
+      fill: var(--eds-blue-strong);
+    }
+
+    // Choosing a threshold is a decision, so the operating points are purple.
+    .eds-point {
+      fill: var(--eds-purple-strong);
+      stroke: var(--eds-paper);
+      stroke-width: 2.5;
+    }
+
+    .eds-scrub-line {
+      stroke: var(--eds-ink);
+      stroke-width: 1.25;
+    }
+
+    .eds-scrub-tag {
+      fill: var(--eds-ink);
+      font-family: var(--pst-font-family-monospace);
+      font-size: 10.5px;
+      font-weight: 600;
     }
   }
 
-  // The curve draws itself in once, left to right, the first time the page is opened.
-  .eds-chart-curve--animated {
-    animation: eds-draw 1100ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  // An invisible range input over the plot: dragging, clicking and the arrow keys all move the
+  // threshold, and assistive technology announces it as the slider it is.
+  .eds-sig__scrub {
+    cursor: ew-resize;
+    height: 100%;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    position: absolute;
+    width: 100%;
   }
 
-  .eds-chart-reveal {
-    animation: eds-fade-in 350ms ease 900ms backwards;
+  .eds-sig__plot:focus-within .eds-scrub-line {
+    stroke: var(--eds-blue-strong);
+    stroke-width: 2;
   }
 
-  .eds-chart__readout {
-    background-color: var(--eds-ink);
-    border-radius: var(--bs-border-radius-sm);
-    color: var(--eds-paper);
+  .eds-sig__hint {
+    align-items: center;
+    color: var(--eds-ink-muted);
+    display: flex;
     font-family: var(--pst-font-family-monospace);
     font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    left: 0;
-    padding: 0.25rem 0.5rem;
-    pointer-events: none;
-    position: absolute;
-    top: 0;
-    transform: translate(-50%, -130%);
-    white-space: nowrap;
+    gap: 0.5rem;
+    padding: 0.25rem 1.375rem 0;
+
+    &[hidden] {
+      display: none;
+    }
   }
 
-  // On the dark canvas `ink` is the page's own text colour, so an ink chip would read as a block
-  // of text rather than as a tooltip; it takes the raised surface and a rule instead.
-  html[data-theme='dark'] & .eds-chart__readout {
+  .eds-sig__foot {
     background-color: var(--eds-surface);
-    border: 1px solid var(--eds-rule);
-    color: var(--eds-ink);
-  }
-
-  .eds-chart__caption {
     border-top: 1px solid var(--eds-rule);
     color: var(--eds-ink-muted);
     font-size: 0.8125rem;
     line-height: 1.5;
-    margin-top: 0.875rem;
-    padding-top: 0.875rem;
+    margin-top: 1rem;
+    padding: 0.875rem 1.375rem 1rem;
 
-    strong {
-      color: var(--eds-ink);
-      font-weight: 650;
+    a {
+      font-weight: 600;
     }
   }
 
-  /* The three claims -------------------------------------------------------------------------- */
+  /* A minute with empulse ------------------------------------------------------------------- */
 
-  .eds-pillars {
+  .eds-tour {
+    align-items: start;
     display: grid;
-    gap: 1.25rem;
+    gap: #{'clamp(1.5rem, 4vw, 3.5rem)'};
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+  }
+
+  .eds-steps {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .eds-step {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--bs-border-radius-lg);
+    color: var(--eds-ink);
+    cursor: pointer;
+    display: grid;
+    font: inherit;
+    gap: 0.25rem 0.875rem;
+    grid-template-columns: 2.125rem minmax(0, 1fr);
+    padding: 1.125rem 1.125rem 1.125rem 0.875rem;
+    text-align: left;
+    width: 100%;
+
+    &:hover {
+      background-color: var(--eds-surface);
+    }
+
+    &[aria-selected='true'] {
+      background-color: var(--eds-surface);
+      border-color: var(--eds-rule);
+    }
+  }
+
+  .eds-step__index {
+    align-items: center;
+    background-color: var(--eds-blue-soft);
+    border-radius: var(--bs-border-radius-pill);
+    color: var(--eds-ink);
+    display: flex;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    grid-row: span 2;
+    height: 1.875rem;
+    justify-content: center;
+    width: 1.875rem;
+  }
+
+  .eds-step[aria-selected='true'] .eds-step__index {
+    background-color: var(--eds-blue-strong);
+    color: var(--eds-paper);
+  }
+
+  .eds-step__title {
+    font-size: 1.1875rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  .eds-step__label {
+    color: var(--eds-purple-strong);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.71875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .eds-step__blurb {
+    color: var(--eds-ink-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .eds-step:not([aria-selected='true']) .eds-step__blurb {
+    display: none;
+  }
+
+  .eds-window {
+    background-color: var(--eds-paper);
+    border: 1px solid var(--eds-rule);
+    border-radius: var(--bs-border-radius-lg);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .eds-window__bar {
+    border-bottom: 1px solid var(--eds-rule);
+    display: flex;
+  }
+
+  .eds-window__file {
+    align-items: center;
+    border-right: 1px solid var(--eds-rule);
+    display: flex;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    gap: 0.5rem;
+    padding: 0.9375rem 1.125rem;
+
+    i {
+      color: var(--eds-blue-strong);
+    }
+  }
+
+  .eds-panel[hidden] {
+    display: none;
+  }
+
+  // The code region sits on paper inside the window rather than on the `surface` every other code
+  // block uses, so the window reads as one object. The syntax colours are Pygments' own, the same
+  // as every code block on the site.
+  .eds-window .highlight,
+  .eds-mini.highlight {
+    background-color: var(--eds-paper);
+    border-radius: 0;
+  }
+
+  .eds-window pre {
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    counter-reset: eds-line;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    margin: 0;
+    min-height: 18.75rem;
+    overflow-x: auto;
+    padding: 1.375rem 1.5rem 1.375rem 0;
+  }
+
+  // Lines arrive from the extension as inline-block spans joined by real newlines, so a copied
+  // selection carries no line numbers and no filler characters.
+  .eds-window .eds-line {
+    display: inline-block;
+    min-height: 1.75em;
+
+    &::before {
+      color: var(--eds-rule);
+      content: counter(eds-line);
+      counter-increment: eds-line;
+      display: inline-block;
+      padding-right: 1.25rem;
+      text-align: right;
+      user-select: none;
+      width: 3.25rem;
+    }
+  }
+
+  .eds-out {
+    align-items: baseline;
+    background-color: var(--eds-surface);
+    border-top: 1px solid var(--eds-rule);
+    display: grid;
+    gap: 0.25rem 1.125rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 1.125rem 1.5rem;
+  }
+
+  .eds-out__label {
+    color: var(--eds-purple-strong);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.71875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .eds-out__value {
+    background: none;
+    border: none;
+    color: var(--eds-ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+    padding: 0;
+  }
+
+  .eds-out__note {
+    color: var(--eds-ink-muted);
+    font-size: 0.875rem;
+    grid-column: 2;
+
+    a {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  .eds-tour__foot {
+    color: var(--eds-ink-muted);
+    font-size: 0.875rem;
+    margin-top: 1.125rem;
+  }
+
+  // Inline literals in landing-page prose take the system's chip.
+  .eds-cell > p a code {
+    color: var(--eds-blue-link);
+  }
+
+  .eds-tour__foot code,
+  .eds-cell > p code {
+    background-color: var(--eds-blue-soft);
+    border: none;
+    border-radius: var(--bs-border-radius-sm);
+    color: var(--eds-ink);
+    font-size: 0.875em;
+    padding: 2px 6px;
+  }
+
+  /* Bento ----------------------------------------------------------------------------------- */
+
+  // Cells of different sizes on a 12-column grid, so the section does not fall into the generic
+  // three equal columns. Every cell holds a real artefact rather than an icon.
+  .eds-bento {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .eds-cell {
+    background-color: var(--eds-paper);
+    border: 1px solid var(--eds-rule);
+    border-radius: 16px;
+    color: var(--eds-ink);
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    min-width: 0;
+    padding: #{'clamp(1.375rem, 2.4vw, 2rem)'};
+    transition: border-color 150ms ease;
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    > p:not(.eds-eyebrow):not(.eds-big) {
+      color: var(--eds-ink-muted);
+      font-size: 0.96875rem;
+      max-width: 36em;
+    }
+  }
+
+  .eds-cell__more {
+    color: var(--eds-blue-link);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-top: auto;
+    padding-top: 0.375rem;
+  }
+
+  .eds-cell--metrics {
+    grid-column: span 7;
+    grid-row: span 2;
+  }
+
+  .eds-cell--models,
+  .eds-cell--decide {
+    grid-column: span 5;
+  }
+
+  .eds-cell--data {
+    grid-column: span 8;
+  }
+
+  .eds-cell--sklearn {
+    grid-column: span 4;
+  }
+
+  .eds-chips {
+    align-content: flex-start;
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .eds-chip {
+    background-color: var(--eds-paper);
+    border: 1px solid var(--eds-rule);
+    border-radius: 6px;
+    color: var(--eds-ink);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    line-height: 1;
+    padding: 0.4375rem 0.5625rem;
+  }
+
+  // A chip that names an API object links to its reference entry.
+  a.eds-chip {
+    transition: border-color 150ms ease;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--eds-blue-strong);
+      color: var(--eds-ink);
+    }
+  }
+
+  .eds-chip--purple {
+    background-color: var(--eds-purple-soft);
+    border-color: transparent;
+  }
+
+  .eds-big {
+    color: var(--eds-blue-strong);
+    font-size: #{'clamp(3.5rem, 6vw, 5.25rem)'};
+    font-weight: 600;
+    letter-spacing: -0.05em;
+    line-height: 0.9;
+
+    small {
+      color: var(--eds-ink-muted);
+      font-size: 1.125rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-left: 0.625rem;
+    }
+  }
+
+  // The cost matrix in the same layout as everywhere in the docs: rows the prediction, columns the
+  // actual outcome. Correct outcomes and mistakes differ by tint, never by hue.
+  .eds-matrix {
+    display: grid;
+    font-family: var(--pst-font-family-monospace);
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+  }
+
+  // Every row shares one fixed row-header column, so the column headers sit over their cells. With
+  // `auto` each row would size that column to its own header, and the empty corner of the header
+  // row would shift the column headings left of the cells they name.
+  .eds-matrix__row {
+    display: grid;
+    gap: 0.375rem;
+    grid-template-columns: 6.25rem minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .eds-matrix__head {
+    align-self: end;
+    color: var(--eds-ink-muted);
+    font-size: 0.71875rem;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 1rem;
+    text-transform: uppercase;
+  }
+
+  .eds-matrix__head--row {
+    align-self: center;
+    padding: 0 0.625rem 0 0;
+    text-align: right;
+  }
+
+  .eds-matrix__cell {
+    align-content: space-between;
+    background-color: var(--eds-surface);
+    border-radius: 10px;
+    color: var(--eds-ink-muted);
+    display: grid;
+    gap: 0.375rem;
+    min-height: 6.75rem;
+    padding: 1.125rem 1rem;
+
+    small {
+      font-size: 0.75rem;
+    }
+
+    b {
+      font-family: var(--pst-font-family-base);
+      font-size: #{'clamp(1.25rem, 2.2vw, 1.75rem)'};
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    em {
+      color: var(--eds-ink-muted);
+      font-size: 0.8125rem;
+      font-style: normal;
+    }
+  }
+
+  .eds-matrix__cell--cost {
+    background-color: var(--eds-blue-soft);
+    color: var(--eds-ink);
+  }
+
+  // The matrix's results in the walkthrough, as three tiles: proof that the drawing above is a
+  // working object. Paper on a rule, so they read as outputs rather than as more matrix cells.
+  .eds-results__caption {
+    color: var(--eds-ink-muted);
+    font-size: 0.875rem;
+    margin-top: 0.375rem;
+  }
+
+  .eds-results {
+    display: grid;
+    gap: 0.375rem;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     list-style: none;
     margin: 0;
     padding: 0;
   }
 
-  .eds-pillar {
-    background-color: var(--eds-paper);
-    border: 1px solid var(--eds-rule);
-    border-radius: var(--bs-border-radius-lg);
-    box-shadow: 0 1px 3px var(--eds-shadow-color);
-    display: flex;
-    flex-direction: column;
-    padding: 1.75rem 1.5rem 1.5rem;
-    transition: border-color 150ms ease;
-
-    &:hover {
-      border-color: var(--eds-blue-strong);
-    }
-  }
-
-  // The one element on the page that is a `<p>` directly inside an `<li>`, which is what the two
-  // rules named at the top of this file target. `margin-top` is stated rather than left to the
-  // reset, because only a selector of this weight clears the 0.25rem the theme would otherwise
-  // add to every card but the first — the difference that stopped the three cards lining up.
-  .eds-pillar__kicker {
-    align-items: center;
-    color: var(--eds-ink-muted);
-    display: flex;
-    font-size: 0.8125rem;
-    font-weight: 650;
-    gap: 0.625rem;
-    letter-spacing: 0.4px;
-    margin-block: 0 0.875rem;
-    text-transform: uppercase;
-  }
-
-  // The same pill the step cards in the guide use, so a number means the same thing everywhere.
-  .eds-pillar__index {
-    align-items: center;
-    background-color: var(--eds-blue-soft);
-    border-radius: var(--bs-border-radius-pill);
-    color: var(--eds-ink);
-    display: flex;
-    flex: none;
-    font-variant-numeric: tabular-nums;
-    height: 1.75rem;
-    justify-content: center;
-    width: 1.75rem;
-  }
-
-  .eds-pillar__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: -0.1px;
-    line-height: 1.35;
-    margin-bottom: 0.625rem;
-  }
-
-  // Grows to fill whatever height the tallest card in the row sets, which keeps the three links
-  // that follow on one line across the row.
-  .eds-pillar__body {
-    color: var(--eds-ink-muted);
-    flex-grow: 1;
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    margin-bottom: 1.25rem;
-  }
-
-  .eds-pillar__link,
-  .eds-panel__link {
-    color: var(--eds-blue-link);
-    font-size: 0.9375rem;
-    font-weight: 600;
-
-    span {
-      display: inline-block;
-      transition: transform 150ms ease;
-    }
-
-    &:hover span,
-    &:focus-visible span {
-      transform: translateX(3px);
-    }
-  }
-
-  /* The code walkthrough ---------------------------------------------------------------------- */
-
-  .eds-tour {
-    margin-top: 5rem;
-    position: relative;
-
-    // The one long stretch of the page that sits on bare canvas between two tinted bands.
-    &::before {
-      @include eds-ambient(0.5, '52rem 34rem at 20% 38%', '44rem 32rem at 82% 62%');
-      @include eds-ambient-layer(-4rem calc(50% - 50vw));
-    }
-  }
-
-  .eds-tour__tabs {
-    border-bottom: 1px solid var(--eds-rule);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .eds-tab {
-    align-items: center;
-    background: none;
-    border: none;
-    border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
-    color: var(--eds-ink-muted);
-    cursor: pointer;
-    display: flex;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    gap: 0.5rem;
-    min-height: 2.75rem;
-    padding: 0.5rem 1rem;
-    position: relative;
-    transition: color 150ms ease;
-
-    &:hover {
-      background-color: var(--eds-surface);
-      color: var(--eds-ink);
-    }
-
-    &[aria-selected='true'] {
-      color: var(--eds-ink);
-
-      .eds-tab__index {
-        background-color: var(--eds-blue-soft);
-        color: var(--eds-ink);
-      }
-
-      .eds-tab__progress i {
-        transform: scaleX(1);
-        transition: transform linear var(--eds-tab-duration, 0ms);
-      }
-    }
-  }
-
-  .eds-tab__index {
-    align-items: center;
-    background-color: var(--eds-surface);
-    border-radius: var(--bs-border-radius-pill);
-    color: var(--eds-ink-muted);
-    display: flex;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    height: 1.375rem;
-    justify-content: center;
-    transition:
-      background-color 150ms ease,
-      color 150ms ease;
-    width: 1.375rem;
-  }
-
-  // The tab's own underline doubles as the autoplay progress bar: the reader can see how long the
-  // step has left, which is what makes an advancing carousel legible rather than startling.
-  .eds-tab__progress {
-    background-color: transparent;
-    bottom: -1px;
-    height: 2px;
-    left: 0;
-    overflow: hidden;
-    position: absolute;
-    right: 0;
-
-    i {
-      background-color: var(--eds-purple-strong);
-      display: block;
-      height: 100%;
-      transform: scaleX(0);
-      transform-origin: left;
-      width: 100%;
-    }
-  }
-
-  .eds-tour__stage {
-    // Holds the height of the tallest panel, so switching tabs does not move the page under the
-    // reader while the walkthrough is advancing on its own.
-    min-height: 20rem;
-  }
-
-  .eds-panel {
-    align-items: start;
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-
-    &[hidden] {
-      display: none;
-    }
-
-    // Each line arrives in turn, the way it would if someone were typing it. Purely
-    // presentational: the whole snippet is in the document from the start, so it stays selectable
-    // and findable mid-animation.
-    &.is-playing .eds-line {
-      animation: eds-line-in 260ms ease backwards;
-      animation-delay: calc(var(--eds-line-index) * 70ms);
-    }
-  }
-
-  .eds-code {
-    background-color: var(--eds-surface);
-    border: 1px solid var(--eds-rule);
-    border-radius: var(--bs-border-radius);
-    // Holds roughly the tallest snippet, so a shorter step does not shrink the block and pull the
-    // rest of the section up under the reader.
-    min-height: 13rem;
-    overflow-x: auto;
-    padding: 1.25rem;
-
-    pre {
-      background: none;
-      border: none;
-      font-size: 0.875rem;
-      letter-spacing: -0.1px;
-      line-height: 1.7;
-      margin: 0;
-      padding: 0;
-    }
-  }
-
-  .eds-line {
-    // `inline-block`, not `block`: the newline between two of these is a real character in the
-    // `<pre>`, which is what a copied selection and a screen reader read, and a block element
-    // would add its own break on top of it. Inline-block is still transformable, which the
-    // per-line reveal needs, and `min-height` is what keeps an empty line an empty line.
-    display: inline-block;
-    min-height: 1.7em;
-  }
-
-  .eds-panel__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: -0.1px;
-    margin-bottom: 0.5rem;
-  }
-
-  .eds-panel__blurb {
-    color: var(--eds-ink-muted);
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    margin-bottom: 1.25rem;
-  }
-
-  // The result reads as an output, so it takes the use side of the palette.
   .eds-result {
-    background-color: var(--eds-purple-soft);
-    border-radius: var(--bs-border-radius);
-    margin-bottom: 1.25rem;
-    padding: 1rem 1.125rem;
+    border: 1px solid var(--eds-rule);
+    border-radius: 10px;
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    min-width: 0;
+    padding: 0.875rem 1rem;
   }
 
   .eds-result__label {
     color: var(--eds-ink-muted);
-    font-size: 0.75rem;
-    font-weight: 650;
-    letter-spacing: 0.4px;
-    margin-bottom: 0.375rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
-  .eds-result__value code {
-    background: none;
-    color: var(--eds-ink);
-    font-size: 1.0625rem;
+  .eds-result__value {
+    color: var(--eds-blue-strong);
+    font-size: #{'clamp(1.25rem, 2vw, 1.625rem)'};
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
-    padding: 0;
-    word-break: break-word;
+    letter-spacing: -0.03em;
+    line-height: 1;
   }
 
-  .eds-result__note {
-    color: var(--eds-ink-muted);
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    margin-top: 0.5rem;
+  // The decision tile is purple: choosing a threshold is something you do with the matrix.
+  .eds-result:last-child .eds-result__value {
+    color: var(--eds-purple-strong);
   }
 
-  .eds-tour__foot {
+  .eds-result__model {
     color: var(--eds-ink-muted);
-    font-size: 0.8125rem;
-    margin-top: 1.25rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
 
-    code {
-      background-color: var(--eds-blue-soft);
-      border-radius: var(--bs-border-radius-sm);
-      color: var(--eds-ink);
-      font-size: 0.8125rem;
-      padding: 1px 5px;
+  a.eds-result__model:hover {
+    color: var(--eds-blue-link);
+  }
+
+  .eds-threshold {
+    height: 4.125rem;
+    margin-top: 0.375rem;
+    position: relative;
+  }
+
+  .eds-threshold__track {
+    background-color: var(--eds-surface);
+    border: 1px solid var(--eds-rule);
+    border-radius: 99px;
+    height: 6px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 1.875rem;
+  }
+
+  .eds-threshold__pin {
+    display: grid;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.71875rem;
+    gap: 0.25rem;
+    justify-items: center;
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+
+    i {
+      background-color: currentColor;
+      height: 1.625rem;
+      width: 2px;
     }
   }
 
-  /* Where to go next -------------------------------------------------------------------------- */
+  .eds-threshold__pin--default {
+    color: var(--eds-ink-muted);
+  }
 
-  .eds-destinations {
+  .eds-threshold__pin--optimal {
+    color: var(--eds-purple-strong);
+
+    span {
+      transform: translateX(28%);
+    }
+  }
+
+  .eds-threshold__scale {
+    color: var(--eds-ink-muted);
+    display: flex;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.6875rem;
+    justify-content: space-between;
+  }
+
+  .eds-table-wrap {
+    margin-top: 0.25rem;
+    overflow-x: auto;
+  }
+
+  .eds-table {
+    border-collapse: collapse;
+    font-size: 0.90625rem;
+    width: 100%;
+
+    th {
+      border-bottom: 1px solid var(--eds-rule);
+      color: var(--eds-ink-muted);
+      font-family: var(--pst-font-family-monospace);
+      font-size: 0.71875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      border-bottom: 1px solid var(--eds-rule);
+      padding: 0.75rem;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    td a {
+      color: var(--eds-ink);
+      font-weight: 500;
+
+      &:hover {
+        color: var(--eds-blue-link);
+      }
+    }
+
+    code {
+      background: none;
+      border: none;
+      color: var(--eds-blue-link);
+      font-size: 0.8125rem;
+      padding: 0;
+    }
+  }
+
+  .eds-table__source {
+    color: var(--eds-ink-muted);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.75rem;
+  }
+
+  .eds-mini {
+    border-radius: var(--bs-border-radius);
+    margin: 0;
+
+    pre {
+      background-color: var(--eds-surface);
+      border: none;
+      border-radius: var(--bs-border-radius);
+      font-size: 0.84375rem;
+      line-height: 1.7;
+      margin: 0;
+      overflow-x: auto;
+      padding: 1rem;
+    }
+  }
+
+  /* Built on research ----------------------------------------------------------------------- */
+
+  .eds-papers {
+    border-top: 1px solid var(--eds-rule);
+    column-gap: 3.5rem;
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     list-style: none;
     margin: 0;
     padding: 0;
   }
 
-  .eds-destination a {
-    background-color: var(--eds-paper);
+  .eds-paper {
+    align-content: start;
+    border-bottom: 1px solid var(--eds-rule);
+    display: grid;
+    gap: 0.25rem 1.125rem;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    margin: 0;
+    padding: 1.375rem 0;
+
+    .eds-chips {
+      grid-column: 2;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .eds-paper__year {
+    color: var(--eds-purple-strong);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.875rem;
+    font-weight: 600;
+    grid-row: span 3;
+    line-height: 1.5;
+  }
+
+  .eds-paper__title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+
+  .eds-paper__meta {
+    color: var(--eds-ink-muted);
+    font-size: 0.875rem;
+  }
+
+  .eds-cite {
+    align-items: center;
+    background-color: var(--eds-surface);
     border: 1px solid var(--eds-rule);
     border-radius: var(--bs-border-radius-lg);
-    box-shadow: 0 1px 3px var(--eds-shadow-color);
-    color: inherit;
-    display: block;
-    height: 100%;
-    padding: 1.5rem 1.25rem;
-    transition: border-color 150ms ease;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.875rem 2rem;
+    justify-content: space-between;
+    margin-top: 2.25rem;
+    padding: 1.375rem 1.5rem;
 
-    &:hover,
-    &:focus-visible {
-      border-color: var(--eds-blue-strong);
+    span {
+      color: var(--eds-ink-muted);
+    }
+
+    code {
+      background: none;
+      border: none;
+      color: var(--eds-blue-link);
+      font-size: 0.875rem;
+      padding: 0;
     }
   }
 
-  .eds-destination__icon {
-    color: var(--eds-blue-strong);
-    display: block;
-    font-size: 1.25rem;
-    margin-bottom: 0.875rem;
+  /* Closing call to action ------------------------------------------------------------------- */
+
+  .eds-cta {
+    align-items: end;
+    display: grid;
+    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+
+    h2 {
+      font-size: #{'clamp(2.5rem, 5.6vw, 5rem)'};
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
   }
 
-  .eds-destination__title {
-    display: block;
-    font-size: 1rem;
+  .eds-cta__side {
+    display: grid;
+    gap: 0.875rem;
+    justify-items: start;
+  }
+
+  .eds-next {
+    border-top: 1px solid var(--eds-rule);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: #{'clamp(3rem, 6vw, 5rem)'};
+
+    a {
+      color: var(--eds-ink);
+      display: grid;
+      gap: 0.375rem;
+      padding: 1.375rem 1.375rem 0.375rem 0;
+
+      + a {
+        border-left: 1px solid var(--eds-rule);
+        padding-left: 1.375rem;
+      }
+
+      &:hover .eds-next__title {
+        color: var(--eds-blue-strong);
+      }
+    }
+  }
+
+  .eds-next__title {
+    display: flex;
+    font-size: 1.125rem;
     font-weight: 600;
-    margin-bottom: 0.375rem;
+    gap: 0.5rem;
+    justify-content: space-between;
+    letter-spacing: -0.015em;
   }
 
-  .eds-destination__body {
+  .eds-next__body {
     color: var(--eds-ink-muted);
-    display: block;
-    font-size: 0.875rem;
-    line-height: 1.55;
+    font-size: 0.90625rem;
   }
 
-  /* Responsive -------------------------------------------------------------------------------- */
+  /* Responsive ------------------------------------------------------------------------------ */
 
-  @media (max-width: 1200px) {
-    .eds-destinations {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 1024px) {
-    .eds-hero {
-      gap: 2.5rem;
-      grid-template-columns: minmax(0, 1fr);
-      padding-block: 3rem 0;
-    }
-
-    .eds-chart {
-      max-width: 34rem;
-    }
-
-    .eds-pillars {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .eds-panel {
+  @media (max-width: 1100px) {
+    .eds-hero__grid {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
 
-    .eds-tour__stage {
-      min-height: 0;
+  @media (max-width: 1000px) {
+    .eds-cell--metrics,
+    .eds-cell--models,
+    .eds-cell--decide,
+    .eds-cell--data,
+    .eds-cell--sklearn {
+      grid-column: span 12;
+      grid-row: auto;
     }
   }
 
-  @media (max-width: 720px) {
-    --eds-gutter: 1rem;
-
-    .eds-band {
-      margin-top: 3.5rem;
-      padding-block: 3rem;
-    }
-
-    .eds-hero + .eds-band {
-      margin-top: 2rem;
-    }
-
+  @media (max-width: 960px) {
     .eds-tour {
-      margin-top: 3.5rem;
-    }
-
-    .eds-pillars,
-    .eds-destinations {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .eds-stats {
-      gap: 1.25rem 2rem;
+    .eds-step:not([aria-selected='true']) .eds-step__blurb {
+      display: block;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .eds-head--split,
+    .eds-cta {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eds-papers {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eds-next {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+      a:nth-child(3) {
+        border-left: none;
+        padding-left: 0;
+      }
+    }
+  }
+
+  // The motto's line breaks are for wide screens; on a phone it flows as one sentence.
+  @media (max-width: 700px) {
+    .eds-br-wide {
+      display: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .eds-install {
+      flex: 1 1 100%;
     }
 
     .eds-btn {
-      flex-grow: 1;
-      justify-content: center;
+      flex: 1 1 auto;
     }
 
-    // The tab strip scrolls rather than wrapping onto three rows on a phone.
-    .eds-tour__tabs {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
+    .eds-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .eds-tab {
-      flex: none;
+    .eds-proof__item {
+      margin-right: 0.625rem;
+      padding-right: 0.625rem;
+    }
+
+    .eds-proof__value {
+      font-size: 1.3125rem;
+    }
+
+    .eds-proof__label {
+      font-size: 0.65625rem;
+    }
+
+    .eds-sig__head,
+    .eds-sig__rows,
+    .eds-sig__delta,
+    .eds-sig__hint,
+    .eds-sig__foot {
+      padding-inline: 1rem;
+    }
+
+    .eds-sig__plot {
+      margin-inline: 0.75rem;
+    }
+
+    .eds-matrix__row {
+      grid-template-columns: 4.75rem minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .eds-matrix__head {
+      padding-inline: 0.75rem;
+    }
+
+    .eds-matrix__head--row {
+      padding: 0 0.5rem 0 0;
+    }
+
+    .eds-matrix__cell {
+      min-height: 0;
+      padding: 0.875rem 0.75rem;
+    }
+
+    .eds-results {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eds-next {
+      grid-template-columns: minmax(0, 1fr);
+
+      a + a {
+        border-left: none;
+        border-top: 1px solid var(--eds-rule);
+        padding-left: 0;
+      }
     }
   }
-
-  /* Motion ------------------------------------------------------------------------------------ */
 
   @media (prefers-reduced-motion: reduce) {
-    .eds-chart-curve--animated,
-    .eds-chart-reveal,
-    .eds-panel.is-playing .eds-line {
+    .eds-wind__streak,
+    .eds-sig__bar i,
+    .eds-btn__arrow {
       animation: none;
-    }
-
-    .eds-tab[aria-selected='true'] .eds-tab__progress i {
       transition: none;
     }
-
-    * {
-      transition-duration: 1ms !important;
-    }
-  }
-}
-
-/* Keyframes ------------------------------------------------------------------------------------ */
-
-// The second exception to the nesting rule: keyframes are global by name and cannot be scoped.
-
-@keyframes eds-draw {
-  from {
-    stroke-dashoffset: var(--eds-path-length);
-  }
-
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes eds-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes eds-line-in {
-  from {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
   }
 }

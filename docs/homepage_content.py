@@ -13,6 +13,9 @@ template has two reasons:
 Every ``:ref:`` target named here has to exist; ``sphinxext/homepage.py`` resolves them through
 Sphinx's own reference machinery, so a renamed label fails the ``-W`` build rather than shipping a
 dead link.
+
+Headings mark their one emphasised word with asterisks (``*value*``). The extension turns that
+into the landing page's emphasis style, so the template never has to know which word it is.
 """
 
 from __future__ import annotations
@@ -23,64 +26,30 @@ from typing import Final, NamedTuple
 
 EYEBROW: Final[str] = 'Cost-sensitive machine learning for scikit-learn'
 
-MOTTO: Final[str] = 'Not every mistake costs the same.'
+# `|` marks where the motto breaks on a wide screen; on a phone it flows as one sentence.
+MOTTO: Final[str] = 'Optimize|for *value*,|not stats.'
 
 LEAD: Final[str] = (
-    'Accuracy, F1 and AUC price a false positive and a false negative the same. Your business '
-    'does not. Empulse lets you write down what each outcome is actually worth, then '
-    '<strong>evaluate</strong>, <strong>train</strong> and <strong>threshold</strong> your models '
-    'as scikit-learn estimators.'
+    'Accuracy, F1 and AUC price every mistake the same. Your business does not. Write down what '
+    'each outcome costs, then <strong>evaluate</strong>, <strong>train</strong> and '
+    '<strong>threshold</strong> your models for profit, with the scikit-learn API you already know.'
 )
 
 INSTALL_COMMAND: Final[str] = 'pip install empulse'
 
-# --- The three selling points --------------------------------------------------------------
-
-
-class Pillar(NamedTuple):
-    """One of the three claims the homepage makes, with the guide page that backs it up."""
-
-    kicker: str
-    title: str
-    body: str
-    link_text: str
-    link_ref: str
-
-
-PILLARS: Final[tuple[Pillar, ...]] = (
-    Pillar(
-        kicker='Measure',
-        title='Score models by value',
-        body=(
-            'Evaluate expected cost, savings, or profit. Use prebuilt metrics for churn, customer '
-            'acquisition, and credit scoring, or define a custom cost matrix.'
-        ),
-        link_text='Measuring a model',
-        link_ref='measuring',
-    ),
-    Pillar(
-        kicker='Train',
-        title='Optimise the cost matrix directly',
-        body=(
-            'Train logistic regression, gradient boosting, and trees to minimise cost instead of '
-            'log-loss. Costs can vary per customer.'
-        ),
-        link_text='Training a model',
-        link_ref='training',
-    ),
-    Pillar(
-        kicker='Decide',
-        title='Tune decision thresholds',
-        body=(
-            'Find the probability threshold or population fraction that minimizes total cost, then '
-            'wrap any classifier to apply it.'
-        ),
-        link_text='Making a decision',
-        link_ref='deciding',
-    ),
+# The signature beside the motto. Its numbers come from `docs/_static/data/homepage_hero.json`,
+# which `scripts/figures/homepage_data.py` computes with Empulse; only the words live here.
+SIGNATURE_KICKER: Final[str] = 'Churn retention'
+SIGNATURE_TITLE: Final[str] = 'Same data, same features. More profit.'
+SIGNATURE_FOOTNOTE: Final[str] = (
+    "Profit is the retention cost saved compared with contacting nobody, using each customer's own "
+    'costs. Thresholds are chosen on the training split.'
 )
 
 # --- The code walkthrough --------------------------------------------------------------------
+
+TOUR_TITLE: Final[str] = 'A minute with *empulse*.'
+TOUR_LEAD: Final[str] = 'Four scikit-learn steps from a business question to a decision that pays.'
 
 # Not displayed. It gives the walkthrough the names an ordinary scikit-learn script would already
 # have bound, so each step below can stay short enough to read in one glance. The caption under
@@ -88,7 +57,7 @@ PILLARS: Final[tuple[Pillar, ...]] = (
 SETUP: Final[str] = """
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -167,7 +136,7 @@ expected_cost(y_test, y_score)
     Step(
         label='Train',
         title='Train on the cost metric',
-        blurb='Pass the metric directly as the training loss function.',
+        blurb='Pass the metric directly as the training loss, so the model minimizes the cost you defined.',
         code="""from empulse.models import CSLogitClassifier
 
 model = CSLogitClassifier(loss=expected_cost).fit(X_train, y_train)
@@ -176,7 +145,7 @@ expected_cost(y_test, model.predict_proba(X_test)[:, 1])
 """,
         result_of='expected_cost(y_test, model.predict_proba(X_test)[:, 1])',
         result='9.37',
-        result_note='Expected cost drops to 9.37 euros per customer, an 8% reduction over the baseline on the same test data.',
+        result_note='Expected cost drops to 9.37 euros per customer, an 8% reduction over the baseline.',
         link_text='Training a model',
         link_ref='training',
     ),
@@ -199,16 +168,207 @@ decider.threshold_
     ),
 )
 
+# --- Everything you need ------------------------------------------------------------------------
+
+FEATURES_TITLE: Final[str] = 'Put a *price* on every outcome.'
+FEATURES_LEAD: Final[str] = (
+    'One cost matrix carries through evaluation, training and the final decision, so the model you '
+    'ship is judged by the number your business reports.'
+)
+
+
+class MetricResult(NamedTuple):
+    """One result tile on the metrics card: a number the quick tour's code produces.
+
+    ``value`` is what the tile prints and ``value_of`` the expression it is the value of, evaluated
+    once the walkthrough has run; ``tests/test_homepage_snippets.py`` checks the two against each
+    other, so a tile cannot drift away from the code. Costs are totals over the test customers
+    rather than per customer, so they read on the same scale as the €200 in the matrix above them
+    and the hero's profit figures. ``sklearn_target`` names the model's intersphinx target when it
+    is a scikit-learn class rather than an Empulse one.
+    """
+
+    label: str
+    model: str
+    value: str
+    value_of: str
+    sklearn_target: str | None = None
+
+
+# The walkthrough's `train_test_split` leaves this many test customers; the test checks it.
+TOUR_TEST_CUSTOMERS: Final[int] = 2814
+
+METRIC_RESULTS_CAPTION: Final[str] = (
+    f"The same matrix, put to work on the quick tour's {TOUR_TEST_CUSTOMERS:,} test customers:"
+)
+METRIC_RESULTS: Final[tuple[MetricResult, ...]] = (
+    MetricResult(
+        'Total expected cost',
+        'LogisticRegression',
+        '€28,765',
+        'expected_cost(y_test, baseline.predict_proba(X_test)[:, 1]) * len(y_test)',
+        sklearn_target='sklearn.linear_model.LogisticRegression',
+    ),
+    MetricResult(
+        'Total expected cost',
+        'CSLogitClassifier',
+        '€26,379',
+        'expected_cost(y_test, model.predict_proba(X_test)[:, 1]) * len(y_test)',
+    ),
+    MetricResult('Optimal threshold', 'CSThresholdClassifier', '0.048', 'decider.threshold_'),
+)
+
+# The metrics card's snippet: the matrix drawn above it, written down. It is the walkthrough's
+# first step without the defaults, and runs after that step, where `CostMatrix` is imported.
+COST_MATRIX_SNIPPET: Final[str] = """CostMatrix().add_fp_cost('incentive').add_fn_cost('clv')
+"""
+
+# The estimators named on the training card. The count beside them is read from
+# `empulse.models.__all__` at build time, so adding a model never leaves the number behind.
+ESTIMATOR_HIGHLIGHTS: Final[tuple[str, ...]] = (
+    'CSLogitClassifier',
+    'CSBoostClassifier',
+    'B2BoostClassifier',
+    'CSTreeClassifier',
+    'CSForestClassifier',
+    'ProfTreeClassifier',
+    'ProfLogitClassifier',
+)
+
+# The scikit-learn card's snippet. It runs after the walkthrough's steps, in the same namespace, so
+# `expected_cost`, `X_train` and `y_train` are already bound and `cross_val_score` is imported by
+# `SETUP`. The scikit-learn names in the card's text link into scikit-learn's own documentation and
+# are examples, so the sentence around them says so.
+SKLEARN_LEAD: Final[str] = (
+    "Estimators, metrics and samplers follow scikit-learn's conventions, so they slot into the tools you "
+    'already use:'
+)
+SKLEARN_TAIL: Final[str] = 'and the rest of the ecosystem.'
+SKLEARN_TOOLS: Final[tuple[tuple[str, str, str], ...]] = (
+    ('Pipeline', 'py:class', 'sklearn.pipeline.Pipeline'),
+    ('GridSearchCV', 'py:class', 'sklearn.model_selection.GridSearchCV'),
+    ('cross_val_score', 'py:function', 'sklearn.model_selection.cross_val_score'),
+)
+
+PIPELINE_SNIPPET: Final[str] = """pipe = make_pipeline(
+    StandardScaler(),
+    CSLogitClassifier(loss=expected_cost),
+)
+cross_val_score(pipe, X_train, y_train)
+"""
+
+
+class DatasetHighlight(NamedTuple):
+    """One row of the datasets card: a few loaders, not the full list, which grows each release."""
+
+    name: str
+    problem: str
+    loader: str
+    source: str
+    ref: str
+
+
+DATASET_HIGHLIGHTS: Final[tuple[DatasetHighlight, ...]] = (
+    DatasetHighlight('TV subscriptions', 'Churn', 'load_churn_tv_subscriptions', 'Bundled', 'churn_tv_subscriptions'),
+    DatasetHighlight(
+        'Bank telemarketing', 'Upsell', 'load_upsell_bank_telemarketing', 'Bundled', 'upsell_bank_telemarketing'
+    ),
+    DatasetHighlight('PAKDD', 'Credit scoring', 'load_credit_scoring_pakdd', 'Bundled', 'credit_scoring_pakdd'),
+    DatasetHighlight('Credit card fraud', 'Fraud', 'fetch_credit_card_fraud', 'Downloaded', 'credit_card_fraud'),
+    DatasetHighlight('KDD Cup 1998', 'Direct mailing', 'fetch_kdd98', 'Downloaded', 'kdd98'),
+)
+
+# --- Built on research ---------------------------------------------------------------------------
+
+RESEARCH_TITLE: Final[str] = 'Methods from *peer-reviewed* papers.'
+RESEARCH_LEAD: Final[str] = (
+    'Every estimator and metric implements a published method, with the reference in its '
+    'docstring. Empulse puts them behind one consistent API.'
+)
+
+
+class Paper(NamedTuple):
+    """A paper behind one of the package's estimators or metrics, as cited in its docstring."""
+
+    year: int
+    title: str
+    authors: str
+    venue: str
+    implements: tuple[str, ...]
+
+
+PAPERS: Final[tuple[Paper, ...]] = (
+    Paper(
+        2013,
+        'A novel profit maximizing metric for measuring classification performance of customer churn '
+        'prediction models',
+        'Verbraken, Verbeke & Baesens',
+        'IEEE Transactions on Knowledge and Data Engineering',
+        ('empc_score', 'mpc_score'),
+    ),
+    Paper(
+        2014,
+        'Development and application of consumer credit scoring models using profit-based '
+        'classification measures',
+        'Verbraken, Bravo, Weber & Baesens',
+        'European Journal of Operational Research',
+        ('empcs_score', 'mpcs_score'),
+    ),
+    Paper(
+        2015,
+        'Example-dependent cost-sensitive decision trees',
+        'Correa Bahnsen, Aouada & Ottersten',
+        'Expert Systems with Applications',
+        ('CSTreeClassifier',),
+    ),
+    Paper(
+        2017,
+        'Profit maximizing logistic model for customer churn prediction using genetic algorithms',
+        'Stripling, vanden Broucke, Antonio, Baesens & Snoeck',
+        'Swarm and Evolutionary Computation',
+        ('ProfLogitClassifier',),
+    ),
+    Paper(
+        2020,
+        'Profit-based churn prediction based on minimax probability machines',
+        'Maldonado, López & Vairetti',
+        'European Journal of Operational Research',
+        ('ProfMPMClassifier',),
+    ),
+    Paper(
+        2022,
+        'Instance-dependent cost-sensitive learning for detecting transfer fraud',
+        'Höppner, Baesens, Verbeke & Verdonck',
+        'European Journal of Operational Research',
+        ('CSLogitClassifier',),
+    ),
+    Paper(
+        2022,
+        'B2Boost: instance-dependent profit-driven modelling of B2B churn',
+        'Janssens, Bogaert, Bagué & Van den Poel',
+        'Annals of Operations Research',
+        ('B2BoostClassifier', 'empb_score'),
+    ),
+    Paper(
+        2025,
+        'Profit-driven pre-processing in B2B customer churn modeling using fairness techniques',
+        'Rahman, Janssens & Bogaert',
+        'Journal of Business Research',
+        ('BiasResamplingClassifier', 'auepc_score'),
+    ),
+)
+
+CITATION_DOI: Final[str] = '10.5281/zenodo.11185664'
+
 # --- The closing row -------------------------------------------------------------------------
+
+CLOSING_TITLE: Final[str] = 'Start shipping models that *pay*.'
+CLOSING_BUTTON: Final[str] = 'Get started in five minutes'
 
 
 class Destination(NamedTuple):
-    """One of the four places a reader can go next from the bottom of the homepage.
+    """One of the four places a reader can go next from the bottom of the homepage."""
 
-    ``icon`` is a Font Awesome class; the theme already loads Font Awesome for its icon links.
-    """
-
-    icon: str
     title: str
     body: str
     ref: str
@@ -216,27 +376,23 @@ class Destination(NamedTuple):
 
 DESTINATIONS: Final[tuple[Destination, ...]] = (
     Destination(
-        icon='fa-solid fa-rocket',
         title='Getting Started',
-        body='Install Empulse and get a working cost-sensitive model in five minutes.',
+        body='Install Empulse and fit a working cost-sensitive model.',
         ref='getting_started',
     ),
     Destination(
-        icon='fa-solid fa-book-open',
         title='Tutorial',
-        body='A step-by-step churn example comparing baseline models and cost-sensitive pipelines.',
+        body='A churn example comparing baseline and cost-sensitive pipelines.',
         ref='tutorial',
     ),
     Destination(
-        icon='fa-solid fa-screwdriver-wrench',
         title='User Guide',
-        body='Detailed guides for models, metrics, samplers, and datasets.',
+        body='Models, metrics, samplers and datasets in depth.',
         ref='guide',
     ),
     Destination(
-        icon='fa-solid fa-code',
         title='API Reference',
-        body='The full class and function reference, with every parameter documented.',
+        body='Every class and function, with every parameter documented.',
         ref='api',
     ),
 )

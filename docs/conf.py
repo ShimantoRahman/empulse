@@ -242,11 +242,13 @@ html_theme_options = {
     'check_switcher': True,
     'pygments_light_style': 'tango',
     'pygments_dark_style': 'monokai',
+    # The cost-matrix mark as an image, with the lowercase wordmark set beside it as text and styled
+    # in custom.scss, so the logo reads inline rather than as a picture of a word.
     'logo': {
         'alt_text': 'empulse homepage',
-        'image_relative': '_static/assets/empulse_logo_light.png',
-        'image_light': '_static/assets/empulse_logo_light.png',
-        'image_dark': '_static/assets/empulse_logo_dark.png',
+        'text': 'empulse',
+        'image_light': '_static/assets/empulse_mark_light.svg',
+        'image_dark': '_static/assets/empulse_mark_dark.svg',
     },
     'surface_warnings': True,
     # -- Template placement in theme layouts ----------------------------------
@@ -278,8 +280,8 @@ html_theme_options = {
     'announcement': None,
 }
 html_short_title = 'empulse'
-html_logo = './_static/assets/empulse_logo_light.png'
-html_favicon = './_static/assets//favicon.ico'
+html_logo = './_static/assets/empulse_mark_light.svg'
+html_favicon = './_static/assets/favicon.svg'
 html_static_path = ['_static']
 # dynamically construct custom.css through sphinxcontrib.sass
 html_css_files = ['css/custom.css']

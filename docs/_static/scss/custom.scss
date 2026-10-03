@@ -23,9 +23,9 @@
 // is announced to a third-party font CDN. Licences sit beside the files in _static/fonts/.
 
 @font-face {
-  font-family: 'Inter Variable';
-  src: url('../fonts/inter-variable.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'Space Grotesk Variable';
+  src: url('../fonts/space-grotesk-variable.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
 }
@@ -140,26 +140,25 @@ html[data-theme='dark'] {
 /* Typography -------------------------------------------------------------------------------- */
 
 html {
-  --pst-font-family-base: 'Inter Variable', 'Inter', var(--pst-font-family-base-system);
-  --pst-font-family-heading: 'Inter Variable', 'Inter', var(--pst-font-family-base-system);
+  --pst-font-family-base: 'Space Grotesk Variable', 'Space Grotesk', var(--pst-font-family-base-system);
+  --pst-font-family-heading: 'Space Grotesk Variable', 'Space Grotesk', var(--pst-font-family-base-system);
   --pst-font-family-monospace: 'JetBrains Mono Variable', 'JetBrains Mono',
     var(--pst-font-family-monospace-system);
 
-  // Inter carries the whole hierarchy, so no second display face is needed. h3-h6 already match
-  // the theme's scale; only the two largest steps move.
+  // Space Grotesk carries the whole hierarchy, so no second display face is needed.
   --pst-font-size-h1: 2.75rem; // 44px - page title
-  --pst-font-size-h2: 2.25rem; // 36px - section title
-  --pst-font-size-h3: 1.75rem; // 28px - major component / API group
-  --pst-font-size-h4: 1.5rem; // 24px - subsection
-  --pst-font-size-h5: 1.25rem; // 20px - card or subsection heading
+  --pst-font-size-h2: 2.125rem; // 34px - section title
+  --pst-font-size-h3: 1.625rem; // 26px - major component / API group
+  --pst-font-size-h4: 1.375rem; // 22px - subsection
+  --pst-font-size-h5: 1.1875rem; // 19px - card or subsection heading
   --pst-font-size-h6: 1rem; // 16px - small section label
   --pst-font-size-milli: 0.875rem; // 14px - captions and metadata
-  --pst-font-weight-caption: 450;
+  --pst-font-weight-caption: 400;
 }
 
 body {
-  font-synthesis-weight: none; // Use Inter's real weights, never a synthesised light.
-  line-height: 1.5;
+  font-synthesis-weight: none; // Use the variable font's real weights, never a synthesised one.
+  line-height: 1.55;
 }
 
 /* Shape ------------------------------------------------------------------------------------- */
@@ -177,43 +176,48 @@ body {
 /* Article content --------------------------------------------------------------------------- */
 
 .bd-article {
-  // Tracking tightens as size grows, which keeps Inter compact at display sizes.
+  // Tracking tightens as size grows, which keeps Space Grotesk compact at display sizes. Page and
+  // section titles stay at 500 so a reference page never looks like the landing page.
   h1 {
-    font-weight: 350;
-    line-height: 1.12;
-    letter-spacing: -0.7px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
     margin-bottom: 2rem;
   }
 
   h2 {
-    font-weight: 400;
-    line-height: 1.16;
-    letter-spacing: -0.45px;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
     margin-bottom: 1.5rem;
   }
 
   h3 {
-    font-weight: 650;
+    font-weight: 600;
     line-height: 1.25;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.02em;
   }
 
   h4 {
     font-weight: 600;
     line-height: 1.3;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.015em;
   }
 
   h5 {
     font-weight: 600;
-    line-height: 1.4;
-    letter-spacing: -0.1px;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
   }
 
+  // The smallest heading reads as a label, so it takes the label face: mono, uppercase, tracked.
   h6 {
-    font-weight: 650;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.8125rem;
+    font-weight: 600;
     line-height: 1.35;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
   }
 
   // A readable measure, for prose only. Scoped to top-level paragraphs so that parameter
@@ -225,8 +229,8 @@ body {
   // The paragraph that opens a page reads as a lead.
   > section > h1 + p {
     font-size: 1.125rem;
-    font-weight: 450;
-    line-height: 1.6;
+    font-weight: 400;
+    line-height: 1.55;
   }
 
   // Avoid changing the aspect ratio of images; add some padding so that at least
@@ -360,6 +364,29 @@ div.admonition {
 }
 
 /* Chrome ------------------------------------------------------------------------------------ */
+
+// The logo: the cost-matrix mark set inline with a lowercase wordmark. The theme renders the mark
+// as an image and the wordmark as text, so the text is styled here rather than baked into an image.
+.navbar-brand {
+  gap: 0.32em;
+
+  img.logo__image {
+    height: 1.4rem;
+    width: auto;
+  }
+
+  .logo__title {
+    color: var(--eds-ink);
+    font-family: var(--pst-font-family-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+  }
+
+  &:hover .logo__title {
+    color: var(--eds-ink);
+  }
+}
 
 // The header shares the page background, so it needs a rule to separate it once the page scrolls.
 .bd-header {

@@ -1,29 +1,29 @@
 /**
  * Behaviour for the documentation landing page (see _templates/homepage.html).
  *
- * Three independent pieces, each of which degrades to something readable if it does not run:
+ * Three independent pieces, each of which leaves a complete page behind if it does not run:
  *
- *   * the install box's copy button, which is simply not shown as copied without it;
- *   * the hero chart, whose numbers are inlined into the page by sphinxext/homepage.py and drawn
- *     here — without the script the figure's caption still states the claim in words;
- *   * the code walkthrough, whose first step is already rendered and whose tabs are ordinary
- *     buttons, so the page never depends on the autoplay to show its code.
+ *   * the copy buttons beside the install command;
+ *   * the signature's profit chart. Its headline and both model rows are already printed by the
+ *     template from the same JSON, so without this script a reader still sees the numbers; the
+ *     script adds the chart, the threshold control and the switch between tuned and default;
+ *   * the quick tour's step tabs, which are ordinary buttons over panels that are all in the page.
  *
- * No colour is named here. Every part of the chart carries a class that _static/scss/homepage.scss
- * paints from the design system's tokens, so the figure follows the reader's light/dark toggle
- * without the script knowing anything about it.
+ * No colour is named here. Every mark the chart draws carries a class that
+ * _static/scss/homepage.scss paints from the design system's tokens, so the figure follows the
+ * reader's light/dark toggle without the script knowing anything about it.
  */
 
 (() => {
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  /* -- Install command ----------------------------------------------------------------------- */
+  /* -- Copy buttons -------------------------------------------------------------------------- */
 
   function setUpCopyButtons() {
-    document.querySelectorAll('[data-copy]').forEach((button) => {
+    document.querySelectorAll('.eds-home [data-copy]').forEach((button) => {
+      const label = button.getAttribute('aria-label');
       button.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(button.dataset.copy);
@@ -34,282 +34,232 @@
         button.setAttribute('aria-label', 'Copied');
         window.setTimeout(() => {
           button.classList.remove('is-copied');
-          button.setAttribute('aria-label', 'Copy the install command');
+          button.setAttribute('aria-label', label);
         }, 1600);
       });
     });
   }
 
-  /* -- Hero chart ---------------------------------------------------------------------------- */
+  /* -- Signature ------------------------------------------------------------------------------- */
 
-  const VIEW = { width: 440, height: 260 };
-  const PLOT = { left: 46, right: 430, top: 30, bottom: 212 };
+  const VIEW = { width: 560, height: 250 };
+  const PLOT = { left: 46, right: 546, top: 14, bottom: 220 };
+  const KEYS = ['baseline', 'cost_sensitive'];
 
-  function element(name, attributes, className) {
-    const node = document.createElementNS(SVG_NS, name);
-    Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-    if (className) node.setAttribute('class', className);
-    return node;
+  function node(name, attributes, parent) {
+    const element = document.createElementNS(SVG_NS, name);
+    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+    if (parent) parent.appendChild(element);
+    return element;
   }
 
-  function money(value) {
-    return `€${value.toFixed(2)}`;
+  function euro(value) {
+    const sign = value < 0 ? '−' : '';
+    return `${sign}€${Math.abs(Math.round(value)).toLocaleString('en-US')}`;
   }
 
-  function drawChart(figure) {
-    const dataNode = figure.querySelector('[data-eds-chart-data]');
-    const svg = figure.querySelector('[data-eds-chart-svg]');
-    if (!dataNode || !svg) return;
+  function signedEuro(value) {
+    return (value < 0 ? '−' : '+') + euro(Math.abs(value));
+  }
 
+  function shortEuro(value) {
+    if (value === 0) return '€0';
+    return `${value < 0 ? '−' : ''}€${Math.abs(value) / 1000}k`;
+  }
+
+  /** A "nice" tick step that splits `span` into roughly `count` intervals. */
+  function tickStep(span, count) {
+    const raw = span / count;
+    const magnitude = 10 ** Math.floor(Math.log10(raw));
+    const residual = raw / magnitude;
+    const nice = residual >= 5 ? 10 : residual >= 2 ? 5 : residual >= 1 ? 2 : 1;
+    return nice * magnitude;
+  }
+
+  function setUpSignature(figure) {
+    const dataNode = figure.querySelector('[data-eds-sig-data]');
+    if (!dataNode) return;
     let data;
     try {
       data = JSON.parse(dataNode.textContent);
     } catch {
-      return; // Leave the written caption standing rather than drawing something wrong.
+      return; // The rows the template printed stay as they are.
     }
 
-    const { thresholds, costs } = data;
-    if (!Array.isArray(thresholds) || thresholds.length !== costs.length) return;
+    const svg = figure.querySelector('[data-eds-sig-svg]');
+    const scrub = figure.querySelector('[data-eds-sig-scrub]');
+    const plot = figure.querySelector('[data-eds-sig-plot]');
+    const modes = figure.querySelector('[data-eds-sig-modes]');
+    const hint = figure.querySelector('[data-eds-sig-hint]');
+    const hintText = figure.querySelector('[data-eds-sig-hint-text]');
+    const delta = figure.querySelector('[data-eds-sig-delta]');
+    const note = figure.querySelector('[data-eds-sig-note]');
+    const thresholds = data.thresholds;
+    const last = thresholds.length - 1;
+    const models = data.models;
 
-    // A padded domain rather than one anchored at zero: this is a line, not a bar, and the whole
-    // point of the figure is the shape of the dip. Both axes are labelled so the padding is
-    // visible rather than implied. The padding is deeper below the minimum than above the
-    // maximum, which is what clears the room the cost-optimal callout sits in.
-    const lowest = Math.min(...costs);
-    const highest = Math.max(...costs);
-    const span = highest - lowest;
-    const yMin = lowest - span * 0.34;
-    const yMax = highest + span * 0.12;
+    // The y axis spans the interesting region: from just above the best profit down to a modest
+    // loss. Contacting nearly everyone loses far more than that, and those tails are clipped by
+    // the plot rather than squashing every other value against the axis.
+    const best = Math.max(...KEYS.flatMap((key) => models[key].profit));
+    const step = tickStep(best, 2);
+    const yMax = Math.ceil((best * 1.08) / step) * step;
+    const yMin = -yMax * 1.1;
 
-    const x = (threshold) => PLOT.left + threshold * (PLOT.right - PLOT.left);
-    const y = (cost) => PLOT.bottom - ((cost - yMin) / (yMax - yMin)) * (PLOT.bottom - PLOT.top);
+    const x = (index) => PLOT.left + (index / last) * (PLOT.right - PLOT.left);
+    const y = (value) => {
+      const clamped = Math.max(yMin - (yMax - yMin) * 0.1, Math.min(yMax, value));
+      return PLOT.top + (1 - (clamped - yMin) / (yMax - yMin)) * (PLOT.bottom - PLOT.top);
+    };
 
-    const axes = element('g', {}, 'eds-chart-axes');
-    axes.appendChild(
-      element('line', { x1: PLOT.left, y1: PLOT.bottom, x2: PLOT.right, y2: PLOT.bottom }, 'eds-chart-axis'),
-    );
+    // Axes and grid.
+    const clip = node('clipPath', { id: 'eds-sig-clip' }, node('defs', {}, svg));
+    node('rect', { x: PLOT.left, y: PLOT.top, width: PLOT.right - PLOT.left, height: PLOT.bottom - PLOT.top }, clip);
+    const grid = node('g', { class: 'eds-grid' }, svg);
+    const axis = node('g', { class: 'eds-axis' }, svg);
+    for (let value = -Math.floor(-yMin / step) * step; value <= yMax; value += step) {
+      if (value !== 0) node('line', { x1: PLOT.left, x2: PLOT.right, y1: y(value), y2: y(value) }, grid);
+      node('text', { x: PLOT.left - 8, y: y(value) + 3.5, 'text-anchor': 'end' }, axis).textContent = shortEuro(value);
+    }
     [0, 0.25, 0.5, 0.75, 1].forEach((tick) => {
-      const label = element(
-        'text',
-        { x: x(tick), y: PLOT.bottom + 16, 'text-anchor': tick === 0 ? 'start' : tick === 1 ? 'end' : 'middle' },
-        'eds-chart-tick',
-      );
-      label.textContent = tick.toFixed(2);
-      axes.appendChild(label);
+      const anchor = tick === 0 ? 'start' : tick === 1 ? 'end' : 'middle';
+      const label = node('text', { x: x(tick * last), y: VIEW.height - 8, 'text-anchor': anchor }, axis);
+      label.textContent = tick % 0.5 === 0 ? tick.toFixed(1) : tick.toFixed(2);
     });
-    [lowest, highest].forEach((cost) => {
-      const label = element('text', { x: PLOT.left - 8, y: y(cost) + 4, 'text-anchor': 'end' }, 'eds-chart-tick');
-      label.textContent = money(cost);
-      axes.appendChild(label);
+    node('line', { class: 'eds-zero', x1: PLOT.left, x2: PLOT.right, y1: y(0), y2: y(0) }, svg);
+
+    // The two curves, each labelled directly rather than through a legend.
+    const curves = node('g', { 'clip-path': 'url(#eds-sig-clip)' }, svg);
+    KEYS.forEach((key) => {
+      const d = models[key].profit.map((value, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)} ${y(value).toFixed(1)}`);
+      node('path', { class: `eds-curve--${key}`, d: d.join('') }, curves);
     });
+    const csTuned = models.cost_sensitive.tuned_index;
+    // Label the cost-sensitive curve just under its lowest point across the label's width, so the
+    // text never sits on the line.
+    const csLabelIndex = Math.round(last * 0.24);
+    const underLabel = models.cost_sensitive.profit.slice(csLabelIndex, csLabelIndex + Math.round(last * 0.18));
+    node('text', {
+      class: 'eds-label eds-label--cost_sensitive',
+      x: x(csLabelIndex),
+      y: y(Math.min(...underLabel)) + 18,
+    }, svg).textContent = 'cost-sensitive';
+    const flat = models.baseline.contacted.findIndex((count) => count === 0);
+    const baseLabelIndex = Math.max(flat, Math.round(last * 0.45));
+    node('text', { class: 'eds-label eds-label--baseline', x: x(baseLabelIndex), y: y(0) + 16 }, svg).textContent =
+      flat >= 0 ? 'standard: contacts no one' : 'standard';
 
-    const axisTitle = element('text', { x: PLOT.left, y: PLOT.bottom + 34 }, 'eds-chart-label');
-    axisTitle.textContent = 'decision threshold';
-    axes.appendChild(axisTitle);
+    const scrubLine = node('line', { class: 'eds-scrub-line', y1: PLOT.top, y2: PLOT.bottom }, svg);
+    const scrubTag = node('text', { class: 'eds-scrub-tag', y: PLOT.top + 10 }, svg);
+    const points = Object.fromEntries(KEYS.map((key) => [key, node('circle', { class: 'eds-point', r: 5.5 }, svg)]));
 
-    const yTitle = element('text', { x: PLOT.left - 40, y: PLOT.top - 12, 'text-anchor': 'start' }, 'eds-chart-label');
-    yTitle.textContent = `€ ${data.unit || 'per instance'}`;
-    axes.appendChild(yTitle);
-    svg.appendChild(axes);
+    const rows = Object.fromEntries(
+      KEYS.map((key) => {
+        const row = figure.querySelector(`[data-eds-sig-row="${key}"]`);
+        return [
+          key,
+          {
+            value: row.querySelector('[data-eds-sig-value]'),
+            meta: row.querySelector('[data-eds-sig-meta]'),
+            bar: row.querySelector('[data-eds-sig-bar]'),
+          },
+        ];
+      }),
+    );
 
-    const points = thresholds.map((threshold, index) => `${x(threshold).toFixed(2)},${y(costs[index]).toFixed(2)}`);
-    const curve = element('polyline', { points: points.join(' ') }, 'eds-chart-curve');
-    svg.appendChild(curve);
+    function render(indices, message) {
+      const profits = KEYS.map((key) => models[key].profit[indices[key]]);
+      const scale = Math.max(...profits, 1);
+      KEYS.forEach((key, i) => {
+        const index = indices[key];
+        rows[key].value.textContent = euro(profits[i]);
+        rows[key].meta.textContent =
+          `threshold ${thresholds[index].toFixed(2)} · ${models[key].contacted[index].toLocaleString('en-US')} contacted`;
+        rows[key].bar.style.width = `${(Math.max(profits[i], 0) / scale) * 100}%`;
+        points[key].setAttribute('cx', x(index));
+        points[key].setAttribute('cy', y(models[key].profit[index]));
+      });
+      delta.textContent = signedEuro(profits[1] - profits[0]);
+      note.textContent = message;
 
-    // Markers, drawn after the curve so they sit on top of it. Each callout is placed away from
-    // the curve rather than centred on its dot: the cost-optimal one sits in the empty wedge
-    // under the rising side, the default one in the empty space above the curve.
-    const markers = element('g', {}, 'eds-chart-reveal');
-    const marker = (point, kind, label, place) => {
-      const px = x(point.threshold);
-      const py = y(point.cost);
-      markers.appendChild(element('line', { x1: px, y1: py, x2: px, y2: PLOT.bottom }, `eds-chart-${kind}-line`));
-      markers.appendChild(element('circle', { cx: px, cy: py, r: 5 }, `eds-chart-${kind}-dot`));
-
-      const text = (content, dy, className) => {
-        const node = element('text', { x: px + place.dx, y: py + dy, 'text-anchor': place.anchor }, className);
-        node.textContent = content;
-        markers.appendChild(node);
-      };
-      text(money(point.cost), place.dy, 'eds-chart-value');
-      text(label, place.dy + 14, `eds-chart-label${kind === 'optimal' ? ' eds-chart-label--optimal' : ''}`);
-    };
-    marker(data.optimal, 'optimal', `cost-optimal · ${data.optimal.threshold}`, {
-      dx: 12,
-      dy: 14,
-      anchor: 'start',
-    });
-    marker(data.default, 'default', 'default 0.5', { dx: 0, dy: -26, anchor: 'middle' });
-    svg.appendChild(markers);
-
-    // The pointer read-out, hidden until the reader actually moves over the plot.
-    const hover = element('g', { visibility: 'hidden' }, 'eds-chart-hover');
-    const hoverLine = element('line', { y1: PLOT.top, y2: PLOT.bottom }, 'eds-chart-hover-line');
-    const hoverDot = element('circle', { r: 4 }, 'eds-chart-hover-dot');
-    hover.append(hoverLine, hoverDot);
-    svg.appendChild(hover);
-
-    const readout = figure.querySelector('[data-eds-chart-readout]');
-    const source = figure.querySelector('[data-eds-chart-source]');
-    const caption = figure.querySelector('[data-eds-chart-caption]');
-
-    if (source && data.dataset) {
-      source.textContent = `${data.dataset} · ${data.samples.toLocaleString('en')} customers`;
-    }
-    if (caption && typeof data.reduction === 'number') {
-      caption.innerHTML =
-        `Moving the decision threshold from 0.5 to ${data.optimal.threshold} reduces expected cost from ${money(data.default.cost)} ` +
-        `to <strong>${money(data.optimal.cost)}</strong> per customer, a ` +
-        `<strong>${Math.round(data.reduction * 100)}% reduction</strong> on the same test predictions. ` +
-        `Drag across the chart to inspect any threshold.`;
-    }
-
-    if (!reduceMotion.matches) {
-      const length = curve.getTotalLength ? curve.getTotalLength() : 0;
-      if (length) {
-        curve.style.setProperty('--eds-path-length', length);
-        curve.style.strokeDasharray = length;
-        curve.style.strokeDashoffset = length;
-        curve.classList.add('eds-chart-curve--animated');
+      const shared = indices.baseline === indices.cost_sensitive;
+      scrubLine.style.display = shared ? '' : 'none';
+      scrubTag.style.display = shared ? '' : 'none';
+      if (shared) {
+        const index = indices.baseline;
+        scrubLine.setAttribute('x1', x(index));
+        scrubLine.setAttribute('x2', x(index));
+        const right = index > last * 0.8;
+        scrubTag.setAttribute('x', x(index) + (right ? -7 : 7));
+        scrubTag.setAttribute('text-anchor', right ? 'end' : 'start');
+        scrubTag.textContent = `t = ${thresholds[index].toFixed(2)}`;
       }
     }
 
-    const track = (event) => {
-      const box = svg.getBoundingClientRect();
-      if (!box.width) return;
-      const svgX = ((event.clientX - box.left) / box.width) * VIEW.width;
-      const fraction = Math.min(1, Math.max(0, (svgX - PLOT.left) / (PLOT.right - PLOT.left)));
-      const index = Math.round(fraction * (thresholds.length - 1));
-      const px = x(thresholds[index]);
-      const py = y(costs[index]);
-
-      hover.setAttribute('visibility', 'visible');
-      hoverLine.setAttribute('x1', px);
-      hoverLine.setAttribute('x2', px);
-      hoverDot.setAttribute('cx', px);
-      hoverDot.setAttribute('cy', py);
-
-      if (readout) {
-        readout.hidden = false;
-        readout.textContent = `${thresholds[index].toFixed(2)} → ${money(costs[index])}`;
-        readout.style.left = `${(px / VIEW.width) * 100}%`;
-        readout.style.top = `${(py / VIEW.height) * 100}%`;
+    const buttons = modes.querySelectorAll('button');
+    function setMode(mode) {
+      buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
+      if (mode === 'tuned') {
+        scrub.value = String(csTuned);
+        hintText.textContent = 'Drag across the chart to try any threshold';
+        render(
+          { baseline: models.baseline.tuned_index, cost_sensitive: csTuned },
+          'more profit than the tuned baseline',
+        );
+      } else {
+        const index = data.default_index;
+        scrub.value = String(index);
+        hintText.textContent = `Both models at the default threshold of ${thresholds[index].toFixed(1)}`;
+        render({ baseline: index, cost_sensitive: index }, 'more profit at the default threshold');
       }
-    };
+    }
 
-    const clear = () => {
-      hover.setAttribute('visibility', 'hidden');
-      if (readout) readout.hidden = true;
-    };
+    scrub.max = String(last);
+    scrub.addEventListener('input', () => {
+      const index = Number(scrub.value);
+      buttons.forEach((button) => button.setAttribute('aria-pressed', 'false'));
+      hintText.textContent = `Both models at threshold ${thresholds[index].toFixed(2)}`;
+      render({ baseline: index, cost_sensitive: index }, 'more profit at this threshold');
+    });
+    buttons.forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
 
-    svg.addEventListener('pointermove', track);
-    svg.addEventListener('pointerdown', track);
-    svg.addEventListener('pointerleave', clear);
-    svg.addEventListener('pointercancel', clear);
+    plot.hidden = false;
+    modes.hidden = false;
+    hint.hidden = false;
+    setMode('tuned');
   }
 
-  /* -- Code walkthrough ---------------------------------------------------------------------- */
+  /* -- Quick tour ------------------------------------------------------------------------------ */
 
-  // Long enough to read a five-line snippet and its result, short enough that a reader who is
-  // watching rather than reading does not lose patience. Paused whenever the reader takes over.
-  const STEP_MS = 7000;
+  function setUpTour(section) {
+    const tabs = Array.from(section.querySelectorAll('[data-eds-tab]'));
+    const panels = Array.from(section.querySelectorAll('[data-eds-panel]'));
 
-  function setUpTour(tour) {
-    const tabs = Array.from(tour.querySelectorAll('[data-eds-tab]'));
-    const panels = Array.from(tour.querySelectorAll('[data-eds-panel]'));
-    if (tabs.length === 0 || tabs.length !== panels.length) return;
-
-    let current = 0;
-    let timer = null;
-    let autoplay = !reduceMotion.matches;
-
-    const show = (index) => {
-      current = index;
-      tabs.forEach((tab, position) => {
-        const selected = position === index;
+    function select(index, focus) {
+      tabs.forEach((tab, i) => {
+        const selected = i === index;
         tab.setAttribute('aria-selected', String(selected));
-        tab.setAttribute('tabindex', selected ? '0' : '-1');
-        // The progress bar is a CSS transition, and a transition only runs if the element is
-        // laid out with its starting value first. Clearing the duration on every other tab
-        // snaps them back so the active one always animates from zero.
-        tab.style.setProperty('--eds-tab-duration', selected && autoplay ? `${STEP_MS}ms` : '0ms');
+        tab.tabIndex = selected ? 0 : -1;
+        panels[i].hidden = !selected;
       });
-      panels.forEach((panel, position) => {
-        const selected = position === index;
-        panel.hidden = !selected;
-        panel.classList.toggle('is-active', selected);
-        panel.classList.remove('is-playing');
-        if (selected && !reduceMotion.matches) {
-          // Force a reflow so the line animation restarts on a panel that was shown before.
-          void panel.offsetWidth;
-          panel.classList.add('is-playing');
-        }
-      });
-    };
-
-    const stop = () => {
-      window.clearTimeout(timer);
-      timer = null;
-    };
-
-    const schedule = () => {
-      stop();
-      if (!autoplay) return;
-      timer = window.setTimeout(() => {
-        show((current + 1) % tabs.length);
-        schedule();
-      }, STEP_MS);
-    };
-
-    const takeOver = (index) => {
-      autoplay = false;
-      stop();
-      show(index);
-    };
+      if (focus) tabs[index].focus();
+    }
 
     tabs.forEach((tab, index) => {
-      tab.addEventListener('click', () => takeOver(index));
+      tab.addEventListener('click', () => select(index, false));
       tab.addEventListener('keydown', (event) => {
-        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-        if (!step) return;
+        const forward = event.key === 'ArrowDown' || event.key === 'ArrowRight';
+        const backward = event.key === 'ArrowUp' || event.key === 'ArrowLeft';
+        if (!forward && !backward) return;
         event.preventDefault();
-        const next = (index + step + tabs.length) % tabs.length;
-        takeOver(next);
-        tabs[next].focus();
+        select((index + (forward ? 1 : tabs.length - 1)) % tabs.length, true);
       });
     });
-
-    // Autoplay is a courtesy, not a demand: it pauses while the pointer or the keyboard is inside
-    // the section, and never runs while the section is off screen.
-    tour.addEventListener('pointerenter', stop);
-    tour.addEventListener('pointerleave', () => autoplay && schedule());
-    tour.addEventListener('focusin', stop);
-
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              show(current);
-              schedule();
-            } else {
-              stop();
-            }
-          });
-        },
-        { threshold: 0.35 },
-      ).observe(tour);
-    } else {
-      show(0);
-      schedule();
-    }
   }
-
-  /* -- Boot ---------------------------------------------------------------------------------- */
 
   function start() {
     setUpCopyButtons();
-    document.querySelectorAll('[data-eds-chart]').forEach(drawChart);
+    document.querySelectorAll('[data-eds-sig]').forEach(setUpSignature);
     document.querySelectorAll('[data-eds-tour]').forEach(setUpTour);
   }
 

@@ -3,7 +3,7 @@
 The homepage hero is not an illustration but a chart the browser draws from data, so it cannot be
 an SVG pair like the rest of ``scripts/figures``. It shares the same rule, though: every number on
 it is computed here by the package itself, so the headline claim beside the chart cannot quietly
-disagree with the curve above it.
+disagree with the curve under it.
 
 Only bundled datasets are used, so ``just figures`` needs no network and produces the same file on
 every machine.
@@ -15,68 +15,84 @@ from typing import Any
 
 import numpy as np
 
+THRESHOLDS = np.round(np.linspace(0.0, 1.0, 101), 2)
+DEFAULT_THRESHOLD = 0.5
 
-def hero_threshold_curve() -> dict[str, Any]:
-    """Expected cost per customer as the decision threshold sweeps from 0 to 1.
 
-    One fixed model scored once. Only the cut-off applied to its predictions moves, which is the
-    homepage's whole claim: the 0.5 every classifier defaults to is a choice, and on a priced
-    problem it is usually the wrong one.
+def hero_profit_comparison() -> dict[str, Any]:
+    """Profit of a standard and a cost-sensitive logistic regression across decision thresholds.
+
+    Both models see the same features and the same split of the TV-subscription churn data; only
+    the objective differs. Profit is the retention cost saved compared with contacting nobody,
+    priced with each customer's own costs from the dataset's cost matrix.
+
+    Each model's operating point is the threshold that maximises profit on the *training* split, so
+    the test-set numbers the page prints are what that choice would actually have earned.
     """
     import pandas as pd
-    from sklearn.compose import make_column_selector, make_column_transformer
-    from sklearn.ensemble import HistGradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.model_selection import train_test_split
     from sklearn.pipeline import make_pipeline
-    from sklearn.preprocessing import OrdinalEncoder
+    from sklearn.preprocessing import StandardScaler
 
-    from empulse.datasets import load_upsell_bank_telemarketing
+    from empulse.datasets import load_churn_tv_subscriptions
     from empulse.metrics import Cost, Metric
+    from empulse.models import CSLogitClassifier
 
-    dataset = load_upsell_bank_telemarketing(backend=pd)
+    dataset = load_churn_tv_subscriptions(backend=pd)
     features, target = dataset.data, np.asarray(dataset.target)
 
     # The row indices travel with the split so the per-customer costs can be sliced the same way.
     rows = np.arange(len(target))
-    x_train, x_test, y_train, y_test, _, test_rows = train_test_split(
-        features, target, rows, test_size=0.4, random_state=42, stratify=target
+    x_train, x_test, y_train, y_test, train_rows, test_rows = train_test_split(
+        features, target, rows, test_size=0.3, random_state=42
     )
+    costs = {name: np.asarray(values) for name, values in dataset.instance_costs.items()}
+    train_costs = {name: values[train_rows] for name, values in costs.items()}
+    test_costs = {name: values[test_rows] for name, values in costs.items()}
 
-    # The categorical columns only need to become numbers; which encoding is used does not change
-    # what the figure shows, and an ordinal one keeps the pipeline short.
-    model = make_pipeline(
-        make_column_transformer(
-            (
-                OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1),
-                make_column_selector(dtype_include=object),
-            ),
-            remainder='passthrough',
-        ),
-        HistGradientBoostingClassifier(random_state=42),
-    ).fit(x_train, y_train)
-    y_score = model.predict_proba(x_test)[:, 1]
-
-    instance_costs = {name: np.asarray(values)[test_rows] for name, values in dataset.instance_costs.items()}
     expected_cost = Metric(dataset.cost_matrix, Cost())
 
-    thresholds = np.linspace(0.0, 1.0, 101)
-    costs = np.array([expected_cost(y_test, (y_score >= t).astype(float), **instance_costs) for t in thresholds])
+    def profit_curve(model: Any, x: Any, y: np.ndarray, instance_costs: dict[str, np.ndarray]) -> tuple:
+        """Total profit and the number of customers contacted, at every threshold."""
+        y_score = model.predict_proba(x)[:, 1]
+        n_customers = len(y)
+        contact_nobody = expected_cost(y, np.zeros(n_customers), **instance_costs) * n_customers
+        profit = [
+            contact_nobody - expected_cost(y, (y_score >= t).astype(float), **instance_costs) * n_customers
+            for t in THRESHOLDS
+        ]
+        contacted = [int((y_score >= t).sum()) for t in THRESHOLDS]
+        return np.asarray(profit), contacted
 
-    best = int(costs.argmin())
-    default = int(np.abs(thresholds - 0.5).argmin())
+    baseline = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(x_train, y_train)
+    cost_sensitive = make_pipeline(StandardScaler(), CSLogitClassifier(loss=expected_cost)).fit(
+        x_train, y_train, **{f'cslogitclassifier__{name}': values for name, values in train_costs.items()}
+    )
+
+    models = {}
+    for key, label, model in (
+        ('baseline', 'LogisticRegression()', baseline),
+        ('cost_sensitive', 'CSLogitClassifier()', cost_sensitive),
+    ):
+        train_profit, _ = profit_curve(model, x_train, y_train, train_costs)
+        test_profit, contacted = profit_curve(model, x_test, y_test, test_costs)
+        models[key] = {
+            'label': label,
+            'profit': [round(float(value)) for value in test_profit],
+            'contacted': contacted,
+            'tuned_index': int(np.argmax(train_profit)),
+        }
 
     return {
         'dataset': dataset.name,
         'samples': len(y_test),
-        'unit': 'cost per customer',
-        'thresholds': [round(float(t), 3) for t in thresholds],
-        'costs': [round(float(c), 4) for c in costs],
-        'default': {'threshold': round(float(thresholds[default]), 3), 'cost': round(float(costs[default]), 3)},
-        'optimal': {'threshold': round(float(thresholds[best]), 3), 'cost': round(float(costs[best]), 3)},
-        'reduction': round(float(1 - costs[best] / costs[default]), 4),
+        'thresholds': [float(t) for t in THRESHOLDS],
+        'default_index': int(np.flatnonzero(THRESHOLDS == DEFAULT_THRESHOLD)[0]),
+        'models': models,
     }
 
 
 DATA = {
-    'homepage_hero': hero_threshold_curve,
+    'homepage_hero': hero_profit_comparison,
 }

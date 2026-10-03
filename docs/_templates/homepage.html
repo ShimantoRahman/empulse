@@ -7,7 +7,8 @@
   a first-time visitor rather than for reading prose.
 
   The content itself comes from `docs/homepage_content.py` by way of `sphinxext/homepage.py`,
-  which also resolves the links and highlights the code. Nothing on this page is written twice.
+  which also resolves the links, highlights the code and summarises the hero data. Nothing on this
+  page is written twice.
 -#}
 {% extends "layout.html" %}
 
@@ -17,167 +18,336 @@
   <link rel="stylesheet" type="text/css" href="{{ pathto('_static/css/homepage.css', 1) }}" />
 {%- endblock extrahead %}
 
+{%- macro install_bar(command) -%}
+<div class="eds-install">
+  <span class="eds-install__prompt" aria-hidden="true">$</span>
+  <code class="eds-install__command">{{ command }}</code>
+  <button type="button" class="eds-copy" data-copy="{{ command }}" aria-label="Copy the install command">
+    <i class="fa-regular fa-copy eds-copy__idle" aria-hidden="true"></i>
+    <i class="fa-solid fa-check eds-copy__done" aria-hidden="true"></i>
+  </button>
+</div>
+{%- endmacro -%}
+
+{#- Wind: a few soft horizontal streaks behind a band. Purely decorative, so hidden from assistive
+    technology; each entry is (side, offset from that side, top or bottom, width, height, faint?,
+    drift seconds). Streaks near a band's foot are anchored to its bottom edge so they stay below
+    the last block of content at every viewport height. -#}
+{%- macro wind(streaks) -%}
+<div class="eds-wind" aria-hidden="true">
+  {%- for side, offset, vertical, width, height, faint, seconds in streaks %}
+  <i class="eds-wind__streak{{ ' eds-wind__streak--' ~ side }}{{ ' eds-wind__streak--faint' if faint }}"
+     style="{{ side }}: {{ offset }}; {{ vertical }}; width: {{ width }}; height: {{ height }}; --eds-drift: {{ seconds }}s"></i>
+  {%- endfor %}
+</div>
+{%- endmacro -%}
+
 {%- block docs_main %}
 <div class="eds-home">
 
   {# --- Hero ------------------------------------------------------------------------------ #}
-  <section class="eds-hero eds-wrap">
-    <div class="eds-hero__copy">
-      <p class="eds-eyebrow">{{ hero_eyebrow }}</p>
-      <h1 class="eds-hero__motto">{{ hero_motto }}</h1>
-      <p class="eds-hero__lead">{{ hero_lead }}</p>
+  <section class="eds-hero eds-windy">
+    {{ wind([
+      ('left', '-3%', 'top: 16%', '30%', '38px', false, 52),
+      ('right', '-3%', 'top: 7%', '44%', '22px', true, 41),
+      ('right', '-5%', 'top: 21%', '56%', '40px', false, 58),
+      ('right', '2%', 'top: 49%', '40%', '42px', true, 47),
+      ('left', '-4%', 'bottom: 3.5%', '12%', '26px', false, 44),
+      ('left', '9.5%', 'bottom: 3.5%', '22%', '26px', true, 61),
+      ('right', '-3%', 'bottom: 6%', '28%', '26px', true, 50),
+    ]) }}
+    <div class="eds-wrap eds-hero__grid">
+      <div class="eds-hero__copy">
+        <p class="eds-eyebrow">{{ hero_eyebrow }}</p>
+        <h1 class="eds-hero__motto">{{ hero_motto }}</h1>
+        <p class="eds-hero__lead">{{ hero_lead }}</p>
 
-      <div class="eds-hero__actions">
-        <a class="eds-btn eds-btn--primary" href="{{ url_getting_started }}">
-          Get started
-          <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span>
-        </a>
-        <a class="eds-btn eds-btn--ghost" href="{{ url_tutorial }}">Work through the tutorial</a>
-      </div>
-
-      <div class="eds-install">
-        <span class="eds-install__prompt" aria-hidden="true">$</span>
-        <code class="eds-install__command">{{ install_command }}</code>
-        <button type="button"
-                class="eds-install__copy"
-                data-copy="{{ install_command }}"
-                aria-label="Copy the install command">
-          <span class="eds-install__copy-idle" aria-hidden="true"><i class="fa-regular fa-copy"></i></span>
-          <span class="eds-install__copy-done" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
-        </button>
-      </div>
-      <p class="eds-install__note">Python 3.11 or higher. <a href="{{ url_installation }}">Optional extras</a> add additional functionalities for boosting and symbolic regression models.</p>
-
-      {%- if stats %}
-      <ul class="eds-stats">
-        {%- for stat in stats %}
-        <li class="eds-stat">
-          <a href="{{ stat.url }}">
-            <span class="eds-stat__value">{{ stat.value }}</span>
-            <span class="eds-stat__label">{{ stat.label }}</span>
+        <div class="eds-start">
+          {{ install_bar(install_command) }}
+          <a class="eds-btn eds-btn--primary" href="{{ url_getting_started }}">
+            Get started <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span>
           </a>
-        </li>
-        {%- endfor %}
-      </ul>
-      {%- endif %}
-    </div>
+        </div>
+        <p class="eds-hero__note">Python 3.11 or higher. <a href="{{ url_installation }}">Optional extras</a> add samplers and boosting models.</p>
 
-    {# The counterweight: not decoration, but the claim above it, measured.
-       `sphinxext/homepage.py` inlines the numbers `scripts/figures/homepage_data.py` computed. #}
-    <figure class="eds-chart" data-eds-chart>
-      <div class="eds-chart__head">
-        <span class="eds-chart__title">Expected cost by decision threshold</span>
-        <span class="eds-chart__source" data-eds-chart-source></span>
-      </div>
-      <div class="eds-chart__plot">
-        <svg class="eds-chart__svg" viewBox="0 0 440 260" role="img" data-eds-chart-svg
-             aria-label="Expected cost per customer against decision threshold. The lowest cost occurs at threshold 0.048 instead of the default 0.5."></svg>
-        {# `aria-hidden` because this only repeats, for the pointer, a value the curve already
-           carries — and an announced live region would fire on every mouse move. #}
-        <div class="eds-chart__readout" data-eds-chart-readout aria-hidden="true" hidden></div>
-        {%- if hero_data %}
-        <script type="application/json" data-eds-chart-data>{{ hero_data }}</script>
+        {%- if stats %}
+        <ul class="eds-proof">
+          {%- for stat in stats %}
+          <li class="eds-proof__item">
+            <a href="{{ stat.url }}">
+              <span class="eds-proof__value">{{ stat.value }}</span>
+              <span class="eds-proof__label">{{ stat.label }}</span>
+            </a>
+          </li>
+          {%- endfor %}
+        </ul>
         {%- endif %}
       </div>
-      <figcaption class="eds-chart__caption" data-eds-chart-caption>
-        Expected cost across decision thresholds for a single model.
-      </figcaption>
-    </figure>
+
+      {#- The signature: the claim above, measured. Rows and headline are printed here from the same
+          JSON the script draws, so the numbers are on the page before, and without, any script. #}
+      {%- if hero_summary %}
+      <figure class="eds-sig" data-eds-sig>
+        <div class="eds-sig__head">
+          <div>
+            <p class="eds-sig__kicker">{{ signature.kicker }} &middot; {{ hero_summary.samples }} test customers</p>
+            <p class="eds-sig__title">{{ signature.title }}</p>
+          </div>
+          <div class="eds-seg" role="group" aria-label="Decision threshold" data-eds-sig-modes hidden>
+            <button type="button" data-mode="tuned" aria-pressed="true">Tuned threshold</button>
+            <button type="button" data-mode="default" aria-pressed="false">Default 0.5</button>
+          </div>
+        </div>
+
+        <p class="eds-sig__delta" aria-live="polite">
+          <span class="eds-sig__delta-value" data-eds-sig-delta>{{ hero_summary.delta }}</span>
+          <span class="eds-sig__delta-note" data-eds-sig-note>more profit than the tuned baseline</span>
+        </p>
+
+        <ul class="eds-sig__rows">
+          {%- for row in hero_summary.rows %}
+          <li class="eds-sig__row eds-sig__row--{{ row.key }}" data-eds-sig-row="{{ row.key }}">
+            <span class="eds-sig__name">{{ row.label }}<small data-eds-sig-meta>threshold {{ row.threshold }} &middot; {{ row.contacted }} contacted</small></span>
+            <span class="eds-sig__value" data-eds-sig-value>{{ row.profit }}</span>
+            <span class="eds-sig__bar"><i data-eds-sig-bar style="width: {{ row.bar }}%"></i></span>
+          </li>
+          {%- endfor %}
+        </ul>
+
+        <div class="eds-sig__plot" data-eds-sig-plot hidden>
+          <svg class="eds-sig__svg" viewBox="0 0 560 250" role="img" data-eds-sig-svg
+               aria-label="Profit against decision threshold for both models on the same test customers."></svg>
+          <input class="eds-sig__scrub" type="range" min="0" max="100" step="1" aria-label="Decision threshold" data-eds-sig-scrub>
+          <script type="application/json" data-eds-sig-data>{{ hero_data }}</script>
+        </div>
+        <p class="eds-sig__hint" data-eds-sig-hint hidden>
+          <i class="fa-solid fa-arrows-left-right" aria-hidden="true"></i>
+          <span data-eds-sig-hint-text>Drag across the chart to try any threshold</span>
+        </p>
+
+        <figcaption class="eds-sig__foot">{{ signature.footnote }} <a href="{{ url_tutorial }}">See how in the tutorial&nbsp;&rarr;</a></figcaption>
+      </figure>
+      {%- endif %}
+    </div>
   </section>
 
-  {# --- The three claims -------------------------------------------------------------------- #}
+  {# --- A minute with empulse --------------------------------------------------------------- #}
+  <section class="eds-band" data-eds-tour>
+    <div class="eds-wrap">
+      <header class="eds-head eds-head--split">
+        <p class="eds-eyebrow">Quick tour</p>
+        <h2>{{ tour_title }}</h2>
+        <p>{{ tour_lead }}</p>
+      </header>
+
+      <div class="eds-tour">
+        <div class="eds-steps" role="tablist" aria-label="Quick tour" aria-orientation="vertical">
+          {%- for step in steps %}
+          <button type="button"
+                  class="eds-step"
+                  role="tab"
+                  id="eds-tab-{{ loop.index }}"
+                  aria-controls="eds-panel-{{ loop.index }}"
+                  aria-selected="{{ 'true' if loop.first else 'false' }}"
+                  tabindex="{{ '0' if loop.first else '-1' }}"
+                  data-eds-tab="{{ loop.index0 }}">
+            <span class="eds-step__index">{{ loop.index }}</span>
+            <span class="eds-step__title">{{ step.title }}<span class="eds-step__label">{{ step.label }}</span></span>
+            <span class="eds-step__blurb">{{ step.blurb }}</span>
+          </button>
+          {%- endfor %}
+        </div>
+
+        <div class="eds-window">
+          <div class="eds-window__bar">
+            <span class="eds-window__file"><i class="fa-brands fa-python" aria-hidden="true"></i>churn.py</span>
+          </div>
+          {%- for step in steps %}
+          <div class="eds-panel"
+               role="tabpanel"
+               id="eds-panel-{{ loop.index }}"
+               aria-labelledby="eds-tab-{{ loop.index }}"
+               data-eds-panel="{{ loop.index0 }}"
+               {% if not loop.first %}hidden{% endif %}>
+            <div class="highlight eds-code"><pre>{{ step.html }}</pre></div>
+            <div class="eds-out">
+              <span class="eds-out__label">Out</span>
+              <code class="eds-out__value">{{ step.result }}</code>
+              <span class="eds-out__note">{{ step.result_note }} <a href="{{ step.url }}">{{ step.link_text }}&nbsp;&rarr;</a></span>
+            </div>
+          </div>
+          {%- endfor %}
+        </div>
+      </div>
+      <p class="eds-tour__foot">{{ setup_caption }}</p>
+    </div>
+  </section>
+
+  {# --- Everything you need ----------------------------------------------------------------- #}
+  <section class="eds-band eds-windy">
+    {{ wind([
+      ('right', '-4%', 'top: 5%', '46%', '34px', true, 55),
+      ('left', '-3%', 'top: 11%', '22%', '24px', true, 49),
+      ('right', '-2%', 'top: 13%', '24%', '22px', true, 43),
+    ]) }}
+    <div class="eds-wrap">
+      <header class="eds-head">
+        <p class="eds-eyebrow eds-eyebrow--purple">Everything you need</p>
+        <h2>{{ features_title }}</h2>
+        <p>{{ features_lead }}</p>
+      </header>
+
+      <div class="eds-bento">
+        <div class="eds-cell eds-cell--metrics">
+          <p class="eds-eyebrow">Measure</p>
+          <h3>Metrics that speak in euros</h3>
+          <p>Describe what each outcome costs once. Costs can be fixed amounts, named variables, or a different value for every customer.</p>
+          <div class="eds-matrix" role="table" aria-label="Churn cost matrix: rows are the prediction, columns the actual outcome">
+            <div role="row" class="eds-matrix__row">
+              <span role="columnheader"></span>
+              <span class="eds-matrix__head" role="columnheader">Actual churner</span>
+              <span class="eds-matrix__head" role="columnheader">Actual stayer</span>
+            </div>
+            <div role="row" class="eds-matrix__row">
+              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>churner</span>
+              <span class="eds-matrix__cell" role="cell"><small>tp_cost</small><b>€0</b><em>churner caught</em></span>
+              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fp_cost &middot; incentive</small><b>€10</b><em>discount wasted on a loyal customer</em></span>
+            </div>
+            <div role="row" class="eds-matrix__row">
+              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>stayer</span>
+              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fn_cost &middot; clv</small><b>€200</b><em>lifetime value of a lost customer</em></span>
+              <span class="eds-matrix__cell" role="cell"><small>tn_cost</small><b>€0</b><em>loyal customer left alone</em></span>
+            </div>
+          </div>
+          <p class="eds-results__caption">{{ metric_results_caption }}</p>
+          <ul class="eds-results">
+            {%- for result in metric_results %}
+            <li class="eds-result">
+              <span class="eds-result__label">{{ result.label }}</span>
+              <span class="eds-result__value">{{ result.value }}</span>
+              {%- if result.url %}
+              <a class="eds-result__model" href="{{ result.url }}">{{ result.model }}</a>
+              {%- else %}
+              <span class="eds-result__model">{{ result.model }}</span>
+              {%- endif %}
+            </li>
+            {%- endfor %}
+          </ul>
+          <div class="highlight eds-mini"><pre>{{ cost_matrix_snippet }}</pre></div>
+          <a class="eds-cell__more" href="{{ url_measuring }}">Measuring a model&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--models">
+          <p class="eds-eyebrow eds-eyebrow--purple">Train</p>
+          <p class="eds-big">{{ estimator_count }}<small>estimators</small></p>
+          <p>Linear models, boosting, trees and forests that minimise your costs instead of log-loss.</p>
+          <div class="eds-chips">
+            {%- for name in estimator_highlights %}<a class="eds-chip eds-chip--purple" href="{{ api_urls[name] }}">{{ name }}</a>{% endfor %}
+            {%- if estimators_not_shown > 0 %}<a class="eds-chip" href="{{ url_models }}">+{{ estimators_not_shown }} more</a>{% endif %}
+          </div>
+          <a class="eds-cell__more" href="{{ url_training }}">Training a model&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--decide">
+          <p class="eds-eyebrow eds-eyebrow--purple">Decide</p>
+          <h3>Thresholds set by cost, not habit</h3>
+          <p>Wrap any classifier and let the cost matrix pick the cut-off.</p>
+          {#- 0.048 is the walkthrough's cost-optimal threshold, the last step's result above. #}
+          <div class="eds-threshold" aria-hidden="true">
+            <span class="eds-threshold__track"></span>
+            <span class="eds-threshold__pin eds-threshold__pin--optimal" style="left: {{ (steps[-1].result | float) * 100 }}%"><span>{{ steps[-1].result }}</span><i></i></span>
+            <span class="eds-threshold__pin eds-threshold__pin--default" style="left: 50%"><span>0.5</span><i></i></span>
+          </div>
+          <div class="eds-threshold__scale" aria-hidden="true"><span>0</span><span>Cost-optimal threshold vs the default</span><span>1</span></div>
+          <a class="eds-cell__more" href="{{ url_deciding }}">Making a decision&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--data">
+          <p class="eds-eyebrow">Datasets</p>
+          <h3>Real problems with real costs attached</h3>
+          <p>Every dataset ships with its cost matrix and per-customer costs, ready for a first experiment. A few to start with:</p>
+          <div class="eds-table-wrap">
+            <table class="eds-table">
+              <thead><tr><th scope="col">Dataset</th><th scope="col">Problem</th><th scope="col">Loader</th><th scope="col">Source</th></tr></thead>
+              <tbody>
+                {%- for row in datasets %}
+                <tr>
+                  <td><a href="{{ row.url }}">{{ row.name }}</a></td>
+                  <td>{{ row.problem }}</td>
+                  <td><a href="{{ api_urls[row.loader] }}"><code>{{ row.loader }}</code></a></td>
+                  <td class="eds-table__source">{{ row.source }}</td>
+                </tr>
+                {%- endfor %}
+              </tbody>
+            </table>
+          </div>
+          <a class="eds-cell__more" href="{{ url_datasets }}">All datasets&nbsp;&rarr;</a>
+        </div>
+
+        <div class="eds-cell eds-cell--sklearn">
+          <p class="eds-eyebrow">scikit-learn native</p>
+          <h3>Fits where your models already live</h3>
+          <p>{{ sklearn_lead }}
+            {%- for tool in sklearn_tools %}
+            {% if tool.url %}<a href="{{ tool.url }}"><code>{{ tool.name }}</code></a>{% else %}<code>{{ tool.name }}</code>{% endif %},
+            {%- endfor %} {{ sklearn_tail }}</p>
+          <div class="highlight eds-mini"><pre>{{ pipeline_snippet }}</pre></div>
+          <a class="eds-cell__more" href="{{ url_api }}">API reference&nbsp;&rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# --- Built on research --------------------------------------------------------------------- #}
   <section class="eds-band">
     <div class="eds-wrap">
-      <header class="eds-section-head">
-        <h2>Evaluate, train, and decide with cost matrices</h2>
-        <p>Use a single cost matrix across evaluation metrics, model training, and threshold tuning.</p>
+      <header class="eds-head eds-head--split">
+        <p class="eds-eyebrow eds-eyebrow--purple">Built on research</p>
+        <h2>{{ research_title }}</h2>
+        <p>{{ research_lead }}</p>
       </header>
-      <ul class="eds-pillars">
-        {%- for pillar in pillars %}
-        <li class="eds-pillar">
-          <p class="eds-pillar__kicker"><span class="eds-pillar__index">{{ loop.index }}</span>{{ pillar.kicker }}</p>
-          <h3 class="eds-pillar__title">{{ pillar.title }}</h3>
-          <p class="eds-pillar__body">{{ pillar.body }}</p>
-          <a class="eds-pillar__link" href="{{ pillar.url }}">{{ pillar.link_text }}
-            <span aria-hidden="true">&rarr;</span></a>
+      <ol class="eds-papers">
+        {%- for paper in papers %}
+        <li class="eds-paper">
+          <span class="eds-paper__year">{{ paper.year }}</span>
+          <span class="eds-paper__title">{{ paper.title|e }}</span>
+          <span class="eds-paper__meta">{{ paper.authors|e }} &middot; <i>{{ paper.venue|e }}</i></span>
+          <span class="eds-chips">
+            {%- for name in paper.implements %}<a class="eds-chip{{ ' eds-chip--purple' if name.endswith('Classifier') }}" href="{{ api_urls[name] }}">{{ name }}</a>{% endfor %}
+          </span>
         </li>
         {%- endfor %}
-      </ul>
-    </div>
-  </section>
-
-  {# --- The code walkthrough ---------------------------------------------------------------- #}
-  <section class="eds-wrap eds-tour" data-eds-tour>
-    <header class="eds-section-head">
-      <h2>A minute with Empulse</h2>
-      <p>Four steps from a business question to a value-driven decision.</p>
-    </header>
-
-    <div class="eds-tour__tabs" role="tablist" aria-label="Code walkthrough">
-      {%- for step in steps %}
-      <button type="button"
-              class="eds-tab"
-              role="tab"
-              id="eds-tab-{{ loop.index }}"
-              aria-controls="eds-panel-{{ loop.index }}"
-              aria-selected="{{ 'true' if loop.first else 'false' }}"
-              tabindex="{{ '0' if loop.first else '-1' }}"
-              data-eds-tab="{{ loop.index0 }}">
-        <span class="eds-tab__index">{{ loop.index }}</span>
-        <span class="eds-tab__label">{{ step.label }}</span>
-        <span class="eds-tab__progress" aria-hidden="true"><i data-eds-tab-fill></i></span>
-      </button>
-      {%- endfor %}
-    </div>
-
-    <div class="eds-tour__stage">
-      {%- for step in steps %}
-      <div class="eds-panel{{ ' is-active' if loop.first }}"
-           role="tabpanel"
-           id="eds-panel-{{ loop.index }}"
-           aria-labelledby="eds-tab-{{ loop.index }}"
-           data-eds-panel="{{ loop.index0 }}"
-           {% if not loop.first %}hidden{% endif %}>
-        <div class="eds-panel__code">
-          <div class="highlight eds-code"><pre data-eds-code>{{ step.html }}</pre></div>
-        </div>
-        <aside class="eds-panel__aside">
-          <h3 class="eds-panel__title">{{ step.title }}</h3>
-          <p class="eds-panel__blurb">{{ step.blurb }}</p>
-          <div class="eds-result" data-eds-result>
-            <p class="eds-result__label">Evaluates to</p>
-            <p class="eds-result__value"><code>{{ step.result }}</code></p>
-            <p class="eds-result__note">{{ step.result_note }}</p>
-          </div>
-          <a class="eds-panel__link" href="{{ step.url }}">{{ step.link_text }}
-            <span aria-hidden="true">&rarr;</span></a>
-        </aside>
+      </ol>
+      <div class="eds-cite">
+        <p>Using Empulse in a paper? <span>Cite the software through Zenodo.</span></p>
+        <a href="https://doi.org/{{ citation_doi }}"><code>doi:{{ citation_doi }}</code></a>
       </div>
-      {%- endfor %}
     </div>
-
-    <p class="eds-tour__foot">{{ setup_caption }}</p>
   </section>
 
-  {# --- Where to go next -------------------------------------------------------------------- #}
-  <section class="eds-band eds-band--last">
+  {# --- Closing call to action ---------------------------------------------------------------- #}
+  <section class="eds-band eds-band--last eds-windy">
+    {{ wind([
+      ('left', '-3%', 'top: 18%', '34%', '36px', true, 50),
+      ('right', '-4%', 'top: 30%', '42%', '40px', false, 57),
+      ('right', '6%', 'top: 52%', '22%', '24px', true, 45),
+    ]) }}
     <div class="eds-wrap">
-      <header class="eds-section-head">
-        <h2>Where to go next</h2>
-        <p>Empulse estimators follow scikit-learn conventions and work directly with
-          <code>Pipeline</code>, <code>GridSearchCV</code>, and <code>cross_val_score</code>.</p>
-      </header>
-      <ul class="eds-destinations">
+      <div class="eds-cta">
+        <h2>{{ closing_title }}</h2>
+        <div class="eds-cta__side">
+          {{ install_bar(install_command) }}
+          <a class="eds-btn eds-btn--primary" href="{{ url_getting_started }}">{{ closing_button }} <span class="eds-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        </div>
+      </div>
+      <nav class="eds-next" aria-label="Where to go next">
         {%- for destination in destinations %}
-        <li class="eds-destination">
-          <a href="{{ destination.url }}">
-            <span class="eds-destination__icon" aria-hidden="true"><i class="{{ destination.icon }}"></i></span>
-            <span class="eds-destination__title">{{ destination.title }}</span>
-            <span class="eds-destination__body">{{ destination.body }}</span>
-          </a>
-        </li>
+        <a href="{{ destination.url }}">
+          <span class="eds-next__title">{{ destination.title }} <span aria-hidden="true">&rarr;</span></span>
+          <span class="eds-next__body">{{ destination.body }}</span>
+        </a>
         {%- endfor %}
-      </ul>
+      </nav>
     </div>
   </section>
 

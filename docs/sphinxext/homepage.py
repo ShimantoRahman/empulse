@@ -11,10 +11,12 @@ What this extension does:
 * swaps the template for ``index`` only, leaving every other page untouched;
 * hands the template the copy from ``homepage_content.py``, with the code snippets already
   highlighted by Pygments, so the homepage needs no client-side highlighter and its code matches
-  every other code block on the site;
-* resolves the ``:ref:`` labels and document names the content module names into real URLs through
-  Sphinx's own machinery, so a renamed label fails the ``-W`` build rather than shipping a dead
-  link;
+  every other code block on the site, and with each heading's ``*emphasised*`` word marked up;
+* summarises the hero data, so the numbers the page prints before any script runs are the same
+  ones the chart draws;
+* resolves the ``:ref:`` labels, document names and API objects the content module names into
+  real URLs through Sphinx's own machinery, so a renamed label or a removed class fails the ``-W``
+  build rather than shipping a dead link;
 * looks up the download count and star count that the README already advertises.
 
 The counts are fetched once per build and every failure is non-fatal: the stat is simply left off
@@ -24,6 +26,8 @@ iterating on the page itself.
 
 from __future__ import annotations
 
+import html
+import json
 import os
 import re
 from pathlib import Path
@@ -37,6 +41,7 @@ from pygments.lexers import PythonLexer
 from sphinx.application import Sphinx
 from sphinx.util.logging import getLogger
 
+import empulse.models
 import homepage_content as content
 
 logger = getLogger(__name__)
@@ -53,6 +58,9 @@ GITHUB_API = f'https://api.github.com/repos/{GITHUB_REPO}'
 # not, and it already carries the rounded number ("54k") this page wants to print.
 PEPY_BADGE = 'https://static.pepy.tech/badge/empulse'
 TIMEOUT = 10
+
+# Losses print with a real minus sign rather than a hyphen, as typeset numbers should.
+MINUS = '\N{MINUS SIGN}'
 
 # `nowrap` because the template supplies the `<div class="highlight"><pre>` wrapper itself. The
 # token classes are Pygments' standard ones, which is the point: Sphinx already writes CSS for
@@ -138,7 +146,6 @@ def _fetch_stats(release: str) -> list[dict[str, str]]:
         if stat['label'] == 'latest release':
             stat['value'] = f'v{stat["value"].lstrip("v")}'
 
-    stats.append({'value': '3.11+', 'label': 'Python', 'url': pypi})
     return stats
 
 
@@ -170,6 +177,102 @@ class _Resolver:
             logger.warning(f'homepage: unknown document {docname!r}', type='homepage')
             return ''
         return self.app.builder.get_relative_uri(self.pagename, docname)
+
+    def api(self, name: str) -> str:
+        """The API reference URL of a public Empulse object, given by its short name.
+
+        The reference documents every object under its public path, for example
+        ``empulse.models.CSLogitClassifier``, so the shortest documented ``empulse.*`` name ending in
+        ``name`` is the one a reader would import.
+        """
+        objects = self.app.env.domains['py'].objects
+        candidates = sorted(
+            (
+                key
+                for key, entry in objects.items()
+                if key.startswith('empulse.') and key.rsplit('.', 1)[-1] == name and not entry.aliased
+            ),
+            key=len,
+        )
+        if not candidates:
+            logger.warning(f'homepage: {name!r} is not in the API reference', type='homepage')
+            return ''
+        entry = objects[candidates[0]]
+        uri = self.app.builder.get_relative_uri(self.pagename, entry.docname)
+        return f'{uri}#{entry.node_id}'
+
+    def external(self, role: str, target: str) -> str:
+        """The URL of an object in another project's documentation, through intersphinx.
+
+        A missing inventory (an offline build) is not an error: the name is then printed without a
+        link, the way the theme prints any unresolved cross-reference.
+        """
+        try:
+            from sphinx.ext.intersphinx import InventoryAdapter
+
+            item = InventoryAdapter(self.app.env).main_inventory[role][target]
+        except Exception as error:  # noqa: BLE001 - an unreachable inventory must not fail a docs build
+            logger.info(f'homepage: no intersphinx entry for {target!r} ({error}); printing it unlinked')
+            return ''
+        return item.uri if hasattr(item, 'uri') else item[2]
+
+
+def _emphasise(text: str) -> str:
+    """Mark up a heading's ``*word*`` as the landing page's emphasis, and ``|`` as a wide-screen break.
+
+    Punctuation directly after the word is kept on the same line as it, so a comma can never start
+    a line of its own.
+    """
+    escaped = html.escape(text, quote=False)
+    escaped = re.sub(
+        r'\*([^*]+)\*([,.;:!?]?)',
+        r'<span class="eds-nowrap"><em class="eds-hl">\1</em>\2</span>',
+        escaped,
+    )
+    return escaped.replace('|', ' <br class="eds-br-wide">')
+
+
+def _highlight_block(code: str) -> str:
+    """Colour a snippet with Pygments, for a static code block with no per-line reveal."""
+    return highlight(code.strip('\n'), PythonLexer(), FORMATTER).rstrip('\n')
+
+
+def _hero_summary(raw: str) -> dict[str, Any] | None:
+    """The numbers the signature prints before its script runs.
+
+    The script redraws the same figures from the same JSON, so a reader without JavaScript and a
+    reader with it see one set of numbers.
+    """
+    if not raw:
+        return None
+    data = json.loads(raw)
+    thresholds = data['thresholds']
+    rows = []
+    for key in ('baseline', 'cost_sensitive'):
+        model = data['models'][key]
+        index = model['tuned_index']
+        rows.append({
+            'key': key,
+            'label': model['label'],
+            'threshold': f'{thresholds[index]:.2f}',
+            'contacted': f'{model["contacted"][index]:,}',
+            'profit': model['profit'][index],
+        })
+    delta = rows[1]['profit'] - rows[0]['profit']
+    scale = max(row['profit'] for row in rows) or 1
+    for row in rows:
+        row['bar'] = round(max(row['profit'], 0) / scale * 100, 1)
+        row['profit'] = _euro(row['profit'])
+    return {
+        'samples': f'{data["samples"]:,}',
+        'rows': rows,
+        'delta': ('+' if delta >= 0 else MINUS) + _euro(abs(delta)),
+    }
+
+
+def _euro(value: float) -> str:
+    """``12345`` as ``€12,345``, with a real minus sign for losses."""
+    return f'{MINUS if value < 0 else ""}€{abs(round(value)):,}'
 
 
 def _highlight(code: str) -> str:
@@ -203,20 +306,28 @@ def _highlight(code: str) -> str:
 def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
     """Everything ``homepage.html`` needs, with refs resolved and code highlighted."""
     resolve = _Resolver(app, pagename)
+    hero_data = HERO_DATA.read_text(encoding='utf-8').strip() if HERO_DATA.is_file() else ''
 
     return {
         'hero_eyebrow': content.EYEBROW,
-        'hero_motto': content.MOTTO,
+        'hero_motto': _emphasise(content.MOTTO),
         'hero_lead': content.LEAD,
         'install_command': content.INSTALL_COMMAND,
+        'signature': {
+            'kicker': content.SIGNATURE_KICKER,
+            'title': content.SIGNATURE_TITLE,
+            'footnote': content.SIGNATURE_FOOTNOTE,
+        },
         # Resolved rather than written with `pathto` so that a page which moves is reported by the
         # `-W` build instead of turning into a 404 on the busiest page of the site.
         'url_getting_started': resolve.doc('getting_started'),
         'url_tutorial': resolve.doc('tutorial'),
         'url_installation': resolve.doc('getting_started/installation'),
-        'hero_data': HERO_DATA.read_text(encoding='utf-8').strip() if HERO_DATA.is_file() else '',
+        'hero_data': hero_data,
+        'hero_summary': _hero_summary(hero_data),
         'stats': app.env.empulse_homepage_stats,
-        'pillars': [{**pillar._asdict(), 'url': resolve.ref(pillar.link_ref)} for pillar in content.PILLARS],
+        'tour_title': _emphasise(content.TOUR_TITLE),
+        'tour_lead': content.TOUR_LEAD,
         'setup_caption': content.SETUP_CAPTION,
         'steps': [
             {
@@ -227,9 +338,56 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
             }
             for step in content.STEPS
         ],
+        'features_title': _emphasise(content.FEATURES_TITLE),
+        'features_lead': content.FEATURES_LEAD,
+        'cost_matrix_snippet': _highlight_block(content.COST_MATRIX_SNIPPET),
+        'metric_results_caption': content.METRIC_RESULTS_CAPTION,
+        'metric_results': [
+            {
+                **result._asdict(),
+                'url': (
+                    resolve.external('py:class', result.sklearn_target)
+                    if result.sklearn_target
+                    else resolve.api(result.model)
+                ),
+            }
+            for result in content.METRIC_RESULTS
+        ],
+        'estimator_count': len(empulse.models.__all__),
+        'estimator_highlights': content.ESTIMATOR_HIGHLIGHTS,
+        'estimators_not_shown': len(empulse.models.__all__) - len(content.ESTIMATOR_HIGHLIGHTS),
+        'pipeline_snippet': _highlight_block(content.PIPELINE_SNIPPET),
+        'sklearn_lead': content.SKLEARN_LEAD,
+        'sklearn_tail': content.SKLEARN_TAIL,
+        'sklearn_tools': [
+            {'name': name, 'url': resolve.external(role, target)} for name, role, target in content.SKLEARN_TOOLS
+        ],
+        'api_urls': {name: resolve.api(name) for name in _api_names()},
+        'datasets': [{**row._asdict(), 'url': resolve.ref(row.ref)} for row in content.DATASET_HIGHLIGHTS],
+        'url_measuring': resolve.ref('measuring'),
+        'url_training': resolve.ref('training'),
+        'url_deciding': resolve.ref('deciding'),
+        'url_datasets': resolve.ref('datasets'),
+        'url_api': resolve.doc('api'),
+        'url_models': resolve.doc('reference/models'),
+        'research_title': _emphasise(content.RESEARCH_TITLE),
+        'research_lead': content.RESEARCH_LEAD,
+        'papers': [paper._asdict() for paper in content.PAPERS],
+        'citation_doi': content.CITATION_DOI,
+        'closing_title': _emphasise(content.CLOSING_TITLE),
+        'closing_button': content.CLOSING_BUTTON,
         'destinations': [
             {**destination._asdict(), 'url': resolve.doc(destination.ref)} for destination in content.DESTINATIONS
         ],
+    }
+
+
+def _api_names() -> set[str]:
+    """Every Empulse object the page names, each of which links to its API reference entry."""
+    return {
+        *content.ESTIMATOR_HIGHLIGHTS,
+        *(row.loader for row in content.DATASET_HIGHLIGHTS),
+        *(name for paper in content.PAPERS for name in paper.implements),
     }
 
 
@@ -250,7 +408,7 @@ def _use_homepage_template(
         return None
     if not HERO_DATA.is_file():
         logger.warning(
-            f'homepage: {HERO_DATA.name} is missing, so the hero chart will be empty; run `just figures`',
+            f'homepage: {HERO_DATA.name} is missing, so the hero comparison will be empty; run `just figures`',
             type='homepage',
         )
     context.update(_build_context(app, pagename))

@@ -8,7 +8,7 @@
 .. This page is rendered from ``_templates/homepage.html`` rather than from the text below. The
    landing page is the one surface on the site that is not prose, so ``sphinxext/homepage.py``
    swaps the template for this document and fills it from ``homepage_content.py`` — which is where
-   the wording, the three selling points and the code walkthrough are edited.
+   the wording, the code walkthrough and the feature cards are edited.
 
    What still has to live here is the page title, which names the document in the browser tab and
    in the version switcher, and the toctree, which is what puts Getting Started, Tutorial, User
