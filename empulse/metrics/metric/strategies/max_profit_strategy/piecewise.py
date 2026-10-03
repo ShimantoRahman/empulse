@@ -11,8 +11,8 @@ from scipy.integrate import IntegrationWarning, quad
 from sympy.stats import density, pspace
 
 from ....._types import FloatNDArray, IntNDArray
-from ...._cy_max_profit import Distribution, expected_max_profit
-from ..._compile import MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ...._cy_max_profit import Distribution, expected_max_profit, expected_max_profit_from_counts
+from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ..._symbolic import _subs_by_name
 from ._distributions import ADAPTERS, adapter_for
@@ -753,6 +753,47 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
             upper_bound=partition.upper_bound,
             lower_bound=partition.lower_bound,
         )
+
+    def _count_scorer(self, **kwargs: Any) -> CountScoreFn:
+        """
+        Prepare the score of samples grouped by score, for parameter values fixed across many calls.
+
+        With the compiled score, everything that depends only on the parameters is resolved here,
+        and the profit's coefficients are reused for as long as the class prior stays the same (as
+        it does for every tree a ProfTree evaluates), so a call is a single compiled function call.
+        """
+        if self._compiled is None or expected_max_profit_from_counts is None:
+            return super()._count_scorer(**kwargs)
+        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+        affine, distribution = self._compiled
+        distribution_parameters, parameters = self._resolve_distribution_parameters(dict(kwargs))
+        lower_bound, upper_bound = self._support(distribution_parameters)
+        distribution_values = np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64)
+        last_parts: tuple[int, int, FloatNDArray] | None = None
+
+        def coefficient_parts(n_positives: int, n_negatives: int) -> FloatNDArray:
+            nonlocal last_parts
+            cached = last_parts
+            if cached is not None and cached[0] == n_positives and cached[1] == n_negatives:
+                return cached[2]
+            positive_class_prior = n_positives / (n_positives + n_negatives)
+            parts = np.ascontiguousarray(affine(positive_class_prior, 1 - positive_class_prior, parameters))
+            last_parts = (n_positives, n_negatives, parts)
+            return parts
+
+        def score(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
+            return expected_max_profit_from_counts(  # type: ignore[no-any-return]
+                np.asarray(y_score, dtype=np.float64),
+                np.asarray(n_positive, dtype=np.int64),
+                np.asarray(n_negative, dtype=np.int64),
+                coefficient_parts,
+                lower_bound,
+                upper_bound,
+                distribution,
+                distribution_values,
+            )
+
+        return score
 
     def _integrate(
         self,

@@ -20,6 +20,8 @@ from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
 from scipy.special.cython_special cimport betainc, chdtr, gamma, gammainc, ndtr
 
+from .._cy_convex_hull.convex_hull cimport Group, Point, _add_groups_to_hull
+
 # Crossings closer together than this (relative to the span they live in) are treated as one.
 cdef double _MERGE_RTOL = 1e-12
 cdef double _NAN = float('nan')
@@ -103,6 +105,12 @@ cdef void _partition(
     cdef int degree = -1
     cdef double constant, linear, quadratic, discriminant, root_of, span
     cdef vector[double] crossings, edges
+
+    # At most two crossings per adjacent pair, plus the two ends of the support.
+    crossings.reserve(2 * n_vertices)
+    edges.reserve(2 * n_vertices + 2)
+    bounds.reserve(2 * n_vertices + 2)
+    vertices.reserve(2 * n_vertices + 1)
 
     # The highest power at which any adjacent pair differs: powers above it cancel in every pair.
     for k in range(n_powers):
@@ -225,25 +233,29 @@ cdef inline double _triangular_cdf(double x, double c, double loc, double scale)
 # --- The integrals over the regions -----------------------------------------------------------
 
 
-cdef inline bint _all_zero(const vector[double]& values) noexcept nogil:
+# The integrators take the coefficients of every region as one array, a[k * n_regions + r] being
+# the coefficient of x**k on region r, with n_regions = bounds.size() - 1.
+
+
+cdef inline bint _all_zero(const double* values, Py_ssize_t n_values) noexcept nogil:
     cdef Py_ssize_t i
-    for i in range(<Py_ssize_t>values.size()):
+    for i in range(n_values):
         if values[i] != 0.0:
             return False
     return True
 
 
 cdef double _integrate_uniform(
-    const vector[vector[double]]& a, const vector[double]& bounds, double lower, double upper
+    const double* a, Py_ssize_t n_powers, const vector[double]& bounds, double lower, double upper
 ) noexcept nogil:
     cdef double pdf = 1.0 / (upper - lower), total = 0.0, term
-    cdef Py_ssize_t k, r
-    for k in range(<Py_ssize_t>a.size()):
-        if _all_zero(a[k]):
+    cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
+    for k in range(n_powers):
+        if _all_zero(&a[k * n_regions], n_regions):
             continue
         term = 0.0
-        for r in range(<Py_ssize_t>a[k].size()):
-            term += (a[k][r] * pdf / (k + 1.0)) * (pow(bounds[r + 1], k + 1) - pow(bounds[r], k + 1))
+        for r in range(n_regions):
+            term += (a[k * n_regions + r] * pdf / (k + 1.0)) * (pow(bounds[r + 1], k + 1) - pow(bounds[r], k + 1))
         total += term
     return total
 
@@ -258,39 +270,39 @@ cdef inline double _pow_times_pdf(double x, int power, double pdf) noexcept nogi
 
 
 cdef double _integrate_normal(
-    const vector[vector[double]]& a, const vector[double]& bounds, double mu, double sigma
+    const double* a, Py_ssize_t n_powers, const vector[double]& bounds, double mu, double sigma
 ) noexcept nogil:
     """Partial moments by the recurrence R_k = mu R_(k-1) + (k-1) sigma**2 R_(k-2) - sigma [x**(k-1) phi(z)]."""
-    cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, n_powers = <Py_ssize_t>a.size(), k, r
-    cdef vector[double] pdf_at
-    cdef vector[vector[double]] moments
+    cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
+    cdef vector[double] scratch  # the pdf at each bound, then moments[k * n_regions + r]
+    cdef double* pdf_at
+    cdef double* moments
     cdef double total = 0.0, term, z_lower, z_upper
-    pdf_at.resize(n_regions + 1)
-    moments.resize(n_powers)
-    for k in range(n_powers):
-        moments[k].resize(n_regions)
+    scratch.resize(n_regions + 1 + n_powers * n_regions)
+    pdf_at = scratch.data()
+    moments = pdf_at + n_regions + 1
     for r in range(n_regions + 1):
         pdf_at[r] = _normal_pdf((bounds[r] - mu) / sigma)
     for r in range(n_regions):
         z_lower = (bounds[r] - mu) / sigma
         z_upper = (bounds[r + 1] - mu) / sigma
-        moments[0][r] = ndtr(z_upper) - ndtr(z_lower)
+        moments[r] = ndtr(z_upper) - ndtr(z_lower)
         if n_powers > 1:
-            moments[1][r] = mu * moments[0][r] - sigma * (pdf_at[r + 1] - pdf_at[r])
+            moments[n_regions + r] = mu * moments[r] - sigma * (pdf_at[r + 1] - pdf_at[r])
         for k in range(2, n_powers):
-            moments[k][r] = (
-                mu * moments[k - 1][r]
-                + (k - 1.0) * (sigma * sigma) * moments[k - 2][r]
+            moments[k * n_regions + r] = (
+                mu * moments[(k - 1) * n_regions + r]
+                + (k - 1.0) * (sigma * sigma) * moments[(k - 2) * n_regions + r]
                 - sigma * (
                     _pow_times_pdf(bounds[r + 1], k - 1, pdf_at[r + 1]) - _pow_times_pdf(bounds[r], k - 1, pdf_at[r])
                 )
             )
     for k in range(n_powers):
-        if _all_zero(a[k]):
+        if _all_zero(&a[k * n_regions], n_regions):
             continue
         term = 0.0
         for r in range(n_regions):
-            term += a[k][r] * moments[k][r]
+            term += a[k * n_regions + r] * moments[k * n_regions + r]
         total += term
     return total
 
@@ -316,7 +328,7 @@ cdef double _triangular_antiderivative(double x, int k, double a, double b, doub
 
 
 cdef double _integrate_triangular(
-    const vector[vector[double]]& coefficients, const vector[double]& bounds, double a, double b, double m
+    const double* coefficients, Py_ssize_t n_powers, const vector[double]& bounds, double a, double b, double m
 ) noexcept nogil:
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
     cdef vector[double] clipped
@@ -325,18 +337,18 @@ cdef double _integrate_triangular(
     for r in range(n_regions + 1):
         # np.clip: NaN stays NaN
         clipped[r] = bounds[r] if isnan(bounds[r]) else min(max(bounds[r], a), b)
-    for k in range(<Py_ssize_t>coefficients.size()):
-        if _all_zero(coefficients[k]):
+    for k in range(n_powers):
+        if _all_zero(&coefficients[k * n_regions], n_regions):
             continue
         term = 0.0
         for r in range(n_regions):
             if k == 0:
-                term += coefficients[k][r] * (
+                term += coefficients[k * n_regions + r] * (
                     _triangular_cdf(clipped[r + 1], (m - a) / scale, a, scale)
                     - _triangular_cdf(clipped[r], (m - a) / scale, a, scale)
                 )
             else:
-                term += coefficients[k][r] * (
+                term += coefficients[k * n_regions + r] * (
                     _triangular_antiderivative(clipped[r + 1], k, a, b, m)
                     - _triangular_antiderivative(clipped[r], k, a, b, m)
                 )
@@ -391,19 +403,19 @@ cdef double _moment(Distribution distribution, const double* p, int k) noexcept 
 
 
 cdef double _integrate_positive(
-    Distribution distribution, const vector[vector[double]]& a, const vector[double]& bounds, const double* p
+    Distribution distribution, const double* a, Py_ssize_t n_powers, const vector[double]& bounds, const double* p
 ) noexcept nogil:
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
     cdef vector[double] cdf_at
     cdef double total = 0.0, term, moment
     cdf_at.resize(n_regions + 1)
-    for k in range(<Py_ssize_t>a.size()):
+    for k in range(n_powers):
         moment = _moment(distribution, p, k)
         for r in range(n_regions + 1):
             cdf_at[r] = _size_biased_cdf(distribution, p, k, bounds[r])
         term = 0.0
         for r in range(n_regions):
-            term += a[k][r] * moment * (cdf_at[r + 1] - cdf_at[r])
+            term += a[k * n_regions + r] * moment * (cdf_at[r + 1] - cdf_at[r])
         total += term
     return total
 
@@ -423,6 +435,67 @@ cdef Py_ssize_t _n_parameters(Distribution distribution) noexcept nogil:
     ):
         return 2
     return -1
+
+
+cdef int _check_profit_and_distribution(
+    Py_ssize_t n_powers, Distribution distribution, const double[::1] distribution_parameters
+) except -1:
+    cdef Py_ssize_t n_parameters = _n_parameters(distribution), k
+    if n_parameters < 0:
+        raise ValueError(f'Unknown distribution {distribution}.')
+    if distribution_parameters.shape[0] != n_parameters:
+        raise ValueError(
+            f'The distribution takes {n_parameters} parameters, got {distribution_parameters.shape[0]}.'
+        )
+    if distribution == PARETO:
+        for k in range(n_powers):
+            if distribution_parameters[1] <= k:
+                raise ValueError(
+                    f'The Pareto shape parameter (alpha={distribution_parameters[1]}) must be strictly '
+                    f'greater than degree k={k} for the moment to exist.'
+                )
+    return 0
+
+
+cdef double _expected_max_profit(
+    const double* true_positive_rates,
+    const double* false_positive_rates,
+    Py_ssize_t n_vertices,
+    const double* constant,
+    const double* tpr_slope,
+    const double* fpr_slope,
+    Py_ssize_t n_powers,
+    double lower_bound,
+    double upper_bound,
+    Distribution distribution,
+    const double* p,
+) noexcept nogil:
+    cdef vector[double] coefficients  # coefficients[m * n_powers + k]: of x**k at vertex m
+    cdef vector[double] bounds
+    cdef vector[Py_ssize_t] vertices
+    cdef vector[double] a  # a[k * n_regions + r]: the coefficient of x**k on region r
+    cdef Py_ssize_t m, k, r, n_regions
+
+    coefficients.resize(n_vertices * n_powers)
+    for m in range(n_vertices):
+        for k in range(n_powers):
+            coefficients[m * n_powers + k] = (
+                constant[k] + tpr_slope[k] * true_positive_rates[m] + fpr_slope[k] * false_positive_rates[m]
+            )
+    _partition(coefficients, n_vertices, n_powers, lower_bound, upper_bound, bounds, vertices)
+    n_regions = <Py_ssize_t>vertices.size()
+    a.resize(n_powers * n_regions)
+    for k in range(n_powers):
+        for r in range(n_regions):
+            a[k * n_regions + r] = coefficients[vertices[r] * n_powers + k]
+
+    if distribution == UNIFORM:
+        return _integrate_uniform(a.data(), n_powers, bounds, lower_bound, upper_bound)
+    if distribution == NORMAL:
+        return _integrate_normal(a.data(), n_powers, bounds, p[0], p[1])
+    if distribution == TRIANGULAR:
+        return _integrate_triangular(a.data(), n_powers, bounds, p[0], p[1], p[2])
+    return _integrate_positive(distribution, a.data(), n_powers, bounds, p)
 
 
 def expected_max_profit(
@@ -462,7 +535,7 @@ def expected_max_profit(
     float
         The expected maximum profit.
     """
-    cdef Py_ssize_t n_vertices = true_positive_rates.shape[0], n_powers = constant.shape[0], m, k, r
+    cdef Py_ssize_t n_vertices = true_positive_rates.shape[0], n_powers = constant.shape[0]
     if n_vertices == 0 or false_positive_rates.shape[0] != n_vertices:
         raise ValueError(
             'The hull needs at least one vertex, with as many false as true positive rates, got '
@@ -473,48 +546,127 @@ def expected_max_profit(
             'The profit needs one to three coefficients (a polynomial of degree at most two) of each '
             f'kind, got {n_powers}, {tpr_slope.shape[0]} and {fpr_slope.shape[0]}.'
         )
-    cdef Py_ssize_t n_parameters = _n_parameters(distribution)
-    if n_parameters < 0:
-        raise ValueError(f'Unknown distribution {distribution}.')
-    if distribution_parameters.shape[0] != n_parameters:
-        raise ValueError(
-            f'The distribution takes {n_parameters} parameters, got {distribution_parameters.shape[0]}.'
-        )
-    if distribution == PARETO:
-        for k in range(n_powers):
-            if distribution_parameters[1] <= k:
-                raise ValueError(
-                    f'The Pareto shape parameter (alpha={distribution_parameters[1]}) must be strictly '
-                    f'greater than degree k={k} for the moment to exist.'
-                )
+    _check_profit_and_distribution(n_powers, distribution, distribution_parameters)
 
-    cdef const double* p = &distribution_parameters[0]
-    cdef vector[double] coefficients  # coefficients[m * n_powers + k]: of x**k at vertex m
-    cdef vector[double] bounds
-    cdef vector[Py_ssize_t] vertices
-    cdef vector[vector[double]] a  # a[k][r]: the coefficient of x**k on region r
     cdef double total
-
     with nogil:
-        coefficients.resize(n_vertices * n_powers)
-        for m in range(n_vertices):
-            for k in range(n_powers):
-                coefficients[m * n_powers + k] = (
-                    constant[k] + tpr_slope[k] * true_positive_rates[m] + fpr_slope[k] * false_positive_rates[m]
-                )
-        _partition(coefficients, n_vertices, n_powers, lower_bound, upper_bound, bounds, vertices)
-        a.resize(n_powers)
-        for k in range(n_powers):
-            a[k].resize(vertices.size())
-            for r in range(<Py_ssize_t>vertices.size()):
-                a[k][r] = coefficients[vertices[r] * n_powers + k]
+        total = _expected_max_profit(
+            &true_positive_rates[0],
+            &false_positive_rates[0],
+            n_vertices,
+            &constant[0],
+            &tpr_slope[0],
+            &fpr_slope[0],
+            n_powers,
+            lower_bound,
+            upper_bound,
+            distribution,
+            &distribution_parameters[0],
+        )
+    return total
 
-        if distribution == UNIFORM:
-            total = _integrate_uniform(a, bounds, lower_bound, upper_bound)
-        elif distribution == NORMAL:
-            total = _integrate_normal(a, bounds, p[0], p[1])
-        elif distribution == TRIANGULAR:
-            total = _integrate_triangular(a, bounds, p[0], p[1], p[2])
+
+def expected_max_profit_from_counts(
+    const double[:] y_score,
+    const long long[:] n_positive,
+    const long long[:] n_negative,
+    object coefficient_parts,
+    double lower_bound,
+    double upper_bound,
+    Distribution distribution,
+    const double[::1] distribution_parameters,
+) -> float:
+    """
+    Return the expected maximum profit of samples grouped by score, such as the leaves of a tree.
+
+    Gives the same result as :func:`expected_max_profit` on the ROC convex hull that
+    :func:`~empulse.metrics._cy_convex_hull.convex_hull_from_counts` builds from the groups, in one
+    call and without creating the hull's arrays: with few groups, as a tree has leaves, passing those
+    arrays around costs more than the computation itself.
+
+    Parameters
+    ----------
+    y_score : 1D np.ndarray, shape=(n_groups,)
+        The score shared by the samples of each group. Scores need not be distinct.
+
+    n_positive, n_negative : 1D np.ndarray, shape=(n_groups,)
+        The number of positive and of negative samples in each group.
+
+    coefficient_parts : callable
+        Called with the total numbers of positive and negative samples, which set the class priors.
+        Returns the profit's ``constant``, ``tpr_slope`` and ``fpr_slope`` (see
+        :func:`expected_max_profit`) as the rows of a C-contiguous float64 array of shape
+        ``(3, degree + 1)``.
+
+    lower_bound, upper_bound, distribution, distribution_parameters
+        As for :func:`expected_max_profit`.
+
+    Returns
+    -------
+    float
+        The expected maximum profit.
+    """
+    cdef Py_ssize_t n_groups = y_score.shape[0], i
+    if not n_groups == n_positive.shape[0] == n_negative.shape[0]:
+        raise ValueError(
+            'y_score, n_positive and n_negative must have the same length, got '
+            f'{n_groups}, {n_positive.shape[0]} and {n_negative.shape[0]}.'
+        )
+    cdef bint has_negative_count = False
+    cdef long long n_samples = 0
+    cdef vector[Group] groups
+    cdef vector[Point] hull
+    with nogil:
+        groups.resize(n_groups)
+        for i in range(n_groups):
+            groups[i] = Group(y_score[i], n_positive[i], n_negative[i])
+            has_negative_count |= n_positive[i] < 0 or n_negative[i] < 0
+            n_samples += n_positive[i] + n_negative[i]
+    if has_negative_count:
+        raise ValueError('The numbers of positive and negative samples cannot be negative.')
+    if n_samples == 0:
+        raise ValueError('The ROC convex hull needs at least one sample.')
+    with nogil:
+        hull.reserve(n_groups + 1)
+        hull.push_back(Point(0, 0))  # targeting no one
+        _add_groups_to_hull(groups, hull)
+
+    cdef long long n_positives = hull.back().n_positive, n_negatives = hull.back().n_negative
+    cdef const double[:, ::1] parts = coefficient_parts(n_positives, n_negatives)
+    cdef Py_ssize_t n_powers = parts.shape[1]
+    if parts.shape[0] != 3 or not 1 <= n_powers <= 3:
+        raise ValueError(
+            'The profit needs one to three coefficients (a polynomial of degree at most two) of each '
+            f'kind, as an array of shape (3, degree + 1), got shape ({parts.shape[0]}, {n_powers}).'
+        )
+    _check_profit_and_distribution(n_powers, distribution, distribution_parameters)
+
+    # The rates as convex_hull_from_counts computes them, including its diagonal for a single class.
+    cdef vector[double] true_positive_rates, false_positive_rates
+    cdef double total
+    with nogil:
+        if n_positives == 0 or n_negatives == 0:
+            true_positive_rates.push_back(0.0)
+            true_positive_rates.push_back(1.0)
+            false_positive_rates.push_back(0.0)
+            false_positive_rates.push_back(1.0)
         else:
-            total = _integrate_positive(distribution, a, bounds, p)
+            true_positive_rates.resize(hull.size())
+            false_positive_rates.resize(hull.size())
+            for i in range(<Py_ssize_t>hull.size()):
+                true_positive_rates[i] = hull[i].n_positive / <double>n_positives
+                false_positive_rates[i] = hull[i].n_negative / <double>n_negatives
+        total = _expected_max_profit(
+            true_positive_rates.data(),
+            false_positive_rates.data(),
+            <Py_ssize_t>true_positive_rates.size(),
+            &parts[0, 0],
+            &parts[1, 0],
+            &parts[2, 0],
+            n_powers,
+            lower_bound,
+            upper_bound,
+            distribution,
+            &distribution_parameters[0],
+        )
     return total

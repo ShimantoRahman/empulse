@@ -311,10 +311,12 @@ cdef EvolutionResult evolve_forest_stochastic(
                 index=i,
             )
 
+        # Each offspring is fitted and scored before it competes with its parent: until then it
+        # carries its parent's fitness, or NaN after a crossover.
+        fit_population(offspring, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
+        evaluate_population(offspring, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
         for i in range(pop_size):
             insert_offspring(population, offspring, i)
-        fit_population(population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf, n_threads)
-        evaluate_population(population, X_view, y, n_samples, fitness_function, fitness_from_leaves, alpha)
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(
@@ -409,12 +411,14 @@ cdef EvolutionResult evolve_forest_deterministic(
                 index=i,
             )
 
-        for i in range(pop_size):
-            insert_offspring(population, offspring, i)
+        # Each offspring is fitted and scored before it competes with its parent: until then it
+        # carries its parent's fitness, or NaN after a crossover.
         fit_population_max_profit(
-            population, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
+            offspring, X_view, y_view, n_samples, min_samples_split, min_samples_leaf,
             tp_benefit, tn_benefit, fp_cost, fn_cost, alpha, n_threads,
         )
+        for i in range(pop_size):
+            insert_offspring(population, offspring, i)
 
         gen_best_tree = find_best_tree(population)
         if stop_evolution(

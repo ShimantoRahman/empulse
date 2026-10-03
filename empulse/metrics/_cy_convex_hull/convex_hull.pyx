@@ -20,17 +20,6 @@ cnp.import_array()
 cdef Py_ssize_t _MAX_SAMPLES_SORTED_IN_CPP = 256
 
 
-cdef struct Point:
-    long long n_negative  # samples ranked at or above a threshold that are negative
-    long long n_positive  # ... and positive
-
-
-cdef struct Group:
-    double score
-    long long n_positive
-    long long n_negative
-
-
 cdef inline long long _cross(const Point& o, const Point& a, const Point& b) noexcept nogil:
     """
     Cross product of (o->a) and (o->b): positive for a left turn, zero when the points are collinear.

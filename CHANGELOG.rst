@@ -124,11 +124,16 @@ Models
   loss such as its default it no longer scores large outputs as ties.
 - |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 16-24x faster with its default
   maximum profit fitness and about 4x faster with a stochastic
-  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss, to the same trees.
+  :class:`~empulse.metrics.MaxProfit` or :class:`~empulse.metrics.MinCost` loss, or 9-14x when its
+  expected profit has a closed form (such as :func:`~empulse.metrics.empc_score`), to the same trees.
   It now uses ``n_jobs``, which it ignored, and ``n_jobs`` accepts ``None`` and negative values.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` now minimizes a custom ``loss`` instead of
   maximizing it, its ``alpha`` penalty counts the tree's actual nodes, its early stopping works
   when the fitness is negative, and it no longer crashes on a constant feature.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` now scores each offspring before it competes
+  with its parent. Fitted trees are larger and earn more profit on held-out data,
+  and fits run longer, since the search keeps improving instead of stopping early. Results for a
+  given ``random_state`` change.
 - |Efficiency| :class:`~empulse.models.ProfLogitClassifier` and
   :class:`~empulse.models.CSLogitClassifier` with a :class:`~empulse.metrics.MaxProfit` loss and an
   optimizer that does not use gradients (such as the default of

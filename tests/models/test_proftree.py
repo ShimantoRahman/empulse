@@ -203,15 +203,15 @@ class TestEarlyStoppingWithNegativeFitness:
     without benefits, or a custom loss), so a tie would count as an improvement and reset the patience
     counter every generation.
 
-    With crossover as the only variation operator, the population never changes (crossover
-    offspring are never inserted, by design), so every generation's best ties the champion and the
-    search must stop after ``patience`` generations without improvement.
+    With prune as the only variation operator, the population never changes: every tree starts as a
+    single split at its root, which prune leaves alone. So every generation's best ties the champion
+    and the search must stop after ``patience`` generations without improvement.
     """
 
     FROZEN_POPULATION: ClassVar[dict[str, float]] = {
-        'crossover_rate': 1.0,
+        'crossover_rate': 0.0,
         'grow_rate': 0.0,
-        'prune_rate': 0.0,
+        'prune_rate': 1.0,
         'mutate_split_rate': 0.0,
         'mutate_value_rate': 0.0,
     }
@@ -238,6 +238,44 @@ class TestEarlyStoppingWithNegativeFitness:
             loss=loss, patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
         ).fit(X, y, fn=5.0, fp=1.0)
         assert model.n_iter_ == 6
+
+
+class TestSurvivorSelection:
+    """Each offspring is scored before it competes with its parent, and the fitter of the two survives.
+
+    Every initial tree is a single split at its root, so with crossover as the only variation operator
+    a deeper tree can only come from a crossover offspring that won its place in the population. An
+    offspring compared before it is scored carries no fitness of its own after a crossover, and would
+    never survive.
+    """
+
+    CROSSOVER_ONLY: ClassVar[dict[str, float]] = {
+        'crossover_rate': 1.0,
+        'grow_rate': 0.0,
+        'prune_rate': 0.0,
+        'mutate_split_rate': 0.0,
+        'mutate_value_rate': 0.0,
+    }
+
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.parametrize('loss', ['max_profit', 'custom_loss', 'stochastic_max_profit'])
+    def test_crossover_offspring_survive(self, loss):
+        X, y = make_classification(n_samples=1000, n_features=6, n_informative=4, random_state=0)
+        clv, cost = sympy.symbols('clv cost')
+        if loss == 'max_profit':
+            model, fit_params = ProfTreeClassifier(), {'fn_cost': 5.0, 'fp_cost': 1.0}
+        elif loss == 'custom_loss':
+            fn, fp = sympy.symbols('fn fp')
+            model = ProfTreeClassifier(loss=Metric(CostMatrix().add_fn_cost(fn).add_fp_cost(fp), Cost()))
+            fit_params = {'fn': 5.0, 'fp': 1.0}
+        else:
+            gamma = sympy.stats.Beta('gamma', 6, 14)
+            matrix = CostMatrix().add_tp_benefit(gamma * clv).add_fp_cost(cost)
+            model, fit_params = ProfTreeClassifier(loss=Metric(matrix, MaxProfit())), {'clv': 100.0, 'cost': 1.0}
+        model.set_params(max_iter=30, patience=30, population_size=20, random_state=0, **self.CROSSOVER_ONLY)
+        model.fit(X, y, **fit_params)
+
+        assert model.tree_._serialize_tree()['n_nodes'] > 3
 
 
 class TestLeafLevelFitness:

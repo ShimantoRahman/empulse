@@ -1,5 +1,5 @@
 try:  # ruff: ignore[non-empty-init-module]
-    from .piecewise import Distribution, expected_max_profit
+    from .piecewise import Distribution, expected_max_profit, expected_max_profit_from_counts
 except ImportError:  # pragma: no cover - exercised only when the extension is unbuilt or cannot link
     # Unlike the convex hull, this extension has a pure-Python fallback (the piecewise score
     # classes' own integration), which is used when it is missing. It links against SciPy's
@@ -7,5 +7,6 @@ except ImportError:  # pragma: no cover - exercised only when the extension is u
     # would otherwise make empulse.metrics unimportable rather than only slower.
     Distribution = None
     expected_max_profit = None
+    expected_max_profit_from_counts = None
 
-__all__ = ['Distribution', 'expected_max_profit']
+__all__ = ['Distribution', 'expected_max_profit', 'expected_max_profit_from_counts']
