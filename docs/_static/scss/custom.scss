@@ -23,9 +23,9 @@
 // is announced to a third-party font CDN. Licences sit beside the files in _static/fonts/.
 
 @font-face {
-  font-family: 'Space Grotesk Variable';
-  src: url('../fonts/space-grotesk-variable.woff2') format('woff2');
-  font-weight: 300 700;
+  font-family: 'Shorai Sans Var';
+  src: url('../fonts/ShoraiSansStdNVar-Latin-Plus-Symbols.woff2') format('woff2');
+  font-weight: 200 950;
   font-style: normal;
   font-display: swap;
 }
@@ -140,12 +140,12 @@ html[data-theme='dark'] {
 /* Typography -------------------------------------------------------------------------------- */
 
 html {
-  --pst-font-family-base: 'Space Grotesk Variable', 'Space Grotesk', var(--pst-font-family-base-system);
-  --pst-font-family-heading: 'Space Grotesk Variable', 'Space Grotesk', var(--pst-font-family-base-system);
+  --pst-font-family-base: 'Shorai Sans Var', var(--pst-font-family-base-system);
+  --pst-font-family-heading: 'Shorai Sans Var', var(--pst-font-family-base-system);
   --pst-font-family-monospace: 'JetBrains Mono Variable', 'JetBrains Mono',
     var(--pst-font-family-monospace-system);
 
-  // Space Grotesk carries the whole hierarchy, so no second display face is needed.
+  // Shorai Sans carries the whole hierarchy, so no second display face is needed.
   --pst-font-size-h1: 2.75rem; // 44px - page title
   --pst-font-size-h2: 2.125rem; // 34px - section title
   --pst-font-size-h3: 1.625rem; // 26px - major component / API group
@@ -176,7 +176,7 @@ body {
 /* Article content --------------------------------------------------------------------------- */
 
 .bd-article {
-  // Tracking tightens as size grows, which keeps Space Grotesk compact at display sizes. Page and
+  // Tracking tightens as size grows, which keeps Shorai Sans compact at display sizes. Page and
   // section titles stay at 500 so a reference page never looks like the landing page.
   h1 {
     font-weight: 500;
@@ -369,6 +369,8 @@ div.admonition {
 // as an image and the wordmark as text, so the text is styled here rather than baked into an image.
 .navbar-brand {
   gap: 0.32em;
+  // Room between the wordmark and the first navigation link, so the logo reads as its own item.
+  margin-right: 1.75rem;
 
   img.logo__image {
     height: 1.4rem;

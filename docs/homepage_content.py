@@ -49,7 +49,6 @@ SIGNATURE_FOOTNOTE: Final[str] = (
 # --- The code walkthrough --------------------------------------------------------------------
 
 TOUR_TITLE: Final[str] = 'A minute with *empulse*.'
-TOUR_LEAD: Final[str] = 'Four scikit-learn steps from a business question to a decision that pays.'
 
 # Not displayed. It gives the walkthrough the names an ordinary scikit-learn script would already
 # have bound, so each step below can stay short enough to read in one glance. The caption under
@@ -57,7 +56,7 @@ TOUR_LEAD: Final[str] = 'Four scikit-learn steps from a business question to a d
 SETUP: Final[str] = """
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -177,51 +176,38 @@ FEATURES_LEAD: Final[str] = (
 )
 
 
-class MetricResult(NamedTuple):
-    """One result tile on the metrics card: a number the quick tour's code produces.
-
-    ``value`` is what the tile prints and ``value_of`` the expression it is the value of, evaluated
-    once the walkthrough has run; ``tests/test_homepage_snippets.py`` checks the two against each
-    other, so a tile cannot drift away from the code. Costs are totals over the test customers
-    rather than per customer, so they read on the same scale as the €200 in the matrix above them
-    and the hero's profit figures. ``sklearn_target`` names the model's intersphinx target when it
-    is a scikit-learn class rather than an Empulse one.
-    """
-
-    label: str
-    model: str
-    value: str
-    value_of: str
-    sklearn_target: str | None = None
+# Each bento card says one thing and shows it with a small interactive figure; the detail lives on
+# the guide page the card links to.
 
 
-# The walkthrough's `train_test_split` leaves this many test customers; the test checks it.
-TOUR_TEST_CUSTOMERS: Final[int] = 2814
+class MatrixCell(NamedTuple):
+    """One cell of the measuring card's cost matrix: rows are the prediction, columns the outcome."""
 
-METRIC_RESULTS_CAPTION: Final[str] = (
-    f"The same matrix, put to work on the quick tour's {TOUR_TEST_CUSTOMERS:,} test customers:"
-)
-METRIC_RESULTS: Final[tuple[MetricResult, ...]] = (
-    MetricResult(
-        'Total expected cost',
-        'LogisticRegression',
-        '€28,765',
-        'expected_cost(y_test, baseline.predict_proba(X_test)[:, 1]) * len(y_test)',
-        sklearn_target='sklearn.linear_model.LogisticRegression',
+    key: str
+    name: str
+    amount: str
+    note: str
+    is_cost: bool
+
+
+MEASURE_TITLE: Final[str] = 'Every mistake has a price'
+MEASURE_LEAD: Final[str] = 'Write down what each outcome costs once. Every metric then reports in euros.'
+# In reading order: predicted churner (TP, FP), then predicted stayer (FN, TN). The amounts are the
+# walkthrough's defaults, `incentive=10` and `clv=200`.
+MATRIX_CELLS: Final[tuple[MatrixCell, ...]] = (
+    MatrixCell('tp', 'True positive', '€0', 'A churner you contacted stays.', is_cost=False),
+    MatrixCell('fp', 'False positive', '€10', 'A loyal customer gets a discount they did not need.', is_cost=True),
+    MatrixCell(
+        'fn',
+        'False negative',
+        '€200',
+        'A churner you missed leaves, and their lifetime value goes too.',
+        is_cost=True,
     ),
-    MetricResult(
-        'Total expected cost',
-        'CSLogitClassifier',
-        '€26,379',
-        'expected_cost(y_test, model.predict_proba(X_test)[:, 1]) * len(y_test)',
-    ),
-    MetricResult('Optimal threshold', 'CSThresholdClassifier', '0.048', 'decider.threshold_'),
+    MatrixCell('tn', 'True negative', '€0', 'A loyal customer is left alone.', is_cost=False),
 )
 
-# The metrics card's snippet: the matrix drawn above it, written down. It is the walkthrough's
-# first step without the defaults, and runs after that step, where `CostMatrix` is imported.
-COST_MATRIX_SNIPPET: Final[str] = """CostMatrix().add_fp_cost('incentive').add_fn_cost('clv')
-"""
+TRAIN_LEAD: Final[str] = 'Linear models, boosting, trees and forests that minimise your costs instead of log-loss.'
 
 # The estimators named on the training card. The count beside them is read from
 # `empulse.models.__all__` at build time, so adding a model never leaves the number behind.
@@ -235,31 +221,48 @@ ESTIMATOR_HIGHLIGHTS: Final[tuple[str, ...]] = (
     'ProfLogitClassifier',
 )
 
-# The scikit-learn card's snippet. It runs after the walkthrough's steps, in the same namespace, so
-# `expected_cost`, `X_train` and `y_train` are already bound and `cross_val_score` is imported by
-# `SETUP`. The scikit-learn names in the card's text link into scikit-learn's own documentation and
-# are examples, so the sentence around them says so.
-SKLEARN_LEAD: Final[str] = (
-    "Estimators, metrics and samplers follow scikit-learn's conventions, so they slot into the tools you "
-    'already use:'
-)
-SKLEARN_TAIL: Final[str] = 'and the rest of the ecosystem.'
-SKLEARN_TOOLS: Final[tuple[tuple[str, str, str], ...]] = (
-    ('Pipeline', 'py:class', 'sklearn.pipeline.Pipeline'),
-    ('GridSearchCV', 'py:class', 'sklearn.model_selection.GridSearchCV'),
-    ('cross_val_score', 'py:function', 'sklearn.model_selection.cross_val_score'),
+DECIDE_TITLE: Final[str] = 'Draw the line where profit peaks'
+DECIDE_LEAD: Final[str] = 'Drag the threshold. Empulse finds the most profitable one for you.'
+
+
+class ExampleCustomer(NamedTuple):
+    """A made-up customer on the deciding card: a churn score and whether they really churn."""
+
+    score: float
+    churns: bool
+
+
+# Made-up customers for the deciding card, roughly as a decent model would rank them: churners
+# cluster at high scores, but not perfectly. Contacting one costs the matrix's €10 incentive;
+# reaching a churner saves the €200 they would take with them.
+DECIDE_CUSTOMERS: Final[tuple[ExampleCustomer, ...]] = tuple(
+    ExampleCustomer(score, churns)
+    for score, churns in (
+        (0.04, False), (0.08, False), (0.11, False), (0.15, False), (0.19, False), (0.22, True),
+        (0.26, False), (0.30, False), (0.33, False), (0.37, False), (0.41, True), (0.44, False),
+        (0.48, False), (0.52, True), (0.55, False), (0.59, False), (0.63, True), (0.66, True),
+        (0.70, False), (0.74, True), (0.78, True), (0.82, False), (0.87, True), (0.93, True),
+    )
 )
 
-PIPELINE_SNIPPET: Final[str] = """pipe = make_pipeline(
-    StandardScaler(),
-    CSLogitClassifier(loss=expected_cost),
+DATASETS_TITLE: Final[str] = 'Real problems, costs included'
+DATASETS_LEAD: Final[str] = 'Churn, credit and fraud datasets that each ship with their own cost matrix.'
+
+SKLEARN_TITLE: Final[str] = 'Fits where your models already live'
+SKLEARN_LEAD: Final[str] = (
+    "Estimators, metrics and samplers follow scikit-learn's conventions, so they slot into the rest of "
+    'the ecosystem.'
 )
-cross_val_score(pipe, X_train, y_train)
-"""
+# The scikit-learn names in the card's diagram, linked into scikit-learn's own documentation.
+SKLEARN_TOOLS: Final[dict[str, tuple[str, str]]] = {
+    'GridSearchCV': ('py:class', 'sklearn.model_selection.GridSearchCV'),
+    'Pipeline': ('py:class', 'sklearn.pipeline.Pipeline'),
+    'StandardScaler': ('py:class', 'sklearn.preprocessing.StandardScaler'),
+}
 
 
 class DatasetHighlight(NamedTuple):
-    """One row of the datasets card: a few loaders, not the full list, which grows each release."""
+    """One tile of the datasets card: a few datasets, not the full list, which grows each release."""
 
     name: str
     problem: str
@@ -276,15 +279,15 @@ DATASET_HIGHLIGHTS: Final[tuple[DatasetHighlight, ...]] = (
     DatasetHighlight('PAKDD', 'Credit scoring', 'load_credit_scoring_pakdd', 'Bundled', 'credit_scoring_pakdd'),
     DatasetHighlight('Credit card fraud', 'Fraud', 'fetch_credit_card_fraud', 'Downloaded', 'credit_card_fraud'),
     DatasetHighlight('KDD Cup 1998', 'Direct mailing', 'fetch_kdd98', 'Downloaded', 'kdd98'),
+    DatasetHighlight(
+        'Give Me Some Credit', 'Credit scoring', 'fetch_give_me_some_credit', 'Downloaded', 'give_me_some_credit'
+    ),
 )
 
 # --- Built on research ---------------------------------------------------------------------------
 
 RESEARCH_TITLE: Final[str] = 'Methods from *peer-reviewed* papers.'
-RESEARCH_LEAD: Final[str] = (
-    'Every estimator and metric implements a published method, with the reference in its '
-    'docstring. Empulse puts them behind one consistent API.'
-)
+
 
 
 class Paper(NamedTuple):

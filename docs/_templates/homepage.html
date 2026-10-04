@@ -134,10 +134,8 @@
   {# --- A minute with empulse --------------------------------------------------------------- #}
   <section class="eds-band" data-eds-tour>
     <div class="eds-wrap">
-      <header class="eds-head eds-head--split">
-        <p class="eds-eyebrow">Quick tour</p>
+      <header class="eds-head">
         <h2>{{ tour_title }}</h2>
-        <p>{{ tour_lead }}</p>
       </header>
 
       <div class="eds-tour">
@@ -184,6 +182,8 @@
   </section>
 
   {# --- Everything you need ----------------------------------------------------------------- #}
+  {#- Each card says one thing and shows it with a small figure that responds to the pointer. The
+      figures are complete without their script; `homepage.js` only adds the interaction. -#}
   <section class="eds-band eds-windy">
     {{ wind([
       ('right', '-4%', 'top: 5%', '46%', '34px', true, 55),
@@ -192,55 +192,44 @@
     ]) }}
     <div class="eds-wrap">
       <header class="eds-head">
-        <p class="eds-eyebrow eds-eyebrow--purple">Everything you need</p>
         <h2>{{ features_title }}</h2>
         <p>{{ features_lead }}</p>
       </header>
 
       <div class="eds-bento">
-        <div class="eds-cell eds-cell--metrics">
-          <p class="eds-eyebrow">Measure</p>
-          <h3>Metrics that speak in euros</h3>
-          <p>Describe what each outcome costs once. Costs can be fixed amounts, named variables, or a different value for every customer.</p>
-          <div class="eds-matrix" role="table" aria-label="Churn cost matrix: rows are the prediction, columns the actual outcome">
-            <div role="row" class="eds-matrix__row">
-              <span role="columnheader"></span>
-              <span class="eds-matrix__head" role="columnheader">Actual churner</span>
-              <span class="eds-matrix__head" role="columnheader">Actual stayer</span>
-            </div>
-            <div role="row" class="eds-matrix__row">
-              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>churner</span>
-              <span class="eds-matrix__cell" role="cell"><small>tp_cost</small><b>€0</b><em>churner caught</em></span>
-              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fp_cost &middot; incentive</small><b>€10</b><em>discount wasted on a loyal customer</em></span>
-            </div>
-            <div role="row" class="eds-matrix__row">
-              <span class="eds-matrix__head eds-matrix__head--row" role="rowheader">Predicted<br>stayer</span>
-              <span class="eds-matrix__cell eds-matrix__cell--cost" role="cell"><small>fn_cost &middot; clv</small><b>€200</b><em>lifetime value of a lost customer</em></span>
-              <span class="eds-matrix__cell" role="cell"><small>tn_cost</small><b>€0</b><em>loyal customer left alone</em></span>
-            </div>
-          </div>
-          <p class="eds-results__caption">{{ metric_results_caption }}</p>
-          <ul class="eds-results">
-            {%- for result in metric_results %}
-            <li class="eds-result">
-              <span class="eds-result__label">{{ result.label }}</span>
-              <span class="eds-result__value">{{ result.value }}</span>
-              {%- if result.url %}
-              <a class="eds-result__model" href="{{ result.url }}">{{ result.model }}</a>
-              {%- else %}
-              <span class="eds-result__model">{{ result.model }}</span>
+        {#- Measure: the cost matrix in the logo's own shape. Pointing at a cell explains it. -#}
+        <div class="eds-cell eds-cell--measure" data-eds-matrix>
+          <h3>{{ measure.title }}</h3>
+          <p>{{ measure.lead }}</p>
+          <div class="eds-pricer">
+            <div class="eds-pricer__grid" role="group" aria-label="Cost of each outcome. Columns: actual churner, actual stayer. Rows: predicted churner, predicted stayer.">
+              <span aria-hidden="true"></span>
+              <span class="eds-pricer__axis" aria-hidden="true">Churns</span>
+              <span class="eds-pricer__axis" aria-hidden="true">Stays</span>
+              {%- for cell in matrix_cells %}
+              {%- if loop.index0 % 2 == 0 %}
+              <span class="eds-pricer__axis eds-pricer__axis--row" aria-hidden="true">{{ 'Contacted' if loop.first else 'Not contacted' }}</span>
               {%- endif %}
-            </li>
+              <button type="button"
+                      class="eds-pricer__cell{{ ' eds-pricer__cell--cost' if cell.is_cost }}{{ ' is-active' if cell.key == 'fn' }}"
+                      data-eds-cell="{{ cell.key }}"
+                      data-name="{{ cell.name }}"
+                      data-note="{{ cell.note }}"
+                      aria-label="{{ cell.name }}: {{ cell.amount }}. {{ cell.note }}">
+                <span class="eds-pricer__amount">{{ cell.amount }}</span>
+              </button>
+              {%- endfor %}
+            </div>
+            {%- for cell in matrix_cells if cell.key == 'fn' %}
+            <p class="eds-pricer__readout" aria-hidden="true"><b data-eds-matrix-name>{{ cell.name }}</b><span data-eds-matrix-note>{{ cell.note }}</span></p>
             {%- endfor %}
-          </ul>
-          <div class="highlight eds-mini"><pre>{{ cost_matrix_snippet }}</pre></div>
+          </div>
           <a class="eds-cell__more" href="{{ url_measuring }}">Measuring a model&nbsp;&rarr;</a>
         </div>
 
         <div class="eds-cell eds-cell--models">
-          <p class="eds-eyebrow eds-eyebrow--purple">Train</p>
           <p class="eds-big">{{ estimator_count }}<small>estimators</small></p>
-          <p>Linear models, boosting, trees and forests that minimise your costs instead of log-loss.</p>
+          <p>{{ train_lead }}</p>
           <div class="eds-chips">
             {%- for name in estimator_highlights %}<a class="eds-chip eds-chip--purple" href="{{ api_urls[name] }}">{{ name }}</a>{% endfor %}
             {%- if estimators_not_shown > 0 %}<a class="eds-chip" href="{{ url_models }}">+{{ estimators_not_shown }} more</a>{% endif %}
@@ -248,51 +237,83 @@
           <a class="eds-cell__more" href="{{ url_training }}">Training a model&nbsp;&rarr;</a>
         </div>
 
-        <div class="eds-cell eds-cell--decide">
-          <p class="eds-eyebrow eds-eyebrow--purple">Decide</p>
-          <h3>Thresholds set by cost, not habit</h3>
-          <p>Wrap any classifier and let the cost matrix pick the cut-off.</p>
-          {#- 0.048 is the walkthrough's cost-optimal threshold, the last step's result above. #}
-          <div class="eds-threshold" aria-hidden="true">
-            <span class="eds-threshold__track"></span>
-            <span class="eds-threshold__pin eds-threshold__pin--optimal" style="left: {{ (steps[-1].result | float) * 100 }}%"><span>{{ steps[-1].result }}</span><i></i></span>
-            <span class="eds-threshold__pin eds-threshold__pin--default" style="left: 50%"><span>0.5</span><i></i></span>
+        {#- Decide: example customers ranked by score. Moving the threshold contacts everyone right
+            of it, and the running total prices that choice with the measuring card's matrix. -#}
+        <div class="eds-cell eds-cell--decide" data-eds-decide>
+          <h3>{{ decide.title }}</h3>
+          <p>{{ decide.lead }}</p>
+          <div class="eds-cutoff">
+            <div class="eds-cutoff__plot">
+              <svg class="eds-cutoff__svg" viewBox="0 0 400 112" role="img" data-eds-decide-svg
+                   aria-label="{{ decide_customers | length }} example customers ranked by predicted churn score, with a movable decision threshold.">
+                <line class="eds-cutoff__axis" x1="16" x2="384" y1="92" y2="92"></line>
+                <text class="eds-cutoff__tick" x="16" y="108">low churn score</text>
+                <text class="eds-cutoff__tick" x="384" y="108" text-anchor="end">high</text>
+                {%- for customer in decide_customers %}
+                <circle class="eds-cutoff__dot{{ ' eds-cutoff__dot--churn' if customer.churns }}"
+                        cx="{{ '%.1f' % (16 + customer.score * 368) }}" cy="{{ customer.lane }}" r="6.5"
+                        data-score="{{ customer.score }}" data-churns="{{ 1 if customer.churns else 0 }}"></circle>
+                {%- endfor %}
+                <line class="eds-cutoff__best" x1="0" x2="0" y1="10" y2="92" data-eds-decide-best hidden></line>
+                <line class="eds-cutoff__line" x1="200" x2="200" y1="6" y2="96" data-eds-decide-line></line>
+              </svg>
+              <input class="eds-cutoff__scrub" type="range" min="0" max="100" step="1" value="50"
+                     aria-label="Decision threshold" data-eds-decide-scrub>
+            </div>
+            <p class="eds-cutoff__readout" aria-live="polite" data-eds-decide-readout>Contact the customers right of the line.</p>
+            <p class="eds-cutoff__legend" aria-hidden="true">
+              <span><i class="eds-dot eds-dot--churn"></i>will churn</span>
+              <span><i class="eds-dot"></i>will stay</span>
+              <span><i class="eds-dot eds-dot--best"></i>most profitable line</span>
+            </p>
           </div>
-          <div class="eds-threshold__scale" aria-hidden="true"><span>0</span><span>Cost-optimal threshold vs the default</span><span>1</span></div>
           <a class="eds-cell__more" href="{{ url_deciding }}">Making a decision&nbsp;&rarr;</a>
         </div>
 
-        <div class="eds-cell eds-cell--data">
-          <p class="eds-eyebrow">Datasets</p>
-          <h3>Real problems with real costs attached</h3>
-          <p>Every dataset ships with its cost matrix and per-customer costs, ready for a first experiment. A few to start with:</p>
-          <div class="eds-table-wrap">
-            <table class="eds-table">
-              <thead><tr><th scope="col">Dataset</th><th scope="col">Problem</th><th scope="col">Loader</th><th scope="col">Source</th></tr></thead>
-              <tbody>
-                {%- for row in datasets %}
-                <tr>
-                  <td><a href="{{ row.url }}">{{ row.name }}</a></td>
-                  <td>{{ row.problem }}</td>
-                  <td><a href="{{ api_urls[row.loader] }}"><code>{{ row.loader }}</code></a></td>
-                  <td class="eds-table__source">{{ row.source }}</td>
-                </tr>
-                {%- endfor %}
-              </tbody>
-            </table>
-          </div>
+        {#- Datasets: tiles that link to each dataset's page. Pointing at one shows the call that loads
+            it, linked to the loader's API entry. -#}
+        <div class="eds-cell eds-cell--data" data-eds-shelf>
+          <h3>{{ datasets_copy.title }}</h3>
+          <p>{{ datasets_copy.lead }}</p>
+          <ul class="eds-shelf">
+            {%- for row in datasets %}
+            <li>
+              <a class="eds-shelf__tile" href="{{ row.url }}" data-loader="{{ row.loader }}" data-loader-url="{{ api_urls[row.loader] }}">
+                <span class="eds-shelf__name">{{ row.name }}</span>
+                <span class="eds-shelf__problem">{{ row.problem }}</span>
+              </a>
+            </li>
+            {%- endfor %}
+          </ul>
+          {%- set first = datasets[0] %}
+          <p class="eds-shelf__call"><a href="{{ api_urls[first.loader] }}" data-eds-shelf-call><code><span data-eds-shelf-loader>{{ first.loader }}</span>(backend=pd)</code></a></p>
           <a class="eds-cell__more" href="{{ url_datasets }}">All datasets&nbsp;&rarr;</a>
         </div>
 
+        {#- scikit-learn: a cost-sensitive model inside a pipeline inside a grid search, drawn as
+            nested boxes with costs flowing through. -#}
         <div class="eds-cell eds-cell--sklearn">
-          <p class="eds-eyebrow">scikit-learn native</p>
-          <h3>Fits where your models already live</h3>
-          <p>{{ sklearn_lead }}
-            {%- for tool in sklearn_tools %}
-            {% if tool.url %}<a href="{{ tool.url }}"><code>{{ tool.name }}</code></a>{% else %}<code>{{ tool.name }}</code>{% endif %},
-            {%- endfor %} {{ sklearn_tail }}</p>
-          <div class="highlight eds-mini"><pre>{{ pipeline_snippet }}</pre></div>
-          <a class="eds-cell__more" href="{{ url_api }}">API reference&nbsp;&rarr;</a>
+          <div class="eds-cell__text">
+            <h3>{{ sklearn.title }}</h3>
+            <p>{{ sklearn.lead }}</p>
+            <a class="eds-cell__more" href="{{ url_api }}">API reference&nbsp;&rarr;</a>
+          </div>
+          {%- macro tool(name, url) -%}
+          {%- if url %}<a href="{{ url }}"><code>{{ name }}</code></a>{% else %}<code>{{ name }}</code>{% endif -%}
+          {%- endmacro %}
+          <div class="eds-nest" aria-label="A cost-sensitive classifier inside a scikit-learn pipeline inside a grid search">
+            <div class="eds-nest__box eds-nest__box--outer">
+              <span class="eds-nest__label">{{ tool('GridSearchCV', sklearn_urls['GridSearchCV']) }}</span>
+              <div class="eds-nest__box">
+                <span class="eds-nest__label">{{ tool('Pipeline', sklearn_urls['Pipeline']) }}</span>
+                <div class="eds-nest__flow">
+                  <span class="eds-nest__step">{{ tool('StandardScaler', sklearn_urls['StandardScaler']) }}</span>
+                  <span class="eds-nest__wire" aria-hidden="true"><i></i></span>
+                  <span class="eds-nest__step eds-nest__step--ours">{{ tool('CSLogitClassifier', api_urls['CSLogitClassifier']) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -301,10 +322,8 @@
   {# --- Built on research --------------------------------------------------------------------- #}
   <section class="eds-band">
     <div class="eds-wrap">
-      <header class="eds-head eds-head--split">
-        <p class="eds-eyebrow eds-eyebrow--purple">Built on research</p>
+      <header class="eds-head">
         <h2>{{ research_title }}</h2>
-        <p>{{ research_lead }}</p>
       </header>
       <ol class="eds-papers">
         {%- for paper in papers %}

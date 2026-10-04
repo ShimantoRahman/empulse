@@ -46,6 +46,16 @@
 }
 
 // Global by name, so it cannot be nested.
+@keyframes eds-flow {
+  from {
+    left: 0;
+  }
+
+  to {
+    left: calc(100% - 8px);
+  }
+}
+
 @keyframes eds-drift {
   from {
     transform: translateX(0);
@@ -216,7 +226,7 @@
     display: grid;
     gap: 1.125rem;
     margin-bottom: #{'clamp(2.25rem, 5vw, 3.5rem)'};
-    max-width: 54rem;
+    max-width: 66rem;
 
     h2 {
       font-size: var(--eds-display-xl);
@@ -866,8 +876,7 @@
   // The code region sits on paper inside the window rather than on the `surface` every other code
   // block uses, so the window reads as one object. The syntax colours are Pygments' own, the same
   // as every code block on the site.
-  .eds-window .highlight,
-  .eds-mini.highlight {
+  .eds-window .highlight {
     background-color: var(--eds-paper);
     border-radius: 0;
   }
@@ -1009,9 +1018,9 @@
     padding-top: 0.375rem;
   }
 
-  .eds-cell--metrics {
+  .eds-cell--measure,
+  .eds-cell--data {
     grid-column: span 7;
-    grid-row: span 2;
   }
 
   .eds-cell--models,
@@ -1019,12 +1028,23 @@
     grid-column: span 5;
   }
 
-  .eds-cell--data {
-    grid-column: span 8;
-  }
-
+  // The last card runs the full width: text on the left, the nested diagram on the right.
   .eds-cell--sklearn {
-    grid-column: span 4;
+    align-items: center;
+    display: grid;
+    gap: 1.5rem 3rem;
+    grid-column: span 12;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+
+    .eds-cell__text {
+      display: grid;
+      gap: 0.875rem;
+
+      p {
+        color: var(--eds-ink-muted);
+        font-size: 0.96875rem;
+      }
+    }
   }
 
   .eds-chips {
@@ -1079,257 +1099,348 @@
     }
   }
 
-  // The cost matrix in the same layout as everywhere in the docs: rows the prediction, columns the
-  // actual outcome. Correct outcomes and mistakes differ by tint, never by hue.
-  .eds-matrix {
+  /* Bento figures ------------------------------------------------------------------------- */
+
+  // Measure: the cost matrix in the logo's own shape, the two mistakes filled. Pointing at a cell
+  // (or focusing it) names the outcome in the readout below. Correct and incorrect differ by tint.
+  .eds-pricer {
     display: grid;
-    font-family: var(--pst-font-family-monospace);
-    gap: 0.375rem;
-    margin-top: 0.5rem;
+    gap: 1rem;
+    margin-block: 0.5rem auto;
   }
 
-  // Every row shares one fixed row-header column, so the column headers sit over their cells. With
-  // `auto` each row would size that column to its own header, and the empty corner of the header
-  // row would shift the column headings left of the cells they name.
-  .eds-matrix__row {
+  .eds-pricer__grid {
+    align-items: center;
     display: grid;
-    gap: 0.375rem;
-    grid-template-columns: 6.25rem minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .eds-matrix__head {
-    align-self: end;
+  .eds-pricer__axis {
     color: var(--eds-ink-muted);
+    font-family: var(--pst-font-family-monospace);
     font-size: 0.71875rem;
     letter-spacing: 0.06em;
-    padding: 0.25rem 1rem;
+    text-align: center;
     text-transform: uppercase;
   }
 
-  .eds-matrix__head--row {
-    align-self: center;
-    padding: 0 0.625rem 0 0;
+  .eds-pricer__axis--row {
+    padding-right: 0.5rem;
     text-align: right;
   }
 
-  .eds-matrix__cell {
-    align-content: space-between;
+  .eds-pricer__cell {
+    align-items: center;
+    aspect-ratio: 5 / 2;
     background-color: var(--eds-surface);
-    border-radius: 10px;
+    border: 2px solid transparent;
+    border-radius: 14px;
     color: var(--eds-ink-muted);
-    display: grid;
-    gap: 0.375rem;
-    min-height: 6.75rem;
-    padding: 1.125rem 1rem;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    justify-content: center;
+    transition:
+      border-color 150ms ease,
+      transform 150ms ease;
 
-    small {
-      font-size: 0.75rem;
+    &:hover,
+    &:focus-visible,
+    &.is-active {
+      border-color: var(--eds-blue-strong);
     }
 
-    b {
-      font-family: var(--pst-font-family-base);
-      font-size: #{'clamp(1.25rem, 2.2vw, 1.75rem)'};
-      font-weight: 600;
-      letter-spacing: -0.03em;
-      line-height: 1.05;
-    }
-
-    em {
-      color: var(--eds-ink-muted);
-      font-size: 0.8125rem;
-      font-style: normal;
+    &:hover {
+      transform: translateY(-2px);
     }
   }
 
-  .eds-matrix__cell--cost {
+  .eds-pricer__cell--cost {
     background-color: var(--eds-blue-soft);
     color: var(--eds-ink);
   }
 
-  // The matrix's results in the walkthrough, as three tiles: proof that the drawing above is a
-  // working object. Paper on a rule, so they read as outputs rather than as more matrix cells.
-  .eds-results__caption {
-    color: var(--eds-ink-muted);
-    font-size: 0.875rem;
-    margin-top: 0.375rem;
-  }
-
-  .eds-results {
-    display: grid;
-    gap: 0.375rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .eds-result {
-    border: 1px solid var(--eds-rule);
-    border-radius: 10px;
-    display: grid;
-    gap: 0.375rem;
-    margin: 0;
-    min-width: 0;
-    padding: 0.875rem 1rem;
-  }
-
-  .eds-result__label {
-    color: var(--eds-ink-muted);
-    font-family: var(--pst-font-family-monospace);
-    font-size: 0.6875rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .eds-result__value {
-    color: var(--eds-blue-strong);
-    font-size: #{'clamp(1.25rem, 2vw, 1.625rem)'};
+  .eds-pricer__amount {
+    font-size: #{'clamp(1.5rem, 2.6vw, 2.25rem)'};
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     letter-spacing: -0.03em;
-    line-height: 1;
   }
 
-  // The decision tile is purple: choosing a threshold is something you do with the matrix.
-  .eds-result:last-child .eds-result__value {
-    color: var(--eds-purple-strong);
-  }
-
-  .eds-result__model {
+  .eds-pricer__readout {
+    border-left: 2px solid var(--eds-blue-strong);
     color: var(--eds-ink-muted);
-    font-family: var(--pst-font-family-monospace);
-    font-size: 0.75rem;
-    overflow-wrap: anywhere;
+    display: grid;
+    font-size: 0.9375rem;
+    gap: 0.125rem;
+    min-height: 3.25rem;
+    padding-left: 0.875rem;
+
+    b {
+      color: var(--eds-ink);
+      font-weight: 600;
+    }
   }
 
-  a.eds-result__model:hover {
-    color: var(--eds-blue-link);
+  // Decide: example customers on a score axis. Everyone right of the line is contacted, which the
+  // script shows by filling their dot; the purple line marks where profit peaks.
+  .eds-cutoff {
+    display: grid;
+    gap: 0.625rem;
+    margin-block: 0.25rem auto;
   }
 
-  .eds-threshold {
-    height: 4.125rem;
-    margin-top: 0.375rem;
+  .eds-cutoff__plot {
     position: relative;
   }
 
-  .eds-threshold__track {
-    background-color: var(--eds-surface);
-    border: 1px solid var(--eds-rule);
-    border-radius: 99px;
-    height: 6px;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 1.875rem;
+  .eds-cutoff__svg {
+    display: block;
+    height: auto;
+    overflow: visible;
+    width: 100%;
   }
 
-  .eds-threshold__pin {
-    display: grid;
+  .eds-cutoff__axis {
+    stroke: var(--eds-rule);
+    stroke-width: 1.5;
+  }
+
+  .eds-cutoff__tick {
+    fill: var(--eds-ink-muted);
     font-family: var(--pst-font-family-monospace);
-    font-size: 0.71875rem;
-    gap: 0.25rem;
-    justify-items: center;
+    font-size: 10px;
+  }
+
+  .eds-cutoff__dot {
+    fill: var(--eds-paper);
+    stroke: var(--eds-ink-muted);
+    stroke-width: 1.5;
+    transition: fill 150ms ease;
+  }
+
+  .eds-cutoff__dot--churn {
+    stroke: var(--eds-blue-strong);
+    stroke-width: 2;
+  }
+
+  .eds-cutoff__dot.is-contacted {
+    fill: var(--eds-ink-muted);
+  }
+
+  .eds-cutoff__dot--churn.is-contacted {
+    fill: var(--eds-blue-strong);
+  }
+
+  .eds-cutoff__line {
+    stroke: var(--eds-ink);
+    stroke-width: 2;
+  }
+
+  .eds-cutoff__best {
+    stroke: var(--eds-purple-strong);
+    stroke-dasharray: 4 4;
+    stroke-width: 2;
+  }
+
+  .eds-cutoff__plot:focus-within .eds-cutoff__line {
+    stroke: var(--eds-blue-strong);
+  }
+
+  // The same invisible range-input-over-the-plot pattern as the hero's chart.
+  .eds-cutoff__scrub {
+    cursor: ew-resize;
+    height: 100%;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
     position: absolute;
-    top: 0;
-    transform: translateX(-50%);
+    width: 100%;
+  }
 
-    i {
-      background-color: currentColor;
-      height: 1.625rem;
-      width: 2px;
+  .eds-cutoff__readout {
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+    min-height: 1.5em;
+
+    b {
+      color: var(--eds-blue-strong);
+      font-weight: 600;
     }
   }
 
-  .eds-threshold__pin--default {
-    color: var(--eds-ink-muted);
-  }
-
-  .eds-threshold__pin--optimal {
-    color: var(--eds-purple-strong);
-
-    span {
-      transform: translateX(28%);
-    }
-  }
-
-  .eds-threshold__scale {
+  .eds-cutoff__legend {
     color: var(--eds-ink-muted);
     display: flex;
+    flex-wrap: wrap;
     font-family: var(--pst-font-family-monospace);
-    font-size: 0.6875rem;
-    justify-content: space-between;
+    font-size: 0.71875rem;
+    gap: 0.375rem 1rem;
+
+    span {
+      align-items: center;
+      display: inline-flex;
+      gap: 0.375rem;
+    }
   }
 
-  .eds-table-wrap {
-    margin-top: 0.25rem;
-    overflow-x: auto;
+  .eds-dot {
+    border: 1.5px solid var(--eds-ink-muted);
+    border-radius: 50%;
+    display: inline-block;
+    height: 0.625rem;
+    width: 0.625rem;
   }
 
-  .eds-table {
-    border-collapse: collapse;
-    font-size: 0.90625rem;
-    width: 100%;
+  .eds-dot--churn {
+    border-color: var(--eds-blue-strong);
+    border-width: 2px;
+  }
 
-    th {
-      border-bottom: 1px solid var(--eds-rule);
-      color: var(--eds-ink-muted);
-      font-family: var(--pst-font-family-monospace);
-      font-size: 0.71875rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      padding: 0.625rem 0.75rem;
-      text-align: left;
-      text-transform: uppercase;
-      white-space: nowrap;
+  .eds-dot--best {
+    background-color: var(--eds-purple-strong);
+    border: none;
+    border-radius: 1px;
+    height: 0.75rem;
+    width: 2px;
+  }
+
+  // Datasets: a shelf of tiles. Pointing at one puts the call that loads it in the line below.
+  .eds-shelf {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+
+    li {
+      margin: 0;
     }
+  }
 
-    td {
-      border-bottom: 1px solid var(--eds-rule);
-      padding: 0.75rem;
-      white-space: nowrap;
-    }
+  .eds-shelf__tile {
+    background-color: var(--eds-surface);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--eds-ink);
+    display: grid;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0.875rem 1rem;
+    transition:
+      border-color 150ms ease,
+      transform 150ms ease;
 
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    td a {
+    &:hover,
+    &:focus-visible,
+    &.is-active {
+      border-color: var(--eds-blue-strong);
       color: var(--eds-ink);
-      font-weight: 500;
-
-      &:hover {
-        color: var(--eds-blue-link);
-      }
     }
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .eds-shelf__name {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .eds-shelf__problem {
+    color: var(--eds-ink-muted);
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.71875rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .eds-shelf__call {
+    margin-top: auto;
 
     code {
       background: none;
       border: none;
       color: var(--eds-blue-link);
-      font-size: 0.8125rem;
+      font-size: 0.875rem;
       padding: 0;
     }
   }
 
-  .eds-table__source {
-    color: var(--eds-ink-muted);
-    font-family: var(--pst-font-family-monospace);
-    font-size: 0.75rem;
+  // scikit-learn: nested boxes, a cost-sensitive model inside a pipeline inside a grid search.
+  // A dot runs along the wire between the steps.
+  .eds-nest__box {
+    border: 1.5px dashed var(--eds-rule);
+    border-radius: 14px;
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem 1rem;
   }
 
-  .eds-mini {
-    border-radius: var(--bs-border-radius);
-    margin: 0;
+  .eds-nest__box--outer {
+    border-style: solid;
+  }
 
-    pre {
-      background-color: var(--eds-surface);
+  .eds-nest__label code {
+    background: none;
+    border: none;
+    color: var(--eds-ink-muted);
+    font-size: 0.8125rem;
+    padding: 0;
+  }
+
+  .eds-nest__label a code {
+    color: var(--eds-blue-link);
+  }
+
+  .eds-nest__flow {
+    align-items: center;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) 4rem minmax(0, 1fr);
+  }
+
+  .eds-nest__step {
+    background-color: var(--eds-surface);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    text-align: center;
+
+    code {
+      background: none;
       border: none;
-      border-radius: var(--bs-border-radius);
-      font-size: 0.84375rem;
-      line-height: 1.7;
-      margin: 0;
-      overflow-x: auto;
-      padding: 1rem;
+      color: var(--eds-ink);
+      font-size: 0.875rem;
+      overflow-wrap: anywhere;
+      padding: 0;
+    }
+  }
+
+  .eds-nest__step--ours {
+    background-color: var(--eds-blue-soft);
+
+    code {
+      font-weight: 600;
+    }
+  }
+
+  .eds-nest__wire {
+    background-color: var(--eds-rule);
+    height: 2px;
+    position: relative;
+
+    i {
+      animation: eds-flow 2.4s linear infinite;
+      background-color: var(--eds-purple-strong);
+      border-radius: 50%;
+      height: 8px;
+      left: 0;
+      position: absolute;
+      top: -3px;
+      width: 8px;
     }
   }
 
@@ -1474,13 +1585,17 @@
   }
 
   @media (max-width: 1000px) {
-    .eds-cell--metrics,
+    .eds-cell--measure,
     .eds-cell--models,
     .eds-cell--decide,
     .eds-cell--data,
     .eds-cell--sklearn {
       grid-column: span 12;
       grid-row: auto;
+    }
+
+    .eds-cell--sklearn {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
@@ -1560,25 +1675,22 @@
       margin-inline: 0.75rem;
     }
 
-    .eds-matrix__row {
-      grid-template-columns: 4.75rem minmax(0, 1fr) minmax(0, 1fr);
+    .eds-shelf {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .eds-matrix__head {
-      padding-inline: 0.75rem;
-    }
-
-    .eds-matrix__head--row {
-      padding: 0 0.5rem 0 0;
-    }
-
-    .eds-matrix__cell {
-      min-height: 0;
-      padding: 0.875rem 0.75rem;
-    }
-
-    .eds-results {
+    .eds-nest__flow {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eds-nest__wire {
+      height: 1.5rem;
+      justify-self: center;
+      width: 2px;
+
+      i {
+        display: none;
+      }
     }
 
     .eds-next {
@@ -1595,7 +1707,11 @@
   @media (prefers-reduced-motion: reduce) {
     .eds-wind__streak,
     .eds-sig__bar i,
-    .eds-btn__arrow {
+    .eds-btn__arrow,
+    .eds-nest__wire i,
+    .eds-pricer__cell,
+    .eds-shelf__tile,
+    .eds-cutoff__dot {
       animation: none;
       transition: none;
     }

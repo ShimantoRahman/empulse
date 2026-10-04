@@ -1,13 +1,16 @@
 /**
  * Behaviour for the documentation landing page (see _templates/homepage.html).
  *
- * Three independent pieces, each of which leaves a complete page behind if it does not run:
+ * Independent pieces, each of which leaves a complete page behind if it does not run:
  *
  *   * the copy buttons beside the install command;
  *   * the signature's profit chart. Its headline and both model rows are already printed by the
  *     template from the same JSON, so without this script a reader still sees the numbers; the
  *     script adds the chart, the threshold control and the switch between tuned and default;
  *   * the quick tour's step tabs, which are ordinary buttons over panels that are all in the page.
+ *   * the three bento figures: the cost matrix's readout, the threshold over example customers,
+ *     and the dataset tiles' loader line. Each is drawn by the template and only made responsive
+ *     here.
  *
  * No colour is named here. Every mark the chart draws carries a class that
  * _static/scss/homepage.scss paints from the design system's tokens, so the figure follows the
@@ -257,10 +260,109 @@
     });
   }
 
+  /* -- Bento: the cost matrix ------------------------------------------------------------------- */
+
+  // Pointing at or focusing a cell names its outcome in the readout under the matrix.
+  function setUpMatrix(card) {
+    const cells = card.querySelectorAll('[data-eds-cell]');
+    const name = card.querySelector('[data-eds-matrix-name]');
+    const note = card.querySelector('[data-eds-matrix-note]');
+    const show = (cell) => {
+      cells.forEach((other) => other.classList.toggle('is-active', other === cell));
+      name.textContent = cell.dataset.name;
+      note.textContent = cell.dataset.note;
+    };
+    cells.forEach((cell) => {
+      cell.addEventListener('mouseenter', () => show(cell));
+      cell.addEventListener('focus', () => show(cell));
+      cell.addEventListener('click', () => show(cell));
+    });
+  }
+
+  /* -- Bento: the threshold -------------------------------------------------------------------- */
+
+  // Everyone at or right of the line is contacted. Priced with the matrix on the measuring card:
+  // reaching a churner keeps the €200 they would take with them, and every loyal customer reached
+  // costs a €10 incentive. The purple line marks the threshold where that total peaks.
+  const SAVED_PER_CHURNER = 200;
+  const COST_PER_STAYER = 10;
+  const AXIS = { left: 16, width: 368 };
+
+  function setUpDecide(card) {
+    const dots = Array.from(card.querySelectorAll('.eds-cutoff__dot')).map((dot) => ({
+      dot,
+      score: Number(dot.dataset.score),
+      churns: dot.dataset.churns === '1',
+    }));
+    const line = card.querySelector('[data-eds-decide-line]');
+    const best = card.querySelector('[data-eds-decide-best]');
+    const scrub = card.querySelector('[data-eds-decide-scrub]');
+    const readout = card.querySelector('[data-eds-decide-readout]');
+    const x = (threshold) => AXIS.left + threshold * AXIS.width;
+
+    const profitAt = (threshold) =>
+      dots.reduce((total, d) => {
+        if (d.score < threshold) return total;
+        return total + (d.churns ? SAVED_PER_CHURNER : -COST_PER_STAYER);
+      }, 0);
+
+    // The best line sits just left of the lowest-scoring customer worth contacting.
+    const candidates = [1, ...dots.map((d) => d.score)];
+    const optimum = candidates.reduce((top, t) => (profitAt(t) > profitAt(top) ? t : top), 1);
+    const bestX = x(optimum) - 9;
+    best.setAttribute('x1', bestX);
+    best.setAttribute('x2', bestX);
+    best.hidden = false;
+
+    function render(threshold) {
+      let contacted = 0;
+      let churners = 0;
+      dots.forEach((d) => {
+        const reached = d.score >= threshold;
+        d.dot.classList.toggle('is-contacted', reached);
+        contacted += reached ? 1 : 0;
+        churners += reached && d.churns ? 1 : 0;
+      });
+      line.setAttribute('x1', x(threshold));
+      line.setAttribute('x2', x(threshold));
+      const profit = profitAt(threshold);
+      const sign = profit < 0 ? '−' : '';
+      readout.innerHTML =
+        `Contact <b>${contacted}</b> · reach ${churners} ${churners === 1 ? 'churner' : 'churners'} · ` +
+        `profit <b>${sign}€${Math.abs(profit).toLocaleString('en-US')}</b>` +
+        (profit === profitAt(optimum) ? ' · the most profitable line' : '');
+    }
+
+    scrub.addEventListener('input', () => render(Number(scrub.value) / 100));
+    render(Number(scrub.value) / 100);
+  }
+
+  /* -- Bento: the datasets --------------------------------------------------------------------- */
+
+  // Pointing at or focusing a tile puts the call that loads that dataset in the line below it.
+  function setUpShelf(card) {
+    const tiles = card.querySelectorAll('[data-loader]');
+    const call = card.querySelector('[data-eds-shelf-call]');
+    const loader = card.querySelector('[data-eds-shelf-loader]');
+    const show = (tile) => {
+      tiles.forEach((other) => other.classList.toggle('is-active', other === tile));
+      loader.textContent = tile.dataset.loader;
+      if (tile.dataset.loaderUrl) call.href = tile.dataset.loaderUrl;
+    };
+    tiles.forEach((tile) => {
+      tile.addEventListener('mouseenter', () => show(tile));
+      tile.addEventListener('focus', () => show(tile));
+    });
+    if (tiles.length) show(tiles[0]);
+  }
+
   function start() {
     setUpCopyButtons();
     document.querySelectorAll('[data-eds-sig]').forEach(setUpSignature);
     document.querySelectorAll('[data-eds-tour]').forEach(setUpTour);
+    document.querySelectorAll('[data-eds-matrix]').forEach(setUpMatrix);
+    document.querySelectorAll('[data-eds-decide]').forEach(setUpDecide);
+    document.querySelectorAll('[data-eds-shelf]').forEach(setUpShelf);
   }
 
   if (document.readyState === 'loading') {

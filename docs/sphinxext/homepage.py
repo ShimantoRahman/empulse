@@ -232,11 +232,6 @@ def _emphasise(text: str) -> str:
     return escaped.replace('|', ' <br class="eds-br-wide">')
 
 
-def _highlight_block(code: str) -> str:
-    """Colour a snippet with Pygments, for a static code block with no per-line reveal."""
-    return highlight(code.strip('\n'), PythonLexer(), FORMATTER).rstrip('\n')
-
-
 def _hero_summary(raw: str) -> dict[str, Any] | None:
     """The numbers the signature prints before its script runs.
 
@@ -327,7 +322,6 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
         'hero_summary': _hero_summary(hero_data),
         'stats': app.env.empulse_homepage_stats,
         'tour_title': _emphasise(content.TOUR_TITLE),
-        'tour_lead': content.TOUR_LEAD,
         'setup_caption': content.SETUP_CAPTION,
         'steps': [
             {
@@ -340,28 +334,23 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
         ],
         'features_title': _emphasise(content.FEATURES_TITLE),
         'features_lead': content.FEATURES_LEAD,
-        'cost_matrix_snippet': _highlight_block(content.COST_MATRIX_SNIPPET),
-        'metric_results_caption': content.METRIC_RESULTS_CAPTION,
-        'metric_results': [
-            {
-                **result._asdict(),
-                'url': (
-                    resolve.external('py:class', result.sklearn_target)
-                    if result.sklearn_target
-                    else resolve.api(result.model)
-                ),
-            }
-            for result in content.METRIC_RESULTS
-        ],
+        'measure': {'title': content.MEASURE_TITLE, 'lead': content.MEASURE_LEAD},
+        'matrix_cells': [cell._asdict() for cell in content.MATRIX_CELLS],
+        'train_lead': content.TRAIN_LEAD,
         'estimator_count': len(empulse.models.__all__),
         'estimator_highlights': content.ESTIMATOR_HIGHLIGHTS,
         'estimators_not_shown': len(empulse.models.__all__) - len(content.ESTIMATOR_HIGHLIGHTS),
-        'pipeline_snippet': _highlight_block(content.PIPELINE_SNIPPET),
-        'sklearn_lead': content.SKLEARN_LEAD,
-        'sklearn_tail': content.SKLEARN_TAIL,
-        'sklearn_tools': [
-            {'name': name, 'url': resolve.external(role, target)} for name, role, target in content.SKLEARN_TOOLS
+        'decide': {'title': content.DECIDE_TITLE, 'lead': content.DECIDE_LEAD},
+        # Two lanes, alternating, so neighbouring dots never overlap.
+        'decide_customers': [
+            {'score': customer.score, 'churns': customer.churns, 'lane': 34 if index % 2 else 62}
+            for index, customer in enumerate(content.DECIDE_CUSTOMERS)
         ],
+        'datasets_copy': {'title': content.DATASETS_TITLE, 'lead': content.DATASETS_LEAD},
+        'sklearn': {'title': content.SKLEARN_TITLE, 'lead': content.SKLEARN_LEAD},
+        'sklearn_urls': {
+            name: resolve.external(role, target) for name, (role, target) in content.SKLEARN_TOOLS.items()
+        },
         'api_urls': {name: resolve.api(name) for name in _api_names()},
         'datasets': [{**row._asdict(), 'url': resolve.ref(row.ref)} for row in content.DATASET_HIGHLIGHTS],
         'url_measuring': resolve.ref('measuring'),
@@ -371,7 +360,6 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
         'url_api': resolve.doc('api'),
         'url_models': resolve.doc('reference/models'),
         'research_title': _emphasise(content.RESEARCH_TITLE),
-        'research_lead': content.RESEARCH_LEAD,
         'papers': [paper._asdict() for paper in content.PAPERS],
         'citation_doi': content.CITATION_DOI,
         'closing_title': _emphasise(content.CLOSING_TITLE),
@@ -385,6 +373,7 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
 def _api_names() -> set[str]:
     """Every Empulse object the page names, each of which links to its API reference entry."""
     return {
+        'CSLogitClassifier',
         *content.ESTIMATOR_HIGHLIGHTS,
         *(row.loader for row in content.DATASET_HIGHLIGHTS),
         *(name for paper in content.PAPERS for name in paper.implements),
