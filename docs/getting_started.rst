@@ -1,3 +1,9 @@
+.. meta::
+    :description lang=en:
+        Install Empulse and build your first cost-sensitive classifier in Python with
+        scikit-learn: define what each outcome is worth, then evaluate, train and threshold
+        your model for profit.
+
 ===============
 Getting Started
 ===============

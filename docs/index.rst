@@ -1,9 +1,13 @@
 .. meta::
     :description lang=en:
-        Empulse is a scikit-learn based Python package for cost-sensitive and
-        value-driven (also known as profit-driven) machine learning.
-        Solve your imbalanced data and other cost-sensitive learning data science problems
-        with a sklearn compatible library.
+        Empulse is a Python package for cost-sensitive classification and value-driven
+        (profit-driven) machine learning, built on scikit-learn. Evaluate, train and set
+        decision thresholds for imbalanced data with business costs, such as churn,
+        credit scoring and customer acquisition.
+    :keywords lang=en:
+        Empulse, Empulse Python, cost-sensitive learning, cost-sensitive classification,
+        cost-sensitive learning Python, scikit-learn, value-driven, profit-driven,
+        expected maximum profit, imbalanced classification
 
 .. This page is rendered from ``_templates/homepage.html`` rather than from the text below. The
    landing page is the one surface on the site that is not prose, so ``sphinxext/homepage.py``
@@ -14,9 +18,9 @@
    in the version switcher, and the toctree, which is what puts Getting Started, Tutorial, User
    Guide, API Reference and Project Info in the header navigation of every page on the site.
 
-=======
-Empulse
-=======
+===========================================
+Empulse: Cost-Sensitive Learning in Python
+===========================================
 
 .. toctree::
     :maxdepth: 1

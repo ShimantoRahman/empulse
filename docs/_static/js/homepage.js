@@ -283,7 +283,7 @@
 
   // Everyone at or right of the line is contacted. Priced with the matrix on the measuring card:
   // reaching a churner keeps the €200 they would take with them, and every loyal customer reached
-  // costs a €10 incentive. The purple line marks the threshold where that total peaks.
+  // costs a €10 incentive.
   const SAVED_PER_CHURNER = 200;
   const COST_PER_STAYER = 10;
   const AXIS = { left: 16, width: 368 };
@@ -295,7 +295,6 @@
       churns: dot.dataset.churns === '1',
     }));
     const line = card.querySelector('[data-eds-decide-line]');
-    const best = card.querySelector('[data-eds-decide-best]');
     const scrub = card.querySelector('[data-eds-decide-scrub]');
     const readout = card.querySelector('[data-eds-decide-readout]');
     const x = (threshold) => AXIS.left + threshold * AXIS.width;
@@ -309,10 +308,6 @@
     // The best line sits just left of the lowest-scoring customer worth contacting.
     const candidates = [1, ...dots.map((d) => d.score)];
     const optimum = candidates.reduce((top, t) => (profitAt(t) > profitAt(top) ? t : top), 1);
-    const bestX = x(optimum) - 9;
-    best.setAttribute('x1', bestX);
-    best.setAttribute('x2', bestX);
-    best.hidden = false;
 
     function render(threshold) {
       let contacted = 0;

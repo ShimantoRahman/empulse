@@ -1,3 +1,9 @@
+.. meta::
+    :description lang=en:
+        A step-by-step Empulse tutorial: build a cost-sensitive churn classification model
+        with scikit-learn, choose the decision threshold that maximizes profit, and compare it
+        with an accuracy-optimized model.
+
 ========
 Tutorial
 ========

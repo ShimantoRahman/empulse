@@ -1,3 +1,8 @@
+.. meta::
+    :description lang=en:
+        The Empulse user guide: cost matrices, cost-sensitive metrics, cost-sensitive
+        classifiers, samplers and decision thresholds for scikit-learn workflows in Python.
+
 ==========
 User Guide
 ==========

@@ -92,6 +92,26 @@ extensions = [
     'override_pst_pagetoc',
     'themed_figure',
     'homepage',
+    'sphinxext.opengraph',
+]
+
+html_title = 'Empulse'
+html_baseurl = os.environ.get('READTHEDOCS_CANONICAL_URL', 'https://empulse.readthedocs.io/en/stable/')
+html_extra_path = ['robots.txt']
+
+ogp_site_url = html_baseurl
+ogp_site_name = 'Empulse'
+ogp_description_length = 200
+ogp_image = '_static/assets/empulse-social-card-dark.png'
+ogp_image_alt = 'Empulse: Build models that pay. Cost-sensitive machine learning, built for scikit-learn.'
+ogp_social_cards = {'enable': False}
+ogp_custom_meta_tags = [
+    '<meta property="og:image:width" content="1200" />',
+    '<meta property="og:image:height" content="630" />',
+    '<meta property="og:image:type" content="image/png" />',
+    '<meta name="twitter:card" content="summary_large_image" />',
+    f'<meta name="twitter:image" content="{ogp_site_url}{ogp_image}" />',
+    f'<meta name="twitter:image:alt" content="{ogp_image_alt}" />',
 ]
 
 numpydoc_show_class_members = False
@@ -242,13 +262,10 @@ html_theme_options = {
     'check_switcher': True,
     'pygments_light_style': 'tango',
     'pygments_dark_style': 'monokai',
-    # The cost-matrix mark as an image, with the lowercase wordmark set beside it as text and styled
-    # in custom.scss, so the logo reads inline rather than as a picture of a word.
     'logo': {
         'alt_text': 'empulse homepage',
-        'text': 'empulse',
-        'image_light': '_static/assets/empulse_mark_light.svg',
-        'image_dark': '_static/assets/empulse_mark_dark.svg',
+        'image_light': '_static/assets/empulse_logo_light.svg',
+        'image_dark': '_static/assets/empulse_logo_dark.svg',
     },
     'surface_warnings': True,
     # -- Template placement in theme layouts ----------------------------------
@@ -280,7 +297,7 @@ html_theme_options = {
     'announcement': None,
 }
 html_short_title = 'empulse'
-html_logo = './_static/assets/empulse_mark_light.svg'
+html_logo = './_static/assets/empulse_logo_light.svg'
 html_favicon = './_static/assets/favicon.svg'
 html_static_path = ['_static']
 # dynamically construct custom.css through sphinxcontrib.sass

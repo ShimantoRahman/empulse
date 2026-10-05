@@ -27,7 +27,7 @@ from typing import Final, NamedTuple
 EYEBROW: Final[str] = 'Cost-sensitive machine learning for scikit-learn'
 
 # `|` marks where the motto breaks on a wide screen; on a phone it flows as one sentence.
-MOTTO: Final[str] = 'Optimize|for *value*,|not stats.'
+MOTTO: Final[str] = 'Build|models|that *pay*.'
 
 LEAD: Final[str] = (
     'Accuracy, F1 and AUC price every mistake the same. Your business does not. Write down what '
@@ -170,10 +170,6 @@ decider.threshold_
 # --- Everything you need ------------------------------------------------------------------------
 
 FEATURES_TITLE: Final[str] = 'Put a *price* on every outcome.'
-FEATURES_LEAD: Final[str] = (
-    'One cost matrix carries through evaluation, training and the final decision, so the model you '
-    'ship is judged by the number your business reports.'
-)
 
 
 # Each bento card says one thing and shows it with a small interactive figure; the detail lives on
@@ -191,7 +187,7 @@ class MatrixCell(NamedTuple):
 
 
 MEASURE_TITLE: Final[str] = 'Every mistake has a price'
-MEASURE_LEAD: Final[str] = 'Write down what each outcome costs once. Every metric then reports in euros.'
+MEASURE_LEAD: Final[str] = 'Write down what each outcome is costs once. Every metric then reports in your value measurement.'
 # In reading order: predicted churner (TP, FP), then predicted stayer (FN, TN). The amounts are the
 # walkthrough's defaults, `incentive=10` and `clv=200`.
 MATRIX_CELLS: Final[tuple[MatrixCell, ...]] = (
@@ -207,18 +203,17 @@ MATRIX_CELLS: Final[tuple[MatrixCell, ...]] = (
     MatrixCell('tn', 'True negative', '€0', 'A loyal customer is left alone.', is_cost=False),
 )
 
-TRAIN_LEAD: Final[str] = 'Linear models, boosting, trees and forests that minimise your costs instead of log-loss.'
+TRAIN_LEAD: Final[str] = 'Linear models, boosting, trees and forests that learn from your costs.'
 
 # The estimators named on the training card. The count beside them is read from
 # `empulse.models.__all__` at build time, so adding a model never leaves the number behind.
 ESTIMATOR_HIGHLIGHTS: Final[tuple[str, ...]] = (
     'CSLogitClassifier',
     'CSBoostClassifier',
-    'B2BoostClassifier',
     'CSTreeClassifier',
     'CSForestClassifier',
-    'ProfTreeClassifier',
     'ProfLogitClassifier',
+    'ProfTreeClassifier',
 )
 
 DECIDE_TITLE: Final[str] = 'Draw the line where profit peaks'
@@ -249,10 +244,7 @@ DATASETS_TITLE: Final[str] = 'Real problems, costs included'
 DATASETS_LEAD: Final[str] = 'Churn, credit and fraud datasets that each ship with their own cost matrix.'
 
 SKLEARN_TITLE: Final[str] = 'Fits where your models already live'
-SKLEARN_LEAD: Final[str] = (
-    "Estimators, metrics and samplers follow scikit-learn's conventions, so they slot into the rest of "
-    'the ecosystem.'
-)
+SKLEARN_LEAD: Final[str] = 'Cost-sensitive models in your usual pipelines and grid searches with full scikit-learn compatibility.'
 # The scikit-learn names in the card's diagram, linked into scikit-learn's own documentation.
 SKLEARN_TOOLS: Final[dict[str, tuple[str, str]]] = {
     'GridSearchCV': ('py:class', 'sklearn.model_selection.GridSearchCV'),
@@ -361,7 +353,7 @@ PAPERS: Final[tuple[Paper, ...]] = (
     ),
 )
 
-CITATION_DOI: Final[str] = '10.5281/zenodo.11185664'
+CITATION_DOI: Final[str] = '10.5281/zenodo.11185663'
 
 # --- The closing row -------------------------------------------------------------------------
 

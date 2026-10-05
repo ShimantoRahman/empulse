@@ -333,7 +333,6 @@ def _build_context(app: Sphinx, pagename: str) -> dict[str, Any]:
             for step in content.STEPS
         ],
         'features_title': _emphasise(content.FEATURES_TITLE),
-        'features_lead': content.FEATURES_LEAD,
         'measure': {'title': content.MEASURE_TITLE, 'lead': content.MEASURE_LEAD},
         'matrix_cells': [cell._asdict() for cell in content.MATRIX_CELLS],
         'train_lead': content.TRAIN_LEAD,

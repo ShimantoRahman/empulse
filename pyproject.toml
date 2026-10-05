@@ -5,8 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "empulse"
 dynamic = ["version"]
-description = "Value-driven and cost-sensitive tools for scikit-learn"
+description = "Cost-sensitive and value-driven machine learning in Python: metrics, classifiers and thresholds for scikit-learn"
 readme = "README.md"
+keywords = [
+    "empulse",
+    "cost-sensitive learning",
+    "cost-sensitive classification",
+    "value-driven",
+    "profit-driven",
+    "scikit-learn",
+    "sklearn",
+    "imbalanced data",
+    "expected maximum profit",
+    "fraud detection",
+    "churn prediction",
+    "credit scoring",
+    "machine learning",
+]
 authors = [
     { name = "Shimanto Rahman", email = "shimanto.rahman@ugent.be" },
 ]
@@ -49,6 +64,7 @@ dependencies = [
 ]
 
 [project.urls]
+homepage = "https://empulse.readthedocs.io/en/stable/"
 documentation = "https://empulse.readthedocs.io/en/stable/"
 repository = "https://github.com/ShimantoRahman/empulse"
 issue-tracker = "https://github.com/ShimantoRahman/empulse/issues"
@@ -94,6 +110,11 @@ docs = [
     "numpydoc>=1.6.0",
     "sphinx-codeautolink>=0.17.5",
     "sphinx-design>=0.7.0",
+    "sphinxext-opengraph>=0.9.1",
+    "matplotlib>=3.8.0",
+    "pillow>=10.0.0",
+    "fonttools>=4.40.0",
+    "brotli>=1.1.0",
 ]
 
 lint = [

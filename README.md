@@ -7,7 +7,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.11185663-blue.svg)](https://zenodo.org/doi/10.5281/zenodo.11185663)
 
-# Empulse
+# Empulse: Cost-Sensitive Learning in Python
 
 <a href="https://empulse.readthedocs.io/en/latest/"><img src="https://empulse.readthedocs.io/en/latest/_static/assets/empulse_logo_light.png" alt="Empulse Logo" width="25%" height="25%" align="right" /></a>
 
@@ -17,7 +17,8 @@ Accuracy, F1 and AUC treat a false positive and a false negative as equally bad.
 not. Flagging a loyal customer as a churner wastes a discount; missing a real churner loses their
 entire lifetime value. A model tuned for accuracy quietly optimises the wrong thing.
 
-Empulse lets you write down what each outcome is actually worth, then use that same definition to
+Empulse is a Python package for cost-sensitive classification and value-driven (profit-driven)
+machine learning. It lets you write down what each outcome is actually worth, then use that same definition to
 **evaluate** models, **train** them, and **set their decision threshold** — all as ordinary
 scikit-learn estimators.
 

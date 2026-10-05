@@ -365,28 +365,13 @@ div.admonition {
 
 /* Chrome ------------------------------------------------------------------------------------ */
 
-// The logo: the cost-matrix mark set inline with a lowercase wordmark. The theme renders the mark
-// as an image and the wordmark as text, so the text is styled here rather than baked into an image.
+// The outlined M1 lockup preserves its optical spacing and u/l spark at navigation size.
 .navbar-brand {
-  gap: 0.32em;
-  // Room between the wordmark and the first navigation link, so the logo reads as its own item.
   margin-right: 1.75rem;
 
   img.logo__image {
-    height: 1.4rem;
+    height: 2rem;
     width: auto;
-  }
-
-  .logo__title {
-    color: var(--eds-ink);
-    font-family: var(--pst-font-family-heading);
-    font-size: 1.5rem;
-    font-weight: 600;
-    letter-spacing: -0.035em;
-  }
-
-  &:hover .logo__title {
-    color: var(--eds-ink);
   }
 }
 

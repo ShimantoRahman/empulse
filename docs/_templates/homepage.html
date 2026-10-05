@@ -184,7 +184,7 @@
   {# --- Everything you need ----------------------------------------------------------------- #}
   {#- Each card says one thing and shows it with a small figure that responds to the pointer. The
       figures are complete without their script; `homepage.js` only adds the interaction. -#}
-  <section class="eds-band eds-windy">
+  <section class="eds-band eds-band--features eds-windy">
     {{ wind([
       ('right', '-4%', 'top: 5%', '46%', '34px', true, 55),
       ('left', '-3%', 'top: 11%', '22%', '24px', true, 49),
@@ -193,14 +193,15 @@
     <div class="eds-wrap">
       <header class="eds-head">
         <h2>{{ features_title }}</h2>
-        <p>{{ features_lead }}</p>
       </header>
 
       <div class="eds-bento">
         {#- Measure: the cost matrix in the logo's own shape. Pointing at a cell explains it. -#}
         <div class="eds-cell eds-cell--measure" data-eds-matrix>
-          <h3>{{ measure.title }}</h3>
-          <p>{{ measure.lead }}</p>
+          <div class="eds-cell__text">
+            <h3>{{ measure.title }}</h3>
+            <p>{{ measure.lead }}</p>
+          </div>
           <div class="eds-pricer">
             <div class="eds-pricer__grid" role="group" aria-label="Cost of each outcome. Columns: actual churner, actual stayer. Rows: predicted churner, predicted stayer.">
               <span aria-hidden="true"></span>
@@ -237,6 +238,32 @@
           <a class="eds-cell__more" href="{{ url_training }}">Training a model&nbsp;&rarr;</a>
         </div>
 
+        {#- scikit-learn: a cost-sensitive model inside a pipeline inside a grid search, drawn as
+            nested boxes with costs flowing through. -#}
+        <div class="eds-cell eds-cell--sklearn">
+          <div class="eds-cell__text">
+            <h3>{{ sklearn.title }}</h3>
+            <p>{{ sklearn.lead }}</p>
+          </div>
+          {%- macro tool(name, url) -%}
+          {%- if url %}<a href="{{ url }}"><code>{{ name }}</code></a>{% else %}<code>{{ name }}</code>{% endif -%}
+          {%- endmacro %}
+          <div class="eds-nest" aria-label="A cost-sensitive classifier inside a scikit-learn pipeline inside a grid search">
+            <div class="eds-nest__box eds-nest__box--outer">
+              <span class="eds-nest__label">{{ tool('GridSearchCV', sklearn_urls['GridSearchCV']) }}</span>
+              <div class="eds-nest__box">
+                <span class="eds-nest__label">{{ tool('Pipeline', sklearn_urls['Pipeline']) }}</span>
+                <div class="eds-nest__flow">
+                  <span class="eds-nest__step">{{ tool('StandardScaler', sklearn_urls['StandardScaler']) }}</span>
+                  <span class="eds-nest__wire" aria-hidden="true"><i></i></span>
+                  <span class="eds-nest__step eds-nest__step--ours">{{ tool('CSLogitClassifier', api_urls['CSLogitClassifier']) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <a class="eds-cell__more" href="{{ url_api }}">API reference&nbsp;&rarr;</a>
+        </div>
+
         {#- Decide: example customers ranked by score. Moving the threshold contacts everyone right
             of it, and the running total prices that choice with the measuring card's matrix. -#}
         <div class="eds-cell eds-cell--decide" data-eds-decide>
@@ -254,7 +281,6 @@
                         cx="{{ '%.1f' % (16 + customer.score * 368) }}" cy="{{ customer.lane }}" r="6.5"
                         data-score="{{ customer.score }}" data-churns="{{ 1 if customer.churns else 0 }}"></circle>
                 {%- endfor %}
-                <line class="eds-cutoff__best" x1="0" x2="0" y1="10" y2="92" data-eds-decide-best hidden></line>
                 <line class="eds-cutoff__line" x1="200" x2="200" y1="6" y2="96" data-eds-decide-line></line>
               </svg>
               <input class="eds-cutoff__scrub" type="range" min="0" max="100" step="1" value="50"
@@ -264,7 +290,6 @@
             <p class="eds-cutoff__legend" aria-hidden="true">
               <span><i class="eds-dot eds-dot--churn"></i>will churn</span>
               <span><i class="eds-dot"></i>will stay</span>
-              <span><i class="eds-dot eds-dot--best"></i>most profitable line</span>
             </p>
           </div>
           <a class="eds-cell__more" href="{{ url_deciding }}">Making a decision&nbsp;&rarr;</a>
@@ -288,32 +313,6 @@
           {%- set first = datasets[0] %}
           <p class="eds-shelf__call"><a href="{{ api_urls[first.loader] }}" data-eds-shelf-call><code><span data-eds-shelf-loader>{{ first.loader }}</span>(backend=pd)</code></a></p>
           <a class="eds-cell__more" href="{{ url_datasets }}">All datasets&nbsp;&rarr;</a>
-        </div>
-
-        {#- scikit-learn: a cost-sensitive model inside a pipeline inside a grid search, drawn as
-            nested boxes with costs flowing through. -#}
-        <div class="eds-cell eds-cell--sklearn">
-          <div class="eds-cell__text">
-            <h3>{{ sklearn.title }}</h3>
-            <p>{{ sklearn.lead }}</p>
-            <a class="eds-cell__more" href="{{ url_api }}">API reference&nbsp;&rarr;</a>
-          </div>
-          {%- macro tool(name, url) -%}
-          {%- if url %}<a href="{{ url }}"><code>{{ name }}</code></a>{% else %}<code>{{ name }}</code>{% endif -%}
-          {%- endmacro %}
-          <div class="eds-nest" aria-label="A cost-sensitive classifier inside a scikit-learn pipeline inside a grid search">
-            <div class="eds-nest__box eds-nest__box--outer">
-              <span class="eds-nest__label">{{ tool('GridSearchCV', sklearn_urls['GridSearchCV']) }}</span>
-              <div class="eds-nest__box">
-                <span class="eds-nest__label">{{ tool('Pipeline', sklearn_urls['Pipeline']) }}</span>
-                <div class="eds-nest__flow">
-                  <span class="eds-nest__step">{{ tool('StandardScaler', sklearn_urls['StandardScaler']) }}</span>
-                  <span class="eds-nest__wire" aria-hidden="true"><i></i></span>
-                  <span class="eds-nest__step eds-nest__step--ours">{{ tool('CSLogitClassifier', api_urls['CSLogitClassifier']) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
