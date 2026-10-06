@@ -22,7 +22,14 @@ from ._cost_matrices import (
     direct_marketing_cost_matrix,
     fraud_detection_cost_matrix,
 )
-from ._io import _fetch_csv_url, _fetch_openml, _fetch_uci, _fetch_url_bytes, _read_csv_columns, load_or_fetch
+from ._io import (
+    _fetch_csv_url,
+    _fetch_uci,
+    _fetch_url_bytes,
+    _read_csv_columns,
+    load_or_fetch,
+    load_or_fetch_openml,
+)
 from ._process import (
     _GIVE_ME_SOME_CREDIT_FEATURE_ORDER,  # ruff: ignore[unused-import] (re-exported for tests/compat)
     KDD98_ATTRIBUTES,
@@ -266,7 +273,8 @@ def fetch_give_me_some_credit(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -339,15 +347,16 @@ def fetch_give_me_some_credit(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'give_me_some_credit.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_give_me_some_credit_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'give_me_some_credit.parquet',
+        backend=backend,
+        name='GiveMeSomeCredit',
+        version=1,
         download_if_missing=download_if_missing,
         dataset_name='Give Me Some Credit dataset',
     )
 
-    feat, target_series, monthly_income_np, debt_ratio_np, target_np = process_give_me_some_credit(raw, backend)
+    feat, target_series, monthly_income_np, debt_ratio_np, target_np = process_give_me_some_credit(df)
     cost_matrix, instance_costs = credit_scoring_cost_matrix(
         monthly_income_np,
         debt_ratio=debt_ratio_np,
@@ -370,14 +379,6 @@ def fetch_give_me_some_credit(
         name='Give Me Some Credit',
         DESCR=_GIVE_ME_SOME_CREDIT_DESCRIPTION,
     )
-
-
-def _fetch_openml_give_me_some_credit_raw() -> dict[str, list[str | None]]:
-    """Download Give Me Some Credit from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(name='GiveMeSomeCredit', version=1)  # type: ignore[return-value]
-    except Exception as exc:
-        raise OSError(f'Failed to download the GiveMeSomeCredit dataset from OpenML. Original error: {exc}') from exc
 
 
 _TELCO_CUSTOMER_CHURN_DESCRIPTION = """\
@@ -439,7 +440,8 @@ def fetch_telco_customer_churn(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -499,15 +501,15 @@ def fetch_telco_customer_churn(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'telco_customer_churn.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_telco_customer_churn_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'telco_customer_churn.parquet',
+        backend=backend,
+        data_id=42178,
         download_if_missing=download_if_missing,
         dataset_name='Telco Customer Churn dataset',
     )
 
-    feat, target_series, monthly_charges = process_telco_customer_churn(raw, backend)
+    feat, target_series, monthly_charges = process_telco_customer_churn(df)
     cost_matrix, instance_costs = churn_monthly_charges_cost_matrix(
         monthly_charges,
         fn_months=12.0,
@@ -524,15 +526,6 @@ def fetch_telco_customer_churn(
         name='Telco Customer Churn',
         DESCR=_TELCO_CUSTOMER_CHURN_DESCRIPTION,
     )
-
-
-def _fetch_openml_telco_customer_churn_raw() -> dict[str, list[str | None]]:
-    """Download Telco Customer Churn from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=42178)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the Telco Customer Churn dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _DEFAULT_CREDIT_CARD_CLIENTS_DESCRIPTION = """\
@@ -599,7 +592,8 @@ def fetch_default_credit_card_clients(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -661,15 +655,15 @@ def fetch_default_credit_card_clients(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'default_of_credit_card_clients.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_default_credit_card_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'default_of_credit_card_clients.parquet',
+        backend=backend,
+        data_id=42477,
         download_if_missing=download_if_missing,
         dataset_name='Default of Credit Card Clients dataset',
     )
 
-    feat, target_series, credit_line, target_np = process_default_credit_card_clients(raw, backend)
+    feat, target_series, credit_line, target_np = process_default_credit_card_clients(df)
     cost_matrix, instance_costs = credit_scoring_known_cl_cost_matrix(
         credit_line,
         target_np,
@@ -689,15 +683,6 @@ def fetch_default_credit_card_clients(
         name='Default of Credit Card Clients',
         DESCR=_DEFAULT_CREDIT_CARD_CLIENTS_DESCRIPTION,
     )
-
-
-def _fetch_openml_default_credit_card_raw() -> dict[str, list[str | None]]:
-    """Download Default of Credit Card Clients from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=42477)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the Default of Credit Card Clients dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _IEEE_FRAUD_DETECTION_DESCRIPTION = """\
@@ -761,7 +746,8 @@ def fetch_ieee_fraud_detection(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -821,15 +807,15 @@ def fetch_ieee_fraud_detection(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'ieee_fraud_detection.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_ieee_fraud_detection_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'ieee_fraud_detection.parquet',
+        backend=backend,
+        data_id=46858,
         download_if_missing=download_if_missing,
         dataset_name='IEEE-CIS Fraud Detection dataset',
     )
 
-    feat, target_series, amount = process_ieee_fraud_detection(raw, backend)
+    feat, target_series, amount = process_ieee_fraud_detection(df)
     cost_matrix, instance_costs = fraud_detection_cost_matrix(
         amount,
         investigation_cost=10.0,
@@ -845,15 +831,6 @@ def fetch_ieee_fraud_detection(
         name='IEEE-CIS Fraud Detection',
         DESCR=_IEEE_FRAUD_DETECTION_DESCRIPTION,
     )
-
-
-def _fetch_openml_ieee_fraud_detection_raw() -> dict[str, list[str | None]]:
-    """Download IEEE-CIS Fraud Detection from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=46858)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the IEEE-CIS Fraud Detection dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _KDD98_DESCRIPTION = """\
@@ -1132,7 +1109,8 @@ def fetch_credit_card_fraud(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -1198,15 +1176,15 @@ def fetch_credit_card_fraud(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'credit_card_fraud.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_credit_card_fraud_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'credit_card_fraud.parquet',
+        backend=backend,
+        data_id=1597,
         download_if_missing=download_if_missing,
         dataset_name='Credit Card Fraud Detection dataset',
     )
 
-    feat, target_series, amount = process_credit_card_fraud(raw, backend)
+    feat, target_series, amount = process_credit_card_fraud(df)
     cost_matrix, instance_costs = fraud_detection_cost_matrix(
         amount,
         investigation_cost=10.0,
@@ -1222,15 +1200,6 @@ def fetch_credit_card_fraud(
         name='Credit Card Fraud Detection',
         DESCR=_CREDIT_CARD_FRAUD_DESCRIPTION,
     )
-
-
-def _fetch_openml_credit_card_fraud_raw() -> dict[str, list[str | None]]:
-    """Download Credit Card Fraud Detection from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=1597)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the Credit Card Fraud Detection dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _HOME_EQUITY_DESCRIPTION = """\
@@ -1294,7 +1263,8 @@ def fetch_home_equity(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -1355,15 +1325,15 @@ def fetch_home_equity(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'home_equity.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_home_equity_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'home_equity.parquet',
+        backend=backend,
+        data_id=43337,
         download_if_missing=download_if_missing,
         dataset_name='Home Equity (HMEQ) dataset',
     )
 
-    feat, target_series, amounts, target_np = process_home_equity(raw, backend)
+    feat, target_series, amounts, target_np = process_home_equity(df)
     cost_matrix, instance_costs = credit_scoring_known_cl_cost_matrix(
         amounts,
         target_np,
@@ -1383,15 +1353,6 @@ def fetch_home_equity(
         name='Home Equity (HMEQ)',
         DESCR=_HOME_EQUITY_DESCRIPTION,
     )
-
-
-def _fetch_openml_home_equity_raw() -> dict[str, list[str | None]]:
-    """Download Home Equity from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=43337)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the Home Equity dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _SOUTH_GERMAN_CREDIT_DESCRIPTION = """\
@@ -1650,7 +1611,8 @@ def fetch_kddcup09_churn(
     backend : module
         Dataframe library to use for ``data`` and ``target``.
         Pass the library module directly, e.g. ``backend=polars`` or
-        ``backend=pandas``.
+        ``backend=pandas``. The data is read from a Parquet file, which pandas
+        needs pyarrow for: ``pip install empulse[datasets]``.
     data_home : str or Path, optional
         Directory used for caching downloaded data.
         Defaults to ``~/empulse_data`` (or ``$EMPULSE_DATA_HOME``).
@@ -1722,15 +1684,15 @@ def fetch_kddcup09_churn(
         metric = Metric(dataset.cost_matrix, Cost())
         score = metric(dataset.target, y_score, **dataset.instance_costs)
     """
-    cache_file = get_data_home(data_home) / 'kddcup09_churn.csv.gz'
-    raw = load_or_fetch(
-        cache_file,
-        _fetch_openml_kddcup09_churn_raw,
+    df = load_or_fetch_openml(
+        get_data_home(data_home) / 'kddcup09_churn.parquet',
+        backend=backend,
+        data_id=1112,
         download_if_missing=download_if_missing,
         dataset_name='KDD Cup 2009 / Orange Customer Churn dataset',
     )
 
-    feat, target_series = process_kddcup09_churn(raw, backend)
+    feat, target_series = process_kddcup09_churn(df)
     cost_matrix, instance_costs = churn_retention_cost_matrix(
         np.full(len(target_series), 200.0),
         incentive_fraction=0.05,
@@ -1748,15 +1710,6 @@ def fetch_kddcup09_churn(
         name='KDD Cup 2009 Orange Churn',
         DESCR=_KDDCUP09_CHURN_DESCRIPTION,
     )
-
-
-def _fetch_openml_kddcup09_churn_raw() -> dict[str, list[str | None]]:
-    """Download KDD Cup 2009 Churn from OpenML and return a flat string dict."""
-    try:
-        return _fetch_openml(data_id=1112)  # type: ignore[return-value]
-    except Exception as exc:
-        msg = f'Failed to download the KDD Cup 2009 Churn dataset from OpenML. Original error: {exc}'
-        raise OSError(msg) from exc
 
 
 _CELL2CELL_DESCRIPTION = """\

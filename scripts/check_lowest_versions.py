@@ -2,9 +2,9 @@
 Fail unless every dependency is installed at exactly the minimum version ``pyproject.toml`` declares.
 
 Guards the ``py311-lowest`` tox environment, which installs the lowest installable version of each
-runtime dependency and of the ``boosting`` and ``sampling`` extras, then runs the test suite against them. That only
-proves the declared minimums work if the declared minimums are what got installed, and two things
-can quietly install something newer:
+runtime dependency and of the ``boosting``, ``datasets`` and ``sampling`` extras, then runs the test
+suite against them. That only proves the declared minimums work if the declared minimums are what
+got installed, and two things can quietly install something newer:
 
 * **Another dependency requires more.** ``imbalanced-learn>=0.14.2`` needs ``numpy>=1.25.2``, so a
   declared ``numpy>=1.24.4`` can never be installed alongside it. A user reading ``pyproject.toml``
@@ -31,7 +31,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import Version
 
 # The extras the environment installs.
-EXTRAS = ('boosting', 'sampling')
+EXTRAS = ('boosting', 'datasets', 'sampling')
 
 
 def declared_minimums(pyproject: Path) -> dict[str, Version]:

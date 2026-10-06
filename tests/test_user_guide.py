@@ -18,8 +18,8 @@ DOCS_DIR = ROOT / 'docs'
 EXCLUDED_DIRS = {'_build', '_static', '_templates', 'sphinxext', 'generated'}
 
 
-# Pages whose examples download datasets too large to fetch on every run (hundreds of megabytes for
-# the fraud datasets). They are deselected with the other `remote` tests.
+# Pages whose examples download datasets too large to fetch on every run (about 75 MB each for the
+# fraud datasets). They are deselected with the other `remote` tests.
 REMOTE_PAGES = frozenset({
     'cell2cell.rst',
     'credit_card_fraud.rst',

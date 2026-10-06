@@ -15,7 +15,8 @@ That gives you every metric, the linear and tree-based models and the optimizers
 Optional extras
 ===============
 
-The boosting models and the samplers need extra dependencies, each installable as an extra:
+The boosting models, the samplers and some dataset loaders need extra dependencies, each
+installable as an extra:
 
 .. list-table::
     :widths: 22 30 48
@@ -29,6 +30,10 @@ The boosting models and the samplers need extra dependencies, each installable a
       - XGBoost, LightGBM and CatBoost, the backends behind
         :class:`~empulse.models.CSBoostClassifier` and
         :class:`~empulse.models.B2BoostClassifier`.
+    * - ``datasets``
+      - ``pip install empulse[datasets]``
+      - pyarrow, which the OpenML dataset loaders in :mod:`empulse.datasets` need to read their
+        Parquet files with the pandas backend.
     * - ``sampling``
       - ``pip install empulse[sampling]``
       - imbalanced-learn, which the samplers in :mod:`empulse.samplers` build on.
@@ -87,6 +92,11 @@ itself, which is how Empulse stays agnostic between pandas and polars:
     from empulse.datasets import fetch_iranian_churn
 
     dataset = fetch_iranian_churn(backend=pd)
+
+The loaders that download from OpenML (such as
+:func:`~empulse.datasets.fetch_give_me_some_credit` and
+:func:`~empulse.datasets.fetch_ieee_fraud_detection`) read a Parquet file. Polars reads it on its
+own; pandas needs pyarrow, which ``pip install empulse[datasets]`` installs.
 
 Verifying the install
 =====================

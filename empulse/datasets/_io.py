@@ -1,19 +1,22 @@
-"""Internal I/O helpers; stdlib and numpy only, no dataframe library required."""
+"""Internal I/O helpers for the dataset loaders."""
 
 from __future__ import annotations
 
 import csv
 import gzip
+import importlib.util
 import io
 import json
 import os
 import re
+import shutil
 import ssl
 import threading
 import time
 import unicodedata
 import urllib.error
 import urllib.request
+import warnings
 import zipfile
 from typing import TYPE_CHECKING, Any
 
@@ -21,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from pathlib import Path
 
+import narwhals as nw
 import numpy as np
 
 #: Characters that are replaced by a single underscore (includes non-breaking space \xa0).
@@ -510,65 +514,15 @@ def _openml_api_request(
     ) from last_exc
 
 
-def _parse_arff(content: str) -> dict[str, list[str]]:
-    """Parse a dense ARFF string into a column-oriented dict of raw strings.
-
-    Missing values (``?`` in ARFF) are preserved as the string ``'?'``;
-    callers are responsible for treating them as nulls.
-
-    Parameters
-    ----------
-    content : str
-        Full text content of an ARFF file.
-
-    Returns
-    -------
-    dict[str, list[str]]
-        Column-oriented mapping: attribute name → list of raw string values.
-    """
-    attributes: list[str] = []
-    lines_iter = iter(content.splitlines())
-
-    for line in lines_iter:
-        stripped = line.strip()
-        if not stripped or stripped.startswith('%'):
-            continue
-        lower = stripped.lower()
-        if lower.startswith('@data'):
-            break
-        if lower.startswith('@attribute'):
-            # @ATTRIBUTE <name> <type>   — name may be quoted
-            parts = stripped.split(None, 2)
-            if len(parts) >= 2:
-                attributes.append(parts[1].strip('\'"'))
-
-    result: dict[str, list[str]] = {name: [] for name in attributes}
-    if not attributes:
-        return result
-
-    data_lines = (line for line in lines_iter if line.strip() and not line.strip().startswith('%'))
-    # ARFF quotes values with single quotes and escapes with a backslash (``'Fiber optic'``,
-    # ``'O\'Brien'``); the csv module's defaults would keep the quotes as part of the value.
-    reader = csv.reader(data_lines, quotechar="'", escapechar='\\', skipinitialspace=True)
-    for row in reader:
-        for i, name in enumerate(attributes):
-            result[name].append(row[i].strip() if i < len(row) else '')
-    return result
-
-
-def _fetch_openml(
+def _openml_parquet_url(
     name: str | None = None,
     *,
     version: int | str = 'active',
     data_id: int | None = None,
     n_retries: int = 3,
     delay: float = 1.0,
-) -> dict[str, list[str]]:
-    """Fetch a dataset from OpenML and return a flat dict of raw string lists.
-
-    Uses only Python stdlib (``urllib``, ``json``, ``csv``, ``ssl``, ``gzip``)
-    — no extra dependencies required.  Includes the same retry logic that
-    scikit-learn uses in ``fetch_openml``.
+) -> str:
+    """Resolve an OpenML dataset to the URL of its Parquet file.
 
     Parameters
     ----------
@@ -585,17 +539,15 @@ def _fetch_openml(
 
     Returns
     -------
-    dict[str, list[str]]
-        Column-oriented dict of raw string values suitable for
-        :func:`_write_csv_gz` / :func:`_read_csv_gz`.
-        Missing ARFF values (``?``) are preserved as the string ``'?'``.
+    str
+        Download URL of the dataset's Parquet file.
 
     Raises
     ------
     ValueError
         When neither or both of *name* / *data_id* are given.
     OSError
-        When the dataset cannot be found or downloaded.
+        When the dataset cannot be found or has no Parquet file.
     OpenMLError
         When OpenML returns a HTTP 412 error.
     """
@@ -604,7 +556,6 @@ def _fetch_openml(
     if name is not None and data_id is not None:
         raise ValueError('Provide either name or data_id, not both.')
 
-    # Resolve data_id from name and version.
     if name is not None:
         name_lower = name.lower()
         if version == 'active':
@@ -626,59 +577,132 @@ def _fetch_openml(
             raise OSError(f'No OpenML dataset found with name={name!r}, version={version!r}.')
         data_id = int(datasets_list[0]['did'])
 
-    # The dataset description holds the ARFF download URL.
-    desc_url = _OPENML_DATA_INFO.format(data_id)
-    desc_json = _openml_api_request(desc_url, n_retries=n_retries, delay=delay)
+    desc_json = _openml_api_request(_OPENML_DATA_INFO.format(data_id), n_retries=n_retries, delay=delay)
     description: dict[str, Any] = desc_json.get('data_set_description', {})
 
-    arff_url: str | None = description.get('url')
-    if not arff_url:
-        raise OSError(f'OpenML dataset {data_id} exists but has no downloadable ARFF URL.')
+    parquet_url: str | None = description.get('parquet_url')
+    if not parquet_url:
+        raise OSError(f'OpenML dataset {data_id} exists but has no downloadable Parquet file.')
 
     if description.get('status') != 'active':
-        import warnings
-
         warnings.warn(
             f'OpenML dataset {data_id} ({description.get("name")!r}) '
             f'has status {description.get("status")!r}; it may have known issues.',
             RuntimeWarning,
             stacklevel=3,
         )
+    return parquet_url
 
-    # Download the ARFF file, retrying on failure.
+
+def _download_to_file(url: str, destination: Path, *, n_retries: int = 3, delay: float = 1.0) -> None:
+    """Stream *url* into *destination*, retrying on network errors.
+
+    Parameters
+    ----------
+    url : str
+        URL to download.
+    destination : Path
+        File to write; overwritten on every attempt.
+    n_retries : int, default=3
+        Number of retry attempts on transient network errors.
+    delay : float, default=1.0
+        Seconds to wait between retry attempts.
+
+    Raises
+    ------
+    OSError
+        When every attempt fails.
+    """
     ctx = ssl.create_default_context()
-    arff_req = urllib.request.Request(arff_url)
-    arff_req.add_header('Accept-encoding', 'gzip')
-
+    req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
     last_exc: Exception | None = None
-    arff_bytes: bytes | None = None
     for attempt in range(n_retries + 1):
         try:
-            with urllib.request.urlopen(arff_req, context=ctx, timeout=120) as resp:
-                chunk: bytes = resp.read()
-                if resp.info().get('Content-Encoding', '') == 'gzip':
-                    chunk = gzip.decompress(chunk)
-                arff_bytes = chunk
-            break
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError) as exc:
+            with urllib.request.urlopen(req, context=ctx, timeout=120) as resp, open(destination, 'wb') as f:
+                shutil.copyfileobj(resp, f)
+            return
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
             last_exc = exc
             if attempt < n_retries:
                 time.sleep(delay)
+    raise OSError(f'Failed to download {url} after {n_retries + 1} attempts. Last error: {last_exc}') from last_exc
 
-    if arff_bytes is None:
-        raise OSError(
-            f'Failed to download ARFF for OpenML dataset {data_id} from {arff_url} '
-            f'after {n_retries + 1} attempts. Last error: {last_exc}'
-        ) from last_exc
 
-    # The ARFF file may itself be gzip-compressed.
-    try:
-        with gzip.open(io.BytesIO(arff_bytes), 'rt', encoding='utf-8') as gz:
-            content = gz.read()
-    except OSError:
+def _require_parquet_reader(backend: Any) -> None:
+    """Raise :exc:`ImportError` when *backend* needs pyarrow to read Parquet and it is missing.
+
+    Polars reads Parquet natively; every other backend goes through pyarrow.
+    """
+    implementation = nw.Implementation.from_backend(backend)
+    if implementation is nw.Implementation.POLARS or importlib.util.find_spec('pyarrow') is not None:
+        return
+    raise ImportError(
+        f'Loading this dataset with the {implementation} backend requires pyarrow. '
+        'Install it with `pip install empulse[datasets]` or `pip install pyarrow`, '
+        'or pass `backend=polars`.'
+    )
+
+
+def load_or_fetch_openml(
+    cache_file: Path,
+    *,
+    backend: Any,
+    name: str | None = None,
+    version: int | str = 'active',
+    data_id: int | None = None,
+    download_if_missing: bool = True,
+    dataset_name: str = 'dataset',
+) -> nw.DataFrame[Any]:
+    """Load an OpenML dataset from its cached Parquet file, downloading it first if needed.
+
+    The file is cached exactly as OpenML serves it, so columns keep their OpenML types: numeric
+    attributes are numbers, nominal ones strings or categoricals, and missing values are null.
+
+    Parameters
+    ----------
+    cache_file : Path
+        Path to the ``.parquet`` cache file.
+    backend : module
+        Narwhals-compatible dataframe backend to read the file with.
+    name : str, optional
+        Dataset name on OpenML.  Either *name* or *data_id* must be given.
+    version : int or 'active', default='active'
+        Dataset version.  Only used together with *name*.
+    data_id : int, optional
+        OpenML numeric dataset ID.  Either *name* or *data_id* must be given.
+    download_if_missing : bool, default=True
+        When *False* and the cache file does not exist, raise an
+        :exc:`OSError` instead of downloading.
+    dataset_name : str, default='dataset'
+        Human-readable name used in error messages.
+
+    Returns
+    -------
+    narwhals.DataFrame
+        The dataset as OpenML stores it.
+
+    Raises
+    ------
+    ImportError
+        When the backend needs pyarrow to read Parquet and it is not installed.
+    OSError
+        When *download_if_missing* is *False* and the cache is absent, or the download fails.
+    """
+    _require_parquet_reader(backend)
+    if not cache_file.exists():
+        if not download_if_missing:
+            raise OSError(
+                f'{dataset_name} not found at {cache_file}. Set download_if_missing=True to download it automatically.'
+            )
+        # Download beside the cache file and move it into place, so that another process sharing the
+        # data home sees either no file or a complete one.
+        partial_file = cache_file.with_name(f'{cache_file.name}.{os.getpid()}-{threading.get_ident()}.partial')
         try:
-            content = arff_bytes.decode('utf-8')
-        except UnicodeDecodeError:
-            content = arff_bytes.decode('latin-1')
-
-    return _parse_arff(content)
+            url = _openml_parquet_url(name, version=version, data_id=data_id)
+            _download_to_file(url, partial_file)
+            os.replace(partial_file, cache_file)
+        except (OSError, OpenMLError) as exc:
+            raise OSError(f'Failed to download the {dataset_name} from OpenML. Original error: {exc}') from exc
+        finally:
+            partial_file.unlink(missing_ok=True)
+    return nw.read_parquet(cache_file, backend=backend)

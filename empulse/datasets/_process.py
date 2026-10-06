@@ -1,8 +1,8 @@
 """Per-dataset data-cleaning and feature-engineering functions.
 
-Each ``process_*`` function takes raw data (either a narwhals DataFrame for
-local datasets, or a raw ``dict`` + backend for remote datasets) and returns
-cleaned, typed narwhals objects ready for cost-matrix computation and
+Each ``process_*`` function takes raw data (a narwhals DataFrame for bundled and
+OpenML datasets, or a raw ``dict`` + backend for the other remote datasets) and
+returns cleaned, typed narwhals objects ready for cost-matrix computation and
 final Dataset assembly.
 """
 
@@ -16,6 +16,20 @@ from ._io import _find_column, _sanitize_column_name, _snake_case_column_name
 
 if TYPE_CHECKING:
     from .._types import FloatNDArray
+
+
+def _label_is(column: str, label: str) -> nw.Expr:
+    """Whether *column* equals *label*; OpenML stores class labels as strings, categoricals or integers."""
+    return nw.col(column).cast(nw.String) == label
+
+
+def _nominal(column: str) -> nw.Expr:
+    """*column* as strings, with missing values left missing.
+
+    OpenML stores a nominal attribute as strings, a categorical or numeric codes. A plain cast to
+    string would turn pandas' missing values into the text ``'nan'`` or ``'None'``.
+    """
+    return nw.when(~nw.col(column).is_null()).then(nw.col(column).cast(nw.String))
 
 
 def process_churn_tv(
@@ -324,17 +338,14 @@ _GIVE_ME_SOME_CREDIT_FEATURE_ORDER = [
 
 
 def process_give_me_some_credit(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray, FloatNDArray]:
-    """Process the Give Me Some Credit raw dict.
+    """Process the Give Me Some Credit data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -344,16 +355,15 @@ def process_give_me_some_credit(
     debt_ratio_np : numpy array
     target_np : numpy array
     """
-    renamed: dict[str, list[Any]] = {}
-    for col, vals in raw.items():
-        stripped = col.strip()
-        new_name = _GIVE_ME_SOME_CREDIT_COL_MAP.get(
-            stripped, _GIVE_ME_SOME_CREDIT_COL_MAP.get(stripped.lower(), stripped)
+    df = df.rename({
+        col: _GIVE_ME_SOME_CREDIT_COL_MAP.get(
+            col.strip(), _GIVE_ME_SOME_CREDIT_COL_MAP.get(col.strip().lower(), col.strip())
         )
-        renamed[new_name] = vals
+        for col in df.columns
+    })
 
     target_col = _find_column(
-        renamed,
+        dict.fromkeys(df.columns),
         (
             'target',
             'SeriousDlqin2yrs',
@@ -365,74 +375,37 @@ def process_give_me_some_credit(
         fallback_prefix='target',
     )
 
-    df = nw.from_dict(renamed, backend=backend)
-
-    df = df.with_columns(
-        nw
-        .when(nw.col('monthly_income').is_in(['?', 'NA', '']))
-        .then(nw.lit(None))
-        .otherwise(nw.col('monthly_income'))
-        .cast(nw.Float64)
-        .alias('monthly_income'),
-        nw
-        .when(nw.col('debt_ratio').is_in(['?', 'NA', '']))
-        .then(nw.lit(None))
-        .otherwise(nw.col('debt_ratio'))
-        .cast(nw.Float64)
-        .alias('debt_ratio'),
-    ).filter(
+    df = df.with_columns(nw.col('monthly_income', 'debt_ratio').cast(nw.Float64)).filter(
         ~nw.col('monthly_income').is_null()
         & (nw.col('monthly_income') > 0)
         & ~nw.col('debt_ratio').is_null()
         & (nw.col('debt_ratio') < 1)
     )
 
-    target_as_int = (
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
-        .then(nw.lit(1))
-        .when(nw.col(target_col).is_in(['0', '0.0', 'No', 'no']))
-        .then(nw.lit(0))
-        .otherwise(nw.lit(None))
-    )
-    target_series = df.select(target_as_int.cast(nw.Int64).alias('default'))['default']
+    target_series = df.select(_label_is(target_col, 'Yes').cast(nw.Int64).alias('default'))['default']
 
-    monthly_income_np: FloatNDArray = df['monthly_income'].cast(nw.Float64).to_numpy()
-    debt_ratio_np: FloatNDArray = df['debt_ratio'].cast(nw.Float64).to_numpy()
+    monthly_income_np: FloatNDArray = df['monthly_income'].to_numpy()
+    debt_ratio_np: FloatNDArray = df['debt_ratio'].to_numpy()
     target_np: FloatNDArray = target_series.to_numpy()
 
     available_features = [c for c in _GIVE_ME_SOME_CREDIT_FEATURE_ORDER if c in df.columns]
     float_cols = {'monthly_income', 'debt_ratio', 'revolving_utilization'}
     feat = df.select(*[
-        nw.col(c).cast(nw.Float64).alias(c)
-        if c in float_cols
-        else (
-            nw
-            .when(nw.col(c).is_in(['?', 'NA', '']))
-            .then(nw.lit(None))
-            .otherwise(nw.col(c))
-            .cast(nw.Float64)
-            .cast(nw.UInt8)
-            .alias(c)
-        )
-        for c in available_features
+        nw.col(c).cast(nw.Float64) if c in float_cols else nw.col(c).cast(nw.UInt8) for c in available_features
     ])
 
     return feat, target_series, monthly_income_np, debt_ratio_np, target_np
 
 
 def process_telco_customer_churn(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
-    """Process the Kaggle Telco Customer Churn raw dict.
+    """Process the Kaggle Telco Customer Churn data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -440,19 +413,10 @@ def process_telco_customer_churn(
     target_series : narwhals Series (name='churn', dtype Int8)
     monthly_charges : numpy array
     """
-    df = nw.from_dict(raw, backend=backend)
-
     # Drop the 11 rows with blank TotalCharges, which matches the paper's N=7032.
-    df = df.filter(~nw.col('TotalCharges').is_null() & ~nw.col('TotalCharges').is_in(['', ' ']))
+    df = df.filter(~nw.col('TotalCharges').is_null() & (nw.col('TotalCharges').str.strip_chars() != ''))
 
-    target_series = df.select(
-        nw
-        .when(nw.col('Churn').is_in(['Yes', 'yes', '1', '1.0']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('churn')
-    )['churn']
+    target_series = df.select(_label_is('Churn', 'Yes').cast(nw.Int8).alias('churn'))['churn']
 
     monthly_charges: FloatNDArray = df['MonthlyCharges'].cast(nw.Float64).to_numpy()
 
@@ -460,12 +424,7 @@ def process_telco_customer_churn(
 
     numeric_cols = {'tenure', 'MonthlyCharges', 'TotalCharges', 'SeniorCitizen'}
     feat = df.select([
-        nw
-        .when(nw.col(c).is_in(['?', 'NA', '', ' ']) | nw.col(c).is_null())
-        .then(nw.lit(None))
-        .otherwise(nw.col(c))
-        .cast(nw.Float64)
-        .alias(_snake_case_column_name(c))
+        nw.col(c).cast(nw.Float64).alias(_snake_case_column_name(c))
         if c in numeric_cols
         else nw.col(c).alias(_snake_case_column_name(c))
         for c in feature_cols
@@ -502,17 +461,14 @@ _DEFAULT_CREDIT_CARD_MAP: dict[str, str] = {
 
 
 def process_default_credit_card_clients(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray]:
-    """Process the UCI Default of Credit Card Clients raw dict.
+    """Process the UCI Default of Credit Card Clients data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -521,8 +477,6 @@ def process_default_credit_card_clients(
     credit_line : numpy array (LIMIT_BAL)
     target_np : numpy array
     """
-    df = nw.from_dict(raw, backend=backend)
-
     col_map = {}
     for c in df.columns:
         c_low = c.lower().strip()
@@ -536,14 +490,7 @@ def process_default_credit_card_clients(
     df = df.rename(col_map)
 
     target_col = 'target' if 'target' in df.columns else _find_column(dict.fromkeys(df.columns), ('y', 'default'))
-    target_series = df.select(
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('default')
-    )['default']
+    target_series = df.select(_label_is(target_col, '1').cast(nw.Int8).alias('default'))['default']
     target_np: FloatNDArray = target_series.to_numpy()
 
     cl_col = (
@@ -582,17 +529,14 @@ def _ieee_column_name(name: str) -> str:
 
 
 def process_ieee_fraud_detection(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
-    """Process the Kaggle IEEE-CIS Fraud Detection raw dict.
+    """Process the Kaggle IEEE-CIS Fraud Detection data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -600,19 +544,10 @@ def process_ieee_fraud_detection(
     target_series : narwhals Series (name='fraud', dtype Int8)
     amount : numpy array (TransactionAmt)
     """
-    df = nw.from_dict(raw, backend=backend)
-
     target_col = _find_column(dict.fromkeys(df.columns), ('isFraud', 'isfraud', 'class', 'Class'))
     amt_col = _find_column(dict.fromkeys(df.columns), ('TransactionAmt', 'transactionamt', 'amount', 'Amount'))
 
-    target_series = df.select(
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('fraud')
-    )['fraud']
+    target_series = df.select(_label_is(target_col, '1.0').cast(nw.Int8).alias('fraud'))['fraud']
 
     amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
 
@@ -621,30 +556,24 @@ def process_ieee_fraud_detection(
     # empty for these training transactions; the underscore versions (id_01, ...) hold the data.
     feature_cols = [c for c in df.columns if c not in drop_cols and not c.startswith('id-')]
 
-    def _missing_to_null(c: str) -> nw.Expr:
-        return nw.when(nw.col(c).is_in(['?', ''])).then(nw.lit(None)).otherwise(nw.col(c))
-
     feat = df.select([
-        _missing_to_null(c).alias(_ieee_column_name(c))
+        _nominal(c).alias(_ieee_column_name(c))
         if c in IEEE_FRAUD_CATEGORICAL_ATTRIBUTES
-        else _missing_to_null(c).cast(nw.Float64).alias(_ieee_column_name(c))
+        else nw.col(c).cast(nw.Float64).alias(_ieee_column_name(c))
         for c in feature_cols
     ])
     return feat, target_series, amount
 
 
 def process_credit_card_fraud(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray]:
-    """Process the Kaggle Credit Card Fraud (ULB MLG) raw dict.
+    """Process the Kaggle Credit Card Fraud (ULB MLG) data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -652,8 +581,6 @@ def process_credit_card_fraud(
     target_series : narwhals Series (name='fraud', dtype Int8)
     amount : numpy array (transaction amount)
     """
-    df = nw.from_dict(raw, backend=backend)
-
     target_col = _find_column(dict.fromkeys(df.columns), ('Class', 'class', 'target', 'fraud'))
     amt_col = _find_column(dict.fromkeys(df.columns), ('Amount', 'amount', 'transactionamt'))
 
@@ -661,14 +588,7 @@ def process_credit_card_fraud(
     amt_expr = nw.col(amt_col).cast(nw.Float64)
     df = df.filter(~amt_expr.is_null() & (amt_expr > 0))
 
-    target_series = df.select(
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('fraud')
-    )['fraud']
+    target_series = df.select(_label_is(target_col, '1').cast(nw.Int8).alias('fraud'))['fraud']
 
     amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
 
@@ -840,17 +760,14 @@ HOME_EQUITY_COLUMNS: dict[str, str] = {
 
 
 def process_home_equity(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any], FloatNDArray, FloatNDArray]:
-    """Process the Home Equity (HMEQ) raw dict.
+    """Process the Home Equity (HMEQ) data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
@@ -859,19 +776,10 @@ def process_home_equity(
     loan_amount : numpy array
     target_np : numpy array
     """
-    df = nw.from_dict(raw, backend=backend)
-
     target_col = _find_column(dict.fromkeys(df.columns), ('BAD', 'bad', 'target', 'default'))
     amt_col = _find_column(dict.fromkeys(df.columns), ('LOAN', 'loan', 'amount', 'Amount'))
 
-    target_series = df.select(
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('default')
-    )['default']
+    target_series = df.select(_label_is(target_col, '1').cast(nw.Int8).alias('default'))['default']
     target_np: FloatNDArray = target_series.to_numpy()
 
     loan_amount: FloatNDArray = df[amt_col].cast(nw.Float64).to_numpy()
@@ -884,20 +792,9 @@ def process_home_equity(
         return HOME_EQUITY_COLUMNS.get(name, name)
 
     feat = df.select([
-        nw
-        .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
-        .then(nw.lit(None))
-        .otherwise(nw.col(c))
-        .alias(_name(c))
+        _nominal(c).alias(_name(c))
         if _sanitize_column_name(c) in categorical_cols
-        else (
-            nw
-            .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
-            .then(nw.lit(None))
-            .otherwise(nw.col(c))
-            .cast(nw.Float64)
-            .alias(_name(c))
-        )
+        else nw.col(c).cast(nw.Float64).alias(_name(c))
         for c in feature_cols
     ])
 
@@ -973,58 +870,35 @@ def process_south_german_credit(
 
 
 def process_kddcup09_churn(
-    raw: dict[str, list[Any]],
-    backend: Any,
+    df: nw.DataFrame[Any],
 ) -> tuple[nw.DataFrame[Any], nw.Series[Any]]:
-    """Process the KDD Cup 2009 / Orange Churn raw dict.
+    """Process the KDD Cup 2009 / Orange Churn data.
 
     Parameters
     ----------
-    raw : dict
-        Column-oriented dict of raw string values (from cache or OpenML).
-    backend : module
-        Narwhals-compatible dataframe backend.
+    df : narwhals DataFrame
+        The dataset as OpenML stores it.
 
     Returns
     -------
     feature_df : narwhals DataFrame
     target_series : narwhals Series (name='churn', dtype Int8)
     """
-    df = nw.from_dict(raw, backend=backend)
-
     target_col = _find_column(
         dict.fromkeys(df.columns),
         ('CHURN', 'churn', 'target', 'class'),
     )
 
-    target_series = df.select(
-        nw
-        .when(nw.col(target_col).is_in(['1', '1.0', 'Yes', 'yes', 'True', 'true']))
-        .then(nw.lit(1))
-        .otherwise(nw.lit(0))
-        .cast(nw.Int8)
-        .alias('churn')
-    )['churn']
+    target_series = df.select(_label_is(target_col, '1').cast(nw.Int8).alias('churn'))['churn']
 
     # Var191 to Var229 are nominal; OpenML types the all-missing Var209 as numeric, which makes no difference
     nominal_set = {f'var{i}' for i in range(191, 230)}
 
     feature_cols = [c for c in df.columns if c != target_col]
     feat = df.select([
-        nw
-        .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
-        .then(nw.lit(None))
-        .otherwise(nw.col(c))
-        .alias(_sanitize_column_name(c))
+        _nominal(c).alias(_sanitize_column_name(c))
         if _sanitize_column_name(c) in nominal_set
-        else (
-            nw
-            .when(nw.col(c).is_in(['?', 'NA', '']) | nw.col(c).is_null())
-            .then(nw.lit(None))
-            .otherwise(nw.col(c))
-            .cast(nw.Float64)
-            .alias(_sanitize_column_name(c))
-        )
+        else nw.col(c).cast(nw.Float64).alias(_sanitize_column_name(c))
         for c in feature_cols
     ])
 

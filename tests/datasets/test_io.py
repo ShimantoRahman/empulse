@@ -6,18 +6,23 @@ import csv
 import gzip
 from pathlib import Path
 from typing import ClassVar
+from unittest.mock import patch
 
+import pandas as pd
+import polars as pl
 import pytest
 
 from empulse.datasets import get_data_home
 from empulse.datasets._io import (
     _find_column,
-    _parse_arff,
     _read_csv_gz,
     _sanitize_column_name,
     _write_csv_gz,
     load_or_fetch,
+    load_or_fetch_openml,
 )
+
+from ._helpers import BACKENDS
 
 
 class TestSanitizeColumnName:
@@ -201,26 +206,62 @@ class TestLoadOrFetch:
         assert list(tmp_path.iterdir()) == []
 
 
-class TestParseArff:
-    def test_single_quoted_values_lose_their_quotes(self):
-        content = (
-            '@RELATION telco\n'
-            "@ATTRIBUTE Contract {Month-to-month,'One year'}\n"
-            '@ATTRIBUTE MonthlyCharges NUMERIC\n'
-            '@ATTRIBUTE Churn {No,Yes}\n'
-            '@DATA\n'
-            'Month-to-month,29.85,No\n'
-            "'One year',56.95,Yes\n"
-        )
-        assert _parse_arff(content) == {
-            'Contract': ['Month-to-month', 'One year'],
-            'MonthlyCharges': ['29.85', '56.95'],
-            'Churn': ['No', 'Yes'],
-        }
+class TestLoadOrFetchOpenml:
+    """The Parquet cache in front of OpenML; the network is patched out throughout."""
 
-    def test_quoted_value_may_contain_a_comma_and_an_escaped_quote(self):
-        content = "@ATTRIBUTE name STRING\n@ATTRIBUTE n NUMERIC\n@DATA\n'O\\'Brien, Jr.',1\n?,2\n"
-        assert _parse_arff(content) == {'name': ["O'Brien, Jr.", '?'], 'n': ['1', '2']}
+    FRAME = pl.DataFrame({'amount': [1.5, None], 'label': ['a', 'b']})
+
+    @staticmethod
+    def _write_frame(_url, destination):
+        TestLoadOrFetchOpenml.FRAME.write_parquet(destination)
+
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_downloads_once_then_reads_the_cache(self, tmp_path, backend):
+        cache_file = tmp_path / 'data.parquet'
+        with (
+            patch('empulse.datasets._io._openml_parquet_url', return_value='url') as resolve,
+            patch('empulse.datasets._io._download_to_file', side_effect=self._write_frame) as download,
+        ):
+            first = load_or_fetch_openml(cache_file, backend=backend, data_id=1)
+            second = load_or_fetch_openml(cache_file, backend=backend, data_id=1)
+        assert resolve.call_count == download.call_count == 1
+        for df in (first, second):
+            assert df.columns == ['amount', 'label']
+            assert df['amount'].is_null().to_list() == [False, True]
+            assert df['label'].to_list() == ['a', 'b']
+
+    def test_raises_oserror_when_missing_and_not_allowed(self, tmp_path):
+        with pytest.raises(OSError, match=r'My dataset not found.*download_if_missing'):
+            load_or_fetch_openml(
+                tmp_path / 'data.parquet', backend=pl, data_id=1, download_if_missing=False, dataset_name='My dataset'
+            )
+
+    def test_failed_download_names_the_dataset_and_leaves_no_file(self, tmp_path):
+        def fail_halfway(_url, destination):
+            destination.write_bytes(b'partial')
+            raise OSError('connection reset')
+
+        with (
+            patch('empulse.datasets._io._openml_parquet_url', return_value='url'),
+            patch('empulse.datasets._io._download_to_file', side_effect=fail_halfway),
+            pytest.raises(OSError, match=r'My dataset.*connection reset'),
+        ):
+            load_or_fetch_openml(tmp_path / 'data.parquet', backend=pl, data_id=1, dataset_name='My dataset')
+        assert list(tmp_path.iterdir()) == []
+
+    def test_pandas_without_pyarrow_names_the_extra(self, tmp_path):
+        self.FRAME.write_parquet(tmp_path / 'data.parquet')
+        with (
+            patch('empulse.datasets._io.importlib.util.find_spec', return_value=None),
+            pytest.raises(ImportError, match=r'pip install empulse\[datasets\]'),
+        ):
+            load_or_fetch_openml(tmp_path / 'data.parquet', backend=pd, data_id=1)
+
+    def test_polars_does_not_need_pyarrow(self, tmp_path):
+        self.FRAME.write_parquet(tmp_path / 'data.parquet')
+        with patch('empulse.datasets._io.importlib.util.find_spec', return_value=None):
+            df = load_or_fetch_openml(tmp_path / 'data.parquet', backend=pl, data_id=1)
+        assert df.columns == ['amount', 'label']
 
 
 class TestGetDataHome:

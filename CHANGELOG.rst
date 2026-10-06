@@ -250,13 +250,19 @@ Datasets
     :func:`~empulse.datasets.fetch_default_credit_card_clients` for credit scoring.
 
   :func:`~empulse.datasets.load_vub_credit_scoring` is bundled with the package; the others are
-  downloaded on first use and cached.
+  downloaded on first use and cached. Those downloaded from OpenML need pyarrow with the pandas
+  backend (``pip install empulse[datasets]``).
+- |API| :func:`~empulse.datasets.fetch_give_me_some_credit` downloads OpenML's Parquet file instead
+  of its ARFF file, so with the pandas backend it needs pyarrow (``pip install empulse[datasets]``).
+  The dataset is downloaded again once; the result is unchanged.
 - |Fix| The ``fetch_*`` loaders write downloads to their cache atomically, so processes sharing a
   data home no longer read a partially written file.
 
 Packaging and dependencies
 ---------------------------
 
+- |Feature| A new ``datasets`` extra, ``pip install empulse[datasets]``, installs pyarrow for the
+  OpenML dataset loaders. ``empulse[optional]`` includes it.
 - |Enhancement| Empulse works with scikit-learn 1.5.2 and later (1.7.2 and later on Python 3.14)
   and no longer builds against it, so new scikit-learn releases no longer need a matching Empulse
   release. Any Cython 3.1 or later builds Empulse.

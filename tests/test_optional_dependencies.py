@@ -11,15 +11,11 @@ import textwrap
 
 import pytest
 
-BLOCK_IMBLEARN = textwrap.dedent("""
-    import sys
-    sys.modules['imblearn'] = None
-""")
 
-
-def _run(code: str) -> subprocess.CompletedProcess[str]:
+def _run(code: str, *, block: str = 'imblearn') -> subprocess.CompletedProcess[str]:
+    blocker = f'import sys\nsys.modules[{block!r}] = None\n'
     return subprocess.run(
-        [sys.executable, '-c', BLOCK_IMBLEARN + textwrap.dedent(code)], capture_output=True, text=True, check=False
+        [sys.executable, '-c', blocker + textwrap.dedent(code)], capture_output=True, text=True, check=False
     )
 
 
@@ -49,4 +45,35 @@ def test_samplers_without_imbalanced_learn_name_the_extra():
 @pytest.mark.parametrize('module', ['empulse.metrics', 'empulse.models', 'empulse.optimizers', 'empulse.datasets'])
 def test_imports_without_imbalanced_learn(module):
     result = _run(f'import {module}')
+    assert result.returncode == 0, result.stderr
+
+
+def test_openml_datasets_with_pandas_without_pyarrow_name_the_extra(tmp_path):
+    result = _run(
+        f"""
+        import pandas
+        from empulse.datasets import fetch_home_equity
+
+        fetch_home_equity(backend=pandas, data_home={str(tmp_path)!r})
+        """,
+        block='pyarrow',
+    )
+    assert result.returncode != 0
+    assert 'pip install empulse[datasets]' in result.stderr
+
+
+def test_openml_datasets_with_polars_work_without_pyarrow(tmp_path):
+    result = _run(
+        f"""
+        import polars
+        from empulse.datasets import fetch_home_equity
+
+        polars.DataFrame({{
+            'BAD': [1, 0], 'LOAN': [1100, 1700], 'REASON': ['HomeImp', None], 'DEBTINC': [None, 37.1]
+        }}).write_parquet({str(tmp_path / 'home_equity.parquet')!r})
+        dataset = fetch_home_equity(backend=polars, data_home={str(tmp_path)!r}, download_if_missing=False)
+        assert dataset.data.shape == (2, 3), dataset.data.shape
+        """,
+        block='pyarrow',
+    )
     assert result.returncode == 0, result.stderr

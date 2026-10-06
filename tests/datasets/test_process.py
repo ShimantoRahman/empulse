@@ -359,27 +359,37 @@ class TestProcessIranianChurn:
         np.testing.assert_allclose(clv_pd, clv_pl)
 
 
-def _gmsc_raw(n: int = 6) -> dict:
-    """Synthetic Give-Me-Some-Credit raw dict using original OpenML column names."""
+def _openml_frame(data: dict, backend: IntoBackend[EagerAllowed], categorical: tuple[str, ...] = ()) -> nw.DataFrame:
+    """A frame typed like the Parquet files OpenML serves, with *categorical* as categoricals."""
+    df = nw.from_dict(data, backend=backend)
+    return df.with_columns(nw.col(*categorical).cast(nw.Categorical)) if categorical else df
+
+
+def _gmsc_data(n: int = 6) -> dict:
+    """Synthetic Give-Me-Some-Credit data with the OpenML column names and types."""
     return {
-        'SeriousDlqin2yrs': ['0', '1', '0', '0', '1', '0'][:n],
-        'RevolvingUtilizationOfUnsecuredLines': ['0.5', '0.9', '0.2', '0.3', '0.8', '0.1'][:n],
-        'age': ['45', '35', '28', '60', '42', '55'][:n],
-        'NumberOfTime30-59DaysPastDueNotWorse': ['0', '2', '0', '1', '3', '0'][:n],
-        'DebtRatio': ['0.3', '0.8', '0.1', '0.2', '0.5', '0.05'][:n],
-        'MonthlyIncome': ['5000', '3000', '4000', '8000', '2500', '6000'][:n],
-        'NumberOfOpenCreditLinesAndLoans': ['5', '3', '8', '10', '2', '7'][:n],
-        'NumberOfTimes90DaysLate': ['0', '1', '0', '0', '2', '0'][:n],
-        'NumberRealEstateLoansOrLines': ['1', '0', '2', '3', '0', '1'][:n],
-        'NumberOfTime60-89DaysPastDueNotWorse': ['0', '1', '0', '0', '1', '0'][:n],
-        'NumberOfDependents': ['2', '0', '1', '3', '0', '2'][:n],
+        'FinancialDistressNextTwoYears': ['No', 'Yes', 'No', 'No', 'Yes', 'No'][:n],
+        'RevolvingUtilizationOfUnsecuredLines': [0.5, 0.9, 0.2, 0.3, 0.8, 0.1][:n],
+        'age': [45, 35, 28, 60, 42, 55][:n],
+        'NumberOfTime30-59DaysPastDueNotWorse': [0, 2, 0, 1, 3, 0][:n],
+        'DebtRatio': [0.3, 0.8, 0.1, 0.2, 0.5, 0.05][:n],
+        'MonthlyIncome': [5000.0, 3000.0, 4000.0, 8000.0, 2500.0, 6000.0][:n],
+        'NumberOfOpenCreditLinesAndLoans': [5, 3, 8, 10, 2, 7][:n],
+        'NumberOfTimes90DaysLate': [0, 1, 0, 0, 2, 0][:n],
+        'NumberRealEstateLoansOrLines': [1, 0, 2, 3, 0, 1][:n],
+        'NumberOfTime60-89DaysPastDueNotWorse': [0, 1, 0, 0, 1, 0][:n],
+        'NumberOfDependents': [2.0, 0.0, 1.0, 3.0, 0.0, 2.0][:n],
     }
+
+
+def _gmsc_frame(data: dict, backend: IntoBackend[EagerAllowed] = pd) -> nw.DataFrame:
+    return _openml_frame(data, backend, categorical=('FinancialDistressNextTwoYears',))
 
 
 class TestProcessGiveMeSomeCredit:
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_return_types(self, backend):
-        feat, target, income, debt, t_np = process_give_me_some_credit(_gmsc_raw(), backend)
+        feat, target, income, debt, t_np = process_give_me_some_credit(_gmsc_frame(_gmsc_data(), backend))
         assert isinstance(feat, nw.DataFrame)
         assert isinstance(target, nw.Series)
         assert isinstance(income, np.ndarray)
@@ -387,49 +397,49 @@ class TestProcessGiveMeSomeCredit:
         assert isinstance(t_np, np.ndarray)
 
     def test_target_name(self):
-        _, target, *_ = process_give_me_some_credit(_gmsc_raw(), pd)
+        _, target, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data()))
         assert target.name == 'default'
 
-    def test_target_binary(self):
-        _, target, *_ = process_give_me_some_credit(_gmsc_raw(), pd)
-        assert set(target.to_numpy()).issubset({0, 1})
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_target_encodes_distress_as_positive(self, backend):
+        _, target, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data(), backend))
+        np.testing.assert_array_equal(target.to_numpy(), [0, 1, 0, 0, 1, 0])
 
     def test_shapes_consistent(self):
-        n = 6
-        feat, target, income, debt, t_np = process_give_me_some_credit(_gmsc_raw(n), pd)
+        feat, target, income, debt, t_np = process_give_me_some_credit(_gmsc_frame(_gmsc_data()))
         assert len(feat) == len(target) == len(income) == len(debt) == len(t_np)
 
-    def test_missing_income_filtered(self):
-        """Rows with '?' or '0' income should be dropped."""
-        raw = _gmsc_raw(3)
-        raw['MonthlyIncome'] = ['?', '3000', '0']  # first and last filtered
-        feat, _, income, *_ = process_give_me_some_credit(raw, pd)
+    @pytest.mark.parametrize('backend', BACKENDS)
+    def test_missing_income_filtered(self, backend):
+        """Rows with a missing or zero income should be dropped."""
+        data = _gmsc_data(3)
+        data['MonthlyIncome'] = [None, 3000.0, 0.0]  # first and last filtered
+        feat, _, income, *_ = process_give_me_some_credit(_gmsc_frame(data, backend))
         assert len(feat) == 1
         assert income[0] == pytest.approx(3000.0)
 
     def test_high_debt_ratio_filtered(self):
         """Rows with debt_ratio >= 1 should be dropped."""
-        raw = _gmsc_raw(3)
-        raw['DebtRatio'] = ['0.3', '1.5', '0.2']  # middle one filtered
-        feat, *_ = process_give_me_some_credit(raw, pd)
+        data = _gmsc_data(3)
+        data['DebtRatio'] = [0.3, 1.5, 0.2]  # middle one filtered
+        feat, *_ = process_give_me_some_credit(_gmsc_frame(data))
         assert len(feat) == 2
 
     def test_feature_order(self):
         """Feature columns should follow the canonical order."""
-        feat, *_ = process_give_me_some_credit(_gmsc_raw(), pd)
+        feat, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data()))
         available = [c for c in _GIVE_ME_SOME_CREDIT_FEATURE_ORDER if c in feat.columns]
         assert feat.columns == available
 
     def test_column_name_mapping(self):
         """Original OpenML column names must be mapped to canonical names."""
-        feat, *_ = process_give_me_some_credit(_gmsc_raw(), pd)
+        feat, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data()))
         assert 'monthly_income' in feat.columns
         assert 'debt_ratio' in feat.columns
 
     def test_cross_backend_same_shape(self):
-        raw = _gmsc_raw()
-        feat_pd, *_ = process_give_me_some_credit(raw, pd)
-        feat_pl, *_ = process_give_me_some_credit(raw, pl)
+        feat_pd, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data(), pd))
+        feat_pl, *_ = process_give_me_some_credit(_gmsc_frame(_gmsc_data(), pl))
         assert feat_pd.shape == feat_pl.shape
 
 
@@ -446,35 +456,39 @@ class TestProcessLiteratureDatasets:
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_telco_customer_churn(self, backend):
-        raw = {
+        data = {
             'customerID': ['1', '2', '3', '4'],
             'gender': ['Female', 'Male', 'Male', 'Female'],
-            'SeniorCitizen': ['0', '0', '1', '0'],
-            'MonthlyCharges': ['29.85', '56.95', '53.85', '42.30'],
-            'TotalCharges': ['29.85', '1889.50', ' ', '108.15'],  # 3rd row has blank TotalCharges
+            'SeniorCitizen': [0, 0, 1, 0],
+            'MonthlyCharges': [29.85, 56.95, 53.85, 42.30],
+            # OpenML keeps TotalCharges as text; the 3rd row is blank
+            'TotalCharges': ['29.85', '1889.50', ' ', '108.15'],
             'Churn': ['No', 'No', 'Yes', 'Yes'],
         }
-        feat, target, charges = process_telco_customer_churn(raw, backend)
+        feat, target, charges = process_telco_customer_churn(_openml_frame(data, backend))
         # Blank row filtered out
         assert len(feat) == 3
         assert feat.columns == ['gender', 'senior_citizen', 'monthly_charges', 'total_charges']
         assert 'customer_id' not in feat.columns and 'customerID' not in feat.columns
         assert 'churn' not in feat.columns
         np.testing.assert_array_equal(charges, [29.85, 56.95, 42.30])
+        np.testing.assert_array_equal(feat['total_charges'].to_numpy(), [29.85, 1889.5, 108.15])
         np.testing.assert_array_equal(target.to_numpy(), [0, 0, 1])
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_default_credit_card_clients(self, backend):
-        raw = {
-            'id': ['1', '2', '3'],
-            'x1': ['20000', '120000', '90000'],
-            'x2': ['2', '2', '2'],
-            'x3': ['2', '2', '2'],
-            'x4': ['1', '2', '2'],
-            'x5': ['24', '26', '34'],
+        data = {
+            'id': [1.0, 2.0, 3.0],
+            'x1': [20000.0, 120000.0, 90000.0],
+            'x2': [2, 2, 2],
+            'x3': [2, 2, 2],
+            'x4': [1, 2, 2],
+            'x5': [24.0, 26.0, 34.0],
             'y': ['1', '0', '0'],
         }
-        feat, _target, cl, target_np = process_default_credit_card_clients(raw, backend)
+        feat, _target, cl, target_np = process_default_credit_card_clients(
+            _openml_frame(data, backend, categorical=('y',))
+        )
         assert len(feat) == 3
         assert 'id' not in feat.columns
         assert 'target' not in feat.columns
@@ -484,35 +498,41 @@ class TestProcessLiteratureDatasets:
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_ieee_fraud_detection(self, backend):
-        raw = {
-            'TransactionID': ['1001', '1002', '1003'],
-            'TransactionDT': ['86400', '86401', '86402'],
-            'TransactionAmt': ['36.5', '117.0', '280.0'],
-            'ProductCD': ['W', 'W', 'H'],
-            'id_01': ['-5.0', '?', '0.0'],
-            'id-01': ['?', '?', '?'],  # the Kaggle test set's naming, empty for training rows
-            'isFraud': ['0', '0', '1'],
+        data = {
+            'TransactionID': [1001, 1002, 1003],
+            'TransactionDT': [86400, 86401, 86402],
+            'TransactionAmt': [36.5, 117.0, 280.0],
+            'ProductCD': ['W', None, 'H'],
+            'card1': [13926, 2755, 4663],
+            'card2': [None, 404.0, 490.0],
+            'id_01': [-5.0, None, 0.0],
+            'id-01': [None, None, None],  # the Kaggle test set's naming, empty for training rows
+            'isFraud': ['0.0', '0.0', '1.0'],
         }
-        feat, target, amount = process_ieee_fraud_detection(raw, backend)
-        assert feat.columns == ['transaction_amt', 'product_cd', 'id_01']
-        # numeric attributes are numbers, categorical ones stay strings; '?' is missing in both
+        feat, target, amount = process_ieee_fraud_detection(_openml_frame(data, backend, categorical=('isFraud',)))
+        assert feat.columns == ['transaction_amt', 'product_cd', 'card1', 'card2', 'id_01']
         assert feat.schema['transaction_amt'] == nw.Float64
         assert feat.schema['id_01'] == nw.Float64
         assert feat['id_01'].is_null().to_list() == [False, True, False]
-        assert feat['product_cd'].to_list() == ['W', 'W', 'H']
+        # categorical attributes are strings, numeric codes included, and missing values stay missing
+        assert feat['product_cd'].is_null().to_list() == [False, True, False]
+        assert feat['product_cd'].to_list()[::2] == ['W', 'H']
+        assert feat['card1'].to_list() == ['13926', '2755', '4663']
+        assert feat['card2'].is_null().to_list() == [True, False, False]
+        assert feat['card2'].to_list()[1:] == ['404.0', '490.0']
         np.testing.assert_array_equal(amount, [36.5, 117.0, 280.0])
         np.testing.assert_array_equal(target.to_numpy(), [0, 0, 1])
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_credit_card_fraud(self, backend):
-        raw = {
-            'Time': ['0.0', '1.0', '2.0', '3.0'],
-            'V1': ['-1.35', '1.19', '-0.43', '0.50'],
-            'V2': ['-0.07', '0.26', '-0.17', '0.10'],
-            'Amount': ['149.62', '0.0', '2.69', '300.0'],  # 2nd row has Amount == 0.0, filtered out
+        data = {
+            'Time': [0.0, 1.0, 2.0, 3.0],
+            'V1': [-1.35, 1.19, -0.43, 0.50],
+            'V2': [-0.07, 0.26, -0.17, 0.10],
+            'Amount': [149.62, 0.0, 2.69, 300.0],  # 2nd row has Amount == 0.0, filtered out
             'Class': ['0', '1', '0', '1'],
         }
-        feat, target, amount = process_credit_card_fraud(raw, backend)
+        feat, target, amount = process_credit_card_fraud(_openml_frame(data, backend, categorical=('Class',)))
         assert feat.columns == ['v1', 'v2', 'amount']
         np.testing.assert_array_equal(amount, [149.62, 2.69, 300.0])
         # the zero-amount fraud is dropped with its row
@@ -562,16 +582,18 @@ class TestProcessLiteratureDatasets:
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_home_equity(self, backend):
-        raw = {
-            'BAD': ['1', '0', '1'],
-            'LOAN': ['1100', '1700', '1800'],
-            'MORTDUE': ['25860.0', '97800.0', '48649.0'],
-            'REASON': ['HomeImp', 'HomeImp', 'DebtCon'],
+        data = {
+            'BAD': [1, 0, 1],
+            'LOAN': [1100, 1700, 1800],
+            'MORTDUE': [25860.0, 97800.0, 48649.0],
+            'REASON': ['HomeImp', None, 'DebtCon'],
             'JOB': ['Other', 'Office', 'Other'],
-            'DEBTINC': ['?', '37.11', '36.88'],
+            'DEBTINC': [None, 37.11, 36.88],
         }
-        feat, _target, amounts, target_np = process_home_equity(raw, backend)
+        feat, _target, amounts, target_np = process_home_equity(_openml_frame(data, backend))
         assert feat.columns == ['loan_amount', 'mortgage_due', 'reason', 'job', 'debt_to_income']
+        assert feat['reason'].is_null().to_list() == [False, True, False]
+        assert feat['debt_to_income'].is_null().to_list() == [True, False, False]
         np.testing.assert_array_equal(amounts, [1100.0, 1700.0, 1800.0])
         np.testing.assert_array_equal(target_np, [1, 0, 1])
 
@@ -594,13 +616,17 @@ class TestProcessLiteratureDatasets:
 
     @pytest.mark.parametrize('backend', BACKENDS)
     def test_process_kddcup09_churn(self, backend):
-        raw = {
-            'Var1': ['10.5', '?'],
-            'Var191': ['cat_a', '?'],
+        data = {
+            'Var1': [10.5, None],
+            'Var191': ['cat_a', None],
             'CHURN': ['-1', '1'],
         }
-        feat, target = process_kddcup09_churn(raw, backend)
+        feat, target = process_kddcup09_churn(_openml_frame(data, backend, categorical=('Var191', 'CHURN')))
         assert feat.columns == ['var1', 'var191']
+        assert feat['var1'].is_null().to_list() == [False, True]
+        # a missing categorical stays missing rather than becoming the text 'nan'
+        assert feat['var191'].is_null().to_list() == [False, True]
+        assert feat['var191'].to_list()[0] == 'cat_a'
         np.testing.assert_array_equal(target.to_numpy(), [0, 1])
 
 
