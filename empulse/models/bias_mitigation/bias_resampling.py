@@ -1,16 +1,24 @@
-from typing import Any
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 import numpy as np
+from numpy.random import RandomState
+from numpy.typing import NDArray
 from sklearn.base import clone
+from sklearn.utils.validation import _check_method_params
 
 from ..._common._bias_sampling import resample_indices
-from ..._types import FloatNDArray, IntNDArray
+from ..._common._strategies import Strategy, StrategyFn
+from ..._types import FloatNDArray, IntNDArray, ParameterConstraint
 from .._base.bias import BaseBiasMitigationClassifier
 
 
 class BiasResamplingClassifier(BaseBiasMitigationClassifier):
     """
     Classifier which resamples instances during training to remove bias against a subgroup.
+
+    Fit parameters with one value per training sample, such as ``sample_weight`` or instance-dependent costs,
+    are resampled along with the training data.
 
     Read more in the :ref:`User Guide <bias_mitigation>`.
 
@@ -35,6 +43,10 @@ class BiasResamplingClassifier(BaseBiasMitigationClassifier):
         The element at position (i, j) is the weight for the pair (y_true == i, sensitive_feature == j).
     transform_feature : Optional[Callable], default=None
         Function which transforms sensitive feature before resampling the training data.
+    random_state : int, :class:`numpy:numpy.random.RandomState` or None, default=None
+        Controls which samples are drawn when resampling the training data.
+        To obtain a deterministic behaviour during fitting, ``random_state`` has to be fixed to an integer.
+        See :term:`Sklearn Glossary <sklearn:random_state>` for details.
 
     Attributes
     ----------
@@ -137,6 +149,22 @@ class BiasResamplingClassifier(BaseBiasMitigationClassifier):
             search.fit(X, y, sensitive_feature=high_clv)
     """
 
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
+        **BaseBiasMitigationClassifier._parameter_constraints,
+        'random_state': ['random_state'],
+    }
+
+    def __init__(
+        self,
+        estimator: Any,
+        *,
+        strategy: StrategyFn | Strategy = 'statistical parity',
+        transform_feature: Callable[[NDArray[Any]], IntNDArray] | None = None,
+        random_state: RandomState | int | None = None,
+    ):
+        super().__init__(estimator, strategy=strategy, transform_feature=transform_feature)
+        self.random_state = random_state
+
     def _fit_mitigated(self, X: FloatNDArray, y: IntNDArray, sensitive_feature: IntNDArray, **fit_params: Any) -> Any:
         indices = resample_indices(
             y,
@@ -144,8 +172,9 @@ class BiasResamplingClassifier(BaseBiasMitigationClassifier):
             np.unique(y),
             strategy=self.strategy,
             transform_feature=self.transform_feature,
-            random_state=None,
+            random_state=self.random_state,
         )
+        fit_params = _check_method_params(X, params=fit_params, indices=indices)
         X, y = X[indices], y[indices]
         estimator_ = clone(self.estimator)
         estimator_.fit(X, y, **fit_params)

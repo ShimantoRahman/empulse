@@ -68,7 +68,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         return self._default_optimizer() if self.optimizer is None else self.optimizer
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
-        if self.fit_intercept and not np.all(X[:, 0] == 1):
+        if self.fit_intercept:
             X = np.hstack((np.ones((X.shape[0], 1)), X))
 
         if self._get_metric_loss() is None:
@@ -126,7 +126,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)
 
-        if self.fit_intercept and not np.all(X[:, 0] == 1):
+        if self.fit_intercept:
             X = np.hstack((np.ones((X.shape[0], 1)), X))
         theta = self.result_.x
         logits = np.dot(X, theta)

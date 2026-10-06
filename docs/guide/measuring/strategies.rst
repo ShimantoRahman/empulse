@@ -468,8 +468,8 @@ fitness, so they accept anything.
       - ✅
       - ✅
       - ✅
-      - ❌
-      - ❌
+      - ✅
+      - ✅
     * - :class:`~empulse.models.ProfTreeClassifier`
       - ✅
       - ✅

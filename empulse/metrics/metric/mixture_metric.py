@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from numbers import Real
 from typing import Any, Literal, NamedTuple, Self
 
 import numpy as np
@@ -50,6 +51,32 @@ class MixtureComponent(NamedTuple):
 MixtureComponent.weight.__doc__ = 'The mixture weight for this component.'
 MixtureComponent.metric.__doc__ = 'The metric to evaluate for this component.'
 MixtureComponent.parameters.__doc__ = 'Parameter overrides fixed for this component.'
+
+
+def _check_component(index: int, component: Any) -> MixtureComponent:
+    """Return *component* as a :class:`MixtureComponent`, or raise if it is not one."""
+    if not isinstance(component, tuple) or len(component) != 3:
+        raise TypeError(
+            f'MixtureMetric component {index} must be a MixtureComponent(weight, metric, parameters), '
+            f'got {component!r}.'
+        )
+    weight, metric, parameters = component
+    if not isinstance(weight, Real | str) and not callable(weight):
+        raise TypeError(
+            f'The weight of MixtureMetric component {index} must be a number, a parameter name or a callable, '
+            f'got {weight!r}. MixtureComponent takes its fields in the order (weight, metric, parameters).'
+        )
+    if not isinstance(metric, BaseMetric):
+        raise TypeError(
+            f'The metric of MixtureMetric component {index} must be a BaseMetric, such as a Metric, '
+            f'got {metric!r}. MixtureComponent takes its fields in the order (weight, metric, parameters).'
+        )
+    if not isinstance(parameters, Mapping):
+        raise TypeError(
+            f'The parameters of MixtureMetric component {index} must be a mapping of parameter names to values, '
+            f'got {parameters!r}.'
+        )
+    return MixtureComponent(weight, metric, dict(parameters))
 
 
 class MixtureMetric(BaseMetric):
@@ -130,7 +157,7 @@ class MixtureMetric(BaseMetric):
     def __init__(self, components: Sequence[MixtureComponent], defaults: Mapping[str, float] | None = None) -> None:
         if not components:
             raise ValueError('MixtureMetric requires at least one component.')
-        self.components = list(components)
+        self.components = [_check_component(index, component) for index, component in enumerate(components)]
         self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
         self._name_override: str | None = None
         # Bounds on the mixture's own parameters -- chiefly the weights, which are not symbols of
@@ -310,6 +337,11 @@ class MixtureMetric(BaseMetric):
     def _is_deterministic(self) -> bool:
         """Whether every component is free of stochastic (random) variables."""
         return all(component.metric._is_deterministic for component in self.components)
+
+    @property
+    def _is_unitless(self) -> bool:
+        """Whether every component's value is a pure number rather than an amount of money."""
+        return all(component.metric._is_unitless for component in self.components)
 
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """

@@ -190,3 +190,37 @@ def test_non_finite_costs_are_rejected(data, fn_cost):
     X, y = data
     with pytest.raises(ValueError, match='fn_cost must be finite'):
         CostSensitiveSampler().fit_resample(X, y, fp_cost=1.0, fn_cost=fn_cost)
+
+
+class TestMisclassificationCosts:
+    """Each sample is kept in proportion to what deciding it wrongly costs over deciding it rightly."""
+
+    @pytest.fixture
+    def labels(self, seeded_rng):
+        return (seeded_rng.random(2000) < 0.3).astype(int)
+
+    @staticmethod
+    def kept_fractions(sampler, y):
+        kept = np.bincount(y[sampler.sample_indices_], minlength=2)
+        return kept / np.bincount(y, minlength=2)
+
+    @pytest.mark.parametrize(('fp_cost', 'fn_cost'), [(1.0, 2.5), (0.5, 1.0), (0.4, 0.6)])
+    def test_fractional_costs_are_not_truncated(self, labels, fp_cost, fn_cost):
+        X = np.zeros((labels.size, 1))
+        sampler = CostSensitiveSampler(percentile_threshold=1.0, random_state=0)
+        sampler.fit_resample(X, labels, fp_cost=fp_cost, fn_cost=fn_cost)
+
+        np.testing.assert_allclose(self.kept_fractions(sampler, labels), [fp_cost / fn_cost, 1.0], atol=0.05)
+
+    def test_a_benefit_of_a_correct_decision_counts_like_a_cost_of_a_wrong_one(self, labels):
+        X = np.zeros((labels.size, 1))
+        with_benefit = Metric(CostMatrix().add_tp_benefit('b').add_fp_cost('c'), Cost())
+        with_cost = Metric(CostMatrix().add_fn_cost('b').add_fp_cost('c'), Cost())
+
+        benefit_sampler = CostSensitiveSampler(loss=with_benefit, random_state=0)
+        benefit_sampler.fit_resample(X, labels, b=4.0, c=1.0)
+        cost_sampler = CostSensitiveSampler(loss=with_cost, random_state=0)
+        cost_sampler.fit_resample(X, labels, b=4.0, c=1.0)
+
+        np.testing.assert_array_equal(benefit_sampler.sample_indices_, cost_sampler.sample_indices_)
+        np.testing.assert_allclose(self.kept_fractions(benefit_sampler, labels), [0.25, 1.0], atol=0.05)

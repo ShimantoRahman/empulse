@@ -200,3 +200,24 @@ class TestRegularization:
             return c_1 * model.alpha_1_ + c_0 * model.alpha_0_
 
         assert worst_case_profit(1.0) < worst_case_profit(1e-3) - 0.01
+
+
+@pytest.mark.parametrize('shift', [0.0, 0.001, 0.005, 0.01, 0.02])
+def test_mempm_fits_class_means_much_closer_than_their_spread(shift):
+    """
+    The closer the class means, the smaller the range of feasible worst-case accuracies for the negatives.
+
+    Identical means leave no direction that separates the classes, so the model predicts one half for every sample.
+    """
+    X = np.array([[-1.0], [1.0], [-1.0 + shift], [1.0 + shift]])
+    y = np.array([0, 0, 1, 1])
+    model = ProfMEMPMClassifier().fit(X, y, fp_cost=1.0, fn_cost=1.0)
+
+    y_proba = model.predict_proba(X)
+    assert np.isfinite(y_proba).all()
+    assert 0.0 <= model.alpha_1_ <= 1.0
+    assert 0.0 <= model.alpha_0_ <= 1.0
+    if shift == 0.0:
+        np.testing.assert_allclose(y_proba, 0.5)
+    else:
+        assert model.alpha_0_ > 0.0

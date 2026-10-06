@@ -34,7 +34,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
-from empulse.metrics import CostMatrix, MaxProfit, Metric, cost_loss, empc_score, expected_cost_loss_churn
+from empulse.metrics import CostMatrix, MaxProfit, Metric, auepc_score, cost_loss, empc_score, expected_cost_loss_churn
 from empulse.models import (
     B2BoostClassifier,
     CSBaggingClassifier,
@@ -213,6 +213,15 @@ _CHURN = {'clv': 200.0, 'incentive_cost': 10.0, 'contact_cost': 1.0}
 # in money, so all of them are rescaled together.
 UNIT_INVARIANT_CONFIGURATIONS = [
     pytest.param(ProfMPMClassifier, _WITH_BENEFIT, id='ProfMPM'),
+    *(
+        pytest.param(
+            lambda model=model, penalty=penalty: model(penalty=penalty, lambda_reg=1.0),
+            _WITH_BENEFIT,
+            id=f'{model.__name__.removesuffix("Classifier")}-{penalty}',
+        )
+        for model in (ProfMPMClassifier, ProfMEMPMClassifier)
+        for penalty in ('l1', 'l2')
+    ),
     pytest.param(lambda: CSLogitClassifier(l1_ratio=0.0), _WITH_BENEFIT, id='CSLogit-l2'),
     pytest.param(lambda: CSLogitClassifier(optimizer=SGD()), _WITH_BENEFIT, id='CSLogit-SGD'),
     pytest.param(lambda: CSLogitClassifier(optimizer=Adam()), _WITH_BENEFIT, id='CSLogit-Adam'),
@@ -284,6 +293,17 @@ UNIT_INVARIANT_CONFIGURATIONS = [
         lambda: ProfTreeClassifier(loss=empc_score, max_iter=30, population_size=30, random_state=0),
         _CHURN,
         id='ProfTree-empc',
+    ),
+    # AUEPC is a ratio of profits, so its penalties are not measured against the costs.
+    pytest.param(
+        lambda: ProfTreeClassifier(loss=auepc_score, alpha=1e-3, max_iter=30, population_size=30, random_state=0),
+        {'clv': 200.0, 'contact_cost': 15.0},
+        id='ProfTree-auepc',
+    ),
+    pytest.param(
+        lambda: ProfSRClassifier(loss=auepc_score, max_iter=3, population_size=50, random_state=0),
+        {'clv': 200.0, 'contact_cost': 15.0},
+        id='ProfSR-auepc',
     ),
 ]
 

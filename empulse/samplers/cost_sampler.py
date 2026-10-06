@@ -65,6 +65,8 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
           :class:`~empulse.metrics.MixtureMetric`), its parameters are passed as ``loss_params``
           to the :meth:`~empulse.samplers.CostSensitiveSampler.fit_resample` method,
           and the ``fp_cost``/``fn_cost`` parameters are ignored.
+          A sample is weighted by the difference between the costs of deciding it wrongly and
+          rightly, so a benefit of a correct decision counts as much as a cost of a wrong one.
 
     Attributes
     ----------
@@ -235,21 +237,24 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
                 loss_, loss_params, fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample'
             )
             loss_._validate_parameters(**loss_params)
-            fp_cost, fn_cost, _, _ = loss_._evaluate_costs(**loss_params)
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
         else:
             resolved = self._check_costs(fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample')
             fp_cost, fn_cost = resolved['fp_cost'], resolved['fn_cost']
+            tp_cost = tn_cost = 0.0
 
-        fp_cost = np.full_like(y, fp_cost) if isinstance(fp_cost, Real) else np.array(fp_cost)
-        fn_cost = np.full_like(y, fn_cost) if isinstance(fn_cost, Real) else np.asarray(fn_cost)
+        is_positive = y == 1
+        # What deciding a sample wrongly costs over deciding it rightly.
+        misclassification_costs = np.abs(
+            np.where(is_positive, np.asarray(fn_cost, dtype=np.float64), np.asarray(fp_cost, dtype=np.float64))
+            - np.where(is_positive, np.asarray(tp_cost, dtype=np.float64), np.asarray(tn_cost, dtype=np.float64))
+        )
         rng = check_random_state(self.random_state)
 
-        misclassification_costs = fp_cost
-        misclassification_costs[y == 1] = fn_cost[y == 1]
-
-        normalized_costs = np.minimum(
-            misclassification_costs / np.percentile(misclassification_costs, self.percentile_threshold * 100), 1
-        )
+        cap = np.percentile(misclassification_costs, self.percentile_threshold * 100)
+        if cap <= 0:
+            cap = np.max(misclassification_costs)
+        normalized_costs = np.minimum(misclassification_costs / cap, 1) if cap > 0 else np.ones(y.shape)
 
         n_samples = X.shape[0]
 

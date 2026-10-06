@@ -103,6 +103,22 @@ def test_mixture_requires_at_least_one_component():
         MixtureMetric([])
 
 
+@pytest.mark.parametrize(
+    ('make_component', 'message'),
+    [
+        (lambda metric: (metric, 0.5), 'must be a MixtureComponent'),
+        (lambda metric: (metric, 0.5, {}), 'metric of MixtureMetric component 0 must be a BaseMetric'),
+        (lambda metric: (None, metric, {}), 'weight of MixtureMetric component 0'),
+        (lambda metric: (0.5, metric, None), 'parameters of MixtureMetric component 0'),
+    ],
+    ids=['two_fields', 'fields_out_of_order', 'no_weight', 'no_parameters'],
+)
+def test_mixture_rejects_malformed_components(make_component, message):
+    metric = Metric(CostMatrix().add_fp_cost('a'), Cost())
+    with pytest.raises(TypeError, match=message):
+        MixtureMetric([make_component(metric)])
+
+
 def test_mixture_missing_weight_parameter_raises(empcs_mixture, y_true_and_prediction):
     y, y_proba = y_true_and_prediction
     with pytest.raises(ValueError, match=r"expected a value for weight parameter 'default_rate'"):

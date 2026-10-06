@@ -31,6 +31,8 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
         'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
         'transform_feature': [callable, None],
     }
+    # Fit parameters a subclass passes to the estimator itself, which callers therefore may not pass.
+    _reserved_fit_params: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(
         self,
@@ -80,6 +82,10 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
         self : BaseBiasMitigationClassifier
             The fitted estimator.
         """
+        if reserved := sorted(self._reserved_fit_params & fit_params.keys()):
+            raise TypeError(
+                f'{type(self).__name__}.fit() does not take {", ".join(reserved)}: it passes its own to the estimator.'
+            )
         X, y = validate_data(self, X, y)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':

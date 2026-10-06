@@ -168,7 +168,7 @@ def test_empirical_max_profit_score_class_matches_hand_rolled_delta(empirical_ch
     sorted_indices = np.argsort(y_score)[::-1]
     cumulative_profits = np.cumsum(delta[sorted_indices])
     cumulative_profits = np.insert(cumulative_profits, 0, 0.0)
-    expected = float(np.max(cumulative_profits))
+    expected = float(np.max(cumulative_profits)) / y.size
 
     assert result == pytest.approx(expected)
 
@@ -200,7 +200,7 @@ class TestEmpiricalMaxProfitTiedScores:
         )
         delta = np.where(self.Y_TRUE == 1, 100.0, -20.0)
         boundaries = [0.0, delta[5], delta[:6].sum(), delta.sum()]
-        assert score_fn(self.Y_TRUE, self.Y_SCORE, tp=100.0, fp=20.0) == pytest.approx(max(boundaries))
+        assert score_fn(self.Y_TRUE, self.Y_SCORE, tp=100.0, fp=20.0) == pytest.approx(max(boundaries) / delta.size)
 
     def test_constant_scores_target_everyone_or_nobody(self):
         """With one score for every sample the only policies are to target nobody or everyone."""
@@ -213,7 +213,7 @@ class TestEmpiricalMaxProfitTiedScores:
             accept * ((1 - incentive) * clv - contact) - (1 - accept) * contact,
             -(incentive * clv + contact),
         )
-        assert empb_score(y, constant, clv=clv) == pytest.approx(max(0.0, per_sample.sum()))
+        assert empb_score(y, constant, clv=clv) == pytest.approx(max(0.0, per_sample.mean()))
         assert empb_score.optimal_rate(y, constant, clv=clv) == (1.0 if per_sample.sum() > 0 else 0.0)
 
     def test_optimal_threshold_targets_the_optimal_rate(self):
@@ -406,3 +406,10 @@ class TestAUEPCTiedScores:
             order = np.random.default_rng(seed).permutation(self.Y_TRUE.size)
             results.append(score_fn(self.Y_TRUE[order], self.Y_SCORE[order], tp=100.0, fp=20.0))
         assert results == pytest.approx([results[0]] * len(results))
+
+
+def test_empirical_max_profit_is_a_profit_per_sample(empirical_churn_dataset):
+    """Like MaxProfit, it does not change when every sample is duplicated."""
+    y, y_score, clv = empirical_churn_dataset
+    duplicated = empb_score(np.r_[y, y], np.r_[y_score, y_score], clv=np.r_[clv, clv])
+    assert duplicated == pytest.approx(empb_score(y, y_score, clv=clv))

@@ -116,10 +116,10 @@ The worst-case bounds are unchanged by rescaling the weights, so it is the margi
 give the penalty something to push against: shrinking ``coef_`` now costs worst-case accuracy, and
 the penalty settles that trade-off. With ``'l1'``, coefficients reach exactly zero as ``lambda_reg``
 grows, so it also selects features. Compare fits across ``lambda_reg`` values rather than with the
-unregularised model, whose weights are on the scale set by the canonical constraint. What matters
-is ``lambda_reg`` relative to the costs, since the penalty competes with the cost-weighted
-worst-case accuracies: costs in the hundreds need a correspondingly larger ``lambda_reg`` to have
-an effect.
+unregularised model, whose weights are on the scale set by the canonical constraint. The penalty
+competes with the cost-weighted worst-case accuracies, which are measured in units of the average
+cost of a wrong decision, so the same ``lambda_reg`` has the same effect whatever currency the
+costs are in.
 
 .. warning::
     Both models are **class-dependent only**. Array-valued costs are averaged before fitting,
@@ -155,7 +155,9 @@ Profit-driven symbolic regression
 :class:`~empulse.models.ProfSRClassifier` searches a space of *expressions* — arithmetic
 combinations of the input features — using genetic programming [2]_, and scores each candidate
 directly on the profit metric. The winning expression's output is squashed through a logistic
-function to give a probability.
+function to give a probability. A profit metric only looks at how the outputs rank the samples,
+which leaves their scale free, so the outputs are first centred on their median on the training
+data and divided by their spread there; ``decision_function`` returns them at that point.
 
 The result is a decision function you can read:
 

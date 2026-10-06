@@ -4,6 +4,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.special import expit
+from sklearn.metrics import roc_auc_score
 
 from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import ProfSRClassifier
@@ -61,6 +63,40 @@ def test_predict_proba_is_a_probability_per_class(data):
     assert proba.shape == (X.shape[0], 2)
     np.testing.assert_allclose(proba.sum(axis=1), 1.0)
     assert ((proba >= 0) & (proba <= 1)).all()
+
+
+class TestScores:
+    """
+    A loss that only ranks the samples leaves the scale of the expression free.
+
+    The expression ``X0`` ranks this data perfectly, but its outputs are in the hundreds, where the
+    logistic function rounds every one of them to 1.
+    """
+
+    @pytest.fixture(scope='class')
+    def large_scores(self):
+        rng = np.random.default_rng(0)
+        X = rng.uniform(100, 1000, (500, 1))
+        y = (X[:, 0] > 550).astype(int)
+        return X[:300], X[300:], y[:300], y[300:]
+
+    def test_probabilities_keep_the_ranking_of_a_ranking_loss(self, large_scores):
+        X_train, X_test, y_train, y_test = large_scores
+        model = ProfSRClassifier(max_iter=10, population_size=100, random_state=0).fit(X_train, y_train)
+        y_proba = model.predict_proba(X_test)[:, 1]
+
+        assert roc_auc_score(y_test, model.program_.execute(X_test)) == 1.0
+        assert roc_auc_score(y_test, model.decision_function(X_test)) == 1.0
+        assert roc_auc_score(y_test, y_proba) == 1.0
+        assert np.unique(y_proba).size == np.unique(model.program_.execute(X_test)).size
+
+    def test_probabilities_of_a_probability_loss_are_the_squashed_scores(self, data):
+        X, y = data
+        loss = Metric(CostMatrix().add_fp_cost('fp').add_fn_cost('fn'), Cost())
+        model = fast_model(loss=loss).fit(X, y, fp=1.0, fn=4.0)
+
+        np.testing.assert_array_equal(model.decision_function(X), model.program_.execute(X))
+        np.testing.assert_array_equal(model.predict_proba(X)[:, 1], expit(model.decision_function(X)))
 
 
 class TestStopping:

@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -658,4 +658,45 @@ class LogitObjective(ABC):  # ruff: ignore[abstract-base-class-without-abstract-
         """
         raise NotImplementedError(
             f'{type(self).__name__} does not support mini-batch training. Override with_indices() to enable it.'
+        )
+
+
+class RankingLogitValueObjective(LogitObjective):
+    """
+    The negated score of a logistic model under a ranking metric, for optimizers that need only its value.
+
+    Scores the model with the metric's own score function, so it gives exactly the metric's value,
+    also for metrics that have no gradient. It provides no gradient: :meth:`data_gradient` raises.
+
+    The metric depends on the scores only through their ranking, so the model's linear predictions
+    are scored directly. Their probabilities would rank them the same, except that rounding merges
+    predictions above about 30 into ties: every prediction above about 37 has probability 1.0.
+
+    Parameters
+    ----------
+    score : callable
+        Takes scores of the training samples and returns the metric's score, to be maximized, with
+        the labels and parameters already bound. Only the ranking of the scores may matter to it.
+    features : ndarray of shape (n_samples, n_features)
+        The features, with a leading column of ones if an intercept is fitted.
+    penalty : ElasticNetPenalty
+        The penalty added to the negated score.
+    """
+
+    def __init__(
+        self, *, score: Callable[[FloatNDArray], float], features: FloatNDArray, penalty: ElasticNetPenalty
+    ) -> None:
+        self.score = score
+        self.features = np.asarray(features, dtype=np.float64)
+        self.penalty = penalty
+
+    def data_loss(self, weights: FloatNDArray) -> float:
+        """Return the negated score of the model with coefficients *weights*."""
+        return -self.score(self.features @ np.asarray(weights, dtype=np.float64))
+
+    def data_gradient(self, weights: FloatNDArray) -> FloatNDArray:
+        """Raise: this objective only provides values."""
+        raise NotImplementedError(
+            f'{type(self).__name__} provides only the value of the objective, for optimizers that do '
+            'not need its gradient (Optimizer.requires_gradient is False).'
         )

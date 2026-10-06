@@ -339,8 +339,9 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
         if metric_loss is not None:
-            # Work on a copy so we never mutate the caller's dict.
-            estimator_params = dict(fit_params)
+            estimator_params = self._route_costs_to_loss(
+                metric_loss, fit_params, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+            )
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(
                 X, is_positive, metric_loss, estimator_params
             )

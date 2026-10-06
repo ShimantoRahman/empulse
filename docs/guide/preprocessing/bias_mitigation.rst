@@ -198,13 +198,16 @@ Resampling comes in the same two forms as relabeling.
         :sync: classifier
 
         :class:`~empulse.models.BiasResamplingClassifier` does it in one step and works in an
-        ordinary scikit-learn pipeline. Pass the model that should be fitted on the resampled data.
+        ordinary scikit-learn pipeline. Pass the model that should be fitted on the resampled data,
+        and a ``random_state`` to draw the same samples on every fit. Any other fit parameter with one
+        value per sample, such as ``sample_weight`` or instance-dependent costs, is resampled along
+        with the data.
 
         .. code-block:: python
 
             from empulse.models import BiasResamplingClassifier
 
-            model = BiasResamplingClassifier(LogisticRegression())
+            model = BiasResamplingClassifier(LogisticRegression(), random_state=42)
             model.fit(X, y, sensitive_feature=high_clv)
 
 If you have a continuous feature which you want to dynamically convert to a binary sensitive feature,
@@ -250,8 +253,10 @@ However, instead of resampling the data, the weights are used to influence the t
 The weights are passed to the training algorithm to adjust the loss function.
 This way, the algorithm gives more weight to underrepresented groups and less weight to overrepresented groups.
 
-To use the relabeling technique, you can use the :class:`~empulse.models.BiasReweighingClassifier`.
+To use the reweighing technique, you can use the :class:`~empulse.models.BiasReweighingClassifier`.
 You should pass the model which is fitted with the computed sample weights.
+Those are the only sample weights it is fitted with, so passing ``sample_weight`` to
+:meth:`~empulse.models.BiasReweighingClassifier.fit` raises a ``TypeError``.
 
 .. code-block:: python
 

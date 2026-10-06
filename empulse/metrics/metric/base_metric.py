@@ -124,6 +124,11 @@ class BaseMetric(ABC):
     def _is_deterministic(self) -> bool:
         """Whether the metric is free of stochastic (random) variables."""
 
+    @property
+    def _is_unitless(self) -> bool:
+        """Whether the metric's value is a pure number, like a ratio of profits, rather than an amount of money."""
+        return False
+
     @abstractmethod
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """Return the required parameter names not covered by *supplied*.

@@ -12,6 +12,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
+from .cost_scale import decision_cost_scale
 from .cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 
 if TYPE_CHECKING:
@@ -207,7 +208,9 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
             profit = c1 * alpha_1 + c0 * beta_val
             return -profit
 
-        scalar_res = minimize_scalar(neg_profit, bounds=(1e-4, beta_max), method='bounded')
+        if beta_max <= 0:  # identical class means: no direction separates them
+            return self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        scalar_res = minimize_scalar(neg_profit, bounds=(min(1e-4, 0.5 * beta_max), beta_max), method='bounded')
         best_beta = float(scalar_res.x)
 
         w_star, gamma_star, d1_star = _solve_inner(best_beta)
@@ -508,8 +511,11 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         pi_1 = float(np.mean(pos_mask))
         pi_0 = float(np.mean(neg_mask))
 
-        c1 = max(pi_1 * (tp_benefit + fn_cost), 1e-12)
-        c0 = max(pi_0 * (tn_benefit + fp_cost), 1e-12)
+        # The penalty is measured against the average cost of a wrong decision, so that lambda_reg
+        # does not depend on the units of the costs.
+        scale = decision_cost_scale(loss, y, **loss_params)
+        c1 = max(pi_1 * (tp_benefit + fn_cost) / scale, 1e-12)
+        c0 = max(pi_0 * (tn_benefit + fp_cost) / scale, 1e-12)
 
         coef, intercept, alpha_1, alpha_0, result = self._fit_minimax(
             mu_1=mu_1, mu_0=mu_0, sigma_1=sigma_1, sigma_0=sigma_0, c1=c1, c0=c0

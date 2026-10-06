@@ -1,8 +1,10 @@
+from collections.abc import Callable
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 import sympy
 
+from ...._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ...._types import FloatNDArray, IntNDArray
 from ...common import classification_threshold
 from .._compile import MetricFn, RateFn, ThresholdFn, _safe_lambdify, _safe_run_lambda_array
@@ -16,7 +18,7 @@ from .metric_strategy import MetricStrategy
 
 
 class EmpiricalMaxProfitScore:
-    """Class to compute the maximum profit found by ranking samples by predicted score."""
+    """Class to compute the maximum profit per sample found by ranking samples by predicted score."""
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
         self.delta_equation = _build_delta_equation(
@@ -42,24 +44,40 @@ class EmpiricalMaxProfitScore:
         n_samples : int
             Number of samples.
         """
-        _check_parameters(self.delta_equation.free_symbols - {sympy.symbols('y')}, kwargs)
-
-        y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
         y_score = np.asarray(y_score, dtype=np.float64).reshape(-1)
-        n_samples = y_true.shape[0]
+        delta = self.profit_differential(y_true, **kwargs)
+        n_targeted, cumulative_profits = _ranked_profit_curve(delta, y_score)
+        return n_targeted, cumulative_profits, delta.size
 
+    def profit_differential(self, y_true: IntNDArray, **kwargs: Any) -> FloatNDArray:
+        """Return how much targeting each sample earns over not targeting it."""
+        _check_parameters(self.delta_equation.free_symbols - {sympy.symbols('y')}, kwargs)
+        y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
         delta: FloatNDArray = np.asarray(
-            _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=n_samples, y=y_true, **kwargs),
+            _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=y_true.size, y=y_true, **kwargs),
             dtype=np.float64,
         )
-
-        n_targeted, cumulative_profits = _ranked_profit_curve(delta, y_score)
-        return n_targeted, cumulative_profits, n_samples
+        return delta
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the empirical maximum profit."""
-        _, cumulative_profits, _ = self.cumulative_profits(y_true, y_score, **kwargs)
-        return float(np.max(cumulative_profits))
+        """Compute the empirical maximum profit per sample."""
+        _, cumulative_profits, n_samples = self.cumulative_profits(y_true, y_score, **kwargs)
+        return float(np.max(cumulative_profits)) / n_samples
+
+    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+        """
+        Prepare the score of fixed labels, for parameter values fixed across many calls.
+
+        The profit differential is computed once here. The returned function takes the scores and
+        gives the same result as calling this score function.
+        """
+        delta = self.profit_differential(y_true, **kwargs)
+
+        def score(y_score: FloatNDArray) -> float:
+            _, cumulative_profits = _ranked_profit_curve(delta, np.asarray(y_score, dtype=np.float64).reshape(-1))
+            return float(np.max(cumulative_profits)) / delta.size
+
+        return score
 
 
 class EmpiricalMaxProfitOptimalRate:
@@ -97,16 +115,19 @@ class EmpiricalMaxProfit(MetricStrategy):
     profit-maximizing threshold, empirically: samples are ranked by predicted score, the
     cumulative profit of targeting (predicting positive for) the top-ranked fraction is tracked
     per sample (rather than through population-level true/false positive rates), and the maximum
-    of that curve is the metric's score.
+    of that curve, divided by the number of samples, is the metric's score. Like
+    :class:`~empulse.metrics.MaxProfit`, it is a profit per sample, relative to targeting nobody.
 
     Because the threshold search happens per-sample rather than through population aggregates,
     this strategy naturally supports instance-dependent (array-like) costs and benefits, unlike
     :class:`~empulse.metrics.MaxProfit`.
 
-    ``EmpiricalMaxProfit`` does not support use as a model training objective (no
-    ``logit_objective`` or ``gradient_boost_objective``): the profit-maximizing threshold is found
-    via an empirical argmax over the ranked samples, which is piecewise-constant (and therefore not
-    differentiable) in the predicted scores.
+    The profit-maximizing threshold is found via an empirical argmax over the ranked samples, which
+    is piecewise-constant (and therefore not differentiable) in the predicted scores. Models that
+    train without gradients can optimize it, such as :class:`~empulse.models.ProfTreeClassifier`,
+    :class:`~empulse.models.ProfSRClassifier` and :class:`~empulse.models.ProfLogitClassifier` with
+    an optimizer that does not use gradients, but gradient-based training (no ``logit_objective``
+    or ``gradient_boost_objective``) is not supported.
 
     .. seealso::
         :func:`~empulse.metrics.empb_score` : the underlying metric function.
@@ -166,9 +187,61 @@ class EmpiricalMaxProfit(MetricStrategy):
         Returns
         -------
         score : float
-            The empirical maximum profit.
+            The empirical maximum profit per sample.
         """
         return self._score_function(y_true, y_score, **parameters)
+
+    def logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> RankingLogitValueObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        The objective is the negated empirical maximum profit of the model, plus an elastic-net
+        penalty measured against the average gain of deciding a sample rightly instead of wrongly.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        **parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+
+        Returns
+        -------
+        logistic_objective : RankingLogitValueObjective
+            The objective, whose ``logit_loss`` is the regularized negated score.
+        """
+        y_true = np.asarray(y_true).reshape(-1)
+        parameters = {
+            name: value.reshape(-1) if isinstance(value, np.ndarray) else value for name, value in parameters.items()
+        }
+        delta = self._score_function.profit_differential(y_true, **parameters)  # type: ignore[attr-defined]
+        return RankingLogitValueObjective(
+            score=self._score_function._sample_scorer(y_true, **parameters),  # type: ignore[attr-defined]
+            features=features,
+            penalty=ElasticNetPenalty.from_scale(
+                objective_scale=float(np.mean(np.abs(delta))),
+                C=C,
+                l1_ratio=l1_ratio,
+                fit_intercept=fit_intercept,
+                n_samples=features.shape[0],
+            ),
+        )
 
     def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
         """
@@ -273,7 +346,7 @@ class EmpiricalMinCost(EmpiricalMaxProfit):
         Returns
         -------
         score : float
-            The empirical minimum cost score.
+            The empirical minimum cost per sample.
         """
         return -super().score(y_true, y_score, **parameters)
 
@@ -305,7 +378,7 @@ def _empirical_max_profit_to_latex(
     delta_latex = _latex(delta_equation)
 
     formula = (
-        rf'\{operator}_{{k \in \{{0, ..., N\}}}} \sum_{{i=1}}^{{k}} \Delta_{{\pi(i)}}'
+        rf'\frac{{1}}{{N}} \{operator}_{{k \in \{{0, ..., N\}}}} \sum_{{i=1}}^{{k}} \Delta_{{\pi(i)}}'
         r'\quad\text{where }\Delta_i = ' + delta_latex
     )
 

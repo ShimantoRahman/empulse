@@ -105,6 +105,8 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
         (non-regularized) ProfMPM formulation.
 
         If greater than ``0.0``, ``w`` is regularized, reproducing the Lp-ProfMPM formulation.
+        The penalty is measured against the average cost of a wrong decision on the training data,
+        so ``lambda_reg`` does not depend on the units of the costs.
 
     ridge_penalty : float, default=1e-6
         Small positive value added to the diagonal of the empirical covariance matrices
@@ -271,6 +273,8 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
 
         If greater than ``0.0``, the canonical scale constraint is dropped and ``w`` is
         regularized instead, reproducing the Lp-ProfMEMPM formulation.
+        The penalty is measured against the average cost of a wrong decision on the training data,
+        so ``lambda_reg`` does not depend on the units of the costs.
 
     ridge_penalty : float, default=1e-6
         Small positive value added to the diagonal of the empirical covariance matrices

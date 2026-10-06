@@ -148,3 +148,16 @@ def test_metric_outlier_detection_does_not_depend_on_label_encoding(labels):
     assert 'fp' in model.outlier_estimators_
     np.testing.assert_allclose(model.costs_['fp'], reference.costs_['fp'])
     assert model.costs_['fp'].max() < 1000.0
+
+
+def test_metric_symbols_named_like_the_plain_costs_reach_the_loss(classification_data, seeded_rng):
+    """Several bundled datasets name a cost-matrix symbol ``fp_cost``, which ``fit`` also takes as a plain cost."""
+    X, y = classification_data
+    cost_matrix = CostMatrix().add_fp_cost('fp_cost').add_fn_cost('cl * lgd').set_default(lgd=0.75)
+    fp_cost = seeded_rng.uniform(1, 2, size=X.shape[0])
+    cl = seeded_rng.uniform(10, 100, size=X.shape[0])
+
+    model = RobustCSClassifier(CSLogitClassifier(loss=Metric(cost_matrix, Cost()))).fit(X, y, fp_cost=fp_cost, cl=cl)
+    reference = CSLogitClassifier(loss=Metric(cost_matrix, Cost())).fit(X, y, fp_cost=fp_cost, cl=cl)
+
+    np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))

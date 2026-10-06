@@ -11,7 +11,12 @@ from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
-from empulse.models import BiasRelabelingClassifier, BiasResamplingClassifier, BiasReweighingClassifier
+from empulse.models import (
+    BiasRelabelingClassifier,
+    BiasResamplingClassifier,
+    BiasReweighingClassifier,
+    CSLogitClassifier,
+)
 from empulse.models.bias_mitigation.bias_reweighing import _independent_sample_weights
 
 CLASSIFIERS = [BiasRelabelingClassifier, BiasResamplingClassifier, BiasReweighingClassifier]
@@ -146,6 +151,67 @@ def test_mitigation_narrows_the_positive_rate_gap(classifier_cls, strategy):
     unmitigated = positive_rate_gap(LogisticRegression().fit(X, y).predict(X))
     model = classifier_cls(LogisticRegression(), strategy=strategy).fit(X, y, sensitive_feature=group)
     assert positive_rate_gap(model.predict(X)) < unmitigated / 2
+
+
+class _RecordingLogisticRegression(LogisticRegression):
+    """Keeps the training data and sample weights it was fit on."""
+
+    def fit(self, X, y, sample_weight=None):
+        self.X_fit_, self.sample_weight_fit_ = X, sample_weight
+        return super().fit(X, y, sample_weight=sample_weight)
+
+
+class TestResamplingFitParameters:
+    """A fit parameter with one value per sample must follow its sample when the training data is resampled."""
+
+    @pytest.fixture
+    def data_with_row_ids(self, seeded_rng):
+        X = seeded_rng.normal(size=(400, 3))
+        X[:, 0] = np.arange(400)
+        y = seeded_rng.integers(0, 2, 400)
+        sensitive_feature = seeded_rng.integers(0, 2, 400)
+        return X, y, sensitive_feature
+
+    @pytest.mark.parametrize(
+        'strategy',
+        # The second keeps the number of samples, so misaligned weights would not raise a length mismatch.
+        ['statistical parity', lambda y_true, sensitive_feature: np.array([[0.5, 1.5], [1.5, 0.5]])],
+        ids=['statistical_parity', 'same_size'],
+    )
+    def test_sample_weight_follows_the_resampled_rows(self, data_with_row_ids, strategy):
+        X, y, sensitive_feature = data_with_row_ids
+        model = BiasResamplingClassifier(_RecordingLogisticRegression(), strategy=strategy)
+        model.fit(X, y, sensitive_feature=sensitive_feature, sample_weight=X[:, 0].copy())
+
+        np.testing.assert_array_equal(model.estimator_.sample_weight_fit_, model.estimator_.X_fit_[:, 0])
+
+    def test_instance_dependent_costs_follow_the_resampled_rows(self, data_with_row_ids):
+        X, y, sensitive_feature = data_with_row_ids
+        fn_cost = np.where(X[:, 1] > 0, 9.0, 1.0)
+        model = BiasResamplingClassifier(CSLogitClassifier()).fit(
+            X, y, sensitive_feature=sensitive_feature, fp_cost=1.0, fn_cost=fn_cost
+        )
+
+        assert model.predict_proba(X).shape == (400, 2)
+
+    def test_random_state_fixes_the_resample(self, data_with_row_ids):
+        X, y, sensitive_feature = data_with_row_ids
+
+        def resampled_rows(random_state):
+            model = BiasResamplingClassifier(_RecordingLogisticRegression(), random_state=random_state)
+            return model.fit(X, y, sensitive_feature=sensitive_feature).estimator_.X_fit_[:, 0]
+
+        np.testing.assert_array_equal(resampled_rows(0), resampled_rows(0))
+        assert not np.array_equal(resampled_rows(0), resampled_rows(1))
+
+
+@pytest.mark.parametrize('with_sensitive_feature', [True, False])
+def test_reweighing_rejects_sample_weight(X, imbalanced_y, sensitive_feature, with_sensitive_feature):
+    """The weights that mitigate the bias are the only ones the estimator is fit with."""
+    model = BiasReweighingClassifier(LogisticRegression())
+    fit_params = {'sensitive_feature': sensitive_feature} if with_sensitive_feature else {}
+    with pytest.raises(TypeError, match='does not take sample_weight'):
+        model.fit(X, imbalanced_y, sample_weight=np.ones(len(imbalanced_y)), **fit_params)
 
 
 NON_ZERO_ONE_LABELS = (np.array([-1, 1]), np.array(['no', 'yes']), np.array([2, 5]))

@@ -17,6 +17,19 @@ from .._base.ensemble_weighting import subset_loss_params
 from ._symbolic import ParetoPoint, Program, ProgramSpace, SearchSettings, evolve, get_function
 
 
+def _score_location_and_spread(y_score: FloatNDArray) -> tuple[float, float]:
+    """Return the median of the finite scores and a robust estimate of their standard deviation."""
+    y_score = y_score[np.isfinite(y_score)]
+    if y_score.size == 0:
+        return 0.0, 1.0
+    q1, median, q3 = np.percentile(y_score, [25, 50, 75])
+    # The interquartile range of a normal distribution is 1.349 standard deviations.
+    for spread in ((q3 - q1) / 1.349, np.std(y_score)):
+        if spread > 0 and np.isfinite(spread):
+            return float(median), float(spread)
+    return float(median), 1.0
+
+
 class _LossFitness:
     """Loss of a program's output on rows of the training data, with ``inf`` for outputs that cannot be scored."""
 
@@ -47,7 +60,9 @@ class ProfSRClassifier(CostSensitiveClassifier):
     The predicted score of an expression is squashed through the logistic function to obtain
     a probability estimate, which is used to evaluate the loss function. A loss that depends only on
     how the samples are ranked (the ``RANKING`` member of :class:`~empulse.metrics.Capability`), such as the default
-    maximum profit, is evaluated on the expressions' outputs directly.
+    maximum profit, is evaluated on the expressions' outputs directly. The scale of those outputs is then arbitrary,
+    so :meth:`decision_function` centers them on their median on the training data and divides them by their spread
+    there before :meth:`predict_proba` squashes them, which keeps large outputs from rounding to the same probability.
 
     The size of an expression is limited by ``max_length`` and penalized by ``parsimony_coefficient``,
     which keeps the fitted formula readable. The search keeps the best expression found at every length,
@@ -256,6 +271,15 @@ class ProfSRClassifier(CostSensitiveClassifier):
     n_iter_ : int
         Number of generations evolved.
 
+    score_center_ : float
+        Output of ``program_`` that :meth:`decision_function` maps to 0 and :meth:`predict_proba` to one half:
+        the median output on the training data for a loss that only ranks the samples, 0 otherwise.
+
+    score_scale_ : float
+        Spread by which :meth:`decision_function` divides the centered outputs of ``program_``:
+        their interquartile range on the training data, normalized to the standard deviation of a normal
+        distribution (their standard deviation if that is 0), for a loss that only ranks the samples, 1 otherwise.
+
     References
     ----------
     .. [1] Aliaga, Samuel and Vairetti, Carla and Maldonado, Sebastián,
@@ -444,8 +468,33 @@ class ProfSRClassifier(CostSensitiveClassifier):
         self.pareto_front_: list[ParetoPoint] = result.pareto_front
         self.run_details_ = result.run_details
         self.n_iter_ = len(result.run_details['generation'])
+        self.score_center_, self.score_scale_ = 0.0, 1.0
+        if fitness.scores_rank_only:
+            self.score_center_, self.score_scale_ = _score_location_and_spread(self.program_.execute(X))
 
         return self
+
+    def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
+        """
+        Compute the centered and scaled output of the fitted expression.
+
+        Parameters
+        ----------
+        X : 2D array-like, shape=(n_samples, n_features)
+            Features.
+
+        Returns
+        -------
+        y_score : 1D numpy.ndarray, shape=(n_samples,)
+            Output of ``program_`` for each sample, minus ``score_center_``, divided by ``score_scale_``.
+            Positive values predict the positive class.
+        """
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+        y_score: FloatNDArray = (
+            self.program_.execute(np.asarray(X, dtype=np.float64)) - self.score_center_
+        ) / self.score_scale_
+        return y_score
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
         """
@@ -461,7 +510,5 @@ class ProfSRClassifier(CostSensitiveClassifier):
         y_pred : 2D numpy.ndarray, shape=(n_samples, 2)
             Predicted probabilities.
         """
-        check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
-        y_score = expit(self.program_.execute(np.asarray(X, dtype=np.float64)))
+        y_score = expit(self.decision_function(X))
         return np.vstack((1 - y_score, y_score)).T

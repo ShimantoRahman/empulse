@@ -362,7 +362,7 @@ def empb(
     contact_cost: float = 15,
     check_input: bool = True,
 ) -> tuple[float, float]:
-    """Expected Maximum Profit Measure for B2B Customer Churn (EMPB)."""
+    """Expected Maximum Profit Measure for B2B Customer Churn (EMPB), per customer."""
     if check_input:
         y_true, y_score, clv = _validate_input_empb(y_true, y_score, clv, alpha, beta, incentive_fraction, contact_cost)
     else:
@@ -394,7 +394,7 @@ def empb(
     cumulative_profits = np.where(reachable, cumulative_profits, -np.inf)
 
     max_profit_index = np.argmax(cumulative_profits)
-    max_profit = cumulative_profits[max_profit_index]
+    max_profit = cumulative_profits[max_profit_index] / len(y_score)
     threshold = max_profit_index / len(y_score)
 
     return float(max_profit), float(threshold)

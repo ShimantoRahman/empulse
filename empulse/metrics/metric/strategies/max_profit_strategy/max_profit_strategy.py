@@ -6,7 +6,7 @@ import sympy
 from sympy.stats import density, pspace
 from sympy.stats.rv import is_random
 
-from ....._common._objective import ElasticNetPenalty
+from ....._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
 from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
@@ -17,7 +17,7 @@ from ..._symbolic import _latex
 from ...capabilities import Capability
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
-from .common import MaxProfitLogitValueObjective, _HullScoreFunction
+from .common import _HullScoreFunction
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
     MaxProfitLogitGradientDeterministic,
@@ -629,7 +629,7 @@ class MaxProfit(MetricStrategy):
         l1_ratio: float,
         fit_intercept: bool,
         **parameters: FloatNDArray | float,
-    ) -> MaxProfitLogitValueObjective:
+    ) -> RankingLogitValueObjective:
         """
         Build the logit objective for an optimizer that needs only its value, not its gradient.
 
@@ -656,7 +656,7 @@ class MaxProfit(MetricStrategy):
 
         Returns
         -------
-        logistic_objective : MaxProfitLogitValueObjective
+        logistic_objective : RankingLogitValueObjective
             The objective, whose ``logit_loss`` is the regularized negated score.
         """
         agg_params = _aggregate_instance_parameters(dict(parameters))
@@ -677,7 +677,7 @@ class MaxProfit(MetricStrategy):
             def score(y_score: FloatNDArray) -> float:
                 return float(score_function(labels, y_score, **agg_params))
 
-        return MaxProfitLogitValueObjective(
+        return RankingLogitValueObjective(
             score=score,
             features=features,
             penalty=ElasticNetPenalty.from_scale(

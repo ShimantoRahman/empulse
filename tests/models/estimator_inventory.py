@@ -43,7 +43,7 @@ def make_estimators():
     """
     estimators = [
         BiasReweighingClassifier(estimator=LogisticRegression(max_iter=2)),
-        BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2)),
+        BiasResamplingClassifier(estimator=LogisticRegression(max_iter=2), random_state=42),
         BiasRelabelingClassifier(estimator=LogisticRegression(max_iter=2)),
         B2BoostClassifier(XGBClassifier(n_estimators=2, max_depth=1)),
         ProfLogitClassifier(

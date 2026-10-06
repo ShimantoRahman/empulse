@@ -77,8 +77,8 @@ See :func:`~empulse.metrics.auepc_score` for the area under the expected profit 
 .. rubric:: Methods
 
 ``__call__(y_true, y_score, *, clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)``
-    Compute the expected maximum profit that can be achieved by a classifier at its optimal
-    decision threshold.
+    Compute the expected maximum profit per customer that can be achieved by a classifier at its
+    optimal decision threshold.
 
 ``optimal_threshold(y_true, y_score, *, clv, alpha=6, beta=14, incentive_fraction=0.05, contact_cost=15)``
     Compute the classification threshold that maximizes the expected profit.

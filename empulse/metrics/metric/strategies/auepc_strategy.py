@@ -1,9 +1,11 @@
+from collections.abc import Callable
 from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
 from scipy.integrate import trapezoid
 
+from ...._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
@@ -73,22 +75,32 @@ class AUEPCScore:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the AUEPC score."""
+        return self._sample_scorer(y_true, **kwargs)(y_score)
+
+    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+        """
+        Prepare the score of fixed labels, for parameter values fixed across many calls.
+
+        The profit differential and the oracle's curve are computed once here. The returned function
+        takes the scores and gives the same result as calling this score function.
+        """
         _check_parameters(self.delta_equation.free_symbols - {sympy.symbols('y')}, kwargs)
-
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
-        y_score = np.asarray(y_score, dtype=np.float64).reshape(-1)
-        n_samples = y_true.shape[0]
-
         delta: Float64Array = np.asarray(
-            _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=n_samples, y=y_true, **kwargs),
+            _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=y_true.size, y=y_true, **kwargs),
             dtype=np.float64,
         )
-
         # Oracle ranking: sorting by the profit differential maximizes cumulative profit at every
         # targeted fraction simultaneously, so this is the "perfect model" curve.
-        perfect_order = np.argsort(delta)[::-1]
-        perfect_profits = np.cumsum(delta[perfect_order])
+        perfect_profits = np.cumsum(delta[np.argsort(delta)[::-1]])
 
+        def score(y_score: FloatNDArray) -> float:
+            return self._score(delta, perfect_profits, np.asarray(y_score, dtype=np.float64).reshape(-1))
+
+        return score
+
+    def _score(self, delta: Float64Array, perfect_profits: Float64Array, y_score: FloatNDArray) -> float:
+        n_samples = delta.size
         # The classifier's own ranking, after targeting 1, ..., n samples. Within a group of tied
         # scores the curve is the expected profit under random tie-breaking, so the result does not
         # depend on the order the samples happen to be in.
@@ -128,9 +140,13 @@ class AUEPC(MetricStrategy):
     the targeted fraction, is the AUEPC score. A perfect model (whose ranking matches the oracle)
     scores 1.0 (when ``normalize=True``); an unhelpful/random ranking scores lower.
 
-    Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.MaxProfit`, AUEPC does not
-    support use as a model training objective (no ``logit_objective`` or
-    ``gradient_boost_objective``): it evaluates a full ranking, not the outcome of a single sample.
+    AUEPC evaluates a full ranking, not the outcome of a single sample, so it has no gradient.
+    Models that train without gradients can optimize it, such as
+    :class:`~empulse.models.ProfTreeClassifier`, :class:`~empulse.models.ProfSRClassifier` and
+    :class:`~empulse.models.ProfLogitClassifier` with an optimizer that does not use gradients, but
+    gradient-based training (no ``logit_objective`` or ``gradient_boost_objective``) is not
+    supported. The score is a ratio of profits, so the penalties of those models are not measured
+    against the costs.
 
     .. seealso::
         :func:`~empulse.metrics.auepc_score` : the underlying metric function.
@@ -143,6 +159,7 @@ class AUEPC(MetricStrategy):
     """
 
     _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.RANKING})
+    _unitless_score: ClassVar[bool] = True
     _name: str = 'auepc'
     _direction: Direction = Direction.MAXIMIZE
 
@@ -197,6 +214,53 @@ class AUEPC(MetricStrategy):
             The AUEPC score.
         """
         return self._score_function(y_true, y_score, **parameters)
+
+    def logit_value_objective(
+        self,
+        features: FloatNDArray,
+        y_true: FloatNDArray,
+        C: float,
+        l1_ratio: float,
+        fit_intercept: bool,
+        **parameters: FloatNDArray | float,
+    ) -> RankingLogitValueObjective:
+        """
+        Build the logit objective for an optimizer that needs only its value, not its gradient.
+
+        The objective is the negated AUEPC of the model plus an elastic-net penalty. AUEPC is a ratio
+        of profits, so the penalty is not scaled by the costs.
+
+        Parameters
+        ----------
+        features : NDArray of shape (n_samples, n_features)
+            The features of the samples.
+        y_true : NDArray of shape (n_samples,)
+            The ground truth labels.
+        C : float
+            Regularization strength parameter. Smaller values specify stronger regularization.
+        l1_ratio : float
+            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
+        fit_intercept : bool
+            Specifies if an intercept should be included in the model.
+        **parameters : float or NDArray of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+
+        Returns
+        -------
+        logistic_objective : RankingLogitValueObjective
+            The objective, whose ``logit_loss`` is the regularized negated score.
+        """
+        y_true = np.asarray(y_true).reshape(-1)
+        parameters = {
+            name: value.reshape(-1) if isinstance(value, np.ndarray) else value for name, value in parameters.items()
+        }
+        return RankingLogitValueObjective(
+            score=self._score_function._sample_scorer(y_true, **parameters),  # type: ignore[attr-defined]
+            features=features,
+            penalty=ElasticNetPenalty.from_scale(
+                objective_scale=1.0, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, n_samples=features.shape[0]
+            ),
+        )
 
     def to_latex(
         self,

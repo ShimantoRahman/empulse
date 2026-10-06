@@ -383,6 +383,10 @@ class Metric(BaseMetric):
     def _is_deterministic(self) -> bool:
         return not self._is_stochastic
 
+    @property
+    def _is_unitless(self) -> bool:
+        return self.strategy._unitless_score
+
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """Return the required symbol names not covered by *supplied* (aliases resolved)."""
         resolved_supplied = {str(self.cost_matrix._aliases.get(key, key)) for key in supplied}

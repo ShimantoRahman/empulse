@@ -7,8 +7,18 @@ import sympy.stats
 from scipy.special import expit
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric, MixtureComponent, MixtureMetric
-from empulse.metrics.metric.strategies.max_profit_strategy.common import MaxProfitLogitValueObjective
+from empulse._common._objective import RankingLogitValueObjective
+from empulse.metrics import (
+    AUEPC,
+    Cost,
+    CostMatrix,
+    EmpiricalMaxProfit,
+    EmpiricalMinCost,
+    MaxProfit,
+    Metric,
+    MixtureComponent,
+    MixtureMetric,
+)
 from empulse.models import CSLogitClassifier, ProfLogitClassifier
 from empulse.optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer, MemeticOptimizer, ScipyOptimizer
 
@@ -51,7 +61,7 @@ def test_value_objective_is_the_negated_metric_plus_the_penalty(data, metric):
     X, y = data
     weights = np.random.default_rng(0).normal(size=X.shape[1])
     objective = metric._logit_value_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
-    assert isinstance(objective, MaxProfitLogitValueObjective)
+    assert isinstance(objective, RankingLogitValueObjective)
     expected = -metric(y, expit(X @ weights)) + objective.penalty.value(weights)
     assert objective.logit_loss(weights) == pytest.approx(expected, rel=1e-12)
     with pytest.raises(NotImplementedError, match='only the value'):
@@ -139,3 +149,36 @@ def test_proflogit_fits_metrics_without_a_gradient(data):
     assert model.result_.fun == pytest.approx(expected, rel=1e-12)
     with pytest.raises(NotImplementedError):
         CSLogitClassifier(loss=UNIFORM, optimizer=LBFGSBOptimizer(max_iter=2)).fit(X[:, 1:], y)
+
+
+RANKING_MATRIX = CostMatrix().add_tp_benefit(CLV - D).add_fp_cost(D + F).set_default(d=10, f=1)
+
+
+@pytest.mark.parametrize('strategy', [EmpiricalMaxProfit, EmpiricalMinCost, AUEPC])
+def test_metrics_without_a_gradient_have_a_value_objective(data, strategy):
+    X, y = data
+    clv = np.random.default_rng(1).uniform(50, 400, y.size)
+    metric = Metric(RANKING_MATRIX, strategy())
+    weights = np.random.default_rng(0).normal(size=X.shape[1])
+    objective = metric._logit_value_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True, clv=clv)
+
+    assert objective.logit_loss(weights) == pytest.approx(
+        metric._loss(y, X @ weights, clv=clv) + objective.penalty.value(weights), rel=1e-12
+    )
+    with pytest.raises(NotImplementedError, match='only the value'):
+        objective.logit_gradient(weights)
+
+
+@pytest.mark.parametrize('strategy', [EmpiricalMaxProfit, AUEPC])
+def test_proflogit_trains_on_metrics_without_a_gradient(data, strategy):
+    X, y = data
+    clv = np.random.default_rng(1).uniform(50, 400, y.size)
+    model = ProfLogitClassifier(
+        loss=Metric(RANKING_MATRIX, strategy()),
+        fit_intercept=False,
+        optimizer=GeneticAlgorithmOptimizer(max_iter=20, population_size=20, random_state=0),
+    ).fit(X, y, clv=clv)
+
+    assert Metric(RANKING_MATRIX, strategy())(y, model.predict_proba(X)[:, 1], clv=clv) > Metric(
+        RANKING_MATRIX, strategy()
+    )(y, np.zeros(y.size), clv=clv)

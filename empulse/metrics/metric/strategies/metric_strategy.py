@@ -68,6 +68,10 @@ class MetricStrategy(ABC):
     """
 
     _capabilities: ClassVar[frozenset[Capability]] = frozenset()
+    #: Whether :meth:`score` is a pure number, like a ratio of profits, rather than an amount in the
+    #: units of the costs. Models then measure their penalties and tolerances against 1 instead of
+    #: against the costs.
+    _unitless_score: ClassVar[bool] = False
 
     def __init__(self, name: str, direction: Direction):
         self.name = name

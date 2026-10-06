@@ -28,6 +28,12 @@ Metrics
   :class:`~empulse.models.ProfLogitClassifier` and :class:`~empulse.models.CSBoostClassifier`, are
   1.3-6.6x faster, and their values and derivatives are now exact when the predicted probability
   is close to 1.
+- |API| :class:`~empulse.metrics.EmpiricalMaxProfit`, :class:`~empulse.metrics.EmpiricalMinCost`
+  and :func:`~empulse.metrics.empb_score` return the profit per sample, like
+  :class:`~empulse.metrics.MaxProfit`, instead of the total profit. Divide by the number of samples
+  to compare with earlier results. The optimal threshold and rate are unchanged.
+- |Fix| :class:`~empulse.metrics.MixtureMetric` raises a ``TypeError`` for a malformed component,
+  such as a tuple with its fields out of order, instead of failing when it is used.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables now gives reproducible results
   for a given ``random_state``: with NumPy 1.x and ``integration_method='quasi-monte-carlo'``, and
   across Python processes with two or more stochastic variables. Results for a given
@@ -124,6 +130,10 @@ Models
   operators.
 - |Fix| :class:`~empulse.models.ProfSRClassifier` evolves every generation asked for, instead of
   usually stopping after the first.
+- |Fix| :class:`~empulse.models.ProfSRClassifier` with a ``RANKING`` loss, such as its default, keeps
+  the ranking it learned in ``predict_proba``: large outputs of the expression all rounded to a
+  probability of 1. Its new ``decision_function`` returns the outputs of the expression, centered on
+  their median on the training data and scaled by their spread there.
 - |Efficiency| :class:`~empulse.models.ProfSRClassifier` fits 3-5x faster, and with a ``RANKING``
   loss such as its default it no longer scores large outputs as ties.
 - |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 16-24x faster with its default
@@ -162,6 +172,27 @@ Models
 - |Fix| ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
   :class:`~empulse.models.ProfMEMPMClassifier` now regularizes the model; it had no effect on the
   predictions, and ``penalty='l1'`` never zeroed a coefficient.
+- |Fix| :class:`~empulse.models.ProfMEMPMClassifier` fits classes whose means are close relative to
+  their spread, instead of raising a ``ValueError``.
+- |Fix| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  always add an intercept column when ``fit_intercept=True``. A first feature equal to 1 on every
+  row was taken for the intercept, so predicting such a batch, or a single such row, raised a
+  ``ValueError``, and such a feature at fit time got no coefficient of its own.
+- |Enhancement| :class:`~empulse.models.ProfLogitClassifier` trains on
+  :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.AUEPC` losses, such as
+  :func:`~empulse.metrics.empb_score` and :func:`~empulse.metrics.auepc_score`, with an optimizer
+  that does not use gradients, such as its default.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` passes a ``Metric`` loss the cost-matrix
+  parameters named ``tp_cost``, ``tn_cost``, ``fn_cost`` or ``fp_cost``, as several bundled datasets
+  use, instead of failing with a ``TypeError``.
+- |Fix| :class:`~empulse.models.BiasResamplingClassifier` resamples fit parameters with one value
+  per sample, such as ``sample_weight`` or instance-dependent costs, along with the training data.
+  They were passed on in the original order, which raised a ``ValueError`` or silently paired them
+  with the wrong samples.
+- |Enhancement| :class:`~empulse.models.BiasResamplingClassifier` has a ``random_state`` parameter,
+  so that its resampling can be reproduced.
+- |API| :class:`~empulse.models.BiasReweighingClassifier` raises a ``TypeError`` when ``fit`` is
+  passed a ``sample_weight``, since it fits its estimator with the bias-mitigating weights.
 - |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
   with a ``CatBoostClassifier`` no longer train on distorted sample weights.
 - |API| :class:`~empulse.models.CSBoostClassifier` with a ``CatBoostClassifier`` raises a
@@ -197,6 +228,13 @@ Models
     profit.
   - :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
     stop their optimizers at the same point for any cost units (see Optimizers).
+  - The ``lambda_reg`` of :class:`~empulse.models.ProfMPMClassifier` and
+    :class:`~empulse.models.ProfMEMPMClassifier` is relative to the average cost of a wrong decision.
+  - With an :class:`~empulse.metrics.AUEPC` loss, which is a ratio of profits, the penalties and
+    tolerances of :class:`~empulse.models.ProfTreeClassifier` and
+    :class:`~empulse.models.ProfSRClassifier` are not scaled by the costs. With an
+    :class:`~empulse.metrics.EmpiricalMaxProfit` loss they no longer weaken as the training set
+    grows.
 - |Enhancement| :class:`~empulse.models.CSBoostClassifier` and
   :class:`~empulse.models.B2BoostClassifier` with a :class:`~empulse.metrics.Cost` or
   :class:`~empulse.metrics.Savings` loss use the curvature of the logistic link as hessian, rather
@@ -217,6 +255,16 @@ Models
 - |Fix| :class:`~empulse.models.CSBaggingClassifier` with a
   :class:`~empulse.models.CSTreeClassifier` passed as ``estimator`` votes over the trees' cheapest
   classes, as it does with its default trees, instead of ignoring the costs.
+
+Samplers
+--------
+
+- |Fix| :class:`~empulse.samplers.CostSensitiveSampler` no longer rounds scalar costs down to whole
+  numbers, which with costs below one dropped every sample of a class or returned no samples.
+- |Fix| :class:`~empulse.samplers.CostSensitiveSampler` with a ``loss`` weighs each sample by what
+  deciding it wrongly costs over deciding it rightly, so a benefit of a correct decision counts.
+  It ignored those benefits, and with a matrix such as
+  :func:`~empulse.metrics.expected_cost_loss_churn` dropped every positive sample.
 
 Optimizers
 ----------

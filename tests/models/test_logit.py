@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 from scipy.optimize import OptimizeResult
+from sklearn.base import clone
 from sklearn.utils.validation import NotFittedError, check_is_fitted
 
 from empulse.metrics import CostMatrix, LogCost, MaxProfit, Metric, Savings
@@ -168,3 +169,34 @@ class TestProfLogit:
         assert clf.result_.x.shape == (1,)
         assert isinstance(clf.result_, OptimizeResult)
         assert clf.result_.message == 'Maximum number of iterations reached.'
+
+
+@pytest.mark.parametrize(
+    'classifier',
+    [
+        CSLogitClassifier(),
+        ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=2, population_size=10, random_state=42)),
+    ],
+    ids=['CSLogitClassifier', 'ProfLogitClassifier'],
+)
+class TestIntercept:
+    """The intercept is a column the model adds, whatever the values of the first feature."""
+
+    def test_prediction_does_not_depend_on_the_other_rows(self, classifier, seeded_rng):
+        X = seeded_rng.normal(size=(100, 3))
+        X[:, 0] = seeded_rng.integers(0, 2, 100)
+        y = (X[:, 1] > 0).astype(int)
+        model = clone(classifier).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+
+        first_feature_one = X[:, 0] == 1
+        expected = model.predict_proba(X)[first_feature_one]
+        np.testing.assert_allclose(model.predict_proba(X[first_feature_one]), expected)
+        np.testing.assert_allclose(model.predict_proba(X[first_feature_one][:1]), expected[:1])
+
+    def test_a_constant_first_feature_is_not_taken_for_the_intercept(self, classifier, seeded_rng):
+        X = seeded_rng.normal(size=(100, 3))
+        X[:, 0] = 1.0
+        y = (X[:, 1] > 0).astype(int)
+        model = clone(classifier).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+
+        assert model.coef_.shape == (3,)

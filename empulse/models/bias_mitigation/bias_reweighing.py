@@ -39,6 +39,10 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
     estimator : Estimator instance
         Base estimator which is used for fitting and predicting.
         Base estimator must accept `sample_weight` as an argument in its `fit` method.
+
+        .. note::
+            The sample weights computed by ``strategy`` are the only weights the estimator is fit with,
+            so :meth:`fit` raises a ``TypeError`` when it is passed a ``sample_weight``.
     strategy : {'statistical parity', 'demographic parity'} or Callable, default='statistical parity'
         Determines how the sample weights are computed. Sample weights are passed to the estimator's `fit` method.
 
@@ -154,6 +158,7 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
             search.fit(X, y, sensitive_feature=high_clv)
     """
 
+    _reserved_fit_params: ClassVar[frozenset[str]] = frozenset({'sample_weight'})
     _strategy_mapping: ClassVar[dict[str, StrategyFn]] = {
         'statistical parity': _independent_sample_weights,
         'demographic parity': _independent_sample_weights,
