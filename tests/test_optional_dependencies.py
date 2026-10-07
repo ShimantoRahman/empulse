@@ -63,6 +63,7 @@ def test_openml_datasets_with_pandas_without_pyarrow_name_the_extra(tmp_path):
 
 
 def test_openml_datasets_with_polars_work_without_pyarrow(tmp_path):
+    pytest.importorskip('polars')
     result = _run(
         f"""
         import polars
