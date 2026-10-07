@@ -154,12 +154,7 @@ Profit-driven symbolic regression
 
 :class:`~empulse.models.ProfSRClassifier` searches a space of *expressions* — arithmetic
 combinations of the input features — using genetic programming [2]_, and scores each candidate
-directly on the profit metric. The winning expression's output is squashed through a logistic
-function to give a probability. A profit metric only looks at how the outputs rank the samples,
-which leaves their scale free, so the outputs are first centred on their median on the training
-data and divided by their spread there; ``decision_function`` returns them at that point.
-
-The result is a decision function you can read:
+directly on the profit metric. The result is an expression you can read:
 
 .. code-block:: python
 
@@ -169,6 +164,22 @@ The result is a decision function you can read:
     model.fit(X, y, tp_cost=-200, fp_cost=10)
 
     print(model.program_)
+
+A profit metric only looks at how the expression ranks the samples, which leaves the scale of its
+output free. To turn the output into a probability, the model centres it on its median on the
+training data, divides it by its spread there, and squashes the result through the logistic function.
+``formula_`` writes out that whole rule, so it is the complete model on one line:
+
+.. code-block:: python
+
+    print(model.formula_)
+
+The three ways to score samples are steps of that rule: ``model.program_.execute(X)`` is the output
+of the expression, :meth:`~empulse.models.ProfSRClassifier.decision_function` the centred and
+scaled output, which is positive where the model predicts the positive class, and
+:meth:`~empulse.models.ProfSRClassifier.predict_proba` its logistic. All three rank the samples
+alike. With a loss that is not a ranking metric, such as :class:`~empulse.metrics.Cost`, the model
+learns the scale too, and the output is squashed as it is.
 
 That readability is the point. A linear model tells you the weight on each feature; a symbolic model
 can tell you that what matters is a *ratio* or a *product* of two features, and say so in a form a
@@ -230,8 +241,17 @@ one. Each point shows what the extra symbols bought:
 
 ``program_`` is the point on the front with the lowest loss plus ``parsimony_coefficient`` times its
 length, times the average cost of a wrong decision on the training data (so the penalty does not
-depend on the units of the costs). Pick another point of the front if a shorter or a more accurate formula suits the application
-better; its ``program.execute(X)`` gives the scores that expression assigns to ``X``.
+depend on the units of the costs). If a shorter or a more accurate formula suits the application
+better, :meth:`~empulse.models.ProfSRClassifier.select_program` makes the point of that length the
+fitted expression, including the centre and scale its outputs have on the training data:
+
+.. code-block:: python
+
+    shortest = model.pareto_front_[0].length
+    model.select_program(shortest)
+    print(model.formula_)
+
+Fitting the model again, or cloning it, restores the choice ``parsimony_coefficient`` makes.
 
 Unlike the minimax models, :class:`~empulse.models.ProfSRClassifier` accepts any strategy, since
 evaluating a candidate program only requires a scalar fitness — including the two ranking-based

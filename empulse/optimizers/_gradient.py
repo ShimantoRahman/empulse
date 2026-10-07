@@ -134,10 +134,21 @@ class _IterativeGradientOptimizer(Optimizer):
         nfev = 0
 
         # Best-so-far iterate: the loss surface (particularly MaxProfit's) can be rugged and
-        # non-convex, so the last iterate visited is not necessarily the best one.
+        # non-convex, so the last iterate visited is not necessarily the best one. Mini-batch losses
+        # and losses under a changing alpha are not comparable across steps, so those runs return the
+        # last iterate, scored on the full objective.
+        track_best = self.batch_size is None and self.alpha_schedule is None
         best_loss = np.inf
         best_weights = weights.copy()
         best_gradient = gradient.copy()
+
+        def final_iterate(weights: FloatNDArray) -> tuple[FloatNDArray, float, FloatNDArray]:
+            nonlocal nfev
+            if track_best:
+                return best_weights, best_loss, best_gradient
+            final_loss, final_gradient = objective.logit_loss_gradient(weights)
+            nfev += 1
+            return weights, final_loss, np.asarray(final_gradient, dtype=np.float64)
 
         for t in range(1, self.max_iter + 1):
             if self.alpha_schedule is not None and hasattr(objective, 'set_alpha'):
@@ -155,16 +166,14 @@ class _IterativeGradientOptimizer(Optimizer):
             nfev += 1
             loss_history.append(float(loss) / scale)
 
-            if loss < best_loss:
+            if track_best and loss < best_loss:
                 best_loss = loss
                 best_weights = weights.copy()
                 best_gradient = gradient.copy()
 
             if float(np.max(np.abs(gradient))) < self.tolerance * scale:
                 return _make_result(
-                    best_weights,
-                    best_loss,
-                    best_gradient,
+                    *final_iterate(weights),
                     nit=t,
                     nfev=nfev,
                     success=True,
@@ -178,9 +187,7 @@ class _IterativeGradientOptimizer(Optimizer):
                 window = loss_history[-self.patience - 1 :]
                 if (max(window) - min(window)) < self.tolerance:
                     return _make_result(
-                        best_weights,
-                        best_loss,
-                        best_gradient,
+                        *final_iterate(weights),
                         nit=t,
                         nfev=nfev,
                         success=True,
@@ -191,9 +198,7 @@ class _IterativeGradientOptimizer(Optimizer):
             weights, state = self._step(weights, np.asarray(gradient, dtype=np.float64) / scale, state, t, effective_lr)
 
         return _make_result(
-            best_weights,
-            best_loss,
-            best_gradient,
+            *final_iterate(weights),
             nit=self.max_iter,
             nfev=nfev,
             success=False,

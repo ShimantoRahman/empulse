@@ -22,7 +22,7 @@ produced, so reading top to bottom works; so does jumping straight to the stage 
 
 .. themed-figure:: empulse_spine
     :alt: A cost matrix combines with a strategy to make a metric, which is then used to
-        evaluate, train and decide; the cost matrix also feeds resampling directly.
+        evaluate, train, decide and derive resampling weights.
 
     One definition, four uses. The stage numbers match the sections below.
 

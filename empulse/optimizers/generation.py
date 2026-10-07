@@ -39,7 +39,7 @@ class Generation:
 
     elitism : float, default=0.05
         Fraction of the population that transferred to the next generation without change.
-        Must be in [0, 1].
+        Must be in [0, 1]. At least one individual is always carried over.
 
     verbose : bool, default=False
         If ``True``, print status messages.

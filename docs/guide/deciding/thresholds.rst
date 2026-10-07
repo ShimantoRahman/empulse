@@ -25,10 +25,11 @@ can work with, because it translates straight into a budget and a call list, and
 any monotone rescaling of the scores.
 
 .. themed-figure:: threshold_and_rate
-    :alt: A population sorted by score with one cut through it, labelled above as a fraction of
-        the population and below as a score cut-off.
+    :alt: A fixed threshold of 0.60 targets four of ten customers in population A and two of ten
+        in population B. Converting a fixed rate to a threshold requires the current batch's scores.
 
-    One cut, two ways of naming it.
+    A threshold corresponds to a rate on a particular population. The same threshold need not
+    select the same fraction in the next batch.
 
 Every metric can produce both, and :func:`~empulse.metrics.classification_threshold` converts a
 rate into the threshold that achieves it on a given set of scores:
@@ -128,6 +129,13 @@ plain ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, or a
 One consequence is specific to this model: with **instance-dependent** costs, ``threshold_``
 becomes an array of shape ``(n_samples,)`` rather than a scalar, because each row has its own
 break-even point. That is the strongest practical reason to use per-row costs at all.
+
+.. themed-figure:: instance_thresholds
+    :alt: At probability 0.25, a customer with false-negative cost 20 has threshold 0.333 and is
+        not targeted. A customer with false-negative cost 100 has threshold 0.091 and is targeted.
+        Both have false-positive cost 10 and zero costs for correct decisions.
+
+    Each customer's costs set their break-even probability. Equal scores can justify different actions.
 
 .. code-block:: python
 

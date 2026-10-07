@@ -1,8 +1,6 @@
 """Visual language for the Empulse documentation figures.
 
-The blue ramp is sampled from ``docs/_static/assets/empulse_logo_light.png``; the purple ramp is
-the same hue rotation applied to the logo's own saturation and lightness, so it reads as a sibling
-rather than an import.
+The colour tokens match ``DESIGN.md`` and the documentation theme.
 
 Colour carries meaning and is not decorative:
 
@@ -17,10 +15,6 @@ Each token has a light and a dark value because the logo's own colours cannot se
 """
 
 from typing import Any, Final
-
-# Font names are single-quoted: this string is emitted inside a double-quoted XML attribute, and a
-# nested double quote would terminate it and produce an unparseable SVG.
-FONT_STACK: Final[str] = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
 
 LIGHT: Final[dict[str, str]] = {
     'paper': '#FFFFFF',
@@ -55,13 +49,17 @@ def rc_params(theme: dict[str, str]) -> dict[str, Any]:
     Every colour is transparent or drawn from ``theme`` so the figure sits on the page's own
     background rather than a white card.
     """
+    from typography import font_family, font_file
+
+    for weight in (400, 500, 600, 700):
+        font_file(weight=weight)
     return {
         'figure.facecolor': 'none',
         'axes.facecolor': 'none',
         'savefig.facecolor': 'none',
         'savefig.transparent': True,
         'font.family': 'sans-serif',
-        'font.sans-serif': ['DejaVu Sans'],
+        'font.sans-serif': [font_family()],
         'font.size': 9,
         'text.color': theme['ink'],
         'axes.labelcolor': theme['ink'],

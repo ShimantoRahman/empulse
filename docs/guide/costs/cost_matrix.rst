@@ -40,13 +40,6 @@ positive is five times worse than a false negative:
     fn_cost = 1
     tn_cost = 0
 
-.. themed-figure:: cost_matrix_anatomy
-    :alt: The four cells of a cost matrix, the same matrix written as costs and as benefits with
-        the diagonal negated, and the difference between a scalar and an array cost.
-
-    The two spellings hold the same four numbers; only the diagonal changes sign. A scalar applies
-    one matrix to every row, an array gives every row its own.
-
 Costs and benefits are the same number
 --------------------------------------
 

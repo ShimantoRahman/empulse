@@ -24,6 +24,15 @@ three-step framework [1]_ that detects and corrects outlier costs before trainin
 The corrected costs are then passed to the wrapped estimator exactly as if they had been
 provided directly, so the rest of the training pipeline is unchanged.
 
+.. themed-figure:: robust_cost_correction
+    :alt: Observed CLV is plotted against CLV predicted by a Huber regressor. Most costs lie
+        near the equality line. One observed cost of 100 has predicted cost 53.5 and standardized
+        absolute residual 6.5, above the threshold 2.5. RobustCS replaces it with 53.5 before
+        classifier training. Other costs, features and labels stay unchanged.
+
+    RobustCS replaces the flagged CLV of 100 with the predicted value of 53.5, then fits the
+    classifier on the corrected costs.
+
 .. note::
     Only arrays with non-zero standard deviation are treated as instance-dependent costs.
     Scalar (class-level) costs are never modified.

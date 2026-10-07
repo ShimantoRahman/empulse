@@ -17,10 +17,14 @@ import numpy as np
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 from palette import rc_params
+from typography import font_family
 
 
 def _save(fig: Any) -> str:
     """Serialise a figure to a scalable SVG string."""
+    for ax in fig.axes:
+        for label in [ax.xaxis.label, ax.yaxis.label, *ax.get_xticklabels(), *ax.get_yticklabels()]:
+            label.set_fontfamily(font_family(mono=True))
     buffer = io.StringIO()
     fig.savefig(
         buffer,
@@ -41,7 +45,8 @@ def _save(fig: Any) -> str:
     # two width attributes and the SVG stops being well-formed XML.
     opening_end = svg.index('>')
     opening = re.sub(r'\s(?:width|height)="[^"]*"', '', svg[:opening_end])
-    return f'{opening} width="100%">{svg[opening_end + 1 :]}'
+    result = f'{opening} width="100%">{svg[opening_end + 1 :]}'
+    return '\n'.join(line.rstrip() for line in result.splitlines()) + '\n'
 
 
 # ---------------------------------------------------------------------------------------------
@@ -50,7 +55,7 @@ def _save(fig: Any) -> str:
 
 
 def calibration_effect(theme: dict[str, str]) -> str:
-    """Calibration leaves the ranking alone and moves the money.
+    """Compare the reliability and monetary scores before and after calibration.
 
     Runs the identical experiment as ``docs/guide/deciding/calibration.rst`` so the annotated
     numbers are the page's own.
@@ -105,7 +110,8 @@ def calibration_effect(theme: dict[str, str]) -> str:
             (score_cal, theme['blue-strong'], 'calibrated'),
         ):
             observed, predicted = calibration_curve(y_test, scores, n_bins=8, strategy='quantile')
-            ax_left.plot(predicted, observed, 'o-', color=colour, markersize=4, label=label, zorder=2)
+            style = 'o--' if label == 'uncalibrated' else 'o-'
+            ax_left.plot(predicted, observed, style, color=colour, markersize=4, label=label, zorder=2)
         ax_left.annotate(
             'perfectly calibrated',
             xy=(0.72, 0.72),
@@ -132,20 +138,48 @@ def calibration_effect(theme: dict[str, str]) -> str:
             colour = theme['purple-strong'] if moves else theme['ink-muted']
             ax_right.barh([pos], [change], height=0.42, color=colour, edgecolor=colour, linewidth=0)
             ax_right.annotate(
-                f'{change:+.1%}   ' + fmt.format(before) + ' → ' + fmt.format(after),
+                f'{change:.1%}',
                 xy=(change + biggest * 0.035, pos),
                 va='center',
                 color=theme['ink'],
-                fontsize=9,
+                fontsize=8,
+                fontfamily=font_family(mono=True),
                 fontweight='medium' if moves else 'normal',
+            )
+            for x, value, colour in (
+                (0.77, before, theme['ink-muted']),
+                (0.99, after, theme['blue-strong']),
+            ):
+                ax_right.text(
+                    x,
+                    pos,
+                    fmt.format(value),
+                    transform=ax_right.get_yaxis_transform(),
+                    ha='right',
+                    va='center',
+                    color=colour,
+                    fontsize=9,
+                    fontfamily=font_family(mono=True),
+                )
+
+        for x, label in ((0.77, 'Before'), (0.99, 'After')):
+            ax_right.text(
+                x,
+                2.55,
+                label,
+                transform=ax_right.get_yaxis_transform(),
+                ha='right',
+                va='center',
+                color=theme['ink-muted'],
+                fontsize=8,
             )
 
         ax_right.set_yticks(positions)
         ax_right.set_yticklabels([m[0] for m in measures])
         ax_right.set_xticks([])
-        ax_right.set_xlim(0, biggest * 1.85)
-        ax_right.set_ylim(-0.6, len(measures) - 0.4)
-        ax_right.set_title('Only one of them moves')
+        ax_right.set_xlim(0, biggest * 2.7)
+        ax_right.set_ylim(-0.6, len(measures) - 0.1)
+        ax_right.set_title('Expected cost changes the most')
         ax_right.set_xlabel('change after calibrating')
         ax_right.spines['bottom'].set_visible(False)
         ax_right.spines['left'].set_visible(False)

@@ -69,6 +69,20 @@ class TestMemeticOptimizer:
         result = optimizer(_QuadraticGradObjective(), X)
         assert result.x.shape == (2,)
 
+    def test_success_is_false_when_max_iter_is_reached(self):
+        X = np.zeros((5, 2))
+        optimizer = MemeticOptimizer(max_iter=2, patience=10, population_size=10, random_state=0)
+        result = optimizer(_QuadraticGradObjective(), X)
+        assert result.success is False
+        assert result.message == 'Maximum number of iterations reached.'
+
+    def test_success_is_true_when_the_loss_stagnates(self):
+        X = np.zeros((5, 2))
+        optimizer = MemeticOptimizer(max_iter=1000, patience=3, tol=1e3, population_size=10, random_state=0)
+        result = optimizer(_QuadraticGradObjective(), X)
+        assert result.success is True
+        assert result.nit < 1000
+
     def test_invalid_local_search_optimizer_raises_at_construction(self):
         with pytest.raises(ValueError, match="'adam' or 'sgd'"):
             MemeticOptimizer(optimizer='invalid')

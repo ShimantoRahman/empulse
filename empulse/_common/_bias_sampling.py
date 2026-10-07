@@ -25,7 +25,12 @@ PairsStrategyFn = Callable[[NDArray[Any], NDArray[Any]], int]
 
 
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> int:
-    """Determine promotion and demotion pairs so that y is statistically independent of sensitive feature."""
+    """
+    Determine promotion and demotion pairs so that y is statistically independent of sensitive feature.
+
+    The count is positive when the group with ``sensitive_feature == 1`` has the higher positive rate,
+    and negative when the group with ``sensitive_feature == 0`` does.
+    """
     sensitive_indices = np.where(sensitive_feature == 0)[0]
     not_sensitive_indices = np.where(sensitive_feature == 1)[0]
     n_sensitive = len(sensitive_indices)
@@ -46,7 +51,7 @@ def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> in
 
     discrimination = pos_ratio_not_sensitive - pos_ratio_sensitive
 
-    return int(abs(round((discrimination * n_sensitive * n_not_sensitive) / n)))
+    return int(np.rint(discrimination * n_sensitive * n_not_sensitive / n))
 
 
 RELABEL_STRATEGIES: dict[Strategy, PairsStrategyFn] = {
@@ -109,22 +114,24 @@ def relabel(
 
     strategy_fn = RELABEL_STRATEGIES[strategy] if isinstance(strategy, str) else strategy
     n_pairs = strategy_fn(y_binarized, sensitive_feature)
-    if n_pairs <= 0:
+    if n_pairs == 0:
         return np.asarray(y), fitted_estimator
 
-    sensitive_indices = np.where(sensitive_feature == 0)[0]
-    non_sensitive = np.where(sensitive_feature == 1)[0]
-    probas_non_sensitive = y_pred[non_sensitive]
-    probas_sensitive = y_pred[sensitive_indices]
+    # A positive count favours group 1, so its positives are demoted and group 0's negatives promoted.
+    favoured_group, disfavoured_group = (1, 0) if n_pairs > 0 else (0, 1)
+    n_pairs = abs(n_pairs)
+    favoured_indices = np.where(sensitive_feature == favoured_group)[0]
+    disfavoured_indices = np.where(sensitive_feature == disfavoured_group)[0]
 
     # Candidates are chosen on the 0/1-encoded target, and relabelled with the original labels.
-    demotion_candidates = _get_demotion_candidates(probas_non_sensitive, y_binarized[non_sensitive], n_pairs)
-    promotion_candidates = _get_promotion_candidates(probas_sensitive, y_binarized[sensitive_indices], n_pairs)
+    demotion_candidates = _get_demotion_candidates(y_pred[favoured_indices], y_binarized[favoured_indices], n_pairs)
+    promotion_candidates = _get_promotion_candidates(
+        y_pred[disfavoured_indices], y_binarized[disfavoured_indices], n_pairs
+    )
     negative_label, positive_label = classes
 
-    indices = np.arange(len(y))
-    demotion_candidates = indices[non_sensitive][demotion_candidates]
-    promotion_candidates = indices[sensitive_indices][promotion_candidates]
+    demotion_candidates = favoured_indices[demotion_candidates]
+    promotion_candidates = disfavoured_indices[promotion_candidates]
 
     if hasattr(y, 'copy'):
         relabeled_y = y.copy()

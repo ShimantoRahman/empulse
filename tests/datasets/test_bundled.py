@@ -1,8 +1,10 @@
 """The contract every dataset bundled with the package satisfies, for each dataframe backend."""
 
+import narwhals as nw
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 from empulse.datasets import (
@@ -15,6 +17,10 @@ from empulse.datasets import (
 from empulse.metrics import Cost, CostMatrix, Metric
 
 from ._helpers import BACKENDS, bahnsen_fp_cost
+
+# The bundled loaders read no Parquet, so they are also checked on pyarrow, whose expressions are the
+# strictest about mixing types.
+BUNDLED_BACKENDS = [*BACKENDS, pytest.param(pa, id='pyarrow')]
 
 LOADERS = [
     pytest.param(load_churn_tv_subscriptions, id='churn_tv'),
@@ -47,7 +53,7 @@ def loader(request):
     return request.param
 
 
-@pytest.fixture(params=BACKENDS)
+@pytest.fixture(params=BUNDLED_BACKENDS)
 def local_dataset(request, load, loader):
     backend = request.param
     return load(loader, backend), backend
@@ -67,6 +73,9 @@ def test_local_dataset_returns_correct_types(local_dataset):
     if backend is pd:
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.target, pd.Series)
+    elif backend is pa:
+        assert isinstance(dataset.data, pa.Table)
+        assert isinstance(dataset.target, pa.ChunkedArray)
     else:
         assert isinstance(dataset.data, pl.DataFrame)
         assert isinstance(dataset.target, pl.Series)
@@ -88,7 +97,7 @@ def test_local_dataset_instance_costs_are_arrays(local_dataset):
 def test_local_dataset_feature_names_match_columns(local_dataset):
     """feature_names must exactly match the DataFrame column order."""
     dataset, _ = local_dataset
-    assert list(dataset.data.columns) == dataset.feature_names
+    assert nw.from_native(dataset.data, eager_only=True).columns == dataset.feature_names
 
 
 def test_local_dataset_cross_backend_shape(load, loader):
@@ -106,15 +115,15 @@ def test_local_dataset_target_row_count(local_dataset):
 
 def test_local_dataset_target_is_binary(local_dataset):
     """Target column must contain only 0 and 1."""
-    dataset, backend = local_dataset
-    unique = set(dataset.target.unique()) if backend is pd else set(dataset.target.unique().to_list())
+    dataset, _ = local_dataset
+    unique = set(np.unique(np.asarray(dataset.target)).tolist())
     assert unique <= {0, 1}, f'Non-binary target values: {unique}'
 
 
 def test_local_dataset_target_has_both_classes(local_dataset):
     """Both class 0 and class 1 must be present."""
-    dataset, backend = local_dataset
-    unique = set(dataset.target.unique()) if backend is pd else set(dataset.target.unique().to_list())
+    dataset, _ = local_dataset
+    unique = set(np.unique(np.asarray(dataset.target)).tolist())
     assert 0 in unique and 1 in unique, f'Missing class in target: {unique}'
 
 
@@ -146,7 +155,7 @@ def test_local_dataset_instance_costs_non_negative(local_dataset):
         assert np.all(arr >= 0), f"Negative values in instance_costs['{key}']"
 
 
-@pytest.mark.parametrize('backend', BACKENDS)
+@pytest.mark.parametrize('backend', BUNDLED_BACKENDS)
 def test_vub_credit_scoring_matches_its_source(load, backend):
     """The VUB data and its cost matrix, against the published counts and the Bahnsen costs."""
     ds = load(load_vub_credit_scoring, backend)

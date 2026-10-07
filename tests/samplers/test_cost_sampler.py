@@ -192,6 +192,39 @@ def test_non_finite_costs_are_rejected(data, fn_cost):
         CostSensitiveSampler().fit_resample(X, y, fp_cost=1.0, fn_cost=fn_cost)
 
 
+class TestPosLabel:
+    @staticmethod
+    def resampled(X, y, **kwargs):
+        sampler = CostSensitiveSampler(method='oversampling', **kwargs)
+        return sampler.fit_resample(X, y, fp_cost=1, fn_cost=10)[1]
+
+    @pytest.mark.parametrize('negative', [0, -1])
+    def test_one_is_positive_by_default(self, data, negative):
+        X, y = data
+        y_binary = self.resampled(X, y)
+        np.testing.assert_array_equal(self.resampled(X, np.where(y == 1, 1, negative)) == 1, y_binary == 1)
+
+    @pytest.mark.parametrize(
+        ('negative', 'positive'), [('neg', 'pos'), (2, 1), (1, 2), (1, 0)], ids=['strings', '2/1', '1/2', '1/0']
+    )
+    def test_explicit_pos_label_is_the_positive_class(self, data, negative, positive):
+        X, y = data
+        y_binary = self.resampled(X, y)
+        y_labels = self.resampled(X, np.where(y == 1, positive, negative), pos_label=positive)
+        np.testing.assert_array_equal(y_labels == positive, y_binary == 1)
+
+    @pytest.mark.parametrize(('negative', 'positive'), [('neg', 'pos'), (1, 2)], ids=['strings', '1/2'])
+    def test_ambiguous_labels_require_pos_label(self, data, negative, positive):
+        X, y = data
+        with pytest.raises(ValueError, match='pass pos_label explicitly'):
+            self.resampled(X, np.where(y == 1, positive, negative))
+
+    def test_unknown_pos_label_raises(self, data):
+        X, y = data
+        with pytest.raises(ValueError, match='is not one of the classes'):
+            self.resampled(X, y, pos_label=5)
+
+
 class TestMisclassificationCosts:
     """Each sample is kept in proportion to what deciding it wrongly costs over deciding it rightly."""
 

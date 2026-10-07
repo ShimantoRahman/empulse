@@ -67,11 +67,12 @@ over-confident probabilities — scored before and after calibration:
     :alt: A reliability diagram before and after calibration, beside a bar chart showing that ROC
         AUC and maximum profit barely change while the expected cost changes by 45 per cent.
 
-    Calibration is monotone, so the ranking survives it untouched. The cost does not — and since
-    both cost figures here are negative, that 45% is 45% more profit.
+    Expected cost changes much more than ROC AUC or maximum profit in this example. Both cost
+    figures are negative, so the change corresponds to 45% more profit under this metric.
 
-The ROC AUC barely moves — 0.905 to 0.911 — because calibration is monotone and cannot reorder
-anything. Neither does the maximum profit, 10.48 to 10.54, for the same reason.
+The ROC AUC barely moves, from 0.905 to 0.911. Maximum profit also changes little, from 10.48 to
+10.54. A strictly increasing transformation of one fixed score vector preserves its ranking.
+This example fits and averages models across calibration folds, so its ranking can change.
 
 The expected cost moves from ``-5.41`` to ``-7.85``. Both are profits, but the second is 45% larger
 than the first. Nothing warned you; the uncalibrated model simply understated what the campaign was

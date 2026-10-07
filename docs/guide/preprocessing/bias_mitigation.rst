@@ -23,6 +23,16 @@ Three techniques are available for bias mitigation:
 2. `Resampling`_: This technique resamples the training data to remove the bias.
 3. `Reweighing`_: This technique assigns weights to the training data to remove the bias.
 
+.. themed-figure:: bias_mitigation
+    :alt: Eight training customers start with one event among four high-value customers and
+        three events among four low-value customers. Relabeling changes A from 0 to 1 and G
+        from 1 to 0. Resampling omits A and F and duplicates D and H. Reweighing keeps all rows
+        and labels but gives D and H three times the training weight. Each method gives a 50%
+        event share per group, weighted for reweighing. Holdout rows and labels stay unchanged.
+
+    Relabeling changes labels, resampling changes row counts, and reweighing changes training
+    weights. The illustrated resample targets two rows per value group and label.
+
 Relabeling
 ==========
 

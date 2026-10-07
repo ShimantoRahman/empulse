@@ -97,6 +97,46 @@ class TestScores:
 
         np.testing.assert_array_equal(model.decision_function(X), model.program_.execute(X))
         np.testing.assert_array_equal(model.predict_proba(X)[:, 1], expit(model.decision_function(X)))
+        assert model.formula_ == f'sig({model.program_})'
+
+    def test_formula_states_the_whole_rule(self, large_scores):
+        X_train, _, y_train, _ = large_scores
+        model = ProfSRClassifier(max_iter=10, population_size=100, random_state=0).fit(X_train, y_train)
+
+        assert model.formula_ == (f'sig(({model.program_} - {model.score_center_:.6g}) / {model.score_scale_:.6g})')
+
+
+class TestSelectProgram:
+    """Any expression of the Pareto front can become the fitted one, with the scaling of its own outputs."""
+
+    @pytest.fixture
+    def model(self, data):
+        X, y = data
+        return fast_model(max_iter=6, population_size=60).fit(X, y, **FIT_COSTS)
+
+    def test_every_point_of_the_front_can_be_selected(self, model, data):
+        X, _ = data
+        for point in model.pareto_front_:
+            model.select_program(point.length)
+            expected = (point.program.execute(X) - np.median(point.program.execute(X))) / model.score_scale_
+
+            assert model.program_ is point.program
+            np.testing.assert_allclose(model.decision_function(X), expected)
+            np.testing.assert_array_equal(
+                model.predict(X), model.classes_[(model.decision_function(X) > 0).astype(int)]
+            )
+
+    def test_the_parsimony_choice_can_be_restored(self, model):
+        chosen, scaling = model.program_, (model.score_center_, model.score_scale_)
+        model.select_program(model.pareto_front_[0].length)
+        model.select_program(chosen.length_)
+
+        assert model.program_ is chosen
+        assert (model.score_center_, model.score_scale_) == scaling
+
+    def test_rejects_a_length_not_on_the_front(self, model):
+        with pytest.raises(ValueError, match='no expression of length 999'):
+            model.select_program(999)
 
 
 class TestStopping:

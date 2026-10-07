@@ -27,7 +27,9 @@ class BiasRelabelingClassifier(BaseBiasMitigationClassifier):
 
         - ``Callable``: function which computes the number of labels swaps based on the target and sensitive feature. \
         Callable accepts two arguments: \
-        y_true and sensitive_feature and returns the number of pairs needed to be swapped.
+        y_true and sensitive_feature and returns the number of pairs needed to be swapped. \
+        A positive count promotes negatives where ``sensitive_feature == 0`` and demotes positives where \
+        ``sensitive_feature == 1``; a negative count does the reverse.
     transform_feature : Optional[Callable], default=None
         Function which transforms sensitive feature before resampling the training data.
 

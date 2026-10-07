@@ -63,6 +63,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
     maximum profit, is evaluated on the expressions' outputs directly. The scale of those outputs is then arbitrary,
     so :meth:`decision_function` centers them on their median on the training data and divides them by their spread
     there before :meth:`predict_proba` squashes them, which keeps large outputs from rounding to the same probability.
+    ``formula_`` writes out the whole rule, and :meth:`select_program` adopts another expression of the Pareto front.
 
     The size of an expression is limited by ``max_length`` and penalized by ``parsimony_coefficient``,
     which keeps the fitted formula readable. The search keeps the best expression found at every length,
@@ -261,7 +262,12 @@ class ProfSRClassifier(CostSensitiveClassifier):
 
     pareto_front_ : list of ParetoPoint
         The shortest expressions that reached a lower loss than every shorter expression found during the search,
-        sorted by length. Each point has a ``length``, a ``loss`` and a ``program``.
+        sorted by length. Each point has a ``length``, a ``loss`` and a ``program``. :meth:`select_program` makes
+        any of them the fitted expression.
+
+    formula_ : str
+        The whole rule from features to the probability of the positive class:
+        ``sig((program_ - score_center_) / score_scale_)``, or ``sig(program_)`` when the outputs are not rescaled.
 
     run_details_ : dict of lists
         For every generation: the average length and loss of the population, the length and loss of the best
@@ -468,11 +474,54 @@ class ProfSRClassifier(CostSensitiveClassifier):
         self.pareto_front_: list[ParetoPoint] = result.pareto_front
         self.run_details_ = result.run_details
         self.n_iter_ = len(result.run_details['generation'])
-        self.score_center_, self.score_scale_ = 0.0, 1.0
-        if fitness.scores_rank_only:
-            self.score_center_, self.score_scale_ = _score_location_and_spread(self.program_.execute(X))
+        # Every expression on the front gets its own scaling, so that `select_program` can adopt any of
+        # them without the training data.
+        self._front_scaling = {
+            point.length: _score_location_and_spread(point.program.execute(X))
+            if fitness.scores_rank_only
+            else (0.0, 1.0)
+            for point in self.pareto_front_
+        }
+        self.score_center_, self.score_scale_ = self._front_scaling[self.program_.length_]
 
         return self
+
+    @property
+    def formula_(self) -> str:
+        """The rule that turns the features into the probability of the positive class, as one expression."""
+        check_is_fitted(self)
+        if self.score_center_ == 0.0 and self.score_scale_ == 1.0:
+            return f'sig({self.program_})'
+        return f'sig(({self.program_} - {self.score_center_:.6g}) / {self.score_scale_:.6g})'
+
+    def select_program(self, length: int) -> Self:
+        """
+        Use the expression of the given length on the Pareto front as the fitted expression.
+
+        :meth:`fit` picks ``program_`` from ``pareto_front_`` with ``parsimony_coefficient``. This
+        replaces that choice by another point of the front, together with the ``score_center_`` and
+        ``score_scale_`` that expression has on the training data, so that :meth:`decision_function`,
+        :meth:`predict_proba` and :meth:`predict` all use it. Fitting again, or cloning, restores the
+        choice ``parsimony_coefficient`` makes.
+
+        Parameters
+        ----------
+        length : int
+            Number of nodes of the expression, the ``length`` of a point of ``pareto_front_``.
+
+        Returns
+        -------
+        self : ProfSRClassifier
+            The model, now using the selected expression.
+        """
+        check_is_fitted(self)
+        for point in self.pareto_front_:
+            if point.length == length:
+                self.program_ = point.program
+                self.score_center_, self.score_scale_ = self._front_scaling[length]
+                return self
+        lengths = ', '.join(str(point.length) for point in self.pareto_front_)
+        raise ValueError(f'The Pareto front has no expression of length {length}; its lengths are {lengths}.')
 
     def decision_function(self, X: FloatArrayLike) -> FloatNDArray:
         """
@@ -487,7 +536,8 @@ class ProfSRClassifier(CostSensitiveClassifier):
         -------
         y_score : 1D numpy.ndarray, shape=(n_samples,)
             Output of ``program_`` for each sample, minus ``score_center_``, divided by ``score_scale_``.
-            Positive values predict the positive class.
+            Positive values predict the positive class. ``program_.execute(X)`` gives the output of the
+            expression itself.
         """
         check_is_fitted(self)
         X = validate_data(self, X, reset=False)

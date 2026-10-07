@@ -250,7 +250,10 @@ class StepSchedule(Schedule):
         self.max_value = max_value
 
     def __call__(self, epoch: int) -> float:
-        value = self.start_value * (self.gamma ** (epoch // self.step_size))
+        try:
+            value = self.start_value * (self.gamma ** (epoch // self.step_size))
+        except OverflowError:
+            value = self.max_value if self.max_value is not None else self.start_value
         value = max(self.min_value, value)
         if self.max_value is not None:
             value = min(self.max_value, value)

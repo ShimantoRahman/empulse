@@ -188,7 +188,7 @@ def _pakdd_raw(n: int = 5) -> dict:
         'QUANT_ADDITIONAL_CARDS_IN_THE_APPLICATION': ['0', '1', '0', '0', '2'][:n],
         'PAYMENT_DAY': ['5', '10', '15', '20', '25'][:n],
         'SEX': ['M', 'F', 'M', 'M', 'F'][:n],
-        'MARITAL_STATUS': ['S', 'M', 'D', 'W', 'S'][:n],
+        'MARITAL_STATUS': ['S', 'C', 'D', 'V', 'O'][:n],
         'FLAG_RESIDENCIAL_PHONE': ['Y', 'N', 'Y', 'Y', 'N'][:n],
         'FLAG_MOBILE_PHONE': ['N', 'Y', 'N', 'Y', 'Y'][:n],
         'FLAG_CONTACT_PHONE': ['Y', 'Y', 'N', 'Y', 'N'][:n],
@@ -267,6 +267,12 @@ class TestProcessCreditScoringPakdd:
         vals = feat_nw.to_native()['is_male'].to_numpy()
         assert vals[0] == 1
         assert vals[1] == 0
+
+    def test_marital_status_encoding(self):
+        """The source uses Portuguese codes: casado (C) is married and viuvo (V) widowed."""
+        df = _from_dict(_pakdd_raw(), pd)
+        feat, _, _ = process_credit_scoring_pakdd(df)
+        assert feat['marital_status'].to_list() == ['single', 'married', 'divorced', 'widowed', 'other']
 
     def test_column_names_snake_case(self):
         """All output column names should be lowercase snake_case."""

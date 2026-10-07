@@ -44,7 +44,7 @@ def process_churn_tv(
     instance_costs : dict  — pre-computed per-instance costs from the CSV
     """
     all_cols = df.columns
-    # Layout: [index_col, *features, target, C_TP, C_FP, C_TN, C_FN]
+    # Layout: [id, *features, C_FP, C_FN, C_TP, C_TN, target]
     feature_cols = all_cols[1:-5]
 
     instance_costs: dict[str, FloatNDArray] = {
@@ -162,11 +162,11 @@ def process_credit_scoring_pakdd(
         nw
         .when(nw.col('marital_status') == 'S')
         .then(nw.lit('single'))
-        .when(nw.col('marital_status') == 'M')
+        .when(nw.col('marital_status') == 'C')
         .then(nw.lit('married'))
         .when(nw.col('marital_status') == 'D')
         .then(nw.lit('divorced'))
-        .when(nw.col('marital_status') == 'W')
+        .when(nw.col('marital_status') == 'V')
         .then(nw.lit('widowed'))
         .otherwise(nw.lit('other'))
         .alias('marital_status'),
@@ -725,7 +725,7 @@ def process_vub_credit_scoring(
             exprs.append(
                 nw
                 .when(nw.col(c).is_null() | nw.col(c).is_in(['', ' ']))
-                .then(nw.lit(0.0))
+                .then(nw.lit('0'))
                 .otherwise(nw.col(c))
                 .cast(nw.Float64)
                 .alias(c_clean)

@@ -236,6 +236,12 @@ class LBFGSBOptimizer(Optimizer):
                 stacklevel=2,
             )
             use_split = False
+        if use_split and kwargs:
+            warnings.warn(
+                f'The split-variable reformulation ignores the solver arguments {sorted(kwargs)}.',
+                UserWarning,
+                stacklevel=2,
+            )
 
         if use_split:
             assert penalty is not None

@@ -290,6 +290,10 @@ class TestStepSchedule:
         s = StepSchedule(start_value=1.0, step_size=1, gamma=2.0)
         assert s(10) == pytest.approx(2.0**10)
 
+    def test_overflowing_growth_is_capped_at_max_value(self):
+        s = StepSchedule(start_value=1.0, step_size=1, gamma=2.0, max_value=100.0)
+        assert s(1024) == pytest.approx(100.0)
+
     def test_max_value_below_min_value_raises(self):
         with pytest.raises(ValueError, match='max_value must be >= min_value'):
             StepSchedule(start_value=1.0, step_size=1, gamma=2.0, min_value=1.0, max_value=0.5)
@@ -781,6 +785,20 @@ class TestBestIterateTracking:
 
         assert result.success is True
         assert result.fun == pytest.approx(1.0)
+
+    @pytest.mark.parametrize(
+        'kwargs', [{'batch_size': 1}, {'alpha_schedule': ConstantSchedule(1.0)}], ids=['batch', 'alpha']
+    )
+    def test_incomparable_losses_return_the_last_iterate(self, kwargs):
+        """Mini-batch losses and losses under a changing alpha cannot pick out a best iterate."""
+        losses = [5.0, 1.0, 3.0, 4.0, 4.0, 4.0]
+        obj = _ScriptedObjective(losses, n_features=1)
+        result = SGD(lr=0.1, max_iter=len(losses), tolerance=0.0, patience=9999, **kwargs)(obj, np.zeros((1, 1)))
+
+        # The last iterate is scored once more, on the full objective.
+        assert len(obj.weights_seen) == len(losses) + 1
+        np.testing.assert_allclose(result.x, obj.weights_seen[-1])
+        assert result.fun == pytest.approx(losses[-1])
 
 
 class _ScriptedGradientNormObjective(_ScriptedObjective):

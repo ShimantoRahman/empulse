@@ -58,13 +58,12 @@ A company contacts customers it believes will churn and offers them an incentive
 - **True negative** — a loyal customer is not contacted. No action, so no campaign cost.
 
 .. themed-figure:: churn_cost_benefit
-    :alt: A flow diagram. A contacted real churner splits into a share that accepts the incentive
-        and returns to the customer base, and a share that leaves anyway and flows to outflow. A
-        contacted loyal customer always returns to the customer base, at cost. Customers who are
-        not contacted are unaffected either way.
+    :alt: A contacted churner accepts with probability gamma and earns CLV minus incentive and
+        contact costs, or declines and costs f. Contacting a loyal customer costs d plus f.
+        No contact has zero campaign cost.
 
-    Contacting a churner only pays off for the share that accepts; contacting a loyal customer
-    never pays off.
+    A contact always costs f. Only an accepted offer retains CLV and costs d. Weight the two
+    responses by their probabilities to obtain the true-positive benefit.
 
 Written with :mod:`sympy` symbols and named for readability:
 

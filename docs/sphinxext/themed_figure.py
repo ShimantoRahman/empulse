@@ -2,11 +2,11 @@
 
 Usage::
 
-    .. themed-figure:: cost_matrix_anatomy
-        :alt: Two cost matrices side by side, one written as costs and one as benefits.
+    .. themed-figure:: threshold_and_rate
+        :alt: One threshold selects different fractions in two populations.
         :width: 760
 
-        Costs and benefits are the same four numbers with the diagonal negated.
+        The rate selected by a threshold depends on the population's scores.
 
 The name refers to a pair of files in ``_static/assets`` produced by ``scripts/figures/build.py``:
 ``<name>_light.svg`` and ``<name>_dark.svg``.

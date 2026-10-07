@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import gzip
+import http.client
 import importlib.util
 import io
 import json
@@ -268,7 +269,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
         ctx = ssl.create_default_context()
         with urllib.request.urlopen(api_url, context=ctx, timeout=30) as resp:
             metadata_json: dict[str, Any] = json.loads(resp.read().decode('utf-8'))
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(
             f'Failed to reach the UCI ML Repository API for dataset {dataset_id}. '
             f'Check your internet connection.  Original error: {exc}'
@@ -295,7 +296,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
         ctx2 = ssl.create_default_context()
         with urllib.request.urlopen(data_url, context=ctx2, timeout=60) as resp:
             raw_bytes = resp.read()
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(f'Failed to download UCI dataset {dataset_id} from {data_url}.  Original error: {exc}') from exc
 
     try:
@@ -362,7 +363,7 @@ def _fetch_csv_url(
                 continue
             cols = list(rows[0].keys())
             return {col: [row[col] for row in rows] for col in cols}
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
             last_exc = exc
             continue
     raise OSError(f'Failed to download CSV from {url_list}. Original error: {last_exc}')
@@ -389,7 +390,7 @@ def _fetch_url_bytes(url: str, *, timeout: int = 120) -> bytes:
     try:
         with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
             body: bytes = resp.read()
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(f'Failed to download {url}. Original error: {exc}') from exc
     return body
 
@@ -503,7 +504,7 @@ def _openml_api_request(
                     f'OpenML returned HTTP 412 for {url}. This usually means the requested resource does not exist.'
                 ) from exc
             last_exc = exc
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
             last_exc = exc
 
         if attempt < n_retries:
@@ -620,8 +621,13 @@ def _download_to_file(url: str, destination: Path, *, n_retries: int = 3, delay:
         try:
             with urllib.request.urlopen(req, context=ctx, timeout=120) as resp, open(destination, 'wb') as f:
                 shutil.copyfileobj(resp, f)
+                expected_size = resp.headers.get('Content-Length')
+                received_size = f.tell()
+            # A dropped connection ends a streamed body early without raising.
+            if expected_size is not None and int(expected_size) != received_size:
+                raise OSError(f'Received {received_size} of {expected_size} bytes.')
             return
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
             last_exc = exc
             if attempt < n_retries:
                 time.sleep(delay)

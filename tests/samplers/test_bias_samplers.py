@@ -6,6 +6,7 @@ Their scikit-learn and imbalanced-learn conformance is checked in ``test_sampler
 
 import numpy as np
 import pytest
+from sklearn.linear_model import LogisticRegression
 
 from empulse._common._bias_sampling import _get_demotion_candidates, _get_promotion_candidates, _independent_pairs
 from empulse._common._strategies import _independent_weights
@@ -30,6 +31,27 @@ def test_n_pairs_uneven():
     y_true = [1, 1, 1, 1, 0, 0, 0, 1, 0, 1]
     protected_attr = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
     assert _independent_pairs(y_true, protected_attr) == 1
+
+
+def test_n_pairs_is_negative_when_group_zero_is_favoured():
+    y_true = [0, 0, 1, 0, 1, 1, 1, 1, 1, 0]
+    protected_attr = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    assert _independent_pairs(y_true, protected_attr) == -1
+
+
+@pytest.mark.parametrize(('rate_0', 'rate_1'), [(0.2, 0.5), (0.5, 0.2)], ids=['group_1_favoured', 'group_0_favoured'])
+def test_relabler_closes_the_gap_in_either_direction(seeded_rng, rate_0, rate_1):
+    n = 2000
+    sensitive_feature = seeded_rng.integers(0, 2, n)
+    y = (seeded_rng.random(n) < np.where(sensitive_feature == 0, rate_0, rate_1)).astype(int)
+    X = np.c_[seeded_rng.normal(size=(n, 3)), sensitive_feature]
+
+    def gap(labels):
+        return labels[sensitive_feature == 1].mean() - labels[sensitive_feature == 0].mean()
+
+    _, y_relabeled = BiasRelabler(LogisticRegression()).fit_resample(X, y, sensitive_feature=sensitive_feature)
+    assert abs(gap(y_relabeled)) < 0.01 < abs(gap(y))
+    assert y_relabeled.sum() == y.sum()
 
 
 def test_n_pairs_even():

@@ -35,7 +35,7 @@ def get_data_home(data_home: str | Path | None = None) -> Path:
     """
     if data_home is None:
         data_home = os.environ.get('EMPULSE_DATA_HOME', Path.home() / 'empulse_data')
-    data_home = Path(data_home)
+    data_home = Path(data_home).expanduser()
     data_home.mkdir(parents=True, exist_ok=True)
     return data_home
 

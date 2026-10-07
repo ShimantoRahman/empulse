@@ -68,8 +68,15 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
           A sample is weighted by the difference between the costs of deciding it wrongly and
           rightly, so a benefit of a correct decision counts as much as a cost of a wrong one.
 
+    pos_label : int, float, bool, str or None, default=None
+        The label of the positive class, which the costs refer to.
+        If None, the labels must be ``{0, 1}`` or ``{-1, 1}``, and ``1`` is the positive class.
+
     Attributes
     ----------
+    classes_ : numpy.ndarray of shape (2,)
+        The class labels.
+
     sample_indices_ : numpy.ndarray
         Indices of the samples that were selected.
 
@@ -134,6 +141,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         'fp_cost': [Real, 'array-like'],
         'fn_cost': [Real, 'array-like'],
         'loss': [BaseMetric, None],
+        'pos_label': [Real, str, 'boolean', None],
     }
 
     if TYPE_CHECKING:  # pragma: no cover
@@ -151,6 +159,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         fp_cost: float | FloatArrayLike = 0.0,
         fn_cost: float | FloatArrayLike = 0.0,
         loss: BaseMetric | None = None,
+        pos_label: float | bool | str | None = None,
     ):
         super().__init__()
         self.method = method
@@ -160,6 +169,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         self.fp_cost = fp_cost
         self.fn_cost = fn_cost
         self.loss = loss
+        self.pos_label = pos_label
 
     def _more_tags(self) -> dict[str, bool]:
         return {
@@ -221,6 +231,20 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
         y: NDArray[Any]
         return X, y
 
+    def _resolve_pos_label(self) -> Any:
+        """Return the positive label: ``pos_label``, or ``1`` when the labels are ``{0, 1}`` or ``{-1, 1}``."""
+        if self.pos_label is not None:
+            if self.pos_label not in self.classes_:
+                raise ValueError(f'pos_label={self.pos_label!r} is not one of the classes {self.classes_.tolist()}.')
+            return self.pos_label
+        labels = set(self.classes_.tolist())
+        if self.classes_.dtype.kind in 'OUS' or not (labels <= {0, 1} or labels <= {-1, 1}):
+            raise ValueError(
+                f'y takes values in {self.classes_.tolist()} and pos_label is not specified: either make y take '
+                'values in {0, 1} or {-1, 1}, or pass pos_label explicitly.'
+            )
+        return 1
+
     def _fit_resample(
         self,
         X: NDArray[Any],
@@ -243,7 +267,8 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
             fp_cost, fn_cost = resolved['fp_cost'], resolved['fn_cost']
             tp_cost = tn_cost = 0.0
 
-        is_positive = y == 1
+        self.classes_ = np.unique(y)
+        is_positive = y == self._resolve_pos_label()
         # What deciding a sample wrongly costs over deciding it rightly.
         misclassification_costs = np.abs(
             np.where(is_positive, np.asarray(fn_cost, dtype=np.float64), np.asarray(fp_cost, dtype=np.float64))

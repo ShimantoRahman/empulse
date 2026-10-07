@@ -134,6 +134,9 @@ Models
   the ranking it learned in ``predict_proba``: large outputs of the expression all rounded to a
   probability of 1. Its new ``decision_function`` returns the outputs of the expression, centered on
   their median on the training data and scaled by their spread there.
+- |Feature| :class:`~empulse.models.ProfSRClassifier` has a ``formula_`` attribute that writes out the
+  whole rule from features to probability, and a ``select_program`` method that makes another
+  expression of the Pareto front the fitted one, with consistent probabilities and predictions.
 - |Efficiency| :class:`~empulse.models.ProfSRClassifier` fits 3-5x faster, and with a ``RANKING``
   loss such as its default it no longer scores large outputs as ties.
 - |Efficiency| :class:`~empulse.models.ProfTreeClassifier` fits about 16-24x faster with its default
@@ -265,6 +268,13 @@ Samplers
   deciding it wrongly costs over deciding it rightly, so a benefit of a correct decision counts.
   It ignored those benefits, and with a matrix such as
   :func:`~empulse.metrics.expected_cost_loss_churn` dropped every positive sample.
+- |API| :class:`~empulse.samplers.CostSensitiveSampler` has a new ``pos_label`` argument. Without
+  it, labels must be ``{0, 1}`` or ``{-1, 1}``; other labels, such as strings, raise a
+  ``ValueError`` instead of being silently treated as negative.
+- |Fix| :class:`~empulse.samplers.BiasRelabler` and :class:`~empulse.models.BiasRelabelingClassifier`
+  relabel towards parity whichever group has the higher positive rate. When the group with
+  ``sensitive_feature == 0`` had it, they widened the gap instead. A custom ``strategy`` callable
+  returns a signed number of pairs: a negative one promotes in group ``1`` and demotes in group ``0``.
 
 Optimizers
 ----------
@@ -281,6 +291,14 @@ Optimizers
   individuals. ``n_jobs=4`` was about 7x slower than ``n_jobs=1`` and is now about 2x faster.
 - |API| :class:`~empulse.optimizers.Optimizer` has a new ``requires_gradient`` property. A custom
   optimizer that returns ``False`` gets a faster objective without a gradient.
+- |Fix| :class:`~empulse.optimizers.SGD`, :class:`~empulse.optimizers.Adam` and
+  :class:`~empulse.optimizers.RMSProp` with ``batch_size`` or ``alpha_schedule`` return the last
+  iterate, scored on the full objective. They returned the iterate with the lowest loss, but losses
+  on different mini-batches or at different ``alpha`` cannot be compared.
+- |Fix| :class:`~empulse.optimizers.StepSchedule` with ``gamma > 1`` no longer raises an
+  ``OverflowError`` after many epochs.
+- |Fix| :class:`~empulse.optimizers.MemeticOptimizer` reports ``success=False`` when it stops at
+  ``max_iter``.
 
 Datasets
 --------
@@ -305,6 +323,11 @@ Datasets
   The dataset is downloaded again once; the result is unchanged.
 - |Fix| The ``fetch_*`` loaders write downloads to their cache atomically, so processes sharing a
   data home no longer read a partially written file.
+- |Fix| The ``fetch_*`` loaders retry a download that was cut off, instead of caching the truncated
+  file or failing with an unexpected error.
+- |Fix| :func:`~empulse.datasets.load_credit_scoring_pakdd` encodes married and widowed applicants
+  as ``'married'`` and ``'widowed'`` instead of ``'other'``.
+- |Fix| A ``~`` in ``EMPULSE_DATA_HOME`` is expanded to the home directory.
 
 Packaging and dependencies
 ---------------------------

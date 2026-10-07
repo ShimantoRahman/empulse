@@ -42,7 +42,7 @@ def load_churn_tv_subscriptions(*, backend: IntoBackend[EagerAllowed]) -> Datase
     The goal is to predict whether a customer will churn or not.
     The target variable is whether the customer churned, 'yes' = 1 and 'no' = 0.
 
-    This dataset is from a TV cable provider containing all 9410 customers
+    This dataset is from a TV cable provider containing 9379 customers
     active during the first semester of 2014.
     Feature names are anonymized to protect the privacy of the customers.
 
@@ -51,10 +51,10 @@ def load_churn_tv_subscriptions(*, backend: IntoBackend[EagerAllowed]) -> Datase
 
     =================   ==============
     Classes                          2
-    Churners                       455
-    Non-churners                  8955
-    Samples                       9410
-    Features                        45
+    Churners                       449
+    Non-churners                  8930
+    Samples                       9379
+    Features                        46
     =================   ==============
 
     Parameters

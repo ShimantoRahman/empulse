@@ -204,16 +204,16 @@ Data Description
      - If the applicant works in the same state where lives ('yes' = 1, 'no' = 0)
      - binary
    * - filled_in_mothers_name
-     - If the applicant had filled the father's name in the form ('yes' = 1, 'no' = 0)
+     - If the applicant had filled the mother's name in the form ('yes' = 1, 'no' = 0)
      - binary
    * - filled_in_fathers_name
-     - If the applicant had filled the mother's name in the form ('yes' = 1, 'no' = 0)
+     - If the applicant had filled the father's name in the form ('yes' = 1, 'no' = 0)
      - binary
    * - shop_rank
      - Company's rating for the shop in commercial terms
      - ordinal
    * - marital_status
-     - The marital status of the applicant ('single', 'married', 'divorced', 'widow', 'other')
+     - The marital status of the applicant ('single', 'married', 'divorced', 'widowed', 'other')
      - categorical
    * - residence_type
      - The type of the applicant's residence ('owned', 'rented', 'parents', 'other')

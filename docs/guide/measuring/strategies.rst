@@ -242,6 +242,15 @@ with :math:`w` the joint density of the cost-benefit distribution. This is what 
 "expected maximum profit" family of measures from the plain maximum profit ones. In practice only
 one parameter is usually treated as uncertain.
 
+.. themed-figure:: uncertainty_order
+    :alt: Expected maximum profit averages the best profit in each offer acceptance scenario.
+        At 20% acceptance, threshold 0.70 earns 6 per customer and threshold 0.30 earns 2.
+        At 60% acceptance, the thresholds earn 18 and 26. The equally likely scenario maxima
+        average to 16. A continuous distribution integrates those scenario-specific maxima.
+
+    Expected maximum profit averages the best profit within each acceptance scenario.
+    With a continuous distribution, the metric integrates those scenario-specific maxima.
+
 How the integral is computed
 ----------------------------
 
@@ -330,6 +339,14 @@ AUEPC
 Maximum profit measures report the peak of the profit curve. :class:`~empulse.metrics.AUEPC`
 reports the **area under it**: not "how much can I make at the best cut-off?" but "how good is this
 ranking across all the cut-offs I might end up using?".
+
+.. themed-figure:: peak_and_area
+    :alt: A cumulative-profit curve has a maximum of 0.875 per customer. Beside it, the ratio
+        to the oracle curve has a shaded area over the profitable targeting interval. Its
+        normalized area is 0.844 and summarizes multiple operating points.
+
+    EmpiricalMaxProfit reports the peak. AUEPC summarizes the profit ratio across targeting
+    fractions, stopping where the oracle profit is no longer positive.
 
 .. code-block:: python
 

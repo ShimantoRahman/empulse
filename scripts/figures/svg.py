@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Literal
 from xml.sax.saxutils import escape
 
-from palette import FONT_STACK
+from typography import lettering
 
 Anchor = Literal['start', 'middle', 'end']
 Baseline = Literal['auto', 'middle', 'hanging']
@@ -69,20 +69,16 @@ class Canvas:
         italic: bool = False,
     ) -> None:
         """Draw a single line of text."""
-        family = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' if mono else FONT_STACK
-        attrs = [
-            f'x="{x}" y="{y}"',
-            f'fill="{self._c(fill)}"',
-            f'font-family="{family}"',
-            f'font-size="{size}"',
-            f'text-anchor="{anchor}"',
-            f'dominant-baseline="{baseline}"',
-        ]
-        if weight != 'normal':
-            attrs.append(f'font-weight="{weight}"')
-        if italic:
-            attrs.append('font-style="italic"')
-        self._parts.append(f'  <text {" ".join(attrs)}>{escape(content)}</text>')
+        if not content.strip():
+            return
+        outline, (left, bottom, right, top) = lettering(content, size, mono, 400 if weight == 'normal' else int(weight))
+        shift_x = {'start': -left, 'middle': -(left + right) / 2, 'end': -right}[anchor]
+        shift_y = {'auto': 0, 'middle': (bottom + top) / 2, 'hanging': top}[baseline]
+        skew = ' skewX(-12)' if italic else ''
+        self._parts.append(
+            f'  <g fill="{self._c(fill)}" transform="translate({x + shift_x:.3f} {y + shift_y:.3f}) '
+            f'scale(1 -1){skew}"><title>{escape(content)}</title><path d="{outline}"/></g>'
+        )
 
     def line(
         self,

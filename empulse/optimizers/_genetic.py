@@ -56,6 +56,7 @@ class GeneticAlgorithmOptimizer(Optimizer):
         Mutation probability.
     elitism : float, default=0.05
         Fraction of best individuals carried over unchanged each generation.
+        At least one individual is always carried over.
     random_state : int or None, default=None
         Seed for reproducibility.
     n_jobs : int, default=1
@@ -210,6 +211,7 @@ class MemeticOptimizer(Optimizer):
         Mutation probability (passed to :class:`LamarckianGeneration`).
     elitism : float, default=0.05
         Elite fraction (passed to :class:`LamarckianGeneration`).
+        At least one individual is always carried over.
     local_steps : int, default=5
         Number of gradient steps per individual per generation.
     lr : float, default=0.05
@@ -314,13 +316,15 @@ class MemeticOptimizer(Optimizer):
         scale = objective_scale(objective)
 
         last_gen: Generation | None = None
+        converged = False
         for i, last_gen in enumerate(gen.optimize(fitness, bounds_list)):
-            if i + 1 >= self.max_iter:
-                break
             if len(last_gen.fx_best) >= self.patience:
                 recent = last_gen.fx_best[-self.patience :]
                 if max(recent) - min(recent) < self.tol * scale:
+                    converged = True
                     break
+            if i + 1 >= self.max_iter:
+                break
 
         # optimize() is an infinite generator, so last_gen is set after the first iteration.
         assert last_gen is not None
@@ -329,10 +333,10 @@ class MemeticOptimizer(Optimizer):
         loss = objective.logit_loss(ga_result.x)
         return OptimizeResult(  # type: ignore[call-arg]
             x=ga_result.x,
-            success=True,
+            success=converged,
             fun=float(loss),
-            message='Lamarckian Memetic finished',
-            status=0,
+            message='Converged.' if converged else 'Maximum number of iterations reached.',
+            status=0 if converged else 1,
             nit=ga_result.nit,
             nfev=ga_result.nfev,
         )

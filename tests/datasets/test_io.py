@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import gzip
+import http.server
+import threading
 from pathlib import Path
 from typing import ClassVar
 from unittest.mock import patch
@@ -14,6 +16,7 @@ import pytest
 
 from empulse.datasets import get_data_home
 from empulse.datasets._io import (
+    _download_to_file,
     _find_column,
     _read_csv_gz,
     _sanitize_column_name,
@@ -264,6 +267,32 @@ class TestLoadOrFetchOpenml:
         assert df.columns == ['amount', 'label']
 
 
+class _ShortBodyHandler(http.server.BaseHTTPRequestHandler):
+    """Promise 1000 bytes and send 500, as a dropped connection would."""
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Length', '1000')
+        self.end_headers()
+        self.wfile.write(b'x' * 500)
+
+    def log_message(self, *args):
+        pass
+
+
+def test_download_to_file_rejects_a_truncated_body(tmp_path):
+    server = http.server.HTTPServer(('127.0.0.1', 0), _ShortBodyHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f'http://127.0.0.1:{server.server_address[1]}/data.parquet'
+        with pytest.raises(OSError, match='500 of 1000 bytes'):
+            _download_to_file(url, tmp_path / 'data.parquet', n_retries=0)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 class TestGetDataHome:
     """``get_data_home`` was the only name in the public API with no test reference at all."""
 
@@ -278,6 +307,12 @@ class TestGetDataHome:
         monkeypatch.setenv('EMPULSE_DATA_HOME', str(target))
         assert get_data_home() == target
         assert target.is_dir()
+
+    def test_environment_variable_expands_the_home_directory(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('HOME', str(tmp_path))
+        monkeypatch.setenv('USERPROFILE', str(tmp_path))
+        monkeypatch.setenv('EMPULSE_DATA_HOME', '~/from_env')
+        assert get_data_home() == tmp_path / 'from_env'
 
     def test_explicit_path_overrides_the_environment_variable(self, tmp_path, monkeypatch):
         monkeypatch.setenv('EMPULSE_DATA_HOME', str(tmp_path / 'from_env'))

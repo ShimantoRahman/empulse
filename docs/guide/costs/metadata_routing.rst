@@ -134,6 +134,14 @@ Set ``greater_is_better`` to match the strategy's direction: ``True`` for
 :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.LogCost`. Every metric exposes this as
 ``metric.direction`` if you would rather not hard-code it.
 
+.. themed-figure:: fold_aligned_costs
+    :alt: The model requests clv through set_fit_request. Three-fold cross-validation holds out
+        rows A and B, C and D, and E and F in turn. Each cloned model fits on the other four rows
+        and receives only their corresponding clv values.
+
+    Declare the fit request once, then pass the full cost array to cross-validation. Each cloned
+    model receives the training slice of clv, aligned with its training rows.
+
 Putting it together
 ===================
 
