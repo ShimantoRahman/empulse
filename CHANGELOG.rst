@@ -1,6 +1,9 @@
 `Unreleased`_
 =============
 
+`0.13.0`_ (07-10-2026)
+======================
+
 Metrics
 -------
 
@@ -1054,7 +1057,8 @@ Packaging and dependencies
   target probabilities from y_pred to y_proba
 
 
-.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.12.0...main
+.. _Unreleased: https://github.com/ShimantoRahman/empulse/compare/0.13.0...main
+.. _0.13.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.13.0
 .. _0.12.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.12.0
 .. _0.11.1: https://github.com/ShimantoRahman/empulse/releases/tag/0.11.1
 .. _0.11.0: https://github.com/ShimantoRahman/empulse/releases/tag/0.11.0

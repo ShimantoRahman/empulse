@@ -15,5 +15,5 @@ version: 0.12.0
 identifiers:
   - type: doi
     value: 10.5281/zenodo.11185664
-date-released: 2026-09-19
+date-released: 2026-10-07
 url: "https://github.com/ShimantoRahman/empulse"
