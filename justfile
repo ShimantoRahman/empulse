@@ -1,5 +1,5 @@
-# use cmd.exe instead of sh:
-set shell := ["cmd.exe", "/c"]
+# Windows runs recipes through cmd.exe, Linux and macOS through sh
+set windows-shell := ["cmd.exe", "/c"]
 
 # Default recipe to display help
 [private]
@@ -124,11 +124,26 @@ BUILDDIR := "docs/_build"
 figures:
     uv run python scripts/figures/build.py
 
-# Build HTML documentation
-[group('docs')]
-html:
+_html:
     {{SPHINXBUILD}} -M html {{SOURCEDIR}} {{BUILDDIR}} {{SPHINXOPTS}}
+
+# Build HTML documentation
+[windows]
+[group('docs')]
+html: _html
     start chrome %CD%\{{BUILDDIR}}\html\index.html
+
+# Build HTML documentation
+[macos]
+[group('docs')]
+html: _html
+    open {{BUILDDIR}}/html/index.html
+
+# Build HTML documentation
+[linux]
+[group('docs')]
+html: _html
+    xdg-open {{BUILDDIR}}/html/index.html || echo "Documentation built at {{BUILDDIR}}/html/index.html"
 
 # Build HTML documentation, failing on any warning (matches Read the Docs)
 [group('docs')]
@@ -152,7 +167,12 @@ linkcheck:
 verify-version:
     @powershell -ExecutionPolicy Bypass -File scripts/verify-version.ps1
 
+# Verify version consistency across __init__.py, CITATION.cff, and CHANGELOG.rst
+[unix]
+[group('deploy')]
+verify-version:
+    @sh scripts/verify-version.sh
+
 # Run all preflight checks before deployment
-[windows]
 [group('deploy')]
 preflight: verify-version html-strict linkcheck tox update-sklearn-compat sklearn-compat
