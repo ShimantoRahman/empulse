@@ -85,7 +85,7 @@ or the [full tutorial](https://empulse.readthedocs.io/en/stable/tutorial.html).
 | **[Cost-sensitive models](https://empulse.readthedocs.io/en/stable/reference/models.html)** | Logistic regression, gradient boosting, trees, forests, bagging, minimax probability machines and evolutionary trees — all trained on your cost matrix. |
 | **[Threshold tuning](https://empulse.readthedocs.io/en/stable/guide/deciding/thresholds.html)** | Pick the cut-off that maximises profit instead of defaulting to 0.5, or classify the top-k% by score. |
 | **[Instance-dependent costs](https://empulse.readthedocs.io/en/stable/guide/costs/metadata_routing.html#instance-based-cv)** | Costs that differ per row are routed through pipelines and cross-validation automatically via scikit-learn metadata routing. |
-| **[Robustness](https://empulse.readthedocs.io/en/stable/guide/models/robustcs.html)** | `RobustCSClassifier` detects and imputes outliers in noisy instance-dependent costs. |
+| **[Robustness](https://empulse.readthedocs.io/en/stable/guide/training/robustcs.html)** | `RobustCSClassifier` detects and imputes outliers in noisy instance-dependent costs. |
 | **[Samplers](https://empulse.readthedocs.io/en/stable/reference/samplers.html)** | Cost-proportionate resampling and bias mitigation to make any estimator cost-sensitive. |
 | **[Optimizers](https://empulse.readthedocs.io/en/stable/reference/optimizers.html)** | L-BFGS-B, SGD/Adam/RMSProp with learning-rate schedules, and genetic/memetic algorithms for non-smooth objectives. |
 | **[Datasets](https://empulse.readthedocs.io/en/stable/guide/datasets.html)** | Cost-sensitive datasets, each shipping its own cost matrix. |
