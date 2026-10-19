@@ -15,10 +15,10 @@ step by step, so that both give the same regions and the same score. It covers p
 degree two, whose crossings have closed-form roots; the Python code handles the rest.
 """
 
-from libc.math cimport exp, expm1, isfinite, isnan, log, pow, sqrt
+from libc.math cimport copysign, exp, expm1, isfinite, isnan, log, pow, sqrt
 from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
-from scipy.special.cython_special cimport betainc, chdtr, gamma, gammainc, ndtr
+from scipy.special.cython_special cimport betainc, chdtr, gamma, gammainc, ndtr, poch
 
 from .._cy_convex_hull.convex_hull cimport Group, Point, _add_groups_to_hull
 
@@ -96,14 +96,16 @@ cdef void _partition(
     Fills ``bounds`` with the region edges, ascending, and ``vertices`` with the optimal hull
     vertex on each region.
 
-    Only adjacent vertices can swap rank, since the hull is convex, so the region edges are among
-    the crossings of adjacent pairs of curves. The crossings are sorted, near-duplicates merged, and
-    each region between them labelled with the vertex on top at a point inside it. Neighbouring
-    regions with the same vertex are one region.
+    Only vertices adjacent on the polygon the hull and the diagonal enclose can swap rank, the last
+    vertex paired with the first (see ``envelope._adjacent_pairs``), so the region edges are among the
+    crossings of those pairs of curves. The crossings are sorted, near-duplicates merged, and each
+    region between them labelled with the vertex on top at a point inside it. Neighbouring regions
+    with the same vertex are one region.
     """
-    cdef Py_ssize_t m, k, i, best
+    cdef Py_ssize_t m, k, i, best, other
+    cdef Py_ssize_t n_pairs = n_vertices if n_vertices > 2 else n_vertices - 1
     cdef int degree = -1
-    cdef double constant, linear, quadratic, discriminant, root_of, span
+    cdef double constant, linear, quadratic, discriminant, q, span
     cdef vector[double] crossings, edges
 
     # At most two crossings per adjacent pair, plus the two ends of the support.
@@ -114,31 +116,37 @@ cdef void _partition(
 
     # The highest power at which any adjacent pair differs: powers above it cancel in every pair.
     for k in range(n_powers):
-        for m in range(n_vertices - 1):
-            if coefficients[m * n_powers + k] - coefficients[(m + 1) * n_powers + k] != 0.0:
+        for m in range(n_pairs):
+            other = (m + 1) % n_vertices
+            if coefficients[m * n_powers + k] - coefficients[other * n_powers + k] != 0.0:
                 degree = k
                 break
 
     if degree == 1:
-        for m in range(n_vertices - 1):
-            constant = coefficients[m * n_powers] - coefficients[(m + 1) * n_powers]
-            linear = coefficients[m * n_powers + 1] - coefficients[(m + 1) * n_powers + 1]
+        for m in range(n_pairs):
+            other = (m + 1) % n_vertices
+            constant = coefficients[m * n_powers] - coefficients[other * n_powers]
+            linear = coefficients[m * n_powers + 1] - coefficients[other * n_powers + 1]
             if linear != 0.0:
                 _add_crossing(crossings, -constant / linear, lower, upper)
     elif degree == 2:
-        for m in range(n_vertices - 1):
-            constant = coefficients[m * n_powers] - coefficients[(m + 1) * n_powers]
-            linear = coefficients[m * n_powers + 1] - coefficients[(m + 1) * n_powers + 1]
-            quadratic = coefficients[m * n_powers + 2] - coefficients[(m + 1) * n_powers + 2]
+        for m in range(n_pairs):
+            other = (m + 1) % n_vertices
+            constant = coefficients[m * n_powers] - coefficients[other * n_powers]
+            linear = coefficients[m * n_powers + 1] - coefficients[other * n_powers + 1]
+            quadratic = coefficients[m * n_powers + 2] - coefficients[other * n_powers + 2]
             if quadratic == 0.0:
                 if linear != 0.0:
                     _add_crossing(crossings, -constant / linear, lower, upper)
                 continue
             discriminant = linear * linear - 4.0 * quadratic * constant
             if discriminant >= 0.0:  # a negative one means the two curves never cross
-                root_of = sqrt(discriminant)
-                _add_crossing(crossings, (-linear - root_of) / (2.0 * quadratic), lower, upper)
-                _add_crossing(crossings, (-linear + root_of) / (2.0 * quadratic), lower, upper)
+                # The textbook formula subtracts nearly equal numbers when the quadratic term is
+                # small; this form loses no digits.
+                q = -0.5 * (linear + copysign(sqrt(discriminant), linear))
+                _add_crossing(crossings, q / quadratic, lower, upper)
+                if q != 0.0:
+                    _add_crossing(crossings, constant / q, lower, upper)
 
     sort(crossings.begin(), crossings.end())
     span = max(abs(lower) if isfinite(lower) else 0.0, abs(upper) if isfinite(upper) else 0.0, 1.0)
@@ -383,7 +391,7 @@ cdef double _size_biased_cdf(Distribution distribution, const double* p, int k, 
 
 
 cdef double _moment(Distribution distribution, const double* p, int k) noexcept nogil:
-    """E[X**k]."""
+    """E[X**k], with gamma-function ratios as rising factorials, which do not overflow for large shapes."""
     if distribution == EXPONENTIAL:
         return 1.0 if k == 0 else gamma(1.0 + k) * pow(1.0 / p[0], k)
     if distribution == WEIBULL:
@@ -391,15 +399,15 @@ cdef double _moment(Distribution distribution, const double* p, int k) noexcept 
     if k == 0:
         return 1.0
     if distribution == GAMMA:
-        return pow(p[1], k) * (gamma(p[0] + k) / gamma(p[0]))
+        return pow(p[1], k) * poch(p[0], k)
     if distribution == PARETO:
         return (p[1] * pow(p[0], k)) / (p[1] - k)
     if distribution == CHI_SQUARED:
-        return pow(2.0, k) * gamma(k + p[0] / 2.0) / gamma(p[0] / 2.0)
+        return pow(2.0, k) * poch(p[0] / 2.0, k)
     if distribution == LOG_NORMAL:
         return exp(k * p[0] + (k * k * (p[1] * p[1])) / 2.0)
     # BETA
-    return (gamma(p[0] + k) * gamma(p[0] + p[1])) / (gamma(p[0]) * gamma(p[0] + p[1] + k))
+    return poch(p[0], k) / poch(p[0] + p[1], k)
 
 
 cdef double _integrate_positive(

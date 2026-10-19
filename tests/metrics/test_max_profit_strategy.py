@@ -336,6 +336,63 @@ class TestPiecewiseAgreesWithBruteForce:
         expected = brute_force_emp(y_true, y_score, lambda x: x**degree, 0.2, st.norm.pdf, -12.0, 12.0, 800_001)
         assert metric(y_true, y_score, d=0.2) == pytest.approx(expected, rel=1e-5)
 
+    @pytest.mark.parametrize(('degree', 'scale'), [(1, 1), (3, 3)], ids=['compiled', 'python'])
+    def test_optimum_jumping_between_targeting_nobody_and_everybody(self, degree, scale):
+        """
+        Where targeting either class loses money, the best hull vertex jumps from (1, 1) to (0, 0).
+
+        Those two vertices are not neighbours on the hull, only on the diagonal that closes it.
+        """
+        rng = np.random.default_rng(25)
+        y_true = (rng.random(300) < 0.6).astype(int)
+        y_score = rng.random(300) + y_true
+        x = sympy.stats.Uniform('x', -3, 1)
+        metric = Metric(CostMatrix().add_tp_benefit(x**degree / scale).add_fp_cost(2 * x + 1), MaxProfit())
+
+        expected = brute_force_emp(
+            y_true,
+            y_score,
+            lambda v: v**degree / scale,
+            lambda v: 2 * v + 1,
+            lambda v: np.full_like(v, 0.25),
+            -3.0,
+            1.0,
+        )
+        assert metric(y_true, y_score) == pytest.approx(expected, rel=1e-5)
+
+    @pytest.mark.parametrize(
+        ('distribution', 'pdf', 'lower', 'upper'),
+        [
+            (sympy.stats.Gamma('v', 200, 0.05), lambda v: st.gamma.pdf(v, a=200, scale=0.05), 5.0, 15.0),
+            (sympy.stats.ChiSquared('v', 400), lambda v: st.chi2.pdf(v, 400), 200.0, 650.0),
+            (sympy.stats.Beta('v', 150, 60), lambda v: st.beta.pdf(v, 150, 60), 0.0, 1.0),
+        ],
+        ids=['gamma', 'chi-squared', 'beta'],
+    )
+    @pytest.mark.parametrize('degree', [1, 3], ids=['compiled', 'python'])
+    def test_large_shape_parameters(self, hull_data, distribution, pdf, lower, upper, degree):
+        """The moments' gamma-function ratios must not overflow to inf / inf for shapes above ~171."""
+        y_true, y_score = hull_data
+        scale = 10.0 ** (degree - 1) if upper < 100 else 400.0 ** (degree - 1)
+        metric = Metric(CostMatrix().add_tp_benefit(distribution**degree / scale).add_fp_cost(self.COST), MaxProfit())
+
+        expected = brute_force_emp(y_true, y_score, lambda v: v**degree / scale, 0.1, pdf, lower, upper)
+        assert metric(y_true, y_score, d=0.1) == pytest.approx(expected, rel=1e-5)
+
+
+class TestCrossingPairs:
+    def test_last_vertex_is_paired_with_the_first(self):
+        coefficients = np.array([[0.0, 0.0], [1.0, 2.0], [-1.0, -1.0]])
+        envelope = PolynomialEnvelope(coefficients)
+        # Vertex 0 and vertex 2 cross at x = -1, which only the closing pair finds.
+        assert np.any(np.isclose(envelope.crossings(-5.0, 5.0), -1.0))
+
+    def test_quadratic_roots_keep_their_digits_when_the_quadratic_term_is_small(self):
+        # (x - 0.5)(1e-12 x - 1) has roots 0.5 and 1e12; the textbook formula loses the small one.
+        coefficients = np.array([[0.5, -1.0 - 0.5e-12, 1e-12], [0.0, 0.0, 0.0]])
+        roots = PolynomialEnvelope(coefficients).crossings(-10.0, 10.0)
+        assert roots == pytest.approx([0.5], rel=1e-12)
+
 
 class TestProfitFunctionsBeyondRadicals:
     """

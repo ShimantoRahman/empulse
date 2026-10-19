@@ -454,6 +454,18 @@ class TestDistributionWithLiteralAndSymbolicParameters:
         assert grad_mixed == pytest.approx(grad_symbolic)
 
 
+def test_monte_carlo_result_does_not_depend_on_earlier_calls(y_true_and_prediction):
+    """With distribution parameters given at call time, the samples for a set of values are always the same."""
+    y_true, y_score = y_true_and_prediction
+    a = sympy.symbols('a')
+    cost_matrix = CostMatrix().add_tp_benefit(sympy.stats.Gamma('g', a, 1)).add_fp_cost(1)
+    metric = Metric(cost_matrix, MaxProfit(integration_method='monte-carlo', random_state=0))
+
+    first = metric(y_true, y_score, a=10.0)
+    metric(y_true, y_score, a=12.0)
+    assert metric(y_true, y_score, a=10.0) == first
+
+
 class TestQuasiMonteCarloIsReproducible:
     """
     ``random_state`` fixes a quasi-Monte Carlo result, however often the strategy is copied.

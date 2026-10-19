@@ -82,15 +82,20 @@ class ProfitEnvelope(Protocol):
 
 
 def _adjacent_pairs(n_vertices: int) -> tuple[IntNDArray, IntNDArray]:
-    """Index the adjacent hull-vertex pairs.
+    """Index the adjacent hull-vertex pairs, the last vertex paired with the first.
 
-    Only adjacent pairs need checking. Hull convexity makes the vertex slopes monotone along the
-    hull, so the optimal vertex is a monotone function of the isocline slope; every rank change is
-    therefore a swap between neighbours, even when the slope itself moves non-monotonically in the
-    stochastic variable. This keeps the work linear in the number of vertices rather than quadratic.
+    Only adjacent pairs need checking. The profit is linear in the rates, so the optimal vertex
+    maximizes a linear function over the convex polygon the upper hull and the diagonal enclose. As
+    the stochastic variable moves, the optimum can only pass between vertices joined by an edge of
+    that polygon, even when the profit's direction turns non-monotonically. The diagonal joins the
+    last vertex, (1, 1), to the first, (0, 0): when both the positive and the negative class lose by
+    being targeted, the optimum jumps between those two directly. This keeps the work linear in the
+    number of vertices rather than quadratic.
     """
     index = np.arange(n_vertices)
-    return index[:-1], index[1:]
+    if n_vertices <= 2:
+        return index[:-1], index[1:]
+    return index, np.roll(index, -1)
 
 
 def _linear_roots(differences: FloatNDArray) -> FloatNDArray:
@@ -105,7 +110,9 @@ def _quadratic_roots(differences: FloatNDArray) -> FloatNDArray:
     """Solve ``a_2 x^2 + a_1 x + a_0 = 0`` for every hull pair at once.
 
     Pairs whose quadratic term cancels are linear and are solved as such; a negative discriminant
-    yields NaN, which is the complex-root case and contributes no boundary.
+    yields NaN, which is the complex-root case and contributes no boundary. The roots are taken as
+    ``q / a_2`` and ``a_0 / q``, which, unlike the textbook formula, lose no digits to cancellation
+    when the quadratic term is small.
     """
     constant = np.asarray(differences[:, 0], dtype=np.float64)
     linear = np.asarray(differences[:, 1], dtype=np.float64)
@@ -113,11 +120,12 @@ def _quadratic_roots(differences: FloatNDArray) -> FloatNDArray:
     with np.errstate(divide='ignore', invalid='ignore'):
         discriminant = linear * linear - 4.0 * quadratic * constant
         root_of = np.sqrt(np.where(discriminant >= 0.0, discriminant, np.nan))
-        lower = (-linear - root_of) / (2.0 * quadratic)
-        upper = (-linear + root_of) / (2.0 * quadratic)
+        q = -0.5 * (linear + np.copysign(root_of, linear))
+        first = q / quadratic
+        second = np.where(q != 0.0, constant / q, np.nan)
         degenerate = np.where(linear != 0.0, -constant / linear, np.nan)
     is_linear = quadratic == 0.0
-    return np.concatenate([np.where(is_linear, degenerate, lower), np.where(is_linear, np.nan, upper)])
+    return np.concatenate([np.where(is_linear, degenerate, first), np.where(is_linear, np.nan, second)])
 
 
 def _effective_degree(differences: FloatNDArray) -> IntNDArray:

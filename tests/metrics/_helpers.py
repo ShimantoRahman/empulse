@@ -38,6 +38,8 @@ def brute_force_emp(y_true, y_score, benefit_of, cost, pdf, lower, upper, n_poin
     """
     Independent reference: integrate ``max_t P(t, x) * h(x)`` on a dense grid.
 
+    ``cost`` is the false-positive cost, a number or a function of ``x``.
+
     Deliberately shares nothing with the package beyond the convex hull -- no piecewise regions, no
     partial moments, no root finding -- so it can only agree with the implementation by both being
     right.
@@ -47,7 +49,6 @@ def brute_force_emp(y_true, y_score, benefit_of, cost, pdf, lower, upper, n_poin
     tprs, fprs = _convex_hull(y_true, y_score)
 
     x = np.linspace(lower, upper, n_points)
-    profit = positive_class_prior * np.outer(tprs, benefit_of(x)) - negative_class_prior * np.outer(
-        fprs, np.full_like(x, cost)
-    )
+    cost_of_x = cost(x) if callable(cost) else np.full_like(x, cost)
+    profit = positive_class_prior * np.outer(tprs, benefit_of(x)) - negative_class_prior * np.outer(fprs, cost_of_x)
     return float(trapezoid(profit.max(axis=0) * pdf(x), x))

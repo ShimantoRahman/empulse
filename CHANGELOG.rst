@@ -23,6 +23,14 @@ Metrics
 - |Fix| Instance-dependent distribution parameters are validated when the distribution has another
   parameter, e.g. a negative ``alpha`` array beside a scalar ``beta``.
 - |Fix| Metrics accept boolean labels.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables finds the best threshold when
+  targeting either class loses money, where the optimum jumps between targeting everybody and nobody.
+- |Fix| :class:`~empulse.metrics.MaxProfit` no longer returns ``nan`` for Gamma, Chi-squared and Beta
+  distributions with large shape parameters, such as :func:`~empulse.metrics.empc_score` with a
+  concentrated Beta prior.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
+  result for the same distribution parameters, whichever were evaluated before. Results for a given
+  ``random_state`` change.
 
 
 `0.13.1`_ (22-10-2026)

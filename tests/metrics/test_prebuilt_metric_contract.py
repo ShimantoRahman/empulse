@@ -201,8 +201,6 @@ def test_deterministic_churn_metric_is_a_lower_bound(trial):
     y_true, y_score = _relation_data(rng)
     contact_cost = rng.uniform(0, 100)
     incentive_cost = rng.uniform(0, 500)
-    # Bounded well below the overflow regime documented by
-    # `test_empc_score_overflows_for_a_concentrated_beta_prior` below.
     alpha, beta = rng.uniform(0.1, 30), rng.uniform(0.1, 30)
     clv = max(rng.uniform(0, 1000), contact_cost + incentive_cost + 1)
     shared = {'clv': clv, 'incentive_cost': incentive_cost, 'contact_cost': contact_cost}
@@ -231,18 +229,9 @@ def test_deterministic_acquisition_metric_is_a_lower_bound(trial):
     assert deterministic <= stochastic + 1e-6
 
 
-@pytest.mark.xfail(
-    reason=(
-        'empc_score returns nan once alpha + beta is large (roughly >= 160). The Beta moments are '
-        'computed as (gamma(alpha + k) * gamma(alpha + beta)) / (gamma(alpha) * gamma(alpha + beta + k)) '
-        'in max_profit_strategy/piecewise.py, and the numerator overflows float64 long before any of '
-        'the individual gamma calls do. Evaluating the ratio in log space (lgamma/betaln) would fix it. '
-        'A concentrated Beta prior is a legitimate way to express a confidently-known accept rate, so '
-        'this is reachable from ordinary use.'
-    )
-)
 @pytest.mark.parametrize('concentration', [80, 100, 200], ids=lambda c: f'alpha=beta={c}')
-def test_empc_score_overflows_for_a_concentrated_beta_prior(concentration):
+def test_empc_score_is_finite_for_a_concentrated_beta_prior(concentration):
+    """A concentrated Beta prior, a confidently known accept rate, keeps its moments finite."""
     rng = np.random.default_rng(0)
     y_true = np.concatenate([np.ones(600, dtype=np.int8), np.zeros(400, dtype=np.int8)])
     y_score = rng.beta(2, 2, 1000)

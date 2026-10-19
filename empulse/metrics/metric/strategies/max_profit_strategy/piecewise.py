@@ -997,7 +997,7 @@ class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
         lambda_rate = float(dist_params_list[1])
 
         shifted_cdf_k_diff = np.diff(st.gamma.cdf(bounds, a=alpha + k, scale=lambda_rate))
-        kth_moment = 1.0 if k == 0 else (lambda_rate**k) * (sp.gamma(alpha + k) / sp.gamma(alpha))
+        kth_moment = 1.0 if k == 0 else (lambda_rate**k) * sp.poch(alpha, k)
 
         return kth_moment, shifted_cdf_k_diff
 
@@ -1143,7 +1143,7 @@ class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
         # Shifted CDF: adding 2*k to degrees of freedom
         shifted_cdf_k_diff = np.diff(st.chi2.cdf(bounds, df=df + 2.0 * k))
 
-        kth_moment = 1.0 if k == 0 else (2.0**k) * sp.gamma(k + df / 2.0) / sp.gamma(df / 2.0)
+        kth_moment = 1.0 if k == 0 else (2.0**k) * sp.poch(df / 2.0, k)
 
         return kth_moment, shifted_cdf_k_diff
 
@@ -1184,12 +1184,9 @@ class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
         # Shifted CDF: shape alpha becomes alpha + k
         shifted_cdf_k_diff = np.diff(sp.betainc(alpha + k, beta, bounds))
 
-        if k == 0:
-            kth_moment = 1.0
-        else:
-            # E[x^k] = Beta(alpha + k, beta) / Beta(alpha, beta)
-            # Equivalently: (Gamma(alpha + k) * Gamma(alpha + beta)) / (Gamma(alpha) * Gamma(alpha + beta + k))
-            kth_moment = (sp.gamma(alpha + k) * sp.gamma(alpha + beta)) / (sp.gamma(alpha) * sp.gamma(alpha + beta + k))
+        # E[x^k] = Beta(alpha + k, beta) / Beta(alpha, beta), as rising factorials, which unlike the
+        # gamma functions do not overflow for large shapes.
+        kth_moment = 1.0 if k == 0 else float(sp.poch(alpha, k) / sp.poch(alpha + beta, k))
 
         return kth_moment, shifted_cdf_k_diff
 

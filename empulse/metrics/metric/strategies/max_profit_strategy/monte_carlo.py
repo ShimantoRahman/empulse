@@ -71,13 +71,14 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
         self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
 
+        # Every grid is drawn from this seed, so the samples for a set of distribution parameters do not
+        # depend on which were sampled before, nor on whether they were given up front or at call time.
+        self._grid_seed = int(rng.integers(2**63))
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
         if not any(arg.free_symbols for arg in self.distribution_args):
             self.param_grid_needs_recompute = False
-            self.param_grid: list[Any] | None = [
-                sympy.stats.sample(random_var, size=(n_mc_samples,), seed=rng) for random_var in random_symbols
-            ]
+            self.param_grid: list[Any] | None = self._sample(random_symbols, {})
             self.controls = _control_variates(random_symbols, self.param_grid, {})
         else:
             self.param_grid_needs_recompute = True
@@ -87,6 +88,16 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         # Parameters, the grid sampled for them and its control variates are cached as one tuple, so
         # a concurrent caller can never pair one call's parameters with another call's samples.
         self._grid_cache: tuple[dict[str, Any], list[Any], list[FloatNDArray]] | None = None
+
+    def _sample(self, random_symbols: Iterable[sympy.Expr], distribution_parameters: dict[str, Any]) -> list[Any]:
+        """Draw the samples of every stochastic variable for these distribution parameters."""
+        # Instances pickled by older versions lack the seed and keep drawing from their generator.
+        seed = getattr(self, '_grid_seed', None)
+        rng = self.rng if seed is None else np.random.default_rng(seed)
+        return [
+            sympy.stats.sample(_subs_by_name(random_var, distribution_parameters), size=(self.n_mc_samples,), seed=rng)
+            for random_var in random_symbols
+        ]
 
     def _score_hull(
         self,
@@ -105,12 +116,7 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
             if cached is not None and cached[0] == distribution_parameters:
                 param_grid, controls = cached[1], cached[2]
             else:
-                param_grid = [
-                    sympy.stats.sample(
-                        _subs_by_name(random_var, distribution_parameters), size=(self.n_mc_samples,), seed=self.rng
-                    )
-                    for random_var in self.random_symbols
-                ]
+                param_grid = self._sample(self.random_symbols, distribution_parameters)
                 controls = _control_variates(self.random_symbols, param_grid, distribution_parameters)
                 self._grid_cache = (distribution_parameters, param_grid, controls)
             dist_params = distribution_parameters
