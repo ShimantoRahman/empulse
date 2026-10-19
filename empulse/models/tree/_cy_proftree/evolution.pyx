@@ -363,7 +363,6 @@ cdef EvolutionResult evolve_forest_stochastic(
             tolerance=tol,
             patience=patience,
         ):
-            generation += 1
             break
 
     free_scratch(scratch, n_threads)
@@ -465,7 +464,6 @@ cdef EvolutionResult evolve_forest_native(
             tolerance=tol,
             patience=patience,
         ):
-            generation += 1
             break
 
     free_scratch(scratch, n_threads)

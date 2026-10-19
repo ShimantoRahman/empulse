@@ -61,6 +61,20 @@ Models
 - |Fix| :class:`~empulse.models.RobustCSClassifier` keeps the costs set on the wrapped estimator
   when neither ``fit`` nor its own constructor sets them, instead of overriding them with zero.
 - |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.
+- |Fix| The ``criterion="gini"`` impurity of :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` is per unit of weight, like ``"cost"`` and
+  ``"entropy"``. It grew with node size, which favoured even splits and let noise pass
+  ``min_impurity_decrease``. Trees grown with it change.
+- |Fix| A node of :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`
+  and :class:`~empulse.models.CSBaggingClassifier` that holds a single class is a leaf. With negative
+  or non-zero correct-decision costs such nodes kept splitting without changing any prediction.
+- |Fix| Weighted voting in :class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier` gives a tree without out-of-bag samples the average
+  weight, instead of making every weight uniform (forest) or failing (bagging).
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` raises a clear error for a base estimator whose
+  ``fit`` does not accept the costs.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` reports ``n_iter_`` correctly when stopping early,
+  and reads ``min_samples_split=1.0`` and ``min_samples_leaf=1.0`` as fractions of the samples.
 
 Bias mitigation and samplers
 ----------------------------

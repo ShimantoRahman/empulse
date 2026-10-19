@@ -323,13 +323,14 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         """
         n_samples = X.shape[0]
         population_size = 10 * X.shape[1] if self.population_size is None else self.population_size
-        if self.min_samples_split < 1:
+        # A float is a fraction of the samples, 1.0 included.
+        if not isinstance(self.min_samples_split, Integral):
             min_samples_split = np.ceil(self.min_samples_split * n_samples)
         else:
             min_samples_split = self.min_samples_split
         min_samples_split = max(min_samples_split, 2)
 
-        if self.min_samples_leaf < 1:
+        if not isinstance(self.min_samples_leaf, Integral):
             min_samples_leaf = np.ceil(self.min_samples_leaf * n_samples)
         else:
             min_samples_leaf = self.min_samples_leaf

@@ -1,3 +1,4 @@
+import inspect
 import threading
 from typing import Any, ClassVar, Literal, Self
 
@@ -9,7 +10,7 @@ from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble._base import _partition_estimators
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.metaestimators import available_if
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, has_fit_parameter
 
 from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import indices_to_mask, validate_data
@@ -57,7 +58,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
     Parameters
     ----------
     estimator : object, default=None
-        The base estimator to fit on random subsets of the dataset.
+        The base estimator to fit on random subsets of the dataset: a cost-sensitive classifier whose
+        ``fit`` accepts ``tp_cost``, ``tn_cost``, ``fn_cost`` and ``fp_cost``.
         If None, then the base estimator is a :class:`~empulse.models.CSTreeClassifier`.
 
     n_estimators : int, default=10
@@ -338,6 +340,20 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         else:
             self.base_estimator_ = clone(self.estimator)
 
+        fit_parameters = inspect.signature(self.base_estimator_.fit).parameters.values()
+        takes_any_keyword = any(parameter.kind is parameter.VAR_KEYWORD for parameter in fit_parameters)
+        missing_costs = [
+            name
+            for name in ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost')
+            if not takes_any_keyword and not has_fit_parameter(self.base_estimator_, name)
+        ]
+        if missing_costs:
+            raise ValueError(
+                f'The base estimator must be a cost-sensitive classifier whose fit accepts tp_cost, tn_cost, '
+                f'fn_cost and fp_cost, such as CSTreeClassifier, but the fit of {type(self.base_estimator_).__name__} '
+                f'does not accept {", ".join(missing_costs)}.'
+            )
+
         if self.combination == 'weighted_voting' and not hasattr(self.base_estimator_, 'predict_proba'):
             raise ValueError(
                 f'Weighted voting requires the base estimator to implement `predict_proba`, '
@@ -495,6 +511,9 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             range(self.n_estimators), self.estimators_, self.estimators_samples_, self.estimators_features_, strict=True
         ):
             mask = ~indices_to_mask(samples, n_samples)
+            if not mask.any():
+                losses[i] = np.nan
+                continue
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)

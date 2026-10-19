@@ -21,19 +21,22 @@ def goodness_weights(losses: FloatNDArray) -> FloatNDArray:
     Parameters
     ----------
     losses : ndarray of shape (n_estimators,)
-        The loss computed for each estimator (on its out-of-bag samples), lower is better.
+        The loss computed for each estimator (on its out-of-bag samples), lower is better. ``nan``
+        for an estimator that has no out-of-bag samples to be judged on.
 
     Returns
     -------
     weights : ndarray of shape (n_estimators,)
-        Non-negative weights summing to 1. Falls back to a uniform distribution when every
-        estimator has the same goodness (nothing to distinguish them by) or when the values are
-        non-finite.
+        Non-negative weights summing to 1. An estimator without a finite loss gets the average
+        goodness of the others. Falls back to a uniform distribution when every estimator has the
+        same goodness (nothing to distinguish them by) or none has a finite loss.
     """
     goodness: FloatNDArray = -np.asarray(losses, dtype=np.float64)
     n_estimators = goodness.shape[0]
-    if not np.isfinite(goodness).all():
+    finite = np.isfinite(goodness)
+    if not finite.any():
         return np.full(n_estimators, 1.0 / n_estimators)
+    goodness = np.where(finite, goodness, np.mean(goodness[finite]))
     shifted = goodness - goodness.min()
     total = shifted.sum()
     if total == 0.0:

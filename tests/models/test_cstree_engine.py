@@ -17,7 +17,7 @@ def _weighted_impurity(criterion, pos_cost, neg_cost, pos_weight, neg_weight):
     if criterion == 'cost':
         return min(pos_cost, neg_cost)
     if criterion == 'gini':
-        return min(pos_cost * pos_weight**2 / weight, neg_cost * neg_weight**2 / weight)
+        return min(pos_cost * pos_weight**2, neg_cost * neg_weight**2) / weight**2
     pos_entropy = np.log2(pos_weight / weight) if pos_weight > 0 else 0.0
     neg_entropy = np.log2(neg_weight / weight) if neg_weight > 0 else 0.0
     return min(-pos_cost * pos_entropy, -neg_cost * neg_entropy)
@@ -399,3 +399,33 @@ class TestGrowth:
         full = CSTreeClassifier(random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
         pruned = CSTreeClassifier(ccp_alpha=0.005, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
         assert 1 <= pruned.get_n_leaves() < full.get_n_leaves()
+
+
+@pytest.mark.parametrize('criterion', ['cost', 'gini', 'entropy'])
+def test_impurity_is_per_unit_of_weight(make_data, criterion):
+    """Duplicating every sample leaves each criterion's impurity, and so the grown tree, unchanged."""
+    X, y = make_data(n_samples=200, n_features=4)
+    tree = CSTreeClassifier(criterion=criterion, max_depth=3, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=3.0)
+    doubled = CSTreeClassifier(criterion=criterion, max_depth=3, random_state=0).fit(
+        np.vstack([X, X]), np.concatenate([y, y]), fp_cost=1.0, fn_cost=3.0
+    )
+    np.testing.assert_allclose(doubled.tree_.impurity, tree.tree_.impurity, rtol=1e-12)
+
+
+def test_gini_grows_nothing_from_noise(seeded_rng):
+    X = seeded_rng.normal(size=(2000, 5))
+    y = seeded_rng.integers(0, 2, 2000)
+    tree = CSTreeClassifier(criterion='gini', min_impurity_decrease=0.01).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+    assert tree.tree_.n_leaves == 1
+
+
+@pytest.mark.parametrize(
+    'costs', [{'tp_cost': -10.0, 'fn_cost': 5.0, 'fp_cost': 1.0}, {'tn_cost': 2.0, 'fn_cost': 3.0, 'fp_cost': 3.0}]
+)
+def test_a_node_of_one_class_is_a_leaf(make_data, costs):
+    """Also when a class's costs are shifted by a constant, which leaves such a node's cost above zero."""
+    X, y = make_data(n_samples=500, n_features=6)
+    tree = CSTreeClassifier(min_impurity_decrease=0.0, random_state=0).fit(X, y, **costs).tree_
+    internal = tree.children_left != -1
+    class_shares = tree.value[internal, 0, :]
+    assert np.all(class_shares > 0)

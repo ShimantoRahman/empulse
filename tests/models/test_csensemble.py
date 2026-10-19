@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.datasets import make_classification
+from sklearn.tree import DecisionTreeClassifier
 
 from empulse.models import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier
 from empulse.models._base.ensemble_weighting import (
@@ -267,8 +268,13 @@ class TestGoodnessWeights:
         weights = goodness_weights(np.array([2.0, 2.0, 2.0]))
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
 
-    def test_non_finite_values_fall_back_to_uniform(self):
+    def test_a_non_finite_loss_gets_the_average_goodness(self):
+        # Goodness -1, -2 (the mean of the finite ones) and -3, shifted to 2, 1 and 0.
         weights = goodness_weights(np.array([1.0, np.nan, 3.0]))
+        np.testing.assert_allclose(weights, [2 / 3, 1 / 3, 0.0])
+
+    def test_only_non_finite_losses_fall_back_to_uniform(self):
+        weights = goodness_weights(np.array([np.nan, np.inf, np.nan]))
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
 
 
@@ -411,3 +417,27 @@ class TestPredictVotesCheapestClasses:
         model.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
         np.testing.assert_array_equal(model.predict(X), model.predict_proba(X).argmax(axis=1))
+
+
+@pytest.mark.parametrize(
+    'make_ensemble',
+    [
+        lambda: CSForestClassifier(n_estimators=20, max_samples=3.0, combination='weighted_voting', random_state=0),
+        lambda: CSBaggingClassifier(n_estimators=20, max_samples=180, combination='weighted_voting', random_state=0),
+    ],
+    ids=['forest', 'bagging'],
+)
+def test_weighted_voting_with_trees_without_out_of_bag_samples(make_ensemble):
+    """A tree drawn without out-of-bag samples gets an average weight; the others are still weighted."""
+    X, y = make_classification(n_samples=60, random_state=0)
+    ensemble = make_ensemble().fit(X, y, fp_cost=1.0, fn_cost=5.0)
+    weights = ensemble.estimator_weights_
+    assert np.isfinite(weights).all()
+    assert weights.sum() == pytest.approx(1.0)
+    assert len(np.unique(np.round(weights, 12))) > 1
+
+
+def test_bagging_rejects_a_base_estimator_that_cannot_take_costs():
+    X, y = make_classification(n_samples=60, random_state=0)
+    with pytest.raises(ValueError, match='cost-sensitive classifier whose fit accepts'):
+        CSBaggingClassifier(estimator=DecisionTreeClassifier()).fit(X, y, fp_cost=1.0, fn_cost=5.0)

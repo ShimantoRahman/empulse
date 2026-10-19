@@ -230,7 +230,7 @@ class TestEarlyStoppingWithNegativeFitness:
         model = ProfTreeClassifier(
             patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
         ).fit(X, y, **costs)
-        assert model.n_iter_ == 6
+        assert model.n_iter_ == 5
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
     def test_patience_runs_out_with_a_custom_loss(self):
@@ -240,7 +240,7 @@ class TestEarlyStoppingWithNegativeFitness:
         model = ProfTreeClassifier(
             loss=loss, patience=5, max_iter=200, population_size=20, random_state=0, **self.FROZEN_POPULATION
         ).fit(X, y, fn=5.0, fp=1.0)
-        assert model.n_iter_ == 6
+        assert model.n_iter_ == 5
 
 
 class TestSurvivorSelection:
@@ -538,3 +538,12 @@ class TestNativeExpectedMaxProfit:
                 X, y, **STOCHASTIC_PARAMETERS['beta']
             )
         assert count_loss.call_count == 1  # the check of the loss before the fit
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+def test_a_min_samples_split_of_one_is_every_sample():
+    """``1.0`` is the fraction of all samples, not the integer 1: only the root may split."""
+    X, y = make_classification(n_samples=300, random_state=0)
+    model = ProfTreeClassifier(min_samples_split=1.0, max_depth=5, max_iter=100, random_state=0)
+    model.fit(X, y, tp_cost=-5.0, fp_cost=1.0)
+    assert len(np.unique(model.predict_proba(X)[:, 1])) <= 2

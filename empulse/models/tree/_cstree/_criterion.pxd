@@ -137,7 +137,8 @@ cdef inline float64_t impurity_of(
     neg_cost += cn0
     neg_cost += cn1
     if kind == GINI:
-        return fast_fmin(pos_cost * (pos_count * pos_count / w), neg_cost * (neg_count * neg_count / w)) / w
+        # Per unit weight, like the cost and entropy criteria: the mean cost times the squared class share.
+        return fast_fmin(pos_cost * (pos_count * pos_count / w), neg_cost * (neg_count * neg_count / w)) / (w * w)
     # ENTROPY
     pos_cost /= w
     neg_cost /= w

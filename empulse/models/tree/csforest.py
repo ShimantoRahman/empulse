@@ -554,6 +554,9 @@ class CSForestClassifier(CostSensitiveClassifier):
             oob_proba[unsampled] += proba
             n_oob[unsampled] += 1
             if self.combination == 'weighted_voting':
+                if unsampled.size == 0:
+                    losses[i] = np.nan
+                    continue
                 oob_params = subset_loss_params(loss_params, unsampled, n_samples)
                 losses[i] = loss._loss(y[unsampled], proba[:, 1], validate=False, **oob_params)
 
