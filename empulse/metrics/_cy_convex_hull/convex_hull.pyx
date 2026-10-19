@@ -10,7 +10,7 @@ for its faster sort.
 import numpy as np
 
 cimport numpy as cnp
-from libc.math cimport isnan
+from libc.math cimport INFINITY, isnan
 from libcpp.algorithm cimport sort as cpp_sort
 from libcpp.vector cimport vector
 
@@ -243,7 +243,7 @@ def max_profit_scan(
     -------
     tuple[float, float, float]
         The highest average profit per sample, the fraction of samples targeted to reach it, and the
-        score of the lowest ranked sample targeted (1.0 when targeting no one is best). The first
+        score of the lowest ranked sample targeted (``inf`` when targeting no one is best). The first
         threshold to reach the highest profit is chosen, i.e. the one targeting the fewest samples.
     """
     cdef Py_ssize_t n_samples = y_true.shape[0], i, sample
@@ -267,7 +267,7 @@ def max_profit_scan(
     cdef double profit
     cdef double best_profit = tn_benefit * n_negatives - fn_cost * n_positives  # targeting no one
     cdef long long best_n_targeted = 0
-    cdef double best_threshold = 1.0
+    cdef double best_threshold = INFINITY
     with nogil:
         for i in range(n_samples - 1, -1, -1):
             sample = ascending[i]

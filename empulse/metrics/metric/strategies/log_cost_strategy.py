@@ -26,7 +26,7 @@ from .._parameter_domain import _check_parameters
 from .._stochastic import replace_random_var_with_mean
 from .._symbolic import _latex
 from ..capabilities import Capability
-from .cost_strategy import CostOptimalRate, CostOptimalThreshold, _CachedPenaltyWeights
+from .cost_strategy import CostOptimalThreshold, _CachedPenaltyWeights
 from .metric_strategy import MetricStrategy
 
 
@@ -283,13 +283,13 @@ class LogCost(MetricStrategy):
         self._score_function: MetricFn = LogCostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-        self._optimal_threshold: ThresholdFn = CostOptimalThreshold(
+        self._optimal_threshold: ThresholdFn = LogCostOptimalThreshold(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
-        self._optimal_rate: RateFn = CostOptimalRate(
+        self._optimal_rate: RateFn = LogCostOptimalRate(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
@@ -336,8 +336,15 @@ class LogCost(MetricStrategy):
         """
         Compute the classification threshold(s) to optimize the metric value.
 
-        The optimal threshold only depends on the (linear) cost matrix, not on the loss used to train
-        the classifier, so it is identical to :class:`~empulse.metrics.Cost`'s optimal threshold.
+        The threshold is the Bayes-optimal decision for scores that minimize the expected log cost,
+        such as those of a model trained on this metric. Such a score is not the probability of the
+        positive class: it already carries the cost weighting, and wherever the cost matrix's decision
+        flips, both outcomes weigh the same, so the score there is 0.5. The threshold is therefore 0.5
+        whenever the cost matrix calls for a positive decision for some, but not all, probabilities, and
+        0 or 1 when it calls for always (never) targeting.
+
+        To threshold calibrated probabilities instead, use :class:`~empulse.metrics.Cost`'s optimal
+        threshold on the same cost matrix.
 
         Parameters
         ----------
@@ -485,6 +492,40 @@ class LogCost(MetricStrategy):
     ) -> str:
         """Return the LaTeX representation of the metric."""
         return _log_cost_loss_to_latex(tp_benefit, tn_benefit, fp_cost, fn_cost)
+
+
+class LogCostOptimalThreshold(CostOptimalThreshold):
+    """
+    Bayes-optimal threshold for scores that minimize the expected log cost.
+
+    With positive-class probability ``q``, the expected log cost of score ``s`` is
+    ``A log s + B log(1 - s)``, where ``A`` and ``B`` are the expected linear costs of a positive and a
+    negative decision. Its minimizer is ``s = A / (A + B)``, which is 0.5 exactly where ``A == B``, the
+    probability at which the linear decision flips.
+    """
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
+        """Compute the optimal threshold(s). `y_true` and `y_score` are unused and kept for API compatibility."""
+        probability_threshold = super().__call__(y_true, y_score, **parameters)
+        if np.isscalar(probability_threshold):
+            return 0.5 if 0.0 < probability_threshold < 1.0 else float(probability_threshold)  # type: ignore[operator, arg-type]
+        threshold = np.asarray(probability_threshold, dtype=np.float64)
+        return np.where((threshold > 0.0) & (threshold < 1.0), 0.5, threshold)
+
+
+class LogCostOptimalRate:
+    """Predicted positive rate under :class:`LogCostOptimalThreshold`."""
+
+    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
+        self._threshold = LogCostOptimalThreshold(
+            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
+        )
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+        """Compute the optimal predicted positive rate."""
+        threshold = self._threshold(y_true, y_score, **parameters)
+        scores = np.asarray(y_score).reshape(-1)
+        return float(np.mean(scores >= np.asarray(threshold, dtype=np.float64).reshape(-1)))
 
 
 class LogCostLoss:

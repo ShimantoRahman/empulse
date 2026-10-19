@@ -249,27 +249,49 @@ def test_log_cost_gradient_boost_matches_finite_difference():
     np.testing.assert_allclose(hessian, np.abs(numeric_hess), atol=1e-3)
 
 
-def test_log_cost_optimal_threshold_matches_cost():
-    """The optimal decision threshold only depends on the (linear) cost matrix, not the training
-
-    loss, so LogCost and Cost must agree.
+def _log_cost_optimal_score(q, tp, tn, fp, fn, eps=1e-12):
     """
-    tp, tn, fp, fn = sympy.symbols('tp tn fp fn')
-    cost_matrix = CostMatrix().add_tp_cost(tp).add_tn_cost(tn).add_fp_cost(fp).add_fn_cost(fn)
-    log_cost_metric = Metric(cost_matrix, LogCost())
-    cost_metric = Metric(cost_matrix, Cost())
+    The score minimizing the expected log cost ``A log s + B log(1 - s)`` at positive probability ``q``.
 
-    y = np.array([0, 1, 0, 1])
-    y_proba = np.array([0.2, 0.8, 0.3, 0.9])
-    params = {'tp': 0.3, 'tn': 0.6, 'fp': 1.2, 'fn': 2.1}
+    With both weights negative the minimum is interior, at ``A / (A + B)``. Otherwise the expected log
+    cost falls without bound towards a boundary, which the clipped score reaches.
+    """
+    a = q * tp + (1 - q) * fp  # expected weight on log(s)
+    b = q * fn + (1 - q) * tn  # expected weight on log(1 - s)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        interior = a / (a + b)
+    # Near s = eps the cost is about a log(eps), near s = 1 - eps about b log(eps): the larger weight wins.
+    boundary = np.where(a > b, eps, 1 - eps)
+    return np.where((a < 0) & (b < 0), interior, boundary)
 
-    log_cost_threshold = log_cost_metric.optimal_threshold(y, y_proba, **params)
-    cost_threshold = cost_metric.optimal_threshold(y, y_proba, **params)
 
-    assert log_cost_threshold == pytest.approx(cost_threshold)
+@pytest.mark.parametrize(
+    'tp, tn, fp, fn',
+    [(-5.0, -1.0, 0.0, 0.0), (-1.0, -5.0, 0.0, 0.0), (-2.0, -1.0, 0.5, 0.3), (-0.3, -0.6, 1.2, 2.1)],
+)
+def test_log_cost_optimal_threshold_is_bayes_optimal_for_log_cost_scores(tp, tn, fp, fn):
+    """Thresholding the scores a log-cost-trained model outputs reproduces the Bayes decision.
+
+    The Bayes decision under the linear costs targets a sample when the expected cost of targeting it,
+    ``q tp + (1 - q) fp``, is below that of not targeting it, ``q fn + (1 - q) tn``.
+    """
+    tp_s, tn_s, fp_s, fn_s = sympy.symbols('tp tn fp fn')
+    metric = Metric(CostMatrix().add_tp_cost(tp_s).add_tn_cost(tn_s).add_fp_cost(fp_s).add_fn_cost(fn_s), LogCost())
+    params = {'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn}
+
+    q = np.linspace(0.001, 0.999, 999)
+    scores = _log_cost_optimal_score(q, tp, tn, fp, fn)
+    bayes_targets = q * tp + (1 - q) * fp < q * fn + (1 - q) * tn
+    assert bayes_targets.any()
+    assert not bayes_targets.all()
+
+    threshold = metric.optimal_threshold(np.array([]), np.array([]), **params)
+    np.testing.assert_array_equal(scores >= threshold, bayes_targets)
+    assert metric.optimal_rate(np.zeros_like(q), scores, **params) == pytest.approx(bayes_targets.mean())
 
 
-def test_log_cost_optimal_rate_matches_cost():
+def test_log_cost_optimal_threshold_keeps_an_always_negative_decision():
+    """A matrix under which targeting never pays keeps Cost's (clipped) threshold, targeting nobody."""
     tp, fp = sympy.symbols('tp fp')
     cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
     log_cost_metric = Metric(cost_matrix, LogCost())
@@ -279,9 +301,13 @@ def test_log_cost_optimal_rate_matches_cost():
     y_proba = np.array([0.2, 0.8, 0.3, 0.9])
     params = {'tp': 1.0, 'fp': 2.0}
 
-    log_cost_rate = log_cost_metric.optimal_rate(y, y_proba, **params)
-    cost_rate = cost_metric.optimal_rate(y, y_proba, **params)
-    assert log_cost_rate == pytest.approx(cost_rate)
+    with pytest.warns(UserWarning, match='clipped'):
+        log_cost_threshold = log_cost_metric.optimal_threshold(y, y_proba, **params)
+    with pytest.warns(UserWarning, match='clipped'):
+        cost_threshold = cost_metric.optimal_threshold(y, y_proba, **params)
+    assert log_cost_threshold == pytest.approx(cost_threshold)
+    with pytest.warns(UserWarning, match='clipped'):
+        assert log_cost_metric.optimal_rate(y, y_proba, **params) == pytest.approx(0.0)
 
 
 def test_log_cost_repr_and_latex_smoke():

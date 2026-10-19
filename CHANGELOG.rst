@@ -1,6 +1,30 @@
 `Unreleased`_
 =============
 
+Metrics
+-------
+
+- |Fix| :class:`~empulse.metrics.Savings`, :func:`~empulse.metrics.savings_score` and
+  :func:`~empulse.metrics.expected_savings_score` rank models correctly when the baseline cost is
+  negative, as it is for a matrix of benefits: savings are now divided by the magnitude of the
+  baseline cost. A baseline that costs nothing returns ``nan`` with a warning instead of a huge number.
+- |Fix| The ``'prior'`` baseline of :class:`~empulse.metrics.Savings` predicts the positive class
+  prior, as documented, and a scalar or list baseline is accepted.
+- |Fix| :meth:`LogCost.optimal_threshold <empulse.metrics.LogCost.optimal_threshold>` and
+  ``optimal_rate`` are the Bayes-optimal decision for the scores of a model trained on the log cost,
+  0.5 whenever the cost matrix targets some but not all samples, instead of reusing
+  :class:`~empulse.metrics.Cost`'s threshold for calibrated probabilities.
+- |Fix| When targeting nobody is optimal, :func:`~empulse.metrics.classification_threshold` and the
+  ``optimal_threshold`` of :class:`~empulse.metrics.MaxProfit`, :class:`~empulse.metrics.MinCost`,
+  :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.EmpiricalMinCost`
+  return ``inf`` instead of 1.0, which targeted some samples on decision scores.
+- |Fix| A cost-matrix symbol named after a function its expression calls, such as a Weibull scale
+  named ``gamma``, no longer breaks the metric.
+- |Fix| Instance-dependent distribution parameters are validated when the distribution has another
+  parameter, e.g. a negative ``alpha`` array beside a scalar ``beta``.
+- |Fix| Metrics accept boolean labels.
+
+
 `0.13.1`_ (22-10-2026)
 ======================
 

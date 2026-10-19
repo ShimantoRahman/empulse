@@ -148,6 +148,10 @@ class AUEPC(MetricStrategy):
     supported. The score is a ratio of profits, so the penalties of those models are not measured
     against the costs.
 
+    Just before the oracle's cumulative profit reaches zero, the ratio divides by a profit close to
+    zero. If the model loses money at those targeted fractions, the score can then be very large and
+    negative, and sensitive to small changes in the costs.
+
     .. seealso::
         :func:`~empulse.metrics.auepc_score` : the underlying metric function.
 

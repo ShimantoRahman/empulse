@@ -6,7 +6,7 @@ import sympy
 
 from ....._types import FloatNDArray, IntNDArray
 from ...._cy_convex_hull import max_profit_scan
-from ....common import classification_threshold
+from ....common import _classification_threshold
 from ..._compile import _safe_lambdify, _safe_run_lambda
 from ..._confusion import _compute_confusion_matrix
 from ..._parameter_domain import _check_parameters
@@ -207,7 +207,7 @@ class MaxProfitBoostGradientDeterministic:
         )
         best_idx = int(np.argmax(profits))
         rate = float(tprs[best_idx] * pi0 + fprs[best_idx] * pi1)
-        threshold = float(classification_threshold(self.y_true, y_score_arr, rate))
+        threshold = float(_classification_threshold(self.y_true, y_score_arr, rate, target_nobody=1.0))
 
         _, factor1, factor2 = _smooth_step_derivatives(y_score_arr - threshold, alpha)
         sigma_prime = alpha * factor1
@@ -278,7 +278,7 @@ class MaxProfitLogitGradientDeterministic(_BaseMaxProfitLogitObjective):
         best_idx = int(np.argmax(profits))
 
         rate = float(tprs[best_idx] * pi0 + fprs[best_idx] * pi1)
-        threshold = float(classification_threshold(self.y_true, y_score, rate))
+        threshold = float(_classification_threshold(self.y_true, y_score, rate, target_nobody=1.0))
 
         s_pos = y_score[self.pos_mask]
         s_neg = y_score[self.neg_mask]

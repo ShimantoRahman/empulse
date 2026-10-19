@@ -137,6 +137,13 @@ def test_non_binary_y_true_raises(y_true):
         metric(y_true, Y_SCORE, a=1.0, b=1.0)
 
 
+def test_boolean_y_true_is_accepted():
+    y_score = np.array([0.2, 0.7, 0.4, 0.9])
+    y_bool = np.array([False, True, False, True])
+    expected = expected_cost_loss(y_bool.astype(int), y_score, fp_cost=1.0, fn_cost=2.0)
+    assert expected_cost_loss(y_bool, y_score, fp_cost=1.0, fn_cost=2.0) == pytest.approx(expected)
+
+
 def test_single_class_y_true_is_accepted():
     """
     A y_true with only one distinct value must be accepted, not rejected.

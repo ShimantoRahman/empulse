@@ -114,10 +114,7 @@ def _check_distribution_parameters(
             if all(getattr(argument, 'is_number', False) for argument in arguments):
                 _run_distribution_check(distribution, arguments, random_symbol)
             else:
-                # A shape parameter is instance-dependent, so the distribution's own check cannot run on
-                # the whole vector. Check the parameter's extremes instead: these distributions only
-                # impose interval constraints, so if both ends are admissible, everything between is.
-                _check_array_distribution_parameters(distribution, parameters, random_symbol, display)
+                _check_array_distribution_parameters(distribution, parameters, scalars, random_symbol, display)
 
 
 def _run_distribution_check(distribution: Any, arguments: list[Any], random_symbol: Any, suffix: str = '') -> None:
@@ -133,20 +130,34 @@ def _run_distribution_check(distribution: Any, arguments: list[Any], random_symb
 def _check_array_distribution_parameters(
     distribution: Any,
     parameters: Mapping[str, Any],
+    scalars: Mapping[str, Any],
     random_symbol: Any,
     display: Callable[[str], str],
 ) -> None:
-    """Check array-valued shape parameters by probing the distribution with their extremes."""
-    for argument in distribution.args:
-        symbol = sympy.sympify(argument)
-        if not isinstance(symbol, sympy.Symbol):
+    """
+    Check instance-dependent shape parameters on the rows where each one is smallest and largest.
+
+    The distribution's own check cannot run on a whole vector, and a check per row would cost a sympy
+    call per sample. These distributions impose interval constraints, so a parameter that leaves its
+    interval does so at one of its extremes; checking whole rows keeps a constraint that couples two
+    parameters (e.g. a uniform's bounds) from being judged on values that never occur together.
+    """
+    argument_names = {str(symbol) for argument in distribution.args for symbol in sympy.sympify(argument).free_symbols}
+    arrays = {
+        name: value
+        for name, value in parameters.items()
+        if name in argument_names and isinstance(value, np.ndarray) and value.ndim == 1 and value.size > 0
+    }
+    for name, values in arrays.items():
+        if _extremes(values) is None:
             continue
-        span = _extremes(parameters.get(str(symbol)))
-        if span is None:
-            continue
-        for candidate in span:
-            probe = [sympy.Float(candidate) if other == symbol else sympy.sympify(other) for other in distribution.args]
-            if all(getattr(value, 'is_number', False) for value in probe):
+        for row in {int(np.argmin(values)), int(np.argmax(values))}:
+            row_values = {
+                **scalars,
+                **{other: float(array[row]) for other, array in arrays.items() if array.shape == values.shape},
+            }
+            arguments = [_subs_by_name(sympy.sympify(argument), row_values) for argument in distribution.args]
+            if all(getattr(argument, 'is_number', False) for argument in arguments):
                 _run_distribution_check(
-                    distribution, probe, random_symbol, suffix=f' (from {display(str(symbol))}={candidate})'
+                    distribution, arguments, random_symbol, suffix=f' (from {display(name)}={values[row]})'
                 )

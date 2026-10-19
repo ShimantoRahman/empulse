@@ -7,7 +7,7 @@ import pytest
 import sympy
 import sympy.stats
 
-from empulse.metrics import CostMatrix, MaxProfit, Metric
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric
 
 from ._helpers import RANKING_FEATURES, RANKING_Y_SCORE, RANKING_Y_TRUE, logit_and_count_evaluations
 
@@ -77,6 +77,32 @@ def test_expression_arguments_are_checked_by_the_distribution():
     metric = _metric(DISTRIBUTIONS['beta'][0], 'auto', polynomial=True)
     with pytest.raises(ValueError, match='Invalid parameters for the Beta distribution'):
         metric(RANKING_Y_TRUE, RANKING_Y_SCORE, a=-1.0, b=5.0)
+
+
+class TestInstanceDependentDistributionParameters:
+    """A distribution's check runs on the rows where an instance-dependent parameter is extreme."""
+
+    y_true = np.array([0, 1, 0, 1])
+    y_score = np.array([0.2, 0.7, 0.4, 0.9])
+
+    def test_an_invalid_value_beside_a_scalar_parameter_raises(self):
+        metric = Metric(CostMatrix().add_tp_benefit(sympy.stats.Beta('v', A, B)).add_fp_cost(1), Cost())
+        with pytest.raises(ValueError, match=r'Beta distribution.*\(from a=-1.0\)'):
+            metric(self.y_true, self.y_score, a=np.array([-1.0, 6.0, 6.0, 6.0]), b=14.0)
+
+    def test_an_invalid_row_of_two_array_parameters_raises(self):
+        lower, upper = sympy.symbols('lower upper')
+        metric = Metric(CostMatrix().add_tp_benefit(sympy.stats.Uniform('u', lower, upper)).add_fp_cost(1), Cost())
+        with pytest.raises(ValueError, match='Uniform distribution'):
+            metric(
+                self.y_true, self.y_score, lower=np.array([0.0, 5.0, 1.0, 2.0]), upper=np.array([1.0, 4.0, 2.0, 3.0])
+            )
+
+    def test_coupled_parameters_are_judged_on_values_that_occur_together(self):
+        # The smallest upper bound (1) lies below the largest lower bound (5), but no row pairs them.
+        lower, upper = sympy.symbols('lower upper')
+        metric = Metric(CostMatrix().add_tp_benefit(sympy.stats.Uniform('u', lower, upper)).add_fp_cost(1), Cost())
+        metric(self.y_true, self.y_score, lower=np.array([0.0, 5.0, 1.0, 2.0]), upper=np.array([1.0, 6.0, 2.0, 3.0]))
 
 
 @pytest.mark.parametrize(('distribution', 'polynomial'), _real_cases(DISTRIBUTIONS))

@@ -154,39 +154,25 @@ def expected_savings_score(
             check_input=False,
         )
     elif baseline == 'prior':
-        prior_pos = np.mean(y_true)
-        prior_neg = 1 - prior_pos
-        cost_base = min(
-            cost_loss(
-                y_true,
-                np.full_like(y_true, prior_pos),
-                tp_cost=tp_cost,
-                fp_cost=fp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                check_input=False,
-            ),
-            cost_loss(
-                y_true,
-                np.full_like(y_true, prior_neg),
-                tp_cost=tp_cost,
-                fp_cost=fp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                check_input=False,
-            ),
+        cost_base = expected_cost_loss(
+            y_true,
+            np.full(np.shape(y_true), np.mean(y_true), dtype=np.float64),
+            tp_cost=tp_cost,
+            fp_cost=fp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            check_input=False,
         )
     else:
         raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
 
-    # avoid division by zero
     if cost_base == 0.0:
-        cost_base = float(np.finfo(float).eps)
+        return float('nan')
 
     cost = expected_cost_loss(
         y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
     )
-    return 1.0 - cost / cost_base
+    return (cost_base - cost) / abs(cost_base)
 
 
 # --- make_objective_aec / AECObjective / AECMetric ----------------------------------------------

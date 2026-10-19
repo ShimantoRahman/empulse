@@ -6,6 +6,7 @@ import numpy as np
 from .._types import FloatArrayLike, FloatNDArray
 from ._validation import _check_consistent_length, _check_y_pred, _check_y_true
 from .metric.prebuilt_metrics import make_generic_cost_metric, make_generic_log_cost_metric, make_generic_savings_metric
+from .metric.strategies.savings_strategy import _relative_savings
 
 
 def _validate_input(
@@ -152,7 +153,7 @@ def cost_loss(
     .. math::
 
         C_i = y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \
-        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+        (1 - y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
 
     where
 
@@ -189,7 +190,7 @@ def cost_loss(
     # Scores that are not binary are thresholded at the cost-optimal threshold.
     if not np.all((y_pred == 0) | (y_pred == 1)):
         denominator = fp_cost - tn_cost + fn_cost - tp_cost
-        denominator = np.clip(denominator, np.finfo(float).eps, denominator)  # Avoid division by zero
+        denominator = np.where(denominator == 0, np.finfo(float).eps, denominator)
         optimal_thresholds = (fp_cost - tn_cost) / denominator
         y_pred = (y_pred > optimal_thresholds).astype(int)
 
@@ -368,7 +369,7 @@ def savings_score(
 
         C_i(s_i) = \
         y_i \\cdot (\\hat y_i \\cdot C_i(1|1) + (1 - \\hat y_i) \\cdot C_i(0|1)) + \
-        (1 - \\hat y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
+        (1 - y_i) \\cdot (\\hat y_i \\cdot C_i(1|0) + (1 - \\hat y_i) \\cdot C_i(0|0))
 
     The savings over a naive model is calculated as:
 
@@ -377,6 +378,10 @@ def savings_score(
     The savings over a baseline model is calculated as:
 
     .. math::  \\text{Savings} = 1 - \\frac{\\sum_{i=1}^N C_i(s_i)}{\\sum_{i=1}^N C_i(s_i^*)}
+
+    When the baseline cost is negative, as it is for a matrix of benefits, the cost saved is divided by
+    the magnitude of the baseline cost instead, so that a cheaper model still scores higher.
+    If the baseline costs nothing, the savings are undefined and ``nan`` is returned.
 
     where
 
@@ -476,9 +481,7 @@ def savings_score(
     cost = cost_loss(
         y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
     )
-    if cost_base == 0.0:
-        cost_base = float(np.finfo(float).eps)
-    return 1.0 - cost / cost_base
+    return _relative_savings(cost, cost_base)
 
 
 expected_savings_score = make_generic_savings_metric()
@@ -496,8 +499,7 @@ strategy on a plain cost matrix, accepting class- or instance-dependent ``tp_cos
   better.
 - ``'one'``: a model that predicts all ones.
 - ``'zero'``: a model that predicts all zeros.
-- ``'prior'``: a model that predicts the prior probability of the majority or minority class,
-  whichever is better.
+- ``'prior'``: a model that predicts the positive class prior for every sample.
 - array-like: target probabilities of a baseline model.
 
 With 1 being the perfect model (assuming 0 cost is the lowest you can go,

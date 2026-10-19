@@ -1,9 +1,11 @@
+import warnings
 from typing import Any, Literal, Self
 
 import numpy as np
 import sympy
+from sklearn.exceptions import UndefinedMetricWarning
 
-from ...._types import FloatNDArray, IntNDArray
+from ...._types import FloatArrayLike, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda
 from .._direction import Direction
 from .._parameter_domain import _check_parameters
@@ -46,7 +48,7 @@ class Savings(Cost):
         self,
         y_true: IntNDArray,
         y_score: FloatNDArray,
-        baseline: Literal['zero_one', 'zero', 'one', 'prior'] | FloatNDArray = 'zero_one',
+        baseline: Literal['zero_one', 'zero', 'one', 'prior'] | FloatArrayLike = 'zero_one',
         **parameters: FloatNDArray | float,
     ) -> float:
         """
@@ -66,14 +68,17 @@ class Savings(Cost):
         y_score : array-like of shape (n_samples,)
             The predicted labels, probabilities, or decision scores (based on the chosen metric).
 
-        baseline : {'zero_one', 'zero', 'one', 'prior'} or array-like of shape (n_samples,), default='zero_one'
-            The model that savings are measured against; the score is ``1 - cost / cost_baseline``.
+        baseline : {'zero_one', 'zero', 'one', 'prior'}, float or array-like of shape (n_samples,), default='zero_one'
+            The model that savings are measured against; the score is
+            ``(cost_baseline - cost) / |cost_baseline|``.
 
             - If ``'zero_one'``, whichever of "predict all zeros" or "predict all ones" costs less.
             - If ``'zero'``, predict all zeros.
             - If ``'one'``, predict all ones.
-            - If ``'prior'``, predict the class prior for every sample.
-            - If ``array-like``, the predicted labels or calibrated probabilities of a reference model.
+            - If ``'prior'``, predict the positive class prior for every sample.
+            - If ``float`` or ``array-like``, the predicted labels or calibrated probabilities of a reference model.
+
+            If the baseline costs nothing, the savings are undefined and ``nan`` is returned.
 
         **parameters : float or array-like of shape (n_samples,)
             The parameter values for the costs and benefits defined in the metric.
@@ -118,7 +123,7 @@ class SavingsScore:
         self,
         y_true: IntNDArray,
         y_score: FloatNDArray,
-        baseline: FloatNDArray | Literal['zero_one', 'zero', 'one', 'prior'],
+        baseline: FloatArrayLike | Literal['zero_one', 'zero', 'one', 'prior'],
         **kwargs: Any,
     ) -> float:
         """Compute the savings score."""
@@ -127,9 +132,10 @@ class SavingsScore:
         )
         _check_parameters(all_symbols - {*sympy.symbols('y s')}, kwargs)
 
-        if isinstance(baseline, np.ndarray):
+        if not isinstance(baseline, str):
+            baseline_score = np.broadcast_to(np.asarray(baseline, dtype=np.float64), y_true.shape)
             cost_base = float(
-                np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=baseline, **kwargs))
+                np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=baseline_score, **kwargs))
             )
         elif baseline == 'zero_one':
             all_zero_score = float(
@@ -148,38 +154,32 @@ class SavingsScore:
                 np.mean(_safe_run_lambda(self.all_one_function, self.all_one_equation, y=y_true, **kwargs))
             )
         elif baseline == 'prior':
-            prior_pos = float(np.mean(y_true))
-            prior_neg = 1 - prior_pos
-            prior_pos_score = float(
-                np.mean(
-                    _safe_run_lambda(
-                        self.cost_func,
-                        self.cost_equation,
-                        y=y_true,
-                        s=np.full(y_true.shape, prior_pos, dtype=np.float64),
-                        **kwargs,
-                    )
-                )
+            prior = np.full(y_true.shape, np.mean(y_true), dtype=np.float64)
+            cost_base = float(
+                np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=prior, **kwargs))
             )
-            prior_neg_score = float(
-                np.mean(
-                    _safe_run_lambda(
-                        self.cost_func,
-                        self.cost_equation,
-                        y=y_true,
-                        s=np.full(y_true.shape, prior_neg, dtype=np.float64),
-                        **kwargs,
-                    )
-                )
-            )
-            cost_base = min(prior_pos_score, prior_neg_score)
         else:
             raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
 
-        if cost_base == 0.0:
-            cost_base = float(np.finfo(float).eps)
-        cost = _safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=y_score, **kwargs)
-        return float(1 - np.mean(cost) / cost_base)
+        cost = float(np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=y_score, **kwargs)))
+        return _relative_savings(cost, cost_base)
+
+
+def _relative_savings(cost: float, cost_base: float) -> float:
+    """
+    Return the cost saved relative to the baseline's cost.
+
+    Dividing by the magnitude keeps a lower cost scoring higher when the baseline cost is negative,
+    as it is for a matrix of benefits.
+    """
+    if cost_base == 0.0:
+        warnings.warn(
+            'The baseline has zero cost, so the savings are undefined. Returning nan.',
+            UndefinedMetricWarning,
+            stacklevel=2,
+        )
+        return float('nan')
+    return float((cost_base - cost) / abs(cost_base))
 
 
 def _build_naive_cost_functions(cost_function: sympy.Expr) -> tuple[sympy.Expr, sympy.Expr]:

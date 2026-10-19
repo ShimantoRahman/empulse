@@ -61,7 +61,7 @@ def test_equal_profits_resolve_to_the_fewest_samples_targeted():
 
     assert profit == 3.0
     assert rate == 0.0
-    assert threshold == 1.0
+    assert threshold == np.inf
 
 
 def test_profit_is_the_average_over_samples():

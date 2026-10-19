@@ -197,6 +197,29 @@ def test_picklable_lambda_dummify_keeps_functions_named_like_a_variable():
     assert restored(6.0, 14.0, 0.3) == pytest.approx(expected)
 
 
+def test_picklable_lambda_keyword_call_keeps_functions_named_like_a_variable():
+    """A Weibull scale named ``gamma`` must not shadow the gamma function its mean calls."""
+    scale, shape = sympy.symbols('gamma k', positive=True)
+    mean = sympy.stats.E(sympy.stats.Weibull('W', scale, shape))
+    pl = PicklableLambda(mean)
+
+    expected = st.weibull_min(1.5, scale=2.0).mean()
+    assert pl(gamma=2.0, k=1.5) == pytest.approx(expected)
+    assert pickle.loads(pickle.dumps(pl))(gamma=2.0, k=1.5) == pytest.approx(expected)
+
+
+def test_metric_with_a_symbol_named_like_a_function():
+    scale, shape = sympy.symbols('gamma k', positive=True)
+    renamed_scale, renamed_shape = sympy.symbols('lam kk', positive=True)
+    y_true, y_score = np.array([0, 1, 1, 0]), np.array([0.2, 0.6, 0.7, 0.1])
+
+    def metric(a, b):
+        return Metric(CostMatrix().add_fp_cost(sympy.stats.Weibull('W', a, b)).add_fn_cost(1), Cost())
+
+    expected = metric(renamed_scale, renamed_shape)(y_true, y_score, lam=2.0, kk=1.5)
+    assert metric(scale, shape)(y_true, y_score, gamma=2.0, k=1.5) == pytest.approx(expected)
+
+
 def test_picklable_lambda_explicit_variable_order():
     """PicklableLambda respects an explicit variable list for positional calls."""
     x, y = sympy.symbols('x y')

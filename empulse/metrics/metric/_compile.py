@@ -10,6 +10,8 @@ since a cost expression's compiled function only accepts the free symbols it was
 """
 
 import copy
+import inspect
+import re
 from collections.abc import Callable, Iterable
 from functools import lru_cache
 from typing import Any, Protocol, TypeVar
@@ -117,18 +119,13 @@ class PicklableLambda:
             # Sort free_symbols by name for deterministic variable ordering,
             # ensuring the lambdified function receives kwargs correctly.
             variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
-            expression = self.expression
             # Instances pickled by older versions lack `dummify`.
-            if getattr(self, 'dummify', False):
-                # Substituted here rather than with lambdify's own `dummify`, which still binds the
-                # symbols' names in the function's namespace, where they shadow functions of the same name.
-                dummies = [sympy.Dummy() for _ in variables]
-                expression = expression.xreplace(dict(zip(variables, dummies, strict=True)))
-                variables = dummies
-                # Fresh dummies are never equal across compiles, so the cached `_lambdify` cannot help here.
-                self.func = sympy.lambdify(variables, expression)  # type: ignore[assignment]
-            else:
-                self.func = _lambdify(tuple(variables), expression)
+            if not getattr(self, 'dummify', False):
+                func = _lambdify(tuple(variables), self.expression)
+                if not _calls_an_argument(func, tuple(str(variable) for variable in variables)):
+                    self.func = func
+                    return
+            self.func = _dummified_lambdify(tuple(variables), self.expression)
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
@@ -163,6 +160,48 @@ def _lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Ca
         return _cached_lambdify(variables, expression)
     except TypeError:  # an unhashable expression, e.g. a mutable sympy Matrix
         return sympy.lambdify(variables, expression)  # type: ignore[no-any-return]
+
+
+@lru_cache(maxsize=1024)
+def _calls_an_argument(func: Callable[..., Any], names: tuple[str, ...]) -> bool:
+    """
+    Whether the generated code calls a function named like one of its arguments, which shadows it.
+
+    E.g. the mean of a Weibull distribution calls `gamma`, so a scale parameter named `gamma` breaks it.
+    """
+    try:
+        source = inspect.getsource(func)
+    except (OSError, TypeError):
+        return True
+    return any(re.search(rf'(?<![\w.]){re.escape(name)}\(', source) for name in names)
+
+
+def _dummified_lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
+    """
+    Compile *expression* with private argument names, accepting arguments by position or by symbol name.
+
+    Substituted here rather than with lambdify's own `dummify`, which still binds the symbols' names in
+    the function's namespace, where they shadow functions of the same name.
+    """
+    names = [str(variable) for variable in variables]
+    dummies = {name: sympy.Dummy() for name in names}
+    # Matched by name, as lambdify itself does: an argument and the expression's symbol of the same
+    # name can differ in their assumptions.
+    replacements = {
+        symbol: dummies[str(symbol)] for symbol in {*variables, *expression.free_symbols} if str(symbol) in dummies
+    }
+    # Fresh dummies are never equal across compiles, so the cached `_lambdify` cannot help here.
+    func = sympy.lambdify([dummies[name] for name in names], expression.xreplace(replacements))
+
+    def call(*args: Any, **kwargs: Any) -> Any:
+        if kwargs:
+            try:
+                args = (*args, *(kwargs[name] for name in names[len(args) :]))
+            except KeyError as error:
+                raise TypeError(f'missing required argument: {error.args[0]!r}') from None
+        return func(*args)
+
+    return call
 
 
 @lru_cache(maxsize=1024)

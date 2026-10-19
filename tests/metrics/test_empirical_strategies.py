@@ -19,7 +19,7 @@ import pytest
 import sympy
 from scipy.integrate import trapezoid
 
-from empulse.metrics import AUEPC, CostMatrix, EmpiricalMaxProfit, Metric
+from empulse.metrics import AUEPC, CostMatrix, EmpiricalMaxProfit, Metric, classification_threshold
 from empulse.metrics.churn.stochastic import empb_score
 from empulse.metrics.metric._direction import Direction
 from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
@@ -131,6 +131,22 @@ def test_empirical_max_profit_optimal_threshold_is_consistent_with_optimal_rate(
     # the optimal rate, since it is derived from the empirical score distribution.
     predicted_positive_frac = np.mean(y_score >= threshold)
     assert predicted_positive_frac == pytest.approx(rate, abs=1 / len(y))
+
+
+def test_optimal_threshold_targets_nobody_on_decision_scores_when_the_optimal_rate_is_zero():
+    # Every contact loses money, so the best policy targets nobody, whatever the scale of the scores.
+    metric = Metric(CostMatrix().add_tp_benefit('b').add_fp_cost('c'), EmpiricalMaxProfit())
+    y_true = np.array([0, 1, 0, 1, 0, 1])
+    logits = np.array([5.0, 4.0, 3.0, 2.0, -1.0, -2.0])
+
+    assert metric.optimal_rate(y_true, logits, b=1.0, c=100.0) == 0.0
+    threshold = metric.optimal_threshold(y_true, logits, b=1.0, c=100.0)
+    assert not np.any(logits >= threshold)
+
+
+def test_classification_threshold_for_a_zero_rate_targets_nobody():
+    assert classification_threshold([0, 1, 0, 1], [2.0, 3.0, 4.0, 5.0], 0.0) == np.inf
+    assert classification_threshold([0, 1, 0, 1], [0.2, 0.3, 1.0, 0.5], 0.0) == np.inf
 
 
 def test_empirical_max_profit_class_dependent_clv(empirical_churn_cost_matrix, empirical_churn_dataset):

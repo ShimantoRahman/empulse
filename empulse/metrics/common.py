@@ -23,6 +23,8 @@ def classification_threshold(y_true: FloatArrayLike, y_score: FloatArrayLike, cu
     -------
     threshold : float
         Classification threshold for given customer threshold.
+        Samples with ``y_score >= threshold`` are targeted; a customer threshold of zero
+        returns ``inf``, so that nobody is targeted.
 
     Examples
     --------
@@ -34,10 +36,17 @@ def classification_threshold(y_true: FloatArrayLike, y_score: FloatArrayLike, cu
     >>> classification_threshold(y_true, y_score, threshold)
     0.2
     """
+    return _classification_threshold(y_true, y_score, customer_threshold)
+
+
+def _classification_threshold(
+    y_true: FloatArrayLike, y_score: FloatArrayLike, customer_threshold: float, target_nobody: float = np.inf
+) -> float:
+    """Return the classification threshold, using ``target_nobody`` for a customer threshold of zero."""
     y_true = np.asarray(y_true)
-    y_score = np.asarray(y_score)
+    y_score = np.asarray(y_score, dtype=np.float64)
     confusion_matrix, sorted_indices, duplicated_prediction_indices = _compute_confusion_matrix(y_true, y_score)
-    classification_thresholds = np.pad(y_score[sorted_indices], pad_width=(1, 0), constant_values=1)
+    classification_thresholds = np.pad(y_score[sorted_indices], pad_width=(1, 0), constant_values=target_nobody)
     classification_thresholds = np.delete(classification_thresholds, duplicated_prediction_indices)  # type: ignore[arg-type]
     customer_thresholds = np.sum(confusion_matrix, axis=0) / y_score.shape[0]
     return float(classification_thresholds[np.argmin(np.abs(customer_thresholds - customer_threshold))])

@@ -7,10 +7,20 @@ public metrics. Their agreement with the reference over many parameter sets is
 ``test_prebuilt_metric_contract.py``'s job.
 """
 
+import warnings
+
 import numpy as np
 import pytest
+from sklearn.exceptions import UndefinedMetricWarning
 
-from empulse.metrics import expected_cost_loss, expected_log_cost_loss, expected_savings_score
+from empulse.metrics import (
+    CostMatrix,
+    Metric,
+    Savings,
+    expected_cost_loss,
+    expected_log_cost_loss,
+    expected_savings_score,
+)
 from empulse.metrics.savings import (
     _compute_expected_cost,
     cost_loss,
@@ -408,7 +418,7 @@ def test_expected_saving_score(y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cos
     'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, baseline, expected',
     [
         # The model's total cost is 1 + 2 + 3 + 4 = 10, and so is the expected cost of predicting the
-        # prior 0.5 for every sample. (The reference module hard-thresholds the prior and gets 0.2857.)
+        # prior 0.5 for every sample.
         ([1, 0, 0, 1], [1, 1, 0, 0], 1.0, 2.0, 3.0, 4.0, 'prior', 0.0),
         ([1, 0, 0, 1], [1, 1, 1, 1], 0.0, 1.0, 0.0, 1.0, 'prior', 0.0),
         ([1, 0, 0, 1], [0, 0, 0, 0], 0.0, 1.0, 0.0, 1.0, 'prior', 0.0),
@@ -499,3 +509,76 @@ def test_expected_saving_score_with_baseline(y_true, y_pred, tp_cost, fp_cost, t
         fn_cost=fn_cost,
         baseline=baseline,
     ) == pytest.approx(expected)
+
+
+class TestNegativeBaselineCost:
+    """A matrix of benefits makes the baseline cost negative; a cheaper model must still score higher."""
+
+    y_true = np.array([0, 1, 1, 0])
+
+    def test_savings_score(self):
+        perfect = savings_score(self.y_true, self.y_true, tp_cost=-10.0, fp_cost=1.0)
+        worst = savings_score(self.y_true, 1 - self.y_true, tp_cost=-10.0, fp_cost=1.0)
+        assert perfect > 0 > worst
+
+    def test_expected_savings_score(self):
+        perfect = expected_savings_score(self.y_true, self.y_true.astype(float), tp_cost=-10.0, fp_cost=1.0)
+        uninformed = expected_savings_score(self.y_true, np.full(4, 0.5), tp_cost=-10.0, fp_cost=1.0)
+        assert perfect > uninformed
+
+    def test_savings_strategy_ranks_like_cost(self):
+        metric = Metric(CostMatrix().add_tp_benefit('b').add_tn_benefit('b'), Savings())
+        good = np.array([0.1, 0.9, 0.9, 0.1])
+        bad = np.full(4, 0.5)
+        assert metric(self.y_true, good, b=1.0) > metric(self.y_true, bad, b=1.0)
+
+    def test_positive_baseline_cost_is_unchanged(self):
+        # (base - cost) / |base| equals 1 - cost / base whenever the baseline cost is positive.
+        y_pred = np.array([0, 1, 0, 0])
+        fp_cost = np.array([4, 1, 2, 2])
+        fn_cost = np.array([1, 3, 3, 1])
+        base = min(
+            cost_loss(self.y_true, np.zeros(4), fp_cost=fp_cost, fn_cost=fn_cost),
+            cost_loss(self.y_true, np.ones(4), fp_cost=fp_cost, fn_cost=fn_cost),
+        )
+        cost = cost_loss(self.y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost)
+        assert savings_score(self.y_true, y_pred, fp_cost=fp_cost, fn_cost=fn_cost) == pytest.approx(1 - cost / base)
+
+
+class TestZeroBaselineCost:
+    """A baseline that costs nothing leaves the savings undefined."""
+
+    y_true = np.zeros(4, dtype=int)
+    y_score = np.array([0.1, 0.2, 0.3, 0.4])
+
+    def test_savings_score(self):
+        with pytest.warns(UndefinedMetricWarning, match='zero cost'):
+            assert np.isnan(savings_score(self.y_true, self.y_score, fp_cost=1.0, fn_cost=1.0, check_input=False))
+
+    def test_savings_strategy(self):
+        metric = Metric(CostMatrix().add_fp_cost('c').add_fn_cost('d'), Savings())
+        with pytest.warns(UndefinedMetricWarning, match='zero cost'):
+            assert np.isnan(metric(self.y_true, self.y_score, c=1.0, d=1.0))
+
+
+class TestSavingsStrategyBaselines:
+    metric = Metric(CostMatrix().add_fp_cost('c').add_fn_cost('d'), Savings())
+    y_true = np.array([1] * 10 + [0] * 90)
+    y_score = np.linspace(0.05, 0.95, 100)
+
+    @pytest.mark.parametrize('baseline', [0.3, [0.3] * 100, np.full(100, 0.3)])
+    def test_scalar_and_list_baselines_match_an_array(self, baseline):
+        expected = self.metric(self.y_true, self.y_score, c=1.0, d=20.0, baseline=np.full(100, 0.3))
+        assert self.metric(self.y_true, self.y_score, c=1.0, d=20.0, baseline=baseline) == pytest.approx(expected)
+
+    def test_prior_baseline_predicts_the_positive_class_prior(self):
+        prior = np.full(100, self.y_true.mean())
+        expected = self.metric(self.y_true, self.y_score, c=1.0, d=20.0, baseline=prior)
+        assert self.metric(self.y_true, self.y_score, c=1.0, d=20.0, baseline='prior') == pytest.approx(expected)
+
+
+def test_cost_loss_with_a_zero_threshold_denominator_does_not_divide_by_zero():
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)
+        cost = cost_loss([0, 1], [0.3, 0.6], fp_cost=np.array([0.0, 1.0]), fn_cost=np.array([0.0, 1.0]))
+    assert cost == 0.0
