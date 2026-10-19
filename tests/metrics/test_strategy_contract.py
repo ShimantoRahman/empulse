@@ -660,16 +660,14 @@ def test_loss_on_mixture_metric():
     assert empcs_score._loss(Y_TRUE, Y_SCORE, **CREDIT_PARAMS) == pytest.approx(-score)
 
 
-def test_loss_on_direction_inconsistent_mixture_raises():
-    """``_loss`` is undefined when components disagree on direction, and must not guess a sign."""
+def test_direction_inconsistent_mixture_raises():
+    """A mixture's loss is undefined when components disagree on direction, so it cannot be built."""
     cost_matrix = CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost')
-    mixture = MixtureMetric([
-        MixtureComponent(weight=0.5, metric=Metric(cost_matrix, Cost()), parameters={}),
-        MixtureComponent(weight=0.5, metric=Metric(cost_matrix, Savings()), parameters={}),
-    ])
-
     with pytest.raises(ValueError, match='inconsistent optimization directions'):
-        mixture._loss(Y_TRUE, Y_SCORE, fp_cost=1.0, fn_cost=5.0)
+        MixtureMetric([
+            MixtureComponent(weight=0.5, metric=Metric(cost_matrix, Cost()), parameters={}),
+            MixtureComponent(weight=0.5, metric=Metric(cost_matrix, Savings()), parameters={}),
+        ])
 
 
 # --- Sign-flipped siblings ---------------------------------------------------------------------------
@@ -763,13 +761,11 @@ class TestSiblingIsANegation:
 
     def test_mixing_a_pair_raises(self, parent_cls, sibling_cls, cost_matrix):
         """A mixture of a metric and its own negation has no well-defined direction."""
-        mixture = MixtureMetric([
-            MixtureComponent(weight=0.5, metric=Metric(cost_matrix, parent_cls()), parameters={}),
-            MixtureComponent(weight=0.5, metric=Metric(cost_matrix, sibling_cls()), parameters={}),
-        ])
-
         with pytest.raises(ValueError, match='inconsistent optimization directions'):
-            _ = mixture.direction
+            MixtureMetric([
+                MixtureComponent(weight=0.5, metric=Metric(cost_matrix, parent_cls()), parameters={}),
+                MixtureComponent(weight=0.5, metric=Metric(cost_matrix, sibling_cls()), parameters={}),
+            ])
 
 
 def test_latex_of_a_sibling_differs_from_its_parent(cost_matrix):

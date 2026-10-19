@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from numbers import Real
 from typing import Any, Literal, NamedTuple, Self
@@ -10,7 +11,8 @@ from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
 from .base_metric import BaseMetric
 from .capabilities import Capability
-from .cost_matrix import ParameterBounds, ParameterPredicate
+from .cost_matrix import CostMatrix, ParameterBounds, ParameterPredicate
+from .metric import Metric
 from .strategies import ElasticNetPenalty, LogitObjective, MetricStrategy
 
 Weight = float | str | Callable[[dict[str, Any]], float]
@@ -79,6 +81,24 @@ def _check_component(index: int, component: Any) -> MixtureComponent:
     return MixtureComponent(weight, metric, dict(parameters))
 
 
+_KNOWN_EXTRA_PARAMETERS = frozenset({'sample_weight'})
+
+
+def _aliases(metric: BaseMetric) -> Mapping[str, str]:
+    """Map each alias of *metric*'s cost matrix to the symbol name it stands for."""
+    cost_matrix = getattr(metric, 'cost_matrix', None)
+    aliases = getattr(cost_matrix, '_aliases', {})
+    return {alias: str(symbol) for alias, symbol in aliases.items()}
+
+
+def _extra_parameters(metric: BaseMetric) -> frozenset[str]:
+    """Keyword arguments *metric* accepts besides its cost-matrix symbols, such as Savings' ``baseline``."""
+    try:
+        return frozenset(metric.strategy._extra_kwargs)
+    except (AttributeError, ValueError):  # a nested mixture of inconsistent strategies
+        return frozenset()
+
+
 class MixtureMetric(BaseMetric):
     r"""
     A weighted linear combination ("mixture") of :class:`Metric` objects.
@@ -108,6 +128,10 @@ class MixtureMetric(BaseMetric):
     first combining the components' rates and then converting that single combined rate to a
     threshold, rather than combining the components' own thresholds.
 
+    When every component decides from its costs alone (``Capability.COST_ONLY_DECISION``, as for
+    :class:`~empulse.metrics.Cost`), the decision is instead that of the weighted combined costs,
+    and the components must share one strategy type for the mixture to offer it.
+
     Read more in the :ref:`User Guide <metric_objects>`.
 
     Parameters
@@ -117,6 +141,8 @@ class MixtureMetric(BaseMetric):
         :attr:`~MixtureComponent.metric` should share the same interpretation of ``y_true`` and
         ``y_score``, and should be built from the same underlying cost-matrix pattern, only
         differing in how the uncertain symbol is fixed or distributed for that component.
+        The components must optimize in the same direction. Constant weights must not be negative
+        and, when every weight is constant, must sum to 1.
 
     defaults : Mapping[str, float], optional
         Default values for parameters (including weight parameters named by a component's
@@ -158,6 +184,19 @@ class MixtureMetric(BaseMetric):
         if not components:
             raise ValueError('MixtureMetric requires at least one component.')
         self.components = [_check_component(index, component) for index, component in enumerate(components)]
+        directions = {component.metric.direction for component in self.components}
+        if len(directions) > 1:
+            raise ValueError(
+                f'MixtureMetric components have inconsistent optimization directions: {directions}. '
+                'All components must optimize in the same direction.'
+            )
+        constant_weights = [
+            float(component.weight) for component in self.components if isinstance(component.weight, int | float)
+        ]
+        if any(weight < 0 for weight in constant_weights):
+            raise ValueError(f'MixtureMetric weights must not be negative, got {constant_weights}.')
+        if len(constant_weights) == len(self.components) and not np.isclose(sum(constant_weights), 1.0):
+            raise ValueError(f'MixtureMetric weights must sum to 1, got {constant_weights}.')
         self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
         self._name_override: str | None = None
         # Bounds on the mixture's own parameters -- chiefly the weights, which are not symbols of
@@ -299,7 +338,18 @@ class MixtureMetric(BaseMetric):
         type throughout, so this agrees with routing through :attr:`strategy` for those.
         """
         capability_sets = [component.metric.capabilities for component in self.components]
-        return frozenset.intersection(*capability_sets) if capability_sets else frozenset()
+        capabilities = frozenset.intersection(*capability_sets) if capability_sets else frozenset()
+        if Capability.COST_ONLY_DECISION in capabilities and self._shared_strategy() is None:
+            # The decision follows from the combined costs only through one strategy's rule.
+            capabilities -= {Capability.COST_ONLY_DECISION, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}
+        return capabilities
+
+    def _shared_strategy(self) -> MetricStrategy | None:
+        """Return the strategy every component uses, or ``None`` if they use more than one type."""
+        try:
+            return self.strategy
+        except (AttributeError, ValueError):
+            return None
 
     @property
     def _all_symbols(self) -> set[str]:
@@ -308,7 +358,7 @@ class MixtureMetric(BaseMetric):
         for component in self.components:
             # Exclude symbols this component fixes internally: they are never read from the
             # keyword arguments passed in at call time, since the fixed override always wins.
-            symbols |= component.metric._all_symbols - set(component.parameters.keys())
+            symbols |= component.metric._all_symbols - self._fixed_names(component)
         return symbols
 
     @property
@@ -316,7 +366,7 @@ class MixtureMetric(BaseMetric):
         """The set of parameter names the mixture expects to be supplied by the caller."""
         symbols = set(self._weight_parameter_names)
         for component in self.components:
-            symbols |= component.metric._all_parameters - set(component.parameters.keys())
+            symbols |= component.metric._all_parameters - self._fixed_names(component)
         return symbols
 
     @property
@@ -330,7 +380,7 @@ class MixtureMetric(BaseMetric):
         """
         names: set[str] = set(self.defaults.keys())
         for component in self.components:
-            names |= component.metric._default_parameter_names - set(component.parameters.keys())
+            names |= component.metric._default_parameter_names - self._fixed_names(component)
         return names
 
     @property
@@ -355,8 +405,7 @@ class MixtureMetric(BaseMetric):
         effectively_supplied = set(supplied) | self.defaults.keys()
         missing = {name for name in self._weight_parameter_names if name not in effectively_supplied}
         for component in self.components:
-            fixed = component.parameters.keys()
-            missing |= component.metric._missing_parameters(effectively_supplied) - fixed
+            missing |= component.metric._missing_parameters(effectively_supplied) - self._fixed_names(component)
         return missing
 
     @property
@@ -375,13 +424,44 @@ class MixtureMetric(BaseMetric):
         return float(weight)
 
     def _forward_parameters(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Keyword arguments to forward to each component, excluding mixture-only weight names."""
+        """Keyword arguments to forward to the components, excluding mixture-only weight names."""
         exclude = self._weight_parameter_names
-        return {key: value for key, value in parameters.items() if key not in exclude}
+        forwarded = {key: value for key, value in parameters.items() if key not in exclude}
+        accepted = set(_KNOWN_EXTRA_PARAMETERS)
+        for component in self.components:
+            accepted |= self._accepted_names(component)
+        unknown = set(forwarded) - accepted
+        if unknown:
+            warnings.warn(
+                f'Unknown parameters passed to metric: {sorted(unknown)}. These will be ignored.',
+                UserWarning,
+                stacklevel=3,
+            )
+        return forwarded
 
     @staticmethod
-    def _component_parameters(component: MixtureComponent, forwarded: dict[str, Any]) -> dict[str, Any]:
-        return {**forwarded, **component.parameters}
+    def _fixed_names(component: MixtureComponent) -> set[str]:
+        """Every spelling of the symbols a component fixes: their names and all their aliases."""
+        aliases = _aliases(component.metric)
+        symbols = {aliases.get(key, key) for key in component.parameters}
+        return symbols | set(component.parameters) | {alias for alias, symbol in aliases.items() if symbol in symbols}
+
+    @staticmethod
+    def _accepted_names(component: MixtureComponent) -> set[str]:
+        """Return the keyword arguments a component's metric accepts from the caller."""
+        return component.metric._all_symbols | _extra_parameters(component.metric)
+
+    @classmethod
+    def _component_parameters(cls, component: MixtureComponent, forwarded: dict[str, Any]) -> dict[str, Any]:
+        """
+        Return the keyword arguments for one component: those it accepts, with its fixed values on top.
+
+        A fixed value takes priority over whichever spelling, symbol name or alias, the caller used.
+        """
+        accepted = cls._accepted_names(component) | _KNOWN_EXTRA_PARAMETERS
+        fixed = cls._fixed_names(component)
+        own = {key: value for key, value in forwarded.items() if key in accepted and key not in fixed}
+        return {**own, **component.parameters}
 
     def __call__(
         self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
@@ -420,6 +500,9 @@ class MixtureMetric(BaseMetric):
         """
         Compute the weighted sum of each component's optimal predicted positive rate.
 
+        For components that decide from their costs alone, the rate of the decision made from the
+        weighted combined costs instead.
+
         Parameters
         ----------
         y_true : array-like of shape (n_samples,)
@@ -435,6 +518,10 @@ class MixtureMetric(BaseMetric):
         optimal_rate : float
             The mixture's combined optimal predicted positive rate.
         """
+        combined = self._combined_cost_decision(parameters, validate=validate)
+        if combined is not None:
+            metric, costs = combined
+            return metric.optimal_rate(y_true, y_score, validate=validate, **costs)
         parameters = self._apply_defaults(parameters, validate=validate)
         forwarded = self._forward_parameters(parameters)
         total = 0.0
@@ -457,7 +544,8 @@ class MixtureMetric(BaseMetric):
         combined :meth:`optimal_rate` is computed first, and the threshold that achieves that
         rate on the pooled ``y_score`` is returned, exactly mirroring how
         :class:`~empulse.metrics.MaxProfit` computes its own optimal threshold from its optimal
-        rate.
+        rate. For components that decide from their costs alone, the threshold is that of the
+        weighted combined costs.
 
         Parameters
         ----------
@@ -474,8 +562,35 @@ class MixtureMetric(BaseMetric):
         optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
         """
+        combined = self._combined_cost_decision(parameters, validate=validate)
+        if combined is not None:
+            metric, costs = combined
+            return metric.optimal_threshold(y_true, y_score, validate=validate, **costs)
         rate = self.optimal_rate(y_true, y_score, validate=validate, **parameters)
         return classification_threshold(y_true, y_score, rate)  # type: ignore[return-value]
+
+    def _combined_cost_decision(
+        self, parameters: dict[str, Any], *, validate: bool
+    ) -> tuple[Metric, dict[str, Any]] | None:
+        """
+        Return the metric and costs that decide for a mixture of cost-only components, or ``None``.
+
+        When every component decides from its costs alone, as :class:`~empulse.metrics.Cost` does,
+        the mixture's decision is that of its weighted combined costs: weighting the components'
+        rates instead would average decisions made under each component's costs separately.
+        """
+        strategy = self._shared_strategy()
+        if strategy is None or Capability.COST_ONLY_DECISION not in self.capabilities:
+            return None
+        if validate:
+            self._validate_parameters(**parameters)
+        fp_cost, fn_cost, tp_cost, tn_cost = self._evaluate_costs(replace_stochastic=True, **parameters)
+        cached = getattr(self, '_combined_cost_metric', None)
+        if cached is None or type(cached.strategy) is not type(strategy):
+            cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fp_cost('fp').add_fn_cost('fn')
+            cached = Metric(cost_matrix, strategy)
+            self._combined_cost_metric = cached
+        return cached, {'tp': tp_cost, 'tn': tn_cost, 'fp': fp_cost, 'fn': fn_cost}
 
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:
         parameters = self._apply_defaults(parameters, validate=False)

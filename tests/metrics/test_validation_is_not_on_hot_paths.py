@@ -310,7 +310,7 @@ _VF_METRIC_FACTORIES = {
     'auepc': lambda: _vf_metric(AUEPC()),
     'mixture': lambda: MixtureMetric([
         MixtureComponent(0.5, _vf_metric(MaxProfit()), {}),
-        MixtureComponent(0.5, _vf_metric(Cost()), {}),
+        MixtureComponent(0.5, _vf_metric(Profit()), {}),
     ]),
 }
 

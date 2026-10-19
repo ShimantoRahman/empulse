@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 import sympy
@@ -5,6 +7,7 @@ from sklearn.datasets import make_classification
 
 from empulse.metrics import (
     BaseMetric,
+    Capability,
     Cost,
     CostMatrix,
     LogCost,
@@ -12,12 +15,16 @@ from empulse.metrics import (
     Metric,
     MixtureComponent,
     MixtureMetric,
+    Profit,
     classification_threshold,
     empcs_score,
     mpcs_score,
 )
 
 from .reference.credit_scoring import empcs, mpcs
+
+Y_TRUE = np.array([1, 0, 1, 0, 1, 0])
+Y_SCORE = np.array([0.9, 0.1, 0.8, 0.3, 0.6, 0.4])
 
 
 @pytest.fixture(scope='module')
@@ -139,12 +146,11 @@ def test_mixture_direction_mismatch_raises():
     a, b = sympy.symbols('a b')
     max_metric = Metric(CostMatrix().add_tp_benefit(a), MaxProfit())
     cost_metric = Metric(CostMatrix().add_tp_cost(b), Cost())
-    mixture = MixtureMetric([
-        MixtureComponent(0.5, max_metric, {}),
-        MixtureComponent(0.5, cost_metric, {}),
-    ])
     with pytest.raises(ValueError, match='inconsistent optimization directions'):
-        _ = mixture.direction
+        MixtureMetric([
+            MixtureComponent(0.5, max_metric, {}),
+            MixtureComponent(0.5, cost_metric, {}),
+        ])
 
 
 def test_mixture_direction_consistent(empcs_mixture):
@@ -186,10 +192,10 @@ def test_mixture_strategy_matches_components(credit_scoring_metrics):
 def test_mixture_strategy_mismatch_raises():
     a, b = sympy.symbols('a b')
     max_metric = Metric(CostMatrix().add_tp_benefit(a), MaxProfit())
-    cost_metric = Metric(CostMatrix().add_tp_cost(b), Cost())
+    profit_metric = Metric(CostMatrix().add_tp_benefit(b), Profit())
     mixture = MixtureMetric([
         MixtureComponent(0.5, max_metric, {}),
-        MixtureComponent(0.5, cost_metric, {}),
+        MixtureComponent(0.5, profit_metric, {}),
     ])
     with pytest.raises(ValueError, match='inconsistent strategies'):
         _ = mixture.strategy
@@ -578,3 +584,72 @@ def test_logit_objective_forwards_n_threads_to_its_components():
     assert objective.n_threads == 4
     assert [component.n_threads for _, component in objective._weighted_objectives] == [4, 4]
     assert objective.with_indices(np.arange(10)).n_threads == 4
+
+
+class TestCostOnlyComponents:
+    """A mixture of components that decide from their costs alone decides from the combined costs."""
+
+    a, b = sympy.symbols('a b')
+
+    @pytest.fixture
+    def mixture(self):
+        metric = Metric(CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b), Cost())
+        return MixtureMetric([
+            MixtureComponent(0.5, metric, {'a': 1.0, 'b': 9.0}),
+            MixtureComponent(0.5, metric, {'a': 9.0, 'b': 1.0}),
+        ])
+
+    def test_threshold_is_that_of_the_combined_costs(self, mixture, seeded_rng):
+        # The combined costs are fp = fn = 5, whose threshold is 0.5 on any scores.
+        y_score = seeded_rng.random(1000) ** 3
+        y_true = (seeded_rng.random(1000) < y_score).astype(int)
+        assert mixture.optimal_threshold(y_true, y_score) == pytest.approx(0.5)
+        assert mixture.optimal_threshold(np.array([]), np.array([])) == pytest.approx(0.5)
+        assert mixture.optimal_rate(y_true, y_score) == pytest.approx(np.mean(y_score >= 0.5))
+
+    def test_components_of_different_strategies_offer_no_cost_only_decision(self):
+        metric = Metric(CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b), Cost())
+        log_metric = Metric(CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b), LogCost())
+        mixture = MixtureMetric([MixtureComponent(0.5, metric, {}), MixtureComponent(0.5, log_metric, {})])
+        assert Capability.COST_ONLY_DECISION not in mixture.capabilities
+        assert Capability.OPTIMAL_THRESHOLD not in mixture.capabilities
+
+
+class TestAliasedOverrides:
+    """A component's fixed value wins over the caller's value under any spelling of the symbol."""
+
+    g, v = sympy.symbols('g v')
+
+    @pytest.fixture
+    def metric(self):
+        return Metric(CostMatrix().add_tp_benefit(self.g).add_fp_cost(self.v).alias('rate', self.g), Cost())
+
+    def test_override_by_symbol_ignores_the_callers_alias(self, metric):
+        mixture = MixtureMetric([MixtureComponent(1.0, metric, {'g': 0.0})])
+        expected = metric(Y_TRUE, Y_SCORE, g=0.0, v=1.0)
+        assert mixture(Y_TRUE, Y_SCORE, rate=0.5, v=1.0) == pytest.approx(expected)
+
+    def test_override_by_alias_is_not_required_from_the_caller(self, metric):
+        mixture = MixtureMetric([MixtureComponent(1.0, metric, {'rate': 0.0})])
+        assert mixture._missing_parameters({'v'}) == set()
+        assert {'g', 'rate'}.isdisjoint(mixture._all_parameters)
+
+
+def test_components_with_different_parameters_do_not_warn():
+    a, b, c = sympy.symbols('a b c')
+    first = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(c), Cost())
+    second = Metric(CostMatrix().add_fp_cost(b).add_fn_cost(c), Cost())
+    mixture = MixtureMetric([MixtureComponent(0.5, first, {}), MixtureComponent(0.5, second, {})])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        mixture(Y_TRUE, Y_SCORE, a=1.0, b=2.0, c=3.0)
+    with pytest.warns(UserWarning, match=r"Unknown parameters passed to metric: \['typo'\]"):
+        mixture(Y_TRUE, Y_SCORE, a=1.0, b=2.0, c=3.0, typo=1.0)
+
+
+@pytest.mark.parametrize('weights', [(0.7, 0.7), (1.5, -0.5)])
+def test_constant_weights_must_form_a_mixture(weights):
+    metric = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Cost())
+    with pytest.raises(ValueError, match='weights must'):
+        MixtureMetric([MixtureComponent(weight, metric, {}) for weight in weights])

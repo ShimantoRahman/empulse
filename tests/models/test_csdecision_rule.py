@@ -4,7 +4,16 @@ import sympy
 from sklearn import config_context
 from sklearn.linear_model import LogisticRegression
 
-from empulse.metrics import Capability, Cost, CostMatrix, EmpiricalMaxProfit, MaxProfit, Metric
+from empulse.metrics import (
+    Capability,
+    Cost,
+    CostMatrix,
+    EmpiricalMaxProfit,
+    MaxProfit,
+    Metric,
+    MixtureComponent,
+    MixtureMetric,
+)
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
 
 
@@ -223,6 +232,23 @@ class TestInstanceDependentCostsReduceToTheirAverage:
 
         expected = loss.optimal_threshold(np.array([]), np.array([]), a=9.0, b=1.0)
         assert clf.threshold_ == pytest.approx(expected)
+
+
+def test_threshold_of_a_cost_mixture_matches_its_combined_metric(data):
+    """A mixture of Cost components thresholds like one Cost metric with the weighted costs."""
+    X, y = data
+    a, b = sympy.symbols('a b')
+    metric = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b), Cost())
+    mixture = MixtureMetric([
+        MixtureComponent('w', metric, {'a': 1.0, 'b': 9.0}),
+        MixtureComponent(lambda p: 1 - p['w'], metric, {'a': 9.0, 'b': 1.0}),
+    ])
+
+    mixed = CSThresholdClassifier(LogisticRegression(), loss=mixture, calibrator=None).fit(X, y, w=0.5)
+    combined = CSThresholdClassifier(LogisticRegression(), loss=metric, calibrator=None).fit(X, y, a=5.0, b=5.0)
+
+    assert mixed.threshold_ == pytest.approx(combined.threshold_)
+    np.testing.assert_array_equal(mixed.predict(X), combined.predict(X))
 
 
 class TestSkipCostSensitiveFit:

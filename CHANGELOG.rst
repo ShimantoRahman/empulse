@@ -34,6 +34,15 @@ Metrics
   stochastic cost that is not linear in instance-dependent parameters warns that it is approximated.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` fitted with instance-dependent costs uses
   each cost averaged over the samples for its single threshold.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Cost`-like components
+  (those that decide from their costs alone) takes its optimal threshold and rate from the weighted
+  combined costs, instead of averaging the components' rates, which gave the wrong threshold. Such a
+  mixture of different strategy types no longer claims an optimal threshold or rate.
+- |Fix| :class:`~empulse.metrics.MixtureMetric` applies a component's fixed parameter whichever
+  spelling, symbol name or alias, the caller uses, and no longer warns about parameters that only
+  another component uses.
+- |API| :class:`~empulse.metrics.MixtureMetric` rejects components with different optimization
+  directions, negative constant weights, and constant weights that do not sum to 1 when it is built.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
   result for the same distribution parameters, whichever were evaluated before. Results for a given
   ``random_state`` change.
