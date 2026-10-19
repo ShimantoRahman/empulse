@@ -19,13 +19,36 @@ from ..._common import Parameter
 from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric, Capability
+from ...metrics import BaseMetric, Capability, CostMatrix, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base.cost_sensitive import CostSensitiveClassifier
 
 
 def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
     return float(np.mean(cost)) if isinstance(cost, np.ndarray) else cost
+
+
+def _class_dependent_metric(loss: BaseMetric, loss_params: dict[str, Any]) -> Metric | None:
+    """
+    Return the metric with each cost replaced by its average over the samples, when a parameter is an array.
+
+    Averaging the costs, rather than the parameters they are computed from, is what makes a cost such
+    as the product of two instance-dependent parameters come out right. Only for a :class:`Metric`
+    whose decision depends on nothing but the costs; ``None`` otherwise.
+    """
+    if not isinstance(loss, Metric) or Capability.COST_ONLY_DECISION not in loss.capabilities:
+        return None
+    if not any(isinstance(value, np.ndarray) and value.size > 1 for value in loss_params.values()):
+        return None
+    fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+    cost_matrix = (
+        CostMatrix()
+        .add_tp_cost(float(np.mean(tp_cost)))
+        .add_tn_cost(float(np.mean(tn_cost)))
+        .add_fp_cost(float(np.mean(fp_cost)))
+        .add_fn_cost(float(np.mean(fn_cost)))
+    )
+    return Metric(cost_matrix, loss.strategy)
 
 
 def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, Any]:
@@ -711,6 +734,9 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         loss_params: dict[str, Any],
     ) -> float | FloatNDArray:
         # A single threshold needs class-dependent costs.
+        class_dependent_loss = _class_dependent_metric(loss, loss_params)
+        if class_dependent_loss is not None:
+            return class_dependent_loss.optimal_threshold(y, y_score)
         for key, value in list(loss_params.items()):
             loss_params[key] = _to_class_dependent_cost(value)
         return loss.optimal_threshold(y, y_score, **loss_params)

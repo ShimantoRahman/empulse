@@ -28,6 +28,12 @@ Metrics
 - |Fix| :class:`~empulse.metrics.MaxProfit` no longer returns ``nan`` for Gamma, Chi-squared and Beta
   distributions with large shape parameters, such as :func:`~empulse.metrics.empc_score` with a
   concentrated Beta prior.
+- |Fix| :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.MinCost` average each
+  instance-dependent cost and benefit over the samples, rather than the parameters they are computed
+  from, so a cost such as the product of two instance-dependent parameters is averaged correctly. A
+  stochastic cost that is not linear in instance-dependent parameters warns that it is approximated.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` fitted with instance-dependent costs uses
+  each cost averaged over the samples for its single threshold.
 - |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
   result for the same distribution parameters, whichever were evaluated before. Results for a given
   ``random_state`` change.

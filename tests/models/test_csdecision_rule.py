@@ -208,6 +208,23 @@ class TestFitWithCosts:
         assert hasattr(clf, 'decision_')
 
 
+class TestInstanceDependentCostsReduceToTheirAverage:
+    """The single fitted threshold uses each cost averaged over the samples, not the averaged parameters."""
+
+    def test_cost_of_two_instance_dependent_parameters(self, data):
+        X, y = data
+        a, b = sympy.symbols('a b')
+        loss = Metric(CostMatrix().add_fp_cost(a * b).add_fn_cost(30), Cost())
+        # a * b is 9 for every sample, while mean(a) * mean(b) is 25.
+        a_values = np.where(np.arange(len(y)) % 2 == 0, 1.0, 9.0)
+        b_values = 10.0 - a_values
+
+        clf = CSThresholdClassifier(LogisticRegression(), loss=loss, calibrator=None).fit(X, y, a=a_values, b=b_values)
+
+        expected = loss.optimal_threshold(np.array([]), np.array([]), a=9.0, b=1.0)
+        assert clf.threshold_ == pytest.approx(expected)
+
+
 class TestSkipCostSensitiveFit:
     """When no costs are provided, cost-sensitive fitting is skipped."""
 

@@ -9,10 +9,12 @@ pass them, into an expression.
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
+from itertools import combinations_with_replacement
 from typing import Any
 
 import sympy
+import sympy.stats
 from sympy.printing.conventions import split_super_sub
 from sympy.printing.latex import greek_letters_set, other_symbols
 
@@ -149,3 +151,29 @@ def _subs_by_name(expression: Any, values: Mapping[str, Any]) -> Any:
         symbol: values[symbol.name] for symbol in sympy.sympify(expression).atoms(sympy.Symbol) if symbol.name in values
     }
     return expression.subs(replacements) if replacements else expression
+
+
+def _is_affine_in(expressions: Iterable[sympy.Expr], names: Iterable[str]) -> bool:
+    """
+    Whether every expression is affine in the symbols with these names, jointly.
+
+    Averaging those symbols' per-sample values before evaluating an affine expression gives the
+    average of the expression over the samples, which is not the case for, e.g., the product of two
+    of them.
+    """
+    names = set(names)
+    for expression in expressions:
+        expression = sympy.sympify(expression)
+        random_symbols = expression.atoms(sympy.stats.rv.RandomSymbol)
+        for random_symbol in random_symbols:
+            distribution_args = random_symbol.pspace.distribution.args
+            if any(symbol.name in names for arg in distribution_args for symbol in sympy.sympify(arg).free_symbols):
+                # Expectations are not linear in a distribution's parameters.
+                return False
+        # sympy cannot differentiate through a random variable, which is a constant here anyway.
+        expression = expression.xreplace({random_symbol: sympy.Dummy() for random_symbol in random_symbols})
+        symbols = [symbol for symbol in expression.atoms(sympy.Symbol) if symbol.name in names]
+        for first, second in combinations_with_replacement(symbols, 2):
+            if sympy.expand(sympy.diff(expression, first, second)) != 0:
+                return False
+    return True

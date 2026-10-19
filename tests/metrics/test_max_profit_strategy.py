@@ -380,6 +380,48 @@ class TestPiecewiseAgreesWithBruteForce:
         assert metric(y_true, y_score, d=0.1) == pytest.approx(expected, rel=1e-5)
 
 
+class TestInstanceDependentParameters:
+    """Instance-dependent parameters reduce to the average of each cost or benefit, not of each parameter."""
+
+    a, b = sympy.symbols('a b')
+    a_values = np.where(np.arange(200) % 2 == 0, 1.0, 9.0)
+    b_values = 10.0 - a_values  # a * b is 9 everywhere, while mean(a) * mean(b) is 25
+
+    @pytest.fixture
+    def data(self):
+        rng = np.random.default_rng(0)
+        y_true = rng.integers(0, 2, 200)
+        return y_true, rng.random(200) + 0.3 * y_true
+
+    def test_deterministic_product_is_averaged_per_sample(self, data):
+        y_true, y_score = data
+        metric = Metric(CostMatrix().add_tp_benefit(self.a * self.b).add_fp_cost(1), MaxProfit())
+
+        assert metric(y_true, y_score, a=self.a_values, b=self.b_values) == pytest.approx(
+            metric(y_true, y_score, a=9.0, b=1.0)
+        )
+        assert metric.optimal_rate(y_true, y_score, a=self.a_values, b=self.b_values) == pytest.approx(
+            metric.optimal_rate(y_true, y_score, a=9.0, b=1.0)
+        )
+
+    def test_affine_terms_average_the_parameters(self, data):
+        y_true, y_score = data
+        gamma = sympy.stats.Beta('gamma', 6, 14)
+        metric = Metric(CostMatrix().add_tp_benefit(gamma * self.a - self.b).add_fp_cost(1), MaxProfit())
+
+        assert metric(y_true, y_score, a=self.a_values, b=self.b_values) == pytest.approx(
+            metric(y_true, y_score, a=5.0, b=5.0)
+        )
+
+    def test_stochastic_product_warns(self, data):
+        y_true, y_score = data
+        gamma = sympy.stats.Beta('gamma', 6, 14)
+        metric = Metric(CostMatrix().add_tp_benefit(gamma * self.a * self.b).add_fp_cost(1), MaxProfit())
+
+        with pytest.warns(UserWarning, match='non-linearly'):
+            metric(y_true, y_score, a=self.a_values, b=self.b_values)
+
+
 class TestCrossingPairs:
     def test_last_vertex_is_paired_with_the_first(self):
         coefficients = np.array([[0.0, 0.0], [1.0, 2.0], [-1.0, -1.0]])

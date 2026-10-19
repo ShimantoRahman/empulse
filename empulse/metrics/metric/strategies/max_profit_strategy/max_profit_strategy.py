@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, Literal, Protocol, Self, cast
 
@@ -13,7 +14,7 @@ from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_ru
 from ..._direction import Direction
 from ..._parameter_domain import _check_parameters
 from ..._stochastic import replace_random_var_with_mean
-from ..._symbolic import _latex
+from ..._symbolic import _is_affine_in, _latex
 from ...capabilities import Capability
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
@@ -79,6 +80,10 @@ def _aggregate_instance_parameters(parameters: dict[str, Any]) -> dict[str, Any]
     Scalar parameters are left unchanged.
     """
     return {key: float(np.mean(value)) if isinstance(value, np.ndarray) else value for key, value in parameters.items()}
+
+
+def _array_parameter_names(parameters: dict[str, Any]) -> frozenset[str]:
+    return frozenset(key for key, value in parameters.items() if isinstance(value, np.ndarray) and value.size > 1)
 
 
 def _max_profit_objective_scale(
@@ -335,6 +340,35 @@ class MaxProfit(MetricStrategy):
         self._boost_cache = None
         return self
 
+    def _scoring_parameters(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """
+        Reduce instance-dependent parameters to what the class-dependent score takes.
+
+        Averaging a parameter gives the average class term only while the terms are affine in the
+        instance-dependent parameters. Otherwise a deterministic score averages the evaluated terms
+        instead, and a stochastic one, which cannot, warns.
+        """
+        array_names = _array_parameter_names(parameters)
+        if not array_names:
+            return _aggregate_instance_parameters(parameters)
+        # Instances pickled by older versions lack the cache.
+        cache = self.__dict__.setdefault('_affine_cache', {})
+        if array_names not in cache:
+            class_terms = (self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
+            cache[array_names] = _is_affine_in(class_terms, array_names)
+        if cache[array_names]:
+            return _aggregate_instance_parameters(parameters)
+        if isinstance(self._score_function, MaxProfitScoreDeterministic):
+            return parameters
+        warnings.warn(
+            f'The instance-dependent parameters {sorted(array_names)} enter a stochastic cost or benefit '
+            f'non-linearly, so averaging them first, as {type(self).__name__} does, only approximates the '
+            'average cost or benefit.',
+            UserWarning,
+            stacklevel=4,
+        )
+        return _aggregate_instance_parameters(parameters)
+
     def _evaluate_class_costs(self, parameters: dict[str, FloatNDArray | float]) -> tuple[float, float, float, float]:
         """Evaluate the four class-dependent benefit/cost symbols at pre-aggregated *parameters*.
 
@@ -402,17 +436,17 @@ class MaxProfit(MetricStrategy):
             You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the value is used as-is (class-dependent).
-            - If ``array-like``, the **mean** of the values is used: this strategy does not take
-              instance-dependent costs/benefits into account (see the class docstring), so passing
-              an array gives the same result as passing that array's mean directly.
+            - If ``array-like``, the costs and benefits are averaged over the samples: this strategy
+              does not take instance-dependent costs/benefits into account (see the class docstring).
+              Where a stochastic cost or benefit is not linear in the instance-dependent values, those
+              values are averaged first instead, with a warning.
 
         Returns
         -------
         score : float
             The maximum profit score.
         """
-        parameters = _aggregate_instance_parameters(parameters)
-        return self._score_function(y_true, y_score, **parameters)
+        return self._score_function(y_true, y_score, **self._scoring_parameters(parameters))
 
     def _prepare_count_score(self, **parameters: FloatNDArray | float) -> CountScoreFn | None:
         """
@@ -423,7 +457,7 @@ class MaxProfit(MetricStrategy):
         """
         if not isinstance(self._score_function, _HullScoreFunction):
             return None
-        return self._score_function._count_scorer(**_aggregate_instance_parameters(parameters))
+        return self._score_function._count_scorer(**self._scoring_parameters(parameters))
 
     def _closed_form_expected_max_profit(
         self, n_positives: int, n_negatives: int, **parameters: FloatNDArray | float
@@ -437,7 +471,7 @@ class MaxProfit(MetricStrategy):
         """
         if not isinstance(self._score_function, BaseMaxProfitScorePiecewise):
             return None
-        return self._score_function._closed_form(n_positives, n_negatives, **_aggregate_instance_parameters(parameters))
+        return self._score_function._closed_form(n_positives, n_negatives, **self._scoring_parameters(parameters))
 
     def optimal_threshold(
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
@@ -463,9 +497,10 @@ class MaxProfit(MetricStrategy):
             You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the value is used as-is (class-dependent).
-            - If ``array-like``, the **mean** of the values is used: this strategy does not take
-              instance-dependent costs/benefits into account (see the class docstring), so passing
-              an array gives the same result as passing that array's mean directly.
+            - If ``array-like``, the costs and benefits are averaged over the samples: this strategy
+              does not take instance-dependent costs/benefits into account (see the class docstring).
+              Where a stochastic cost or benefit is not linear in the instance-dependent values, those
+              values are averaged first instead, with a warning.
 
         Returns
         -------
@@ -493,17 +528,17 @@ class MaxProfit(MetricStrategy):
             You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the value is used as-is (class-dependent).
-            - If ``array-like``, the **mean** of the values is used: this strategy does not take
-              instance-dependent costs/benefits into account (see the class docstring), so passing
-              an array gives the same result as passing that array's mean directly.
+            - If ``array-like``, the costs and benefits are averaged over the samples: this strategy
+              does not take instance-dependent costs/benefits into account (see the class docstring).
+              Where a stochastic cost or benefit is not linear in the instance-dependent values, those
+              values are averaged first instead, with a warning.
 
         Returns
         -------
         optimal_rate : float
             The optimal predicted positive rate.
         """
-        parameters = _aggregate_instance_parameters(parameters)
-        return self._optimal_rate(y_true, y_score, **parameters)
+        return self._optimal_rate(y_true, y_score, **self._scoring_parameters(parameters))
 
     def logit_objective(
         self,
@@ -808,9 +843,8 @@ class MinCost(MaxProfit):
             You can set the parameter values for either the symbol names or their aliases.
 
             - If ``float``, the value is used as-is (class-dependent).
-            - If ``array-like``, the **mean** of the values is used: like :class:`MaxProfit`, this
-              strategy does not take instance-dependent costs/benefits into account, so passing an
-              array gives the same result as passing that array's mean directly.
+            - If ``array-like``, the costs and benefits are averaged over the samples, as in
+              :meth:`MaxProfit.score`.
 
         Returns
         -------

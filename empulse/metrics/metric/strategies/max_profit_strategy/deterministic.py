@@ -122,18 +122,21 @@ class _BaseMaxProfitDeterministic:
         return self._pick(result)
 
     def _class_values(self, kwargs: dict[str, Any]) -> tuple[float, float, float, float] | None:
-        """Evaluate the class terms, or ``None`` when they are unknown or not all scalars."""
+        """
+        Evaluate the class terms, averaged over the samples, or ``None`` when they are unknown.
+
+        Instance-dependent parameters are evaluated per sample before averaging, so a term that is
+        not linear in them, such as the product of two, is averaged correctly.
+        """
         # Instances pickled by older versions lack the class terms.
         class_term_fns = getattr(self, '_class_term_fns', None)
         class_terms = getattr(self, 'class_terms', None)
         if class_term_fns is None or class_terms is None:
             return None
-        values = []
-        for function, term in zip(class_term_fns, class_terms, strict=True):
-            value = np.asarray(_safe_run_lambda(function, term, **kwargs), dtype=np.float64)
-            if value.size != 1:
-                return None
-            values.append(float(value.reshape(-1)[0]))
+        values = [
+            float(np.mean(np.asarray(_safe_run_lambda(function, term, **kwargs), dtype=np.float64)))
+            for function, term in zip(class_term_fns, class_terms, strict=True)
+        ]
         return values[0], values[1], values[2], values[3]
 
     def _pick(self, result: tuple[float, float, float]) -> float:
