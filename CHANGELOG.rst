@@ -47,6 +47,21 @@ Metrics
   result for the same distribution parameters, whichever were evaluated before. Results for a given
   ``random_state`` change.
 
+Models
+------
+
+- |Fix| :class:`~empulse.models.CSThresholdClassifier`, :class:`~empulse.models.CSRateClassifier`
+  and :class:`~empulse.models.RobustCSClassifier` hand ``X`` to the wrapped estimator unchanged, so a
+  pipeline can encode string columns or handle missing values, and the wrapped estimator keeps the
+  feature names. Their input tags (sparse, missing values) follow the wrapped estimator's.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  can wrap a :class:`~sklearn.pipeline.Pipeline`. Without metadata routing, ``fit`` forwards its other
+  keyword arguments, such as ``sample_weight``, to the wrapped estimator, and the costs too when the
+  wrapped estimator's ``fit`` accepts them.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` keeps the costs set on the wrapped estimator
+  when neither ``fit`` nor its own constructor sets them, instead of overriding them with zero.
+- |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.
+
 
 `0.13.1`_ (22-10-2026)
 ======================

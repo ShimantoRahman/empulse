@@ -5,6 +5,7 @@ from typing import Any, ClassVar, Protocol, Self
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context
+from sklearn.utils.validation import column_or_1d, indexable
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
@@ -111,7 +112,18 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         self
             Fitted estimator.
         """
-        X, y = validate_data(self, X, y, ensure_all_finite='allow-nan' if get_tags(self).input_tags.allow_nan else True)
+        X_checked: Any
+        y_checked: Any
+        if isinstance(self, MetaEstimatorMixin):
+            # X is the wrapped estimator's to validate: it may be a pipeline that encodes strings,
+            # handles missing values, or needs the feature names.
+            X_checked, y_checked = indexable(X, y)
+            y_checked = column_or_1d(y_checked, warn=True)
+        else:
+            X_checked, y_checked = validate_data(
+                self, X, y, ensure_all_finite='allow-nan' if get_tags(self).input_tags.allow_nan else True
+            )
+        X, y = X_checked, y_checked
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(

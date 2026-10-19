@@ -11,6 +11,7 @@ import pytest
 import sklearn.datasets
 import sklearn.linear_model
 import sklearn.pipeline
+import sympy
 from sklearn import config_context
 from sklearn.model_selection import cross_val_score
 
@@ -18,6 +19,7 @@ from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import (
     B2BoostClassifier,
     CSBoostClassifier,
+    CSLogitClassifier,
     CSThresholdClassifier,
     RobustCSClassifier,
 )
@@ -125,3 +127,13 @@ class TestCSDecisionRuleClassifierRoutesFitAndPredict:
         model.set_predict_request(clv=True)
         assert model.get_metadata_routing()._self_request.fit.requests['clv'] is True
         assert model.get_metadata_routing()._self_request.predict.requests['clv'] is True
+
+
+def test_fit_request_follows_a_loss_replaced_after_fitting():
+    a, b, c, d = sympy.symbols('a b c d')
+    X, y = sklearn.datasets.make_classification(n_samples=100, random_state=0)
+    model = CSLogitClassifier(loss=Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b), Cost()))
+    model.fit(X, y, a=1.0, b=2.0)
+    model.set_params(loss=Metric(CostMatrix().add_fp_cost(c).add_fn_cost(d), Cost()))
+    model.set_fit_request(c=True, d=True)
+    model.fit(X, y, c=1.0, d=2.0)

@@ -5,13 +5,15 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
+from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.metaestimators import available_if
+from sklearn.utils.validation import column_or_1d, indexable
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
 from ..._common._metaestimators import estimator_has
-from ..._common._sklearn_compat import Tags, validate_data
+from ..._common._sklearn_compat import Tags, get_tags
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
@@ -52,8 +54,11 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.
     outlier_threshold : float, default=2.5
         The threshold for the standardized residuals to detect outliers.
-        If the absolute value of the standardized residual is greater than the threshold,
-        the cost is an outlier and will be imputed with the predicted cost.
+        A residual is standardized by dividing its absolute value by the standard deviation of the
+        absolute residuals. If the standardized residual is greater than the threshold, the cost is
+        an outlier and will be imputed with the predicted cost. The standard deviation of absolute
+        residuals is smaller than that of the residuals (about 0.6 times for normal residuals), so the
+        default flags residuals more than about 1.5 standard deviations from the prediction.
 
     detect_outliers_for : {'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', list}, default='all'
         The costs for which to detect outliers.
@@ -256,6 +261,10 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
+        # X goes to the wrapped estimator as given, so it decides what X may contain.
+        estimator_tags = get_tags(self.estimator)
+        tags.input_tags.sparse = estimator_tags.input_tags.sparse
+        tags.input_tags.allow_nan = estimator_tags.input_tags.allow_nan
         return tags
 
     def _get_metric_loss(self) -> BaseMetric | None:
@@ -331,7 +340,12 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         self : RobustCSClassifier
             Fitted RobustCSClassifier model.
         """
-        X, y = validate_data(self, X, y)
+        # X is the wrapped estimators' to validate: it may be a pipeline that encodes strings or needs the
+        # feature names.
+        X, y = indexable(X, y)
+        y = column_or_1d(y, warn=True)
+        if y.size == 0:
+            raise ValueError('Found array with 0 sample(s) while a minimum of 1 is required.')
         # Costs refer to the positive class, the greater of the two labels (the wrapped
         # cost-sensitive estimators' `classes_[1]`), whatever the labels are.
         is_positive = y == np.unique(y)[-1]
@@ -346,7 +360,11 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
                 X, is_positive, metric_loss, estimator_params
             )
         else:
-            self.costs_ = self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
+            self.costs_ = self._check_costs(
+                **self._costs_with_estimator_fallback(
+                    tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost
+                )
+            )
             should_fit = self._determine_outlier_costs()
             self._fit_outlier_estimators(X, is_positive, should_fit)
             estimator_params = {**fit_params, **self.costs_}
@@ -360,6 +378,21 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
 
         return self
 
+    def _costs_with_estimator_fallback(self, **costs: Any) -> dict[str, Any]:
+        """
+        Fill in the costs not passed to ``fit`` and left at zero here from the wrapped estimator's own.
+
+        The resolved costs are passed to the wrapped estimator explicitly, so taking this
+        estimator's default of zero would override costs set on the wrapped estimator instead.
+        """
+        resolved: dict[str, Any] = {}
+        for name, value in costs.items():
+            own = getattr(self, name)
+            if value is Parameter.UNCHANGED and isinstance(own, Real) and own == 0:
+                value = getattr(self.estimator, name, own)
+            resolved[name] = value
+        return resolved
+
     def _select_class_samples(
         self,
         X: FloatNDArray,
@@ -369,10 +402,10 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
     ) -> tuple[FloatNDArray, FloatNDArray]:
         """Return the subset of (X, target) relevant for a parameter classified as *cls*."""
         if cls == 'positive':
-            return X[is_positive], target[is_positive]
+            return _safe_indexing(X, is_positive), target[is_positive]
         if cls == 'negative':
-            return X[~is_positive], target[~is_positive]
-        return X.copy(), target.copy()
+            return _safe_indexing(X, ~is_positive), target[~is_positive]
+        return X, target.copy()
 
     def _impute_outliers(self, outlier_estimator: Any, X: FloatNDArray, target: FloatNDArray) -> FloatNDArray:
         """Predict costs with *outlier_estimator* and replace outlier values in *target*."""
@@ -407,7 +440,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
 
             X_fit, target_fit = self._select_class_samples(X, is_positive, cls, target)
 
-            if X_fit.size > 0:
+            if target_fit.size > 0:
                 outlier_est = clone(
                     self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
                 ).fit(X_fit, target_fit)
@@ -465,11 +498,11 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
                 if not isinstance(target, np.ndarray):
                     raise TypeError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
                 if cost_name in {'tp_cost', 'fn_cost'}:
-                    X_fit, target_fit = X[is_positive], target[is_positive]
+                    X_fit, target_fit = _safe_indexing(X, is_positive), target[is_positive]
                 else:
-                    X_fit, target_fit = X[~is_positive], target[~is_positive]
+                    X_fit, target_fit = _safe_indexing(X, ~is_positive), target[~is_positive]
 
-                if X_fit.size > 0:
+                if target_fit.size > 0:
                     outlier_est = clone(
                         self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
                     ).fit(X_fit, target_fit)

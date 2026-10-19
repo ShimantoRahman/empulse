@@ -4,20 +4,20 @@ from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from sklearn import clone
+from sklearn import clone, get_config
 from sklearn.base import BaseEstimator, MetaEstimatorMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
-from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, process_routing
+from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, get_routing_for_object, process_routing
 from sklearn.utils.metaestimators import available_if
-from sklearn.utils.validation import check_is_fitted, indexable
+from sklearn.utils.validation import check_is_fitted, has_fit_parameter, indexable
 
 from ..._common import Parameter
 from ..._common._metaestimators import estimator_has
-from ..._common._sklearn_compat import sklearn_version
+from ..._common._sklearn_compat import Tags, get_tags, sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, CostMatrix, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
@@ -252,13 +252,44 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         loss = self._get_loss_or_default()
 
         loss_params = _extract_loss_params(params, loss)
-        routing = self.estimator.get_metadata_routing()
-        routing_params = {k: v for k, v in params.items() if k in routing.fit.requests}
-        routed_params = process_routing(self, 'fit', **routing_params)
-        estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
+        fit_params = self._child_fit_params('estimator', self.estimator, params, loss_params)
+        estimator_ = clone(self.estimator).fit(X, y, **fit_params)
 
         y_proba: FloatNDArray = estimator_.predict_proba(X)
         return estimator_, y_proba, loss_params
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        # X goes to the wrapped estimator as given, so it decides what X may contain.
+        estimator_tags = get_tags(self.estimator)
+        tags.input_tags.sparse = estimator_tags.input_tags.sparse
+        tags.input_tags.allow_nan = estimator_tags.input_tags.allow_nan
+        return tags
+
+    def _child_fit_params(
+        self, child: str, child_estimator: Any, params: dict[str, Any], loss_params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Return the ``fit`` keyword arguments for the wrapped estimator (or its calibrator) named `child`.
+
+        With metadata routing enabled, the loss parameters the child requested are routed to it along
+        with everything that is not a loss parameter, which scikit-learn checks was requested. Without
+        routing, every argument that is not a loss parameter is forwarded, and so are the loss
+        parameters the child's ``fit`` names, such as the costs of a cost-sensitive model.
+        """
+        if get_config()['enable_metadata_routing']:
+            requested = get_routing_for_object(child_estimator).consumes('fit', loss_params.keys())
+            routed = process_routing(
+                self,
+                'fit',
+                **{key: value for key, value in params.items() if key not in loss_params or key in requested},
+            )
+            return dict(routed[child].fit)
+        return {
+            key: value
+            for key, value in params.items()
+            if key not in loss_params or has_fit_parameter(child_estimator, key)
+        }
 
     @abstractmethod
     def _compute_decision(
@@ -710,13 +741,12 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         loss = self._get_loss_or_default()
 
         loss_params = _extract_loss_params(params, loss)
-        routing = self.estimator.get_metadata_routing()
-        routing_params = {k: v for k, v in params.items() if k in routing.fit.requests}
-        routed_params = process_routing(self, 'fit', **routing_params)
         if self.calibrator is not None:
-            estimator_ = self._get_calibrator(self.estimator).fit(X, y, **routed_params.calibrator.fit)
+            calibrator = self._get_calibrator(self.estimator)
+            estimator_ = calibrator.fit(X, y, **self._child_fit_params('calibrator', calibrator, params, loss_params))
         else:
-            estimator_ = clone(self.estimator).fit(X, y, **routed_params.estimator.fit)
+            fit_params = self._child_fit_params('estimator', self.estimator, params, loss_params)
+            estimator_ = clone(self.estimator).fit(X, y, **fit_params)
 
         y_proba: FloatNDArray = estimator_.predict_proba(X)
         return estimator_, y_proba, loss_params

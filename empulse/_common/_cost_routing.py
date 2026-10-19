@@ -245,8 +245,13 @@ class RoutesLossParameters:
         return params
 
     def _loss_parameter_names(self) -> set[str]:
-        """Return the cost-matrix parameter names of :meth:`_get_metric_loss`, or an empty set."""
-        loss = self._get_metric_loss()
+        """
+        Return the cost-matrix parameter names of the loss the next fit uses, or an empty set.
+
+        That is ``self.loss`` where the estimator has one, rather than the copy an earlier fit took
+        (see :meth:`_get_metric_loss`), which ``set_params(loss=...)`` leaves behind.
+        """
+        loss = self.loss if hasattr(self, 'loss') else self._get_metric_loss()
         return set(loss._all_symbols) if loss is not None else set()
 
     def __init_subclass__(cls, **kwargs: Any) -> None:

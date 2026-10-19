@@ -1,8 +1,13 @@
+import warnings
+
 import numpy as np
 import pytest
 import sympy
 from sklearn import config_context
+from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
 
 from empulse.metrics import (
     Capability,
@@ -166,6 +171,10 @@ class TestCSRateSpecific:
 # ===================================================================
 
 CLASSIFIERS = ['threshold', 'rate']
+WRAPPERS = {
+    'threshold': lambda estimator: CSThresholdClassifier(estimator, calibrator=None),
+    'rate': CSRateClassifier,
+}
 
 
 def _make_model(classifier_type, kind='logreg', loss=None):
@@ -613,3 +622,69 @@ class TestPosLabel:
         model = CSThresholdClassifier(LogisticRegression(), calibrator=None, pos_label=2)
         with pytest.raises(ValueError, match='pos_label=2 is not one of the classes'):
             model.fit(X, y, fn_cost=5.0, fp_cost=1.0)
+
+
+class TestWrappedEstimatorGetsXAsGiven:
+    """X is the wrapped estimator's to validate, so a pipeline can encode strings and keep feature names."""
+
+    @pytest.fixture
+    def frame(self, data):
+        pd = pytest.importorskip('pandas')
+        X, y = data
+        frame = pd.DataFrame(X[:, :4], columns=list('abcd'))
+        frame['colour'] = np.where(X[:, 4] > 0, 'red', 'blue')
+        return frame, y
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_pipeline_encoding_a_string_column(self, classifier_type, frame):
+        X, y = frame
+        pipeline = make_pipeline(
+            ColumnTransformer([('encode', OneHotEncoder(), ['colour'])], remainder='passthrough'),
+            LogisticRegression(),
+        )
+        clf = WRAPPERS[classifier_type](pipeline).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        assert clf.predict(X).shape == y.shape
+        assert list(clf.feature_names_in_) == list(X.columns)
+
+    def test_feature_names_reach_the_wrapped_estimator(self, frame):
+        X, y = frame
+        X = X.drop(columns='colour')
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', UserWarning)
+            clf = CSThresholdClassifier(LogisticRegression(), calibrator=None).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+            clf.predict(X)
+        assert list(clf.estimator_.feature_names_in_) == list(X.columns)
+
+
+class TestFitParamsReachTheWrappedEstimator:
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_pipeline_with_costs(self, classifier_type, data):
+        X, y = data
+        clf = WRAPPERS[classifier_type](make_pipeline(LogisticRegression()))
+        clf.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        assert hasattr(clf, 'decision_')
+
+    @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
+    def test_sample_weight_without_routing(self, classifier_type, data):
+        X, y = data
+        weights = np.linspace(0.5, 1.5, len(y))
+        clf = WRAPPERS[classifier_type](LogisticRegression()).fit(X, y, fp_cost=1.0, fn_cost=5.0, sample_weight=weights)
+        expected = LogisticRegression().fit(X, y, sample_weight=weights)
+        np.testing.assert_allclose(clf.estimator_.coef_, expected.coef_)
+
+    def test_sample_weight_routed_through_a_pipeline(self, data):
+        X, y = data
+        weights = np.linspace(0.5, 1.5, len(y))
+        with config_context(enable_metadata_routing=True):
+            pipeline = make_pipeline(LogisticRegression().set_fit_request(sample_weight=True))
+            clf = CSThresholdClassifier(pipeline, calibrator=None)
+            clf.set_fit_request(fp_cost=True, fn_cost=True)
+            clf.fit(X, y, fp_cost=1.0, fn_cost=5.0, sample_weight=weights)
+        expected = LogisticRegression().fit(X, y, sample_weight=weights)
+        np.testing.assert_allclose(clf.estimator_[-1].coef_, expected.coef_)
+
+    def test_costs_reach_a_cost_sensitive_estimator_without_routing(self, data):
+        X, y = data
+        clf = CSThresholdClassifier(CSLogitClassifier(), calibrator=None).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        expected = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        np.testing.assert_allclose(clf.estimator_.coef_, expected.coef_)

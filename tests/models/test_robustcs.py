@@ -161,3 +161,28 @@ def test_metric_symbols_named_like_the_plain_costs_reach_the_loss(classification
     reference = CSLogitClassifier(loss=Metric(cost_matrix, Cost())).fit(X, y, fp_cost=fp_cost, cl=cl)
 
     np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+
+def test_costs_set_on_the_wrapped_estimator_are_kept():
+    """Costs left at their default here must not override the wrapped estimator's own."""
+    X, y = make_classification(n_samples=200, random_state=0)
+    fn_cost = np.random.default_rng(0).uniform(1, 10, 200)
+
+    robust = RobustCSClassifier(CSLogitClassifier(fp_cost=5.0)).fit(X, y, fn_cost=fn_cost)
+
+    assert robust.costs_['fp_cost'] == 5.0
+    imputed_fn_cost = robust.costs_['fn_cost']
+    expected = CSLogitClassifier(fp_cost=5.0).fit(X, y, fn_cost=imputed_fn_cost)
+    np.testing.assert_allclose(robust.estimator_.coef_, expected.coef_)
+
+
+def test_feature_names_reach_the_wrapped_estimator():
+    pd = pytest.importorskip('pandas')
+    X, y = make_classification(n_samples=200, n_features=4, random_state=0)
+    frame = pd.DataFrame(X, columns=list('abcd'))
+    fn_cost = np.random.default_rng(0).uniform(1, 10, 200)
+
+    robust = RobustCSClassifier(CSLogitClassifier()).fit(frame, y, fp_cost=1.0, fn_cost=fn_cost)
+
+    assert list(robust.feature_names_in_) == list('abcd')
+    assert list(robust.estimator_.feature_names_in_) == list('abcd')
