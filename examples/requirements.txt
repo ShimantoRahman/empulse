@@ -1,0 +1,11 @@
+empulse==0.13.0
+numpy==2.3.3
+scipy==1.16.2
+scikit-learn==1.9.0
+pandas==2.3.3
+sympy==1.14.0
+matplotlib==3.10.6
+xgboost==3.0.5
+imbalanced-learn==0.14.2
+joblib==1.5.2
+threadpoolctl==3.6.0

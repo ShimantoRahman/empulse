@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from textwrap import fill
 from typing import TYPE_CHECKING, Generic
 
 from narwhals.typing import IntoDataFrameT, IntoSeriesT
@@ -86,3 +87,43 @@ class Dataset(Generic[IntoDataFrameT, IntoSeriesT]):
     target_names: list[str]
     name: str
     DESCR: str
+
+    def __repr__(self) -> str:
+        """Summarize the dataset without printing observations or the full description."""
+        lines = [
+            f'Dataset: {self.name}',
+            f'  Samples: {len(self.target)}',
+            f'  Features: {len(self.feature_names)}',
+            fill(
+                f'Target labels: {", ".join(self.target_names)}',
+                width=88,
+                initial_indent='  ',
+                subsequent_indent='    ',
+            ),
+            fill(
+                f'Feature names: {", ".join(self.feature_names)}',
+                width=88,
+                initial_indent='  ',
+                subsequent_indent='    ',
+            ),
+            '  Cost matrix (negative costs represent benefits):',
+        ]
+        for outcome in ('tp', 'tn', 'fp', 'fn'):
+            formula = getattr(self.cost_matrix, f'{outcome}_cost')
+            lines.append(
+                fill(f'{outcome.upper()}: {formula}', width=88, initial_indent='    ', subsequent_indent='      ')
+            )
+        lines.append('  Instance costs:')
+        if self.instance_costs:
+            lines.extend(
+                f'    {name}: shape={values.shape}, dtype={values.dtype}'
+                for name, values in self.instance_costs.items()
+            )
+        else:
+            lines.append('    None')
+        lines.append('  Full description: print(dataset.DESCR)')
+        return '\n'.join(lines)
+
+    def __str__(self) -> str:
+        """Return the terminal summary also used by repr()."""
+        return self.__repr__()

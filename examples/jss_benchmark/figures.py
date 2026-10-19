@@ -1,17 +1,7 @@
-"""Summary tables and the paper's two benchmark figures, drawn only from the CSVs in ``results/``.
-
-Because nothing here reruns an experiment, the figures can be redrawn in seconds, and also from
-partially completed sweeps: a line simply stops where its data does.
-
-Colours: Empulse (and the exact EMP value) in blue, the reference implementations (and the
-approximate integration methods) in burnt orange, a pair that stays distinguishable under the common
-forms of colour-vision deficiency. Models and methods are further told apart by marker and line
-style, and reference implementations use hollow markers, so the figures also read in greyscale.
-"""
+"""Summary tables and matplotlib figures built from in-memory benchmark results."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import matplotlib as mpl
@@ -22,9 +12,7 @@ import pandas as pd
 from scipy import stats
 
 from .data import MODELS
-from .emp_integration import DIM_N_SAMPLES, DIMENSIONS, ERROR_N_SAMPLES, METHODS, SIZES
-
-RESULTS_DIR = Path(__file__).resolve().parents[1] / 'results'
+from .emp_integration import DIM_N_SAMPLES, ERROR_N_SAMPLES, METHODS
 
 INK = '#244876'
 INK_MUTED = '#5C6B80'
@@ -38,7 +26,6 @@ COMPARISON_FILL = '#F5E1D6'
 RC_PARAMS: dict[str, Any] = {
     'figure.facecolor': PAPER,
     'axes.facecolor': PAPER,
-    'savefig.facecolor': PAPER,
     'font.family': 'sans-serif',
     'font.sans-serif': ['DejaVu Sans'],
     'font.size': 9,
@@ -61,11 +48,10 @@ RC_PARAMS: dict[str, Any] = {
     'legend.fontsize': 8,
     'lines.linewidth': 1.8,
     'lines.solid_capstyle': 'round',
-    'pdf.fonttype': 42,
 }
 
 MODEL_LABEL = {'cslogit': 'CSLogit', 'cstree': 'CSTree', 'csforest': 'CSForest'}
-LEGACY_LABEL = {'cslogit': 'GitHub', 'cstree': 'CostCla', 'csforest': 'CostCla'}
+LEGACY_LABEL = {'cslogit': 'Reference', 'cstree': 'CostCla', 'csforest': 'CostCla'}
 IMPL_COLOR = {'current': PRIMARY, 'legacy': COMPARISON}
 IMPL_FILL = {'current': PRIMARY_FILL, 'legacy': COMPARISON_FILL}
 IMPL_MARKER_FACE = {'current': None, 'legacy': PAPER}
@@ -80,14 +66,6 @@ METHOD_LINESTYLE = {'Exact': 'solid', 'Quad': (0, (4, 1.5)), 'QMC': (0, (1, 1)),
 # ------------------------------------------------------------------------------------------------
 # Training time
 # ------------------------------------------------------------------------------------------------
-
-
-def load_timing(results_dir: Path = RESULTS_DIR) -> pd.DataFrame:
-    """All timing rows of both implementations that exist so far."""
-    frames = [pd.read_csv(p) for impl in ('legacy', 'current') if (p := results_dir / f'timing_{impl}.csv').exists()]
-    if not frames:
-        raise FileNotFoundError(f'No timing CSVs found under {results_dir}')
-    return pd.concat(frames, ignore_index=True)
 
 
 def summarize_timing(timing: pd.DataFrame) -> pd.DataFrame:
@@ -117,7 +95,7 @@ def speedup_table(summary: pd.DataFrame) -> pd.DataFrame:
     return wide.reset_index()[['model', 'n_samples', 'legacy', 'current', 'speedup']]
 
 
-def plot_scaling(summary: pd.DataFrame, out_stem: Path | None = None) -> plt.Figure:
+def plot_scaling(summary: pd.DataFrame) -> plt.Figure:
     """Mean training time against N on log-log axes, with 95% confidence bands."""
     with mpl.rc_context(RC_PARAMS):
         fig, ax = plt.subplots(figsize=(8.0, 5.2))
@@ -149,23 +127,12 @@ def plot_scaling(summary: pd.DataFrame, out_stem: Path | None = None) -> plt.Fig
         handles, labels = ax.get_legend_handles_labels()
         fig.legend(handles, labels, loc='lower center', ncols=len(MODELS), bbox_to_anchor=(0.5, 0.0))
         fig.tight_layout(rect=(0.0, 0.14, 1.0, 1.0))
-        if out_stem is not None:
-            fig.savefig(Path(out_stem).with_suffix('.pdf'))
-            fig.savefig(Path(out_stem).with_suffix('.png'), dpi=150)
-    plt.close(fig)  # returned for the caller to display or save, not shown twice by pyplot
     return fig
 
 
 # ------------------------------------------------------------------------------------------------
 # EMP integration methods
 # ------------------------------------------------------------------------------------------------
-
-
-def load_emp_integration(results_dir: Path = RESULTS_DIR) -> tuple[pd.DataFrame, pd.DataFrame | None]:
-    """The size sweep and, if it exists, the dimension sweep."""
-    dim_path = results_dir / 'emp_integration_dimensions.csv'
-    size = pd.read_csv(results_dir / 'emp_integration.csv')
-    return size, (pd.read_csv(dim_path) if dim_path.exists() else None)
 
 
 def summarize_emp_integration(size: pd.DataFrame, dimensions: pd.DataFrame | None) -> dict[str, pd.DataFrame]:
@@ -200,9 +167,7 @@ def _sci_label(value: float) -> str:
     return rf'${mantissa} \times 10^{{{int(exponent)}}}$%'
 
 
-def plot_emp_integration(
-    size: pd.DataFrame, dimensions: pd.DataFrame | None, out_stem: Path | None = None
-) -> plt.Figure:
+def plot_emp_integration(size: pd.DataFrame, dimensions: pd.DataFrame | None) -> plt.Figure:
     """Accuracy (a), scaling with N (b) and, if available, scaling with the number of variables (c)."""
     with mpl.rc_context(RC_PARAMS):
         n_panels = 2 if dimensions is None else 3
@@ -211,7 +176,8 @@ def plot_emp_integration(
 
         # The error hardly depends on N, so one size represents it. Exact is the reference, so its
         # error is zero by construction and is left out.
-        error = size[size['n_samples'] == ERROR_N_SAMPLES].groupby('method')['error_pct'].mean()
+        error_n_samples = ERROR_N_SAMPLES if ERROR_N_SAMPLES in set(size['n_samples']) else int(size['n_samples'].max())
+        error = size[size['n_samples'] == error_n_samples].groupby('method')['error_pct'].mean()
         error = error.reindex([name for name in METHODS if name != 'Exact'])
         bars = ax_error.bar(error.index, error.to_numpy(), color=COMPARISON, width=0.6)
         ax_error.bar_label(bars, labels=[_sci_label(value) for value in error], padding=3)
@@ -219,15 +185,17 @@ def plot_emp_integration(
         ax_error.set_ylim(1e-7, error.max() * 5)
         ax_error.set_xlabel('Integration method')
         ax_error.set_ylabel('Relative error vs. Exact (%)')
-        ax_error.set_title(f'(a) Approximation accuracy (N = {ERROR_N_SAMPLES:,})')
+        ax_error.set_title(f'(a) Approximation accuracy (N = {error_n_samples:,})')
         ax_error.grid(True, which='major', axis='y', linewidth=0.6)
 
         _plot_method_lines(ax_time, size, 'n_samples')
-        sizes = [n for n in SIZES if n in set(size['n_samples'])]
+        sizes = sorted(size['n_samples'].unique())
         ax_time.set_xscale('log')
         ax_time.set_yscale('log')
         ax_time.set_xticks(sizes)
-        ax_time.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _p: f'{int(x) // 1000}k'))
+        ax_time.xaxis.set_major_formatter(
+            mticker.FuncFormatter(lambda x, _p: f'{int(x) // 1000}k' if x >= 1000 else str(int(x)))
+        )
         ax_time.xaxis.set_minor_locator(mticker.NullLocator())
         ax_time.set_xlabel('Number of samples (N)')
         ax_time.set_ylabel('Execution time (seconds)')
@@ -240,17 +208,15 @@ def plot_emp_integration(
             # Exact exists only for a single stochastic variable, where panel (b) already shows it.
             _plot_method_lines(ax_dim, dimensions, 'n_stochastic', skip=('Exact',))
             ax_dim.set_yscale('log')
-            ax_dim.set_xticks(list(DIMENSIONS))
-            ax_dim.set_xlim(DIMENSIONS[0] - 0.25, DIMENSIONS[-1] + 0.25)
+            dims = sorted(dimensions['n_stochastic'].unique())
+            ax_dim.set_xticks(dims)
+            ax_dim.set_xlim(dims[0] - 0.25, dims[-1] + 0.25)
             ax_dim.set_xlabel('Number of stochastic variables')
             ax_dim.set_ylabel('Execution time (seconds)')
-            ax_dim.set_title(f'(c) Scaling with dimension (N = {DIM_N_SAMPLES:,})')
+            dim_n_samples = int(dimensions['n_samples'].iloc[0]) if 'n_samples' in dimensions else DIM_N_SAMPLES
+            ax_dim.set_title(f'(c) Scaling with dimension (N = {dim_n_samples:,})')
             ax_dim.legend(loc='upper left')
             ax_dim.grid(True, which='major', linewidth=0.6)
 
         fig.tight_layout()
-        if out_stem is not None:
-            fig.savefig(Path(out_stem).with_suffix('.pdf'))
-            fig.savefig(Path(out_stem).with_suffix('.png'), dpi=150)
-    plt.close(fig)  # returned for the caller to display or save, not shown twice by pyplot
     return fig
