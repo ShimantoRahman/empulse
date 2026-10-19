@@ -4,6 +4,7 @@ from typing import Any, ClassVar
 import numpy as np
 from sklearn.base import clone
 
+from ..._common._bias_sampling import _check_sensitive_feature
 from ..._common._strategies import StrategyFn, _independent_weights
 from ..._types import FloatNDArray, IntNDArray
 from .._base.bias import BaseBiasMitigationClassifier
@@ -165,10 +166,14 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
     }
 
     def _fit_mitigated(self, X: FloatNDArray, y: IntNDArray, sensitive_feature: IntNDArray, **fit_params: Any) -> Any:
-        strategy_fn = self._strategy_mapping[self.strategy] if isinstance(self.strategy, str) else self.strategy
-
-        if self.transform_feature is not None:
-            sensitive_feature = self.transform_feature(sensitive_feature)
+        if isinstance(self.strategy, str):
+            # The built-in strategies index their group weights by the 0/1 value of the feature.
+            strategy_fn = self._strategy_mapping[self.strategy]
+            sensitive_feature = _check_sensitive_feature(sensitive_feature, len(y), self.transform_feature)
+        else:
+            strategy_fn = self.strategy
+            if self.transform_feature is not None:
+                sensitive_feature = self.transform_feature(sensitive_feature)
 
         # The strategy works on the 0/1-encoded target; the estimator is fitted on the original labels.
         y_binary = np.where(y == self.classes_[1], 1, 0)

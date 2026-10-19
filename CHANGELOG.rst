@@ -62,6 +62,22 @@ Models
   when neither ``fit`` nor its own constructor sets them, instead of overriding them with zero.
 - |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.
 
+Bias mitigation and samplers
+----------------------------
+
+- |Fix| :class:`~empulse.models.BiasRelabelingClassifier` passes its fit parameters, such as the
+  parameters of a :class:`~empulse.metrics.Metric` loss, to the estimator that ranks the relabelling
+  candidates too.
+- |Fix| The bias mitigation models and samplers raise a clear error for a ``sensitive_feature`` that
+  is not coded as 0 and 1 (after ``transform_feature``), or whose length differs from ``y``, instead
+  of failing with an index error or silently doing nothing.
+- |Fix| :class:`~empulse.samplers.BiasRelabler` without a ``sensitive_feature`` returns the data
+  unchanged, like :class:`~empulse.samplers.BiasResampler`, and relabels a pandas target with any index.
+- |Fix| :class:`~empulse.samplers.BiasResampler` and :class:`~empulse.models.BiasResamplingClassifier`
+  keep the number of samples and no longer return the resample ordered by class and group. Results
+  for a given ``random_state`` change.
+- |Fix| :class:`~empulse.samplers.CostSensitiveSampler` rejects ``oversampling_norm=0``.
+
 
 `0.13.1`_ (22-10-2026)
 ======================

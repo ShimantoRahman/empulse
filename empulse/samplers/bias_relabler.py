@@ -220,12 +220,11 @@ class BiasRelabler(BaseSampler):  # type: ignore[misc]
         y : np.ndarray
             Relabeled target values.
         """
-        sensitive_feature = np.asarray(sensitive_feature)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(f'Only binary classification is supported. The type of the target is {y_type}.')
         self.classes_: NDArray[np.int64] = np.unique(y)
-        if len(self.classes_) == 1:
+        if len(self.classes_) == 1 or sensitive_feature is None:
             return X, y
         y, self.estimator_ = relabel(
             X,

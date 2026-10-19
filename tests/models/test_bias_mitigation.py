@@ -243,3 +243,21 @@ class TestNonZeroOneLabels:
         np.testing.assert_array_equal(model.classes_, labels)
         np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
         np.testing.assert_array_equal(model.predict(X), labels[reference.predict(X)])
+
+
+def test_relabeling_ranks_with_the_fit_parameters(X, y, sensitive_feature):
+    """The estimator ranking the relabelling candidates gets the same fit parameters as the final one."""
+    sympy = pytest.importorskip('sympy')
+    from empulse.metrics import Cost, CostMatrix, Metric
+
+    a, b = sympy.symbols('a b')
+    loss = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b), Cost())
+    BiasRelabelingClassifier(CSLogitClassifier(loss=loss)).fit(X, y, sensitive_feature=sensitive_feature, a=1.0, b=5.0)
+
+
+@pytest.mark.parametrize('classifier_cls', CLASSIFIERS, ids=lambda cls: cls.__name__)
+def test_sensitive_feature_not_coded_zero_one_raises(classifier_cls, X, y, imbalanced_y):
+    target = imbalanced_y if classifier_cls is BiasReweighingClassifier else y
+    sensitive_feature = np.array([1, 2] * (len(target) // 2))
+    with pytest.raises(ValueError, match='coded as 0 and 1'):
+        classifier_cls(LogisticRegression()).fit(X, target, sensitive_feature=sensitive_feature)

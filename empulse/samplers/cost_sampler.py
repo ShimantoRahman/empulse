@@ -135,7 +135,7 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
     _cost_names: ClassVar[tuple[str, ...]] = ('fp_cost', 'fn_cost')
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         'method': [StrOptions({'oversampling', 'rejection sampling'})],
-        'oversampling_norm': [Interval(Real, 0, 1, closed='both')],
+        'oversampling_norm': [Interval(Real, 0, 1, closed='right')],
         'percentile_threshold': [Interval(Real, 0, 1, closed='both')],
         'random_state': ['random_state'],
         'fp_cost': [Real, 'array-like'],

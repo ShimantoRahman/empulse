@@ -24,6 +24,30 @@ from ._strategies import Strategy, StrategyFn, _independent_weights
 PairsStrategyFn = Callable[[NDArray[Any], NDArray[Any]], int]
 
 
+def _check_sensitive_feature(
+    sensitive_feature: ArrayLike,
+    n_samples: int,
+    transform_feature: Callable[[NDArray[Any]], IntNDArray] | None,
+) -> IntNDArray:
+    """
+    Return the (transformed) sensitive feature as 0/1 integers, or raise if it is not binary.
+
+    The strategies index their group weights by the feature's value and treat 1 and 0 as the two
+    groups, so any other coding would silently pick the wrong groups or fail with an index error.
+    """
+    values = np.asarray(sensitive_feature)
+    if len(values) != n_samples:
+        raise ValueError(f'sensitive_feature must have the same length as y, got {len(values)} and {n_samples}.')
+    if transform_feature is not None:
+        values = np.asarray(transform_feature(values))
+    if not np.isin(values, [0, 1]).all():
+        raise ValueError(
+            'sensitive_feature must be coded as 0 and 1, got the values '
+            f'{np.unique(values).tolist()[:10]}. Pass a transform_feature that maps it to 0 and 1.'
+        )
+    return values.astype(np.intp)
+
+
 def _independent_pairs(y_true: ArrayLike, sensitive_feature: NDArray[Any]) -> int:
     """
     Determine promotion and demotion pairs so that y is statistically independent of sensitive feature.
@@ -84,17 +108,19 @@ def _get_promotion_candidates(y_pred: FloatNDArray, y_true: FloatNDArray, n_pair
 def relabel(
     X: NDArray[Any],
     y: Any,
-    sensitive_feature: NDArray[Any],
+    sensitive_feature: ArrayLike,
     classes: NDArray[Any],
     *,
     estimator: Any,
     strategy: PairsStrategyFn | Strategy,
     transform_feature: Callable[[NDArray[Any]], IntNDArray] | None,
+    fit_params: dict[str, Any] | None = None,
 ) -> tuple[Any, Any]:
     """
     Fit a clone of ``estimator`` and swap labels between groups according to ``strategy``.
 
-    ``y`` must be binary with two classes, ``classes`` being its sorted unique values.
+    ``y`` must be binary with two classes, ``classes`` being its sorted unique values. ``fit_params``
+    are passed to the estimator's ``fit``.
 
     Returns
     -------
@@ -104,12 +130,10 @@ def relabel(
         The fitted clone of ``estimator`` that ranked the relabelling candidates.
     """
     y_binarized = np.where(y == classes[1], 1, 0)
-
-    if transform_feature is not None:
-        sensitive_feature = transform_feature(sensitive_feature)
+    sensitive_feature = _check_sensitive_feature(sensitive_feature, len(y_binarized), transform_feature)
 
     fitted_estimator = clone(estimator)
-    fitted_estimator.fit(X, y)
+    fitted_estimator.fit(X, y, **(fit_params or {}))
     y_pred = fitted_estimator.predict_proba(X)[:, 1]
 
     strategy_fn = RELABEL_STRATEGIES[strategy] if isinstance(strategy, str) else strategy
@@ -140,9 +164,9 @@ def relabel(
     else:
         relabeled_y = np.copy(y)
 
-    if hasattr(relabeled_y, 'loc'):
-        relabeled_y.loc[demotion_candidates] = negative_label
-        relabeled_y.loc[promotion_candidates] = positive_label
+    if hasattr(relabeled_y, 'iloc'):
+        relabeled_y.iloc[demotion_candidates] = negative_label
+        relabeled_y.iloc[promotion_candidates] = positive_label
     else:
         relabeled_y[demotion_candidates] = negative_label
         relabeled_y[promotion_candidates] = positive_label
@@ -167,9 +191,7 @@ def resample_indices(
     """
     y_binarized = np.where(y == classes[1], 1, 0)
     rng = check_random_state(random_state)
-
-    if transform_feature is not None:
-        sensitive_feature = transform_feature(sensitive_feature)
+    sensitive_feature = _check_sensitive_feature(sensitive_feature, len(y_binarized), transform_feature)
 
     strategy_fn = RESAMPLE_STRATEGIES[strategy] if isinstance(strategy, str) else strategy
     class_weights = strategy_fn(y_binarized, sensitive_feature)
@@ -185,13 +207,19 @@ def resample_indices(
         )
         return np.arange(len(y))
 
-    indices = np.empty((0,), dtype=int)
+    groups = []
     for target_class, sensitive_val in product(np.unique(y_binarized), unique_attr):
-        sensitive_val = int(sensitive_val)
-        idx_class = np.flatnonzero(y_binarized == target_class)
-        idx_sensitive_feature = np.flatnonzero(sensitive_feature == sensitive_val)
-        idx_class_sensitive = np.intersect1d(idx_class, idx_sensitive_feature)
-        n_samples = int(class_weights[target_class, sensitive_val] * len(idx_class_sensitive))
+        idx_class_sensitive = np.flatnonzero((y_binarized == target_class) & (sensitive_feature == sensitive_val))
+        groups.append((idx_class_sensitive, class_weights[target_class, int(sensitive_val)] * len(idx_class_sensitive)))
+
+    # Largest-remainder rounding, so the group sizes add up to the (rounded) total the weights call for.
+    targets = np.array([target for _, target in groups])
+    sizes = np.floor(targets).astype(int)
+    shortfall = round(float(targets.sum())) - int(sizes.sum())
+    sizes[np.argsort(sizes - targets, kind='stable')[:shortfall]] += 1
+
+    indices = np.empty((0,), dtype=int)
+    for (idx_class_sensitive, _), n_samples in zip(groups, sizes, strict=True):
         if n_samples > len(idx_class_sensitive):
             indices = np.concatenate((indices, idx_class_sensitive))
             indices = np.concatenate((
@@ -201,4 +229,5 @@ def resample_indices(
         else:
             indices = np.concatenate((indices, rng.choice(idx_class_sensitive, n_samples, replace=False)))
 
-    return indices
+    # Mixed, so the resample is not ordered by class and group.
+    return np.asarray(rng.permutation(indices))

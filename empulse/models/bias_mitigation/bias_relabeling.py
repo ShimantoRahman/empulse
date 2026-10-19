@@ -140,6 +140,7 @@ class BiasRelabelingClassifier(BaseBiasMitigationClassifier):
             estimator=self.estimator,
             strategy=self.strategy,
             transform_feature=self.transform_feature,
+            fit_params=fit_params,
         )
         estimator_ = clone(self.estimator)
         estimator_.fit(X, y, **fit_params)

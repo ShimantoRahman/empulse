@@ -257,3 +257,11 @@ class TestMisclassificationCosts:
 
         np.testing.assert_array_equal(benefit_sampler.sample_indices_, cost_sampler.sample_indices_)
         np.testing.assert_allclose(self.kept_fractions(benefit_sampler, labels), [0.25, 1.0], atol=0.05)
+
+
+def test_zero_oversampling_norm_is_rejected(data):
+    X, y = data
+    with pytest.raises(ValueError, match='oversampling_norm'):
+        CostSensitiveSampler(method='oversampling', oversampling_norm=0).fit_resample(
+            X, y, fp_cost=np.ones(len(y)), fn_cost=np.full(len(y), 3.0)
+        )
