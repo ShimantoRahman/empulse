@@ -1,4 +1,4 @@
-empulse==0.13.0
+empulse==0.13.1
 numpy==2.3.3
 scipy==1.16.2
 scikit-learn==1.9.0

@@ -11,9 +11,9 @@ authors:
     given-names: Matthias
     orcid: https://orcid.org/0000-0002-4502-0764
 title: "Empulse"
-version: 0.12.0
+version: 0.13.1
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.11185664
-date-released: 2026-10-07
+    value: 10.5281/zenodo.11185663
+date-released: 2026-10-22
 url: "https://github.com/ShimantoRahman/empulse"
