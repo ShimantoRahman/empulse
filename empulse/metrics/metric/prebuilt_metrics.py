@@ -227,17 +227,12 @@ def make_credit_scoring_empirical_max_profit_metric() -> MixtureMetric:
             [
                 MixtureComponent('success_rate', metric_det, {'lam': 0.0}),
                 MixtureComponent('default_rate', metric_det, {'lam': 1.0}),
-                MixtureComponent(lambda p: 1 - p['success_rate'] - p['default_rate'], metric_stoch, {}),
+                MixtureComponent('1 - success_rate - default_rate', metric_stoch, {}),
             ],
             defaults={'success_rate': 0.55, 'default_rate': 0.1, 'roi': 0.2644},
         )
-        # The two spikes are probabilities, and the continuous piece takes whatever mass they leave,
-        # so they must also leave some: without the joint constraint the third weight goes negative
-        # and the mixture stops being a convex combination.
+        # The weights themselves are checked to be non-negative and to sum to 1, so the continuous
+        # piece's weight rules out success_rate + default_rate > 1.
         .constrain('success_rate', 0, 1)
         .constrain('default_rate', 0, 1)
-        .constrain(
-            lambda p: p['success_rate'] + p['default_rate'] <= 1,
-            message='success_rate + default_rate must not exceed 1',
-        )
     )

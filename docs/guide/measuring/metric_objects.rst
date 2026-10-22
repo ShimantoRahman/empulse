@@ -146,8 +146,9 @@ therefore combines the *rates* first and converts the result to a threshold once
 
 A mixture behaves like a plain metric everywhere else. It satisfies the same
 :class:`~empulse.metrics.BaseMetric` interface, so it can be a model's ``loss``, and its
-``direction`` and ``strategy`` are read from its components — which must agree, or accessing them
-raises.
+``direction`` and ``strategy`` are read from its components. The components must optimize in the
+same direction and must all be amounts of money or all pure numbers, which is checked when the mixture
+is built; accessing ``strategy`` raises if they use different strategy types.
 
 Where next
 ==========

@@ -606,3 +606,23 @@ class TestModelsTrainIdenticallyOnEitherPhrasing:
         )
 
         np.testing.assert_allclose(cost_model.predict_proba(X), profit_model.predict_proba(X))
+
+
+def test_a_model_fitted_on_empcs_score_can_be_pickled():
+    from empulse.metrics import empcs_score
+
+    X, y = make_classification(n_samples=200, random_state=0)
+    model = CSThresholdClassifier(LogisticRegression(), loss=empcs_score).fit(X, y)
+    restored = pickle.loads(pickle.dumps(model))
+    np.testing.assert_array_equal(restored.predict(X), model.predict(X))
+
+
+def test_a_mixture_of_strategy_types_gets_the_models_own_error():
+    a = sympy.Symbol('a')
+    mixture = MixtureMetric([
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost(a).add_fn_cost(1), Cost()), {}),
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost(a).add_fn_cost(1), LogCost()), {}),
+    ])
+    X, y = make_classification(n_samples=100, random_state=0)
+    with pytest.raises(ValueError, match='requires a loss whose strategy supports gradient boosting'):
+        CSBoostClassifier(loss=mixture).fit(X, y, a=2.0)

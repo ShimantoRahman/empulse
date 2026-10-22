@@ -180,16 +180,15 @@ as a weighted sum of ordinary metrics, one per piece:
     empcs_score = MixtureMetric([
         MixtureComponent('success_rate', point_mass, {'loss_rate': 0.0}),
         MixtureComponent('default_rate', point_mass, {'loss_rate': 1.0}),
-        MixtureComponent(
-            lambda p: 1 - p['success_rate'] - p['default_rate'], spread, {}
-        ),
+        MixtureComponent('1 - success_rate - default_rate', spread, {}),
     ])
 
     print(empcs_score(y_true, y_proba, success_rate=0.55, default_rate=0.1, roi=0.2644))
 
 Each component supplies a weight, a metric, and any parameter values fixed for that component. A
-weight can be a constant, the name of a parameter supplied at call time, or — as in the third
-component — a callable computing it from the others.
+weight can be a constant, or an expression in parameters supplied at call time: a single name, as in
+the first two components, or a formula, as in the third. The weights must not be negative and must sum
+to 1, which the metric checks every time it is called.
 
 .. note::
     Symbol names become keyword arguments, so they must be valid Python identifiers and must not be

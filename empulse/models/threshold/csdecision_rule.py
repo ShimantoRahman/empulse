@@ -442,7 +442,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
             if Capability.COST_ONLY_DECISION not in loss.capabilities:
                 raise ValueError(
-                    f'Cannot use {loss.strategy.__class__.__name__} at predict time: its optimal '
+                    f'Cannot use {loss.__name__!r} at predict time: its optimal '
                     'threshold/rate is a function of the observed scores, not of the cost values '
                     'alone, so it cannot be recomputed from cost parameters passed to predict().'
                 )

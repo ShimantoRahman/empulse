@@ -1,3 +1,5 @@
+import pickle
+import re
 import warnings
 
 import numpy as np
@@ -47,7 +49,7 @@ def empcs_mixture(credit_scoring_metrics):
     return MixtureMetric([
         MixtureComponent('success_rate', metric_det, {'gamma': 0.0}),
         MixtureComponent('default_rate', metric_det, {'gamma': 1.0}),
-        MixtureComponent(lambda p: 1 - p['success_rate'] - p['default_rate'], metric_stoch, {}),
+        MixtureComponent('1 - success_rate - default_rate', metric_stoch, {}),
     ])
 
 
@@ -128,7 +130,7 @@ def test_mixture_rejects_malformed_components(make_component, message):
 
 def test_mixture_missing_weight_parameter_raises(empcs_mixture, y_true_and_prediction):
     y, y_proba = y_true_and_prediction
-    with pytest.raises(ValueError, match=r"expected a value for weight parameter 'default_rate'"):
+    with pytest.raises(ValueError, match=re.escape("expected a value for weight parameter(s) ['default_rate']")):
         empcs_mixture(y, y_proba, success_rate=0.55, roi=0.2644)
 
 
@@ -661,3 +663,111 @@ def test_constant_weights_must_form_a_mixture(weights):
     metric = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Cost())
     with pytest.raises(ValueError, match='weights must'):
         MixtureMetric([MixtureComponent(weight, metric, {}) for weight in weights])
+
+
+class TestWeights:
+    """Weights are expressions whose parameters the mixture can see, check and pickle."""
+
+    A = sympy.Symbol('a')
+    FIRST = Metric(CostMatrix().add_fp_cost(A).add_fn_cost(1), Cost())
+    SECOND = Metric(CostMatrix().add_fp_cost(1).add_fn_cost(A), Cost())
+
+    def mixture(self, first='w', second='1 - w'):
+        return MixtureMetric([MixtureComponent(first, self.FIRST, {}), MixtureComponent(second, self.SECOND, {})])
+
+    def test_an_expression_weight_is_the_weighted_sum(self):
+        expected = 0.3 * self.FIRST(Y_TRUE, Y_SCORE, a=2.0) + 0.7 * self.SECOND(Y_TRUE, Y_SCORE, a=2.0)
+        assert self.mixture()(Y_TRUE, Y_SCORE, a=2.0, w=0.3) == pytest.approx(expected)
+
+    def test_weight_parameters_are_parameters_of_the_mixture(self):
+        mixture = self.mixture()
+        assert 'w' in mixture._all_parameters
+        assert mixture._missing_parameters({'a'}) == {'w'}
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            mixture(Y_TRUE, Y_SCORE, a=2.0, w=0.3)
+
+    def test_a_missing_weight_parameter_is_named(self):
+        with pytest.raises(ValueError, match=re.escape("weight parameter(s) ['w']")):
+            self.mixture()(Y_TRUE, Y_SCORE, a=2.0)
+
+    @pytest.mark.parametrize(
+        ('first', 'second', 'match'),
+        [('p', 'q', 'must sum to 1'), ('1.5', '-0.5', 'must not be negative')],
+        ids=['not_summing_to_one', 'negative'],
+    )
+    def test_weights_are_checked_when_called(self, first, second, match):
+        parameters = {'p': 0.9, 'q': 0.9}
+        if first == 'p':
+            mixture = self.mixture(first, second)
+        else:
+            with pytest.raises(ValueError, match=match):  # constant weights are checked when built
+                self.mixture(first, second)
+            mixture = self.mixture('w', '1 - w')
+            parameters = {'w': 1.5}
+            match = 'must not be negative'
+        with pytest.raises(ValueError, match=match):
+            mixture(Y_TRUE, Y_SCORE, a=2.0, **parameters)
+
+    def test_unvalidated_calls_skip_the_weight_check(self):
+        mixture = self.mixture('p', 'q')
+        mixture(Y_TRUE, Y_SCORE, validate=False, a=2.0, p=0.9, q=0.9)
+
+    def test_a_callable_weight_is_deprecated_but_still_works(self):
+        with pytest.warns(FutureWarning, match='callable MixtureComponent weight is deprecated'):
+            mixture = self.mixture(lambda p: p['w'], lambda p: 1 - p['w'])
+        assert mixture(Y_TRUE, Y_SCORE, a=2.0, w=0.3) == pytest.approx(self.mixture()(Y_TRUE, Y_SCORE, a=2.0, w=0.3))
+
+    def test_empcs_score_can_be_pickled(self):
+        restored = pickle.loads(pickle.dumps(empcs_score))
+        assert restored(Y_TRUE, Y_SCORE) == pytest.approx(empcs_score(Y_TRUE, Y_SCORE))
+
+    def test_a_mixture_pickled_without_compiled_weights_still_loads(self):
+        mixture = self.mixture()
+        state = mixture.__dict__.copy()
+        del state['_weights']
+        restored = MixtureMetric.__new__(MixtureMetric)
+        restored.__setstate__(state)
+        assert restored(Y_TRUE, Y_SCORE, a=2.0, w=0.3) == pytest.approx(mixture(Y_TRUE, Y_SCORE, a=2.0, w=0.3))
+
+
+class TestComponentChecks:
+    def test_money_and_pure_number_components_are_rejected(self):
+        from empulse.metrics import AUEPC
+
+        a = sympy.Symbol('a')
+        with pytest.raises(ValueError, match='all be amounts of money, or all pure numbers'):
+            MixtureMetric([
+                MixtureComponent(0.5, Metric(CostMatrix().add_tp_benefit(a).add_fp_cost(1), AUEPC()), {}),
+                MixtureComponent(0.5, Metric(CostMatrix().add_tp_benefit(a).add_fp_cost(1), MaxProfit()), {}),
+            ])
+
+    def test_a_parameter_every_component_fixes_is_not_outlier_sensitive(self):
+        lam, b = sympy.symbols('lam b')
+        metric = Metric(CostMatrix().add_tp_benefit(lam).add_fp_cost(b).mark_outlier_sensitive(lam), Cost())
+        mixture = MixtureMetric([
+            MixtureComponent(0.5, metric, {'lam': 0.0}),
+            MixtureComponent(0.5, metric, {'lam': 1.0}),
+        ])
+        assert mixture._outlier_sensitive_parameters() == {}
+
+
+class TestConstrain:
+    A = sympy.Symbol('a')
+
+    def mixture(self):
+        metric = Metric(CostMatrix().add_fp_cost(self.A).add_fn_cost(1), Cost())
+        return MixtureMetric([MixtureComponent('w', metric, {}), MixtureComponent('1 - w', metric, {})])
+
+    def test_lower_above_upper_is_rejected(self):
+        with pytest.raises(ValueError, match='greater than upper bound'):
+            self.mixture().constrain('a', 5, 1)
+
+    def test_bounding_twice_keeps_the_tighter_bounds(self):
+        mixture = self.mixture().constrain('a', 0, 10).constrain('a', 2, 20)
+        with pytest.raises(ValueError, match='between 2 and 10'):
+            mixture(Y_TRUE, Y_SCORE, a=11.0, w=0.5)
+
+    def test_an_unknown_name_is_rejected(self):
+        with pytest.raises(ValueError, match="Cannot constrain 'typo'"):
+            self.mixture().constrain('typo', 0, 1)

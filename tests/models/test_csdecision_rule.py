@@ -268,7 +268,7 @@ def test_threshold_of_a_cost_mixture_matches_its_combined_metric(data):
     metric = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b), Cost())
     mixture = MixtureMetric([
         MixtureComponent('w', metric, {'a': 1.0, 'b': 9.0}),
-        MixtureComponent(lambda p: 1 - p['w'], metric, {'a': 9.0, 'b': 1.0}),
+        MixtureComponent('1 - w', metric, {'a': 9.0, 'b': 1.0}),
     ])
 
     mixed = CSThresholdClassifier(LogisticRegression(), loss=mixture, calibrator=None).fit(X, y, w=0.5)
@@ -369,7 +369,7 @@ class TestPredictTimeCosts:
         loss = _DummyMetric(MaxProfit())
         clf = _make_model(classifier_type, kind, loss=loss)
         clf.fit(X, y, alpha=0.1)
-        with pytest.raises(ValueError, match='MaxProfit'):
+        with pytest.raises(ValueError, match="'max profit' at predict time"):
             clf.predict(X, alpha=0.2)
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)
@@ -386,7 +386,7 @@ class TestPredictTimeCosts:
         loss = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), EmpiricalMaxProfit())
         clf = _make_model(classifier_type, 'logreg', loss=loss)
         clf.fit(X, y, a=5.0, b=1.0)
-        with pytest.raises(ValueError, match='EmpiricalMaxProfit'):
+        with pytest.raises(ValueError, match="'empirical max profit' at predict time"):
             clf.predict(X, a=5.0, b=1.0)
 
     @pytest.mark.parametrize('classifier_type', CLASSIFIERS)

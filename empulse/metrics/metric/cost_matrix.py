@@ -25,6 +25,15 @@ class ParameterBounds:
     upper: float | None = None
 
 
+def _check_bounds(target: Any, lower: float | None, upper: float | None) -> ParameterBounds:
+    """Return the bounds *lower* and *upper* on *target*, raising if they do not describe an interval."""
+    if lower is None and upper is None:
+        raise ValueError(f"Constraining '{target}' requires a lower bound, an upper bound, or both.")
+    if lower is not None and upper is not None and lower > upper:
+        raise ValueError(f"Lower bound {lower} is greater than upper bound {upper} for '{target}'.")
+    return ParameterBounds(lower=lower, upper=upper)
+
+
 def _add_bounds(bounds: dict[str, ParameterBounds], name: str, new: ParameterBounds) -> None:
     """Add *new* to the bounds of *name*, keeping the tighter of each bound if it already has some."""
     existing = bounds.get(name)
@@ -573,12 +582,7 @@ class CostMatrix:
                 'The target must be a sympy.Symbol, a string that can be converted to one, or a callable, '
                 f'got {type(target).__name__!r} instead.'
             )
-        if lower is None and upper is None:
-            raise ValueError(f"Constraining '{target}' requires a lower bound, an upper bound, or both.")
-        if lower is not None and upper is not None and lower > upper:
-            raise ValueError(f"Lower bound {lower} is greater than upper bound {upper} for '{target}'.")
-
-        _add_bounds(self._bounds, str(target), ParameterBounds(lower=lower, upper=upper))
+        _add_bounds(self._bounds, str(target), _check_bounds(target, lower, upper))
         return self
 
     def _resolve_aliases(self) -> None:

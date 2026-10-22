@@ -395,8 +395,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
         if Capability.PRECOMPUTED_BOOST_OBJECTIVE not in capabilities:
             raise ValueError(
                 f'{type(self).__name__} requires a loss whose strategy supports gradient boosting '
-                f"(neither 'boost_objective' nor 'precomputed_boost_objective'; got the "
-                f'{loss.strategy.name!r} strategy).'
+                f"(neither 'boost_objective' nor 'precomputed_boost_objective'), got {loss.__name__!r}."
             )
         return backend.wrap_objective(loss, y, loss_params, precomputed=True, scaling=scaling)
 

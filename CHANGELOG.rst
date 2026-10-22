@@ -75,7 +75,17 @@ Metrics
   can be called before :meth:`~empulse.metrics.CostMatrix.alias`. A constraint on a name that is
   neither a symbol nor an alias raises instead of being ignored.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` whose components mark the same parameter
-  outlier-sensitive for different classes detects its outliers on every sample.
+  outlier-sensitive for different classes detects its outliers on every sample, and a parameter
+  every component fixes is no longer outlier-sensitive.
+- |API| A :class:`~empulse.metrics.MixtureComponent` weight can be an expression, such as
+  ``'1 - success_rate - default_rate'``, whose parameters are parameters of the mixture: they can be
+  passed to a model's ``fit`` and are reported when missing. A callable weight is deprecated.
+- |Fix| :func:`~empulse.metrics.empcs_score`, and models trained on it, can be pickled.
+- |Fix| :class:`~empulse.metrics.MixtureMetric` checks that its weights are not negative and sum to 1
+  when called, not only when they are constants, and rejects mixing components that are amounts of
+  money with ones that are pure numbers, such as :class:`~empulse.metrics.AUEPC`.
+- |Fix| :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` rejects a lower bound
+  above the upper one and names that are not parameters, and keeps the tighter bound when called twice.
 - |API| :attr:`Metric.cost_matrix <empulse.metrics.Metric.cost_matrix>` returns a copy: a metric is
   compiled from its cost matrix when it is built, so changing the matrix afterwards had no effect on
   scoring. Build a new metric from the changed cost matrix instead.

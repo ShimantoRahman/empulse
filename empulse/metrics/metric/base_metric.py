@@ -81,7 +81,7 @@ class BaseMetric(ABC):
         if capability not in self.capabilities:
             raise ValueError(
                 f'{requester} only supports losses whose strategy supports {capability.value!r}; '
-                f"the '{self.strategy.name}' strategy of {self!r} does not."
+                f'{self.__name__!r} does not.'
             )
 
     @property

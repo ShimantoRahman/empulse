@@ -1,22 +1,24 @@
 import warnings
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from numbers import Real
-from typing import Any, Literal, NamedTuple, Self
+from typing import Any, Literal, NamedTuple, Self, TypeAlias
 
 import numpy as np
+import sympy
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray
 from ..common import classification_threshold
-from ._compile import CountScoreFn
+from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_lambda
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
+from ._symbolic import _sympify_term
 from .base_metric import BaseMetric
 from .capabilities import Capability
-from .cost_matrix import CostMatrix, ParameterBounds, ParameterPredicate
+from .cost_matrix import CostMatrix, ParameterPredicate, _add_bounds, _check_bounds
 from .metric import Metric
 from .strategies import ElasticNetPenalty, LogitObjective, MetricStrategy
 
-Weight = float | str | Callable[[dict[str, Any]], float]
+Weight: TypeAlias = float | str | sympy.Expr | Callable[[dict[str, Any]], float]
 
 
 class MixtureComponent(NamedTuple):
@@ -25,16 +27,19 @@ class MixtureComponent(NamedTuple):
 
     Parameters
     ----------
-    weight : float | str | Callable[[dict], float]
+    weight : float, str or sympy.Expr
         The mixture weight for this component.
 
         - If ``float``, a constant weight.
-        - If ``str``, the name of a parameter supplied at call time (e.g. ``'success_rate'``),
-          looked up in the keyword arguments passed to the :class:`MixtureMetric`.
-        - If callable, called with the full dict of keyword arguments passed to the
-          :class:`MixtureMetric` and should return a ``float``. Useful for a weight that is
-          derived from other parameters
-          (e.g. ``lambda p: 1 - p['success_rate'] - p['default_rate']``).
+        - If ``str`` or a sympy expression, an expression in parameters supplied at call time, such as
+          ``'success_rate'`` or ``'1 - success_rate - default_rate'``. Its symbols are parameters of
+          the :class:`MixtureMetric`, so they can have defaults and constraints, be passed through
+          a model's ``fit``, and be routed like any other parameter.
+
+        .. deprecated::
+            A callable weight, called with the keyword arguments passed to the
+            :class:`MixtureMetric`, is deprecated. The mixture cannot see which parameters it reads,
+            nor can it be pickled when it is a ``lambda``. Pass an expression instead.
 
     metric : BaseMetric
         The metric to evaluate for this component. Usually a :class:`Metric`, but any
@@ -64,9 +69,9 @@ def _check_component(index: int, component: Any) -> MixtureComponent:
             f'got {component!r}.'
         )
     weight, metric, parameters = component
-    if not isinstance(weight, Real | str) and not callable(weight):
+    if not isinstance(weight, Real | str | sympy.Expr) and not callable(weight):
         raise TypeError(
-            f'The weight of MixtureMetric component {index} must be a number, a parameter name or a callable, '
+            f'The weight of MixtureMetric component {index} must be a number or an expression, '
             f'got {weight!r}. MixtureComponent takes its fields in the order (weight, metric, parameters).'
         )
     if not isinstance(metric, BaseMetric):
@@ -82,14 +87,49 @@ def _check_component(index: int, component: Any) -> MixtureComponent:
     return MixtureComponent(weight, metric, dict(parameters))
 
 
+class _CompiledWeight:
+    """A component's weight, compiled once, with the names of the parameters it reads."""
+
+    function: PicklableLambda | Callable[[dict[str, Any]], float]
+
+    def __init__(self, weight: Weight) -> None:
+        self.weight = weight
+        if callable(weight) and not isinstance(weight, sympy.Basic):
+            warnings.warn(
+                'A callable MixtureComponent weight is deprecated: the mixture cannot see which parameters '
+                "it reads, nor can a lambda be pickled. Pass an expression instead, such as '1 - a - b'.",
+                FutureWarning,
+                stacklevel=4,
+            )
+            self.expression: sympy.Expr | None = None
+            #: ``None`` when the parameters cannot be known, for a callable weight.
+            self.names: frozenset[str] | None = None
+            self.function = weight
+            return
+        self.expression = _sympify_term(weight) if isinstance(weight, str) else sympy.sympify(weight)
+        self.names = frozenset(str(symbol) for symbol in self.expression.free_symbols)
+        self.function = _safe_lambdify(self.expression)
+
+    @property
+    def constant(self) -> float | None:
+        """The weight, if it does not depend on any parameter."""
+        if self.expression is None or self.names:
+            return None
+        return float(self.expression)
+
+    def __call__(self, parameters: Mapping[str, Any]) -> float:
+        if self.expression is None:
+            return float(self.function(dict(parameters)))  # type: ignore[arg-type]
+        missing = sorted(name for name in self.names or () if name not in parameters)
+        if missing:
+            raise ValueError(f'MixtureMetric expected a value for weight parameter(s) {missing}, did not receive it.')
+        value = np.asarray(_safe_run_lambda(self.function, self.expression, **dict(parameters)), dtype=np.float64)
+        if value.size != 1:
+            raise ValueError(f'The MixtureMetric weight {self.weight!r} must be a single value, got {value.size}.')
+        return float(value.reshape(-1)[0])
+
+
 _KNOWN_EXTRA_PARAMETERS = frozenset({'sample_weight'})
-
-
-def _aliases(metric: BaseMetric) -> Mapping[str, str]:
-    """Map each alias of *metric*'s cost matrix to the symbol name it stands for."""
-    cost_matrix = getattr(metric, '_cost_matrix', None)
-    aliases = getattr(cost_matrix, '_aliases', {})
-    return {alias: str(symbol) for alias, symbol in aliases.items()}
 
 
 def _extra_parameters(metric: BaseMetric) -> frozenset[str]:
@@ -171,9 +211,7 @@ class MixtureMetric(BaseMetric):
         empcs_metric = MixtureMetric([
             MixtureComponent('success_rate', metric_det, {'gamma': 0.0}),
             MixtureComponent('default_rate', metric_det, {'gamma': 1.0}),
-            MixtureComponent(
-                lambda p: 1 - p['success_rate'] - p['default_rate'], metric_stoch, {}
-            ),
+            MixtureComponent('1 - success_rate - default_rate', metric_stoch, {}),
         ])
 
         y_true = [1, 0, 1, 0, 1]
@@ -191,19 +229,30 @@ class MixtureMetric(BaseMetric):
                 f'MixtureMetric components have inconsistent optimization directions: {directions}. '
                 'All components must optimize in the same direction.'
             )
-        constant_weights = [
-            float(component.weight) for component in self.components if isinstance(component.weight, int | float)
-        ]
-        if any(weight < 0 for weight in constant_weights):
-            raise ValueError(f'MixtureMetric weights must not be negative, got {constant_weights}.')
-        if len(constant_weights) == len(self.components) and not np.isclose(sum(constant_weights), 1.0):
+        if len({component.metric._is_unitless for component in self.components}) > 1:
+            raise ValueError(
+                'MixtureMetric components must all be amounts of money, or all pure numbers such as AUEPC, '
+                'since their weighted sum adds them up.'
+            )
+        self._weights = [_CompiledWeight(component.weight) for component in self.components]
+        constant_weights = [weight.constant for weight in self._weights]
+        _check_weights([weight for weight in constant_weights if weight is not None])
+        if None not in constant_weights and not np.isclose(sum(constant_weights), 1.0):  # type: ignore[arg-type]
             raise ValueError(f'MixtureMetric weights must sum to 1, got {constant_weights}.')
         self.defaults: dict[str, float] = dict(defaults) if defaults is not None else {}
         self._name_override: str | None = None
         # Bounds on the mixture's own parameters -- chiefly the weights, which are not symbols of
         # any component's cost matrix and so are not reached by CostMatrix.constrain().
-        self._bounds: dict[str, ParameterBounds] = {}
+        self._bounds: dict[str, Any] = {}
         self._predicates: list[ParameterPredicate] = []
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        # Mixtures pickled by older versions lack the compiled weights.
+        if '_weights' not in state:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', FutureWarning)
+                self._weights = [_CompiledWeight(component.weight) for component in self.components]
 
     def _validate_parameters(self, **parameters: Any) -> None:
         """
@@ -220,17 +269,32 @@ class MixtureMetric(BaseMetric):
             If a distribution rejects its shape parameters, a value falls outside bounds declared
             with :meth:`~empulse.metrics.CostMatrix.constrain`, or a declared predicate fails.
         """
-        resolved = self._apply_defaults(dict(parameters), validate=True)
-        forwarded = self._forward_parameters(resolved)
-        for component in self.components:
-            component.metric._validate_parameters(**self._component_parameters(component, forwarded))
+        for _, metric, component_parameters in self._weighted_components(parameters, validate=True):
+            metric._validate_parameters(**component_parameters)
 
-    def _apply_defaults(self, parameters: dict[str, Any], *, validate: bool = True) -> dict[str, Any]:
-        """Fill in missing parameters (including weight parameters) from :attr:`defaults`."""
+    def _weighted_components(
+        self, parameters: Mapping[str, Any], *, validate: bool
+    ) -> list[tuple[float, BaseMetric, dict[str, Any]]]:
+        """
+        Resolve the parameters once, into each component's weight, metric and keyword arguments.
+
+        Every method of the mixture goes through this, so that defaults, fixed values, aliases and
+        weights are handled the same way everywhere. With ``validate``, the mixture's own constraints
+        are checked, and so are the weights: none may be negative, and together they must sum to 1.
+        """
         resolved = {**self.defaults, **parameters}
         if validate and (self._bounds or self._predicates):
             _check_parameter_domains((), resolved, self._bounds, self._predicates)
-        return resolved
+        self._warn_about_unknown_parameters(resolved)
+        weights = [weight(resolved) for weight in self._weights]
+        if validate:
+            _check_weights(weights)
+            if not np.isclose(sum(weights), 1.0):
+                raise ValueError(f'MixtureMetric weights must sum to 1, got {weights}.')
+        return [
+            (weight, component.metric, self._component_parameters(component, resolved))
+            for weight, component in zip(weights, self.components, strict=True)
+        ]
 
     def constrain(
         self,
@@ -270,29 +334,32 @@ class MixtureMetric(BaseMetric):
         Raises
         ------
         ValueError
-            If `target` is a name and neither `lower` nor `upper` is given, or if `target` is a
-            callable and `message` is not given.
+            If `target` is a name and neither `lower` nor `upper` is given, if `lower` is greater than
+            `upper`, if `target` names no parameter of the mixture, or if `target` is a callable and
+            `message` is not given.
+
+        Notes
+        -----
+        Bounding the same parameter twice keeps the tighter of each bound.
         """
         if callable(target):
             if message is None:
                 raise ValueError('A message is required when constraining with a callable.')
             self._predicates.append(ParameterPredicate(predicate=target, message=message))
             return self
-        if lower is None and upper is None:
-            raise ValueError(f"Constraining '{target}' requires a lower bound, an upper bound, or both.")
-        self._bounds[target] = ParameterBounds(lower=lower, upper=upper)
+        bounds = _check_bounds(target, lower, upper)
+        if target not in self._all_symbols:
+            raise ValueError(
+                f"Cannot constrain '{target}': it is not a parameter of the mixture. "
+                f'Known parameters: {sorted(self._all_symbols)}.'
+            )
+        _add_bounds(self._bounds, target, bounds)
         return self
 
     @property
     def direction(self) -> Direction:
         """The optimization direction shared by all components."""
-        directions = {component.metric.direction for component in self.components}
-        if len(directions) > 1:
-            raise ValueError(
-                f'MixtureMetric components have inconsistent optimization directions: {directions}. '
-                'All components must optimize in the same direction.'
-            )
-        return next(iter(directions))
+        return self.components[0].metric.direction
 
     @property
     def __name__(self) -> str:
@@ -400,7 +467,7 @@ class MixtureMetric(BaseMetric):
 
         A mixture-level default (:attr:`defaults`) counts as covered for every component, in
         addition to whatever the caller passed, since it is merged in before parameters are
-        forwarded (see :meth:`_apply_defaults`). Parameters a component fixes internally
+        forwarded (see :meth:`_weighted_components`). Parameters a component fixes internally
         (:attr:`MixtureComponent.parameters`) are never required from the caller.
         """
         effectively_supplied = set(supplied) | self.defaults.keys()
@@ -411,41 +478,27 @@ class MixtureMetric(BaseMetric):
 
     @property
     def _weight_parameter_names(self) -> set[str]:
-        """Names of keyword arguments that are consumed only to resolve component weights."""
-        return {component.weight for component in self.components if isinstance(component.weight, str)}
+        """Names of the parameters the weights read, as far as they are known."""
+        return set().union(*(weight.names or () for weight in self._weights))
 
-    @staticmethod
-    def _resolve_weight(weight: Weight, parameters: dict[str, Any]) -> float:
-        if isinstance(weight, str):
-            if weight not in parameters:
-                raise ValueError(f'MixtureMetric expected a value for weight parameter {weight!r}, did not receive it.')
-            return float(parameters[weight])
-        if callable(weight):
-            return float(weight(parameters))
-        return float(weight)
-
-    def _forward_parameters(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Keyword arguments to forward to the components, excluding mixture-only weight names."""
-        exclude = self._weight_parameter_names
-        forwarded = {key: value for key, value in parameters.items() if key not in exclude}
-        accepted = set(_KNOWN_EXTRA_PARAMETERS)
+    def _warn_about_unknown_parameters(self, parameters: Mapping[str, Any]) -> None:
+        if any(weight.names is None for weight in self._weights):
+            return  # a callable weight may read any parameter
+        accepted = self._weight_parameter_names | _KNOWN_EXTRA_PARAMETERS
         for component in self.components:
             accepted |= self._accepted_names(component)
-        unknown = set(forwarded) - accepted
+        unknown = set(parameters) - accepted
         if unknown:
             warnings.warn(
                 f'Unknown parameters passed to metric: {sorted(unknown)}. These will be ignored.',
                 UserWarning,
-                stacklevel=3,
+                stacklevel=4,
             )
-        return forwarded
 
     @staticmethod
     def _fixed_names(component: MixtureComponent) -> set[str]:
         """Every spelling of the symbols a component fixes: their names and all their aliases."""
-        aliases = _aliases(component.metric)
-        symbols = {aliases.get(key, key) for key in component.parameters}
-        return symbols | set(component.parameters) | {alias for alias, symbol in aliases.items() if symbol in symbols}
+        return set().union(*(component.metric._parameter_spellings(name) for name in component.parameters))
 
     @staticmethod
     def _accepted_names(component: MixtureComponent) -> set[str]:
@@ -453,7 +506,7 @@ class MixtureMetric(BaseMetric):
         return component.metric._all_symbols | _extra_parameters(component.metric)
 
     @classmethod
-    def _component_parameters(cls, component: MixtureComponent, forwarded: dict[str, Any]) -> dict[str, Any]:
+    def _component_parameters(cls, component: MixtureComponent, parameters: Mapping[str, Any]) -> dict[str, Any]:
         """
         Return the keyword arguments for one component: those it accepts, with its fixed values on top.
 
@@ -461,7 +514,7 @@ class MixtureMetric(BaseMetric):
         """
         accepted = cls._accepted_names(component) | _KNOWN_EXTRA_PARAMETERS
         fixed = cls._fixed_names(component)
-        own = {key: value for key, value in forwarded.items() if key in accepted and key not in fixed}
+        own = {key: value for key, value in parameters.items() if key in accepted and key not in fixed}
         return {**own, **component.parameters}
 
     def __call__(
@@ -485,15 +538,12 @@ class MixtureMetric(BaseMetric):
         score : float
             The mixture's combined score.
         """
-        parameters = self._apply_defaults(parameters, validate=validate)
-        forwarded = self._forward_parameters(parameters)
-        total = 0.0
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            total += weight * component.metric(
-                y_true, y_score, validate=validate, **self._component_parameters(component, forwarded)
+        return float(
+            sum(
+                weight * metric(y_true, y_score, validate=validate, **component_parameters)
+                for weight, metric, component_parameters in self._weighted_components(parameters, validate=validate)
             )
-        return float(total)
+        )
 
     def _prepare_count_loss(
         self, *, n_samples: int | None = None, validate: bool = True, **parameters: Any
@@ -503,16 +553,12 @@ class MixtureMetric(BaseMetric):
 
         The weighted sum of the components' own, so ``None`` unless every component has one.
         """
-        parameters = self._apply_defaults(parameters, validate=validate)
-        forwarded = self._forward_parameters(parameters)
         weighted_losses = []
-        for component in self.components:
-            component_loss = component.metric._prepare_count_loss(
-                n_samples=n_samples, validate=validate, **self._component_parameters(component, forwarded)
-            )
+        for weight, metric, component_parameters in self._weighted_components(parameters, validate=validate):
+            component_loss = metric._prepare_count_loss(n_samples=n_samples, validate=validate, **component_parameters)
             if component_loss is None:
                 return None
-            weighted_losses.append((self._resolve_weight(component.weight, parameters), component_loss))
+            weighted_losses.append((weight, component_loss))
 
         def loss(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
             return float(sum(weight * fn(y_score, n_positive, n_negative) for weight, fn in weighted_losses))
@@ -547,15 +593,12 @@ class MixtureMetric(BaseMetric):
         if combined is not None:
             metric, costs = combined
             return metric.optimal_rate(y_true, y_score, validate=validate, **costs)
-        parameters = self._apply_defaults(parameters, validate=validate)
-        forwarded = self._forward_parameters(parameters)
-        total = 0.0
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            total += weight * component.metric.optimal_rate(
-                y_true, y_score, validate=validate, **self._component_parameters(component, forwarded)
+        return float(
+            sum(
+                weight * metric.optimal_rate(y_true, y_score, validate=validate, **component_parameters)
+                for weight, metric, component_parameters in self._weighted_components(parameters, validate=validate)
             )
-        return float(total)
+        )
 
     def optimal_threshold(
         self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
@@ -618,36 +661,21 @@ class MixtureMetric(BaseMetric):
         return cached, {'tp': tp_cost, 'tn': tn_cost, 'fp': fp_cost, 'fn': fn_cost}
 
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:
-        parameters = self._apply_defaults(parameters, validate=False)
-        forwarded = self._forward_parameters(parameters)
-        total: FloatNDArray | None = None
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            contribution = weight * component.metric._prepare_boost_objective(
-                y_true, **self._component_parameters(component, forwarded)
-            )
-            total = contribution if total is None else total + contribution
-        assert total is not None  # components is non-empty, checked in __init__
+        total: FloatNDArray = sum(  # type: ignore[assignment]
+            weight * metric._prepare_boost_objective(y_true, **component_parameters)
+            for weight, metric, component_parameters in self._weighted_components(parameters, validate=False)
+        )
         return total
 
     def _gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any
     ) -> tuple[FloatNDArray, FloatNDArray]:
-        parameters = self._apply_defaults(parameters, validate=False)
-        forwarded = self._forward_parameters(parameters)
-        total_gradient: FloatNDArray | None = None
-        total_hessian: FloatNDArray | None = None
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            gradient, hessian = component.metric._gradient_boost_objective(
-                y_true, y_score, **self._component_parameters(component, forwarded)
-            )
-            weighted_gradient = weight * gradient
-            weighted_hessian = weight * hessian
-            total_gradient = weighted_gradient if total_gradient is None else total_gradient + weighted_gradient
-            total_hessian = weighted_hessian if total_hessian is None else total_hessian + weighted_hessian
-        assert total_gradient is not None
-        assert total_hessian is not None
+        total_gradient: Any = 0.0
+        total_hessian: Any = 0.0
+        for weight, metric, component_parameters in self._weighted_components(parameters, validate=False):
+            gradient, hessian = metric._gradient_boost_objective(y_true, y_score, **component_parameters)
+            total_gradient = total_gradient + weight * gradient
+            total_hessian = total_hessian + weight * hessian
         return total_gradient, total_hessian
 
     def _logit_objective(
@@ -688,21 +716,16 @@ class MixtureMetric(BaseMetric):
         **parameters: Any,
     ) -> LogitObjective:
         """Combine the components' logit objectives, full or value-only as *kind* says."""
-        parameters = self._apply_defaults(parameters, validate=False)
-        forwarded = self._forward_parameters(parameters)
         weighted_objectives = []
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            build = (
-                component.metric._logit_objective if kind == 'objective' else component.metric._logit_value_objective
-            )
+        for weight, metric, component_parameters in self._weighted_components(parameters, validate=False):
+            build = metric._logit_objective if kind == 'objective' else metric._logit_value_objective
             objective = build(
                 features=features,
                 y_true=y_true,
                 C=C,
                 l1_ratio=l1_ratio,
                 fit_intercept=fit_intercept,
-                **self._component_parameters(component, forwarded),
+                **component_parameters,
             )
             weighted_objectives.append((weight, objective))
 
@@ -734,16 +757,13 @@ class MixtureMetric(BaseMetric):
         FloatNDArray | float,
     ]:
         """Compute the weighted sum of each component's (class- or instance-dependent) costs."""
-        parameters = self._apply_defaults(parameters, validate=False)
-        forwarded = self._forward_parameters(parameters)
         total_fp: FloatNDArray | float = 0.0
         total_fn: FloatNDArray | float = 0.0
         total_tp: FloatNDArray | float = 0.0
         total_tn: FloatNDArray | float = 0.0
-        for component in self.components:
-            weight = self._resolve_weight(component.weight, parameters)
-            fp_cost, fn_cost, tp_cost, tn_cost = component.metric._evaluate_costs(
-                replace_stochastic=replace_stochastic, **self._component_parameters(component, forwarded)
+        for weight, metric, component_parameters in self._weighted_components(parameters, validate=False):
+            fp_cost, fn_cost, tp_cost, tn_cost = metric._evaluate_costs(
+                replace_stochastic=replace_stochastic, **component_parameters
             )
             total_fp = total_fp + weight * fp_cost
             total_fn = total_fn + weight * fn_cost
@@ -763,16 +783,24 @@ class MixtureMetric(BaseMetric):
         Merge each component's outlier-sensitive parameters.
 
         See :meth:`BaseMetric._outlier_sensitive_parameters`. A parameter that components classify
-        differently describes the rows of both classes, so it is ``'both'``.
+        differently describes the rows of both classes, so it is ``'both'``. A parameter a component
+        fixes is not read from the caller, so it is not outlier-sensitive there.
         """
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
         for component in self.components:
+            fixed = self._fixed_names(component)
             for name, rows in component.metric._outlier_sensitive_parameters().items():
-                result[name] = rows if result.get(name, rows) == rows else 'both'
+                if name not in fixed:
+                    result[name] = rows if result.get(name, rows) == rows else 'both'
         return result
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(components={self.components!r})'
+
+
+def _check_weights(weights: Sequence[float]) -> None:
+    if any(weight < 0 for weight in weights):
+        raise ValueError(f'MixtureMetric weights must not be negative, got {list(weights)}.')
 
 
 class _MixtureLogitObjective(LogitObjective):

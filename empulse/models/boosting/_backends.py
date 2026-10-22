@@ -318,7 +318,7 @@ class BoostingBackend:
             if self.name in {'xgboost', 'lightgbm'}:
                 return MetricObjective(loss, scaling, **loss_params)
             raise ValueError(
-                f'The CatBoost backend does not support the {loss.strategy.name!r} strategy: CatBoost '
+                f'The CatBoost backend does not support {loss.__name__!r}: CatBoost '
                 'computes its objective on chunks of the training rows, which this strategy cannot be '
                 'evaluated on. Use XGBClassifier or LGBMClassifier as the estimator, or a Cost or '
                 'Savings loss.'
