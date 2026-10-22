@@ -106,7 +106,13 @@ def _check_distribution_parameters(
     display: Callable[[str], str],
 ) -> None:
     """Validate each random variable's shape parameters using the distribution's own ``check``."""
-    scalars = {name: value for name, value in parameters.items() if isinstance(value, Real)}
+    scalars: dict[str, Any] = {name: value for name, value in parameters.items() if isinstance(value, Real)}
+    # A length-1 array applies one value to every sample, so it is checked as the scalar it stands for.
+    scalars |= {
+        name: float(value[0])
+        for name, value in parameters.items()
+        if isinstance(value, np.ndarray) and value.ndim == 1 and value.size == 1 and _extremes(value) is not None
+    }
     for expression in expressions:
         for random_symbol in expression.atoms(sympy.stats.rv.RandomSymbol):
             distribution = random_symbol.pspace.distribution
@@ -146,7 +152,7 @@ def _check_array_distribution_parameters(
     arrays = {
         name: value
         for name, value in parameters.items()
-        if name in argument_names and isinstance(value, np.ndarray) and value.ndim == 1 and value.size > 0
+        if name in argument_names and isinstance(value, np.ndarray) and value.ndim == 1 and value.size > 1
     }
     for name, values in arrays.items():
         if _extremes(values) is None:

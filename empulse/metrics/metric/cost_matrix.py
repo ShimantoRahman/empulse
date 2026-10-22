@@ -418,7 +418,7 @@ class CostMatrix:
         Parameters
         ----------
         symbol : str | sympy.Symbol
-            The symbol to mark as outlier-sensitive.
+            The symbol, or its alias, to mark as outlier-sensitive.
 
         Returns
         -------
@@ -510,7 +510,8 @@ class CostMatrix:
         :meth:`constrain` if you want to constrain a parameter by its alias.
 
         A callable receives the parameters keyed by **symbol name**, with aliases already resolved
-        and defaults already applied.
+        and defaults already applied. An instance-dependent parameter arrives as an array, so the
+        callable may return one boolean per sample; the parameters are accepted only if all are true.
 
         Distribution parameters are validated automatically and do not need a constraint: the
         shape of a ``sympy.stats`` random variable is checked by the distribution itself, so

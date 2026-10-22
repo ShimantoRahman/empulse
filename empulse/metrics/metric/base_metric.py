@@ -302,6 +302,10 @@ class BaseMetric(ABC):
     ]:
         """Evaluate the (class-dependent or instance-dependent) cost expressions."""
 
+    def _parameter_spellings(self, name: str) -> set[str]:
+        """Return every keyword the parameter *name* can be passed as: its symbol name and its aliases."""
+        return {name}
+
     @abstractmethod
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
         """Map each outlier-sensitive parameter to the class whose rows it describes.

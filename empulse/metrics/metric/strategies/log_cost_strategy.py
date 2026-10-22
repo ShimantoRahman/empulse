@@ -565,7 +565,7 @@ def _log_cost_loss_to_latex(
 ) -> str:
     i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
-        _build_log_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
+        _build_log_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 1, N)
     )
 
     for symbol in cost_function.free_symbols:

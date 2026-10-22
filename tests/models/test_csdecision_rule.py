@@ -242,6 +242,22 @@ class TestInstanceDependentCostsReduceToTheirAverage:
         expected = loss.optimal_threshold(np.array([]), np.array([]), a=9.0, b=1.0)
         assert clf.threshold_ == pytest.approx(expected)
 
+    def test_the_same_holds_for_a_mixture(self, data):
+        """A MixtureMetric of such a component thresholds exactly like the component on its own."""
+        X, y = data
+        a, b = sympy.symbols('a b')
+        component = Metric(CostMatrix().add_fp_cost(a * b).add_fn_cost(30), Cost())
+        mixture = MixtureMetric([MixtureComponent(1.0, component, {})])
+        a_values = np.where(np.arange(len(y)) % 2 == 0, 1.0, 9.0)
+        b_values = 10.0 - a_values
+
+        on_metric = CSThresholdClassifier(LogisticRegression(), loss=component, calibrator=None)
+        on_mixture = CSThresholdClassifier(LogisticRegression(), loss=mixture, calibrator=None)
+
+        assert on_mixture.fit(X, y, a=a_values, b=b_values).threshold_ == pytest.approx(
+            on_metric.fit(X, y, a=a_values, b=b_values).threshold_
+        )
+
 
 def test_threshold_of_a_cost_mixture_matches_its_combined_metric(data):
     """A mixture of Cost components thresholds like one Cost metric with the weighted costs."""

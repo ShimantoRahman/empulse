@@ -611,19 +611,22 @@ def test_repr_latex_min_cost(uniform_dist_matrix):
 
 
 def test_repr_latex_savings(churn_cost_matrix):
+    """Savings renders what it computes: the baseline's cost less the model's, relative to the baseline's."""
     savings_func = Metric(churn_cost_matrix, Savings())
     assert savings_func._repr_latex_() == (
-        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - '
-        '\\gamma_{i}\\right) - \\gamma_{i} \\left(\\mathrm{clv}_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} '
-        '\\left(1 - y_{i}\\right) \\left(d_{i} + f_{i}\\right)\\right)}{N \\min\\left(\\mathrm{Cost}_{0}, '
-        '\\mathrm{Cost}_{1}\\right)}$'
+        '$\\displaystyle \\frac{\\min\\left(\\mathrm{Cost}_{0}, \\mathrm{Cost}_{1}\\right) - '
+        '\\frac{\\sum_{i=1}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - \\gamma_{i}\\right) - \\gamma_{i} '
+        '\\left(\\mathrm{clv}_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} \\left(1 - y_{i}\\right) '
+        '\\left(d_{i} + f_{i}\\right)\\right)}{N}}{\\left|{\\min\\left(\\mathrm{Cost}_{0}, '
+        '\\mathrm{Cost}_{1}\\right)}\\right|}$'
     )
 
 
 def test_repr_latex_cost(churn_cost_matrix):
+    """The mean runs over the N samples, i = 1, ..., N."""
     cost_func = Metric(churn_cost_matrix, Cost())
     assert cost_func._repr_latex_() == (
-        '$\\displaystyle \\frac{\\sum_{i=0}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - '
+        '$\\displaystyle \\frac{\\sum_{i=1}^{N} \\left(s_{i} y_{i} \\left(f_{i} \\left(1 - '
         '\\gamma_{i}\\right) - \\gamma_{i} \\left(\\mathrm{clv}_{i} - d_{i} - f_{i}\\right)\\right) + s_{i} '
         '\\left(1 - y_{i}\\right) \\left(d_{i} + f_{i}\\right)\\right)}{N}$'
     )

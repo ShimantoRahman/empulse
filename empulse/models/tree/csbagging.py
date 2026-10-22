@@ -18,7 +18,7 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
-from .cstree import CSTreeClassifier
+from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
 
 
 class CSBaggingClassifier(CostSensitiveClassifier):
@@ -108,6 +108,12 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         If a :class:`~empulse.metrics.BaseMetric` is provided, then the costs are computed using the
         metric, and any costs provided to the
         constructor or to the ``fit`` method are ignored.
+
+        The base estimators are trained on those costs, whatever the metric's strategy, so they
+        optimize the metric itself only for an expected-cost strategy
+        (:class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` or
+        :class:`~empulse.metrics.Savings`), and a warning is raised otherwise. The metric itself is
+        used for weighted voting.
 
     combination : {'majority_voting', 'weighted_voting'}, default='majority_voting'
         How the base estimators' predictions are aggregated.
@@ -325,6 +331,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         if self.combination == 'weighted_voting' and not self.bootstrap:
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
+        _warn_if_trees_ignore_strategy(loss, type(self).__name__, loss_used_for='weighted voting')
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
 
         n_samples = X.shape[0]

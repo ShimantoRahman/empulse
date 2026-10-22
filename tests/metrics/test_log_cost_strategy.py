@@ -318,3 +318,4 @@ def test_log_cost_repr_and_latex_smoke():
     latex = metric._repr_latex_()
     assert isinstance(latex, str)
     assert latex.startswith('$')
+    assert '\\sum_{i=1}^{N}' in latex  # the mean runs over the N samples

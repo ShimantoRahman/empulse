@@ -89,7 +89,8 @@ def _check_parameter_domains(
             raise ValueError(_bounds_message(display(name), bound, high))
 
     for constraint in predicates:
-        if not constraint.predicate(parameters):
+        # A predicate over instance-dependent parameters answers per sample; every sample must pass.
+        if not np.all(constraint.predicate(parameters)):
             raise ValueError(f'The parameters do not satisfy a constraint on the cost matrix: {constraint.message}')
 
 

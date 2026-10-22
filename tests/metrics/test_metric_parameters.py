@@ -102,6 +102,25 @@ class TestOutlierSensitiveParameters:
         )
         assert metric._outlier_sensitive_parameters() == {'incentive_cost': 'negative'}
 
+    def test_marked_by_alias(self):
+        """Marking a symbol by its alias classifies the symbol the alias stands for."""
+        d = sympy.Symbol('d')
+        metric = Metric(
+            CostMatrix()
+            .add_fn_cost(d)
+            .add_fp_cost('f')
+            .alias('incentive_cost', d)
+            .mark_outlier_sensitive('incentive_cost'),
+            Cost(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'incentive_cost': 'positive'}
+
+    def test_marked_by_name_of_a_symbol_with_assumptions(self):
+        """``mark_outlier_sensitive('d')`` creates an assumption-free symbol, which must still match ``d``."""
+        d = sympy.Symbol('d', positive=True)
+        metric = Metric(CostMatrix().add_fn_cost(d).add_fp_cost('f').mark_outlier_sensitive('d'), Cost())
+        assert metric._outlier_sensitive_parameters() == {'d': 'positive'}
+
     def test_unaliased_symbol_uses_raw_name(self):
         clv = sympy.Symbol('clv')
         metric = Metric(CostMatrix().add_tp_benefit(clv).mark_outlier_sensitive(clv), Cost())
@@ -125,6 +144,22 @@ class TestParameterNames:
     def test_matches_all_symbols(self):
         metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), Cost())
         assert metric.parameter_names == metric._all_symbols == {'a', 'b'}
+
+
+class TestParameterSpellings:
+    """`_parameter_spellings` lists every keyword one parameter is accepted under."""
+
+    @staticmethod
+    def _aliased_metric():
+        cost_matrix = CostMatrix().add_fn_cost('d').add_fp_cost('f').alias({'amount': 'd', 'incentive': 'd'})
+        return Metric(cost_matrix, Cost())
+
+    @pytest.mark.parametrize('name', ['d', 'amount', 'incentive'])
+    def test_any_spelling_gives_all_of_them(self, name):
+        assert self._aliased_metric()._parameter_spellings(name) == {'d', 'amount', 'incentive'}
+
+    def test_an_unaliased_symbol_has_one_spelling(self):
+        assert self._aliased_metric()._parameter_spellings('f') == {'f'}
 
 
 @pytest.mark.parametrize('kwarg_order', ['symbol_first', 'alias_first'])

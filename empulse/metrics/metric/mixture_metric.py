@@ -726,6 +726,13 @@ class MixtureMetric(BaseMetric):
             total_tn = total_tn + weight * tn_cost
         return total_fp, total_fn, total_tp, total_tn
 
+    def _parameter_spellings(self, name: str) -> set[str]:
+        """Return every keyword the parameter *name* can be passed as, in any component."""
+        spellings = {name}
+        for component in self.components:
+            spellings |= component.metric._parameter_spellings(name)
+        return spellings
+
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
         """
         Merge each component's outlier-sensitive parameters.

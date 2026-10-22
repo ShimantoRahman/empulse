@@ -889,6 +889,12 @@ class Metric(BaseMetric):
         tn_cost = _safe_run_lambda(tn_fn, tn_expr, **parameters)
         return fp_cost, fn_cost, tp_cost, tn_cost
 
+    def _parameter_spellings(self, name: str) -> set[str]:
+        """Return every keyword the parameter *name* can be passed as: its symbol name and its aliases."""
+        aliases = self.cost_matrix._aliases
+        symbol_name = str(aliases.get(name, name))
+        return {symbol_name} | {alias for alias, target in aliases.items() if str(target) == symbol_name}
+
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
         """
         Map each outlier-sensitive parameter to the class whose rows it describes.
@@ -897,13 +903,17 @@ class Metric(BaseMetric):
         """
         if not self.cost_matrix._outlier_sensitive_symbols:
             return {}
-        alias_of = _invert_alias_map(self.cost_matrix._aliases)
-        pos_symbols = self.tp_cost.free_symbols | self.fn_cost.free_symbols
-        neg_symbols = self.tn_cost.free_symbols | self.fp_cost.free_symbols
+        aliases = self.cost_matrix._aliases
+        alias_of = _invert_alias_map(aliases)
+        # Matched by name: a symbol may be marked by its alias, or as a string while the cost matrix
+        # holds a symbol of that name with assumptions, which sympy treats as a different symbol.
+        pos_names = {str(symbol) for symbol in self.tp_cost.free_symbols | self.fn_cost.free_symbols}
+        neg_names = {str(symbol) for symbol in self.tn_cost.free_symbols | self.fp_cost.free_symbols}
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
         for symbol in self.cost_matrix._outlier_sensitive_symbols:
-            name = alias_of.get(str(symbol), str(symbol))
-            in_pos, in_neg = symbol in pos_symbols, symbol in neg_symbols
+            symbol_name = str(aliases.get(str(symbol), symbol))
+            name = alias_of.get(symbol_name, symbol_name)
+            in_pos, in_neg = symbol_name in pos_names, symbol_name in neg_names
             if in_pos and not in_neg:
                 result[name] = 'positive'
             elif in_neg and not in_pos:

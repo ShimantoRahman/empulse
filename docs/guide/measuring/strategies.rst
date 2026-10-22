@@ -415,8 +415,8 @@ Which models can train on which
 
 A metric can always be *evaluated*. Training on one is a stronger requirement: the model has to be
 able to optimise it. Gradient-based models need an objective with usable derivatives, which the two
-ranking-based strategies do not provide; evolutionary and tree-based models only need a scalar
-fitness, so they accept anything.
+ranking-based strategies do not provide; evolutionary models only need a scalar fitness, so they
+accept anything.
 
 .. _metric_class_in_model:
 
@@ -447,25 +447,25 @@ fitness, so they accept anything.
       - ❌
     * - :class:`~empulse.models.CSTreeClassifier`
       - ✅
+      - ➖
       - ✅
-      - ✅
-      - ✅
-      - ✅
-      - ✅
+      - ➖
+      - ➖
+      - ➖
     * - :class:`~empulse.models.CSForestClassifier`
       - ✅
+      - ➖
       - ✅
-      - ✅
-      - ✅
-      - ✅
-      - ✅
+      - ➖
+      - ➖
+      - ➖
     * - :class:`~empulse.models.CSBaggingClassifier`
       - ✅
+      - ➖
       - ✅
-      - ✅
-      - ✅
-      - ✅
-      - ✅
+      - ➖
+      - ➖
+      - ➖
     * - :class:`~empulse.models.CSThresholdClassifier`
       - ✅
       - ✅
@@ -521,6 +521,12 @@ approximating the piecewise-constant true/false positive rates with a smooth sig
 **experimental** and not recommended for production. The sigmoid's temperature is the ``alpha``
 parameter, and annealing it during training is what ``alpha_schedule`` on the gradient optimizers
 does — see :ref:`cslogit`.
+
+➖ marks a strategy the cost-sensitive trees accept but do not optimise. They split on cost impurity,
+so they grow their trees on the costs the metric's cost matrix evaluates to and minimise the expected
+cost, whatever the strategy, and warn that they do. :class:`~empulse.models.CSForestClassifier` and
+:class:`~empulse.models.CSBaggingClassifier` still use the metric itself to weigh their trees'
+votes. To train on the metric, use :class:`~empulse.models.ProfTreeClassifier`.
 
 The two minimax models are the mirror image: they optimise a worst-case expected profit and accept
 :class:`~empulse.metrics.MaxProfit` only. Anything else raises a ``ValueError`` naming the

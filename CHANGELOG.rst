@@ -50,9 +50,36 @@ Metrics
   which made it unsafe to build a cost matrix from untrusted input. A string term may only use
   names, numbers, arithmetic and sympy's mathematical functions such as ``exp`` or ``Max``; build
   anything else, such as ``sympy.Rational(1, 2)``, from sympy objects.
+- |Fix| A string term of a :class:`~empulse.metrics.CostMatrix` may use ``True`` and ``False``, e.g.
+  as the condition of a ``Piecewise``'s last branch.
+- |Fix| A callable passed to :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` works
+  with instance-dependent parameters: it may answer per sample, and every sample must satisfy it.
+- |Fix| An instance-dependent distribution parameter is validated when another parameter of the same
+  distribution is passed as a single-element list or array.
+- |Fix| :meth:`CostMatrix.mark_outlier_sensitive <empulse.metrics.CostMatrix.mark_outlier_sensitive>`
+  accepts an alias, and marking a symbol by name finds it when it was created with assumptions, such
+  as ``positive=True``. Both were treated as a parameter of either class.
+- |Fix| The LaTeX of :class:`~empulse.metrics.Savings` shows the savings relative to the baseline
+  instead of the cost divided by it, and the sums of :class:`~empulse.metrics.Cost`,
+  :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.LogCost` and
+  :class:`~empulse.metrics.Savings` run over the N samples from 1.
+- |Enhancement| :class:`~empulse.metrics.Capability` has an ``EXPECTED_COST`` member, present for
+  :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` and
+  :class:`~empulse.metrics.Savings`.
 
 Models
 ------
+
+- |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier` warn when the strategy of their ``loss`` is not an
+  expected cost, such as :class:`~empulse.metrics.MaxProfit`: they grow their trees on the metric's
+  costs, minimizing their expected cost, whatever the strategy.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` fitted on a
+  :class:`~empulse.metrics.MixtureMetric` with instance-dependent costs averages each cost over the
+  samples for its threshold, as it does for a :class:`~empulse.metrics.Metric`, instead of the
+  parameters the costs are computed from.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` finds an outlier-sensitive parameter of a metric
+  loss whether it is passed under its symbol name or its alias.
 
 - |Fix| :class:`~empulse.models.CSThresholdClassifier`, :class:`~empulse.models.CSRateClassifier`
   and :class:`~empulse.models.RobustCSClassifier` hand ``X`` to the wrapped estimator unchanged, so a

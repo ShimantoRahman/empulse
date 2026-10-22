@@ -351,8 +351,12 @@ class Cost(MetricStrategy):
     _direction: Direction = Direction.MINIMIZE
     #: `optimal_threshold`/`optimal_rate` are algebraic solves of the cost equation, so they
     #: depend only on the cost values, not on the actual `y_true`/`y_score`. Inherited by `Profit`
-    #: and `Savings`, for which the same is true.
-    _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.COST_ONLY_DECISION})
+    #: and `Savings`, for which the same is true, as is `EXPECTED_COST`: savings are a decreasing affine
+    #: map of the expected cost.
+    _capabilities: ClassVar[frozenset[Capability]] = frozenset({
+        Capability.COST_ONLY_DECISION,
+        Capability.EXPECTED_COST,
+    })
 
     def __init__(self) -> None:
         super().__init__(name=self._name, direction=self._direction)
@@ -801,7 +805,7 @@ def _cost_loss_to_latex(
 ) -> str:
     i, N = sympy.symbols('i N')  # ruff: ignore[non-lowercase-variable-in-function]
     cost_function = (1 / N) * sympy.Sum(
-        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
+        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 1, N)
     )
 
     for symbol in cost_function.free_symbols:

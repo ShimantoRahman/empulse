@@ -136,6 +136,12 @@ class TestStringTermsCannotRunCode:
                     (sympy.Symbol('clv'), sympy.Symbol('d') < 1), (sympy.Symbol('f'), sympy.Symbol('d') >= 1)
                 ),
             ),
+            # True and False are literals, not names sympy claims, e.g. the condition of the last branch.
+            (
+                'Piecewise((clv, d < 1), (f, True))',
+                sympy.Piecewise((sympy.Symbol('clv'), sympy.Symbol('d') < 1), (sympy.Symbol('f'), True)),
+            ),
+            ('Piecewise((clv, False), (f, True))', sympy.Symbol('f')),
         ],
     )
     def test_accepts_the_term_grammar(self, term, expected):
@@ -378,6 +384,22 @@ def test_a_predicate_can_span_several_parameters():
         metric(Y_TRUE, Y_SCORE, a=1.0, b=5.0)
 
 
+def test_a_predicate_over_instance_dependent_parameters_must_hold_for_every_sample():
+    """An array parameter makes the predicate answer per sample, which must not be read as one truth value."""
+    cost_matrix = (
+        CostMatrix()
+        .add_fp_cost('a')
+        .add_fn_cost('b')
+        .constrain(lambda params: params['a'] > params['b'], message='a must exceed b')
+    )
+    metric = Metric(cost_matrix, Cost())
+    a = np.full(Y_TRUE.size, 5.0)
+    assert isinstance(metric(Y_TRUE, Y_SCORE, a=a, b=1.0), float)
+    a[2] = 0.5
+    with pytest.raises(ValueError, match='a must exceed b'):
+        metric(Y_TRUE, Y_SCORE, a=a, b=1.0)
+
+
 def test_a_predicate_sees_defaults_that_were_not_passed():
     cost_matrix = (
         CostMatrix()
@@ -427,3 +449,15 @@ def test_distribution_shape_parameters_are_checked_without_being_declared():
     assert isinstance(metric(Y_TRUE, Y_SCORE, alpha=6.0, beta=14.0, b=1.0), float)
     with pytest.raises(ValueError, match='Shape parameter Alpha must be positive'):
         metric(Y_TRUE, Y_SCORE, alpha=-1.0, beta=14.0, b=1.0)
+
+
+@pytest.mark.parametrize('alpha', [6.0, [6.0], np.array([6.0])], ids=['scalar', 'list', 'length-1 array'])
+def test_an_instance_dependent_shape_parameter_is_checked_beside_a_single_value(alpha):
+    """A length-1 array is one value for every sample, so it must not stop the per-sample check of the other."""
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), sympy.Symbol('beta'))
+    metric = Metric(CostMatrix().add_tp_benefit(gamma).add_fp_cost('b'), Cost())
+    beta = np.full(Y_TRUE.size, 14.0)
+    assert isinstance(metric(Y_TRUE, Y_SCORE, alpha=alpha, beta=beta, b=1.0), float)
+    beta[3] = -1.0
+    with pytest.raises(ValueError, match='Shape parameter Beta must be positive'):
+        metric(Y_TRUE, Y_SCORE, alpha=alpha, beta=beta, b=1.0)

@@ -192,9 +192,11 @@ def _savings_score_to_latex(
     tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr
 ) -> str:
     i, N, c0, c1 = sympy.symbols('i N Cost_{0} Cost_{1}')  # ruff: ignore[non-lowercase-variable-in-function]
-    savings_function = (1 / (N * sympy.Min(c0, c1))) * sympy.Sum(
-        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 0, N)
+    baseline_cost = sympy.Min(c0, c1)
+    cost = (1 / N) * sympy.Sum(
+        _build_cost_equation(tp_cost=-tp_benefit, tn_cost=-tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost), (i, 1, N)
     )
+    savings_function = (baseline_cost - cost) / sympy.Abs(baseline_cost)
 
     for symbol in savings_function.free_symbols:
         if symbol not in {N, c0, c1}:

@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
@@ -10,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric
+from ...metrics import BaseMetric, Capability
 from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._cstree import CostTree, ccp_pruning_path, cost_records
@@ -27,6 +28,27 @@ from ._cstree._grow import (
 # `min_impurity_decrease=None` counts as a real decrease. On a million samples, rounding errors
 # stayed below 1e-16 while the smallest real decrease was 2e-10, so this sits well clear of both.
 _RELATIVE_MIN_COST_DECREASE = 1e-12
+
+
+def _warn_if_trees_ignore_strategy(loss: BaseMetric, model_name: str, *, loss_used_for: str | None = None) -> None:
+    """
+    Warn when the trees will not optimize *loss*, because its score is not an expected cost.
+
+    The trees are grown on the costs the loss's cost matrix evaluates to, so they minimize the
+    expected cost whatever the loss's strategy. *loss_used_for* names what the model still uses the
+    loss itself for, if anything.
+    """
+    if Capability.EXPECTED_COST in loss.capabilities:
+        return
+    used_for = f' The loss itself is used only for {loss_used_for}.' if loss_used_for else ''
+    warnings.warn(
+        f'{model_name} grows its trees to minimize the expected cost of the costs that the cost matrix of '
+        f'{loss.__name__!r} evaluates to, not to optimize that metric itself.{used_for} To train on the '
+        'metric, use a model that optimizes it directly, such as ProfTreeClassifier.',
+        UserWarning,
+        # Past this helper, `_fit`, `fit` and scikit-learn's `_fit_context` wrapper, to the caller.
+        stacklevel=5,
+    )
 
 
 class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
@@ -87,8 +109,13 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             Instead, pass them to the ``fit`` method.
 
     loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
-        The metric to measure the quality of a split.
-        If None, the cost impurity is used.
+        The metric whose costs the tree is grown on.
+        If None, the costs passed to the constructor or to :meth:`fit` are used.
+
+        The tree minimizes the expected cost of the costs the metric's cost matrix evaluates to,
+        whatever its strategy, so it optimizes the metric itself only for an expected-cost strategy
+        (:class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` or
+        :class:`~empulse.metrics.Savings`), and warns otherwise.
 
     criterion : {"cost", "gini", "log_loss" or "entropy"}, default="cost"
         The function to measure the quality of a split.
@@ -370,6 +397,7 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         self : object
             Returns self.
         """
+        _warn_if_trees_ignore_strategy(loss, type(self).__name__)
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
         y = np.asarray(y).reshape(-1)
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)

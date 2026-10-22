@@ -29,7 +29,7 @@ from ._cstree._grow import (
     missing_feature_mask,
     resolve_tree_params,
 )
-from .cstree import CSTreeClassifier
+from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
 
 # The largest tree seed, as scikit-learn's forests draw them.
 MAX_INT = np.iinfo(np.int32).max
@@ -96,8 +96,14 @@ class CSForestClassifier(CostSensitiveClassifier):
             Instead, pass them to the ``fit`` method.
 
     loss : :class:`~empulse.metrics.BaseMetric` or None, default=None
-        The metric to measure the quality of a split.
-        If None, the cost impurity is used.
+        The metric whose costs the trees are grown on.
+        If None, the costs passed to the constructor or to :meth:`fit` are used.
+
+        The trees minimize the expected cost of the costs the metric's cost matrix evaluates to,
+        whatever its strategy, so they optimize the metric itself only for an expected-cost
+        strategy (:class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` or
+        :class:`~empulse.metrics.Savings`), and warn otherwise. The metric itself is used for the
+        out-of-bag score and weighted voting.
 
     criterion : {"cost", "gini", "log_loss" or "entropy"}, default="cost"
         The function to measure the quality of a split.
@@ -443,6 +449,9 @@ class CSForestClassifier(CostSensitiveClassifier):
         if not self.bootstrap and self.oob_score:
             raise ValueError('Out of bag estimation only available if bootstrap=True')
 
+        _warn_if_trees_ignore_strategy(
+            loss, type(self).__name__, loss_used_for='the out-of-bag score and weighted voting'
+        )
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
         y = np.asarray(y).reshape(-1)
         n_samples, n_features = X.shape

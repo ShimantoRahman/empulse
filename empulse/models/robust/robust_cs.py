@@ -430,9 +430,15 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         imputed_costs: dict[str, FloatNDArray] = {}
         outlier_estimators: dict[str, Any] = {}
 
-        for param_name, cls in metric_loss._outlier_sensitive_parameters().items():
-            if param_name not in estimator_params:
-                raise ValueError(f"Cost '{param_name}' is not provided in fit params.")
+        for name, cls in metric_loss._outlier_sensitive_parameters().items():
+            spellings = metric_loss._parameter_spellings(name)
+            # The metric takes a parameter under its symbol name or any alias, and so does this.
+            supplied = sorted(spellings & estimator_params.keys())
+            if not supplied:
+                raise ValueError(
+                    f"Cost '{name}' is not provided in fit params (accepted as: {', '.join(sorted(spellings))})."
+                )
+            param_name = supplied[0]
             target = estimator_params[param_name]
 
             if not isinstance(target, np.ndarray):

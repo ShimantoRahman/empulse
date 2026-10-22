@@ -46,7 +46,8 @@ def test_cstree_with_stochastic_maxprofit_metric(classification_data):
     contact_cost = sympy.symbols('contact_cost')
     metric = Metric(CostMatrix().add_tp_benefit(clv).add_fp_cost(contact_cost), MaxProfit())
 
-    model = CSTreeClassifier(loss=metric).fit(X, y, contact_cost=1.0)
+    with pytest.warns(UserWarning, match='minimize the expected cost'):
+        model = CSTreeClassifier(loss=metric).fit(X, y, contact_cost=1.0)
     y_proba = model.predict_proba(X)
     assert y_proba.shape == (100, 2)
 
@@ -307,3 +308,39 @@ class TestPredictDecidesByCost:
         encoded = CSTreeClassifier(max_depth=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
         np.testing.assert_array_equal(model.predict(X), np.where(encoded.predict(X) == 1, 'yes', 'no'))
+
+
+class TestLossStrategyIsNotWhatTheTreeOptimizes:
+    """The tree is grown on the costs a loss evaluates to, so it says so when the loss is not an expected cost."""
+
+    @pytest.mark.parametrize('strategy', ['MaxProfit', 'MinCost', 'LogCost', 'EmpiricalMaxProfit', 'AUEPC'])
+    def test_warns_for_a_strategy_that_is_not_an_expected_cost(self, classification_data, strategy):
+        import empulse.metrics
+
+        X, y = classification_data
+        loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), getattr(empulse.metrics, strategy)())
+        with pytest.warns(UserWarning, match='minimize the expected cost'):
+            CSTreeClassifier(loss=loss, max_depth=2).fit(X, y, a=1.0, b=5.0)
+
+    @pytest.mark.parametrize('strategy', ['Cost', 'Profit', 'Savings'])
+    def test_silent_for_an_expected_cost_strategy(self, classification_data, strategy):
+        import warnings
+
+        import empulse.metrics
+
+        X, y = classification_data
+        loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), getattr(empulse.metrics, strategy)())
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', UserWarning)
+            CSTreeClassifier(loss=loss, max_depth=2).fit(X, y, a=1.0, b=5.0)
+
+    def test_the_strategy_does_not_change_the_tree(self, classification_data):
+        """What the warning states: a MaxProfit loss grows the same tree as Cost on the same costs."""
+        from empulse.metrics import Cost
+
+        X, y = classification_data
+        cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+        on_cost = CSTreeClassifier(loss=Metric(cost_matrix, Cost()), max_depth=3).fit(X, y, a=1.0, b=5.0)
+        with pytest.warns(UserWarning, match='minimize the expected cost'):
+            on_max_profit = CSTreeClassifier(loss=Metric(cost_matrix, MaxProfit()), max_depth=3).fit(X, y, a=1.0, b=5.0)
+        np.testing.assert_array_equal(on_cost.predict_proba(X), on_max_profit.predict_proba(X))

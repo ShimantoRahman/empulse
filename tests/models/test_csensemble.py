@@ -441,3 +441,16 @@ def test_bagging_rejects_a_base_estimator_that_cannot_take_costs():
     X, y = make_classification(n_samples=60, random_state=0)
     with pytest.raises(ValueError, match='cost-sensitive classifier whose fit accepts'):
         CSBaggingClassifier(estimator=DecisionTreeClassifier()).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+
+@pytest.mark.parametrize(
+    ('model_cls', 'used_for'),
+    [(CSForestClassifier, 'the out-of-bag score and weighted voting'), (CSBaggingClassifier, 'weighted voting')],
+)
+def test_ensembles_warn_that_a_non_expected_cost_loss_only_weighs_the_votes(classification_data, model_cls, used_for):
+    from empulse.metrics import CostMatrix, MaxProfit, Metric
+
+    X, y = classification_data
+    loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), MaxProfit())
+    with pytest.warns(UserWarning, match=f'used only for {used_for}'):
+        model_cls(n_estimators=3, loss=loss, combination='weighted_voting').fit(X, y, a=1.0, b=5.0)

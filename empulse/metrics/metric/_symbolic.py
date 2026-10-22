@@ -22,6 +22,8 @@ from sympy.printing.latex import greek_letters_set, other_symbols
 # An identifier that is not immediately followed by "(", i.e. used as a value rather than called.
 # `exp(clv)` is a legitimate function call; a bare `exp` is almost certainly meant as a parameter.
 _BARE_NAME_PATTERN = re.compile(r'\b[A-Za-z_]\w*\b(?!\s*\()')
+# Python literals rather than names, e.g. the condition of a Piecewise's last branch; they cannot be parameters.
+_BOOLEAN_LITERALS = frozenset({'True', 'False'})
 
 # sympify evaluates its input with `eval`, so a string term is checked against this grammar first:
 # names, numbers, arithmetic, comparisons and tuples (for Piecewise), and calls to sympy's
@@ -103,7 +105,9 @@ def _sympify_term(term: sympy.Expr | str) -> sympy.Expr:
     reserved = {
         name: value
         for name in dict.fromkeys(_BARE_NAME_PATTERN.findall(term))
-        if not isinstance(value := _try_sympify(name), sympy.Symbol) and value is not None
+        if name not in _BOOLEAN_LITERALS
+        and not isinstance(value := _try_sympify(name), sympy.Symbol)
+        and value is not None
     }
     if reserved:
         first = next(iter(reserved))

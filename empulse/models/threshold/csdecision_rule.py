@@ -33,10 +33,10 @@ def _class_dependent_metric(loss: BaseMetric, loss_params: dict[str, Any]) -> Me
     Return the metric with each cost replaced by its average over the samples, when a parameter is an array.
 
     Averaging the costs, rather than the parameters they are computed from, is what makes a cost such
-    as the product of two instance-dependent parameters come out right. Only for a :class:`Metric`
-    whose decision depends on nothing but the costs; ``None`` otherwise.
+    as the product of two instance-dependent parameters come out right. Only for a metric whose
+    decision depends on nothing but the costs; ``None`` otherwise.
     """
-    if not isinstance(loss, Metric) or Capability.COST_ONLY_DECISION not in loss.capabilities:
+    if Capability.COST_ONLY_DECISION not in loss.capabilities:
         return None
     if not any(isinstance(value, np.ndarray) and value.size > 1 for value in loss_params.values()):
         return None

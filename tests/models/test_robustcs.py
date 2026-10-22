@@ -150,6 +150,21 @@ def test_metric_outlier_detection_does_not_depend_on_label_encoding(labels):
     assert model.costs_['fp'].max() < 1000.0
 
 
+@pytest.mark.parametrize('spelling', ['d', 'amount'], ids=['symbol_name', 'alias'])
+def test_an_outlier_sensitive_parameter_is_imputed_under_either_spelling(spelling):
+    """The metric accepts a parameter as its symbol name or its alias, so outlier detection must too."""
+    X, y = make_classification(n_samples=300, random_state=0)
+    cost_matrix = CostMatrix().add_fp_cost('d').add_fn_cost('f').alias('amount', 'd').mark_outlier_sensitive('d')
+    loss = Metric(cost_matrix, Cost())
+    amount = np.random.default_rng(0).random(300)
+    amount[:5] = 1000.0
+
+    model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, y, f=1.0, **{spelling: amount})
+
+    assert spelling in model.outlier_estimators_
+    assert model.costs_[spelling].max() < 1000.0
+
+
 def test_metric_symbols_named_like_the_plain_costs_reach_the_loss(classification_data, seeded_rng):
     """Several bundled datasets name a cost-matrix symbol ``fp_cost``, which ``fit`` also takes as a plain cost."""
     X, y = classification_data

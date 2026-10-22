@@ -384,6 +384,7 @@ class TestCapabilities:
                 Cost,
                 frozenset({
                     Capability.COST_ONLY_DECISION,
+                    Capability.EXPECTED_COST,
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
@@ -395,6 +396,7 @@ class TestCapabilities:
                 Profit,
                 frozenset({
                     Capability.COST_ONLY_DECISION,
+                    Capability.EXPECTED_COST,
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
@@ -406,6 +408,7 @@ class TestCapabilities:
                 Savings,
                 frozenset({
                     Capability.COST_ONLY_DECISION,
+                    Capability.EXPECTED_COST,
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
