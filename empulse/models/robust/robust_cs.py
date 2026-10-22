@@ -346,9 +346,10 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         y = column_or_1d(y, warn=True)
         if y.size == 0:
             raise ValueError('Found array with 0 sample(s) while a minimum of 1 is required.')
-        # Costs refer to the positive class, the greater of the two labels (the wrapped
-        # cost-sensitive estimators' `classes_[1]`), whatever the labels are.
-        is_positive = y == np.unique(y)[-1]
+        # Costs refer to the wrapped estimator's positive class: its `pos_label` if it has one, else the
+        # greater of the two labels (the wrapped cost-sensitive estimators' `classes_[1]`).
+        pos_label = getattr(self.estimator, 'pos_label', None)
+        is_positive = y == (np.unique(y)[-1] if pos_label is None else pos_label)
 
         metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
 
@@ -441,7 +442,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             param_name = supplied[0]
             target = estimator_params[param_name]
 
-            if not isinstance(target, np.ndarray):
+            if isinstance(target, Real) or (target := np.asarray(target)).ndim == 0:
                 raise TypeError(f"Cost '{param_name}' must be an array for outlier detection.")
 
             X_fit, target_fit = self._select_class_samples(X, is_positive, cls, target)

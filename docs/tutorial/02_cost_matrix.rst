@@ -84,8 +84,8 @@ Three things are worth noting:
   twice, as above, adds both terms together.
 - **Aliases** let callers write ``accept_rate=0.5`` instead of remembering that the symbol is
   ``gamma``.
-- **Order matters**: call ``.alias()`` before ``.set_default()``, because defaults are resolved
-  against the names in use at the time.
+- **Defaults** can use either spelling, the alias or the symbol; aliases are resolved when the
+  metric is built.
 
 .. note::
     This is exactly the matrix :func:`~empulse.datasets.fetch_iranian_churn` already ships as

@@ -125,6 +125,16 @@ class BaseMetric(ABC):
         """Whether the metric is free of stochastic (random) variables."""
 
     @property
+    def _has_single_cost_matrix(self) -> bool:
+        """
+        Whether the metric is computed from one cost matrix, rather than combining several.
+
+        A maximum profit over the class costs is then the maximum profit of the metric itself, which
+        a composite metric, such as a weighted sum of maximum profits, is not.
+        """
+        return False
+
+    @property
     def _is_unitless(self) -> bool:
         """Whether the metric's value is a pure number, like a ratio of profits, rather than an amount of money."""
         return False

@@ -13,7 +13,7 @@ from .._validation import _check_y_pred, _check_y_true
 from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_lambda
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
-from ._stochastic import replace_random_var_with_mean
+from ._stochastic import expectation_over_random_vars
 from .base_metric import BaseMetric
 from .cost_matrix import (
     CostMatrix,
@@ -175,6 +175,7 @@ class Metric(BaseMetric):
 
     def __init__(self, cost_matrix: CostMatrix, strategy: MetricStrategy) -> None:
         self.cost_matrix = copy.deepcopy(cost_matrix)
+        self.cost_matrix._resolve_aliases()
         _check_reserved_symbol_names(
             self.tp_benefit,
             self.tn_benefit,
@@ -195,6 +196,7 @@ class Metric(BaseMetric):
             self.fn_cost,
             aliases=self.cost_matrix._aliases,
             default_names=self.cost_matrix._defaults.keys(),
+            bound_names=self.cost_matrix._bounds.keys(),
         )
         if self.tp_benefit == 0 and self.tn_benefit == 0 and self.fp_cost == 0 and self.fn_cost == 0:
             warnings.warn(
@@ -382,6 +384,10 @@ class Metric(BaseMetric):
     @property
     def _is_deterministic(self) -> bool:
         return not self._is_stochastic
+
+    @property
+    def _has_single_cost_matrix(self) -> bool:
+        return True
 
     @property
     def _is_unitless(self) -> bool:
@@ -866,7 +872,7 @@ class Metric(BaseMetric):
         parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
         if replace_stochastic and self._is_stochastic:
             if self._mean_substituted_costs is None:
-                fp_expr, fn_expr, tp_expr, tn_expr = replace_random_var_with_mean(
+                fp_expr, fn_expr, tp_expr, tn_expr = expectation_over_random_vars(
                     self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
                 )
                 self._mean_substituted_costs = (

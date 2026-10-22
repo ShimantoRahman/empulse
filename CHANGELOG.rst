@@ -66,10 +66,28 @@ Metrics
 - |Enhancement| :class:`~empulse.metrics.Capability` has an ``EXPECTED_COST`` member, present for
   :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` and
   :class:`~empulse.metrics.Savings`.
+- |Fix| Strategies that reduce a stochastic variable, such as :class:`~empulse.metrics.Cost` and
+  :class:`~empulse.metrics.EmpiricalMaxProfit`, take the expectation of a term that is not linear in
+  it, such as ``gamma ** 2``, instead of evaluating the term at the variable's mean. A term that is
+  not a polynomial in it, such as ``exp(gamma)``, warns that it is approximated.
+- |Fix| :class:`~empulse.metrics.CostMatrix` resolves aliases when the metric is built, so
+  :meth:`~empulse.metrics.CostMatrix.set_default` and :meth:`~empulse.metrics.CostMatrix.constrain`
+  can be called before :meth:`~empulse.metrics.CostMatrix.alias`. A constraint on a name that is
+  neither a symbol nor an alias raises instead of being ignored.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` whose components mark the same parameter
+  outlier-sensitive for different classes detects its outliers on every sample.
+- |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
+  :class:`~empulse.metrics.MaxProfit` score itself when instance-dependent parameters enter a cost
+  non-linearly.
 
 Models
 ------
 
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
+  :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
+  metrics, instead of the maximum profit of their averaged costs.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` detects outliers on the positive class of a
+  wrapped estimator's ``pos_label``, and accepts an outlier-sensitive parameter given as a list.
 - |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
   :class:`~empulse.models.CSBaggingClassifier` warn when the strategy of their ``loss`` is not an
   expected cost, such as :class:`~empulse.metrics.MaxProfit`: they grow their trees on the metric's

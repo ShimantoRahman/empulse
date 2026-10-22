@@ -226,26 +226,44 @@ def test_alias_target_typo_is_rejected_at_construction():
         Metric(cost_matrix, Cost())
 
 
-def test_set_default_before_alias_is_rejected_at_construction():
-    """
-    `set_default()` called with an alias name before that alias is registered stores the raw,
-    untranslated key (see the ordering note in `CostMatrix.set_default`'s docstring) - this must
-    be rejected at `Metric` construction time rather than silently dropped.
-    """
-    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').set_default(my_cost=5.0).alias({'my_cost': 'a'})
-
-    with pytest.raises(ValueError, match=r"default\(s\) for \['my_cost'\]"):
-        Metric(cost_matrix, Cost())
-
-
-def test_set_default_after_alias_is_accepted():
-    """Sanity check: the documented correct ordering (alias() before set_default()) must still work."""
-    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'my_cost': 'a'}).set_default(my_cost=5.0)
+@pytest.mark.parametrize('alias_first', [True, False], ids=['alias_first', 'default_first'])
+def test_set_default_by_alias_works_in_either_order(alias_first):
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+    if alias_first:
+        cost_matrix = cost_matrix.alias({'my_cost': 'a'}).set_default(my_cost=5.0)
+    else:
+        cost_matrix = cost_matrix.set_default(my_cost=5.0).alias({'my_cost': 'a'})
     metric = Metric(cost_matrix, Cost())
 
-    # The default should behave exactly like passing a=5.0 explicitly.
     expected = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Cost())(Y_TRUE, Y_SCORE, a=5.0, b=1.0)
     assert metric(Y_TRUE, Y_SCORE, b=1.0) == pytest.approx(expected)
+
+
+def test_the_last_default_set_wins_under_either_spelling():
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias('my_cost', 'a').set_default(a=1.0, my_cost=2.0)
+    cost_matrix.set_default(a=3.0)
+    metric = Metric(cost_matrix, Cost())
+    expected = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Cost())(Y_TRUE, Y_SCORE, a=3.0, b=1.0)
+    assert metric(Y_TRUE, Y_SCORE, b=1.0) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize('alias_first', [True, False], ids=['alias_first', 'constrain_first'])
+def test_constrain_by_alias_works_in_either_order(alias_first):
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b')
+    if alias_first:
+        cost_matrix = cost_matrix.alias('rate', 'a').constrain('rate', 0, 1)
+    else:
+        cost_matrix = cost_matrix.constrain('rate', 0, 1).alias('rate', 'a')
+    metric = Metric(cost_matrix, Cost())
+
+    with pytest.raises(ValueError, match='rate should lay between 0 and 1'):
+        metric(Y_TRUE, Y_SCORE, rate=5.0, b=1.0)
+
+
+def test_constrain_on_an_unknown_name_is_rejected_at_construction():
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').constrain('typo', 0, 1)
+    with pytest.raises(ValueError, match=r"bound\(s\) on \['typo'\]"):
+        Metric(cost_matrix, Cost())
 
 
 def test_default_for_a_real_symbol_is_accepted():

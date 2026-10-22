@@ -13,7 +13,7 @@ from ....common import classification_threshold
 from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._direction import Direction
 from ..._parameter_domain import _check_parameters
-from ..._stochastic import replace_random_var_with_mean
+from ..._stochastic import expectation_over_random_vars
 from ..._symbolic import _is_affine_in, _latex
 from ...capabilities import Capability
 from .._training_signal import warn_if_no_training_signal
@@ -649,7 +649,7 @@ class MaxProfit(MetricStrategy):
         gradient magnitude. Substituting each random variable by its mean gives the same scale the
         deterministic route would use, which keeps ``C`` comparable between the two.
         """
-        mean_terms = replace_random_var_with_mean(self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
+        mean_terms = expectation_over_random_vars(self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
         scalar_params = {name: float(np.mean(value)) for name, value in parameters.items()}
         tp_val, tn_val, fp_val, fn_val = (
             float(_safe_run_lambda(_safe_lambdify(term), term, **scalar_params)) for term in mean_terms
@@ -694,23 +694,26 @@ class MaxProfit(MetricStrategy):
         logistic_objective : RankingLogitValueObjective
             The objective, whose ``logit_loss`` is the regularized negated score.
         """
-        agg_params = _aggregate_instance_parameters(dict(parameters))
+        # Reduced as `score` reduces them, so that the objective is the score.
+        scoring_params = self._scoring_parameters(dict(parameters))
         y_true = np.asarray(y_true).reshape(-1)
         if isinstance(self._score_function, MaxProfitScoreDeterministic):
-            _check_parameters(self._score_function.deterministic_symbols, agg_params)
-            tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(agg_params)
-            objective_scale = _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
+            _check_parameters(self._score_function.deterministic_symbols, scoring_params)
+            class_values = self._score_function._class_values(scoring_params) or self._evaluate_class_costs(
+                _aggregate_instance_parameters(scoring_params)
+            )
+            objective_scale = _max_profit_objective_scale(y_true, *class_values)
         else:
-            objective_scale = self._stochastic_objective_scale(y_true, agg_params)
+            objective_scale = self._stochastic_objective_scale(y_true, scoring_params)
 
         labels: IntNDArray = y_true.astype(np.intp)
         score_function = self._score_function
         if hasattr(score_function, '_sample_scorer'):
-            score = score_function._sample_scorer(labels, **agg_params)
+            score = score_function._sample_scorer(labels, **scoring_params)
         else:
 
             def score(y_score: FloatNDArray) -> float:
-                return float(score_function(labels, y_score, **agg_params))
+                return float(score_function(labels, y_score, **scoring_params))
 
         return RankingLogitValueObjective(
             score=score,

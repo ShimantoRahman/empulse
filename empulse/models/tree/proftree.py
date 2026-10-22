@@ -375,8 +375,11 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         }
 
         # `fit_max_profit` handles only the default loss and deterministic MaxProfit metrics. Any other
-        # loss, such as a stochastic MaxProfit metric, goes through a custom fitness function.
-        use_fit_max_profit = loss_ is None or (Capability.CLASS_COSTS in loss_.capabilities and loss_._is_deterministic)
+        # loss, such as a stochastic MaxProfit metric or a mixture of maximum profits, goes through a
+        # custom fitness function.
+        use_fit_max_profit = loss_ is None or (
+            Capability.CLASS_COSTS in loss_.capabilities and loss_._is_deterministic and loss_._has_single_cost_matrix
+        )
 
         if use_fit_max_profit:
             tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)

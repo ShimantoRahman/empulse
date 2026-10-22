@@ -650,3 +650,20 @@ def test_objective_boost_max_profit_alpha_is_constant_across_fits():
 
     np.testing.assert_array_equal(gradient_1, gradient_2)
     np.testing.assert_array_equal(hessian_1, hessian_2)
+
+
+def test_value_objective_is_the_score_for_non_linear_instance_parameters(seeded_rng):
+    """The value-only logit objective reduces instance-dependent parameters exactly as the score does."""
+    n_samples = 400
+    y_true = seeded_rng.integers(0, 2, n_samples)
+    features = np.column_stack([np.ones(n_samples), seeded_rng.normal(size=(n_samples, 3)) + y_true[:, None]])
+    a, b = sympy.symbols('a b')
+    metric = Metric(CostMatrix().add_tp_benefit(a * b).add_fp_cost(5), MaxProfit())
+    parameters = {'a': seeded_rng.uniform(0, 20, n_samples), 'b': seeded_rng.uniform(0, 2, n_samples)}
+    weights = np.array([0.1, 0.5, -0.2, 0.3])
+
+    objective = metric._logit_value_objective(
+        features=features, y_true=y_true, C=1.0, l1_ratio=0.0, fit_intercept=True, **parameters
+    )
+    y_score = 1 / (1 + np.exp(-(features @ weights)))
+    assert -objective.data_loss(weights) == pytest.approx(metric(y_true, y_score, **parameters))

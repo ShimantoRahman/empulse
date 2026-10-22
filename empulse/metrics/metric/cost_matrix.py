@@ -25,6 +25,16 @@ class ParameterBounds:
     upper: float | None = None
 
 
+def _add_bounds(bounds: dict[str, ParameterBounds], name: str, new: ParameterBounds) -> None:
+    """Add *new* to the bounds of *name*, keeping the tighter of each bound if it already has some."""
+    existing = bounds.get(name)
+    if existing is not None:
+        new = ParameterBounds(
+            lower=_tightest(new.lower, existing.lower, max), upper=_tightest(new.upper, existing.upper, min)
+        )
+    bounds[name] = new
+
+
 @dataclass(frozen=True)
 class ParameterPredicate:
     """An arbitrary condition over several cost-matrix parameters at once."""
@@ -366,11 +376,8 @@ class CostMatrix:
 
         Notes
         -----
-        If you want to set a default using an alias name, you must call
-        :meth:`alias` **before** calling :meth:`set_default`.  Defaults passed
-        via alias names are immediately resolved to their underlying symbol names
-        during this call; any alias registered afterwards will *not* retroactively
-        match previously stored defaults.
+        A default may name a symbol or an alias, whether that alias is registered before or after
+        this call. When several calls set the same parameter, under either spelling, the last wins.
 
         Examples
         --------
@@ -394,16 +401,10 @@ class CostMatrix:
             y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
             cost_loss(y_true, y_proba, clv=100, incentive_fraction=0.1)
         """
-        converted_defaults = {}
         for key, value in defaults.items():
-            if key in self._aliases:
-                symbol_name = str(self._aliases[key])
-                converted_defaults[symbol_name] = value
-            else:
-                converted_defaults[key] = value
-
-        self._defaults.update(converted_defaults)
-
+            # Moved to the end, so that resolving aliases later keeps the last value set.
+            self._defaults.pop(key, None)
+            self._defaults[key] = value
         return self
 
     def mark_outlier_sensitive(self, symbol: str | sympy.Symbol) -> Self:
@@ -506,8 +507,8 @@ class CostMatrix:
 
         Notes
         -----
-        Bounds are stored against the resolved symbol, so call :meth:`alias` *before*
-        :meth:`constrain` if you want to constrain a parameter by its alias.
+        A parameter may be bounded by its symbol or by an alias, whether that alias is registered
+        before or after this call. Bounding the same parameter twice keeps the tighter of each bound.
 
         A callable receives the parameters keyed by **symbol name**, with aliases already resolved
         and defaults already applied. An instance-dependent parameter arrives as an array, so the
@@ -577,13 +578,20 @@ class CostMatrix:
         if lower is not None and upper is not None and lower > upper:
             raise ValueError(f"Lower bound {lower} is greater than upper bound {upper} for '{target}'.")
 
-        name = str(self._aliases.get(str(target), target))
-        existing = self._bounds.get(name)
-        if existing is not None:  # Tighten instead of replacing, so two calls compose.
-            lower = _tightest(lower, existing.lower, max)
-            upper = _tightest(upper, existing.upper, min)
-        self._bounds[name] = ParameterBounds(lower=lower, upper=upper)
+        _add_bounds(self._bounds, str(target), ParameterBounds(lower=lower, upper=upper))
         return self
+
+    def _resolve_aliases(self) -> None:
+        """Key every default and bound by the symbol it is for, instead of the alias it may have been given by."""
+        defaults, bounds = self._defaults, self._bounds
+        self._defaults, self._bounds = {}, {}
+        for name, value in defaults.items():
+            self._defaults[self._symbol_name(name)] = value
+        for name, bound in bounds.items():
+            _add_bounds(self._bounds, self._symbol_name(name), bound)
+
+    def _symbol_name(self, name: str) -> str:
+        return str(self._aliases.get(name, name))
 
     def __repr__(self) -> str:
         return (
@@ -740,33 +748,35 @@ def _collect_known_symbol_names(*expressions: sympy.Expr) -> set[str]:
 
 
 def _check_known_alias_and_default_targets(
-    *expressions: sympy.Expr, aliases: Mapping[str, str | sympy.Symbol], default_names: Iterable[str]
+    *expressions: sympy.Expr,
+    aliases: Mapping[str, str | sympy.Symbol],
+    default_names: Iterable[str],
+    bound_names: Iterable[str] = (),
 ) -> None:
     """
-    Raise if an alias's target, or a default's parameter name, matches no symbol in the cost matrix.
+    Raise if an alias's target, or the parameter of a default or bound, matches no symbol in the cost matrix.
 
-    ``CostMatrix`` is built incrementally, so ``alias()`` and ``set_default()`` cannot validate
-    their arguments against the cost matrix's symbols at the time they are called. ``Metric``
-    can, once the cost matrix is complete, and does so here - turning a typo'd alias target, or a
-    ``set_default()`` call for an alias that had not been registered yet (see the ordering note
-    in :meth:`~empulse.metrics.CostMatrix.set_default`), into one clear error at construction
-    time instead of a confusing "did not receive it" error only once the metric is called.
+    ``CostMatrix`` is built incrementally, so ``alias()``, ``set_default()`` and ``constrain()`` cannot
+    check their arguments against the cost matrix's symbols when they are called. ``Metric`` can, once
+    the cost matrix is complete, and does so here, so that a typo is one clear error at construction
+    instead of a value that is silently never used.
 
     Parameters
     ----------
     *expressions : sympy.Expr
         The cost-matrix expressions (e.g. ``tp_benefit``, ``tn_benefit``, ``fp_cost``,
-        ``fn_cost``) whose symbols are considered valid alias targets / default names.
+        ``fn_cost``) whose symbols are considered valid alias targets / parameter names.
     aliases : Mapping[str, str]
         The cost matrix's registered aliases, mapping alias name to target symbol name.
     default_names : Iterable[str]
-        The cost matrix's registered default parameter names (already resolved to symbol names,
-        for aliases registered before the corresponding ``set_default()`` call).
+        The parameter names of the cost matrix's defaults, aliases already resolved.
+    bound_names : Iterable[str], default=()
+        The parameter names of the cost matrix's bounds, aliases already resolved.
 
     Raises
     ------
     ValueError
-        If any alias target or default name does not match a known symbol name.
+        If any alias target, default or bound does not match a known symbol name.
     """
     known_names = _collect_known_symbol_names(*expressions)
 
@@ -774,16 +784,17 @@ def _check_known_alias_and_default_targets(
         f'{alias!r} -> {str(target)!r}' for alias, target in aliases.items() if str(target) not in known_names
     }
     unknown_defaults = {name for name in default_names if name not in known_names}
+    unknown_bounds = {name for name in bound_names if name not in known_names}
 
-    if unknown_alias_targets or unknown_defaults:
-        messages = []
-        if unknown_alias_targets:
-            messages.append(f'alias(es) {sorted(unknown_alias_targets)} whose target is not a cost matrix symbol')
-        if unknown_defaults:
-            messages.append(f'default(s) for {sorted(unknown_defaults)}, which is not a cost matrix symbol or alias')
+    messages = []
+    if unknown_alias_targets:
+        messages.append(f'alias(es) {sorted(unknown_alias_targets)} whose target is not a cost matrix symbol')
+    if unknown_defaults:
+        messages.append(f'default(s) for {sorted(unknown_defaults)}, which is not a cost matrix symbol or alias')
+    if unknown_bounds:
+        messages.append(f'bound(s) on {sorted(unknown_bounds)}, which is not a cost matrix symbol or alias')
+    if messages:
         raise ValueError(
             f'The cost matrix has {" and ".join(messages)}. Known symbol names: {sorted(known_names)}. '
-            'This is usually a typo, or set_default() was called with an alias name before that alias '
-            'was registered with alias() - aliases must be registered before set_default() can resolve '
-            'them (see the CostMatrix.set_default() docstring).'
+            'This is usually a typo in a symbol or alias name.'
         )

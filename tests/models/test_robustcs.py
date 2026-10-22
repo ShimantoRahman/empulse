@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 import sympy
 from sklearn.datasets import make_classification
-from sklearn.linear_model import HuberRegressor
+from sklearn.linear_model import HuberRegressor, LogisticRegression
 
 from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
-from empulse.models import CSLogitClassifier, RobustCSClassifier
+from empulse.models import CSLogitClassifier, CSThresholdClassifier, RobustCSClassifier
 
 ARRAY_COST_CASES = [
     ('fn_cost',),
@@ -201,3 +201,27 @@ def test_feature_names_reach_the_wrapped_estimator():
 
     assert list(robust.feature_names_in_) == list('abcd')
     assert list(robust.estimator_.feature_names_in_) == list('abcd')
+
+
+def test_outliers_are_detected_on_the_wrapped_estimators_positive_class():
+    """A wrapped decision rule's ``pos_label`` decides which rows describe the positive class."""
+    X, y = make_classification(n_samples=300, random_state=0)
+    fn_cost = np.random.default_rng(1).random(300)
+    fn_cost[5:10] = 1000.0
+
+    reference = RobustCSClassifier(CSThresholdClassifier(LogisticRegression())).fit(X, y, fn_cost=fn_cost, fp_cost=1)
+    flipped = RobustCSClassifier(CSThresholdClassifier(LogisticRegression(), pos_label=0))
+    flipped.fit(X, 1 - y, fn_cost=fn_cost, fp_cost=1)
+
+    np.testing.assert_allclose(flipped.costs_['fn_cost'], reference.costs_['fn_cost'])
+
+
+def test_a_list_valued_outlier_sensitive_parameter_is_imputed():
+    X, y = make_classification(n_samples=300, random_state=0)
+    loss = Metric(CostMatrix().add_fp_cost('d').add_fn_cost('f').mark_outlier_sensitive('d'), Cost())
+    amount = np.random.default_rng(0).random(300)
+    amount[:5] = 1000.0
+
+    model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, y, f=1.0, d=amount.tolist())
+
+    assert model.costs_['d'].max() < 1000.0

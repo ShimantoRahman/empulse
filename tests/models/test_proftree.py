@@ -433,22 +433,19 @@ class TestLeafLevelCustomLoss:
     @pytest.mark.filterwarnings('ignore::UserWarning')
     @pytest.mark.parametrize('rounded', [False, True], ids=['continuous', 'tied'])
     def test_fits_the_same_tree_as_scoring_every_sample(self, rounded):
-        from empulse.metrics import MixtureComponent, MixtureMetric
-
         X, y = make_classification(n_samples=500, n_features=6, weights=[0.7], random_state=0)
         if rounded:
             X = np.round(X)
         metric = Metric(self.EMPC_MATRIX, MaxProfit())
-        # A mixture of one component scores the same, but only from every sample's prediction.
-        per_sample = MixtureMetric([MixtureComponent(1.0, metric, {})])
         assert metric._prepare_count_loss(clv=200.0, d=10.0) is not None
-        assert per_sample._prepare_count_loss(clv=200.0, d=10.0) is None
 
-        def fit(loss):
-            model = ProfTreeClassifier(loss=loss, max_iter=15, population_size=20, max_depth=5, random_state=0)
+        def fit():
+            model = ProfTreeClassifier(loss=metric, max_iter=15, population_size=20, max_depth=5, random_state=0)
             return model.fit(X, y, clv=200.0, d=10.0)
 
-        from_leaves, from_samples = fit(metric), fit(per_sample)
+        from_leaves = fit()
+        with mock.patch.object(Metric, '_prepare_count_loss', return_value=None):
+            from_samples = fit()
         np.testing.assert_array_equal(from_leaves.predict_proba(X), from_samples.predict_proba(X))
         assert from_leaves.n_iter_ == from_samples.n_iter_
         assert from_leaves.tree_._serialize_tree()['fitness'] == from_samples.tree_._serialize_tree()['fitness']
@@ -547,3 +544,20 @@ def test_a_min_samples_split_of_one_is_every_sample():
     model = ProfTreeClassifier(min_samples_split=1.0, max_depth=5, max_iter=100, random_state=0)
     model.fit(X, y, tp_cost=-5.0, fp_cost=1.0)
     assert len(np.unique(model.predict_proba(X)[:, 1])) <= 2
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+def test_a_mixture_of_deterministic_max_profits_is_optimized_as_the_mixture():
+    """A mixture's score is a weighted sum of maximum profits, not the maximum profit of its averaged costs."""
+    from empulse.metrics import MixtureComponent, MixtureMetric
+
+    X, y = make_classification(n_samples=500, n_features=6, weights=[0.7], random_state=0)
+    lam, roi = sympy.symbols('lam roi')
+    metric = Metric(CostMatrix().add_tp_benefit(lam).add_fp_cost(roi), MaxProfit())
+    mixture = MixtureMetric([MixtureComponent(0.5, metric, {'lam': 0.0}), MixtureComponent(0.5, metric, {'lam': 1.0})])
+
+    model = ProfTreeClassifier(loss=mixture, max_iter=15, population_size=20, max_depth=4, random_state=0, alpha=0.0)
+    model.fit(X, y, roi=0.2644)
+
+    fitness = model.tree_._serialize_tree()['fitness']
+    assert fitness == pytest.approx(mixture(y, model.predict_proba(X)[:, 1], roi=0.2644), rel=1e-6)

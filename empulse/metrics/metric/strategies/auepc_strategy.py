@@ -10,7 +10,7 @@ from ...._types import Float64Array, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
 from .._parameter_domain import _check_parameters
-from .._stochastic import replace_random_var_with_mean
+from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
 from .metric_strategy import MetricStrategy
@@ -179,7 +179,7 @@ class AUEPC(MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
-        tp_benefit, tn_benefit, fp_cost, fn_cost = replace_random_var_with_mean(
+        tp_benefit, tn_benefit, fp_cost, fn_cost = expectation_over_random_vars(
             tp_benefit, tn_benefit, fp_cost, fn_cost
         )
         self._tp_benefit: sympy.Expr = tp_benefit

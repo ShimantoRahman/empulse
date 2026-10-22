@@ -876,3 +876,27 @@ def test_hardcoded_distribution_params_multiple_rvs(y_true_and_prediction, integ
     result = metric(y, y_proba)
     assert isinstance(result, float)
     assert np.isfinite(result)
+
+
+class TestExpectationOfNonLinearTerms:
+    """Strategies that reduce a random variable take the expectation of the term, not the term at the mean."""
+
+    Y_TRUE = np.array([0, 0, 1, 1])
+    Y_SCORE = np.array([1.0, 1.0, 0.0, 0.0])
+
+    def test_polynomial_term_uses_the_moments(self):
+        gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), sympy.Symbol('beta'))
+        metric = Metric(CostMatrix().add_fp_cost(gamma**2).add_fn_cost(1), Cost())
+        second_moment = float(sympy.stats.E(sympy.stats.Beta('x', 2, 2) ** 2))
+        expected = (2 * second_moment + 2) / 4
+        assert metric(self.Y_TRUE, self.Y_SCORE, alpha=2, beta=2) == pytest.approx(expected)
+
+    def test_multilinear_term_is_the_term_at_the_means(self):
+        a, b = sympy.stats.Uniform('a', 0, 2), sympy.stats.Uniform('b', 1, 3)
+        metric = Metric(CostMatrix().add_fp_cost(a * b + a).add_fn_cost(1), Cost())
+        assert metric(self.Y_TRUE, self.Y_SCORE) == pytest.approx((2 * (1 * 2 + 1) + 2) / 4)
+
+    def test_non_polynomial_term_warns(self):
+        gamma = sympy.stats.Beta('gamma', 2, 2)
+        with pytest.warns(UserWarning, match='only approximates the expectation'):
+            Metric(CostMatrix().add_fp_cost(sympy.exp(gamma)).add_fn_cost(1), Cost())

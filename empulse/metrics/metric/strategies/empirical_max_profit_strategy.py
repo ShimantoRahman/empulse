@@ -10,7 +10,7 @@ from ...common import classification_threshold
 from .._compile import MetricFn, RateFn, ThresholdFn, _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
 from .._parameter_domain import _check_parameters
-from .._stochastic import replace_random_var_with_mean
+from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
 from .auepc_strategy import _build_delta_equation, _ranked_profit_curve
@@ -148,7 +148,7 @@ class EmpiricalMaxProfit(MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
-        tp_benefit, tn_benefit, fp_cost, fn_cost = replace_random_var_with_mean(
+        tp_benefit, tn_benefit, fp_cost, fn_cost = expectation_over_random_vars(
             tp_benefit, tn_benefit, fp_cost, fn_cost
         )
         self._tp_benefit: sympy.Expr = tp_benefit

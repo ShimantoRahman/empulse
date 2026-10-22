@@ -5,8 +5,9 @@ from typing import Any, Literal, NamedTuple, Self
 
 import numpy as np
 
-from ..._types import FloatArrayLike, FloatNDArray
+from ..._types import FloatArrayLike, FloatNDArray, IntNDArray
 from ..common import classification_threshold
+from ._compile import CountScoreFn
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
 from .base_metric import BaseMetric
@@ -494,6 +495,30 @@ class MixtureMetric(BaseMetric):
             )
         return float(total)
 
+    def _prepare_count_loss(
+        self, *, n_samples: int | None = None, validate: bool = True, **parameters: Any
+    ) -> CountScoreFn | None:
+        """
+        Prepare :meth:`_loss` for samples grouped by score (see :meth:`BaseMetric._prepare_count_loss`).
+
+        The weighted sum of the components' own, so ``None`` unless every component has one.
+        """
+        parameters = self._apply_defaults(parameters, validate=validate)
+        forwarded = self._forward_parameters(parameters)
+        weighted_losses = []
+        for component in self.components:
+            component_loss = component.metric._prepare_count_loss(
+                n_samples=n_samples, validate=validate, **self._component_parameters(component, forwarded)
+            )
+            if component_loss is None:
+                return None
+            weighted_losses.append((self._resolve_weight(component.weight, parameters), component_loss))
+
+        def loss(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
+            return float(sum(weight * fn(y_score, n_positive, n_negative) for weight, fn in weighted_losses))
+
+        return loss
+
     def optimal_rate(
         self, y_true: FloatArrayLike, y_score: FloatArrayLike, *, validate: bool = True, **parameters: Any
     ) -> float:
@@ -737,14 +762,13 @@ class MixtureMetric(BaseMetric):
         """
         Merge each component's outlier-sensitive parameters.
 
-        See :meth:`BaseMetric._outlier_sensitive_parameters`. A parameter name that more than one
-        component marks outlier-sensitive takes the last component's classification, the same
-        left-to-right precedence :attr:`_all_symbols` and :attr:`_all_parameters` use for the
-        union across components.
+        See :meth:`BaseMetric._outlier_sensitive_parameters`. A parameter that components classify
+        differently describes the rows of both classes, so it is ``'both'``.
         """
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
         for component in self.components:
-            result.update(component.metric._outlier_sensitive_parameters())
+            for name, rows in component.metric._outlier_sensitive_parameters().items():
+                result[name] = rows if result.get(name, rows) == rows else 'both'
         return result
 
     def __repr__(self) -> str:

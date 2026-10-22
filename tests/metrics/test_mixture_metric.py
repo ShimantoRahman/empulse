@@ -486,6 +486,14 @@ class TestOutlierSensitiveParameters:
         mixture = MixtureMetric([MixtureComponent(0.5, first, {}), MixtureComponent(0.5, second, {})])
         assert mixture._outlier_sensitive_parameters() == {'a': 'positive', 'b': 'negative'}
 
+    def test_components_that_disagree_give_both(self):
+        a, b = sympy.symbols('a b')
+        positive = Metric(CostMatrix().add_fn_cost(a).add_fp_cost(b).mark_outlier_sensitive(a), Cost())
+        negative = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a), Cost())
+        for components in ((positive, negative), (negative, positive)):
+            mixture = MixtureMetric([MixtureComponent(0.5, metric, {}) for metric in components])
+            assert mixture._outlier_sensitive_parameters() == {'a': 'both'}
+
     def test_empty_when_no_component_marks_anything(self):
         a = sympy.symbols('a')
         metric = Metric(CostMatrix().add_tp_benefit(a), Cost())

@@ -180,11 +180,9 @@ Default values
         incentive_cost=10, contact_cost=1, accept_rate=0.3
     )
 
-.. warning::
-    **Register aliases before setting defaults.** ``set_default`` keys are resolved against the
-    aliases known at that moment, so a default keyed by an alias that has not been registered yet
-    cannot be matched. Empulse raises a ``ValueError`` naming the unmatched key when the metric is
-    built.
+A default can be keyed by a symbol or an alias, and aliases are resolved when the metric is built,
+so the order of ``alias`` and ``set_default`` calls does not matter. A default for a name that is
+neither raises a ``ValueError`` at that point.
 
 Reserved names
 --------------
@@ -340,10 +338,9 @@ For a matrix of your own, declare the domain with
     except ValueError as error:
         print(error)
 
-Call :meth:`~empulse.metrics.CostMatrix.alias` before
-:meth:`~empulse.metrics.CostMatrix.constrain`, for the same reason as
-:meth:`~empulse.metrics.CostMatrix.set_default`: the constraint is stored against the symbol the
-alias resolves to. The error message still names whichever spelling you passed.
+As with :meth:`~empulse.metrics.CostMatrix.set_default`, a constraint can name a symbol or an alias
+in either order of calls, and a constraint on a name that is neither raises when the metric is
+built. The error message names whichever spelling you passed at call time.
 
 Conditions that span several parameters are expressed with a callable. This is how you would add
 the rule that the incentive must be worth less than the customer:

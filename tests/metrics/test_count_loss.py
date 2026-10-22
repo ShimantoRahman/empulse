@@ -78,12 +78,26 @@ def test_count_loss_equals_the_loss_of_the_samples(metric, parameters, tree_like
     [
         Metric(CostMatrix().add_tp_benefit(clv).add_fp_cost(d), MaxProfit()),
         Metric(CostMatrix().add_tp_benefit(clv).add_fp_cost(d), Cost()),
-        MixtureMetric([MixtureComponent(1.0, Metric(EMPC_MATRIX, MaxProfit()), {})]),
+        MixtureMetric([
+            MixtureComponent(0.5, Metric(EMPC_MATRIX, MaxProfit()), {}),
+            MixtureComponent(0.5, Metric(CostMatrix().add_tp_benefit(clv).add_fp_cost(d), MaxProfit()), {}),
+        ]),
     ],
-    ids=['deterministic_max_profit', 'cost', 'mixture'],
+    ids=['deterministic_max_profit', 'cost', 'mixture_with_a_component_needing_every_sample'],
 )
 def test_count_loss_is_none_when_every_sample_is_needed(metric):
     assert metric._prepare_count_loss(clv=200.0, d=10.0) is None
+
+
+def test_mixture_count_loss_is_the_weighted_sum_of_its_components(tree_like_predictions):
+    y_true, y_score = tree_like_predictions
+    mixture = MixtureMetric([
+        MixtureComponent(0.3, Metric(EMPC_MATRIX, MaxProfit()), {}),
+        MixtureComponent(0.7, Metric(TWO_VARIABLES, MaxProfit()), {}),
+    ])
+    count_loss = mixture._prepare_count_loss(n_samples=y_true.size, clv=200.0)
+    assert count_loss is not None
+    assert count_loss(*grouped(y_true, y_score)) == pytest.approx(mixture._loss(y_true, y_score, clv=200.0))
 
 
 def test_count_loss_resolves_its_parameters_once(tree_like_predictions):
