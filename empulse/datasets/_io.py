@@ -16,6 +16,7 @@ import threading
 import time
 import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 import warnings
 import zipfile
@@ -24,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from pathlib import Path
+    from typing import IO
 
 import narwhals as nw
 import numpy as np
@@ -243,6 +245,43 @@ def load_or_fetch(
     return _read_csv_gz(cache_file, null_values=[''])
 
 
+#: URL schemes the loaders download from. Every URL is checked, including those the UCI and OpenML
+#: APIs return and every redirect: urllib would otherwise also follow http, ftp and file URLs.
+_ALLOWED_URL_SCHEMES = frozenset({'https'})
+
+
+class _InsecureURLError(OSError):
+    """A download URL, or a redirect, whose scheme is not allowed."""
+
+
+def _require_allowed_scheme(url: str) -> None:
+    if urllib.parse.urlsplit(url).scheme.lower() not in _ALLOWED_URL_SCHEMES:
+        raise _InsecureURLError(f'Refusing to download {url}: only https URLs are allowed.')
+
+
+class _AllowedSchemeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: http.client.HTTPMessage,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        _require_allowed_scheme(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _urlopen(request: str | urllib.request.Request, *, timeout: float) -> Any:
+    """Open *request* with TLS certificate verification, refusing a URL or redirect that is not https."""
+    _require_allowed_scheme(request.full_url if isinstance(request, urllib.request.Request) else request)
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPSHandler(context=ssl.create_default_context()), _AllowedSchemeRedirectHandler()
+    )
+    return opener.open(request, timeout=timeout)
+
+
 _UCI_API_BASE = 'https://archive.ics.uci.edu/api/dataset'
 
 
@@ -266,8 +305,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
     # Query the metadata API.
     api_url = f'{_UCI_API_BASE}?id={dataset_id}'
     try:
-        ctx = ssl.create_default_context()
-        with urllib.request.urlopen(api_url, context=ctx, timeout=30) as resp:
+        with _urlopen(api_url, timeout=30) as resp:
             metadata_json: dict[str, Any] = json.loads(resp.read().decode('utf-8'))
     except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(
@@ -293,8 +331,7 @@ def _fetch_uci(dataset_id: int) -> tuple[dict[str, np.ndarray], dict[str, np.nda
 
     # Download the CSV, which is plain text or gzip-compressed.
     try:
-        ctx2 = ssl.create_default_context()
-        with urllib.request.urlopen(data_url, context=ctx2, timeout=60) as resp:
+        with _urlopen(data_url, timeout=60) as resp:
             raw_bytes = resp.read()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(f'Failed to download UCI dataset {dataset_id} from {data_url}.  Original error: {exc}') from exc
@@ -346,11 +383,10 @@ def _fetch_csv_url(
     """
     url_list = [urls] if isinstance(urls, str) else urls
     last_exc: Exception | None = None
-    ctx = ssl.create_default_context()
     for url in url_list:
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
-            with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
+            with _urlopen(req, timeout=timeout) as resp:
                 raw_bytes = resp.read()
             try:
                 with gzip.open(io.BytesIO(raw_bytes), 'rt', encoding='utf-8') as gz:
@@ -385,10 +421,9 @@ def _fetch_url_bytes(url: str, *, timeout: int = 120) -> bytes:
     bytes
         The undecoded response body.
     """
-    ctx = ssl.create_default_context()
     req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
     try:
-        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
+        with _urlopen(req, timeout=timeout) as resp:
             body: bytes = resp.read()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError, http.client.HTTPException) as exc:
         raise OSError(f'Failed to download {url}. Original error: {exc}') from exc
@@ -485,19 +520,20 @@ def _openml_api_request(
     OSError
         When all retry attempts are exhausted.
     """
-    ctx = ssl.create_default_context()
     req = urllib.request.Request(url)
     req.add_header('Accept-encoding', 'gzip')
 
     last_exc: Exception | None = None
     for attempt in range(n_retries + 1):
         try:
-            with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            with _urlopen(req, timeout=30) as resp:
                 data: bytes = resp.read()
                 if resp.info().get('Content-Encoding', '') == 'gzip':
                     data = gzip.decompress(data)
                 result: dict[str, Any] = json.loads(data.decode('utf-8'))
                 return result
+        except _InsecureURLError:
+            raise
         except urllib.error.HTTPError as exc:
             if exc.code == 412:
                 raise OpenMLError(
@@ -614,12 +650,11 @@ def _download_to_file(url: str, destination: Path, *, n_retries: int = 3, delay:
     OSError
         When every attempt fails.
     """
-    ctx = ssl.create_default_context()
     req = urllib.request.Request(url, headers={'User-Agent': 'empulse'})
     last_exc: Exception | None = None
     for attempt in range(n_retries + 1):
         try:
-            with urllib.request.urlopen(req, context=ctx, timeout=120) as resp, open(destination, 'wb') as f:
+            with _urlopen(req, timeout=120) as resp, open(destination, 'wb') as f:
                 shutil.copyfileobj(resp, f)
                 expected_size = resp.headers.get('Content-Length')
                 received_size = f.tell()
@@ -627,6 +662,8 @@ def _download_to_file(url: str, destination: Path, *, n_retries: int = 3, delay:
             if expected_size is not None and int(expected_size) != received_size:
                 raise OSError(f'Received {received_size} of {expected_size} bytes.')
             return
+        except _InsecureURLError:
+            raise
         except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
             last_exc = exc
             if attempt < n_retries:

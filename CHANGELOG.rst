@@ -96,6 +96,12 @@ Bias mitigation and samplers
   for a given ``random_state`` change.
 - |Fix| :class:`~empulse.samplers.CostSensitiveSampler` rejects ``oversampling_norm=0``.
 
+Datasets
+--------
+
+- |Fix| The ``fetch_*`` loaders only download over https. A ``http``, ``ftp`` or ``file`` URL, such
+  as one returned by the UCI or OpenML API or reached through a redirect, raises an error instead.
+
 Packaging and dependencies
 ---------------------------
 

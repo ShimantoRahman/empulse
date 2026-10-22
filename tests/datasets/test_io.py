@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import csv
 import gzip
+import http.client
 import http.server
+import io
 import threading
+import urllib.request
 from pathlib import Path
 from typing import ClassVar
 from unittest.mock import patch
@@ -16,6 +19,7 @@ import pytest
 
 from empulse.datasets import get_data_home
 from empulse.datasets._io import (
+    _AllowedSchemeRedirectHandler,
     _download_to_file,
     _find_column,
     _read_csv_gz,
@@ -286,11 +290,53 @@ def test_download_to_file_rejects_a_truncated_body(tmp_path):
     thread.start()
     try:
         url = f'http://127.0.0.1:{server.server_address[1]}/data.parquet'
-        with pytest.raises(OSError, match='500 of 1000 bytes'):
+        # The loopback server speaks plain HTTP, which the loaders otherwise refuse.
+        with (
+            patch('empulse.datasets._io._ALLOWED_URL_SCHEMES', frozenset({'http'})),
+            pytest.raises(OSError, match='500 of 1000 bytes'),
+        ):
             _download_to_file(url, tmp_path / 'data.parquet', n_retries=0)
     finally:
         server.shutdown()
         server.server_close()
+
+
+class TestOnlyHttpsIsDownloaded:
+    """Download URLs come partly from the UCI and OpenML APIs, so none of them is trusted to be https."""
+
+    @pytest.mark.parametrize('scheme', ['http', 'ftp', 'file'])
+    def test_a_non_https_url_is_refused_without_retrying(self, scheme, tmp_path):
+        with patch('empulse.datasets._io.time.sleep') as sleep, pytest.raises(OSError, match='only https'):
+            _download_to_file(f'{scheme}://example.com/data.parquet', tmp_path / 'data.parquet', n_retries=3)
+        sleep.assert_not_called()
+        assert not (tmp_path / 'data.parquet').exists()
+
+    def test_a_local_file_named_by_the_api_is_not_copied_into_the_cache(self, tmp_path):
+        secret = tmp_path / 'secret.txt'
+        secret.write_text('local file')
+        cache_file = tmp_path / 'cache.parquet'
+        description = {'data_set_description': {'parquet_url': secret.as_uri(), 'status': 'active'}}
+        with (
+            patch('empulse.datasets._io._openml_api_request', return_value=description),
+            pytest.raises(OSError, match='only https'),
+        ):
+            load_or_fetch_openml(cache_file, backend=pd, data_id=1)
+        assert not cache_file.exists()
+
+    @pytest.mark.parametrize('target', ['http://example.com/data.parquet', 'file:///etc/passwd'])
+    def test_a_redirect_away_from_https_is_refused(self, target):
+        request = urllib.request.Request('https://example.com/data.parquet')
+        with pytest.raises(OSError, match='only https'):
+            _AllowedSchemeRedirectHandler().redirect_request(
+                request, io.BytesIO(), 302, 'Found', http.client.HTTPMessage(), target
+            )
+
+    def test_a_redirect_to_https_is_followed(self):
+        request = urllib.request.Request('https://example.com/data.parquet')
+        redirected = _AllowedSchemeRedirectHandler().redirect_request(
+            request, io.BytesIO(), 302, 'Found', http.client.HTTPMessage(), 'https://mirror.example.com/data.parquet'
+        )
+        assert redirected.full_url == 'https://mirror.example.com/data.parquet'
 
 
 class TestGetDataHome:
