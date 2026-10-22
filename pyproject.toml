@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=80.9.0", "wheel", "Cython>=3.1", "numpy", "scipy>=1.15.3"]
+# Cython 3.1.0 and 3.1.1 compile fused functions that XGBoost's objective wrapper can neither
+# introspect nor pickle.
+requires = ["setuptools>=80.9.0", "wheel", "Cython>=3.1.2", "numpy", "scipy>=1.15.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -37,6 +39,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Free Threading :: 2 - Beta",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
@@ -51,13 +54,17 @@ classifiers = [
 requires-python = ">= 3.11"
 dependencies = [
     "numpy>=1.25.2; python_version < '3.13'",
-    "numpy>=2.0.0; python_version >= '3.13'",
+    "numpy>=2.0.0; python_version >= '3.13' and python_version < '3.15'",
+    "numpy>=2.5.2; python_version >= '3.15'",
     # 1.5.2 is the first release with Python 3.13 wheels and numpy 2 support; 1.7.2 the first with
-    # Python 3.14 wheels. The sampling extra's imbalanced-learn would allow 1.4.2, but CSBaggingClassifier
-    # needs the `**fit_params` that BaggingClassifier.fit only has from 1.5.
+    # Python 3.14 wheels, 1.9.1 with Python 3.15 wheels. The sampling extra's imbalanced-learn would
+    # allow 1.4.2, but CSBaggingClassifier needs the `**fit_params` that BaggingClassifier.fit only has
+    # from 1.5.
     "scikit-learn>=1.5.2; python_version < '3.14'",
-    "scikit-learn>=1.7.2; python_version >= '3.14'",
-    "scipy>=1.15.3",
+    "scikit-learn>=1.7.2; python_version >= '3.14' and python_version < '3.15'",
+    "scikit-learn>=1.9.1; python_version >= '3.15'",
+    "scipy>=1.15.3; python_version < '3.15'",
+    "scipy>=1.18.1; python_version >= '3.15'",
     "joblib>=1.4.0",
     "narwhals>=2.21.0",
     "sympy>=1.14.0",
@@ -76,17 +83,20 @@ boosting = [
     "lightgbm>=4.6.0",
     "catboost>=1.2.7; python_version < '3.13'",
     "catboost>=1.2.8; python_version >= '3.13' and python_version < '3.14'",
-    "catboost>=1.2.9; python_version >= '3.14'",
+    # No CatBoost release has Python 3.15 wheels yet.
+    "catboost>=1.2.9; python_version >= '3.14' and python_version < '3.15'",
 ]
 sampling = [
     "imbalanced-learn>=0.14.2",
 ]
 # Reads the Parquet files the OpenML dataset loaders download, when the backend is pandas.
-# 16.0 is the first release that works with numpy 2; 23.0 the first with free-threaded 3.14 wheels.
+# 16.0 is the first release that works with numpy 2; 23.0 the first with free-threaded 3.14 wheels;
+# 26.0 the first with Python 3.15 wheels.
 datasets = [
     "pyarrow>=16.0.0; python_version < '3.13'",
     "pyarrow>=18.0.0; python_version >= '3.13' and python_version < '3.14'",
-    "pyarrow>=23.0.0; python_version >= '3.14'",
+    "pyarrow>=23.0.0; python_version >= '3.14' and python_version < '3.15'",
+    "pyarrow>=26.0.0; python_version >= '3.15'",
 ]
 
 # Every optional dependency at once. Add new extras here as well as above, so that
@@ -100,11 +110,14 @@ test = [
     "pytest-cov>=4.1.0",
     "pytest-xdist>=3.8.0",
     "tox>=4.13.0",
-    "cython>=3.1",
+    "cython>=3.1.2",
     "tox-uv>=1.25.0",
     "setuptools>=80.9.0",
-    "pandas>=2.2.0",
-    "polars>=1.40.1",
+    "pandas>=2.2.0; python_version < '3.15'",
+    "pandas>=3.0.6; python_version >= '3.15'",
+    "polars>=1.40.1; python_version < '3.15'",
+    # On Python 3.15, earlier polars releases return None from Series methods such as is_null().
+    "polars>=2.0.0; python_version >= '3.15'",
 ]
 
 docs = [

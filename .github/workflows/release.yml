@@ -94,7 +94,7 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
           CIBW_ARCHS_WINDOWS: "auto64"
-          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-* cp314t-*"
+          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-* cp314t-* cp315-* cp315t-*"
           # cibuildwheel runs delvewheel by default, which would vendor msvcp140.dll and vcomp140.dll
           # into the Windows wheels. They are left to the system's Visual C++ runtime instead.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""

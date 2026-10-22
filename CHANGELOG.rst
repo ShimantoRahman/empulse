@@ -92,6 +92,17 @@ Bias mitigation and samplers
   for a given ``random_state`` change.
 - |Fix| :class:`~empulse.samplers.CostSensitiveSampler` rejects ``oversampling_norm=0``.
 
+Packaging and dependencies
+---------------------------
+
+- |Enhancement| Support for Python 3.15, including the free-threaded build (``cp315t``). It needs
+  numpy 2.5.2, scipy 1.18.1, scikit-learn 1.9.1 and, for the ``datasets`` extra, pyarrow 26.0 or
+  later. CatBoost has no Python 3.15 wheels yet, so there the ``boosting`` extra installs XGBoost
+  and LightGBM only. The polars backend of :mod:`empulse.datasets` needs polars 2.0 on Python 3.15.
+- |Fix| Building Empulse requires Cython 3.1.2 or later. With Cython 3.1.0 or 3.1.1,
+  :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier` failed
+  to fit or pickle with XGBoost.
+
 
 `0.13.1`_ (22-10-2026)
 ======================

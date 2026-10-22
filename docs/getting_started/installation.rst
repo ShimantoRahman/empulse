@@ -29,7 +29,8 @@ installable as an extra:
       - ``pip install empulse[boosting]``
       - XGBoost, LightGBM and CatBoost, the backends behind
         :class:`~empulse.models.CSBoostClassifier` and
-        :class:`~empulse.models.B2BoostClassifier`.
+        :class:`~empulse.models.B2BoostClassifier`. CatBoost publishes no wheels for Python 3.15
+        yet, so there the extra installs XGBoost and LightGBM only.
     * - ``datasets``
       - ``pip install empulse[datasets]``
       - pyarrow, which the OpenML dataset loaders in :mod:`empulse.datasets` need to read their
@@ -49,8 +50,8 @@ If you use a backend that is not installed, Empulse raises an error telling you 
 Free-threaded Python
 ====================
 
-Empulse publishes wheels for the free-threaded build of CPython 3.14 (``cp314t``, the
-:pep:`703` interpreter without a global interpreter lock).
+Empulse publishes wheels for the free-threaded builds of CPython 3.14 and 3.15 (``cp314t`` and
+``cp315t``, the :pep:`703` interpreter without a global interpreter lock).
 
 .. code-block:: bash
 
@@ -63,13 +64,13 @@ supported — that is scikit-learn's contract too.
 
 .. note::
 
-    Two optional dependencies do not publish free-threaded wheels yet, so on 3.14t:
+    Two optional dependencies do not publish free-threaded wheels yet:
 
-    - ``pip install empulse[boosting]`` fails to resolve, because **CatBoost** has no ``cp314t``
-      wheel. XGBoost and LightGBM do install, so
+    - On 3.14t, ``pip install empulse[boosting]`` fails to resolve, because **CatBoost** has no
+      ``cp314t`` wheel. XGBoost and LightGBM do install, so
       :class:`~empulse.models.CSBoostClassifier` works with those two backends — install them
-      directly rather than through the extra.
-    - **polars** has no ``cp314t`` wheel, so use pandas as the dataframe backend for
+      directly rather than through the extra. On 3.15t the extra leaves CatBoost out.
+    - **polars** has no ``cp314t`` or ``cp315t`` wheel, so use pandas as the dataframe backend for
       :mod:`empulse.datasets`.
 
 Dataframe support
@@ -77,7 +78,8 @@ Dataframe support
 
 The bundled datasets in :mod:`empulse.datasets` return dataframes, so they need **pandas or
 polars** installed. Neither is a hard dependency of Empulse itself, because the rest of the package
-works fine on plain NumPy arrays.
+works fine on plain NumPy arrays. On Python 3.15, use polars 2.0 or later: earlier releases return
+``None`` from some ``Series`` methods there.
 
 .. code-block:: bash
 
