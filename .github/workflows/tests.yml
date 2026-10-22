@@ -36,7 +36,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - name: Run test suite
-        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow and not remote"
+        run: uvx --with tox-uv --with "uv>=0.13.4" tox -e ${{ matrix.env }} -- -m "not slow and not remote"
 
   slow-test:
     # The doc-executing suites (tests/test_user_guide.py and other @pytest.mark.slow tests) run
@@ -61,7 +61,7 @@ jobs:
           path: ~/empulse_data
           key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
       - name: Run slow suite
-        run: uvx --with tox-uv tox -e py312-tests -- -m "slow and not remote"
+        run: uvx --with tox-uv --with "uv>=0.13.4" tox -e py312-tests -- -m "slow and not remote"
 
   lowest-test:
     # Every other job installs the newest version of each dependency. This one installs the lowest
@@ -85,7 +85,7 @@ jobs:
           path: ~/empulse_data
           key: empulse-data-${{ hashFiles('empulse/datasets/_remote.py', 'empulse/datasets/_io.py') }}
       - name: Run test suite against the lowest dependency versions
-        run: uvx --with tox-uv tox -e py311-lowest -- -m "not remote"
+        run: uvx --with tox-uv --with "uv>=0.13.4" tox -e py311-lowest -- -m "not remote"
 
   remote-test:
     # The dataset fetchers download from third-party hosts, so they are too slow and too flaky to
@@ -103,4 +103,4 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
       - name: Run remote-data suite
-        run: uvx --with tox-uv tox -e py312-tests -- -m "remote"
+        run: uvx --with tox-uv --with "uv>=0.13.4" tox -e py312-tests -- -m "remote"

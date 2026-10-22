@@ -44,7 +44,7 @@ dependency_groups =
     test
 deps =
     scikit-learn=={version}
-    uv
+    uv>=0.13.4
 commands_pre =
     uv pip install --python {{env_python}} --reinstall-package scikit-learn --prerelease allow scikit-learn=={version}
     python scripts/assert_sklearn_version.py {version}

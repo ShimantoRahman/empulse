@@ -120,7 +120,7 @@ jobs:
       - name: Run test suite against scikit-learn ${{ needs.detect.outputs.version }}
         env:
           SKLEARN_VERSION: ${{ needs.detect.outputs.version }}
-        run: uvx --with tox-uv tox -e ${{ matrix.env }} -- -m "not slow and not remote"
+        run: uvx --with tox-uv --with "uv>=0.13.4" tox -e ${{ matrix.env }} -- -m "not slow and not remote"
 
   report:
     needs: [detect, test]

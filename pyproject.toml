@@ -148,6 +148,9 @@ dev = [
 
 [tool.uv]
 default-groups = ["dev"]
+# uv before 0.13.4 trusts the compromised eMudhra (emSign) CA roots (GHSA-hq85-5cpj-mr62).
+# astral-sh/setup-uv reads this too, so CI installs a version that satisfies it.
+required-version = ">=0.13.4"
 
 [tool.setuptools]
 include-package-data = true

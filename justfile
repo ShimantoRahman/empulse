@@ -82,9 +82,9 @@ doctest:
 # Run tox tests
 [group('test')]
 tox:
-    uvx --with tox-uv tox -e py312-lint
-    uvx --with tox-uv tox -e py312-docs
-    uvx --with tox-uv tox -f tests
+    uvx --with tox-uv --with "uv>=0.13.4" tox -e py312-lint
+    uvx --with tox-uv --with "uv>=0.13.4" tox -e py312-docs
+    uvx --with tox-uv --with "uv>=0.13.4" tox -f tests
 
 # Update scikit-learn compat tox environments by querying PyPI for latest patch releases
 [group('test')]
