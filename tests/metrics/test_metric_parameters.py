@@ -214,24 +214,34 @@ def _metric():
     return Metric(cost_matrix.set_default(clv=100, d=5), Cost())
 
 
-def test_parameter_names_are_cached_until_the_cost_matrix_changes():
+def test_parameter_names_are_a_copy():
     metric = _metric()
     assert metric._all_parameters == {'clv', 'd'}
-    # The returned set is a copy, so changing it cannot corrupt the cache.
     metric._all_parameters.add('typo')
     assert metric._all_parameters == {'clv', 'd'}
 
-    metric.cost_matrix.alias('discount', 'd')
-    assert metric._all_parameters == {'clv', 'd', 'discount'}
-    metric.cost_matrix.add_fp_cost(sympy.Symbol('f'))
-    assert metric._all_parameters == {'clv', 'd', 'discount', 'f'}
+
+def test_changing_the_cost_matrix_copy_does_not_change_the_metric():
+    metric = _metric()
+    expected = metric(Y_TRUE, Y_SCORE)
+    metric.cost_matrix.alias('discount', 'd').add_fp_cost(sympy.Symbol('f'))
+    assert metric._all_parameters == {'clv', 'd'}
+    assert metric(Y_TRUE, Y_SCORE) == expected
 
 
-def test_parameter_name_cache_survives_pickling():
+def test_parameter_names_survive_pickling():
     metric = _metric()
     names = metric._all_parameters
     restored = pickle.loads(pickle.dumps(metric))
     assert restored._all_parameters == names
-    # A metric pickled by an older version has no cache attribute at all.
-    del restored._all_parameters_cache
-    assert restored._all_parameters == names
+
+
+def test_a_metric_pickled_with_a_public_cost_matrix_still_loads():
+    metric = _metric()
+    state = metric.__dict__.copy()
+    state['cost_matrix'] = state.pop('_cost_matrix')
+    del state['_parameter_names']
+    restored = Metric.__new__(Metric)
+    restored.__setstate__(state)
+    assert restored._all_parameters == {'clv', 'd'}
+    assert restored(Y_TRUE, Y_SCORE) == metric(Y_TRUE, Y_SCORE)

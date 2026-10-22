@@ -174,14 +174,14 @@ class Metric(BaseMetric):
     """
 
     def __init__(self, cost_matrix: CostMatrix, strategy: MetricStrategy) -> None:
-        self.cost_matrix = copy.deepcopy(cost_matrix)
-        self.cost_matrix._resolve_aliases()
+        self._cost_matrix = copy.deepcopy(cost_matrix)
+        self._cost_matrix._resolve_aliases()
         _check_reserved_symbol_names(
             self.tp_benefit,
             self.tn_benefit,
             self.fp_cost,
             self.fn_cost,
-            alias_names=self.cost_matrix._aliases.keys(),
+            alias_names=self._cost_matrix._aliases.keys(),
         )
         _check_duplicate_symbol_names(
             self.tp_benefit,
@@ -194,9 +194,9 @@ class Metric(BaseMetric):
             self.tn_benefit,
             self.fp_cost,
             self.fn_cost,
-            aliases=self.cost_matrix._aliases,
-            default_names=self.cost_matrix._defaults.keys(),
-            bound_names=self.cost_matrix._bounds.keys(),
+            aliases=self._cost_matrix._aliases,
+            default_names=self._cost_matrix._defaults.keys(),
+            bound_names=self._cost_matrix._bounds.keys(),
         )
         if self.tp_benefit == 0 and self.tn_benefit == 0 and self.fp_cost == 0 and self.fn_cost == 0:
             warnings.warn(
@@ -218,8 +218,7 @@ class Metric(BaseMetric):
         self._fn_cost_fn = _safe_lambdify(self.fn_cost)
         self._tp_cost_fn = _safe_lambdify(self.tp_cost)
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
-        # The parameter names, and the cost matrix state they were found for; see _all_parameters.
-        self._all_parameters_cache: tuple[tuple[Any, ...], frozenset[str]] | None = None
+        self._parameter_names = frozenset(self._find_all_parameters())
         # Built on the first _evaluate_costs(replace_stochastic=True) call; most metrics never need it.
         self._mean_substituted_costs: (
             tuple[
@@ -241,6 +240,25 @@ class Metric(BaseMetric):
         return self._strategy
 
     @property
+    def cost_matrix(self) -> CostMatrix:
+        """
+        A copy of the cost matrix the metric was built from.
+
+        The metric is compiled from its cost matrix when it is built, so changing this copy does not
+        change the metric. To use a different cost matrix, build a new metric from it.
+        """
+        return copy.deepcopy(self._cost_matrix)
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        # Metrics pickled by older versions hold the cost matrix publicly and lack the parameter names.
+        if 'cost_matrix' in state:
+            state['_cost_matrix'] = state.pop('cost_matrix')
+        state.pop('_all_parameters_cache', None)
+        self.__dict__.update(state)
+        if '_parameter_names' not in state:
+            self._parameter_names = frozenset(self._find_all_parameters())
+
+    @property
     def __name__(self) -> str:
         return self.strategy.name
 
@@ -250,35 +268,35 @@ class Metric(BaseMetric):
 
     @property
     def tp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.tp_benefit
+        return self._cost_matrix.tp_benefit
 
     @property
     def tn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.tn_benefit
+        return self._cost_matrix.tn_benefit
 
     @property
     def fp_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.fp_benefit
+        return self._cost_matrix.fp_benefit
 
     @property
     def fn_benefit(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.fn_benefit
+        return self._cost_matrix.fn_benefit
 
     @property
     def tp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.tp_cost
+        return self._cost_matrix.tp_cost
 
     @property
     def tn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.tn_cost
+        return self._cost_matrix.tn_cost
 
     @property
     def fp_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.fp_cost
+        return self._cost_matrix.fp_cost
 
     @property
     def fn_cost(self) -> sympy.Expr:  # ruff: ignore[undocumented-public-method]
-        return self.cost_matrix.fn_cost
+        return self._cost_matrix.fn_cost
 
     @property
     def direction(self) -> Direction:  # ruff: ignore[undocumented-public-method]
@@ -296,10 +314,10 @@ class Metric(BaseMetric):
 
         stochastic_params = set()
         for expr in [
-            self.cost_matrix.tp_cost,
-            self.cost_matrix.tn_cost,
-            self.cost_matrix.fp_cost,
-            self.cost_matrix.fn_cost,
+            self._cost_matrix.tp_cost,
+            self._cost_matrix.tn_cost,
+            self._cost_matrix.fp_cost,
+            self._cost_matrix.fn_cost,
         ]:
             for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
                 pspace = atom.pspace
@@ -307,36 +325,12 @@ class Metric(BaseMetric):
                     for arg in pspace.distribution.args:
                         stochastic_params.update(arg.free_symbols)
 
-        return {str(symbol) for symbol in all_symbols | stochastic_params} | set(self.cost_matrix._aliases.keys())
+        return {str(symbol) for symbol in all_symbols | stochastic_params} | set(self._cost_matrix._aliases.keys())
 
     @property
     def _all_parameters(self) -> set[str]:
-        """
-        The set of cost matrix parameters which can be used.
-
-        Every call of the metric needs it, and finding it walks the cost expressions, so it is
-        cached. The cache is keyed on the cost matrix's expressions and aliases, since
-        :attr:`cost_matrix` can still be changed after the metric is built.
-        """
-        cost_matrix = self.cost_matrix
-        key = (
-            cost_matrix._tp_benefit,
-            cost_matrix._tn_benefit,
-            cost_matrix._fp_cost,
-            cost_matrix._fn_cost,
-            tuple(cost_matrix._aliases),
-        )
-        # getattr: metrics pickled by older versions lack the cache.
-        cached = getattr(self, '_all_parameters_cache', None)
-        if (
-            cached is not None
-            and all(stored is current for stored, current in zip(cached[0][:4], key[:4], strict=True))
-            and cached[0][4] == key[4]
-        ):
-            return set(cached[1])
-        parameters = self._find_all_parameters()
-        self._all_parameters_cache = (key, frozenset(parameters))
-        return parameters
+        """The set of cost matrix parameters which can be used."""
+        return set(self._parameter_names)
 
     def _find_all_parameters(self) -> set[str]:
         """Find the cost matrix parameters which can be used, see :attr:`_all_parameters`."""
@@ -350,10 +344,10 @@ class Metric(BaseMetric):
         stochastic_symbols = set()
         stochastic_params = set()
         for expr in [
-            self.cost_matrix.tp_cost,
-            self.cost_matrix.tn_cost,
-            self.cost_matrix.fp_cost,
-            self.cost_matrix.fn_cost,
+            self._cost_matrix.tp_cost,
+            self._cost_matrix.tn_cost,
+            self._cost_matrix.fp_cost,
+            self._cost_matrix.fn_cost,
         ]:
             for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
                 stochastic_symbols.add(atom)
@@ -363,13 +357,13 @@ class Metric(BaseMetric):
                         stochastic_params.update(arg.free_symbols)
 
         return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols} | set(
-            self.cost_matrix._aliases.keys()
+            self._cost_matrix._aliases.keys()
         )
 
     @property
     def _default_parameter_names(self) -> set[str]:
         """The set of parameter names that have a default value and need not be supplied."""
-        return set(self.cost_matrix._defaults.keys())
+        return set(self._cost_matrix._defaults.keys())
 
     @property
     def _is_stochastic(self) -> bool:
@@ -395,8 +389,8 @@ class Metric(BaseMetric):
 
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """Return the required symbol names not covered by *supplied* (aliases resolved)."""
-        resolved_supplied = {str(self.cost_matrix._aliases.get(key, key)) for key in supplied}
-        required_symbols = self._all_parameters - set(self.cost_matrix._aliases.keys()) - self._default_parameter_names
+        resolved_supplied = {str(self._cost_matrix._aliases.get(key, key)) for key in supplied}
+        required_symbols = self._all_parameters - set(self._cost_matrix._aliases.keys()) - self._default_parameter_names
         return required_symbols - resolved_supplied
 
     def _validate_parameters(self, **parameters: Any) -> None:
@@ -448,7 +442,7 @@ class Metric(BaseMetric):
         # one symbol, raises; otherwise the last kwarg would win and the result would depend on kwarg order.
         resolved_from: dict[str, str] = {}
         for key, value in kwargs.items():
-            alias_target = self.cost_matrix._aliases.get(key)
+            alias_target = self._cost_matrix._aliases.get(key)
             symbol_name = str(alias_target) if alias_target is not None else key
             if symbol_name in resolved_from:
                 raise ValueError(
@@ -458,7 +452,7 @@ class Metric(BaseMetric):
             resolved_from[symbol_name] = key
             params[symbol_name] = value
 
-        for key, value in self.cost_matrix._defaults.items():
+        for key, value in self._cost_matrix._defaults.items():
             params.setdefault(key, value)
 
         # Warn about unknown parameters, which are likely typos. Strategy extras and scikit-learn's
@@ -495,8 +489,8 @@ class Metric(BaseMetric):
             _check_parameter_domains(
                 (self.tp_benefit, self.tn_benefit, self.fp_cost, self.fn_cost),
                 out,
-                self.cost_matrix._bounds,
-                self.cost_matrix._predicates,
+                self._cost_matrix._bounds,
+                self._cost_matrix._predicates,
                 caller_names=resolved_from,
             )
 
@@ -897,7 +891,7 @@ class Metric(BaseMetric):
 
     def _parameter_spellings(self, name: str) -> set[str]:
         """Return every keyword the parameter *name* can be passed as: its symbol name and its aliases."""
-        aliases = self.cost_matrix._aliases
+        aliases = self._cost_matrix._aliases
         symbol_name = str(aliases.get(name, name))
         return {symbol_name} | {alias for alias, target in aliases.items() if str(target) == symbol_name}
 
@@ -907,16 +901,16 @@ class Metric(BaseMetric):
 
         See :meth:`BaseMetric._outlier_sensitive_parameters`.
         """
-        if not self.cost_matrix._outlier_sensitive_symbols:
+        if not self._cost_matrix._outlier_sensitive_symbols:
             return {}
-        aliases = self.cost_matrix._aliases
+        aliases = self._cost_matrix._aliases
         alias_of = _invert_alias_map(aliases)
         # Matched by name: a symbol may be marked by its alias, or as a string while the cost matrix
         # holds a symbol of that name with assumptions, which sympy treats as a different symbol.
         pos_names = {str(symbol) for symbol in self.tp_cost.free_symbols | self.fn_cost.free_symbols}
         neg_names = {str(symbol) for symbol in self.tn_cost.free_symbols | self.fp_cost.free_symbols}
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
-        for symbol in self.cost_matrix._outlier_sensitive_symbols:
+        for symbol in self._cost_matrix._outlier_sensitive_symbols:
             symbol_name = str(aliases.get(str(symbol), symbol))
             name = alias_of.get(symbol_name, symbol_name)
             in_pos, in_neg = symbol_name in pos_names, symbol_name in neg_names
@@ -929,7 +923,7 @@ class Metric(BaseMetric):
         return result
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(cost_matrix={self.cost_matrix}, strategy={self.strategy})'
+        return f'{self.__class__.__name__}(cost_matrix={self._cost_matrix}, strategy={self.strategy})'
 
     def _repr_latex_(self) -> str:
         return self.strategy.to_latex(

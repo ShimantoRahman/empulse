@@ -1,9 +1,9 @@
 """
 What a :class:`~empulse.metrics.MetricStrategy` supports, so callers can ask instead of guess.
 
-:class:`MetricStrategy` declares eleven members (see its docstring), of which only three --
+:class:`MetricStrategy` has three ``@abstractmethod`` members --
 :meth:`~empulse.metrics.MetricStrategy.build`, :meth:`~empulse.metrics.MetricStrategy.score` and
-:meth:`~empulse.metrics.MetricStrategy.to_latex` -- are ``@abstractmethod``. The rest
+:meth:`~empulse.metrics.MetricStrategy.to_latex`. Its optional methods
 (:meth:`~empulse.metrics.MetricStrategy.optimal_threshold`,
 :meth:`~empulse.metrics.MetricStrategy.optimal_rate`,
 :meth:`~empulse.metrics.MetricStrategy.logit_objective`,
@@ -56,13 +56,14 @@ class Capability(Enum):
         loss is non-linear in the predicted probability, or it needs the current round's scores
         to locate a threshold) cannot also offer a round-independent constant term.
     COST_ONLY_DECISION : Capability
-        :meth:`~empulse.metrics.MetricStrategy.optimal_threshold` and
-        :meth:`~empulse.metrics.MetricStrategy.optimal_rate` depend only on the cost values, not
-        on the actual ``y_true``/``y_score`` -- they can be called with empty or dummy arrays,
-        which is what lets a decision be recomputed at predict time from cost parameters alone
-        rather than only from what was learned during ``fit``. Absent for a ranking-based
-        strategy (e.g. :class:`~empulse.metrics.MaxProfit`), whose threshold is a genuine
-        function of the observed scores.
+        :meth:`~empulse.metrics.MetricStrategy.optimal_threshold` depends only on the cost values,
+        not on ``y_true`` or ``y_score``, so it can be called with empty arrays, and
+        :meth:`~empulse.metrics.MetricStrategy.optimal_rate` is the fraction of ``y_score`` at or
+        above that threshold, so it needs the scores but not the labels. This is what lets a
+        decision be recomputed at predict time from cost parameters alone, rather than only from
+        what was learned during ``fit``. Absent for a ranking-based strategy (e.g.
+        :class:`~empulse.metrics.MaxProfit`), whose threshold is a genuine function of the observed
+        scores.
     CLASS_COSTS : Capability
         The metric is reducible to four class-level scalars (``tp_benefit``, ``tn_benefit``,
         ``fp_cost``, ``fn_cost``), which is what a model needs to feed a cost-sensitive criterion

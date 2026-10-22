@@ -87,7 +87,7 @@ _KNOWN_EXTRA_PARAMETERS = frozenset({'sample_weight'})
 
 def _aliases(metric: BaseMetric) -> Mapping[str, str]:
     """Map each alias of *metric*'s cost matrix to the symbol name it stands for."""
-    cost_matrix = getattr(metric, 'cost_matrix', None)
+    cost_matrix = getattr(metric, '_cost_matrix', None)
     aliases = getattr(cost_matrix, '_aliases', {})
     return {alias: str(symbol) for alias, symbol in aliases.items()}
 

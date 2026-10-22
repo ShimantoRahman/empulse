@@ -12,8 +12,8 @@ from ..capabilities import Capability
 
 #: Maps each capability that corresponds to a `MetricStrategy` method to that method's name, so
 #: `_capabilities_from_overrides` can detect an override. The capabilities without an entry
-#: (`COST_ONLY_DECISION`, `CLASS_COSTS`, `RANKING`, `PRECOMPUTED_BOOST_OBJECTIVE`) describe what a
-#: method computes, not whether it exists, so a strategy must declare them via `_capabilities`.
+#: (`COST_ONLY_DECISION`, `CLASS_COSTS`, `EXPECTED_COST`, `RANKING`) describe what a method computes,
+#: not whether it exists, so a strategy must declare them via `_capabilities`.
 _CAPABILITY_METHOD_NAMES: dict[Capability, str] = {
     Capability.OPTIMAL_THRESHOLD: 'optimal_threshold',
     Capability.OPTIMAL_RATE: 'optimal_rate',
@@ -27,10 +27,9 @@ _CAPABILITY_METHOD_NAMES: dict[Capability, str] = {
 def _capabilities_from_overrides(cls: type['MetricStrategy']) -> frozenset[Capability]:
     """Infer capabilities from which optional `MetricStrategy` methods *cls* overrides.
 
-    A capability whose corresponding method is still the base class's own `raise
-    NotImplementedError` body is absent; a capability the base class has no method for at all
-    (`COST_ONLY_DECISION`, `CLASS_COSTS`, `PRECOMPUTED_BOOST_OBJECTIVE`'s sibling
-    `BOOST_OBJECTIVE` aside, see `_CAPABILITY_METHOD_NAMES`) is never inferred this way.
+    A capability whose method is still the base class's own `raise NotImplementedError` body is
+    absent. A capability with no method of its own (see `_CAPABILITY_METHOD_NAMES`) is never
+    inferred this way.
 
     This is what lets a third-party `MetricStrategy` subclass that overrides e.g.
     `logit_objective` keep working unedited: the capability follows the override automatically,
@@ -90,21 +89,6 @@ class MetricStrategy(ABC):
         calling a method and catching ``NotImplementedError``.
         """
         return self._capabilities | _capabilities_from_overrides(type(self))
-
-    @property
-    def requires_dynamic_boost_objective(self) -> bool:
-        """
-        Whether gradients must be recomputed from the metric each boosting round.
-
-        .. deprecated::
-            Use ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
-
-        ``True`` for strategies whose per-sample loss is not linear in the predicted
-        probability (e.g. :class:`~empulse.metrics.LogCost`) or that need the current round's
-        scores to locate a threshold (e.g. :class:`~empulse.metrics.MaxProfit`); such strategies
-        cannot use the precomputed constant returned by :meth:`prepare_boost_objective`.
-        """
-        return Capability.PRECOMPUTED_BOOST_OBJECTIVE not in self.capabilities
 
     @property
     def _extra_kwargs(self) -> set[str]:

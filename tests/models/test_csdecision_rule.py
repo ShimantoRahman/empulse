@@ -50,7 +50,8 @@ class _DummyMetric(Metric):
 
     def __init__(self, strategy):
         self._strategy = strategy
-        self.cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
+        self._cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
+        self._parameter_names = frozenset({'alpha'})
 
     def optimal_threshold(self, y_true, y_score, **kwargs):
         return 0.5
@@ -421,7 +422,8 @@ class _RecordingMetric(Metric):
 
     def __init__(self, strategy):
         self._strategy = strategy
-        self.cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
+        self._cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
+        self._parameter_names = frozenset({'alpha'})
         self.call_log = []
 
     def optimal_threshold(self, y_true, y_score, **kwargs):

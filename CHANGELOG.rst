@@ -76,6 +76,11 @@ Metrics
   neither a symbol nor an alias raises instead of being ignored.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` whose components mark the same parameter
   outlier-sensitive for different classes detects its outliers on every sample.
+- |API| :attr:`Metric.cost_matrix <empulse.metrics.Metric.cost_matrix>` returns a copy: a metric is
+  compiled from its cost matrix when it is built, so changing the matrix afterwards had no effect on
+  scoring. Build a new metric from the changed cost matrix instead.
+- |API| ``MetricStrategy.requires_dynamic_boost_objective`` is removed. Use
+  ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
 - |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
   :class:`~empulse.metrics.MaxProfit` score itself when instance-dependent parameters enter a cost
   non-linearly.

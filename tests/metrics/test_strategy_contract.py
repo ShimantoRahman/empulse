@@ -357,13 +357,13 @@ def test_max_profit_logit_gradient_piecewise_is_picklable(dataset):
         pytest.param(MinCost, True, id='MinCost'),
     ],
 )
-def test_requires_dynamic_boost_objective(strategy_factory, expected):
+def test_needs_per_round_boost_gradients(strategy_factory, expected):
     """MaxProfit and LogCost need per-round gradients; Cost and Savings use a precomputed constant."""
     strategy = strategy_factory()
-    assert strategy.requires_dynamic_boost_objective is expected
+    assert (Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities) is expected
 
 
-def test_requires_dynamic_boost_objective_survives_rename():
+def test_boost_objective_capability_survives_rename():
     """Renaming a strategy (e.g. via Metric.__name__) must not change its objective capability.
 
     CSBoostClassifier must not dispatch on `strategy.name`, which `Metric.__name__`'s setter
@@ -371,7 +371,7 @@ def test_requires_dynamic_boost_objective_survives_rename():
     """
     strategy = MaxProfit()
     strategy.name = 'my_custom_metric'
-    assert strategy.requires_dynamic_boost_objective is True
+    assert Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities
 
 
 class TestCapabilities:
@@ -743,7 +743,8 @@ class TestSiblingIsANegation:
 
     def test_boost_objective_dispatch_is_unchanged(self, parent_cls, sibling_cls):
         """CSBoostClassifier branches on this; a sibling must route the same way as its parent."""
-        assert sibling_cls().requires_dynamic_boost_objective == parent_cls().requires_dynamic_boost_objective
+        boost = {Capability.BOOST_OBJECTIVE, Capability.PRECOMPUTED_BOOST_OBJECTIVE}
+        assert sibling_cls().capabilities & boost == parent_cls().capabilities & boost
 
     def test_instance_dependent_costs(self, parent_cls, sibling_cls, cost_matrix, sibling_dataset):
         y, y_score = sibling_dataset
