@@ -8,7 +8,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 from ...._types import FloatArrayLike, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda
 from .._direction import Direction
-from .._parameter_domain import _check_parameters
+from .._parameter_domain import LABEL_AND_SCORE_SYMBOLS, _check_parameters
 from .._symbolic import _latex
 from .cost_strategy import (
     Cost,
@@ -130,7 +130,7 @@ class SavingsScore:
         all_symbols = (
             self.cost_equation.free_symbols | self.all_zero_equation.free_symbols | self.all_one_equation.free_symbols
         )
-        _check_parameters(all_symbols - {*sympy.symbols('y s')}, kwargs)
+        _check_parameters(all_symbols - LABEL_AND_SCORE_SYMBOLS, kwargs)
 
         if not isinstance(baseline, str):
             baseline_score = np.broadcast_to(np.asarray(baseline, dtype=np.float64), y_true.shape)

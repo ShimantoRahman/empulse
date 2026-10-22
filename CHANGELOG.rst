@@ -79,6 +79,9 @@ Metrics
 - |API| :attr:`Metric.cost_matrix <empulse.metrics.Metric.cost_matrix>` returns a copy: a metric is
   compiled from its cost matrix when it is built, so changing the matrix afterwards had no effect on
   scoring. Build a new metric from the changed cost matrix instead.
+- |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings`,
+  :class:`~empulse.metrics.LogCost` and the empirical strategies is up to a quarter faster, which
+  speeds up the models that score them on every iteration.
 - |API| ``MetricStrategy.requires_dynamic_boost_objective`` is removed. Use
   ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
 - |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
@@ -91,6 +94,9 @@ Models
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
   :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
   metrics, instead of the maximum profit of their averaged costs.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  fitted with every cost zero fit only the wrapped estimator, as without costs, also when that
+  overrides non-zero costs set in the constructor.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` detects outliers on the positive class of a
   wrapped estimator's ``pos_label``, and accepts an outlier-sensitive parameter given as a list.
 - |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and

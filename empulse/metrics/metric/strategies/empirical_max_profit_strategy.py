@@ -9,7 +9,7 @@ from ...._types import FloatNDArray, IntNDArray
 from ...common import classification_threshold
 from .._compile import MetricFn, RateFn, ThresholdFn, _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
-from .._parameter_domain import _check_parameters
+from .._parameter_domain import LABEL_SYMBOLS, _check_parameters
 from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
@@ -51,7 +51,7 @@ class EmpiricalMaxProfitScore:
 
     def profit_differential(self, y_true: IntNDArray, **kwargs: Any) -> FloatNDArray:
         """Return how much targeting each sample earns over not targeting it."""
-        _check_parameters(self.delta_equation.free_symbols - {sympy.symbols('y')}, kwargs)
+        _check_parameters(self.delta_equation.free_symbols - LABEL_SYMBOLS, kwargs)
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
         delta: FloatNDArray = np.asarray(
             _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=y_true.size, y=y_true, **kwargs),

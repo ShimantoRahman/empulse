@@ -105,6 +105,11 @@ def _bounds_message(name: str, bound: Any, offending: float) -> str:
     return f'{name} should {expected}, got a value of {offending} instead.'
 
 
+#: The label and score symbols the strategies' expressions are written in, which are never parameters.
+LABEL_SYMBOLS = frozenset({sympy.Symbol('y')})
+LABEL_AND_SCORE_SYMBOLS = frozenset(sympy.symbols('y s'))
+
+
 def _check_parameters(symbols: Iterable[str | sympy.Expr], kwargs: dict[str, Any]) -> None:
     """
     Check if all parameters are provided.
@@ -112,7 +117,10 @@ def _check_parameters(symbols: Iterable[str | sympy.Expr], kwargs: dict[str, Any
     In particular:
         - deterministic parameters
         - distribution parameters of stochastic variables
+
+    Runs on every scoring call, so a symbol is looked up by its ``name``, which, unlike ``str``,
+    does not go through sympy's printer.
     """
     for symbol in symbols:
-        if str(symbol) not in kwargs:
+        if getattr(symbol, 'name', symbol) not in kwargs:
             raise ValueError(f'Metric expected a value for {symbol}, did not receive it.')

@@ -9,7 +9,7 @@ from ...._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
-from .._parameter_domain import _check_parameters
+from .._parameter_domain import LABEL_SYMBOLS, _check_parameters
 from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
@@ -84,7 +84,7 @@ class AUEPCScore:
         The profit differential and the oracle's curve are computed once here. The returned function
         takes the scores and gives the same result as calling this score function.
         """
-        _check_parameters(self.delta_equation.free_symbols - {sympy.symbols('y')}, kwargs)
+        _check_parameters(self.delta_equation.free_symbols - LABEL_SYMBOLS, kwargs)
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
         delta: Float64Array = np.asarray(
             _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=y_true.size, y=y_true, **kwargs),

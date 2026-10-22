@@ -20,6 +20,7 @@ from .cost_matrix import (
     _check_duplicate_symbol_names,
     _check_known_alias_and_default_targets,
     _check_reserved_symbol_names,
+    _symbol_names,
 )
 from .strategies import LogitObjective, MetricStrategy
 
@@ -218,7 +219,7 @@ class Metric(BaseMetric):
         self._fn_cost_fn = _safe_lambdify(self.fn_cost)
         self._tp_cost_fn = _safe_lambdify(self.tp_cost)
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
-        self._parameter_names = frozenset(self._find_all_parameters())
+        self._symbols = _symbol_names(self.tp_cost, self.tn_cost, self.fp_cost, self.fn_cost)
         # Built on the first _evaluate_costs(replace_stochastic=True) call; most metrics never need it.
         self._mean_substituted_costs: (
             tuple[
@@ -250,13 +251,13 @@ class Metric(BaseMetric):
         return copy.deepcopy(self._cost_matrix)
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # Metrics pickled by older versions hold the cost matrix publicly and lack the parameter names.
+        # Metrics pickled by older versions hold the cost matrix publicly and lack the symbol names.
         if 'cost_matrix' in state:
             state['_cost_matrix'] = state.pop('cost_matrix')
         state.pop('_all_parameters_cache', None)
         self.__dict__.update(state)
-        if '_parameter_names' not in state:
-            self._parameter_names = frozenset(self._find_all_parameters())
+        if '_symbols' not in state:
+            self._symbols = _symbol_names(self.tp_cost, self.tn_cost, self.fp_cost, self.fn_cost)
 
     @property
     def __name__(self) -> str:
@@ -305,60 +306,12 @@ class Metric(BaseMetric):
     @property
     def _all_symbols(self) -> set[str]:
         """The set of all symbols used in the cost matrix."""
-        all_symbols = (
-            self.tp_cost.free_symbols
-            | self.tn_cost.free_symbols
-            | self.fp_cost.free_symbols
-            | self.fn_cost.free_symbols
-        )
-
-        stochastic_params = set()
-        for expr in [
-            self._cost_matrix.tp_cost,
-            self._cost_matrix.tn_cost,
-            self._cost_matrix.fp_cost,
-            self._cost_matrix.fn_cost,
-        ]:
-            for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
-                pspace = atom.pspace
-                if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
-                    for arg in pspace.distribution.args:
-                        stochastic_params.update(arg.free_symbols)
-
-        return {str(symbol) for symbol in all_symbols | stochastic_params} | set(self._cost_matrix._aliases.keys())
+        return set(self._symbols.all | self._cost_matrix._aliases.keys())
 
     @property
     def _all_parameters(self) -> set[str]:
         """The set of cost matrix parameters which can be used."""
-        return set(self._parameter_names)
-
-    def _find_all_parameters(self) -> set[str]:
-        """Find the cost matrix parameters which can be used, see :attr:`_all_parameters`."""
-        all_symbols = (
-            self.tp_cost.free_symbols
-            | self.tn_cost.free_symbols
-            | self.fp_cost.free_symbols
-            | self.fn_cost.free_symbols
-        )
-
-        stochastic_symbols = set()
-        stochastic_params = set()
-        for expr in [
-            self._cost_matrix.tp_cost,
-            self._cost_matrix.tn_cost,
-            self._cost_matrix.fp_cost,
-            self._cost_matrix.fn_cost,
-        ]:
-            for atom in expr.atoms(sympy.stats.rv.RandomSymbol):
-                stochastic_symbols.add(atom)
-                pspace = atom.pspace
-                if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
-                    for arg in pspace.distribution.args:
-                        stochastic_params.update(arg.free_symbols)
-
-        return {str(symbol) for symbol in (all_symbols | stochastic_params) - stochastic_symbols} | set(
-            self._cost_matrix._aliases.keys()
-        )
+        return set(self._symbols.supplied | self._cost_matrix._aliases.keys())
 
     @property
     def _default_parameter_names(self) -> set[str]:
@@ -367,13 +320,7 @@ class Metric(BaseMetric):
 
     @property
     def _is_stochastic(self) -> bool:
-        all_symbols = (
-            self.tp_cost.free_symbols
-            | self.tn_cost.free_symbols
-            | self.fp_cost.free_symbols
-            | self.fn_cost.free_symbols
-        )
-        return any(sympy.stats.rv.is_random(symbol) for symbol in all_symbols)
+        return bool(self._symbols.random)
 
     @property
     def _is_deterministic(self) -> bool:

@@ -70,15 +70,6 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         if self.fit_intercept:
             X = np.hstack((np.ones((X.shape[0], 1)), X))
-
-        if self._get_metric_loss() is None:
-            # `fit()` already validated these costs; the logit objective needs instance-dependent
-            # costs as column vectors.
-            for key in ('tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'):
-                value = loss_params[key]
-                if not isinstance(value, Real) and (value := np.asarray(value)).ndim == 1:
-                    loss_params[key] = np.expand_dims(value, axis=1)
-
         return self._fit_estimator(X, y, loss=loss, **loss_params)
 
     def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:

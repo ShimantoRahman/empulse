@@ -16,6 +16,7 @@ from ..._parameter_domain import _check_parameters
 from ..._stochastic import expectation_over_random_vars
 from ..._symbolic import _is_affine_in, _latex
 from ...capabilities import Capability
+from .._class_terms import ClassTerms
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
 from .common import _HullScoreFunction
@@ -128,7 +129,7 @@ def _max_profit_objective_scale(
     return float(scale)
 
 
-class MaxProfit(MetricStrategy):
+class MaxProfit(ClassTerms, MetricStrategy):
     """
     Strategy for the Expected Maximum Profit (EMP) metric.
 
@@ -327,16 +328,7 @@ class MaxProfit(MetricStrategy):
             rng=self._rng,
             class_terms=class_terms,
         )
-        # Kept symbolic for the gradients in logit_objective.
-        self._tp_benefit = tp_benefit
-        self._tn_benefit = tn_benefit
-        self._fp_cost = fp_cost
-        self._fn_cost = fn_cost
-        # Compiled once here, not on every _evaluate_class_costs() call.
-        self._tp_benefit_fn = _safe_lambdify(self._tp_benefit)
-        self._tn_benefit_fn = _safe_lambdify(self._tn_benefit)
-        self._fp_cost_fn = _safe_lambdify(self._fp_cost)
-        self._fn_cost_fn = _safe_lambdify(self._fn_cost)
+        self._compile_class_terms(tp_benefit, tn_benefit, fp_cost, fn_cost)
         self._boost_cache = None
         return self
 
@@ -376,11 +368,8 @@ class MaxProfit(MetricStrategy):
         -------
         tp_benefit, tn_benefit, fp_cost, fn_cost : float
         """
-        tp_val = float(_safe_run_lambda(self._tp_benefit_fn, self._tp_benefit, **parameters))
-        tn_val = float(_safe_run_lambda(self._tn_benefit_fn, self._tn_benefit, **parameters))
-        fp_val = float(_safe_run_lambda(self._fp_cost_fn, self._fp_cost, **parameters))
-        fn_val = float(_safe_run_lambda(self._fn_cost_fn, self._fn_cost, **parameters))
-        return tp_val, tn_val, fp_val, fn_val
+        tp_val, tn_val, fp_val, fn_val = self._evaluate_class_terms(**parameters)
+        return float(tp_val), float(tn_val), float(fp_val), float(fn_val)
 
     def _prepare_boost_deterministic_objective(
         self, y_true: FloatNDArray, **parameters: FloatNDArray | float

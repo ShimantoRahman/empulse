@@ -16,6 +16,7 @@ from sklearn.utils.metaestimators import available_if
 from sklearn.utils.validation import check_is_fitted, has_fit_parameter, indexable
 
 from ..._common import Parameter
+from ..._common._cost_routing import _all_costs_zero
 from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import Tags, get_tags, sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
@@ -143,15 +144,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         y_pred: NDArray[Any] = np.where(is_positive, self.classes_[positive_index], self.classes_[1 - positive_index])
         return y_pred
 
-    def _all_init_costs_zero(self) -> bool:
-        """Check if all init costs are zero/default."""
-        return all((
-            not (isinstance(self.tp_cost, np.ndarray) or self.tp_cost != 0.0),
-            not (isinstance(self.tn_cost, np.ndarray) or self.tn_cost != 0.0),
-            not (isinstance(self.fn_cost, np.ndarray) or self.fn_cost != 0.0),
-            not (isinstance(self.fp_cost, np.ndarray) or self.fp_cost != 0.0),
-        ))
-
     @staticmethod
     def _all_costs_unchanged(
         tp_cost: FloatArrayLike | float | Parameter,
@@ -167,47 +159,18 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             fp_cost is Parameter.UNCHANGED,
         ))
 
-    @staticmethod
-    def _all_costs_zero(
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-    ) -> bool:
-        """Check if all provided costs are scalar zeros."""
-        return all(
-            isinstance(c, (int, float)) and not isinstance(c, Parameter) and c == 0.0
-            for c in (tp_cost, tn_cost, fn_cost, fp_cost)
-        )
-
-    def _should_skip_cost_sensitive_fit(
-        self,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        params: dict[str, Any],
-    ) -> bool:
+    def _should_skip_cost_sensitive_fit(self, params: dict[str, Any]) -> bool:
         """
         Check if cost-sensitive fitting should be skipped.
 
-        Returns True if:
-        1. All init costs are zero/default AND all fit costs are unchanged/zero AND no loss function
-        2. Loss function exists but the caller did not supply values for parameters it requires
+        ``fit`` has already resolved the plain costs into *params*, so this is the case when there is no
+        loss and every cost is zero, or when there is a loss but the caller did not supply a parameter it
+        requires. ``_missing_parameters`` accepts a parameter under its symbol name or any alias, and
+        ignores unrelated keys such as ``sample_weight``.
         """
-        # First condition: no costs provided and no loss function
-        costs_not_provided = self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost) or self._all_costs_zero(
-            tp_cost, tn_cost, fn_cost, fp_cost
-        )
-        no_costs_no_loss = self._all_init_costs_zero() and costs_not_provided and self.loss is None
-
-        # Second condition: loss exists but the caller left a required parameter unsupplied.
-        # `_missing_parameters` accepts a parameter under its symbol name or any alias and ignores
-        # unrelated keys such as sample_weight. Comparing against `_all_parameters` would never be
-        # satisfied for an aliased metric, because it lists both spellings.
-        loss_without_params = self.loss is not None and bool(self.loss._missing_parameters(params.keys()))
-
-        return no_costs_no_loss or loss_without_params
+        if self.loss is None:
+            return _all_costs_zero({name: params[name] for name in self._cost_names})
+        return bool(self.loss._missing_parameters(params.keys()))
 
     def _should_use_fitted_decision(
         self,
@@ -249,14 +212,15 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         loss_params : dict
             Parameters extracted for the loss function.
         """
-        loss = self._get_loss_or_default()
-
-        loss_params = _extract_loss_params(params, loss)
-        fit_params = self._child_fit_params('estimator', self.estimator, params, loss_params)
-        estimator_ = clone(self.estimator).fit(X, y, **fit_params)
-
+        loss_params = _extract_loss_params(params, self._get_loss_or_default())
+        child, estimator = self._unfitted_estimator()
+        estimator_ = estimator.fit(X, y, **self._child_fit_params(child, estimator, params, loss_params))
         y_proba: FloatNDArray = estimator_.predict_proba(X)
         return estimator_, y_proba, loss_params
+
+    def _unfitted_estimator(self) -> tuple[str, Any]:
+        """Return the routing name and an unfitted copy of the estimator to fit."""
+        return 'estimator', clone(self.estimator)
 
     def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
@@ -391,13 +355,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         """
         X, y = indexable(X, y)
 
-        if self._should_skip_cost_sensitive_fit(
-            params.get('tp_cost', Parameter.UNCHANGED),
-            params.get('tn_cost', Parameter.UNCHANGED),
-            params.get('fn_cost', Parameter.UNCHANGED),
-            params.get('fp_cost', Parameter.UNCHANGED),
-            params,
-        ):
+        if self._should_skip_cost_sensitive_fit(params):
             loss_param_names = self._get_loss_or_default()._all_symbols
             estimator_params = {k: v for k, v in params.items() if k not in loss_param_names}
             self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
@@ -731,25 +689,11 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
             # Clone so refitting cannot mutate the calibrator the caller passed to __init__.
             return clone(self.calibrator).set_params(estimator=estimator)  # type: ignore[union-attr]
 
-    def _fit_estimator(
-        self, X: FloatArrayLike, y: ArrayLike, **params: Any
-    ) -> tuple[Any, FloatNDArray, dict[str, Any]]:
-        """Fit the underlying estimator, handling calibration if configured.
-
-        Overrides the base implementation to support probability calibration.
-        """
-        loss = self._get_loss_or_default()
-
-        loss_params = _extract_loss_params(params, loss)
-        if self.calibrator is not None:
-            calibrator = self._get_calibrator(self.estimator)
-            estimator_ = calibrator.fit(X, y, **self._child_fit_params('calibrator', calibrator, params, loss_params))
-        else:
-            fit_params = self._child_fit_params('estimator', self.estimator, params, loss_params)
-            estimator_ = clone(self.estimator).fit(X, y, **fit_params)
-
-        y_proba: FloatNDArray = estimator_.predict_proba(X)
-        return estimator_, y_proba, loss_params
+    def _unfitted_estimator(self) -> tuple[str, Any]:
+        """Return the calibrator wrapping the estimator, if one is configured."""
+        if self.calibrator is None:
+            return super()._unfitted_estimator()
+        return 'calibrator', self._get_calibrator(self.estimator)
 
     @property
     def threshold_(self) -> float | None:

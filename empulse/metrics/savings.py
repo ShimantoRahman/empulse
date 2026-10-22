@@ -25,41 +25,25 @@ def _validate_input(
     float | FloatNDArray,
     float | FloatNDArray,
 ]:
-    if check_input:
-        y_true = _check_y_true(y_true)
-        y_proba = _check_y_pred(y_proba)
-        arrays = [y_true, y_proba]
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-            arrays.append(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-            arrays.append(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-            arrays.append(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
-            arrays.append(fn_cost)
-        _check_consistent_length(*arrays)
-        for name, cost in (('tp_cost', tp_cost), ('fp_cost', fp_cost), ('tn_cost', tn_cost), ('fn_cost', fn_cost)):
-            if not np.isfinite(cost).all():
-                raise ValueError(f'{name} must be finite, but contains NaN or infinite values.')
-        if len(arrays) == 2 and all(cost == 0.0 for cost in (tp_cost, fp_cost, fn_cost, tn_cost)):
-            raise ValueError('All costs are zero. At least one cost must be non-zero.')
-        return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
-    else:
-        y_true = np.asarray(y_true)
-        y_proba = np.asarray(y_proba)
-        if not isinstance(tp_cost, numbers.Number):
-            tp_cost = np.asarray(tp_cost)
-        if not isinstance(fp_cost, numbers.Number):
-            fp_cost = np.asarray(fp_cost)
-        if not isinstance(tn_cost, numbers.Number):
-            tn_cost = np.asarray(tn_cost)
-        if not isinstance(fn_cost, numbers.Number):
-            fn_cost = np.asarray(fn_cost)
-        return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
+    tp_cost, fp_cost, tn_cost, fn_cost = _as_cost(tp_cost), _as_cost(fp_cost), _as_cost(tn_cost), _as_cost(fn_cost)
+    if not check_input:
+        return np.asarray(y_true), np.asarray(y_proba), tp_cost, fp_cost, tn_cost, fn_cost
+
+    y_true = _check_y_true(y_true)
+    y_proba = _check_y_pred(y_proba)
+    costs = {'tp_cost': tp_cost, 'fp_cost': fp_cost, 'tn_cost': tn_cost, 'fn_cost': fn_cost}
+    array_costs = [cost for cost in costs.values() if isinstance(cost, np.ndarray)]
+    _check_consistent_length(y_true, y_proba, *array_costs)
+    for name, cost in costs.items():
+        if not np.isfinite(cost).all():
+            raise ValueError(f'{name} must be finite, but contains NaN or infinite values.')
+    if not array_costs and all(cost == 0.0 for cost in costs.values()):
+        raise ValueError('All costs are zero. At least one cost must be non-zero.')
+    return y_true, y_proba, tp_cost, fp_cost, tn_cost, fn_cost
+
+
+def _as_cost(cost: float | FloatArrayLike) -> float | FloatNDArray:
+    return cost if isinstance(cost, numbers.Number) else np.asarray(cost)  # type: ignore[return-value]
 
 
 def _compute_expected_cost(

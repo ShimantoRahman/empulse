@@ -240,7 +240,7 @@ def test_a_metric_pickled_with_a_public_cost_matrix_still_loads():
     metric = _metric()
     state = metric.__dict__.copy()
     state['cost_matrix'] = state.pop('_cost_matrix')
-    del state['_parameter_names']
+    del state['_symbols']
     restored = Metric.__new__(Metric)
     restored.__setstate__(state)
     assert restored._all_parameters == {'clv', 'd'}

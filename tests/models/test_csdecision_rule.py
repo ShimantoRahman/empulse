@@ -19,6 +19,7 @@ from empulse.metrics import (
     MixtureComponent,
     MixtureMetric,
 )
+from empulse.metrics.metric.cost_matrix import _symbol_names
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
 
 
@@ -51,7 +52,7 @@ class _DummyMetric(Metric):
     def __init__(self, strategy):
         self._strategy = strategy
         self._cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
-        self._parameter_names = frozenset({'alpha'})
+        self._symbols = _symbol_names(self._cost_matrix.fp_cost, self._cost_matrix.fn_cost)
 
     def optimal_threshold(self, y_true, y_score, **kwargs):
         return 0.5
@@ -423,7 +424,7 @@ class _RecordingMetric(Metric):
     def __init__(self, strategy):
         self._strategy = strategy
         self._cost_matrix = CostMatrix().add_fp_cost('alpha').add_fn_cost('alpha')
-        self._parameter_names = frozenset({'alpha'})
+        self._symbols = _symbol_names(self._cost_matrix.fp_cost, self._cost_matrix.fn_cost)
         self.call_log = []
 
     def optimal_threshold(self, y_true, y_score, **kwargs):

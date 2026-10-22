@@ -12,7 +12,6 @@ from ..._loss import cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
 from .._compile import (
     BoostGradientConst,
     MetricFn,
-    PicklableLambda,
     RateFn,
     ThresholdFn,
     _safe_lambdify,
@@ -20,10 +19,11 @@ from .._compile import (
     _safe_run_lambda_array,
 )
 from .._direction import Direction
-from .._parameter_domain import _check_parameters
+from .._parameter_domain import LABEL_AND_SCORE_SYMBOLS, LABEL_SYMBOLS, _check_parameters
 from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
+from ._class_terms import ClassTerms
 from ._training_signal import warn_if_no_training_signal
 from .metric_strategy import MetricStrategy
 
@@ -344,7 +344,7 @@ class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
         return generator
 
 
-class Cost(MetricStrategy):
+class Cost(ClassTerms, MetricStrategy):
     """Strategy for the Expected Cost metric."""
 
     _name: str = 'cost'
@@ -372,15 +372,7 @@ class Cost(MetricStrategy):
         tp_benefit, tn_benefit, fp_cost, fn_cost = expectation_over_random_vars(
             tp_benefit, tn_benefit, fp_cost, fn_cost
         )
-        self._tp_benefit: sympy.Expr = tp_benefit
-        self._tn_benefit: sympy.Expr = tn_benefit
-        self._fp_cost: sympy.Expr = fp_cost
-        self._fn_cost: sympy.Expr = fn_cost
-
-        self._tp_benefit_fn: PicklableLambda = _safe_lambdify(tp_benefit)
-        self._tn_benefit_fn: PicklableLambda = _safe_lambdify(tn_benefit)
-        self._fp_cost_fn: PicklableLambda = _safe_lambdify(fp_cost)
-        self._fn_cost_fn: PicklableLambda = _safe_lambdify(fn_cost)
+        self._compile_class_terms(tp_benefit, tn_benefit, fp_cost, fn_cost)
 
         self._score_function: MetricFn = CostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
@@ -530,10 +522,7 @@ class Cost(MetricStrategy):
             The function signature is:
             ``logistic_objective(weights) -> (value, gradient)``.
         """
-        tp_val = _safe_run_lambda(self._tp_benefit_fn, self._tp_benefit, **parameters)
-        fn_val = _safe_run_lambda(self._fn_cost_fn, self._fn_cost, **parameters)
-        tn_val = _safe_run_lambda(self._tn_benefit_fn, self._tn_benefit, **parameters)
-        fp_val = _safe_run_lambda(self._fp_cost_fn, self._fp_cost, **parameters)
+        tp_val, tn_val, fp_val, fn_val = self._evaluate_class_terms(**parameters)
         return CostLogitObjective(
             tp_benefit=tp_val,
             tn_benefit=tn_val,
@@ -649,7 +638,7 @@ class CostLoss:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
-        _check_parameters(self.cost_equation.free_symbols - set(sympy.symbols('y s')), kwargs)
+        _check_parameters(self.cost_equation.free_symbols - LABEL_AND_SCORE_SYMBOLS, kwargs)
         return float(np.mean(_safe_run_lambda(self.cost_function, self.cost_equation, y=y_true, s=y_score, **kwargs)))
 
 
@@ -675,7 +664,7 @@ class CostBoostGradientConst:
 
     def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray:
         """Compute the gradient constants."""
-        _check_parameters(self.gradient_const_eq.free_symbols - {sympy.symbols('y')}, kwargs)
+        _check_parameters(self.gradient_const_eq.free_symbols - LABEL_SYMBOLS, kwargs)
         gradient_const_value = _safe_run_lambda_array(
             self.gradient_const_fn, self.gradient_const_eq, shape=y_true.shape[0], y=y_true, **kwargs
         )
@@ -770,34 +759,18 @@ class CostOptimalThreshold:
         return _solve_optimal_threshold(numerator, denominator)
 
 
-class CostOptimalRate:
+class CostOptimalRate(CostOptimalThreshold):
     """Class to compute the optimal predicted positive rate for the cost metric."""
 
-    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
-        self.denominator_expression = fp_cost + tn_benefit + fn_cost + tp_benefit
-        self.numerator_expression = fp_cost + tn_benefit
-        self.calculate_denominator = _safe_lambdify(self.denominator_expression)
-        self.calculate_numerator = _safe_lambdify(self.numerator_expression)
-
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:  # type: ignore[override]
         """Compute the optimal predicted positive rate."""
-        all_symbols = self.denominator_expression.free_symbols | self.numerator_expression.free_symbols
-        _check_parameters(all_symbols, parameters)
-        denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
-        numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
-        t_star = _solve_optimal_threshold(numerator, denominator)
+        return _rate_at_threshold(y_score, super().__call__(y_true, y_score, **parameters))
 
-        scores = np.asarray(y_score)
-        if scores.ndim > 1:
-            scores = scores.reshape(-1)
 
-        if np.isscalar(t_star):
-            rate = float(np.mean(scores >= float(t_star)))  # type: ignore[arg-type]
-        else:
-            t_arr = np.asarray(t_star, dtype=np.float64).reshape(-1)
-            rate = float(np.mean(scores >= t_arr))
-
-        return rate
+def _rate_at_threshold(y_score: FloatNDArray, threshold: FloatNDArray | float) -> float:
+    """Return the fraction of *y_score* at or above the (per-sample) *threshold*."""
+    scores = np.asarray(y_score).reshape(-1)
+    return float(np.mean(scores >= np.asarray(threshold, dtype=np.float64).reshape(-1)))
 
 
 def _cost_loss_to_latex(

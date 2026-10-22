@@ -19,6 +19,8 @@ from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
+# The costs that describe positive samples, whose outliers are detected on those samples only.
+POSITIVE_COSTS = frozenset({'tp_cost', 'fn_cost'})
 CSCLASSIFIER_PARAMS = CostSensitiveClassifier._parameter_constraints.copy()
 CSCLASSIFIER_PARAMS.pop('loss')
 
@@ -408,6 +410,25 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             return _safe_indexing(X, ~is_positive), target[~is_positive]
         return X, target.copy()
 
+    def _fit_and_impute(
+        self,
+        X: FloatNDArray,
+        is_positive: NDArray[np.bool_],
+        rows: Literal['positive', 'negative', 'both'],
+        target: FloatNDArray,
+    ) -> tuple[FloatNDArray, Any]:
+        """
+        Fit the outlier estimator on the *rows* of *target*, and return *target* with its outliers imputed.
+
+        Also returns the fitted estimator, or ``None``, leaving *target* as it is, when there are no such rows.
+        """
+        X_fit, target_fit = self._select_class_samples(X, is_positive, rows, target)
+        if target_fit.size == 0:
+            return target, None
+        outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
+        outlier_estimator = clone(outlier_estimator).fit(X_fit, target_fit)
+        return self._impute_outliers(outlier_estimator, X, target), outlier_estimator
+
     def _impute_outliers(self, outlier_estimator: Any, X: FloatNDArray, target: FloatNDArray) -> FloatNDArray:
         """Predict costs with *outlier_estimator* and replace outlier values in *target*."""
         predictions = outlier_estimator.predict(X)
@@ -445,13 +466,8 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             if isinstance(target, Real) or (target := np.asarray(target)).ndim == 0:
                 raise TypeError(f"Cost '{param_name}' must be an array for outlier detection.")
 
-            X_fit, target_fit = self._select_class_samples(X, is_positive, cls, target)
-
-            if target_fit.size > 0:
-                outlier_est = clone(
-                    self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
-                ).fit(X_fit, target_fit)
-                imputed = self._impute_outliers(outlier_est, X, target)
+            imputed, outlier_est = self._fit_and_impute(X, is_positive, cls, target)
+            if outlier_est is not None:
                 estimator_params[param_name] = imputed
                 imputed_costs[param_name] = imputed
                 outlier_estimators[param_name] = outlier_est
@@ -500,25 +516,11 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
     def _fit_outlier_estimators(self, X: FloatNDArray, is_positive: NDArray[np.bool_], should_fit: list[str]) -> None:
         self.outlier_estimators_ = {}
         for cost_name in self.costs_:
+            outlier_est = None
             if cost_name in should_fit:
-                target = self.costs_[cost_name]
-                if not isinstance(target, np.ndarray):
-                    raise TypeError(f"Cost '{cost_name}' is not an array. Cannot detect outliers for this cost.")
-                if cost_name in {'tp_cost', 'fn_cost'}:
-                    X_fit, target_fit = _safe_indexing(X, is_positive), target[is_positive]
-                else:
-                    X_fit, target_fit = _safe_indexing(X, ~is_positive), target[~is_positive]
-
-                if target_fit.size > 0:
-                    outlier_est = clone(
-                        self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
-                    ).fit(X_fit, target_fit)
-                    self.costs_[cost_name] = self._impute_outliers(outlier_est, X, target)
-                    self.outlier_estimators_[cost_name] = outlier_est
-                else:
-                    self.outlier_estimators_[cost_name] = None
-            else:
-                self.outlier_estimators_[cost_name] = None
+                rows: Literal['positive', 'negative'] = 'positive' if cost_name in POSITIVE_COSTS else 'negative'
+                self.costs_[cost_name], outlier_est = self._fit_and_impute(X, is_positive, rows, self.costs_[cost_name])
+            self.outlier_estimators_[cost_name] = outlier_est
 
     @available_if(estimator_has('predict'))  # type: ignore[misc]
     def predict(self, X: FloatArrayLike) -> FloatNDArray:

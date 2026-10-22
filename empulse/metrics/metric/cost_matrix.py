@@ -1,6 +1,6 @@
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, NamedTuple, Self
 
 import sympy
 import sympy.stats
@@ -711,15 +711,30 @@ def _check_duplicate_symbol_names(*expressions: sympy.Expr) -> None:
     )
 
 
-def _collect_known_symbol_names(*expressions: sympy.Expr) -> set[str]:
-    """
-    Collect the names of every symbol a cost matrix's expressions can be evaluated with.
+class SymbolNames(NamedTuple):
+    """The names of the symbols a cost matrix's expressions are built from, by kind."""
 
-    This includes each expression's own free symbols (deterministic symbols and, for a
-    stochastic expression, the random variable's own symbol, e.g. ``gamma`` for
-    ``sympy.stats.Beta('gamma', alpha, beta)``) as well as any random variable's distribution
-    parameters (e.g. ``alpha``/``beta`` above), since those are what a caller actually supplies
-    a value for at call time.
+    #: Symbols that are not random variables, such as ``clv``.
+    deterministic: frozenset[str]
+    #: The random variables themselves, e.g. ``gamma`` for ``sympy.stats.Beta('gamma', alpha, beta)``.
+    random: frozenset[str]
+    #: The symbols in the random variables' distribution parameters, e.g. ``alpha`` and ``beta`` above.
+    distribution: frozenset[str]
+
+    @property
+    def all(self) -> frozenset[str]:
+        """Every name, of whatever kind."""
+        return self.deterministic | self.random | self.distribution
+
+    @property
+    def supplied(self) -> frozenset[str]:
+        """The names a caller gives values for: every name but the random variables'."""
+        return (self.deterministic | self.distribution) - self.random
+
+
+def _symbol_names(*expressions: sympy.Expr) -> SymbolNames:
+    """
+    Collect the names of the symbols in the cost-matrix *expressions*, by kind.
 
     Parameters
     ----------
@@ -729,22 +744,21 @@ def _collect_known_symbol_names(*expressions: sympy.Expr) -> set[str]:
 
     Returns
     -------
-    set of str
-        The names of every symbol found.
+    SymbolNames
+        The names found.
     """
-    free_symbols: set[sympy.Expr] = set()
-    for expression in expressions:
-        free_symbols |= expression.free_symbols
-
-    stochastic_params: set[sympy.Expr] = set()
-    for expression in expressions:
-        for atom in expression.atoms(sympy.stats.rv.RandomSymbol):
-            pspace = atom.pspace
-            if hasattr(pspace, 'distribution') and hasattr(pspace.distribution, 'args'):
-                for arg in pspace.distribution.args:
-                    stochastic_params.update(arg.free_symbols)
-
-    return {str(symbol) for symbol in free_symbols | stochastic_params}
+    free_symbols: set[sympy.Expr] = set().union(*(expression.free_symbols for expression in expressions))
+    random_symbols = {symbol for symbol in free_symbols if sympy.stats.rv.is_random(symbol)}
+    distribution_symbols: set[sympy.Expr] = set()
+    for symbol in random_symbols:
+        distribution = getattr(symbol.pspace, 'distribution', None)
+        for argument in getattr(distribution, 'args', ()):
+            distribution_symbols |= sympy.sympify(argument).free_symbols
+    return SymbolNames(
+        deterministic=frozenset(str(symbol) for symbol in free_symbols - random_symbols),
+        random=frozenset(str(symbol) for symbol in random_symbols),
+        distribution=frozenset(str(symbol) for symbol in distribution_symbols),
+    )
 
 
 def _check_known_alias_and_default_targets(
@@ -778,7 +792,7 @@ def _check_known_alias_and_default_targets(
     ValueError
         If any alias target, default or bound does not match a known symbol name.
     """
-    known_names = _collect_known_symbol_names(*expressions)
+    known_names = _symbol_names(*expressions).all
 
     unknown_alias_targets = {
         f'{alias!r} -> {str(target)!r}' for alias, target in aliases.items() if str(target) not in known_names
