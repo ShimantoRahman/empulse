@@ -8,6 +8,7 @@ what sympy actually holds. :func:`_subs_by_name` substitutes values given by nam
 pass them, into an expression.
 """
 
+import ast
 import re
 from collections.abc import Iterable, Mapping
 from itertools import combinations_with_replacement
@@ -21,6 +22,46 @@ from sympy.printing.latex import greek_letters_set, other_symbols
 # An identifier that is not immediately followed by "(", i.e. used as a value rather than called.
 # `exp(clv)` is a legitimate function call; a bare `exp` is almost certainly meant as a parameter.
 _BARE_NAME_PATTERN = re.compile(r'\b[A-Za-z_]\w*\b(?!\s*\()')
+
+# sympify evaluates its input with `eval`, so a string term is checked against this grammar first:
+# names, numbers, arithmetic, comparisons and tuples (for Piecewise), and calls to sympy's
+# mathematical functions. Attribute access, subscripts, string literals and calls to anything else
+# are what would let a term run arbitrary Python.
+_TERM_FUNCTIONS = frozenset(sympy.functions.__all__)
+_TERM_OPERATORS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod, ast.BitXor, ast.UAdd, ast.USub)
+_TERM_COMPARISONS = (ast.Lt, ast.LtE, ast.Gt, ast.GtE)
+_TERM_NODES = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Compare, ast.Tuple, ast.Call, ast.keyword, ast.Load)
+
+
+def _check_term_syntax(term: str) -> None:
+    """Raise :exc:`ValueError` unless *term* uses only the grammar of a cost-matrix term."""
+    try:
+        tree = ast.parse(term, mode='eval')
+    except SyntaxError as exc:
+        raise ValueError(f'Cannot read {term!r} as a cost matrix term: {exc.msg}.') from None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name) or node.func.id not in _TERM_FUNCTIONS:
+                reason = f"it calls {ast.unparse(node.func)!r}, which is not one of sympy's mathematical functions"
+                break
+        elif isinstance(node, ast.Name):
+            if node.id.startswith('__'):
+                reason = f'{node.id!r} is not a valid parameter name'
+                break
+        elif isinstance(node, ast.Constant):
+            if type(node.value) not in {int, float, bool}:
+                reason = f'it contains the literal {node.value!r}'
+                break
+        elif not isinstance(node, (*_TERM_NODES, *_TERM_OPERATORS, *_TERM_COMPARISONS)):
+            reason = f'it uses {type(node).__name__!r} syntax'
+            break
+    else:
+        return
+    raise ValueError(
+        f'Cannot read {term!r} as a cost matrix term: {reason}. A string term may only use names, '
+        "numbers, arithmetic and sympy's mathematical functions such as exp or Max; build anything else "
+        'from sympy objects.'
+    )
 
 
 def _sympify_term(term: sympy.Expr | str) -> sympy.Expr:
@@ -36,7 +77,8 @@ def _sympify_term(term: sympy.Expr | str) -> sympy.Expr:
     a ``TypeError`` about ``FunctionClass`` from deep inside sympy.
 
     Only strings are checked. An explicitly constructed sympy object is taken at face value, so
-    ``add_fp_cost(2 * sympy.pi)`` still means what it says.
+    ``add_fp_cost(2 * sympy.pi)`` still means what it says. A string must also stay within the
+    grammar :func:`_check_term_syntax` allows before sympy evaluates it.
 
     Parameters
     ----------
@@ -51,11 +93,13 @@ def _sympify_term(term: sympy.Expr | str) -> sympy.Expr:
     Raises
     ------
     ValueError
-        If `term` is a string that sympy cannot read, or that uses a name sympy reserves.
+        If `term` is a string that sympy cannot read, that goes beyond the grammar of a term, or
+        that uses a name sympy reserves.
     """
     if not isinstance(term, str):
         return term
 
+    _check_term_syntax(term)
     reserved = {
         name: value
         for name in dict.fromkeys(_BARE_NAME_PATTERN.findall(term))

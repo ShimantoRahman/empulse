@@ -86,6 +86,62 @@ class TestSympyReservedNamesInStringTerms:
                 getattr(CostMatrix(), adder)('E')
 
 
+class TestStringTermsCannotRunCode:
+    """``sympy.sympify`` evaluates its input with ``eval``, so a string term is checked before it gets there."""
+
+    @pytest.mark.parametrize(
+        'template',
+        [
+            "__import__('pathlib').Path({marker!r}).write_text('ran')",
+            "clv + 0 * len(__import__('pathlib').Path({marker!r}).write_text('ran'))",
+            "exp(__import__('pathlib').Path({marker!r}).write_text('ran'))",
+        ],
+    )
+    def test_code_in_a_term_is_rejected_before_it_runs(self, template, tmp_path):
+        marker = tmp_path / 'marker'
+        with pytest.raises(ValueError, match="not one of sympy's mathematical functions"):
+            CostMatrix().add_fp_cost(template.format(marker=str(marker)))
+        assert not marker.exists()
+
+    @pytest.mark.parametrize(
+        ('term', 'reason'),
+        [
+            ("eval('1')", "calls 'eval'"),
+            ("sympify('clv')", "calls 'sympify'"),
+            ('Rational(1, 2)', "calls 'Rational'"),
+            ('clv.__class__', "'Attribute' syntax"),
+            ('clv[0]', "'Subscript' syntax"),
+            ('(lambda: 1)()', 'calls'),
+            ("'clv'", "literal 'clv'"),
+            ('1j', 'literal 1j'),
+            ('__builtins__', "'__builtins__' is not a valid parameter name"),
+            ('clv if d else f', "'IfExp' syntax"),
+            ('exp(*clv)', "'Starred' syntax"),
+            ('clv!', 'Cannot read'),
+        ],
+    )
+    def test_rejects_syntax_beyond_a_term(self, term, reason):
+        with pytest.raises(ValueError, match=re.escape(reason)):
+            CostMatrix().add_fp_cost(term)
+
+    @pytest.mark.parametrize(
+        ('term', 'expected'),
+        [
+            ('clv^2', sympy.Symbol('clv') ** 2),
+            ('Max(clv, d) / 3', sympy.Max(sympy.Symbol('clv'), sympy.Symbol('d')) / 3),
+            ('Abs(-clv) % 7', sympy.Mod(sympy.Abs(sympy.Symbol('clv')), 7)),
+            (
+                'Piecewise((clv, d < 1), (f, d >= 1))',
+                sympy.Piecewise(
+                    (sympy.Symbol('clv'), sympy.Symbol('d') < 1), (sympy.Symbol('f'), sympy.Symbol('d') >= 1)
+                ),
+            ),
+        ],
+    )
+    def test_accepts_the_term_grammar(self, term, expected):
+        assert CostMatrix().add_fp_cost(term).fp_cost == expected
+
+
 class TestDuplicateSymbolNames:
     """Two symbols with one name reach ``lambdify`` as two parameters of the same name."""
 

@@ -130,8 +130,11 @@ business logic at a time.
     )
 
 Terms can be plain strings, as above — they are parsed with :func:`sympy.sympify`, so ``'d + f'``
-and ``'gamma * (clv - d)'`` work too. For anything beyond a couple of terms it is clearer to
-declare the symbols first with :func:`sympy.symbols` and build expressions from them:
+and ``'accept_rate * (clv - d)'`` work too. A string term may only use parameter names, numbers,
+arithmetic and sympy's mathematical functions such as ``exp`` or ``Max``; anything else is rejected
+before sympy evaluates it, so a string from an untrusted source cannot run code. For anything
+beyond a couple of terms it is clearer to declare the symbols first with :func:`sympy.symbols` and
+build expressions from them:
 
 .. code-block:: python
 

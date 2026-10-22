@@ -46,6 +46,10 @@ Metrics
 - |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
   result for the same distribution parameters, whichever were evaluated before. Results for a given
   ``random_state`` change.
+- |Fix| A string term of a :class:`~empulse.metrics.CostMatrix` can no longer run Python code,
+  which made it unsafe to build a cost matrix from untrusted input. A string term may only use
+  names, numbers, arithmetic and sympy's mathematical functions such as ``exp`` or ``Max``; build
+  anything else, such as ``sympy.Rational(1, 2)``, from sympy objects.
 
 Models
 ------
