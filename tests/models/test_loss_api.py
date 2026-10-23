@@ -186,8 +186,8 @@ def test_data_types_metric_loss(estimator, cost_dataset):
     X, y, _, _ = cost_dataset
     tp_cost = 0
     # +0.5 keeps tn_cost off integer values, so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample. That would be a degenerate
-    # cost matrix, which Metric.optimal_threshold() rejects.
+    # threshold's denominator) never lands on exactly 0 for any sample, where the costs no longer
+    # depend on the probability and Metric.optimal_threshold() warns that it always or never targets.
     tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)
@@ -247,8 +247,8 @@ def test_data_types_metric_loss_predict_time(estimator, cost_dataset):
     X, y, _, _ = cost_dataset
     tp_cost = 0
     # +0.5 keeps tn_cost off integer values, so fp_cost - tn_cost + fn_cost - tp_cost (the optimal
-    # threshold's denominator) never lands on exactly 0 for any sample. That would be a degenerate
-    # cost matrix, which Metric.optimal_threshold() rejects.
+    # threshold's denominator) never lands on exactly 0 for any sample, where the costs no longer
+    # depend on the probability and Metric.optimal_threshold() warns that it always or never targets.
     tn_cost = np.arange(y.size, dtype=np.float32) + 0.5
     fn_cost = np.ones(y.size, dtype=np.int32)
     fp_cost = np.expand_dims(np.ones(y.size, dtype=np.float64), axis=0)

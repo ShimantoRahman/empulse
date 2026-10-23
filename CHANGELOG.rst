@@ -77,6 +77,11 @@ Metrics
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` whose components mark the same parameter
   outlier-sensitive for different classes detects its outliers on every sample, and a parameter
   every component fixes is no longer outlier-sensitive.
+- |Fix| :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+  :class:`~empulse.metrics.Savings` and :class:`~empulse.metrics.LogCost` no longer raise in
+  ``optimal_threshold`` and ``optimal_rate`` when, for some sample, the costs do not depend on the
+  predicted probability. Such a sample is always targeted if that costs less and otherwise never,
+  including when both decisions cost the same.
 - |API| A :class:`~empulse.metrics.MixtureComponent` weight can be an expression, such as
   ``'1 - success_rate - default_rate'``, whose parameters are parameters of the mixture: they can be
   passed to a model's ``fit`` and are reported when missing. A callable weight is deprecated.
@@ -107,6 +112,9 @@ Models
   cost of its training samples, instead of growing until its leaves are pure. On the 15 bundled
   datasets the ensembles' own predictions save more, with a tenth of the leaves or fewer and fits
   taking half the time. Pass ``min_impurity_decrease=0.0`` for the previous trees.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` accepts missing values in ``X`` when its base
+  estimator does, as its default :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` do.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
   :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
   metrics, instead of the maximum profit of their averaged costs.

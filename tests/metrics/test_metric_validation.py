@@ -301,19 +301,31 @@ def test_optimal_threshold_predict_time_empty_arrays_skip_length_check():
 # --- optimal_threshold/optimal_rate out of [0, 1] or degenerate cost matrices --------
 
 
-def test_degenerate_cost_matrix_raises_instead_of_returning_a_huge_number():
-    """A cost matrix whose denominator evaluates to 0 must raise, not silently substitute eps."""
+@pytest.mark.parametrize(
+    ('a', 'b', 'expected'),
+    [(1.0, -1.0, 1.0), (-1.0, 1.0, 0.0)],
+    ids=['targeting_always_costs_more', 'targeting_always_costs_less'],
+)
+def test_costs_that_do_not_depend_on_the_probability_decide_always_or_never(a, b, expected):
+    """Where the threshold's denominator is 0, the cheaper decision holds for every probability."""
     metric = Metric(COST_MATRIX, Cost())
 
-    with pytest.raises(ValueError, match='degenerate'):
-        metric.optimal_threshold(Y_TRUE, Y_SCORE, a=1.0, b=-1.0)
+    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
+        assert metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b) == expected
+    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
+        assert metric.optimal_rate(Y_TRUE, Y_SCORE, a=a, b=b) == np.mean(expected <= Y_SCORE)
 
 
-def test_degenerate_cost_matrix_raises_for_optimal_rate_too():
+def test_a_sample_whose_decisions_cost_the_same_is_never_targeted_without_a_warning():
     metric = Metric(COST_MATRIX, Cost())
+    a = np.array([1.0, 0.0, 1.0, 0.0, 1.0])
+    b = np.array([4.0, 0.0, 4.0, 0.0, 4.0])
 
-    with pytest.raises(ValueError, match='degenerate'):
-        metric.optimal_rate(Y_TRUE, Y_SCORE, a=1.0, b=-1.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        thresholds = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b)
+
+    np.testing.assert_allclose(thresholds, [0.2, 1.0, 0.2, 1.0, 0.2])
 
 
 def test_out_of_range_threshold_is_clipped_and_warns():

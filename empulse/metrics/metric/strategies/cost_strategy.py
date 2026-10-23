@@ -678,9 +678,14 @@ def _solve_optimal_threshold(
     """
     Solve ``numerator / denominator`` for the optimal threshold, guarding against degenerate cases.
 
-    Raises rather than silently substituting a value when the denominator is exactly zero (the
-    cost matrix does not define a meaningful threshold for those parameters), and clips-with-warning
-    rather than silently returning a threshold outside ``[0, 1]``.
+    A sample is targeted when its probability ``p`` satisfies ``p * denominator > numerator``. Where
+    the denominator is zero, the costs do not depend on ``p``, so the sample is always targeted when
+    that costs less (a negative numerator, threshold ``0``) and otherwise never (threshold ``1``),
+    which includes a sample for which both decisions cost the same. A threshold outside ``[0, 1]``
+    is clipped into it.
+
+    Both an always-or-never decision implied by unequal costs and a clipped threshold warn, since
+    they usually mean the cost matrix or its parameters are not what was intended.
 
     Parameters
     ----------
@@ -692,40 +697,18 @@ def _solve_optimal_threshold(
     Returns
     -------
     threshold : float or ndarray
-        The optimal threshold(s), each guaranteed to lie in ``[0, 1]``.
-
-    Raises
-    ------
-    ValueError
-        If the denominator is exactly zero for any sample: the cost matrix does not define a
-        meaningful threshold for those parameter values.
+        The optimal threshold(s), each in ``[0, 1]``.
     """
-    if np.isscalar(denominator):
-        if denominator == 0:
-            raise ValueError(
-                'Cannot compute the optimal threshold/rate: the cost matrix is degenerate for the '
-                'given parameters (fp_cost + tn_benefit + fn_cost + tp_benefit evaluates to 0, so '
-                'the threshold that maximizes the expected cost metric is undefined). Check the '
-                'cost matrix and the parameter values passed in.'
-            )
-        threshold: FloatNDArray | float = numerator / denominator  # type: ignore[operator, assignment]
-    else:
-        denom_arr = np.asarray(denominator, dtype=np.float64)
-        if np.any(denom_arr == 0):
-            raise ValueError(
-                'Cannot compute the optimal threshold/rate: the cost matrix is degenerate for at '
-                'least one sample (fp_cost + tn_benefit + fn_cost + tp_benefit evaluates to 0, so '
-                'the threshold that maximizes the expected cost metric is undefined for that '
-                'sample). Check the cost matrix and the (possibly instance-dependent) parameter '
-                'values passed in.'
-            )
-        threshold = np.asarray(numerator, dtype=np.float64) / denom_arr
+    is_scalar = np.ndim(numerator) == 0 and np.ndim(denominator) == 0
+    numerator, denominator = np.broadcast_arrays(
+        np.asarray(numerator, dtype=np.float64), np.asarray(denominator, dtype=np.float64)
+    )
+    constant_cost = denominator == 0
+    with np.errstate(divide='ignore', invalid='ignore'):
+        threshold = np.where(constant_cost, np.where(numerator < 0, 0.0, 1.0), numerator / denominator)
 
-    if np.isscalar(threshold):
-        out_of_range = bool(threshold < 0 or threshold > 1)  # type: ignore[operator]
-    else:
-        out_of_range = bool(np.any((threshold < 0) | (threshold > 1)))  # type: ignore[operator]
-    if out_of_range:
+    always_or_never = constant_cost & (numerator != 0)
+    if np.any(always_or_never | (threshold < 0) | (threshold > 1)):
         warnings.warn(
             'The optimal threshold computed from the cost matrix fell outside [0, 1] and was '
             'clipped. This means the cost matrix implies an always-positive or always-negative '
@@ -734,11 +717,8 @@ def _solve_optimal_threshold(
             UserWarning,
             stacklevel=3,
         )
-        threshold = (
-            float(np.clip(threshold, 0.0, 1.0)) if np.isscalar(threshold) else np.clip(threshold, 0.0, 1.0)  # type: ignore[arg-type]
-        )
-
-    return float(threshold) if np.isscalar(threshold) else threshold  # type: ignore[arg-type]
+    threshold = np.clip(threshold, 0.0, 1.0)
+    return float(threshold) if is_scalar else threshold
 
 
 class CostOptimalThreshold:

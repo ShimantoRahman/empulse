@@ -455,3 +455,33 @@ def test_ensembles_warn_that_a_non_expected_cost_loss_only_weighs_the_votes(clas
     loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), MaxProfit())
     with pytest.warns(UserWarning, match=f'used only for {used_for}'):
         model_cls(n_estimators=3, loss=loss, combination='weighted_voting').fit(X, y, a=1.0, b=5.0)
+
+
+class TestBaggingMissingValues:
+    """Bagging accepts missing values whenever its base estimator does, as the forest does."""
+
+    @staticmethod
+    def _data():
+        X, y = make_classification(n_samples=200, random_state=0)
+        X[::7, 2] = np.nan
+        return X, y
+
+    @pytest.mark.parametrize('combination', ['majority_voting', 'weighted_voting'])
+    def test_the_default_tree_accepts_missing_values(self, combination):
+        X, y = self._data()
+        model = CSBaggingClassifier(n_estimators=5, combination=combination, random_state=0)
+        model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert model.__sklearn_tags__().input_tags.allow_nan
+        assert np.isfinite(model.predict_proba(X)).all()
+        assert set(model.predict(X)) <= {0, 1}
+
+    def test_a_base_estimator_without_missing_value_support_still_rejects_them(self):
+        from empulse.models import CSLogitClassifier
+
+        X, y = self._data()
+        model = CSBaggingClassifier(CSLogitClassifier(), n_estimators=3, random_state=0)
+
+        assert not model.__sklearn_tags__().input_tags.allow_nan
+        with pytest.raises(ValueError, match='NaN'):
+            model.fit(X, y, fp_cost=1.0, fn_cost=5.0)

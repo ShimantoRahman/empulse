@@ -13,7 +13,7 @@ from sklearn.utils.metaestimators import available_if
 from sklearn.utils.validation import check_is_fitted, has_fit_parameter
 
 from ..._common._metaestimators import estimator_has
-from ..._common._sklearn_compat import indices_to_mask, validate_data
+from ..._common._sklearn_compat import Tags, get_tags, indices_to_mask, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
@@ -298,6 +298,25 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         self.verbose = verbose
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
+    def _allows_nan(self) -> bool:
+        """Whether the base estimator, and so the ensemble, accepts missing values in ``X``."""
+        estimator = self.estimator if self.estimator is not None else CSTreeClassifier()
+        return bool(get_tags(estimator).input_tags.allow_nan)
+
+    def _more_tags(self) -> dict[str, bool]:
+        return {**super()._more_tags(), 'allow_nan': self._allows_nan()}
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = self._allows_nan()
+        return tags
+
+    def _validate_X_predict(self, X: FloatArrayLike) -> FloatNDArray:
+        X_checked: FloatNDArray = validate_data(
+            self, X, reset=False, ensure_all_finite='allow-nan' if self._allows_nan() else True
+        )
+        return X_checked
+
     def _fit(
         self,
         X: FloatNDArray,
@@ -418,7 +437,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             y_pred: IntNDArray = self.classes_.take(np.argmax(y_proba, axis=1), axis=0)
             return y_pred
 
-        X = validate_data(self, X, reset=False)
+        X = self._validate_X_predict(X)
         estimators = self.estimator_.estimators_
         weights = (
             np.asarray(self.estimator_weights_, dtype=np.float64)
@@ -456,7 +475,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             classes corresponds to that in the attribute :term:`classes_ <sklearn:classes_>`.
         """
         check_is_fitted(self)
-        X: FloatNDArray = validate_data(self, X, reset=False)
+        X = self._validate_X_predict(X)
 
         if self.combination == 'weighted_voting':
             y_proba: FloatNDArray = self._predict_weighted_proba(X)
@@ -531,7 +550,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         return weights
 
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:
-        X = validate_data(self, X, reset=False)
+        X = self._validate_X_predict(X)
 
         n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
 

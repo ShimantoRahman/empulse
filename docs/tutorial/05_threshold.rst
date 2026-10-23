@@ -107,8 +107,8 @@ A caveat on this dataset
 
     Worth knowing generally: a cost matrix that collapses to zero for a row is a modelling signal,
     not just a numerical edge case. It says those customers carry no business consequence either
-    way. If **every** term genuinely cancels, there is no break-even point at all, and
-    ``optimal_threshold``/``optimal_rate`` raise a ``ValueError`` saying the matrix is degenerate.
+    way. If **every** term genuinely cancels, contacting them and not contacting them cost the same,
+    and ``optimal_threshold`` gives them a threshold of ``1.0`` as well: they are not contacted.
 
 Letting a meta-estimator do it
 ==============================
