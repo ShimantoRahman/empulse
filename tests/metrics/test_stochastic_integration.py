@@ -5,11 +5,13 @@ by quadrature and by (quasi-)Monte Carlo sampling.
 The exact piecewise path for a single variable is in ``test_max_profit_strategy.py``.
 """
 
+import itertools
 import math
 import os
 import pickle
 import subprocess
 import sys
+import warnings
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -18,7 +20,7 @@ import pytest
 import scipy.stats as st
 import sympy
 import sympy.stats
-from scipy.integrate import trapezoid
+from scipy.integrate import IntegrationWarning, trapezoid
 from sympy.stats import Normal
 
 from empulse.metrics import (
@@ -900,3 +902,203 @@ class TestExpectationOfNonLinearTerms:
         gamma = sympy.stats.Beta('gamma', 2, 2)
         with pytest.warns(UserWarning, match='only approximates the expectation'):
             Metric(CostMatrix().add_fp_cost(sympy.exp(gamma)).add_fn_cost(1), Cost())
+
+
+# --- Densities far from zero, narrow, heavy-tailed or overflowing ------------------------------------
+
+
+def _weak_model_samples() -> tuple[np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(0)
+    y_true = rng.integers(0, 2, 500)
+    return y_true, np.clip(y_true * 0.3 + rng.random(500) * 0.7, 0, 1)
+
+
+def _reference_expected_max_profit(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+    frozen: Any,
+    tp_benefit: Callable[[Any], Any],
+    fp_cost: float,
+    x_range: tuple[float, float] | None = None,
+) -> float:
+    """
+    The expected maximum over every ROC point, integrated with SciPy's own distribution.
+
+    Over pieces between the distribution's quantiles, each integrated adaptively, so that every
+    kink of the maximum is resolved wherever it lies. A profit that grows fast enough to weigh the
+    far tail, or a heavy tail, is integrated over ``x_range`` instead, with the profit at its ends
+    weighted by the probability beyond them.
+    """
+    from scipy.integrate import quad
+
+    order = np.argsort(-y_score, kind='stable')
+    ranked_true, ranked_score = y_true[order], y_score[order]
+    last = np.r_[ranked_score[1:] != ranked_score[:-1], True]
+    tpr = np.r_[0.0, np.cumsum(ranked_true)[last] / ranked_true.sum()]
+    fpr = np.r_[0.0, np.cumsum(1 - ranked_true)[last] / (1 - ranked_true).sum()]
+    pi0 = y_true.mean()
+
+    def maximum_profit(x: float) -> float:
+        return float(np.max(tp_benefit(x) * pi0 * tpr - fp_cost * (1 - pi0) * fpr))
+
+    if x_range is None:
+        edges = np.unique(frozen.ppf(np.linspace(1e-12, 1 - 1e-12, 401)))
+        tails = 0.0
+    else:
+        edges = np.linspace(*x_range, 401)
+        tails = maximum_profit(x_range[0]) * frozen.cdf(x_range[0]) + maximum_profit(x_range[1]) * frozen.sf(x_range[1])
+    with warnings.catch_warnings():
+        # Asking for nearly all of the digits there are, the reference reports rounding.
+        warnings.simplefilter('ignore', IntegrationWarning)
+        return tails + sum(
+            quad(lambda x: frozen.pdf(x) * maximum_profit(x), a, b, epsabs=0, epsrel=1e-12, limit=200)[0]
+            for a, b in itertools.pairwise(edges)
+        )
+
+
+def _hand_built_laplace() -> Any:
+    x = sympy.Symbol('x', real=True)
+    density = sympy.exp(-sympy.Abs(x - 300) / 3) / 6
+    return sympy.stats.ContinuousRV(x, density, set=sympy.Interval(-sympy.oo, sympy.oo))
+
+
+_HARD_DENSITIES = {
+    'laplace-far': (lambda: sympy.stats.Laplace('v', 200, 2), st.laplace(200, 2), lambda v: v, 10),
+    'logistic': (lambda: sympy.stats.Logistic('v', 0, 1), st.logistic(0, 1), lambda v: 10 + v, 1),
+    'logistic-far': (lambda: sympy.stats.Logistic('v', 200, 2), st.logistic(200, 2), lambda v: v, 10),
+    'gamma-large-shape': (lambda: sympy.stats.Gamma('v', 1000, 1), st.gamma(1000), lambda v: v, 500),
+    'beta-narrow': (lambda: sympy.stats.Beta('v', 600, 1400), st.beta(600, 1400), lambda v: 100 * v, 10),
+    'lognormal-narrow': (
+        lambda: sympy.stats.LogNormal('v', math.log(500), 0.01),
+        st.lognorm(0.01, scale=500),
+        lambda v: v,
+        100,
+    ),
+    'normal-narrow': (lambda: sympy.stats.Normal('v', 0, 1e-4), st.norm(0, 1e-4), lambda v: 10 + 1e4 * v, 5),
+    'hand-built-density': (_hand_built_laplace, st.laplace(300, 3), lambda v: v, 20),
+}
+
+
+@pytest.mark.parametrize('integration_method', ['auto', 'quad'])
+@pytest.mark.parametrize('case', _HARD_DENSITIES)
+def test_quadrature_finds_the_mass_wherever_it_lies(case, integration_method):
+    """
+    Quadrature integrates a density far from zero, much narrower than one, or that overflows a float.
+
+    On an infinite interval, ``quad`` spreads its nodes at unit scale around zero, so it returned
+    about zero for these without a warning, or NaN or an OverflowError where the density overflowed.
+    """
+    variable, frozen, tp_benefit, fp_cost = _HARD_DENSITIES[case]
+    y_true, y_score = _weak_model_samples()
+    metric = Metric(
+        CostMatrix().add_tp_benefit(tp_benefit(variable())).add_fp_cost(fp_cost),
+        MaxProfit(integration_method=integration_method),
+    )
+    expected = _reference_expected_max_profit(y_true, y_score, frozen, tp_benefit, fp_cost)
+    assert metric(y_true, y_score) == pytest.approx(expected, rel=1e-6)
+
+
+_NON_POLYNOMIAL_PROFITS = {
+    'gamma-sqrt': (lambda: sympy.stats.Gamma('v', 100, 1), st.gamma(100), sympy.sqrt, np.sqrt, 1, None),
+    'cauchy-tanh': (
+        lambda: sympy.stats.Cauchy('v', 1000, 0.01),
+        st.cauchy(1000, 0.01),
+        lambda v: 20 + 10 * sympy.tanh((v - 1000) / 0.05),
+        lambda v: 20 + 10 * np.tanh((v - 1000) / 0.05),
+        5,
+        # The profit is flat beyond, and the reference's quantiles would cut off the heavy tails.
+        (999.0, 1001.0),
+    ),
+    'gamma-exp': (
+        lambda: sympy.stats.Gamma('v', 30, 1),
+        st.gamma(30),
+        lambda v: sympy.exp(v / 2) / 1e5,
+        lambda v: np.exp(v / 2) / 1e5,
+        50,
+        (0.0, 400.0),
+    ),
+}
+
+
+@pytest.mark.parametrize('integration_method', ['auto', 'quad'])
+@pytest.mark.parametrize('case', _NON_POLYNOMIAL_PROFITS)
+def test_quadrature_of_a_profit_that_is_not_a_polynomial(case, integration_method):
+    """
+    A profit that is not a polynomial in the variable is integrated, and its crossings found, where the mass lies.
+
+    The crossings were searched for on a grid spaced evenly in ``arctan``, whose last gap on an
+    unbounded support spans many orders of magnitude: the crossings near the mass of ``exp(v / 2)``
+    were missed, and the result was NaN.
+    """
+    variable, frozen, symbolic, numeric, fp_cost, x_range = _NON_POLYNOMIAL_PROFITS[case]
+    y_true, y_score = _weak_model_samples()
+    metric = Metric(
+        CostMatrix().add_tp_benefit(symbolic(variable())).add_fp_cost(fp_cost),
+        MaxProfit(integration_method=integration_method),
+    )
+    expected = _reference_expected_max_profit(y_true, y_score, frozen, numeric, fp_cost, x_range)
+    assert metric(y_true, y_score) == pytest.approx(expected, rel=1e-6)
+
+
+def test_quadrature_of_two_variables_far_from_zero():
+    """Each variable of a multiple integral is integrated where its own mass lies."""
+    y_true, y_score = _weak_model_samples()
+    cost_matrix = CostMatrix().add_tp_benefit(Normal('clv', 200, 5) * sympy.stats.Beta('g', 6, 14)).add_fp_cost(10)
+    by_quadrature = Metric(cost_matrix, MaxProfit(integration_method='quad'))(y_true, y_score)
+    by_sampling = Metric(cost_matrix, MaxProfit(integration_method='quasi-monte-carlo', random_state=0))(
+        y_true, y_score
+    )
+    assert by_quadrature == pytest.approx(by_sampling, rel=1e-5)
+
+
+class TestDiscreteVariables:
+    """A probability mass function is only integrated by sampling."""
+
+    @staticmethod
+    def _cost_matrix() -> CostMatrix:
+        return CostMatrix().add_tp_benefit(10 * sympy.stats.Poisson('v', 5)).add_fp_cost(20)
+
+    @pytest.mark.parametrize('integration_method', ['auto', 'monte-carlo'])
+    def test_sampling_integrates_a_discrete_variable(self, integration_method):
+        y_true, y_score = _weak_model_samples()
+        metric = Metric(self._cost_matrix(), MaxProfit(integration_method=integration_method, random_state=0))
+        order = np.argsort(-y_score, kind='stable')
+        ranked = y_true[order]
+        tpr = np.r_[0.0, np.cumsum(ranked) / ranked.sum()]
+        fpr = np.r_[0.0, np.cumsum(1 - ranked) / (1 - ranked).sum()]
+        pi0 = y_true.mean()
+        values = np.arange(60)
+        profits = np.max(np.outer(10 * values * pi0, tpr) - 20 * (1 - pi0) * fpr, axis=1)
+        expected = float(np.sum(st.poisson(5).pmf(values) * profits))
+        assert metric(y_true, y_score) == pytest.approx(expected, rel=1e-2)
+
+    @pytest.mark.parametrize('integration_method', ['quad', 'quasi-monte-carlo'])
+    def test_other_methods_reject_a_discrete_variable(self, integration_method):
+        with pytest.raises(ValueError, match='discrete'):
+            Metric(self._cost_matrix(), MaxProfit(integration_method=integration_method))
+
+    def test_a_finite_distribution_is_discrete_too(self):
+        """A Bernoulli variable, on a finite rather than a countable set, is sampled under 'auto' as well."""
+        y_true, y_score = _weak_model_samples()
+        variable = sympy.stats.Bernoulli('v', 0.3, 50, 10)
+        metric = Metric(CostMatrix().add_tp_benefit(variable).add_fp_cost(5), MaxProfit(random_state=0))
+        order = np.argsort(-y_score, kind='stable')
+        ranked = y_true[order]
+        tpr = np.r_[0.0, np.cumsum(ranked) / ranked.sum()]
+        fpr = np.r_[0.0, np.cumsum(1 - ranked) / (1 - ranked).sum()]
+        pi0 = y_true.mean()
+        expected = sum(
+            probability * np.max(benefit * pi0 * tpr - 5 * (1 - pi0) * fpr)
+            for benefit, probability in ((50, 0.3), (10, 0.7))
+        )
+        assert metric(y_true, y_score) == pytest.approx(expected, rel=1e-2)
+        with pytest.raises(ValueError, match='discrete'):
+            Metric(CostMatrix().add_tp_benefit(variable).add_fp_cost(5), MaxProfit(integration_method='quad'))
+
+
+def test_quasi_monte_carlo_rejects_a_distribution_without_a_quantile_function():
+    with pytest.raises(ValueError, match='CauchyDistribution'):
+        Metric(
+            CostMatrix().add_tp_benefit(sympy.stats.Cauchy('v', 1000, 1)).add_fp_cost(1),
+            MaxProfit(integration_method='quasi-monte-carlo'),
+        )

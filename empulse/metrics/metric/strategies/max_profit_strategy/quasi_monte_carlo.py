@@ -13,6 +13,7 @@ from .common import (
     _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
+    _LowerChainGate,
     _SampledIntegrand,
     extract_distribution_parameters,
 )
@@ -152,6 +153,7 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         self.rng = rng
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
         self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
+        self._lower_chain_gate = _LowerChainGate(profit_function, random_symbols)
 
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
         self.distribution_args = [arg for args in distributions_args for arg in args]
@@ -173,6 +175,15 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         # can never pair one call's parameters with another call's samples.
         self._grid_cache: tuple[dict[str, Any], list[Any]] | None = None
 
+    def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
+        """Whether the lower hull can hold the most profitable vertex at any of the samples."""
+        # Instances pickled by older versions lack the gate.
+        gate = getattr(self, '_lower_chain_gate', None)
+        if gate is None:
+            return True
+        param_grid, parameters = self._grid(dict(kwargs))
+        return bool(gate.on_samples(parameters, param_grid))
+
     def _score_hull(
         self,
         true_positive_rates: FloatNDArray,
@@ -181,6 +192,20 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         kwargs: dict[str, Any],
     ) -> float:
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+        param_grid, parameters = self._grid(kwargs)
+        return _evaluate_sampled_integrands(
+            self._profit_integrand,
+            self._rate_integrand,
+            true_positive_rates,
+            false_positive_rates,
+            positive_class_prior,
+            parameters,
+            param_grid,
+            self.n_mc_samples,
+        )
+
+    def _grid(self, kwargs: dict[str, Any]) -> tuple[list[Any], dict[str, Any]]:
+        """Return the samples for these parameters, and the parameters to evaluate them with."""
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid
         if self.param_grid_needs_recompute:
@@ -196,14 +221,4 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
                 param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]
                 self._grid_cache = (distribution_parameters, param_grid)
             dist_params = distribution_parameters
-
-        return _evaluate_sampled_integrands(
-            self._profit_integrand,
-            self._rate_integrand,
-            true_positive_rates,
-            false_positive_rates,
-            positive_class_prior,
-            {**kwargs, **dist_params},
-            param_grid,
-            self.n_mc_samples,
-        )
+        return param_grid, {**kwargs, **dist_params}

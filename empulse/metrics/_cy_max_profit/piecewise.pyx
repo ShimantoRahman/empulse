@@ -96,11 +96,11 @@ cdef void _partition(
     Fills ``bounds`` with the region edges, ascending, and ``vertices`` with the optimal hull
     vertex on each region.
 
-    Only vertices adjacent on the polygon the hull and the diagonal enclose can swap rank, the last
-    vertex paired with the first (see ``envelope._adjacent_pairs``), so the region edges are among the
-    crossings of those pairs of curves. The crossings are sorted, near-duplicates merged, and each
-    region between them labelled with the vertex on top at a point inside it. Neighbouring regions
-    with the same vertex are one region.
+    Only vertices adjacent on the hull's polygon can swap rank, the last vertex paired with the first
+    (see ``envelope._adjacent_pairs``), so the region edges are among the crossings of those pairs of
+    curves. The crossings are sorted, near-duplicates merged, and each region between them labelled
+    with the vertex on top at a point inside it. Neighbouring regions with the same vertex are one
+    region.
     """
     cdef Py_ssize_t m, k, i, best, other
     cdef Py_ssize_t n_pairs = n_vertices if n_vertices > 2 else n_vertices - 1

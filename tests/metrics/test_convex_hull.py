@@ -282,6 +282,58 @@ def test_convex_hull_is_exactly_the_upper_hull_of_the_roc_curve(seed):
         assert cross(previous, vertex, following) < 0, 'the hull does not turn at a vertex'
 
 
+@pytest.mark.parametrize('seed', range(12))
+def test_full_convex_hull_is_the_convex_hull_of_the_roc_curve(seed):
+    """
+    The full hull starts with the upper hull and has the vertices of the curve's whole convex hull.
+
+    Its vertices go round the polygon once, so that a linear function of the rates is highest at
+    one of them whatever its direction.
+    """
+    from empulse.metrics._cy_convex_hull import convex_hull_full, convex_hull_full_from_counts
+
+    rng = np.random.default_rng(seed)
+    n_samples = int(rng.choice([50, 300, 5_000]))
+    y_true = rng.integers(0, 2, n_samples).astype(np.int32)
+    y_true[:2] = [0, 1]
+    # A weak model, so that parts of the curve lie below the diagonal.
+    y_score = np.round(rng.normal(rng.uniform(-0.2, 0.2) * y_true, 1), int(rng.integers(0, 3)))
+
+    tpr, fpr = convex_hull_full(y_true, y_score)
+    upper_tpr, upper_fpr = cy_convex_hull(y_true, y_score)
+    np.testing.assert_array_equal(tpr[: upper_tpr.size], upper_tpr)
+    np.testing.assert_array_equal(fpr[: upper_fpr.size], upper_fpr)
+
+    n_negative, n_positive = _roc_counts(y_true, y_score)
+    points = np.unique(np.column_stack([n_negative / n_negative[-1], n_positive / n_positive[-1]]), axis=0)
+    expected = {tuple(points[index]) for index in ConvexHull(points).vertices}
+    assert set(zip(fpr, tpr, strict=True)) == expected
+    assert len(tpr) == len(expected)
+
+    for direction in rng.normal(size=(20, 2)):
+        values = direction[0] * tpr + direction[1] * fpr
+        assert values.max() == pytest.approx(np.max(direction[0] * points[:, 1] + direction[1] * points[:, 0]))
+
+    groups, inverse = np.unique(y_score, return_inverse=True)
+    n_positive_groups = np.bincount(inverse, weights=y_true).astype(np.int64)
+    n_negative_groups = np.bincount(inverse, weights=1 - y_true).astype(np.int64)
+    counts_tpr, counts_fpr = convex_hull_full_from_counts(groups, n_positive_groups, n_negative_groups)
+    np.testing.assert_allclose(counts_tpr, tpr)
+    np.testing.assert_allclose(counts_fpr, fpr)
+
+
+def test_full_convex_hull_of_a_curve_above_its_diagonal_is_the_upper_hull():
+    """Without points below the diagonal, the lower hull adds no vertex."""
+    from empulse.metrics._cy_convex_hull import convex_hull_full
+
+    y_true = np.array([1, 1, 0, 1, 0, 0], dtype=np.int32)
+    y_score = np.linspace(1, 0, 6)
+    full = convex_hull_full(y_true, y_score)
+    upper = cy_convex_hull(y_true, y_score)
+    np.testing.assert_array_equal(full[0], upper[0])
+    np.testing.assert_array_equal(full[1], upper[1])
+
+
 @pytest.mark.parametrize('label', [0, 1])
 def test_convex_hull_of_a_single_class_is_the_diagonal(label):
     """Without one of the classes, only targeting no one (0, 0) or everyone (1, 1) is worth considering."""

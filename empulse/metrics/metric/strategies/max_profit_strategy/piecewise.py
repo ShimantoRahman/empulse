@@ -7,16 +7,16 @@ import numpy as np
 import scipy.special as sp
 import scipy.stats as st
 import sympy
-from scipy.integrate import IntegrationWarning, quad
-from sympy.stats import density, pspace
+from sympy.stats import pspace
 
 from ....._types import FloatNDArray, IntNDArray
 from ...._cy_max_profit import Distribution, expected_max_profit, expected_max_profit_from_counts
 from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
 from ..._parameter_domain import _check_parameters
 from ..._symbolic import _subs_by_name
+from ._anchoring import Anchor, DensityOf, anchored_quad, warn_if_inaccurate
 from ._distributions import ADAPTERS, adapter_for
-from .common import _convex_hull, _distribution_parameter_symbols, _HullScoreFunction
+from .common import _convex_hull, _distribution_parameter_symbols, _HullScoreFunction, _LowerChainGate
 from .envelope import (
     CallableEnvelope,
     Partition,
@@ -105,10 +105,13 @@ class _PreparedIntegrand:
     the second is the gamma function. Substituting ``k`` collapses the call to a number and removes
     the ambiguity; passing ``k`` as an argument leaves generated source that cannot be read either
     way, whether or not the arguments are dummified.
+
+    The integrand is the product of a ``factor`` and a density, compiled as the factor and the
+    log-density, whose exponential is taken numerically (see :func:`~._anchoring.log_density`).
     """
 
-    def __init__(self, integrand: sympy.Expr, random_symbol: sympy.Symbol) -> None:
-        self.integrand = integrand
+    def __init__(self, factor: sympy.Expr, log_density: sympy.Expr, random_symbol: sympy.Symbol) -> None:
+        self.integrand = sympy.Tuple(factor, log_density)
         self.random_symbol = random_symbol
         self.arguments = [*sympy.symbols('F_0 F_1'), random_symbol]
         self._compiled: tuple[tuple[tuple[str, float], ...], Callable[..., Any]] | None = None
@@ -124,13 +127,20 @@ class _PreparedIntegrand:
             key = tuple(sorted((name, float(value)) for name, value in parameters.items()))
         except (TypeError, ValueError):
             # A non-scalar parameter cannot key the cache; compile without caching.
-            return _safe_lambdify(_subs_by_name(self.integrand, parameters), self.arguments)
+            return self._lambdify(parameters)
         cached = self._compiled
         if cached is not None and cached[0] == key:
             return cached[1]
-        function = _safe_lambdify(_subs_by_name(self.integrand, parameters), self.arguments)
+        function = self._lambdify(parameters)
         self._compiled = (key, function)
         return function
+
+    def _lambdify(self, parameters: dict[str, Any]) -> Callable[..., Any]:
+        # Instances pickled by older versions hold the product itself.
+        parts = self.integrand if isinstance(self.integrand, sympy.Tuple) else (self.integrand, sympy.S.Zero)
+        # evalf: a substituted normalisation such as loggamma(100) is otherwise left for NumPy.
+        substituted = sympy.Tuple(*(_subs_by_name(part, parameters).evalf() for part in parts))
+        return _safe_lambdify(substituted, self.arguments)
 
     def integrate_regions(
         self,
@@ -138,20 +148,40 @@ class _PreparedIntegrand:
         true_positive_rates: Sequence[float],
         false_positive_rates: Sequence[float],
         parameters: dict[str, Any],
+        anchor: Anchor | None,
     ) -> float:
-        """Sum the integral of the prepared integrand over every region."""
+        """
+        Sum the integral of the prepared integrand over every region.
+
+        Each region is split around ``anchor``, where the density's mass lies (see
+        :func:`~._anchoring.anchored_quad`), and a large estimated error is reported once.
+        """
         function = self._compile(parameters)
-        total = 0.0
+        total = error = 0.0
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', IntegrationWarning)
             warnings.simplefilter('ignore', RuntimeWarning)
             for (lower, upper), tpr, fpr in zip(
                 pairwise(bounds), true_positive_rates, false_positive_rates, strict=True
             ):
                 if lower == upper:
                     continue
-                total += quad(lambda x, tpr=tpr, fpr=fpr: function(tpr, fpr, x), lower, upper)[0]
+
+                def integrand(x: float, tpr: float = tpr, fpr: float = fpr) -> Any:
+                    return _product_with_density(function(tpr, fpr, x))
+
+                value, estimate = anchored_quad(integrand, lower, upper, anchor)
+                total += value
+                error += estimate
+        warn_if_inaccurate(total, error)
         return total
+
+
+def _product_with_density(parts: tuple[Any, Any]) -> Any:
+    """Return the integrand from its factor and log-density, see :class:`_PreparedIntegrand`."""
+    if not isinstance(parts, tuple):  # compiled by an older version, and pickled with it
+        return parts
+    factor, log_density = parts
+    return factor * np.exp(log_density)
 
 
 def _resolve_support(
@@ -286,6 +316,7 @@ def _callable_envelope(
     positive_class_prior: float,
     negative_class_prior: float,
     parameters: dict[str, Any],
+    anchor: Anchor | None = None,
 ) -> CallableEnvelope:
     """Wrap a profit function of any shape as the family of candidate curves over the hull."""
     # Resolve which arguments the expression needs once: finding the region boundaries evaluates
@@ -310,7 +341,7 @@ def _callable_envelope(
             arguments[random_name] = x
         return profit_fn(**arguments)
 
-    return CallableEnvelope(profit_at, true_positive_rates, false_positive_rates)
+    return CallableEnvelope(profit_at, true_positive_rates, false_positive_rates, anchor)
 
 
 class _AffineCoefficients:
@@ -410,6 +441,8 @@ class _PiecewiseBase:
             self.profit_fn = _safe_lambdify(profit_function)
 
         self.dist_params = _distribution_parameter_symbols(self.distribution_args)
+        self._lower_chain_gate = _LowerChainGate(profit_function, [random_symbol])
+        self._density = DensityOf(random_symbol)
 
         # Resolved once because naming a sympy symbol means printing it, which costs more than
         # scoring a small hull.
@@ -426,8 +459,14 @@ class _PiecewiseBase:
         positive_class_prior: float,
         negative_class_prior: float,
         parameters: dict[str, Any],
+        anchor: Anchor | None = None,
     ) -> ProfitEnvelope:
-        """Build the candidate profit curves for this call's ROC hull and parameter values."""
+        """
+        Build the candidate profit curves for this call's ROC hull and parameter values.
+
+        ``anchor`` locates the density's mass, around which curves that are not polynomials are
+        searched for crossings most finely.
+        """
         if self.poly_eqs is not None and self.poly_fns is not None:
             return PolynomialEnvelope(
                 _evaluate_coefficient_matrix(
@@ -450,7 +489,25 @@ class _PiecewiseBase:
             positive_class_prior,
             negative_class_prior,
             parameters,
+            anchor,
         )
+
+    def _anchor(self, distribution_parameters: dict[str, Any]) -> Anchor | None:
+        """Return where the density's mass lies for these parameters, see :class:`~._anchoring.DensityOf`."""
+        # Instances pickled by older versions lack the density.
+        density_of: DensityOf | None = getattr(self, '_density', None)
+        if density_of is None:
+            return None
+        return density_of.anchor(distribution_parameters, *self._support(distribution_parameters))
+
+    def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
+        """Whether the lower hull can hold the most profitable vertex anywhere in the support."""
+        # Instances pickled by older versions lack the gate.
+        gate = getattr(self, '_lower_chain_gate', None)
+        if gate is None:
+            return True
+        distribution_parameters, _ = self._resolve_distribution_parameters(kwargs)
+        return bool(gate.on_support(kwargs, *self._support(distribution_parameters)))
 
     def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Pick the distribution's own parameters out of the call's parameters.
@@ -514,8 +571,7 @@ class MaxProfitRatePiecewise(_PiecewiseBase):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self._init_common(profit_function, random_symbol)
-        self.integrand = rate_function * density(random_symbol).pdf(random_symbol)
-        self._prepared = _PreparedIntegrand(self.integrand, random_symbol)
+        self._prepared = _PreparedIntegrand(rate_function, self._density.log_expression, random_symbol)
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the optimal rate."""
@@ -523,13 +579,14 @@ class MaxProfitRatePiecewise(_PiecewiseBase):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        anchor = self._anchor(distribution_parameters)
 
         partition = compute_piecewise_bounds(
             self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
             ),
             true_positive_rates,
             false_positive_rates,
@@ -543,6 +600,7 @@ class MaxProfitRatePiecewise(_PiecewiseBase):
             partition.tprs,
             partition.fprs,
             {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
+            anchor,
         )
 
 
@@ -578,13 +636,15 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
 
         positive_class_prior = float(np.mean(y_true))
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        # Only a profit that is not a polynomial needs the anchor, to search for its crossings.
+        anchor = None if self.poly_eqs is not None else self._anchor(distribution_parameters)
 
         partition = compute_piecewise_bounds(
             self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
             ),
             true_positive_rates,
             false_positive_rates,
@@ -625,7 +685,7 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
         return float(optimal_rate)
 
 
-class MaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
+class MaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
     """
     Compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -641,8 +701,7 @@ class MaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self._init_common(profit_function, random_symbol)
-        self.integrand = profit_function * density(random_symbol).pdf(random_symbol)
-        self._prepared = _PreparedIntegrand(self.integrand, random_symbol)
+        self._prepared = _PreparedIntegrand(profit_function, self._density.log_expression, random_symbol)
 
     def _score_hull(
         self,
@@ -655,10 +714,11 @@ class MaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         negative_class_prior = 1 - positive_class_prior
 
         distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        anchor = self._anchor(distribution_parameters)
 
         partition = compute_piecewise_bounds(
             self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs
+                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
             ),
             true_positive_rates,
             false_positive_rates,
@@ -672,10 +732,11 @@ class MaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
             partition.tprs,
             partition.fprs,
             {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
+            anchor,
         )
 
 
-class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
+class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
     """
     Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
 
@@ -777,7 +838,8 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         and the profit's coefficients are reused for as long as the class prior stays the same (as
         it does for every tree a ProfTree evaluates), so a call is a single compiled function call.
         """
-        if self._compiled is None or expected_max_profit_from_counts is None:
+        if self._compiled is None or expected_max_profit_from_counts is None or self._needs_lower_hull(dict(kwargs)):
+            # The compiled score builds the upper hull only.
             return super()._count_scorer(**kwargs)
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
         affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
@@ -814,7 +876,8 @@ class BaseMaxProfitScorePiecewise(_HullScoreFunction, _PiecewiseBase):
         For a caller that scores many groupings of the same samples in compiled code, such as the
         trees of a ProfTree population, whose leaves always hold every training sample.
         """
-        if self._compiled is None or expected_max_profit_from_counts is None:
+        if self._compiled is None or expected_max_profit_from_counts is None or self._needs_lower_hull(dict(kwargs)):
+            # The compiled score builds the upper hull only.
             return None
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
         affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)

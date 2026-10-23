@@ -5,6 +5,7 @@ from typing import Any, ClassVar, Literal, Protocol, Self, cast
 import numpy as np
 import sympy
 from sympy.stats import density, pspace
+from sympy.stats.crv import SingleContinuousPSpace
 from sympy.stats.rv import is_random
 
 from ....._common._objective import ElasticNetPenalty, RankingLogitValueObjective
@@ -145,9 +146,11 @@ class MaxProfit(ClassTerms, MetricStrategy):
           in the stochastic variable and its distribution supports closed-form partial moments, and numerically
           integrated otherwise.
           For two or more stochastic variables, 'quasi-monte-carlo' is used if every distribution is supported,
-          and 'monte-carlo' otherwise.
-        - If ``'quad'``, the metric is integrated using the quad function from scipy.
-          Be careful, as this can be slow for more than 2 stochastic variables.
+          'quad' otherwise for two variables, and 'monte-carlo' for more.
+          A discrete variable, such as a Poisson or a Bernoulli one, is always integrated by 'monte-carlo'.
+        - If ``'quad'``, the metric is integrated using the quad function from scipy, split around where
+          each density's mass lies, so that a density far from zero or much narrower or wider than one is
+          integrated accurately too. Be careful, as this can be slow for 2 or more stochastic variables.
         - If ``'monte-carlo'``, the metric is integrated using a Monte Carlo simulation.
           The monte-carlo simulation is less accurate but faster than quad for many stochastic variables.
         - If ``'quasi-monte-carlo'``, the metric is integrated using a Quasi Monte Carlo simulation.
@@ -1000,6 +1003,32 @@ def _build_max_profit_stochastic(
     one of the supported ones.
     """
     n_random = len(random_symbols)
+    # Poisson, Bernoulli, Binomial, ...: countable or finite rather than continuous.
+    discrete = [str(symbol) for symbol in random_symbols if not isinstance(pspace(symbol), SingleContinuousPSpace)]
+    if discrete:
+        # Every other method integrates a density: only sampling handles a probability mass function.
+        if integration_method == 'quasi-monte-carlo' and _support_all_distributions(random_symbols):
+            return MaxProfitScoreQuasiMonteCarlo(
+                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
+            )
+        if integration_method in {'auto', 'monte-carlo'}:
+            return MaxProfitScoreMonteCarlo(
+                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
+            )
+        raise ValueError(
+            f'The stochastic variable(s) {", ".join(discrete)} are discrete, which '
+            f"integration_method={integration_method!r} does not support. Use 'monte-carlo' or 'auto'."
+        )
+    if integration_method == 'quasi-monte-carlo' and not _support_all_distributions(random_symbols):
+        unsupported = sorted({
+            type(pspace(symbol).distribution).__name__
+            for symbol in random_symbols
+            if type(pspace(symbol).distribution) not in _sympy_dist_to_scipy
+        })
+        raise ValueError(
+            f"integration_method='quasi-monte-carlo' needs a quantile function for every distribution, which "
+            f"{', '.join(unsupported)} lacks. Use 'auto', 'quad' or 'monte-carlo' instead."
+        )
     if integration_method == 'auto' and n_random == 1:
         if rate_function is None:
             return cast(

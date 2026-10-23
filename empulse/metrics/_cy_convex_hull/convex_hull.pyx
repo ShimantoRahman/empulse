@@ -2,6 +2,9 @@
 """
 The ROC convex hull, the part of the convex hull of a ROC curve on or above its diagonal.
 
+The ``_full`` variants return the whole convex hull, below the diagonal too, for a profit that is
+highest where targeting by score does worse than at random.
+
 Everything between the inputs and the two output arrays runs in C++ without the GIL: sorting the
 samples, accumulating the ROC curve and building its hull. Only large inputs call back into NumPy,
 for its faster sort.
@@ -51,6 +54,23 @@ cdef inline void _add_to_hull(vector[Point]& hull, long long n_negative, long lo
     hull.push_back(point)
 
 
+cdef inline void _add_to_lower_hull(vector[Point]& hull, long long n_negative, long long n_positive) noexcept nogil:
+    """Extend the lower hull with the next point of the ROC curve: as `_add_to_hull`, turning left."""
+    cdef Point point = Point(n_negative, n_positive)
+    while hull.size() >= 2 and _cross(hull[hull.size() - 2], hull[hull.size() - 1], point) <= 0:
+        hull.pop_back()
+    hull.push_back(point)
+
+
+cdef inline void _add_point(
+    vector[Point]& hull, vector[Point]* lower, long long n_negative, long long n_positive
+) noexcept nogil:
+    """Add the next point of the ROC curve to the upper hull, and to the lower hull unless it is NULL."""
+    _add_to_hull(hull, n_negative, n_positive)
+    if lower is not NULL:
+        _add_to_lower_hull(lower[0], n_negative, n_positive)
+
+
 cdef inline bint _ranks_higher(const Group& a, const Group& b) noexcept nogil:
     """Order by descending score, with NaN (which NumPy sorts last) ranked first."""
     return a.score > b.score or (isnan(a.score) and not isnan(b.score))
@@ -58,6 +78,11 @@ cdef inline bint _ranks_higher(const Group& a, const Group& b) noexcept nogil:
 
 cdef void _add_groups_to_hull(vector[Group]& groups, vector[Point]& hull) noexcept nogil:
     """Rank the groups by score and add the ROC curve they give to the hull, one point per distinct score."""
+    _add_groups_to_hulls(groups, hull, NULL)
+
+
+cdef void _add_groups_to_hulls(vector[Group]& groups, vector[Point]& hull, vector[Point]* lower) noexcept nogil:
+    """As `_add_groups_to_hull`, also adding the curve to the ``lower`` hull unless it is NULL."""
     cpp_sort(groups.begin(), groups.end(), _ranks_higher)
     cdef long long n_negative = 0, n_positive = 0
     cdef size_t i
@@ -66,13 +91,21 @@ cdef void _add_groups_to_hull(vector[Group]& groups, vector[Point]& hull) noexce
         n_positive += groups[i].n_positive
         # Scores that tie form a single threshold: only the last of them is a point of the curve.
         if i + 1 == groups.size() or groups[i + 1].score != groups[i].score:
-            _add_to_hull(hull, n_negative, n_positive)
+            _add_point(hull, lower, n_negative, n_positive)
 
 
 cdef void _add_sorted_samples_to_hull(
-    const int[:] y_true, const double[:] y_score, const cnp.intp_t[::1] ascending, vector[Point]& hull
+    const int[:] y_true,
+    const double[:] y_score,
+    const cnp.intp_t[::1] ascending,
+    vector[Point]& hull,
+    vector[Point]* lower,
 ) noexcept nogil:
-    """Add the ROC curve of the samples to the hull, given the order that sorts their scores ascending."""
+    """
+    Add the ROC curve of the samples to the hull, given the order that sorts their scores ascending.
+
+    Also adds it to the ``lower`` hull, unless that is NULL.
+    """
     cdef Py_ssize_t n_samples = ascending.shape[0], i, sample
     cdef long long n_positive = 0
     for i in range(n_samples - 1, -1, -1):
@@ -80,14 +113,22 @@ cdef void _add_sorted_samples_to_hull(
         n_positive += y_true[sample]
         # Scores that tie form a single threshold: only the last of them is a point of the curve.
         if i == 0 or y_score[ascending[i - 1]] != y_score[sample]:
-            _add_to_hull(hull, n_samples - i - n_positive, n_positive)
+            _add_point(hull, lower, n_samples - i - n_positive, n_positive)
 
 
-cdef tuple _rates(const vector[Point]& hull):
-    """Turn the counts at the vertices of the hull into (TPR, FPR) arrays."""
+cdef tuple _rates(const vector[Point]& hull, const vector[Point]* lower):
+    """
+    Turn the counts at the vertices of the hull into (TPR, FPR) arrays.
+
+    Unless ``lower`` is NULL, the vertices of the lower hull strictly between (0, 0) and (1, 1)
+    follow those of the upper hull, walked back towards (0, 0), so that the arrays go round the whole
+    convex hull once.
+    """
     cdef long long n_negatives = hull.back().n_negative
     cdef long long n_positives = hull.back().n_positive
-    cdef cnp.npy_intp n_vertices = hull.size()
+    cdef Py_ssize_t n_upper = hull.size()
+    cdef Py_ssize_t n_lower = 0 if lower is NULL else max(<Py_ssize_t>lower[0].size() - 2, 0)
+    cdef cnp.npy_intp n_vertices = n_upper + n_lower
     cdef cnp.ndarray tpr_array, fpr_array
     cdef double* tpr
     cdef double* fpr
@@ -108,9 +149,13 @@ cdef tuple _rates(const vector[Point]& hull):
         tpr[0] = fpr[0] = 0.0
         tpr[1] = fpr[1] = 1.0
     else:
-        for i in range(n_vertices):
+        for i in range(n_upper):
             tpr[i] = hull[i].n_positive / <double>n_positives
             fpr[i] = hull[i].n_negative / <double>n_negatives
+        for i in range(n_lower):
+            # The lower hull runs from (0, 0) to (1, 1); its interior is walked backwards.
+            tpr[n_upper + i] = lower[0][n_lower - i].n_positive / <double>n_positives
+            fpr[n_upper + i] = lower[0][n_lower - i].n_negative / <double>n_negatives
     return tpr_array, fpr_array
 
 
@@ -131,6 +176,37 @@ def convex_hull(const int[:] y_true, const double[:] y_score) -> tuple[np.ndarra
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
+    return _hull_of_samples(y_true, y_score, False)
+
+
+def convex_hull_full(const int[:] y_true, const double[:] y_score) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the whole convex hull of the ROC curve, below its diagonal too.
+
+    The vertices of :func:`convex_hull`, from (0, 0) to (1, 1), followed by those of the lower hull
+    strictly between the two, from (1, 1) back towards (0, 0). Whatever its direction, a linear
+    function of the rates is highest at a vertex of this polygon, and vertices next to each other in
+    the arrays, the last next to the first, are joined by one of its edges. When no point of the
+    ROC curve lies below its diagonal, this is the hull :func:`convex_hull` returns.
+
+    Parameters
+    ----------
+    y_true : 1D np.ndarray, shape=(n_samples,)
+        Binary target values.
+
+    y_pred : 1D np.ndarray, shape=(n_samples,)
+        Target scores, can either be probability estimates or non-thresholded decision values.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        The vertices of the convex hull of the ROC curve (TPR, FPR)
+    """
+    return _hull_of_samples(y_true, y_score, True)
+
+
+cdef tuple _hull_of_samples(const int[:] y_true, const double[:] y_score, bint full):
+    """The upper hull of the ROC curve of the samples, followed by its lower hull when ``full``."""
     cdef Py_ssize_t n_samples = y_true.shape[0], i
     if n_samples != y_score.shape[0]:
         raise ValueError(
@@ -139,24 +215,27 @@ def convex_hull(const int[:] y_true, const double[:] y_score) -> tuple[np.ndarra
     if n_samples == 0:
         raise ValueError('The ROC convex hull needs at least one sample.')
 
-    cdef vector[Point] hull
+    cdef vector[Point] hull, lower_hull
+    cdef vector[Point]* lower = &lower_hull if full else NULL
     cdef vector[Group] samples
     cdef const cnp.intp_t[::1] ascending
     if n_samples <= _MAX_SAMPLES_SORTED_IN_CPP:
         with nogil:
             hull.push_back(Point(0, 0))  # targeting no one
+            lower_hull.push_back(Point(0, 0))
             samples.resize(n_samples)
             for i in range(n_samples):
                 samples[i] = Group(y_score[i], y_true[i], 1 - y_true[i])
-            _add_groups_to_hull(samples, hull)
+            _add_groups_to_hulls(samples, hull, lower)
     else:
         # The order of tied scores does not matter, as each tie is a single point of the curve, so
         # the sort need not be stable.
         ascending = np.argsort(y_score)
         with nogil:
             hull.push_back(Point(0, 0))  # targeting no one
-            _add_sorted_samples_to_hull(y_true, y_score, ascending, hull)
-    return _rates(hull)
+            lower_hull.push_back(Point(0, 0))
+            _add_sorted_samples_to_hull(y_true, y_score, ascending, hull, lower)
+    return _rates(hull, lower)
 
 
 def convex_hull_from_counts(
@@ -186,6 +265,27 @@ def convex_hull_from_counts(
     tuple[np.ndarray, np.ndarray]
         Convex Hull points of the ROC curve (TPR, FPR)
     """
+    return _hull_of_groups(y_score, n_positive, n_negative, False)
+
+
+def convex_hull_full_from_counts(
+    const double[:] y_score,
+    const long long[:] n_positive,
+    const long long[:] n_negative,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the whole convex hull of the ROC curve of samples grouped by score.
+
+    Gives the same points as :func:`convex_hull_full` on the samples themselves. See
+    :func:`convex_hull_from_counts` for the parameters.
+    """
+    return _hull_of_groups(y_score, n_positive, n_negative, True)
+
+
+cdef tuple _hull_of_groups(
+    const double[:] y_score, const long long[:] n_positive, const long long[:] n_negative, bint full
+):
+    """The upper hull of the ROC curve of the groups, followed by its lower hull when ``full``."""
     cdef Py_ssize_t n_groups = y_score.shape[0], i
     if not n_groups == n_positive.shape[0] == n_negative.shape[0]:
         raise ValueError(
@@ -195,7 +295,8 @@ def convex_hull_from_counts(
     cdef bint has_negative_count = False
     cdef long long n_samples = 0
     cdef vector[Group] groups
-    cdef vector[Point] hull
+    cdef vector[Point] hull, lower_hull
+    cdef vector[Point]* lower = &lower_hull if full else NULL
     with nogil:
         groups.resize(n_groups)
         for i in range(n_groups):
@@ -208,8 +309,9 @@ def convex_hull_from_counts(
         raise ValueError('The ROC convex hull needs at least one sample.')
     with nogil:
         hull.push_back(Point(0, 0))  # targeting no one
-        _add_groups_to_hull(groups, hull)
-    return _rates(hull)
+        lower_hull.push_back(Point(0, 0))
+        _add_groups_to_hulls(groups, hull, lower)
+    return _rates(hull, lower)
 
 
 def max_profit_scan(

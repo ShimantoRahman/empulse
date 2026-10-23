@@ -26,6 +26,7 @@ import numpy as np
 from scipy.optimize import brentq
 
 from ....._types import FloatNDArray, IntNDArray
+from ._anchoring import Anchor
 
 __all__ = [
     'CallableEnvelope',
@@ -85,12 +86,14 @@ def _adjacent_pairs(n_vertices: int) -> tuple[IntNDArray, IntNDArray]:
     """Index the adjacent hull-vertex pairs, the last vertex paired with the first.
 
     Only adjacent pairs need checking. The profit is linear in the rates, so the optimal vertex
-    maximizes a linear function over the convex polygon the upper hull and the diagonal enclose. As
-    the stochastic variable moves, the optimum can only pass between vertices joined by an edge of
-    that polygon, even when the profit's direction turns non-monotonically. The diagonal joins the
-    last vertex, (1, 1), to the first, (0, 0): when both the positive and the negative class lose by
-    being targeted, the optimum jumps between those two directly. This keeps the work linear in the
-    number of vertices rather than quadratic.
+    maximizes a linear function over a convex polygon: the one the upper hull and the diagonal
+    enclose, or the whole convex hull of the ROC curve when the vertices of its lower hull follow
+    (see :func:`~empulse.metrics._cy_convex_hull.convex_hull_full`). As the stochastic variable
+    moves, the optimum can only pass between vertices joined by an edge of that polygon, even when
+    the profit's direction turns non-monotonically. The last vertex is joined to the first, (0, 0):
+    by the diagonal from (1, 1) when there is no lower hull, along which the optimum jumps directly
+    when both the positive and the negative class lose by being targeted. This keeps the work linear
+    in the number of vertices rather than quadratic.
     """
     index = np.arange(n_vertices)
     if n_vertices <= 2:
@@ -227,6 +230,7 @@ class CallableEnvelope:
         profit_fn: Callable[..., FloatNDArray],
         true_positive_rates: FloatNDArray,
         false_positive_rates: FloatNDArray,
+        anchor: Anchor | None = None,
     ) -> None:
         """
         Build the envelope from a general profit function and the hull it is evaluated on.
@@ -237,10 +241,13 @@ class CallableEnvelope:
             Called as ``profit_fn(tpr, fpr, x)``; must accept array input for the rates.
         true_positive_rates, false_positive_rates : ndarray of shape (n_vertices,)
             The ROC convex hull.
+        anchor : Anchor or None
+            Where the stochastic variable's mass lies, which the search for crossings covers most finely.
         """
         self.profit_fn = profit_fn
         self.true_positive_rates = np.asarray(true_positive_rates, dtype=np.float64)
         self.false_positive_rates = np.asarray(false_positive_rates, dtype=np.float64)
+        self.anchor = anchor
 
     def crossings(self, lower_bound: float, upper_bound: float) -> FloatNDArray:
         """
@@ -248,10 +255,11 @@ class CallableEnvelope:
 
         A general function has no root formula, so the support is swept for sign changes and each
         one is refined with Brent's method. Unbounded ends are mapped through ``arctan`` so the
-        sweep covers them in finitely many steps.
+        sweep covers them in finitely many steps, and the sweep is finest around the ``anchor``,
+        where the crossings that matter lie.
         """
         left, right = _adjacent_pairs(len(self.true_positive_rates))
-        grid = self._sweep_grid(lower_bound, upper_bound)
+        grid = self._sweep_grid(lower_bound, upper_bound, self.anchor)
 
         found: list[float] = []
         for i, j in zip(left, right, strict=True):
@@ -265,28 +273,46 @@ class CallableEnvelope:
             with np.errstate(all='ignore'):
                 values = np.asarray(difference(grid), dtype=np.float64)
             finite = np.isfinite(values)
+            if finite[-1] and values[-1] == 0.0:
+                found.append(float(grid[-1]))
             for index in range(len(grid) - 1):
                 if not (finite[index] and finite[index + 1]):
                     continue
                 if values[index] == 0.0:
                     found.append(float(grid[index]))
-                elif values[index] * values[index + 1] < 0.0:
-                    found.append(float(brentq(difference, grid[index], grid[index + 1], xtol=1e-14)))
+                # Compared rather than multiplied: the product of two large differences overflows.
+                elif values[index] < 0.0 < values[index + 1] or values[index + 1] < 0.0 < values[index]:
+                    with np.errstate(all='ignore'):
+                        found.append(float(brentq(difference, grid[index], grid[index + 1], xtol=1e-14)))
         return np.asarray(found, dtype=np.float64)
 
     @staticmethod
-    def _sweep_grid(lower_bound: float, upper_bound: float) -> FloatNDArray:
-        """Points spanning the support, spaced evenly in ``arctan`` so infinite ends are covered."""
+    def _sweep_grid(lower_bound: float, upper_bound: float, anchor: Anchor | None = None) -> FloatNDArray:
+        """
+        Points spanning the support, spaced evenly in ``arctan`` so infinite ends are covered.
+
+        Spacing in ``arctan`` leaves the gaps far from zero wide, the last one on an unbounded
+        support spanning many orders of magnitude. Around the ``anchor``, the points are therefore
+        also spaced geometrically in its scale, out to well past where the mass ends.
+        """
         low = np.arctan(lower_bound) if np.isfinite(lower_bound) else -np.pi / 2
         high = np.arctan(upper_bound) if np.isfinite(upper_bound) else np.pi / 2
         # Step strictly inside the support: the endpoints are region edges already, and
         # tan(+-pi/2) is not representable.
         margin = (high - low) * 1e-9
-        return np.asarray(np.tan(np.linspace(low + margin, high - margin, _BRACKET_SUBDIVISIONS + 1)))
+        grid = np.tan(np.linspace(low + margin, high - margin, _BRACKET_SUBDIVISIONS + 1))
+        if anchor is None:
+            return np.asarray(grid)
+        offsets = np.geomspace(1e-3, 1e8, 133)
+        around = anchor.location + anchor.scale * np.concatenate([-offsets[::-1], [0.0], offsets])
+        around = around[(around > lower_bound) & (around < upper_bound)]
+        return np.unique(np.concatenate([grid, around]))
 
     def evaluate(self, x: float) -> FloatNDArray:
         """Return the profit of every hull vertex at ``x``."""
-        return np.asarray(self.profit_fn(self.true_positive_rates, self.false_positive_rates, x), dtype=np.float64)
+        # Far out on an unbounded support, a profit such as exp(x) overflows; NaN ranks last.
+        with np.errstate(all='ignore'):
+            return np.asarray(self.profit_fn(self.true_positive_rates, self.false_positive_rates, x), dtype=np.float64)
 
 
 def _probe(lower: float, upper: float) -> float:

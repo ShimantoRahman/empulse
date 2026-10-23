@@ -1,5 +1,6 @@
 import copy
 from collections.abc import Callable, Iterable, Sequence
+from itertools import pairwise
 from typing import Any, Literal, Self, overload
 
 import numpy as np
@@ -8,32 +9,154 @@ from scipy.special import expit
 
 from ....._common._objective import ElasticNetPenalty, LogitObjective
 from ....._types import Float64Array, FloatNDArray, IntNDArray
-from ...._cy_convex_hull import convex_hull, convex_hull_from_counts
+from ...._cy_convex_hull import convex_hull, convex_hull_from_counts, convex_hull_full, convex_hull_full_from_counts
 from ..._compile import CountScoreFn, _safe_lambdify
 from ..._parameter_domain import _check_parameters
+from .envelope import _probe
 
 
-def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
+def _convex_hull(y_true: IntNDArray, y_score: FloatNDArray, *, full: bool = False) -> tuple[FloatNDArray, FloatNDArray]:
     """
     Return the ROC convex hull as (TPR, FPR), for labels and scores of any numeric dtype and layout.
 
     The compiled hull only accepts int32 labels and float64 scores, so any other dtype is converted
-    here. Arrays that already have them are passed on without a copy.
+    here. Arrays that already have them are passed on without a copy. With ``full``, the vertices of
+    the lower hull follow, see :func:`~empulse.metrics._cy_convex_hull.convex_hull_full`.
     """
-    return convex_hull(  # type: ignore[no-any-return]
+    hull = convex_hull_full if full else convex_hull
+    return hull(  # type: ignore[no-any-return]
         np.asarray(y_true, dtype=np.int32),
         np.asarray(y_score, dtype=np.float64),
     )
 
 
 def _convex_hull_from_counts(
-    y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray
+    y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray, *, full: bool = False
 ) -> tuple[FloatNDArray, FloatNDArray]:
-    return convex_hull_from_counts(  # type: ignore[no-any-return]
+    hull = convex_hull_full_from_counts if full else convex_hull_from_counts
+    return hull(  # type: ignore[no-any-return]
         np.asarray(y_score, dtype=np.float64),
         np.asarray(n_positive, dtype=np.int64),
         np.asarray(n_negative, dtype=np.int64),
     )
+
+
+class _LowerChainGate:
+    """
+    Decide whether the lower hull of the ROC curve can hold the most profitable operating point.
+
+    The profit is linear in the rates, ``constant + a * F_0 + b * F_1``, with
+    ``a = pi_0 * (tp_benefit + fn_cost)`` and ``b = -pi_1 * (tn_benefit + fp_cost)``. Its maximum over
+    the ROC curve lies on the upper hull, which includes (0, 0) and (1, 1), unless ``a < 0 < b``:
+    targeting a positive costs more than missing it, while targeting a negative gains. Only then can
+    it lie below the diagonal, on the lower hull. That takes a cost matrix whose benefits are
+    inverted, so the lower hull is built only when the coefficients can take those signs.
+
+    Parameters
+    ----------
+    profit_function : sympy.Expr
+        The profit, linear in ``F_0`` and ``F_1``.
+    random_symbols : sequence of sympy.stats.rv.RandomSymbol
+        The stochastic variables, in the order of the sample grids the gate is given.
+    """
+
+    def __init__(self, profit_function: sympy.Expr, random_symbols: Sequence[sympy.Symbol]) -> None:
+        pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
+        # The priors are positive, so they do not change the signs.
+        coefficients = (
+            sympy.diff(profit_function, tpr).subs(pos_prior, 1),
+            sympy.diff(profit_function, fpr).subs(neg_prior, 1),
+        )
+        self.random_symbols = list(random_symbols)
+        parameters = sorted(
+            {symbol for coefficient in coefficients for symbol in coefficient.free_symbols} - set(self.random_symbols),
+            key=str,
+        )
+        self.parameter_names = [str(symbol) for symbol in parameters]
+        arguments = [*parameters, *self.random_symbols]
+        self._coefficients = [_safe_lambdify(coefficient, arguments, dummify=True) for coefficient in coefficients]
+        self._is_random = any(coefficient.has(*self.random_symbols) for coefficient in coefficients)
+        # Polynomial coefficients in a single stochastic variable, in ascending powers.
+        self._polynomials: list[list[Callable[..., Any]]] | None = None
+        if len(self.random_symbols) == 1:
+            try:
+                polynomials = [sympy.Poly(sympy.expand(c), self.random_symbols[0]) for c in coefficients]
+            except (sympy.polys.polyerrors.PolynomialError, TypeError, ValueError, NotImplementedError):
+                polynomials = None
+            if polynomials is not None:
+                self._polynomials = [
+                    [_safe_lambdify(term, parameters, dummify=True) for term in reversed(polynomial.all_coeffs())]
+                    for polynomial in polynomials
+                ]
+        # The last parameters and their answer, published as one tuple for concurrent callers.
+        self._cache: tuple[tuple[Any, ...], bool] | None = None
+
+    def _values(self, parameters: dict[str, Any]) -> list[Any] | None:
+        try:
+            return [parameters[name] for name in self.parameter_names]
+        except KeyError:
+            return None
+
+    def _cached(self, key: tuple[Any, ...], decide: Callable[[], bool]) -> bool:
+        cached = self._cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        answer = decide()
+        self._cache = (key, answer)
+        return answer
+
+    def on_support(self, parameters: dict[str, Any], lower_bound: float, upper_bound: float) -> bool:
+        """Whether ``a < 0 < b`` anywhere in the support of a single stochastic variable."""
+        values = self._values(parameters)
+        if values is None:
+            return True
+        if not self._is_random:
+            return self._at(values, [])
+        if self._polynomials is None:
+            return True  # not a polynomial: assume it can
+        try:
+            key = (*(float(value) for value in values), float(lower_bound), float(upper_bound))
+        except (TypeError, ValueError):
+            return True
+        return self._cached(key, lambda: self._polynomials_invert(values, lower_bound, upper_bound))
+
+    def _polynomials_invert(self, values: list[Any], lower_bound: float, upper_bound: float) -> bool:
+        assert self._polynomials is not None
+        polynomials = [
+            np.array([float(term(*values)) for term in polynomial], dtype=np.float64)
+            for polynomial in self._polynomials
+        ]
+        edges = [lower_bound, upper_bound]
+        for coefficients in polynomials:
+            nonzero = np.flatnonzero(coefficients)
+            if len(nonzero) and nonzero[-1] > 0:
+                roots = np.roots(coefficients[: nonzero[-1] + 1][::-1])
+                real = roots.real[np.abs(roots.imag) <= 1e-12 * np.maximum(1.0, np.abs(roots.real))]
+                edges.extend(root for root in real if lower_bound < root < upper_bound)
+        edges.sort()
+        for lower, upper in pairwise(edges):
+            if lower == upper:
+                continue
+            x = _probe(lower, upper)
+            tpr_coefficient, fpr_coefficient = (np.polynomial.polynomial.polyval(x, c) for c in polynomials)
+            if tpr_coefficient < 0 < fpr_coefficient:
+                return True
+        return False
+
+    def on_samples(self, parameters: dict[str, Any], param_grid: Sequence[Any]) -> bool:
+        """Whether ``a < 0 < b`` at any of the samples of the stochastic variables."""
+        values = self._values(parameters)
+        if values is None:
+            return True
+        return self._at(values, param_grid)
+
+    def _at(self, values: list[Any], param_grid: Sequence[Any]) -> bool:
+        if not self._is_random:
+            param_grid = [np.nan] * len(self.random_symbols)
+        tpr_coefficient, fpr_coefficient = (
+            np.asarray(function(*values, *param_grid), dtype=np.float64) for function in self._coefficients
+        )
+        return bool(np.any((tpr_coefficient < 0) & (fpr_coefficient > 0)))
 
 
 class _HullScoreFunction:
@@ -57,11 +180,20 @@ class _HullScoreFunction:
     ) -> float:
         raise NotImplementedError
 
+    def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
+        """
+        Whether the lower hull can hold the most profitable vertex for these parameters.
+
+        :meth:`_score_hull` then gets the whole convex hull, see :class:`_LowerChainGate`. True
+        unless a subclass can tell otherwise.
+        """
+        return True
+
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
         positive_class_prior = float(np.mean(y_true))
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
+        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
         return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, kwargs)
 
     def _count_scorer(self, **kwargs: Any) -> CountScoreFn:
@@ -73,11 +205,14 @@ class _HullScoreFunction:
         as calling this score function on the samples themselves.
         """
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
+        full = self._needs_lower_hull(dict(kwargs))
 
         def score(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
             n_positives = int(np.sum(n_positive))
             positive_class_prior = n_positives / (n_positives + int(np.sum(n_negative)))
-            true_positive_rates, false_positive_rates = _convex_hull_from_counts(y_score, n_positive, n_negative)
+            true_positive_rates, false_positive_rates = _convex_hull_from_counts(
+                y_score, n_positive, n_negative, full=full
+            )
             # _score_hull may consume entries of the parameters, so each call gets its own copy.
             return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
 
@@ -93,9 +228,10 @@ class _HullScoreFunction:
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
         y_true = np.ascontiguousarray(y_true, dtype=np.int32).reshape(-1)
         positive_class_prior = float(np.mean(y_true))
+        full = self._needs_lower_hull(dict(kwargs))
 
         def score(y_score: FloatNDArray) -> float:
-            true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score)
+            true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=full)
             # _score_hull may consume entries of the parameters, so each call gets its own copy.
             return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
 

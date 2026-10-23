@@ -28,6 +28,24 @@ Metrics
 - |Fix| :class:`~empulse.metrics.MaxProfit` no longer returns ``nan`` for Gamma, Chi-squared and Beta
   distributions with large shape parameters, such as :func:`~empulse.metrics.empc_score` with a
   concentrated Beta prior.
+- |Fix| :class:`~empulse.metrics.MaxProfit` integrates numerically wherever a stochastic variable's
+  mass lies. With ``integration_method='quad'``, or a single variable whose expected profit has no
+  closed form, a distribution far from zero, such as a Laplace(200, 2), or much narrower or wider
+  than one, such as a Normal(0, 1e-4), gave about zero without a warning. A density that overflows
+  a float, such as a Logistic, a Gamma(100, 1) or a Beta(600, 1400), no longer gives ``nan`` or
+  raises an ``OverflowError``. A large estimated integration error now warns.
+- |Fix| :class:`~empulse.metrics.MaxProfit` finds every point where the optimal threshold changes
+  for a profit that is not a polynomial in its stochastic variable, such as ``exp(v / 2)``, which
+  gave ``nan`` or a wrong optimal rate.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables maximizes over every threshold
+  when targeting a positive loses and targeting a negative gains, like the deterministic
+  :class:`~empulse.metrics.MaxProfit` does, instead of only over the part of the ROC convex hull
+  above its diagonal. Other cost matrices are scored as before.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with a discrete stochastic variable, such as a Poisson or
+  a Bernoulli one, uses Monte Carlo integration under ``integration_method='auto'``, and
+  ``'quad'`` raises a clear error, instead of failing with an ``IndexError`` or an
+  ``AttributeError``. ``'quasi-monte-carlo'`` with a distribution it has no quantile function for
+  raises a clear error instead of a ``KeyError``.
 - |Fix| :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.MinCost` average each
   instance-dependent cost and benefit over the samples, rather than the parameters they are computed
   from, so a cost such as the product of two instance-dependent parameters is averaged correctly. A

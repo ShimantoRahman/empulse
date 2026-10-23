@@ -11,6 +11,7 @@ from .common import (
     _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
+    _LowerChainGate,
     _SampledIntegrand,
     extract_distribution_parameters,
 )
@@ -70,6 +71,7 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         self.rng = rng
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
         self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
+        self._lower_chain_gate = _LowerChainGate(profit_function, list(random_symbols))
 
         # Every grid is drawn from this seed, so the samples for a set of distribution parameters do not
         # depend on which were sampled before, nor on whether they were given up front or at call time.
@@ -99,14 +101,8 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
             for random_var in random_symbols
         ]
 
-    def _score_hull(
-        self,
-        true_positive_rates: FloatNDArray,
-        false_positive_rates: FloatNDArray,
-        positive_class_prior: float,
-        kwargs: dict[str, Any],
-    ) -> float:
-        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+    def _grid(self, kwargs: dict[str, Any]) -> tuple[list[Any], list[FloatNDArray], dict[str, Any]]:
+        """Return the samples and control variates for these parameters, and the parameters to evaluate them with."""
         dist_params: dict[str, Any] = {}
         param_grid = self.param_grid
         controls = self.controls
@@ -120,15 +116,34 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
                 controls = _control_variates(self.random_symbols, param_grid, distribution_parameters)
                 self._grid_cache = (distribution_parameters, param_grid, controls)
             dist_params = distribution_parameters
-
         assert param_grid is not None
+        return param_grid, controls, {**kwargs, **dist_params}
+
+    def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
+        """Whether the lower hull can hold the most profitable vertex at any of the samples."""
+        # Instances pickled by older versions lack the gate.
+        gate = getattr(self, '_lower_chain_gate', None)
+        if gate is None:
+            return True
+        param_grid, _, parameters = self._grid(dict(kwargs))
+        return bool(gate.on_samples(parameters, param_grid))
+
+    def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+        param_grid, controls, parameters = self._grid(kwargs)
         return _evaluate_sampled_integrands(
             self._profit_integrand,
             self._rate_integrand,
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
-            {**kwargs, **dist_params},
+            parameters,
             param_grid,
             self.n_mc_samples,
             controls,

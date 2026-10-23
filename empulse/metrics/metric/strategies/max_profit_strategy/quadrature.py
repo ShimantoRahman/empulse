@@ -12,6 +12,7 @@ from sympy.stats import pspace
 from ....._types import FloatNDArray
 from ..._compile import _safe_lambdify
 from ..._symbolic import _subs_by_name
+from ._anchoring import Anchor, DensityOf, anchored_nquad, anchored_quad, warn_if_inaccurate
 from .common import (
     _distribution_parameter_symbols,
     _HullScoreFunction,
@@ -23,13 +24,24 @@ def compute_integral_multiple_quad(
     integrand: Callable[..., float],
     bounds: Sequence[float],
     n_random: int,
+    anchors: Sequence[Anchor | None] | None = None,
 ) -> float:
     """
     Integrate *integrand* over a box with scipy quadrature.
 
     *integrand* takes one value per stochastic variable, in the order of *bounds*, which holds each
-    variable's lower and upper bound in turn.
+    variable's lower and upper bound in turn. With *anchors*, where each variable's mass lies, each
+    axis is split around its anchor (see :func:`~._anchoring.anchored_nquad`), and a large
+    estimated error is reported.
     """
+    if anchors is not None:
+        ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
+        if n_random == 1:
+            value, error = anchored_quad(integrand, *ranges[0], anchors[0])
+        else:
+            value, error = anchored_nquad(integrand, ranges, anchors)
+        warn_if_inaccurate(value, error)
+        return float(value)
 
     def reversed_integrand(*random_vars: float) -> float:
         # dblquad and tplquad pass the innermost variable first, the reverse of the order of the bounds.
@@ -65,38 +77,54 @@ class _Hull:
     """
     The vertices of a ROC convex hull, for finding the one that maximizes a linear function of them.
 
-    Walking the hull from ``(0, 0)`` to ``(1, 1)``, the slopes ``dF_1 / dF_0`` of its segments
+    Walking the upper hull from ``(0, 0)`` to ``(1, 1)``, the slopes ``dF_1 / dF_0`` of its segments
     increase. A step along segment ``k`` changes ``a * F_0 + b * F_1`` by
     ``dF_0 * (a + slope_k * b)``, which changes sign at most once along the hull:
 
     - ``a >= 0 >= b``: the function rises while ``slope_k < -a / b`` and falls after, so the maximum
       is where that threshold falls among the slopes, found by bisection.
-    - ``a <= 0 <= b``: the function falls, then rises, so the maximum is at one of the two ends.
+    - ``a <= 0 <= b``: along the upper hull the function falls, then rises. Its maximum is on the
+      lower hull instead, whose slopes decrease from ``(0, 0)`` to ``(1, 1)``: it rises there while
+      ``slope_k > -a / b``, which is again found by bisection. Without lower hull vertices (see
+      :func:`~empulse.metrics._cy_convex_hull.convex_hull_full`), the lower hull is the diagonal and
+      the maximum one of its two ends.
     - ``a, b > 0``: it rises all the way; ``a, b < 0``: it falls all the way.
     """
 
     def __init__(self, true_positive_rates: FloatNDArray, false_positive_rates: FloatNDArray) -> None:
         tprs = np.asarray(true_positive_rates, dtype=np.float64)
         fprs = np.asarray(false_positive_rates, dtype=np.float64)
+        # The upper hull ends at its first (1, 1); any vertices after it are the lower hull's, walked back.
+        top = np.flatnonzero((tprs == 1.0) & (fprs == 1.0))
+        self.last = int(top[0]) if len(top) else len(tprs) - 1
+        upper = slice(0, self.last + 1)
+        self.slopes = self._slopes(tprs[upper], fprs[upper], np.maximum)
+        # The lower hull from (0, 0) to (1, 1), as indices into the vertices.
+        self.lower_indices: list[int] = [0, *range(len(tprs) - 1, self.last, -1), self.last]
+        lower_slopes = self._slopes(tprs[self.lower_indices], fprs[self.lower_indices], np.minimum)
+        # Negated, so that they increase as `bisect` needs.
+        self.negated_lower_slopes = [-slope for slope in lower_slopes]
+        self.tprs: list[float] = tprs.tolist()
+        self.fprs: list[float] = fprs.tolist()
+
+    @staticmethod
+    def _slopes(tprs: FloatNDArray, fprs: FloatNDArray, monotone: np.ufunc) -> list[float]:
         tpr_steps, fpr_steps = np.diff(tprs), np.diff(fprs)
         with np.errstate(divide='ignore', invalid='ignore'):
             slopes = np.where(tpr_steps > 0, fpr_steps / tpr_steps, np.inf)
-        # Increasing by construction; this only guards the bisection against rounding.
-        self.slopes: list[float] = np.maximum.accumulate(slopes).tolist()
-        self.tprs: list[float] = tprs.tolist()
-        self.fprs: list[float] = fprs.tolist()
+        # Monotone by construction; this only guards the bisection against rounding.
+        return monotone.accumulate(slopes).tolist() if len(slopes) else []
 
     def best_vertex(self, tpr_coefficient: float, fpr_coefficient: float) -> int:
         """Return the index of the first vertex maximizing ``tpr_coefficient * F_0 + fpr_coefficient * F_1``."""
         if tpr_coefficient >= 0 >= fpr_coefficient:
             threshold = -tpr_coefficient / fpr_coefficient if fpr_coefficient < 0 else math.inf
             return bisect.bisect_left(self.slopes, threshold)
-        last = len(self.tprs) - 1
         if tpr_coefficient <= 0 <= fpr_coefficient:
-            first_value = tpr_coefficient * self.tprs[0] + fpr_coefficient * self.fprs[0]
-            last_value = tpr_coefficient * self.tprs[last] + fpr_coefficient * self.fprs[last]
-            return 0 if first_value >= last_value else last
-        return last if tpr_coefficient > 0 else 0
+            threshold = -tpr_coefficient / fpr_coefficient if fpr_coefficient > 0 else math.inf
+            # The number of leading lower-hull segments steeper than the threshold, along which it rises.
+            return self.lower_indices[bisect.bisect_left(self.negated_lower_slopes, -threshold)]
+        return self.last if tpr_coefficient > 0 else 0
 
 
 class MaxProfitScoreQuad(_HullScoreFunction):
@@ -136,14 +164,14 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         # writes its density in the plain symbol `x`, so the random symbol itself cannot stand in.
         placeholders = [sympy.Dummy(str(random_symbol)) for random_symbol in random_symbols]
         to_placeholder = dict(zip(random_symbols, placeholders, strict=True))
-        # evalf folds numeric constants such as the normalization `beta(6, 14)` into numbers, which
-        # would otherwise be recomputed at every point of the integration.
-        joint_density = sympy.Mul(
-            *(
-                pspace(random_symbol).distribution.pdf(placeholder)
-                for random_symbol, placeholder in zip(random_symbols, placeholders, strict=True)
-            )
-        ).evalf()
+        self._densities = [
+            DensityOf(random_symbol, placeholder)
+            for random_symbol, placeholder in zip(random_symbols, placeholders, strict=True)
+        ]
+        # The log of the joint density, whose exponential is taken numerically (see DensityOf). evalf
+        # folds numeric constants such as the normalization `loggamma(6)` into numbers, which would
+        # otherwise be recomputed at every point of the integration.
+        joint_density = sympy.Add(*(density_of.log_expression for density_of in self._densities)).evalf()
         profit_coefficients = [
             coefficient.xreplace(to_placeholder) for coefficient in _roc_coefficients(profit_function)
         ]
@@ -161,7 +189,7 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         self.parameter_names = [str(symbol) for symbol in parameters]
         arguments = [*parameters, *placeholders]
         # dummify: a density calls functions, such as `beta(alpha, beta)`, that a parameter can be named after.
-        self._density = _safe_lambdify(joint_density, arguments, dummify=True)
+        self._log_density = _safe_lambdify(joint_density, arguments, dummify=True)
         self._profit = tuple(
             _safe_lambdify(coefficient, arguments, dummify=True) for coefficient in profit_coefficients
         )
@@ -184,9 +212,19 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
         bounds = [bound for bounds in self.random_variables_bounds for bound in bounds]
         bounds = [
-            _subs_by_name(bounds, distribution_parameters) if isinstance(bounds, sympy.Expr) else bounds
-            for bounds in bounds
+            float(_subs_by_name(bound, distribution_parameters) if isinstance(bound, sympy.Expr) else bound)
+            for bound in bounds
         ]
+        # Instances pickled by older versions lack the densities.
+        densities = getattr(self, '_densities', None)
+        anchors = (
+            [
+                density_of.anchor(distribution_parameters, lower, upper)
+                for density_of, lower, upper in zip(densities, bounds[::2], bounds[1::2], strict=True)
+            ]
+            if densities is not None
+            else None
+        )
 
         values = {
             **kwargs,
@@ -199,7 +237,15 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         best_vertex, tprs, fprs = hull.best_vertex, hull.tprs, hull.fprs
         # The compiled functions themselves, without the pickling wrapper's extra call: the
         # integrand runs hundreds of thousands of times.
-        joint_density = self._density.func
+        log_density = getattr(self, '_log_density', None)
+        if log_density is not None:
+            log_density_fn = log_density.func
+
+            def joint_density(*arguments: float) -> Any:
+                return np.exp(log_density_fn(*arguments))
+
+        else:  # pickled by an older version, with the density itself
+            joint_density = vars(self)['_density'].func
         profit_constant, profit_tpr_coefficient, profit_fpr_coefficient = (function.func for function in self._profit)
         rate = tuple(function.func for function in self._rate) if self._rate is not None else None
 
@@ -219,4 +265,6 @@ class MaxProfitScoreQuad(_HullScoreFunction):
                 )
             return float(value * joint_density(*arguments))
 
-        return compute_integral_multiple_quad(integrand, bounds, self.n_random)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            return compute_integral_multiple_quad(integrand, bounds, self.n_random, anchors)

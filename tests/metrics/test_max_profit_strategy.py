@@ -616,6 +616,51 @@ def test_max_profit_cubic_profit_without_real_crossings(y_true_and_prediction):
     assert exact == pytest.approx(numerical, rel=1e-6)
 
 
+class TestInvertedCosts:
+    """
+    When targeting a positive loses and targeting a negative gains, the optimum can lie below the diagonal.
+
+    The deterministic score maximizes over every threshold, and so must the stochastic ones: they
+    looked at the upper hull only, which made a metric with a barely stochastic variable disagree
+    with the same metric without it.
+    """
+
+    # A weak model, whose ROC curve dips below its diagonal.
+    RNG = np.random.default_rng(1)
+    Y_TRUE = RNG.integers(0, 2, 400)
+    Y_SCORE = np.round(RNG.random(400), 2)
+
+    @pytest.mark.parametrize('integration_method', ['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo'])
+    def test_a_barely_stochastic_variable_agrees_with_the_deterministic_score(self, integration_method):
+        deterministic = Metric(CostMatrix().add_tp_benefit(-5).add_fp_cost(-5.5), MaxProfit())
+        stochastic = Metric(
+            CostMatrix().add_tp_benefit(-5 + sympy.stats.Uniform('v', -1e-6, 1e-6)).add_fp_cost(-5.5),
+            MaxProfit(integration_method=integration_method, random_state=0),
+        )
+        assert stochastic(self.Y_TRUE, self.Y_SCORE) == pytest.approx(
+            deterministic(self.Y_TRUE, self.Y_SCORE), rel=1e-6
+        )
+        assert stochastic.optimal_rate(self.Y_TRUE, self.Y_SCORE) == pytest.approx(
+            deterministic.optimal_rate(self.Y_TRUE, self.Y_SCORE), rel=1e-6
+        )
+        # The optimum lies below the diagonal, so the upper hull alone gives less.
+        upper_tpr, upper_fpr = _convex_hull(self.Y_TRUE, self.Y_SCORE)
+        pi0 = self.Y_TRUE.mean()
+        upper_hull_profit = np.max(-5 * pi0 * upper_tpr + 5.5 * (1 - pi0) * upper_fpr)
+        assert deterministic(self.Y_TRUE, self.Y_SCORE) > upper_hull_profit + 0.01
+
+    def test_the_lower_hull_is_built_only_when_the_costs_can_be_inverted(self):
+        gamma = sympy.stats.Beta('gamma', 6, 14)
+        normal = Metric(CostMatrix().add_tp_benefit(200 * gamma).add_fp_cost(10), MaxProfit())
+        sometimes_inverted = Metric(CostMatrix().add_tp_benefit(200 * gamma - 50).add_fp_cost(-1), MaxProfit())
+        never_targeting_negatives_gains = Metric(
+            CostMatrix().add_tp_benefit(200 * gamma - 50).add_fp_cost(1), MaxProfit()
+        )
+        assert not normal.strategy._score_function._needs_lower_hull({})
+        assert sometimes_inverted.strategy._score_function._needs_lower_hull({})
+        assert not never_targeting_negatives_gains.strategy._score_function._needs_lower_hull({})
+
+
 def test_objective_boost_max_profit_deterministic_linear():
     clv = sympy.symbols('clv')
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
