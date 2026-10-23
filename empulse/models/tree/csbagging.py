@@ -178,8 +178,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
     base_estimator_ : estimator
         The estimator that each ensemble member is a clone of: the ``estimator`` passed
-        to the constructor, or a fully grown :class:`~empulse.models.CSTreeClassifier`
-        (``min_impurity_decrease=0.0``) when ``estimator`` is ``None``.
+        to the constructor, or a default :class:`~empulse.models.CSTreeClassifier` when ``estimator``
+        is ``None``. It grows until no split lowers the cost of its training samples.
 
     estimators_ : list of estimators
         The collection of fitted base estimators.
@@ -342,8 +342,9 @@ class CSBaggingClassifier(CostSensitiveClassifier):
                 raise ValueError(f'{name} has shape {cost.shape}, but should have shape ({n_samples},)')
 
         if self.estimator is None:
-            # Fully grown trees: bagging averages their variance away.
-            self.base_estimator_ = CSTreeClassifier(min_impurity_decrease=0.0)
+            # Grown until no split lowers the cost, rather than until the leaves are pure: pure leaves
+            # vote their class whatever it costs, which bagging does not average away.
+            self.base_estimator_ = CSTreeClassifier()
         else:
             self.base_estimator_ = clone(self.estimator)
 

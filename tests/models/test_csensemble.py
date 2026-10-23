@@ -395,16 +395,17 @@ class TestPredictVotesCheapestClasses:
         )
         np.testing.assert_array_equal(model.predict(X), (votes > weights.sum() / 2).astype(int))
 
-    def test_bagging_keeps_fully_grown_trees(self):
+    def test_bagging_grows_trees_only_while_the_cost_drops(self):
         X, y, fp_cost, fn_cost = self._data()
         model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
-        assert all(tree.min_impurity_decrease_ == 0.0 for tree in model.estimator_.estimators_)
+        assert all(tree.min_impurity_decrease is None for tree in model.estimator_.estimators_)
+        assert all(tree.min_impurity_decrease_ > 0.0 for tree in model.estimator_.estimators_)
 
     def test_bagging_an_explicit_cost_sensitive_tree_votes_like_the_default(self):
         X, y, fp_cost, fn_cost = self._data()
         default = CSBaggingClassifier(n_estimators=5, random_state=0).fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
-        explicit = CSBaggingClassifier(CSTreeClassifier(min_impurity_decrease=0.0), n_estimators=5, random_state=0)
+        explicit = CSBaggingClassifier(CSTreeClassifier(), n_estimators=5, random_state=0)
         explicit.fit(X, y, fp_cost=fp_cost, fn_cost=fn_cost)
 
         np.testing.assert_array_equal(explicit.predict(X), default.predict(X))

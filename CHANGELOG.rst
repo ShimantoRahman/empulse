@@ -101,6 +101,12 @@ Metrics
 Models
 ------
 
+- |API| :class:`~empulse.models.CSForestClassifier` accepts ``min_impurity_decrease=None``, as
+  :class:`~empulse.models.CSTreeClassifier` does, and both it and the default tree of
+  :class:`~empulse.models.CSBaggingClassifier` now use it: a tree only splits while that lowers the
+  cost of its training samples, instead of growing until its leaves are pure. On the 15 bundled
+  datasets the ensembles' own predictions save more, with a tenth of the leaves or fewer and fits
+  taking half the time. Pass ``min_impurity_decrease=0.0`` for the previous trees.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
   :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
   metrics, instead of the maximum profit of their averaged costs.

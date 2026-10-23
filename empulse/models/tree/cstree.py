@@ -21,13 +21,9 @@ from ._cstree._grow import (
     as_float32,
     grow_tree,
     missing_feature_mask,
+    resolve_min_impurity_decrease,
     resolve_tree_params,
 )
-
-# The smallest cost decrease per sample, relative to the average cost per sample, that
-# `min_impurity_decrease=None` counts as a real decrease. On a million samples, rounding errors
-# stayed below 1e-16 while the smallest real decrease was 2e-10, so this sits well clear of both.
-_RELATIVE_MIN_COST_DECREASE = 1e-12
 
 
 def _warn_if_trees_ignore_strategy(loss: BaseMetric, model_name: str, *, loss_used_for: str | None = None) -> None:
@@ -404,7 +400,16 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         sample_weight = None if self.class_weight is None else compute_sample_weight(self.class_weight, y)
 
         self._cost_scale = decision_cost_scale(loss, y, **loss_params)
-        self.min_impurity_decrease_ = self._resolve_min_impurity_decrease(y, tp_cost, tn_cost, fp_cost, fn_cost)
+        self.min_impurity_decrease_ = resolve_min_impurity_decrease(
+            self.min_impurity_decrease,
+            criterion=self.criterion,
+            decision_cost_scale=self._cost_scale,
+            y=y,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
         params = self._tree_params(n_samples=X.shape[0], n_features=X.shape[1])
         self.max_features_ = params.max_features
         X = as_float32(X, fortran=True)
@@ -434,26 +439,6 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
             min_impurity_decrease=self.min_impurity_decrease_,
             ccp_alpha=self.ccp_alpha * self._cost_scale,
         )
-
-    def _resolve_min_impurity_decrease(
-        self,
-        y: IntArrayLike,
-        tp_cost: FloatNDArray | float,
-        tn_cost: FloatNDArray | float,
-        fp_cost: FloatNDArray | float,
-        fn_cost: FloatNDArray | float,
-    ) -> float:
-        """Return ``min_impurity_decrease``, resolving ``None`` as its docstring describes."""
-        if self.min_impurity_decrease is not None:
-            return float(self.min_impurity_decrease) * self._cost_scale
-        if self.criterion != 'cost':
-            return 0.0
-        is_positive = np.asarray(y).reshape(-1) == 1
-        # The cost of predicting each sample positive, and negative.
-        positive_cost = np.where(is_positive, tp_cost, fp_cost)
-        negative_cost = np.where(is_positive, fn_cost, tn_cost)
-        cost_scale = float(np.mean(np.abs(positive_cost)) + np.mean(np.abs(negative_cost)))
-        return _RELATIVE_MIN_COST_DECREASE * cost_scale
 
     def _validate_X_predict(self, X: FloatArrayLike, check_input: bool) -> FloatNDArray:
         check_is_fitted(self)

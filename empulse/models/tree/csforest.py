@@ -1,7 +1,7 @@
 import numbers
 import warnings
 from collections.abc import Callable
-from numbers import Integral, Real
+from numbers import Integral
 from typing import Any, ClassVar, Literal, Self, cast
 
 import numpy as np
@@ -27,6 +27,7 @@ from ._cstree._grow import (
     as_float32,
     grow_tree,
     missing_feature_mask,
+    resolve_min_impurity_decrease,
     resolve_tree_params,
 )
 from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
@@ -173,10 +174,15 @@ class CSForestClassifier(CostSensitiveClassifier):
         Best nodes are defined as relative reduction in impurity.
         If None then unlimited number of leaf nodes.
 
-    min_impurity_decrease : float, default=0.0
+    min_impurity_decrease : float or None, default=None
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value, times the average cost of a wrong decision on the
         training data, so that it does not depend on the units of the costs.
+
+        ``None`` means that with ``criterion="cost"`` a node is only split if the split lowers the
+        cost of the training samples by more than rounding error, as in :class:`CSTreeClassifier`, and
+        otherwise means ``0.0``. ``0.0`` splits on any decrease, growing each tree until its leaves are
+        pure, so that the trees' votes follow the class labels more than the costs.
 
         The weighted impurity decrease equation is the following::
 
@@ -312,7 +318,6 @@ class CSForestClassifier(CostSensitiveClassifier):
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
         **TREE_PARAM_CONSTRAINTS,
-        'min_impurity_decrease': [Interval(Real, 0.0, None, closed='left')],
         'combination': [StrOptions({'majority_voting', 'weighted_voting'})],
         'n_estimators': [Interval(Integral, 1, None, closed='left')],
         'bootstrap': ['boolean'],
@@ -345,7 +350,7 @@ class CSForestClassifier(CostSensitiveClassifier):
         min_weight_fraction_leaf: float = 0.0,
         max_features: Literal['sqrt', 'log2'] | float | None = 'sqrt',
         max_leaf_nodes: int | None = None,
-        min_impurity_decrease: float = 0.0,
+        min_impurity_decrease: float | None = None,
         bootstrap: bool = True,
         oob_score: bool | Callable[[Any, Any], float] = False,
         n_jobs: int | None = None,
@@ -463,6 +468,16 @@ class CSForestClassifier(CostSensitiveClassifier):
         self._n_samples_bootstrap = (
             _get_n_samples_bootstrap(n_samples, self.max_samples, self._sample_weight) if self.bootstrap else None
         )
+        min_impurity_decrease = resolve_min_impurity_decrease(
+            self.min_impurity_decrease,
+            criterion=self.criterion,
+            decision_cost_scale=cost_scale,
+            y=y,
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
         params = resolve_tree_params(
             n_samples=n_samples,
             n_features=n_features,
@@ -474,7 +489,7 @@ class CSForestClassifier(CostSensitiveClassifier):
             min_weight_fraction_leaf=self.min_weight_fraction_leaf,
             max_features=self.max_features,
             max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self.min_impurity_decrease * cost_scale,
+            min_impurity_decrease=min_impurity_decrease,
             ccp_alpha=self.ccp_alpha * cost_scale,
         )
 

@@ -10,13 +10,18 @@ import numpy as np
 from numpy.typing import NDArray
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 
-from ...._types import FloatNDArray
+from ...._types import FloatNDArray, IntArrayLike
 from ._costs import criterion_kind
 from ._splitter import Splitter
 from ._tree import CostTree, build_tree, prune_tree
 
 # The largest value of scikit-learn's tree seeds, 2^31 - 1.
 RAND_R_MAX = np.iinfo(np.int32).max
+
+# The smallest cost decrease per sample, relative to the average cost per sample, that
+# `min_impurity_decrease=None` counts as a real decrease. On a million samples, rounding errors
+# stayed below 1e-16 while the smallest real decrease was 2e-10, so this sits well clear of both.
+_RELATIVE_MIN_COST_DECREASE = 1e-12
 
 TREE_PARAM_CONSTRAINTS: dict[str, list[Any]] = {
     'criterion': [StrOptions({'cost', 'gini', 'entropy', 'log_loss'})],
@@ -121,6 +126,35 @@ def resolve_tree_params(
         min_impurity_decrease=float(min_impurity_decrease),
         ccp_alpha=float(ccp_alpha),
     )
+
+
+def resolve_min_impurity_decrease(
+    min_impurity_decrease: float | None,
+    *,
+    criterion: str,
+    decision_cost_scale: float,
+    y: IntArrayLike,
+    tp_cost: FloatNDArray | float,
+    tn_cost: FloatNDArray | float,
+    fp_cost: FloatNDArray | float,
+    fn_cost: FloatNDArray | float,
+) -> float:
+    """
+    Return the absolute ``min_impurity_decrease`` a tree grows with.
+
+    A float is relative to ``decision_cost_scale``, the average cost of a wrong decision. ``None``
+    with ``criterion="cost"`` is a tolerance for rounding, relative to the average cost per sample
+    of predicting it positive plus predicting it negative; with any other criterion it is ``0.0``.
+    """
+    if min_impurity_decrease is not None:
+        return float(min_impurity_decrease) * decision_cost_scale
+    if criterion != 'cost':
+        return 0.0
+    is_positive = np.asarray(y).reshape(-1) == 1
+    positive_cost = np.where(is_positive, tp_cost, fp_cost)
+    negative_cost = np.where(is_positive, fn_cost, tn_cost)
+    cost_per_sample = float(np.mean(np.abs(positive_cost)) + np.mean(np.abs(negative_cost)))
+    return _RELATIVE_MIN_COST_DECREASE * cost_per_sample
 
 
 def grow_tree(
