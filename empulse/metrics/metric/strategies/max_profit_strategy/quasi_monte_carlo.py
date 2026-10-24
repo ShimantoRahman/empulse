@@ -150,7 +150,6 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         self.random_symbols = random_symbols
         self.deterministic_symbols = deterministic_symbols
         self.n_mc_samples = n_mc_samples
-        self.rng = rng
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
         self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
         self._lower_chain_gate = _LowerChainGate(profit_function, random_symbols)
@@ -177,12 +176,8 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
 
     def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
         """Whether the lower hull can hold the most profitable vertex at any of the samples."""
-        # Instances pickled by older versions lack the gate.
-        gate = getattr(self, '_lower_chain_gate', None)
-        if gate is None:
-            return True
         param_grid, parameters = self._grid(dict(kwargs))
-        return bool(gate.on_samples(parameters, param_grid))
+        return bool(self._lower_chain_gate.on_samples(parameters, param_grid))
 
     def _score_hull(
         self,

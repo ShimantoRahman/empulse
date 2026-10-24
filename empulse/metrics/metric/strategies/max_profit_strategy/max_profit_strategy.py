@@ -277,7 +277,6 @@ class MaxProfit(ClassTerms, MetricStrategy):
         return state
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # Strategies pickled by older versions hold the Generator itself.
         state['_rng'] = _restore_generator(state['_rng'])
         self.__dict__.update(state)
 
@@ -333,6 +332,8 @@ class MaxProfit(ClassTerms, MetricStrategy):
         )
         self._compile_class_terms(tp_benefit, tn_benefit, fp_cost, fn_cost)
         self._boost_cache = None
+        # Whether the class terms are affine in a set of instance-dependent parameters, by that set.
+        self._affine_cache: dict[frozenset[str], bool] = {}
         return self
 
     def _scoring_parameters(self, parameters: dict[str, Any]) -> dict[str, Any]:
@@ -346,8 +347,7 @@ class MaxProfit(ClassTerms, MetricStrategy):
         array_names = _array_parameter_names(parameters)
         if not array_names:
             return _aggregate_instance_parameters(parameters)
-        # Instances pickled by older versions lack the cache.
-        cache = self.__dict__.setdefault('_affine_cache', {})
+        cache = self._affine_cache
         if array_names not in cache:
             class_terms = (self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
             cache[array_names] = _is_affine_in(class_terms, array_names)
@@ -877,7 +877,7 @@ def _build_max_profit_score(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
-    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr] | None = None,
+    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr],
 ) -> _ScoreFunction:
     n_random = len(random_symbols)
 
@@ -905,7 +905,7 @@ def _build_max_profit_optimal_rate(
     integration_method: str,
     n_mc_samples: int,
     rng: np.random.Generator,
-    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr] | None = None,
+    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr],
 ) -> RateFn:
     n_random = len(random_symbols)
 

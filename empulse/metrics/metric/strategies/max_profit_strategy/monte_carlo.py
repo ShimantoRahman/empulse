@@ -68,7 +68,6 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         self.random_symbols = random_symbols
         self.deterministic_symbols = deterministic_symbols
         self.n_mc_samples = n_mc_samples
-        self.rng = rng
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
         self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
         self._lower_chain_gate = _LowerChainGate(profit_function, list(random_symbols))
@@ -93,9 +92,7 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
 
     def _sample(self, random_symbols: Iterable[sympy.Expr], distribution_parameters: dict[str, Any]) -> list[Any]:
         """Draw the samples of every stochastic variable for these distribution parameters."""
-        # Instances pickled by older versions lack the seed and keep drawing from their generator.
-        seed = getattr(self, '_grid_seed', None)
-        rng = self.rng if seed is None else np.random.default_rng(seed)
+        rng = np.random.default_rng(self._grid_seed)
         return [
             sympy.stats.sample(_subs_by_name(random_var, distribution_parameters), size=(self.n_mc_samples,), seed=rng)
             for random_var in random_symbols
@@ -121,12 +118,8 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
 
     def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
         """Whether the lower hull can hold the most profitable vertex at any of the samples."""
-        # Instances pickled by older versions lack the gate.
-        gate = getattr(self, '_lower_chain_gate', None)
-        if gate is None:
-            return True
         param_grid, _, parameters = self._grid(dict(kwargs))
-        return bool(gate.on_samples(parameters, param_grid))
+        return bool(self._lower_chain_gate.on_samples(parameters, param_grid))
 
     def _score_hull(
         self,

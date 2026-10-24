@@ -136,10 +136,8 @@ class _PreparedIntegrand:
         return function
 
     def _lambdify(self, parameters: dict[str, Any]) -> Callable[..., Any]:
-        # Instances pickled by older versions hold the product itself.
-        parts = self.integrand if isinstance(self.integrand, sympy.Tuple) else (self.integrand, sympy.S.Zero)
         # evalf: a substituted normalisation such as loggamma(100) is otherwise left for NumPy.
-        substituted = sympy.Tuple(*(_subs_by_name(part, parameters).evalf() for part in parts))
+        substituted = sympy.Tuple(*(_subs_by_name(part, parameters).evalf() for part in self.integrand))
         return _safe_lambdify(substituted, self.arguments)
 
     def integrate_regions(
@@ -178,8 +176,6 @@ class _PreparedIntegrand:
 
 def _product_with_density(parts: tuple[Any, Any]) -> Any:
     """Return the integrand from its factor and log-density, see :class:`_PreparedIntegrand`."""
-    if not isinstance(parts, tuple):  # compiled by an older version, and pickled with it
-        return parts
     factor, log_density = parts
     return factor * np.exp(log_density)
 
@@ -468,20 +464,12 @@ class _PiecewiseBase:
 
     def _anchor(self, distribution_parameters: dict[str, Any]) -> Anchor | None:
         """Return where the density's mass lies for these parameters, see :class:`~._anchoring.DensityOf`."""
-        # Instances pickled by older versions lack the density.
-        density_of: DensityOf | None = getattr(self, '_density', None)
-        if density_of is None:
-            return None
-        return density_of.anchor(distribution_parameters, *self._support(distribution_parameters))
+        return self._density.anchor(distribution_parameters, *self._support(distribution_parameters))
 
     def _needs_lower_hull(self, kwargs: dict[str, Any]) -> bool:
         """Whether the lower hull can hold the most profitable vertex anywhere in the support."""
-        # Instances pickled by older versions lack the gate.
-        gate = getattr(self, '_lower_chain_gate', None)
-        if gate is None:
-            return True
         distribution_parameters = self._resolve_distribution_parameters(kwargs)
-        return bool(gate.on_support(kwargs, *self._support(distribution_parameters)))
+        return bool(self._lower_chain_gate.on_support(kwargs, *self._support(distribution_parameters)))
 
     def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """Pick the distribution's own parameters out of the call's parameters.

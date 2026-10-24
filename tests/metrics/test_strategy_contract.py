@@ -91,10 +91,11 @@ def dataset():
 
 def _make_deterministic_profit_function():
     clv, contact_cost = sympy.symbols('clv contact_cost')
+    class_terms = (clv, sympy.Integer(0), contact_cost, sympy.Integer(0))
     profit_function = _build_profit_function(
-        tp_benefit=clv, tn_benefit=sympy.Integer(0), fp_cost=contact_cost, fn_cost=sympy.Integer(0)
+        tp_benefit=class_terms[0], tn_benefit=class_terms[1], fp_cost=class_terms[2], fn_cost=class_terms[3]
     )
-    return profit_function, [clv, contact_cost]
+    return profit_function, [clv, contact_cost], class_terms
 
 
 def _make_gamma_score_function():

@@ -252,15 +252,6 @@ class Metric(BaseMetric):
         """
         return copy.deepcopy(self._cost_matrix)
 
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        # Metrics pickled by older versions hold the cost matrix publicly and lack the symbol names.
-        if 'cost_matrix' in state:
-            state['_cost_matrix'] = state.pop('cost_matrix')
-        state.pop('_all_parameters_cache', None)
-        self.__dict__.update(state)
-        if '_symbols' not in state:
-            self._symbols = _symbol_names(self.tp_cost, self.tn_cost, self.fp_cost, self.fn_cost)
-
     @property
     def __name__(self) -> str:
         return self.strategy.name
@@ -871,13 +862,13 @@ class Metric(BaseMetric):
             return {}
         # Matched by name: a symbol may be marked as a string while the cost matrix holds a symbol of
         # that name with assumptions, which sympy treats as a different symbol. Markers are keyed by
-        # symbol name; a caller finds every spelling of one through _parameter_spellings. The alias is
-        # resolved here too, since a metric pickled by an older version kept the marker's spelling.
+        # symbol name, with aliases resolved when the metric was built; a caller finds every spelling of
+        # one through _parameter_spellings.
         pos_names = _symbol_names(self.tp_cost, self.fn_cost).supplied
         neg_names = _symbol_names(self.tn_cost, self.fp_cost).supplied
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
         for symbol in self._cost_matrix._outlier_sensitive_symbols:
-            name = self._cost_matrix._symbol_name(str(symbol))
+            name = str(symbol)
             in_pos, in_neg = name in pos_names, name in neg_names
             if in_pos and not in_neg:
                 result[name] = 'positive'

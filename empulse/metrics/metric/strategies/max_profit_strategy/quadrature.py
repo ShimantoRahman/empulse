@@ -6,7 +6,6 @@ from typing import Any
 
 import numpy as np
 import sympy
-from scipy.integrate import IntegrationWarning, dblquad, nquad, quad, tplquad
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray
@@ -24,44 +23,23 @@ def compute_integral_multiple_quad(
     integrand: Callable[..., float],
     bounds: Sequence[float],
     n_random: int,
-    anchors: Sequence[Anchor | None] | None = None,
+    anchors: Sequence[Anchor | None],
 ) -> float:
     """
     Integrate *integrand* over a box with scipy quadrature.
 
     *integrand* takes one value per stochastic variable, in the order of *bounds*, which holds each
-    variable's lower and upper bound in turn. With *anchors*, where each variable's mass lies, each
-    axis is split around its anchor (see :func:`~._anchoring.anchored_nquad`), and a large
+    variable's lower and upper bound in turn. Each axis is split around its anchor in *anchors*,
+    where that variable's mass lies (see :func:`~._anchoring.anchored_nquad`), and a large
     estimated error is reported.
     """
-    if anchors is not None:
-        ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
-        if n_random == 1:
-            value, error = anchored_quad(integrand, *ranges[0], anchors[0])
-        else:
-            value, error = anchored_nquad(integrand, ranges, anchors)
-        warn_if_inaccurate(value, error)
-        return float(value)
-
-    def reversed_integrand(*random_vars: float) -> float:
-        # dblquad and tplquad pass the innermost variable first, the reverse of the order of the bounds.
-        return integrand(*reversed(random_vars))
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', IntegrationWarning)
-        warnings.simplefilter('ignore', RuntimeWarning)
-        if n_random == 1:
-            result, _ = quad(integrand, *bounds)  # type: ignore[call-overload]
-        elif n_random == 2:
-            result, _ = dblquad(reversed_integrand, *bounds)  # type: ignore[call-overload]
-        elif n_random == 3:
-            result, _ = tplquad(reversed_integrand, *bounds)  # type: ignore[call-overload]
-        else:
-            # nquad expects ranges as a list of (lower, upper) pairs, not a flat unpacked list, and
-            # passes the variables in the order of their ranges.
-            ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
-            result, _ = nquad(integrand, ranges)  # type: ignore[call-overload]
-    return float(result)
+    ranges = list(zip(bounds[::2], bounds[1::2], strict=True))
+    if n_random == 1:
+        value, error = anchored_quad(integrand, *ranges[0], anchors[0])
+    else:
+        value, error = anchored_nquad(integrand, ranges, anchors)
+    warn_if_inaccurate(value, error)
+    return float(value)
 
 
 def _roc_coefficients(expression: sympy.Expr) -> tuple[sympy.Expr, sympy.Expr, sympy.Expr]:
@@ -215,16 +193,10 @@ class MaxProfitScoreQuad(_HullScoreFunction):
             float(_subs_by_name(bound, distribution_parameters) if isinstance(bound, sympy.Expr) else bound)
             for bound in bounds
         ]
-        # Instances pickled by older versions lack the densities.
-        densities = getattr(self, '_densities', None)
-        anchors = (
-            [
-                density_of.anchor(distribution_parameters, lower, upper)
-                for density_of, lower, upper in zip(densities, bounds[::2], bounds[1::2], strict=True)
-            ]
-            if densities is not None
-            else None
-        )
+        anchors = [
+            density_of.anchor(distribution_parameters, lower, upper)
+            for density_of, lower, upper in zip(self._densities, bounds[::2], bounds[1::2], strict=True)
+        ]
 
         values = {
             **kwargs,
@@ -237,15 +209,11 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         best_vertex, tprs, fprs = hull.best_vertex, hull.tprs, hull.fprs
         # The compiled functions themselves, without the pickling wrapper's extra call: the
         # integrand runs hundreds of thousands of times.
-        log_density = getattr(self, '_log_density', None)
-        if log_density is not None:
-            log_density_fn = log_density.func
+        log_density_fn = self._log_density.func
 
-            def joint_density(*arguments: float) -> Any:
-                return np.exp(log_density_fn(*arguments))
+        def joint_density(*arguments: float) -> Any:
+            return np.exp(log_density_fn(*arguments))
 
-        else:  # pickled by an older version, with the density itself
-            joint_density = vars(self)['_density'].func
         profit_constant, profit_tpr_coefficient, profit_fpr_coefficient = (function.func for function in self._profit)
         rate = tuple(function.func for function in self._rate) if self._rate is not None else None
 

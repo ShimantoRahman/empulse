@@ -57,22 +57,20 @@ class _BaseMaxProfitDeterministic:
     :class:`MaxProfitScoreDeterministic` the highest profit, :class:`MaxProfitRateDeterministic` the
     predicted-positive rate that reaches it.
 
-    Given the four class terms the profit is built from, the maximization runs in the compiled
-    :func:`~empulse.metrics._cy_convex_hull.max_profit_scan`. Without them the profit function is
-    evaluated at every threshold instead.
+    The maximization runs over the four class terms the profit is built from, in the compiled
+    :func:`~empulse.metrics._cy_convex_hull.max_profit_scan`.
     """
 
     def __init__(
         self,
         profit_function: sympy.Expr,
         deterministic_symbols: Iterable[sympy.Symbol],
-        class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr] | None = None,
+        class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr],
     ) -> None:
         self.profit_function = profit_function
         self.deterministic_symbols = deterministic_symbols
-        self.calculate_profit = _safe_lambdify(profit_function)
         self.class_terms = class_terms
-        self._class_term_fns = None if class_terms is None else tuple(_safe_lambdify(term) for term in class_terms)
+        self._class_term_fns = tuple(_safe_lambdify(term) for term in class_terms)
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
@@ -88,18 +86,6 @@ class _BaseMaxProfitDeterministic:
         """
         _check_parameters((*self.deterministic_symbols,), kwargs)
         class_values = self._class_values(kwargs)
-        if class_values is None:
-            y_true = np.asarray(y_true).reshape(-1)
-
-            def score(y_score: FloatNDArray) -> float:
-                return self._reduce(
-                    *_calculate_profits_deterministic(
-                        y_true, y_score, self.calculate_profit, self.profit_function, **kwargs
-                    )
-                )
-
-            return score
-
         labels = np.ascontiguousarray(y_true, dtype=np.int32).reshape(-1)
 
         def scan_score(y_score: FloatNDArray) -> float:
@@ -108,42 +94,28 @@ class _BaseMaxProfitDeterministic:
         return scan_score
 
     def _maximize(self, y_true: IntNDArray, y_score: FloatNDArray, kwargs: dict[str, Any]) -> float:
-        class_values = self._class_values(kwargs)
-        if class_values is None:
-            profits, tprs, fprs, pi0, pi1 = _calculate_profits_deterministic(
-                y_true, y_score, self.calculate_profit, self.profit_function, **kwargs
-            )
-            return self._reduce(profits, tprs, fprs, pi0, pi1)
         result = max_profit_scan(
             np.asarray(y_true, dtype=np.int32).reshape(-1),
             np.asarray(y_score, dtype=np.float64).reshape(-1),
-            *class_values,
+            *self._class_values(kwargs),
         )
         return self._pick(result)
 
-    def _class_values(self, kwargs: dict[str, Any]) -> tuple[float, float, float, float] | None:
+    def _class_values(self, kwargs: dict[str, Any]) -> tuple[float, float, float, float]:
         """
-        Evaluate the class terms, averaged over the samples, or ``None`` when they are unknown.
+        Evaluate the class terms, averaged over the samples.
 
         Instance-dependent parameters are evaluated per sample before averaging, so a term that is
         not linear in them, such as the product of two, is averaged correctly.
         """
-        # Instances pickled by older versions lack the class terms.
-        class_term_fns = getattr(self, '_class_term_fns', None)
-        class_terms = getattr(self, 'class_terms', None)
-        if class_term_fns is None or class_terms is None:
-            return None
         values = [
             float(np.mean(np.asarray(_safe_run_lambda(function, term, **kwargs), dtype=np.float64)))
-            for function, term in zip(class_term_fns, class_terms, strict=True)
+            for function, term in zip(self._class_term_fns, self.class_terms, strict=True)
         ]
         return values[0], values[1], values[2], values[3]
 
     def _pick(self, result: tuple[float, float, float]) -> float:
         """Choose this score's number from the (profit, rate, threshold) of the compiled maximization."""
-        raise NotImplementedError
-
-    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
         raise NotImplementedError
 
 
@@ -153,19 +125,12 @@ class MaxProfitScoreDeterministic(_BaseMaxProfitDeterministic):
     def _pick(self, result: tuple[float, float, float]) -> float:
         return result[0]
 
-    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
-        return float(profits.max())
-
 
 class MaxProfitRateDeterministic(_BaseMaxProfitDeterministic):
     """Compute the maximum profit for all deterministic variables."""
 
     def _pick(self, result: tuple[float, float, float]) -> float:
         return result[1]
-
-    def _reduce(self, profits: FloatNDArray, tprs: FloatNDArray, fprs: FloatNDArray, pi0: float, pi1: float) -> float:
-        best_index = np.argmax(profits)
-        return float(tprs[best_index] * pi0 + fprs[best_index] * pi1)
 
 
 class MaxProfitBoostGradientDeterministic:

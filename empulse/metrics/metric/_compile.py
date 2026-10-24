@@ -113,8 +113,7 @@ class PicklableLambda:
             # Sort free_symbols by name for deterministic variable ordering,
             # ensuring the lambdified function receives kwargs correctly.
             variables = sorted(self.expression.free_symbols, key=str) if self.variables is None else self.variables
-            # Instances pickled by older versions lack `dummify`.
-            if not getattr(self, 'dummify', False):
+            if not self.dummify:
                 func = _lambdify(tuple(variables), self.expression)
                 if not _calls_an_argument(func, tuple(str(variable) for variable in variables)):
                     self.func = func

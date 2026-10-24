@@ -63,14 +63,6 @@ class _CachedPenaltyWeights:
             self._l2_weight = penalty.l2_weight
             self._start_coef = penalty.start_coef
 
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        # Objectives pickled by older versions stored the penalty as `penalty`, and the cost
-        # objective a `grad_const` array the kernels no longer take.
-        if 'penalty' in state:
-            state['_penalty'] = state.pop('penalty')
-        state.pop('grad_const', None)
-        self.__dict__.update(state)
-
 
 class CostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     """

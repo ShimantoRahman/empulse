@@ -192,6 +192,8 @@ Metrics
   speeds up the models that score them on every iteration.
 - |API| ``MetricStrategy.requires_dynamic_boost_objective`` is removed. Use
   ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
+- |API| Metrics, strategies and training objectives pickled with 0.13 or earlier are no longer
+  supported. Build or fit them again with this release before pickling them.
 - |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
   :class:`~empulse.metrics.MaxProfit` score itself when instance-dependent parameters enter a cost
   non-linearly.

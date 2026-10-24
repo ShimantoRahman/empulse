@@ -257,14 +257,6 @@ class MixtureMetric(BaseMetric):
         self._bounds: dict[str, Any] = {}
         self._predicates: list[ParameterPredicate] = []
 
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        self.__dict__.update(state)
-        # Mixtures pickled by older versions lack the compiled weights.
-        if '_weights' not in state:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', FutureWarning)
-                self._weights = [_CompiledWeight(component.weight) for component in self.components]
-
     def _validate_parameters(self, **parameters: Any) -> None:
         """
         Check parameter values against the domain this metric declares, and raise if they fall outside.

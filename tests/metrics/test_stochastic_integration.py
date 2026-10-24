@@ -327,19 +327,17 @@ def test_qmc_scipy_distribution_matches_sympy_density(factory):
     assert [complex(sympy_density(point)).real for point in points] == pytest.approx(frozen.pdf(points), rel=1e-9)
 
 
-def test_nquad_integrates_each_variable_over_its_own_range():
-    """With four or more random variables the ranges must stay paired with their own variables.
+@pytest.mark.parametrize('n_random', [2, 3, 4])
+def test_each_variable_is_integrated_over_its_own_range(n_random):
+    """The ranges stay paired with their own variables: ``x0`` over [0, 1], the others over [0, 2], [0, 3], ...
 
-    ``nquad`` passes the variables in the order of its ranges, unlike ``dblquad``/``tplquad``, so
-    reversing them there integrated ``x0`` over ``x3``'s range. The integral of ``x0`` over
-    [0, 1] x [0, 2] x [0, 3] x [0, 4] is 1/2 * 2 * 3 * 4 = 12.
+    Reversing them, as ``dblquad`` and ``tplquad`` would need, integrated ``x0`` over the last range.
     """
+    bounds = [0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0][: 2 * n_random]
     result = compute_integral_multiple_quad(
-        integrand=lambda x0, x1, x2, x3: x0,
-        bounds=[0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0],
-        n_random=4,
+        integrand=lambda x0, *_: x0, bounds=bounds, n_random=n_random, anchors=[None] * n_random
     )
-    assert result == pytest.approx(12.0)
+    assert result == pytest.approx(0.5 * math.prod(bounds[3::2]))
 
 
 @pytest.mark.parametrize(
@@ -362,14 +360,6 @@ def test_best_hull_vertex_matches_evaluating_every_vertex(hull):
             values = tpr_coefficient * tprs + fpr_coefficient * fprs
             best = vertices.best_vertex(tpr_coefficient, fpr_coefficient)
             assert values[best] == pytest.approx(values.max(), abs=1e-12), (tpr_coefficient, fpr_coefficient)
-
-
-@pytest.mark.parametrize('n_random', [2, 3])
-def test_dblquad_and_tplquad_integrate_each_variable_over_its_own_range(n_random):
-    """``dblquad`` and ``tplquad`` pass the innermost variable first; the integrand gets them in order."""
-    bounds = [0.0, 1.0, 0.0, 2.0, 0.0, 3.0][: 2 * n_random]
-    result = compute_integral_multiple_quad(integrand=lambda x0, *_: x0, bounds=bounds, n_random=n_random)
-    assert result == pytest.approx(0.5 * math.prod(bounds[3::2]))
 
 
 class TestDistributionWithLiteralAndSymbolicParameters:

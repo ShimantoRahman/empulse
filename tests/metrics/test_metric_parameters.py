@@ -106,18 +106,6 @@ class TestOutlierSensitiveParameters:
         assert metric._outlier_sensitive_parameters() == {'d': 'negative'}
         assert metric._parameter_spellings('d') == {'d', 'incentive_cost'}
 
-    def test_a_marker_pickled_under_its_alias_is_resolved(self):
-        """Older versions kept the marker's spelling; it must still classify the symbol it stands for."""
-        metric = Metric(
-            CostMatrix().add_fn_cost('d').add_fp_cost(1).alias('amount', 'd').mark_outlier_sensitive('amount'),
-            Cost(),
-        )
-        metric._cost_matrix._outlier_sensitive_symbols = {sympy.Symbol('amount')}
-
-        restored = pickle.loads(pickle.dumps(metric))
-
-        assert restored._outlier_sensitive_parameters() == {'d': 'positive'}
-
     def test_a_symbol_with_two_aliases(self):
         """Inverting the alias map to find "the" alias raised for a symbol with two of them."""
         metric = Metric(
@@ -285,14 +273,3 @@ def test_parameter_names_survive_pickling():
     names = metric._all_parameters
     restored = pickle.loads(pickle.dumps(metric))
     assert restored._all_parameters == names
-
-
-def test_a_metric_pickled_with_a_public_cost_matrix_still_loads():
-    metric = _metric()
-    state = metric.__dict__.copy()
-    state['cost_matrix'] = state.pop('_cost_matrix')
-    del state['_symbols']
-    restored = Metric.__new__(Metric)
-    restored.__setstate__(state)
-    assert restored._all_parameters == {'clv', 'd'}
-    assert restored(Y_TRUE, Y_SCORE) == metric(Y_TRUE, Y_SCORE)
