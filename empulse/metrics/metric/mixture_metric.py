@@ -137,14 +137,6 @@ class _CompiledWeight:
         return float(value.reshape(-1)[0])
 
 
-def _extra_parameters(metric: BaseMetric) -> frozenset[str]:
-    """Keyword arguments *metric* accepts besides its cost-matrix symbols, such as Savings' ``baseline``."""
-    try:
-        return frozenset(metric.strategy._extra_kwargs)
-    except (AttributeError, ValueError):  # a nested mixture of inconsistent strategies
-        return frozenset()
-
-
 class MixtureMetric(BaseMetric):
     r"""
     A weighted linear combination ("mixture") of :class:`Metric` objects.
@@ -416,19 +408,20 @@ class MixtureMetric(BaseMetric):
 
         Raises a :exc:`ValueError` if components use different :class:`MetricStrategy` types
         (e.g. mixing a :class:`~empulse.metrics.MaxProfit` component with a
-        :class:`~empulse.metrics.Cost` component). This lets model code that inspects
-        ``loss.strategy`` (e.g. to check ``isinstance(loss.strategy, MaxProfit)``) work
-        transparently with a :class:`MixtureMetric`, exactly as it would with a plain
-        :class:`Metric`.
+        :class:`~empulse.metrics.Cost` component). To ask what a mixture supports, which works for
+        any components, read :attr:`capabilities` instead.
         """
-        strategies = [component.metric.strategy for component in self.components]
-        strategy_types = {type(strategy) for strategy in strategies}
-        if len(strategy_types) > 1:
+        strategy = self._shared_strategy()
+        if strategy is None:
+            strategy_names = sorted({
+                type(shared).__name__ if (shared := component.metric._shared_strategy()) is not None else 'mixed'
+                for component in self.components
+            })
             raise ValueError(
-                f'MixtureMetric components use inconsistent strategies: {strategy_types}. '
+                f'MixtureMetric components use inconsistent strategies: {strategy_names}. '
                 'All components must use the same MetricStrategy type.'
             )
-        return strategies[0]
+        return strategy
 
     @property
     def capabilities(self) -> frozenset[Capability]:
@@ -459,10 +452,16 @@ class MixtureMetric(BaseMetric):
 
     def _shared_strategy(self) -> MetricStrategy | None:
         """Return the strategy every component uses, or ``None`` if they use more than one type."""
-        try:
-            return self.strategy
-        except (AttributeError, ValueError):
+        strategies = [component.metric._shared_strategy() for component in self.components]
+        first = strategies[0]
+        if first is None or any(strategy is None or type(strategy) is not type(first) for strategy in strategies):
             return None
+        return first
+
+    @property
+    def _extra_parameters(self) -> frozenset[str]:
+        """Keyword arguments some component accepts besides its cost-matrix symbols, such as Savings' ``baseline``."""
+        return frozenset().union(*(component.metric._extra_parameters for component in self.components))
 
     def _combined_decision_strategy(self) -> MetricStrategy | None:
         """
@@ -660,7 +659,7 @@ class MixtureMetric(BaseMetric):
     @staticmethod
     def _accepted_names(component: MixtureComponent) -> set[str]:
         """Return the keyword arguments a component's metric accepts from the caller."""
-        return component.metric._all_parameters | _extra_parameters(component.metric)
+        return component.metric._all_parameters | component.metric._extra_parameters
 
     def _canonical_name(self, name: str) -> str:
         """Return the name of the parameter the keyword *name* stands for: a weight's, or a component's symbol."""

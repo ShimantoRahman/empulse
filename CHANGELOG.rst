@@ -12,6 +12,11 @@ Metrics
   :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Every strategy with
   ``Capability.LOGIT_OBJECTIVE`` has it, and so do :class:`~empulse.metrics.EmpiricalMaxProfit`,
   :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC`.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` nested in another accepts its components' extra
+  parameters when they use different strategies, such as the ``baseline`` of a
+  :class:`~empulse.metrics.Savings` component mixed with a :class:`~empulse.metrics.Profit` one. The
+  parameter was ignored with an unknown-parameter warning, so ``baseline='zero'`` scored 0.43 instead
+  of 0.74 in one example.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
   decides and trains on the weighted sum of their savings. Each savings divides its component's cost by
   the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the

@@ -413,7 +413,7 @@ class Metric(BaseMetric):
             params.setdefault(key, value)
 
         # Warn about unknown parameters, which are likely typos. Strategy extras are known.
-        known = self._all_parameters | self.strategy._extra_kwargs
+        known = self._all_parameters | self._extra_parameters
         extra_keys = set(params) - known
         if extra_keys:
             warnings.warn(

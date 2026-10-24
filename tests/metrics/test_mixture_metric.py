@@ -950,3 +950,30 @@ class TestAliasedParameters:
         """The default and the caller's value used to reach the component as two conflicting spellings."""
         mixture = self.mixture(defaults={default_under: 0.5})
         assert mixture(Y_TRUE, Y_SCORE, **{passed: 0.7}) == pytest.approx(self.mixture()(Y_TRUE, Y_SCORE, a=0.7))
+
+
+def _mixed_strategy_mixture():
+    a, b = sympy.symbols('a b')
+    savings = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(5), Savings())
+    profit = Metric(CostMatrix().add_tp_benefit(b).add_fp_cost(1), Profit())
+    return MixtureMetric([MixtureComponent(0.5, savings, {}), MixtureComponent(0.5, profit, {})])
+
+
+def test_mixed_strategy_mixture_has_no_shared_strategy_and_still_reports_capabilities():
+    mixture = _mixed_strategy_mixture()
+    nested = MixtureMetric([MixtureComponent(1.0, mixture, {})])
+    assert mixture._shared_strategy() is None
+    assert nested._shared_strategy() is None
+    with pytest.raises(ValueError, match="inconsistent strategies: \\['mixed'\\]"):
+        _ = nested.strategy
+    assert Capability.LOGIT_OBJECTIVE in nested.capabilities
+
+
+def test_nested_mixed_strategy_mixture_accepts_its_components_extra_parameters():
+    """A nested mixture of Savings and Profit accepts Savings' ``baseline``, without an unknown-parameter warning."""
+    nested = MixtureMetric([MixtureComponent(1.0, _mixed_strategy_mixture(), {})])
+    assert 'baseline' in nested._extra_parameters
+    y_true, y_score = np.array([0, 1, 1, 0]), np.array([0.2, 0.8, 0.6, 0.4])
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        nested(y_true, y_score, a=2.0, b=3.0, baseline='zero')

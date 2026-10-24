@@ -74,6 +74,15 @@ class BaseMetric(ABC):
         For a composite metric, a representative strategy shared by all of its components.
         """
 
+    def _shared_strategy(self) -> MetricStrategy | None:
+        """Return :attr:`strategy`, or ``None`` for a composite metric whose components use more than one type."""
+        return self.strategy
+
+    @property
+    def _extra_parameters(self) -> frozenset[str]:
+        """Keyword arguments the metric accepts besides its cost-matrix symbols, such as Savings' ``baseline``."""
+        return frozenset(self.strategy._extra_kwargs)
+
     @property
     def capabilities(self) -> frozenset[Capability]:
         """
