@@ -233,6 +233,11 @@ Metrics
 Models
 ------
 
+- |Fix| :class:`~empulse.models.RobustCSClassifier` wraps a :class:`~sklearn.pipeline.Pipeline` whose
+  last step is a cost-sensitive classifier. It looked for the loss and the costs on the pipeline itself,
+  so it missed a ``loss`` set on the classifier, and passed the costs to ``Pipeline.fit`` under their
+  plain names, which it rejects. Without metadata routing, the costs now go to the last step as
+  ``<step>__<cost>``; with it, to the steps that request them.
 - |API| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
   raise a ``ValueError`` before fitting when their optimizer needs a gradient the loss has no
   objective for, such as :class:`~empulse.optimizers.LBFGSBOptimizer` with an

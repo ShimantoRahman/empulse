@@ -283,3 +283,31 @@ def test_allow_nan_needs_the_outlier_estimator_to_take_missing_values(outlier_es
         .input_tags.allow_nan
         is False
     )
+
+
+@pytest.mark.parametrize('routing', [False, True], ids=['no-routing', 'routing'])
+def test_wraps_a_pipeline_ending_in_a_cost_sensitive_classifier(routing):
+    """The loss is found on the pipeline's last step, and the costs reach it as the pipeline takes them."""
+    import sklearn
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(300, 3))
+    y = (X[:, 0] + rng.normal(size=300) > 0).astype(int)
+    clv = np.exp(X[:, 1]) * 100
+    clv[:5] = 1e5
+    cost_matrix = CostMatrix().add_fp_cost('d').add_fn_cost('clv').set_default(d=10).mark_outlier_sensitive('clv')
+    with sklearn.config_context(enable_metadata_routing=routing):
+        classifier = CSLogitClassifier(loss=Metric(cost_matrix, Cost()))
+        if routing:
+            classifier.set_fit_request(clv=True, d=True)
+        direct = RobustCSClassifier(CSLogitClassifier(loss=Metric(cost_matrix, Cost()))).fit(X, y, clv=clv)
+        piped = RobustCSClassifier(make_pipeline(StandardScaler(), classifier)).fit(X, y, clv=clv)
+
+    np.testing.assert_allclose(piped.costs_['clv'], direct.costs_['clv'])
+    # clv is the cost of a false negative, so only the outliers among the positive rows are imputed.
+    planted = np.arange(5)
+    assert np.all((piped.costs_['clv'][planted] < 1e5) == (y[planted] == 1))
+    assert piped.n_features_in_ == 3
+    np.testing.assert_array_equal(piped.classes_, [0, 1])

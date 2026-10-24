@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from numbers import Real
 from typing import Any, ClassVar, Literal, Self
 
@@ -21,6 +22,8 @@ from .._base.wrapper import (
     BinaryClassifierTags,
     ClassesFromEstimator,
     PassesXThrough,
+    final_estimator,
+    fit_parameter_name,
 )
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
@@ -268,8 +271,9 @@ class RobustCSClassifier(  # type: ignore[misc]
         return tags
 
     def _get_metric_loss(self) -> BaseMetric | None:
-        """Get the metric loss function if available."""
-        return self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
+        """Return the loss of the cost-sensitive estimator this wraps, the last step of a pipeline, if it has one."""
+        classifier = final_estimator(self.estimator)
+        return classifier._get_metric_loss() if isinstance(classifier, CostSensitiveClassifier) else None
 
     def __init__(
         self,
@@ -348,10 +352,10 @@ class RobustCSClassifier(  # type: ignore[misc]
             raise ValueError('Found array with 0 sample(s) while a minimum of 1 is required.')
         # Costs refer to the wrapped estimator's positive class: its `pos_label` if it has one, else the
         # greater of the two labels (the wrapped cost-sensitive estimators' `classes_[1]`).
-        pos_label = getattr(self.estimator, 'pos_label', None)
+        pos_label = getattr(final_estimator(self.estimator), 'pos_label', None)
         is_positive = y == (np.unique(y)[-1] if pos_label is None else pos_label)
 
-        metric_loss = self.estimator._get_metric_loss() if isinstance(self.estimator, CostSensitiveClassifier) else None
+        metric_loss = self._get_metric_loss()
 
         if metric_loss is not None:
             estimator_params = self._route_costs_to_loss(
@@ -359,6 +363,9 @@ class RobustCSClassifier(  # type: ignore[misc]
             )
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(
                 X, is_positive, metric_loss, estimator_params
+            )
+            estimator_params = self._named_for_estimator(
+                estimator_params, metric_loss._all_parameters | metric_loss._extra_parameters
             )
         else:
             self.costs_ = self._check_costs(
@@ -368,11 +375,17 @@ class RobustCSClassifier(  # type: ignore[misc]
             )
             should_fit = self._determine_outlier_costs()
             self._fit_outlier_estimators(X, is_positive, should_fit)
-            estimator_params = {**fit_params, **self.costs_}
+            estimator_params = {**fit_params, **self._named_for_estimator(self.costs_, self.costs_.keys())}
 
         self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
         self._copy_feature_attributes()
         return self
+
+    def _named_for_estimator(self, params: dict[str, Any], names: Collection[str]) -> dict[str, Any]:
+        """Rename the *params* among *names* as the wrapped estimator's ``fit`` takes them, e.g. a pipeline's."""
+        return {
+            fit_parameter_name(self.estimator, key) if key in names else key: value for key, value in params.items()
+        }
 
     def _costs_with_estimator_fallback(self, **costs: Any) -> dict[str, Any]:
         """
@@ -385,7 +398,7 @@ class RobustCSClassifier(  # type: ignore[misc]
         for name, value in costs.items():
             own = getattr(self, name)
             if value is Parameter.UNCHANGED and isinstance(own, Real) and own == 0:
-                value = getattr(self.estimator, name, own)
+                value = getattr(final_estimator(self.estimator), name, own)
             resolved[name] = value
         return resolved
 
