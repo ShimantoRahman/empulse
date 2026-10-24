@@ -63,6 +63,20 @@ class BaseMetric(ABC):
     divides by the baseline's cost, which differs between cost matrices, so a
     :class:`~empulse.metrics.MixtureMetric` weighs each component's objective by its
     :meth:`_cost_weight` to keep the sum of the objectives equivalent to the sum of the scores.
+
+    Besides the public methods, models and samplers use these private members, and only these: a new
+    kind of metric implements them, and a model needs nothing else of a metric. A test keeps the list
+    complete.
+
+    - Parameters: :attr:`_all_parameters`, :attr:`_extra_parameters`, :meth:`_missing_parameters`,
+      :meth:`_validate_parameters`, :meth:`_parameter_spellings` and
+      :meth:`_outlier_sensitive_parameters`.
+    - Values: :meth:`_loss`, :meth:`_prepare_count_loss`, :meth:`_closed_form_expected_max_profit`,
+      :meth:`_evaluate_costs`, :meth:`_decision_costs` and :attr:`_decides_from_costs`.
+    - Training: :meth:`_logit_objective`, :meth:`_logit_value_objective`,
+      :meth:`_gradient_boost_objective` and :meth:`_prepare_boost_objective`.
+    - Description: :attr:`capabilities` with :meth:`_require`, :attr:`_is_deterministic`,
+      :attr:`_has_single_cost_matrix` and :attr:`_is_unitless`.
     """
 
     @property

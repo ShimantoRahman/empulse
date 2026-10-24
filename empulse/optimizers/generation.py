@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from scipy.optimize import OptimizeResult
 from sklearn.utils import check_random_state
 
-from ..metrics.metric._direction import Direction
+from ..metrics import Direction
 from ._base import objective_scale
 
 if TYPE_CHECKING:
