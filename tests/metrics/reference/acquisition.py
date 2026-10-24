@@ -14,9 +14,14 @@ import scipy.stats as st
 
 from empulse._types import FloatArrayLike, FloatNDArray
 from empulse.metrics._cy_convex_hull import convex_hull
-from empulse.metrics._validation import _check_fraction, _check_positive, _check_shape, _check_y_pred, _check_y_true
+from empulse.metrics._validation import _check_fraction, _check_shape, _check_y_pred, _check_y_true
 
-from ._common import _compute_prior_class_probabilities, _compute_profits, _compute_tpr_fpr_diffs
+from ._common import (
+    _check_positive,
+    _compute_prior_class_probabilities,
+    _compute_profits,
+    _compute_tpr_fpr_diffs,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     try:

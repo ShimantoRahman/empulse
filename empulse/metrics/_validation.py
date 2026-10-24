@@ -1,4 +1,3 @@
-from numbers import Real
 from typing import Any
 
 import numpy as np
@@ -83,11 +82,6 @@ def _check_variance(array: NDArray[Any]) -> None:
         raise ValueError(
             f'The array should have at least two different values, got unique values {unique_values} instead.'
         )
-
-
-def _check_positive(var: float | Real, var_name: str) -> None:
-    if var < 0:
-        raise ValueError(f'{var_name} should be positive, got a value of {var} instead.')
 
 
 def _check_fraction(var: float, var_name: str) -> None:

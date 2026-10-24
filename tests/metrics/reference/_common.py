@@ -9,6 +9,11 @@ import numpy as np
 from empulse._types import FloatNDArray
 
 
+def _check_positive(var: float, var_name: str) -> None:
+    if var < 0:
+        raise ValueError(f'{var_name} should be positive, got a value of {var} instead.')
+
+
 def _compute_confusion_matrix(
     y_true: FloatNDArray, y_pred: FloatNDArray
 ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]:
