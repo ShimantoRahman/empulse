@@ -21,7 +21,6 @@ from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, CostMatrix, Metric
-from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base.cost_sensitive import CostSensitiveClassifier
 from .._base.wrapper import ClassesFromEstimator, PassesXThrough
 
@@ -120,8 +119,9 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     def _get_loss_or_default(self) -> BaseMetric:
-        """Return the configured loss or a generic cost metric."""
-        return self.loss if self.loss is not None else make_generic_cost_metric()
+        """Return the loss of the current fit, see :meth:`_get_metric_loss`, or the default generic cost metric."""
+        loss = self._get_metric_loss()
+        return loss if loss is not None else self._get_default_loss()
 
     def _positive_class_index(self) -> int:
         """Return the index in :attr:`classes_` of the positive class: ``pos_label``, or ``classes_[1]``."""
@@ -160,9 +160,10 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
         requires. ``_missing_parameters`` accepts a parameter under its symbol name or any alias, and
         ignores unrelated keys such as ``sample_weight``.
         """
-        if self.loss is None:
+        loss = self._get_metric_loss()
+        if loss is None:
             return _all_costs_zero({name: params[name] for name in self._cost_names})
-        return bool(self.loss._missing_parameters(params.keys()))
+        return bool(loss._missing_parameters(params.keys()))
 
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""
@@ -424,7 +425,7 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
                 raise NotFittedError
             check_is_fitted(self.estimator_)
 
-            loss = self._get_metric_loss() or make_generic_cost_metric()
+            loss = self._get_loss_or_default()
 
             if Capability.COST_ONLY_DECISION not in loss.capabilities:
                 raise ValueError(
