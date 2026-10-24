@@ -416,9 +416,9 @@ class TestDistributionWithLiteralAndSymbolicParameters:
         ),
         pytest.param(
             lambda: sympy.stats.Normal('g', sympy.Symbol('m'), 0.3),
-            lambda: sympy.stats.Normal('g', sympy.Symbol('m'), sympy.Symbol('s')),
+            lambda: sympy.stats.Normal('g', sympy.Symbol('m'), sympy.Symbol('sd')),
             {'m': 1.0},
-            {'m': 1.0, 's': 0.3},
+            {'m': 1.0, 'sd': 0.3},
             id='Normal-literal-last',
         ),
     ]

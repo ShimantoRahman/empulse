@@ -4,6 +4,28 @@
 Metrics
 -------
 
+- |API| :attr:`~empulse.metrics.Metric.parameter_names` lists the names a caller can pass, under
+  each spelling, and no longer a stochastic variable, which is drawn rather than passed and warned
+  about as unknown when passed. The parameters of its distribution are listed instead. A model's
+  ``set_fit_request`` no longer offers a stochastic variable either.
+- |API| Building a :class:`~empulse.metrics.Metric` raises a ``ValueError`` for a cost matrix with an
+  alias named after another of its symbols, which could then not be passed under its own name; with a
+  default or an outlier-sensitive marker on a stochastic variable; or with an outlier-sensitive marker
+  on a name that is no symbol or alias, which surfaced only as a misleading error when fitting a
+  :class:`~empulse.models.RobustCSClassifier`.
+- |Fix| The checks for reserved and duplicate symbol names cover the parameters of a stochastic
+  variable's distribution. A distribution parameter named ``s`` failed with ``Cost`` with an unclear
+  ``TypeError`` (and is now rejected for every strategy, as any other symbol named ``s`` is), and two
+  distinct symbols named alike failed with a ``SyntaxError`` from sympy.
+- |Fix| A symbol with several aliases can be outlier-sensitive: finding its outlier-sensitive
+  parameters raised, so :class:`~empulse.models.RobustCSClassifier` could not use the metric. An
+  outlier-sensitive parameter is now reported under its symbol name, and one that only enters a
+  distribution is classified by the costs that distribution enters.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` applies its bounds, predicates and defaults to a
+  component's parameter under every spelling. A bound on an alias was bypassed by passing the symbol,
+  and the other way around; a predicate raised a ``KeyError`` for a parameter passed by its alias; and
+  a default under one spelling conflicted with a value passed under another. Constraining a stochastic
+  variable, which was accepted and never checked, raises a ``ValueError``.
 - |API| :class:`~empulse.metrics.Metric` and :class:`~empulse.metrics.MixtureMetric` raise a
   ``TypeError`` when passed ``sample_weight``, for instance by a scorer that requests it through
   metadata routing. They accepted it and ignored it, so a weighted cross-validation score was the

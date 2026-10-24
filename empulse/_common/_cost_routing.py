@@ -223,7 +223,7 @@ class RoutesLossParameters:
             The loss parameters, extended with any cost argument that names a symbol of ``loss``.
         """
         params = dict(params)
-        symbols = loss._all_symbols
+        symbols = loss._all_parameters
         ignored = []
         for name, value in costs.items():
             if value is Parameter.UNCHANGED:
@@ -252,7 +252,7 @@ class RoutesLossParameters:
         (see :meth:`_get_metric_loss`), which ``set_params(loss=...)`` leaves behind.
         """
         loss = self.loss if hasattr(self, 'loss') else self._get_metric_loss()
-        return set(loss._all_symbols) if loss is not None else set()
+        return set(loss._all_parameters) if loss is not None else set()
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         # scikit-learn's __init_subclass__ installs a plain RequestMethod for every set_{method}_request

@@ -68,7 +68,7 @@ def _class_dependent_metric(loss: BaseMetric, loss_params: dict[str, Any]) -> Me
 
 def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, Any]:
     loss_params = {}
-    loss_param_names = loss._all_symbols
+    loss_param_names = loss._all_parameters
     for param_name in list(params.keys()):
         if param_name in loss_param_names:
             loss_params[param_name] = params[param_name]

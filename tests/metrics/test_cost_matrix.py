@@ -191,6 +191,26 @@ def test_reserved_symbol_name_is_rejected_at_construction(reserved_name, strateg
         Metric(cost_matrix, strategy)
 
 
+@pytest.mark.parametrize('strategy', [Cost(), Savings(), MaxProfit()], ids=['Cost', 'Savings', 'MaxProfit'])
+def test_reserved_name_of_a_distribution_parameter_is_rejected_at_construction(strategy):
+    """``free_symbols`` stops at a random variable, so its distribution's parameters went unchecked."""
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('s'), 2)
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1)
+
+    with pytest.raises(ValueError, match=re.escape("['s']")):
+        Metric(cost_matrix, strategy)
+
+
+@pytest.mark.parametrize('strategy', [Cost(), Savings(), MaxProfit()], ids=['Cost', 'Savings', 'MaxProfit'])
+def test_a_distribution_parameter_sharing_a_name_is_rejected_at_construction(strategy):
+    """Without the check, Cost and Savings fail with `SyntaxError: duplicate argument 'a'`."""
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('a', positive=True), 2)
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost('a')
+
+    with pytest.raises(ValueError, match='share a name'):
+        Metric(cost_matrix, strategy)
+
+
 @pytest.mark.parametrize('reserved_name', sorted(RESERVED_SYMBOL_NAMES))
 def test_reserved_alias_name_is_rejected_at_construction(reserved_name):
     """An alias sharing a name reserved for internal use must be rejected too, not just a bare symbol."""
@@ -258,6 +278,48 @@ def test_constrain_by_alias_works_in_either_order(alias_first):
 
     with pytest.raises(ValueError, match='rate should lay between 0 and 1'):
         metric(Y_TRUE, Y_SCORE, rate=5.0, b=1.0)
+
+
+def test_an_alias_named_after_another_symbol_is_rejected_at_construction():
+    """The alias would capture every value passed under that symbol's own name."""
+    cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'a': 'b'})
+
+    with pytest.raises(ValueError, match=r"'a' -> 'b'.*named after another cost matrix symbol"):
+        Metric(cost_matrix, Cost())
+
+
+def test_an_alias_named_after_its_own_target_is_accepted():
+    metric = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b').alias({'a': 'a'}), Cost())
+    assert metric(Y_TRUE, Y_SCORE, a=1.0, b=4.0) == pytest.approx(
+        Metric(_ab_matrix(), Cost())(Y_TRUE, Y_SCORE, a=1.0, b=4.0)
+    )
+
+
+def test_a_default_for_a_random_variable_is_rejected_at_construction():
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), 2)
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1).set_default(gamma=0.5)
+
+    with pytest.raises(ValueError, match=re.escape("default(s) for the random variable(s) ['gamma']")):
+        Metric(cost_matrix, MaxProfit())
+
+
+def test_an_outlier_marker_on_an_unknown_name_is_rejected_at_construction():
+    cost_matrix = CostMatrix().add_fn_cost('clv').add_fp_cost(1).mark_outlier_sensitive('cvl')
+
+    with pytest.raises(ValueError, match=re.escape("outlier-sensitive marker(s) on ['cvl']")):
+        Metric(cost_matrix, Cost())
+
+
+def test_an_outlier_marker_on_a_random_variable_is_rejected_at_construction():
+    gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), 2)
+    cost_matrix = CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1)
+
+    with pytest.raises(ValueError, match=re.escape("outlier-sensitive marker(s) on the random variable(s) ['gamma']")):
+        Metric(cost_matrix.mark_outlier_sensitive(gamma.symbol), MaxProfit())
+
+
+def _ab_matrix():
+    return CostMatrix().add_fp_cost('a').add_fn_cost('b')
 
 
 def test_constrain_on_an_unknown_name_is_rejected_at_construction():

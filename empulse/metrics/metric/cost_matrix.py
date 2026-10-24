@@ -332,6 +332,12 @@ class CostMatrix:
         ValueError
             If neither a mapping nor both an alias and a symbol are given.
 
+        Notes
+        -----
+        A symbol may have several aliases. An alias may not be named after another symbol of the cost
+        matrix, which could then not be passed under its own name; building a
+        :class:`~empulse.metrics.Metric` from such a cost matrix raises a :class:`ValueError`.
+
         Examples
         --------
         .. code-block:: python
@@ -388,6 +394,11 @@ class CostMatrix:
         A default may name a symbol or an alias, whether that alias is registered before or after
         this call. When several calls set the same parameter, under either spelling, the last wins.
 
+        A stochastic variable's values are drawn rather than passed, so it takes no default: set
+        defaults for the parameters of its distribution instead. Building a
+        :class:`~empulse.metrics.Metric` with a default on a stochastic variable, or on a name that is
+        no symbol or alias, raises a :class:`ValueError`.
+
         Examples
         --------
         .. code-block:: python
@@ -439,6 +450,12 @@ class CostMatrix:
         ------
         TypeError
             If ``symbol`` is not a ``str`` or :class:`sympy.Symbol`.
+
+        Notes
+        -----
+        Building a :class:`~empulse.metrics.Metric` raises a :class:`ValueError` if the marked name is
+        no symbol or alias of the cost matrix, or is a stochastic variable, whose values are drawn
+        rather than passed.
 
         Examples
         --------
@@ -586,16 +603,25 @@ class CostMatrix:
         return self
 
     def _resolve_aliases(self) -> None:
-        """Key every default and bound by the symbol it is for, instead of the alias it may have been given by."""
+        """Key every default, bound and outlier marker by the symbol it is for, instead of the alias it may name."""
         defaults, bounds = self._defaults, self._bounds
         self._defaults, self._bounds = {}, {}
         for name, value in defaults.items():
             self._defaults[self._symbol_name(name)] = value
         for name, bound in bounds.items():
             _add_bounds(self._bounds, self._symbol_name(name), bound)
+        self._outlier_sensitive_symbols = {
+            sympy.Symbol(self._symbol_name(str(symbol))) for symbol in self._outlier_sensitive_symbols
+        }
 
     def _symbol_name(self, name: str) -> str:
+        """Return the symbol name a caller's keyword *name* stands for: the alias's target, or *name* itself."""
         return str(self._aliases.get(name, name))
+
+    def _spellings(self, name: str) -> set[str]:
+        """Return every keyword the parameter *name* (a symbol name or alias) can be passed as."""
+        symbol_name = self._symbol_name(name)
+        return {symbol_name} | {alias for alias, target in self._aliases.items() if str(target) == symbol_name}
 
     def __repr__(self) -> str:
         return (
@@ -644,7 +670,7 @@ def _check_reserved_symbol_names(*expressions: sympy.Expr, alias_names: Iterable
     ValueError
         If any free symbol name or alias collides with a name in :data:`RESERVED_SYMBOL_NAMES`.
     """
-    symbol_names = {str(symbol) for expression in expressions for symbol in expression.free_symbols}
+    symbol_names = {str(symbol) for symbol in _free_symbols(*expressions)}
     reserved_in_use = (symbol_names | set(alias_names)) & RESERVED_SYMBOL_NAMES
     if reserved_in_use:
         raise ValueError(
@@ -692,9 +718,8 @@ def _check_duplicate_symbol_names(*expressions: sympy.Expr) -> None:
         If any two distinct symbols share a name.
     """
     by_name: dict[str, set[sympy.Symbol]] = {}
-    for expression in expressions:
-        for symbol in expression.free_symbols:
-            by_name.setdefault(str(symbol), set()).add(symbol)
+    for symbol in _free_symbols(*expressions):
+        by_name.setdefault(str(symbol), set()).add(symbol)
 
     duplicates = {name: symbols for name, symbols in by_name.items() if len(symbols) > 1}
     if not duplicates:
@@ -736,6 +761,28 @@ class SymbolNames(NamedTuple):
         return (self.deterministic | self.distribution) - self.random
 
 
+def _distribution_symbols(random_symbols: Iterable[sympy.Expr]) -> set[sympy.Expr]:
+    """Return the free symbols of the parameters of *random_symbols*' distributions, e.g. ``alpha``."""
+    distribution_symbols: set[sympy.Expr] = set()
+    for symbol in random_symbols:
+        distribution = getattr(symbol.pspace, 'distribution', None)
+        for argument in getattr(distribution, 'args', ()):
+            distribution_symbols |= sympy.sympify(argument).free_symbols
+    return distribution_symbols
+
+
+def _free_symbols(*expressions: sympy.Expr) -> set[sympy.Expr]:
+    """
+    Return the free symbols of *expressions*, including those of their random variables' distributions.
+
+    ``expression.free_symbols`` stops at a random variable, so ``alpha`` in ``Beta('gamma', alpha, 2)``
+    is not among them, although a caller passes it like any other parameter.
+    """
+    free_symbols: set[sympy.Expr] = set().union(*(expression.free_symbols for expression in expressions))
+    random_symbols = {symbol for symbol in free_symbols if sympy.stats.rv.is_random(symbol)}
+    return free_symbols | _distribution_symbols(random_symbols)
+
+
 def _symbol_names(*expressions: sympy.Expr) -> SymbolNames:
     """
     Collect the names of the symbols in the cost-matrix *expressions*, by kind.
@@ -753,11 +800,7 @@ def _symbol_names(*expressions: sympy.Expr) -> SymbolNames:
     """
     free_symbols: set[sympy.Expr] = set().union(*(expression.free_symbols for expression in expressions))
     random_symbols = {symbol for symbol in free_symbols if sympy.stats.rv.is_random(symbol)}
-    distribution_symbols: set[sympy.Expr] = set()
-    for symbol in random_symbols:
-        distribution = getattr(symbol.pspace, 'distribution', None)
-        for argument in getattr(distribution, 'args', ()):
-            distribution_symbols |= sympy.sympify(argument).free_symbols
+    distribution_symbols = _distribution_symbols(random_symbols)
     return SymbolNames(
         deterministic=frozenset(str(symbol) for symbol in free_symbols - random_symbols),
         random=frozenset(str(symbol) for symbol in random_symbols),
@@ -765,19 +808,27 @@ def _symbol_names(*expressions: sympy.Expr) -> SymbolNames:
     )
 
 
-def _check_known_alias_and_default_targets(
+def _check_parameter_names(
     *expressions: sympy.Expr,
     aliases: Mapping[str, str | sympy.Symbol],
     default_names: Iterable[str],
     bound_names: Iterable[str] = (),
+    outlier_names: Iterable[str] = (),
 ) -> None:
     """
-    Raise if an alias's target, or the parameter of a default or bound, matches no symbol in the cost matrix.
+    Raise if an alias, default, bound or outlier marker of the cost matrix cannot mean what it says.
 
-    ``CostMatrix`` is built incrementally, so ``alias()``, ``set_default()`` and ``constrain()`` cannot
-    check their arguments against the cost matrix's symbols when they are called. ``Metric`` can, once
-    the cost matrix is complete, and does so here, so that a typo is one clear error at construction
-    instead of a value that is silently never used.
+    ``CostMatrix`` is built incrementally, so ``alias()``, ``set_default()``, ``constrain()`` and
+    ``mark_outlier_sensitive()`` cannot check their arguments against the cost matrix's symbols when
+    they are called. ``Metric`` can, once the cost matrix is complete, and does so here, so that a typo
+    is one clear error at construction instead of a value that is silently never used. Rejected are:
+
+    - an alias whose target, or a default, bound or outlier marker whose parameter, is no symbol;
+    - an alias named after another symbol, which would make that symbol impossible to pass;
+    - a default or outlier marker on a random variable, whose values are drawn rather than passed.
+
+    A bound on a random variable is allowed, so that one cost matrix builder can serve a metric in
+    which the variable is stochastic and one in which it is not.
 
     Parameters
     ----------
@@ -790,19 +841,29 @@ def _check_known_alias_and_default_targets(
         The parameter names of the cost matrix's defaults, aliases already resolved.
     bound_names : Iterable[str], default=()
         The parameter names of the cost matrix's bounds, aliases already resolved.
+    outlier_names : Iterable[str], default=()
+        The parameter names marked outlier-sensitive, aliases already resolved.
 
     Raises
     ------
     ValueError
-        If any alias target, default or bound does not match a known symbol name.
+        If any of the above is found.
     """
-    known_names = _symbol_names(*expressions).all
+    names = _symbol_names(*expressions)
+    known_names = names.all
 
     unknown_alias_targets = {
         f'{alias!r} -> {str(target)!r}' for alias, target in aliases.items() if str(target) not in known_names
     }
-    unknown_defaults = {name for name in default_names if name not in known_names}
-    unknown_bounds = {name for name in bound_names if name not in known_names}
+    shadowing_aliases = {
+        f'{alias!r} -> {str(target)!r}'
+        for alias, target in aliases.items()
+        if alias in known_names and alias != str(target)
+    }
+    default_names, outlier_names = set(default_names), set(outlier_names)
+    unknown_defaults = default_names - known_names
+    unknown_bounds = set(bound_names) - known_names
+    unknown_outliers = outlier_names - known_names
 
     messages = []
     if unknown_alias_targets:
@@ -811,8 +872,27 @@ def _check_known_alias_and_default_targets(
         messages.append(f'default(s) for {sorted(unknown_defaults)}, which is not a cost matrix symbol or alias')
     if unknown_bounds:
         messages.append(f'bound(s) on {sorted(unknown_bounds)}, which is not a cost matrix symbol or alias')
+    if unknown_outliers:
+        messages.append(
+            f'outlier-sensitive marker(s) on {sorted(unknown_outliers)}, which is not a cost matrix symbol or alias'
+        )
+    if shadowing_aliases:
+        messages.append(
+            f'alias(es) {sorted(shadowing_aliases)} named after another cost matrix symbol, which could then '
+            'not be passed under its own name'
+        )
+    if random_defaults := default_names & names.random:
+        messages.append(
+            f'default(s) for the random variable(s) {sorted(random_defaults)}, whose values are drawn rather '
+            'than passed: set defaults for the parameters of their distributions instead'
+        )
+    if random_outliers := outlier_names & names.random:
+        messages.append(
+            f'outlier-sensitive marker(s) on the random variable(s) {sorted(random_outliers)}, whose values are '
+            'drawn rather than passed'
+        )
     if messages:
         raise ValueError(
-            f'The cost matrix has {" and ".join(messages)}. Known symbol names: {sorted(known_names)}. '
-            'This is usually a typo in a symbol or alias name.'
+            f'The cost matrix has {"; and ".join(messages)}. Known symbol names: {sorted(known_names)}. '
+            'A name that matches no symbol is usually a typo in a symbol or alias name.'
         )

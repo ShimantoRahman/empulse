@@ -117,12 +117,13 @@ class BaseMetric(ABC):
     @property
     def parameter_names(self) -> set[str]:
         """
-        The set of all parameter names this metric accepts, including stochastic variables.
+        The names of the parameters a caller can pass to this metric, under each of their spellings.
 
-        A public alias for :attr:`_all_symbols`, for a caller that wants to know what to pass to
-        this metric without reaching into a private name.
+        These are the cost matrix's symbols, the parameters of its stochastic variables'
+        distributions and the aliases of either. A stochastic variable itself is not among them: its
+        values are drawn from its distribution, not passed.
         """
-        return self._all_symbols
+        return self._all_parameters
 
     @property
     @abstractmethod
@@ -327,6 +328,10 @@ class BaseMetric(ABC):
     ]:
         """Evaluate the (class-dependent or instance-dependent) cost expressions."""
 
+    def _canonical_name(self, name: str) -> str:
+        """Return the name of the parameter the keyword *name* stands for, resolving any alias."""
+        return name
+
     def _parameter_spellings(self, name: str) -> set[str]:
         """Return every keyword the parameter *name* can be passed as: its symbol name and its aliases."""
         return {name}
@@ -337,7 +342,8 @@ class BaseMetric(ABC):
 
         A parameter is outlier-sensitive when it was declared with
         :meth:`~empulse.metrics.CostMatrix.mark_outlier_sensitive`. The key is the parameter's
-        caller-facing spelling (its alias, if it has one, else its raw symbol name) --
+        symbol name, whichever spelling marked it; :meth:`_parameter_spellings` lists every keyword it
+        can be passed as --
         :class:`~empulse.models.RobustCSClassifier` uses this to decide, for a given
         outlier-sensitive parameter, which rows of ``X``/``y`` to fit an outlier-detecting
         regressor on: ``'positive'`` restricts to the rows where ``y`` is positive (the parameter

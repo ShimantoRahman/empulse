@@ -1,6 +1,6 @@
 import copy
 import warnings
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable
 from numbers import Real
 from typing import Any, Literal
 
@@ -18,7 +18,7 @@ from .base_metric import BaseMetric, _reject_sample_weight
 from .cost_matrix import (
     CostMatrix,
     _check_duplicate_symbol_names,
-    _check_known_alias_and_default_targets,
+    _check_parameter_names,
     _check_reserved_symbol_names,
     _symbol_names,
 )
@@ -190,7 +190,7 @@ class Metric(BaseMetric):
             self.fp_cost,
             self.fn_cost,
         )
-        _check_known_alias_and_default_targets(
+        _check_parameter_names(
             self.tp_benefit,
             self.tn_benefit,
             self.fp_cost,
@@ -198,6 +198,7 @@ class Metric(BaseMetric):
             aliases=self._cost_matrix._aliases,
             default_names=self._cost_matrix._defaults.keys(),
             bound_names=self._cost_matrix._bounds.keys(),
+            outlier_names={str(symbol) for symbol in self._cost_matrix._outlier_sensitive_symbols},
         )
         if self.tp_benefit == 0 and self.tn_benefit == 0 and self.fp_cost == 0 and self.fn_cost == 0:
             warnings.warn(
@@ -310,8 +311,11 @@ class Metric(BaseMetric):
 
     @property
     def _all_parameters(self) -> set[str]:
-        """The set of cost matrix parameters which can be used."""
-        return set(self._symbols.supplied | self._cost_matrix._aliases.keys())
+        """The names a caller can pass: the symbols given values, and the aliases of those symbols."""
+        supplied = self._symbols.supplied
+        return set(supplied) | {
+            alias for alias, target in self._cost_matrix._aliases.items() if str(target) in supplied
+        }
 
     @property
     def _default_parameter_names(self) -> set[str]:
@@ -336,9 +340,8 @@ class Metric(BaseMetric):
 
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """Return the required symbol names not covered by *supplied* (aliases resolved)."""
-        resolved_supplied = {str(self._cost_matrix._aliases.get(key, key)) for key in supplied}
-        required_symbols = self._all_parameters - set(self._cost_matrix._aliases.keys()) - self._default_parameter_names
-        return required_symbols - resolved_supplied
+        resolved_supplied = {self._cost_matrix._symbol_name(key) for key in supplied}
+        return set(self._symbols.supplied) - self._default_parameter_names - resolved_supplied
 
     def _validate_parameters(self, **parameters: Any) -> None:
         """
@@ -390,8 +393,7 @@ class Metric(BaseMetric):
         # one symbol, raises; otherwise the last kwarg would win and the result would depend on kwarg order.
         resolved_from: dict[str, str] = {}
         for key, value in kwargs.items():
-            alias_target = self._cost_matrix._aliases.get(key)
-            symbol_name = str(alias_target) if alias_target is not None else key
+            symbol_name = self._cost_matrix._symbol_name(key)
             if symbol_name in resolved_from:
                 raise ValueError(
                     f"Got conflicting values for symbol '{symbol_name}': passed both as "
@@ -835,11 +837,13 @@ class Metric(BaseMetric):
         tn_cost = _safe_run_lambda(tn_fn, tn_expr, **parameters)
         return fp_cost, fn_cost, tp_cost, tn_cost
 
+    def _canonical_name(self, name: str) -> str:
+        """Return the symbol name the keyword *name* stands for: the alias's target, or *name* itself."""
+        return self._cost_matrix._symbol_name(name)
+
     def _parameter_spellings(self, name: str) -> set[str]:
         """Return every keyword the parameter *name* can be passed as: its symbol name and its aliases."""
-        aliases = self._cost_matrix._aliases
-        symbol_name = str(aliases.get(name, name))
-        return {symbol_name} | {alias for alias, target in aliases.items() if str(target) == symbol_name}
+        return self._cost_matrix._spellings(name)
 
     def _outlier_sensitive_parameters(self) -> dict[str, Literal['positive', 'negative', 'both']]:
         """
@@ -849,17 +853,16 @@ class Metric(BaseMetric):
         """
         if not self._cost_matrix._outlier_sensitive_symbols:
             return {}
-        aliases = self._cost_matrix._aliases
-        alias_of = _invert_alias_map(aliases)
-        # Matched by name: a symbol may be marked by its alias, or as a string while the cost matrix
-        # holds a symbol of that name with assumptions, which sympy treats as a different symbol.
-        pos_names = {str(symbol) for symbol in self.tp_cost.free_symbols | self.fn_cost.free_symbols}
-        neg_names = {str(symbol) for symbol in self.tn_cost.free_symbols | self.fp_cost.free_symbols}
+        # Matched by name: a symbol may be marked as a string while the cost matrix holds a symbol of
+        # that name with assumptions, which sympy treats as a different symbol. Markers are keyed by
+        # symbol name; a caller finds every spelling of one through _parameter_spellings. The alias is
+        # resolved here too, since a metric pickled by an older version kept the marker's spelling.
+        pos_names = _symbol_names(self.tp_cost, self.fn_cost).supplied
+        neg_names = _symbol_names(self.tn_cost, self.fp_cost).supplied
         result: dict[str, Literal['positive', 'negative', 'both']] = {}
         for symbol in self._cost_matrix._outlier_sensitive_symbols:
-            symbol_name = str(aliases.get(str(symbol), symbol))
-            name = alias_of.get(symbol_name, symbol_name)
-            in_pos, in_neg = symbol_name in pos_names, symbol_name in neg_names
+            name = self._cost_matrix._symbol_name(str(symbol))
+            in_pos, in_neg = name in pos_names, name in neg_names
             if in_pos and not in_neg:
                 result[name] = 'positive'
             elif in_neg and not in_pos:
@@ -875,25 +878,3 @@ class Metric(BaseMetric):
         return self.strategy.to_latex(
             tp_benefit=self.tp_benefit, tn_benefit=self.tn_benefit, fp_cost=self.fp_cost, fn_cost=self.fn_cost
         )
-
-
-def _invert_alias_map(aliases: MutableMapping[str, str | sympy.Symbol]) -> dict[str, str]:
-    """Invert a ``{alias: symbol_name}`` mapping to ``{symbol_name: alias}``.
-
-    Raises
-    ------
-    ValueError
-        If any symbol name is aliased by more than one key, because inversion would silently
-        drop one of them.
-    """
-    symbol_to_alias: dict[str, str] = {}
-    for alias, symbol_name in aliases.items():
-        symbol_name = str(symbol_name)
-        if symbol_name in symbol_to_alias:
-            raise ValueError(
-                f'Cannot invert alias mapping: symbol {symbol_name!r} is aliased by more than one '
-                f'key ({symbol_to_alias[symbol_name]!r} and {alias!r}). Each symbol must have at '
-                f'most one alias.'
-            )
-        symbol_to_alias[symbol_name] = alias
-    return symbol_to_alias

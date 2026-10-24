@@ -4,14 +4,17 @@ one another, which are outlier-sensitive, and how their names are cached.
 """
 
 import pickle
+import warnings
 
 import numpy as np
 import pytest
 import sympy
+import sympy.stats
 
 from empulse.metrics import (
     Cost,
     CostMatrix,
+    MaxProfit,
     Metric,
 )
 
@@ -93,14 +96,48 @@ class TestOutlierSensitiveParameters:
         )
         assert metric._outlier_sensitive_parameters() == {'a': 'both'}
 
-    def test_returned_under_alias_not_raw_symbol_name(self):
-        """The key is the caller-facing spelling (the alias), not the raw sympy symbol name."""
+    def test_returned_under_its_symbol_name_with_every_spelling_available(self):
+        """The key is the symbol name; `_parameter_spellings` gives every keyword it can be passed as."""
         d = sympy.Symbol('d')
         metric = Metric(
             CostMatrix().add_fp_cost(d).alias({'incentive_cost': 'd'}).mark_outlier_sensitive(d),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'incentive_cost': 'negative'}
+        assert metric._outlier_sensitive_parameters() == {'d': 'negative'}
+        assert metric._parameter_spellings('d') == {'d', 'incentive_cost'}
+
+    def test_a_marker_pickled_under_its_alias_is_resolved(self):
+        """Older versions kept the marker's spelling; it must still classify the symbol it stands for."""
+        metric = Metric(
+            CostMatrix().add_fn_cost('d').add_fp_cost(1).alias('amount', 'd').mark_outlier_sensitive('amount'),
+            Cost(),
+        )
+        metric._cost_matrix._outlier_sensitive_symbols = {sympy.Symbol('amount')}
+
+        restored = pickle.loads(pickle.dumps(metric))
+
+        assert restored._outlier_sensitive_parameters() == {'d': 'positive'}
+
+    def test_a_symbol_with_two_aliases(self):
+        """Inverting the alias map to find "the" alias raised for a symbol with two of them."""
+        metric = Metric(
+            CostMatrix()
+            .add_fn_cost('clv')
+            .add_fp_cost(1)
+            .alias({'value': 'clv', 'customer_value': 'clv'})
+            .mark_outlier_sensitive('value'),
+            Cost(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'clv': 'positive'}
+
+    def test_a_distribution_parameter_is_classified_by_the_costs_it_enters(self):
+        alpha = sympy.Symbol('alpha')
+        gamma = sympy.stats.Beta('gamma', alpha, 2)
+        metric = Metric(
+            CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1).mark_outlier_sensitive(alpha),
+            MaxProfit(),
+        )
+        assert metric._outlier_sensitive_parameters() == {'alpha': 'positive'}
 
     def test_marked_by_alias(self):
         """Marking a symbol by its alias classifies the symbol the alias stands for."""
@@ -113,7 +150,7 @@ class TestOutlierSensitiveParameters:
             .mark_outlier_sensitive('incentive_cost'),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'incentive_cost': 'positive'}
+        assert metric._outlier_sensitive_parameters() == {'d': 'positive'}
 
     def test_marked_by_name_of_a_symbol_with_assumptions(self):
         """``mark_outlier_sensitive('d')`` creates an assumption-free symbol, which must still match ``d``."""
@@ -139,11 +176,25 @@ class TestOutlierSensitiveParameters:
 
 
 class TestParameterNames:
-    """`parameter_names` is the public alias for `_all_symbols`."""
+    """`parameter_names` lists what a caller can pass: every spelling, but no random variable."""
 
-    def test_matches_all_symbols(self):
-        metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), Cost())
-        assert metric.parameter_names == metric._all_symbols == {'a', 'b'}
+    def test_deterministic_symbols_and_their_aliases(self):
+        metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b').alias('rate', 'a'), Cost())
+        assert metric.parameter_names == {'a', 'b', 'rate'}
+
+    def test_a_random_variable_is_replaced_by_its_distribution_parameters(self):
+        """Passing every listed name must not warn that one is unknown."""
+        alpha, beta = sympy.symbols('alpha beta')
+        gamma = sympy.stats.Beta('gamma', alpha, beta)
+        cost_matrix = (
+            CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1).alias({'accept_rate': 'gamma'})
+        )
+        metric = Metric(cost_matrix, MaxProfit())
+
+        assert metric.parameter_names == {'alpha', 'beta', 'clv'}
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            metric(Y_TRUE, Y_SCORE, alpha=2.0, beta=3.0, clv=10.0)
 
 
 class TestParameterSpellings:

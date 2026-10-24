@@ -279,10 +279,16 @@ class MixtureMetric(BaseMetric):
         weights are handled the same way everywhere. With ``validate``, the mixture's own constraints
         are checked, and so are the weights: none may be negative, and together they must sum to 1.
         """
-        resolved = {**self.defaults, **parameters}
+        # A default yields to the caller's value under any spelling, as a cost matrix default does.
+        supplied = {self._canonical_name(key) for key in parameters}
+        defaults = {key: value for key, value in self.defaults.items() if self._canonical_name(key) not in supplied}
+        resolved = {**defaults, **parameters}
         _reject_sample_weight(resolved, self._accepted_parameter_names())
         if validate and (self._bounds or self._predicates):
-            _check_parameter_domains((), resolved, self._bounds, self._predicates)
+            # Bounds and predicates name a parameter by its symbol, whichever spelling the caller used.
+            by_symbol = {self._canonical_name(key): value for key, value in resolved.items()}
+            caller_names = {self._canonical_name(key): key for key in resolved}
+            _check_parameter_domains((), by_symbol, self._bounds, self._predicates, caller_names=caller_names)
         self._warn_about_unknown_parameters(resolved)
         weights = [weight(resolved) for weight in self._weights]
         if validate:
@@ -338,7 +344,11 @@ class MixtureMetric(BaseMetric):
 
         Notes
         -----
-        Bounding the same parameter twice keeps the tighter of each bound.
+        A parameter may be bounded by its symbol name or by an alias, and the bound holds under every
+        spelling a caller passes it as. Bounding the same parameter twice keeps the tighter of each bound.
+
+        A callable receives the parameters keyed by **symbol name**, with aliases already resolved and
+        the mixture's :attr:`defaults` already applied, as for :meth:`CostMatrix.constrain`.
         """
         if callable(target):
             if message is None:
@@ -346,12 +356,12 @@ class MixtureMetric(BaseMetric):
             self._predicates.append(ParameterPredicate(predicate=target, message=message))
             return self
         bounds = _check_bounds(target, lower, upper)
-        if target not in self._all_symbols:
+        if target not in self._all_parameters:
             raise ValueError(
                 f"Cannot constrain '{target}': it is not a parameter of the mixture. "
-                f'Known parameters: {sorted(self._all_symbols)}.'
+                f'Known parameters: {sorted(self._all_parameters)}.'
             )
-        _add_bounds(self._bounds, target, bounds)
+        _add_bounds(self._bounds, self._canonical_name(target), bounds)
         return self
 
     @property
@@ -505,7 +515,16 @@ class MixtureMetric(BaseMetric):
     @staticmethod
     def _accepted_names(component: MixtureComponent) -> set[str]:
         """Return the keyword arguments a component's metric accepts from the caller."""
-        return component.metric._all_symbols | _extra_parameters(component.metric)
+        return component.metric._all_parameters | _extra_parameters(component.metric)
+
+    def _canonical_name(self, name: str) -> str:
+        """Return the name of the parameter the keyword *name* stands for: a weight's, or a component's symbol."""
+        if name in self._weight_parameter_names:
+            return name
+        for component in self.components:
+            if name in component.metric._all_parameters:
+                return component.metric._canonical_name(name)
+        return name
 
     @classmethod
     def _component_parameters(cls, component: MixtureComponent, parameters: Mapping[str, Any]) -> dict[str, Any]:

@@ -150,11 +150,13 @@ def test_metric_outlier_detection_does_not_depend_on_label_encoding(labels):
     assert model.costs_['fp'].max() < 1000.0
 
 
-@pytest.mark.parametrize('spelling', ['d', 'amount'], ids=['symbol_name', 'alias'])
+@pytest.mark.parametrize('spelling', ['d', 'amount', 'value'], ids=['symbol_name', 'alias', 'second_alias'])
 def test_an_outlier_sensitive_parameter_is_imputed_under_either_spelling(spelling):
-    """The metric accepts a parameter as its symbol name or its alias, so outlier detection must too."""
+    """The metric accepts a parameter as its symbol name or any alias, so outlier detection must too."""
     X, y = make_classification(n_samples=300, random_state=0)
-    cost_matrix = CostMatrix().add_fp_cost('d').add_fn_cost('f').alias('amount', 'd').mark_outlier_sensitive('d')
+    cost_matrix = (
+        CostMatrix().add_fp_cost('d').add_fn_cost('f').alias({'amount': 'd', 'value': 'd'}).mark_outlier_sensitive('d')
+    )
     loss = Metric(cost_matrix, Cost())
     amount = np.random.default_rng(0).random(300)
     amount[:5] = 1000.0

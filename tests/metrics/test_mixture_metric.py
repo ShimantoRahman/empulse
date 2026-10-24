@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pytest
 import sympy
+import sympy.stats
 from sklearn.datasets import make_classification
 
 from empulse.metrics import (
@@ -771,3 +772,41 @@ class TestConstrain:
     def test_an_unknown_name_is_rejected(self):
         with pytest.raises(ValueError, match="Cannot constrain 'typo'"):
             self.mixture().constrain('typo', 0, 1)
+
+    def test_a_random_variable_is_rejected(self):
+        """Its values are drawn, not passed, so a bound on it would never be checked."""
+        gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), 2)
+        metric = Metric(CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1), MaxProfit())
+        with pytest.raises(ValueError, match="Cannot constrain 'gamma'"):
+            MixtureMetric([MixtureComponent(1.0, metric, {})]).constrain('gamma', 0, 0.1)
+
+
+class TestAliasedParameters:
+    """A mixture resolves a component's aliases before its bounds, predicates and defaults apply."""
+
+    A = sympy.Symbol('a')
+
+    def mixture(self, **kwargs):
+        metric = Metric(CostMatrix().add_fp_cost(self.A).add_fn_cost(4).alias({'rate': 'a'}), Cost())
+        return MixtureMetric([MixtureComponent(0.5, metric, {}), MixtureComponent(0.5, metric, {})], **kwargs)
+
+    @pytest.mark.parametrize('bounded', ['a', 'rate'])
+    @pytest.mark.parametrize('passed', ['a', 'rate'])
+    def test_a_bound_holds_under_every_spelling(self, bounded, passed):
+        mixture = self.mixture().constrain(bounded, 0, 1)
+        with pytest.raises(ValueError, match=f'{passed} should lay between 0 and 1'):
+            mixture(Y_TRUE, Y_SCORE, **{passed: 5.0})
+
+    @pytest.mark.parametrize('passed', ['a', 'rate'])
+    def test_a_predicate_reads_the_symbol_name(self, passed):
+        mixture = self.mixture().constrain(lambda parameters: parameters['a'] <= 1, message='a must be at most 1')
+        assert mixture(Y_TRUE, Y_SCORE, **{passed: 0.5}) == pytest.approx(mixture(Y_TRUE, Y_SCORE, a=0.5))
+        with pytest.raises(ValueError, match='a must be at most 1'):
+            mixture(Y_TRUE, Y_SCORE, **{passed: 5.0})
+
+    @pytest.mark.parametrize('default_under', ['a', 'rate'])
+    @pytest.mark.parametrize('passed', ['a', 'rate'])
+    def test_a_default_yields_to_a_value_under_another_spelling(self, default_under, passed):
+        """The default and the caller's value used to reach the component as two conflicting spellings."""
+        mixture = self.mixture(defaults={default_under: 0.5})
+        assert mixture(Y_TRUE, Y_SCORE, **{passed: 0.7}) == pytest.approx(self.mixture()(Y_TRUE, Y_SCORE, a=0.7))
