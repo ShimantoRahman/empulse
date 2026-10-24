@@ -149,14 +149,16 @@ class ProfTreeClassifier(CostSensitiveClassifier):
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
-        All probabilities must sum to 1.
+        The rates are relative weights, divided by their sum, so they need not sum to 1, but at least one
+        must be positive.
 
     grow_rate : float, default=0.2
         Probability to add a randomly generated split rule to a leaf node. Must be in [0, 1].
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
-        All probabilities must sum to 1.
+        The rates are relative weights, divided by their sum, so they need not sum to 1, but at least one
+        must be positive.
 
     prune_rate : float, default=0.2
         Probability to remove a randomly selected split rule from an internal node with two leaf nodes as children.
@@ -164,21 +166,24 @@ class ProfTreeClassifier(CostSensitiveClassifier):
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
-        All probabilities must sum to 1.
+        The rates are relative weights, divided by their sum, so they need not sum to 1, but at least one
+        must be positive.
 
     mutate_split_rate : float, default=0.2
         Probability to change the feature and feature value of a random split in the tree. Must be in [0, 1].
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
-        All probabilities must sum to 1.
+        The rates are relative weights, divided by their sum, so they need not sum to 1, but at least one
+        must be positive.
 
     mutate_value_rate : float, default=0.2
         Probability to change only the feature value of a random split in the tree. Must be in [0, 1].
 
         Variation operator is mutually exclusive with variation operators
         (``crossover_rate``, ``grow_rate``, ``prune_rate``, ``mutate_split_rate``, ``mutate_value_rate``).
-        All probabilities must sum to 1.
+        The rates are relative weights, divided by their sum, so they need not sum to 1, but at least one
+        must be positive.
 
     cache_samples : bool, default=True
         Whether every tree in the population keeps which training samples reach each of its nodes.
@@ -339,6 +344,11 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         total_probability = (
             self.crossover_rate + self.grow_rate + self.prune_rate + self.mutate_split_rate + self.mutate_value_rate
         )
+        if total_probability <= 0:
+            raise ValueError(
+                'At least one of crossover_rate, grow_rate, prune_rate, mutate_split_rate and mutate_value_rate '
+                'must be positive: they are the relative weights with which the variation operators are chosen.'
+            )
         crossover_rate = self.crossover_rate / total_probability
         grow_rate = self.grow_rate / total_probability
         prune_rate = self.prune_rate / total_probability

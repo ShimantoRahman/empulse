@@ -396,20 +396,6 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             resolved[name] = value
         return resolved
 
-    def _select_class_samples(
-        self,
-        X: FloatNDArray,
-        is_positive: NDArray[np.bool_],
-        cls: Literal['positive', 'negative', 'both'],
-        target: FloatNDArray,
-    ) -> tuple[FloatNDArray, FloatNDArray]:
-        """Return the subset of (X, target) relevant for a parameter classified as *cls*."""
-        if cls == 'positive':
-            return _safe_indexing(X, is_positive), target[is_positive]
-        if cls == 'negative':
-            return _safe_indexing(X, ~is_positive), target[~is_positive]
-        return X, target.copy()
-
     def _fit_and_impute(
         self,
         X: FloatNDArray,
@@ -418,16 +404,21 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         target: FloatNDArray,
     ) -> tuple[FloatNDArray, Any]:
         """
-        Fit the outlier estimator on the *rows* of *target*, and return *target* with its outliers imputed.
+        Fit the outlier estimator on the *rows* of *target*, and return *target* with their outliers imputed.
 
-        Also returns the fitted estimator, or ``None``, leaving *target* as it is, when there are no such rows.
+        A cost of one class only enters the rows of that class, so the other rows are left as they are:
+        their values neither change nor widen the spread an outlier is measured against. Also returns the
+        fitted estimator, or ``None``, leaving *target* as it is, when there are no such rows.
         """
-        X_fit, target_fit = self._select_class_samples(X, is_positive, rows, target)
-        if target_fit.size == 0:
+        selected = {'positive': is_positive, 'negative': ~is_positive, 'both': np.ones_like(is_positive)}[rows]
+        if not selected.any():
             return target, None
+        X_fit, target_fit = _safe_indexing(X, selected), target[selected]
         outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
         outlier_estimator = clone(outlier_estimator).fit(X_fit, target_fit)
-        return self._impute_outliers(outlier_estimator, X, target), outlier_estimator
+        imputed = np.array(target, dtype=np.float64)
+        imputed[selected] = self._impute_outliers(outlier_estimator, X_fit, target_fit)
+        return imputed, outlier_estimator
 
     def _impute_outliers(self, outlier_estimator: Any, X: FloatNDArray, target: FloatNDArray) -> FloatNDArray:
         """Predict costs with *outlier_estimator* and replace outlier values in *target*."""

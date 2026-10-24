@@ -261,3 +261,37 @@ def test_sensitive_feature_not_coded_zero_one_raises(classifier_cls, X, y, imbal
     sensitive_feature = np.array([1, 2] * (len(target) // 2))
     with pytest.raises(ValueError, match='coded as 0 and 1'):
         classifier_cls(LogisticRegression()).fit(X, target, sensitive_feature=sensitive_feature)
+
+
+@pytest.mark.parametrize('group', [0, 1])
+def test_reweighing_a_single_sensitive_group_weighs_every_sample_alike(group):
+    """With one group there is nothing to rebalance; group 0 got weights following the class prior instead."""
+    y_true = np.array([0, 0, 0, 1, 1, 0, 1, 0])
+    sensitive_feature = np.full(len(y_true), group)
+
+    with pytest.warns(UserWarning, match='only contains one class, no reweighing is performed'):
+        weights = _independent_sample_weights(y_true, sensitive_feature)
+
+    np.testing.assert_array_equal(weights, np.ones(len(y_true)))
+
+
+def test_independent_weights_count_each_group_by_its_value():
+    """The shared weights must not depend on where two histogram bins happen to fall."""
+    from empulse._common._strategies import _independent_weights
+
+    y_true = np.array([0, 0, 1, 1, 0, 1])
+    protected = np.zeros(len(y_true), dtype=int)
+
+    weights = _independent_weights(y_true, protected)
+
+    np.testing.assert_allclose(weights[:, 0], [1.0, 1.0])
+
+
+def test_single_group_reweighing_warning_points_at_the_callers_fit():
+    X = np.random.default_rng(0).normal(size=(40, 3))
+    y = np.tile([0, 1], 20)
+
+    with pytest.warns(UserWarning, match='no reweighing is performed') as record:
+        BiasReweighingClassifier(LogisticRegression()).fit(X, y, sensitive_feature=np.zeros(len(y), dtype=int))
+
+    assert record[0].filename == __file__

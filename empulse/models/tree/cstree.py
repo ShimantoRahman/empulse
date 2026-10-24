@@ -26,6 +26,26 @@ from ._cstree._grow import (
 )
 
 
+def _encoded_class_weight(class_weight: Any, classes: NDArray[Any]) -> Any:
+    """
+    Re-key a ``class_weight`` dict by the 0/1 encoding of *classes*, which is how ``_fit`` receives ``y``.
+
+    ``fit`` replaces each label by its index in ``classes_`` before the tree sees it, so a dict keyed by
+    the labels themselves, such as ``{'no': 1, 'yes': 5}``, would match neither class. A class without
+    a weight keeps weight one, as in scikit-learn; a key that is no class raises. ``'balanced'`` and
+    ``None`` are returned as they are, and each dict of a list is re-keyed.
+    """
+    if class_weight is None or isinstance(class_weight, str):
+        return class_weight
+    if isinstance(class_weight, list):
+        return [_encoded_class_weight(weights, classes) for weights in class_weight]
+    labels = classes.tolist()
+    unknown = [key for key in class_weight if key not in labels]
+    if unknown:
+        raise ValueError(f'class_weight has weights for {unknown}, which are not classes. The classes are {labels}.')
+    return {index: class_weight[label] for index, label in enumerate(labels) if label in class_weight}
+
+
 def _warn_if_trees_ignore_strategy(loss: BaseMetric, model_name: str, *, loss_used_for: str | None = None) -> None:
     """
     Warn when the trees will not optimize *loss*, because its score is not an expected cost.
@@ -397,7 +417,8 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
         y = np.asarray(y).reshape(-1)
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        sample_weight = None if self.class_weight is None else compute_sample_weight(self.class_weight, y)
+        class_weight = _encoded_class_weight(self.class_weight, self.classes_)
+        sample_weight = None if class_weight is None else compute_sample_weight(class_weight, y)
 
         self._cost_scale = decision_cost_scale(loss, y, **loss_params)
         self.min_impurity_decrease_ = resolve_min_impurity_decrease(

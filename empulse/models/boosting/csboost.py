@@ -58,6 +58,29 @@ def _classifier(name: str) -> Any:
     return getattr(sys.modules[__name__], name)
 
 
+def _encoded_eval_set(eval_set: Any, classes: Any) -> Any:
+    """
+    Encode the labels of an ``eval_set`` as ``fit`` encodes ``y``: 1 for ``classes[1]``, 0 for ``classes[0]``.
+
+    The booster is trained on the 0/1 encoding, so labels such as ``'yes'``/``'no'`` or 1/2 would
+    crash it or be scored as if they were 0/1 probabilities. Takes one ``(X, y)`` pair or a list of
+    them, as XGBoost, LightGBM and CatBoost do; anything else, such as a CatBoost ``Pool``, is passed
+    through as it is.
+    """
+    if isinstance(eval_set, list):
+        return [_encoded_eval_set(pair, classes) for pair in eval_set]
+    if not (isinstance(eval_set, tuple) and len(eval_set) == 2):
+        return eval_set
+    X_eval, y_eval = eval_set
+    y_eval = np.asarray(y_eval).reshape(-1)
+    unknown = np.setdiff1d(y_eval, classes)
+    if unknown.size:
+        raise ValueError(
+            f'eval_set has labels {unknown.tolist()[:10]}, which are not among the training classes {classes.tolist()}.'
+        )
+    return X_eval, np.where(y_eval == classes[1], 1, 0)
+
+
 def _backend_for_estimator(estimator: Any) -> BoostingBackend | None:
     """:func:`backend_for`, threading through this module's own (patchable) classifier names."""
     return backend_for(
@@ -293,6 +316,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
 
         fit_params : dict
             Additional keyword arguments to pass to the estimator's fit method.
+            The labels of an ``eval_set`` are encoded as ``y`` is, so they are given as the class labels.
 
         **loss_params : dict
             Additional keyword arguments to pass to the loss function if using a custom loss function.
@@ -324,6 +348,8 @@ class CSBoostClassifier(CostSensitiveClassifier):
         **loss_params: Any,
     ) -> Self:
         fit_params = {} if fit_params is None else dict(fit_params)
+        if 'eval_set' in fit_params:
+            fit_params['eval_set'] = _encoded_eval_set(fit_params['eval_set'], self.classes_)
         if 'sample_weight' in fit_params:
             raise TypeError(
                 f'{type(self).__name__} does not take sample_weight: the costs of the cost matrix already '

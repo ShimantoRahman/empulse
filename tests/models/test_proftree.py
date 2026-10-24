@@ -561,3 +561,31 @@ def test_a_mixture_of_deterministic_max_profits_is_optimized_as_the_mixture():
 
     fitness = model.tree_._serialize_tree()['fitness']
     assert fitness == pytest.approx(mixture(y, model.predict_proba(X)[:, 1], roi=0.2644), rel=1e-6)
+
+
+class TestVariationOperatorRates:
+    """The operator rates are relative weights, normalized by their sum."""
+
+    RATES: ClassVar[tuple[str, ...]] = (
+        'crossover_rate',
+        'grow_rate',
+        'prune_rate',
+        'mutate_split_rate',
+        'mutate_value_rate',
+    )
+
+    def test_all_zero_raises_a_clear_error(self, data):
+        X, y = data
+        model = ProfTreeClassifier(max_iter=2, random_state=0, **dict.fromkeys(self.RATES, 0.0))
+        with pytest.raises(ValueError, match='At least one of crossover_rate'):
+            model.fit(X, y, fp_cost=1.0, fn_cost=2.0)
+
+    def test_rates_need_not_sum_to_one(self, data):
+        X, y = data
+        halves = ProfTreeClassifier(max_iter=3, random_state=0, **dict.fromkeys(self.RATES, 0.5))
+        fifths = ProfTreeClassifier(max_iter=3, random_state=0, **dict.fromkeys(self.RATES, 0.2))
+
+        np.testing.assert_allclose(
+            halves.fit(X, y, fp_cost=1.0, fn_cost=2.0).predict_proba(X),
+            fifths.fit(X, y, fp_cost=1.0, fn_cost=2.0).predict_proba(X),
+        )

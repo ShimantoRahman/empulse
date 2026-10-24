@@ -485,3 +485,33 @@ class TestBaggingMissingValues:
         assert not model.__sklearn_tags__().input_tags.allow_nan
         with pytest.raises(ValueError, match='NaN'):
             model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+
+@pytest.mark.parametrize('bootstrap', [True, False])
+def test_forest_class_weight_is_keyed_by_the_class_labels(classification_data, bootstrap):
+    X, y = classification_data
+    model = CSForestClassifier(
+        n_estimators=5, class_weight={'no': 1.0, 'yes': 5.0}, bootstrap=bootstrap, random_state=0
+    )
+    model.fit(X, np.array(['no', 'yes'])[y], fp_cost=1, fn_cost=1)
+    reference = CSForestClassifier(n_estimators=5, class_weight={0: 1.0, 1: 5.0}, bootstrap=bootstrap, random_state=0)
+    reference.fit(X, y, fp_cost=1, fn_cost=1)
+
+    np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+
+def test_callable_oob_score_receives_the_class_labels(classification_data):
+    """As in scikit-learn's forests, not the 0/1 encoding the trees are grown on."""
+    X, y = classification_data
+    received = {}
+
+    def oob_score(y_true, y_pred):
+        received['labels'] = set(np.unique(y_true)) | set(np.unique(y_pred))
+        return float(np.mean(y_true == y_pred))
+
+    model = CSForestClassifier(n_estimators=20, oob_score=oob_score, random_state=0)
+    model.fit(X, np.array(['no', 'yes'])[y], fp_cost=1, fn_cost=1)
+    reference = CSForestClassifier(n_estimators=20, oob_score=True, random_state=0).fit(X, y, fp_cost=1, fn_cost=1)
+
+    assert received['labels'] <= {'no', 'yes'}
+    assert model.oob_score_ == pytest.approx(reference.oob_score_)

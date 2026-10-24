@@ -344,3 +344,36 @@ class TestLossStrategyIsNotWhatTheTreeOptimizes:
         with pytest.warns(UserWarning, match='minimize the expected cost'):
             on_max_profit = CSTreeClassifier(loss=Metric(cost_matrix, MaxProfit()), max_depth=3).fit(X, y, a=1.0, b=5.0)
         np.testing.assert_array_equal(on_cost.predict_proba(X), on_max_profit.predict_proba(X))
+
+
+@pytest.mark.parametrize(
+    ('labels', 'class_weight'),
+    [(['no', 'yes'], {'no': 1.0, 'yes': 5.0}), ([1, 2], {1: 1.0, 2: 5.0}), ([-1, 1], {-1: 1.0, 1: 5.0})],
+    ids=['strings', 'one_and_two', 'minus_one_and_one'],
+)
+def test_class_weight_is_keyed_by_the_class_labels(classification_data, labels, class_weight):
+    """``fit`` encodes y as 0/1 before the tree sees it, so the dict must be re-keyed, not looked up as is."""
+    X, y = classification_data
+    y_labeled = np.asarray(labels)[y]
+
+    model = CSTreeClassifier(class_weight=class_weight, random_state=0).fit(X, y_labeled, fp_cost=1, fn_cost=1)
+    reference = CSTreeClassifier(class_weight={0: 1.0, 1: 5.0}, random_state=0).fit(X, y, fp_cost=1, fn_cost=1)
+
+    np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+
+def test_a_class_without_a_weight_keeps_weight_one(classification_data):
+    X, y = classification_data
+    model = CSTreeClassifier(class_weight={'yes': 5.0}, random_state=0)
+    model.fit(X, np.array(['no', 'yes'])[y], fp_cost=1, fn_cost=1)
+    reference = CSTreeClassifier(class_weight={0: 1.0, 1: 5.0}, random_state=0).fit(X, y, fp_cost=1, fn_cost=1)
+
+    np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+
+def test_class_weight_for_a_label_that_is_no_class_raises(classification_data):
+    X, y = classification_data
+    with pytest.raises(ValueError, match=r"class_weight has weights for \['maybe'\], which are not classes"):
+        CSTreeClassifier(class_weight={'no': 1.0, 'maybe': 5.0}).fit(
+            X, np.array(['no', 'yes'])[y], fp_cost=1, fn_cost=1
+        )

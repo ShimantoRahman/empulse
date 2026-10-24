@@ -125,7 +125,8 @@ def test_outlier_detection_does_not_depend_on_label_encoding(labels):
     for cost_name in ('fp_cost', 'fn_cost'):
         assert model.outlier_estimators_[cost_name] is not None
         np.testing.assert_allclose(model.costs_[cost_name], reference.costs_[cost_name])
-    assert model.costs_['fp_cost'].max() < 1000.0
+    # fp_cost only enters the negatives' costs, so only their outliers are imputed.
+    assert model.costs_['fp_cost'][y == 0].max() < 1000.0
 
 
 @pytest.mark.parametrize(
@@ -147,7 +148,7 @@ def test_metric_outlier_detection_does_not_depend_on_label_encoding(labels):
 
     assert 'fp' in model.outlier_estimators_
     np.testing.assert_allclose(model.costs_['fp'], reference.costs_['fp'])
-    assert model.costs_['fp'].max() < 1000.0
+    assert model.costs_['fp'][y == 0].max() < 1000.0
 
 
 @pytest.mark.parametrize('spelling', ['d', 'amount', 'value'], ids=['symbol_name', 'alias', 'second_alias'])
@@ -164,7 +165,7 @@ def test_an_outlier_sensitive_parameter_is_imputed_under_either_spelling(spellin
     model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, y, f=1.0, **{spelling: amount})
 
     assert spelling in model.outlier_estimators_
-    assert model.costs_[spelling].max() < 1000.0
+    assert model.costs_[spelling][y == 0].max() < 1000.0
 
 
 def test_metric_symbols_named_like_the_plain_costs_reach_the_loss(classification_data, seeded_rng):
@@ -226,4 +227,41 @@ def test_a_list_valued_outlier_sensitive_parameter_is_imputed():
 
     model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, y, f=1.0, d=amount.tolist())
 
-    assert model.costs_['d'].max() < 1000.0
+    assert model.costs_['d'][y == 0].max() < 1000.0
+
+
+def test_outliers_of_a_one_class_cost_are_measured_among_that_class_only():
+    """
+    A cost of the positive rows must not be judged against the negatives' values of the same parameter.
+
+    The negatives' values never enter the cost, and the outlier model never sees them, so their large
+    residuals widened the spread and hid the positives' outliers, and the negatives got "imputed".
+    """
+    X, y = make_classification(n_samples=600, n_features=6, weights=[0.8], random_state=0)
+    rng = np.random.default_rng(0)
+    clv = np.where(y == 1, 100 + 10 * X[:, 0], rng.uniform(0, 2000, len(y)))
+    planted = np.flatnonzero(y == 1)[:5]
+    clv[planted] = 400.0
+    cost_matrix = CostMatrix().add_fn_cost('clv').add_fp_cost(5).mark_outlier_sensitive('clv')
+
+    model = RobustCSClassifier(CSLogitClassifier(loss=Metric(cost_matrix, Cost()))).fit(X, y, clv=clv)
+
+    changed = np.flatnonzero(~np.isclose(model.costs_['clv'], clv))
+    assert set(planted) <= set(changed)
+    assert not (y[changed] == 0).any()
+
+
+def test_outliers_of_a_one_class_plain_cost_are_measured_among_that_class_only():
+    X, y = make_classification(n_samples=600, n_features=6, weights=[0.8], random_state=0)
+    rng = np.random.default_rng(0)
+    fn_cost = np.where(y == 1, 100 + 10 * X[:, 0], rng.uniform(0, 2000, len(y)))
+    planted = np.flatnonzero(y == 1)[:5]
+    fn_cost[planted] = 400.0
+
+    model = RobustCSClassifier(CSLogitClassifier(), detect_outliers_for='fn_cost').fit(
+        X, y, fn_cost=fn_cost, fp_cost=5.0
+    )
+
+    changed = np.flatnonzero(~np.isclose(model.costs_['fn_cost'], fn_cost))
+    assert set(planted) <= set(changed)
+    assert not (y[changed] == 0).any()

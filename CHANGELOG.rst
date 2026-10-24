@@ -166,6 +166,27 @@ Metrics
 Models
 ------
 
+- |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
+  accept a ``class_weight`` dict keyed by the class labels, as documented. It was looked up by the
+  0/1 encoding of the labels, so ``{'no': 1, 'yes': 5}`` or ``{1: 1, 2: 5}`` raised, and only labels 0
+  and 1 worked. A key that is no class raises a clear error, so a dict keyed by 0 and 1 for other
+  labels, which used to be the way around this, has to be keyed by the labels instead.
+- |Fix| :class:`~empulse.models.CSForestClassifier` passes a callable ``oob_score`` the class labels,
+  as scikit-learn's forests do, instead of their 0/1 encoding.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` measures and imputes the outliers of a cost that
+  only enters one class's rows (such as ``fn_cost``, or a parameter used only in it) among that
+  class's rows. The other class's values, which the outlier model never saw and the cost never uses,
+  widened the spread an outlier is measured against, so that real outliers were missed, and were
+  themselves replaced as outliers.
+- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  encode the labels of an ``eval_set`` passed in ``fit_params`` as they encode ``y``. String labels
+  crashed XGBoost, and labels such as 1/2 or -1/1 were scored as if they were 0/1.
+- |Fix| :class:`~empulse.models.BiasReweighingClassifier` weighs every sample alike, with a warning,
+  when the sensitive feature has a single value, as the resampling and relabeling models do. With
+  only the value 0, the weights followed the class prior instead.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` raises a clear error when every variation operator
+  rate is zero, instead of a ``ZeroDivisionError``. The rates are documented as the relative weights
+  they are: they need not sum to 1.
 - |API| :class:`~empulse.models.CSForestClassifier` accepts ``min_impurity_decrease=None``, as
   :class:`~empulse.models.CSTreeClassifier` does, and both it and the default tree of
   :class:`~empulse.models.CSBaggingClassifier` now use it: a tree only splits while that lowers the

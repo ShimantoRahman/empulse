@@ -333,3 +333,36 @@ class TestCatBoostBackend:
         y_proba = model.fit(X, y, fp_cost=1.0).predict_proba(X)
         # Only false positives cost anything, so the model must lean negative.
         assert y_proba[:, 1].mean() < 0.5
+
+
+@pytest.mark.parametrize(
+    'labels', [['no', 'yes'], [1, 2], [-1, 1]], ids=['strings', 'one_and_two', 'minus_one_and_one']
+)
+def test_eval_set_labels_are_encoded_as_y_is(cost_dataset, labels):
+    """The booster trains on 0/1, so an eval_set in the class labels crashed or was scored as nonsense."""
+    pytest.importorskip('xgboost')
+    X, y, fn_cost, fp_cost = cost_dataset
+    X_val, y_val = X[:20], y[:20]
+    labels = np.asarray(labels)
+
+    model = CSBoostClassifier().fit(
+        X,
+        labels[y],
+        fp_cost=fp_cost,
+        fn_cost=fn_cost,
+        fit_params={'eval_set': [(X_val, labels[y_val])], 'verbose': False},
+    )
+    reference = CSBoostClassifier().fit(
+        X, y, fp_cost=fp_cost, fn_cost=fn_cost, fit_params={'eval_set': [(X_val, y_val)], 'verbose': False}
+    )
+
+    assert model.estimator_.evals_result() == reference.estimator_.evals_result()
+
+
+def test_eval_set_with_a_label_that_is_no_class_raises(cost_dataset):
+    pytest.importorskip('xgboost')
+    X, y, fn_cost, fp_cost = cost_dataset
+    with pytest.raises(ValueError, match='eval_set has labels'):
+        CSBoostClassifier().fit(
+            X, y, fp_cost=fp_cost, fn_cost=fn_cost, fit_params={'eval_set': [(X[:5], np.full(5, 7))]}
+        )

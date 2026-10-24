@@ -30,7 +30,7 @@ from ._cstree._grow import (
     resolve_min_impurity_decrease,
     resolve_tree_params,
 )
-from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
+from .cstree import CSTreeClassifier, _encoded_class_weight, _warn_if_trees_ignore_strategy
 
 # The largest tree seed, as scikit-learn's forests draw them.
 MAX_INT = np.iinfo(np.int32).max
@@ -534,7 +534,7 @@ class CSForestClassifier(CostSensitiveClassifier):
             if self.bootstrap:
                 return None  # computed on each bootstrap sample
             return compute_sample_weight('balanced', y)  # type: ignore[no-any-return]
-        return compute_sample_weight(self.class_weight, y)  # type: ignore[no-any-return]
+        return compute_sample_weight(_encoded_class_weight(self.class_weight, self.classes_), y)  # type: ignore[no-any-return]
 
     def _drawn_samples(self, seed: int) -> IntNDArray:
         """Return the bootstrap sample of the tree with ``seed``, drawn as when it was grown."""
@@ -598,7 +598,9 @@ class CSForestClassifier(CostSensitiveClassifier):
                 n_oob[n_oob == 0] = 1
             self.oob_decision_function_ = oob_proba / n_oob[:, None]
             scoring_function = self.oob_score if callable(self.oob_score) else accuracy_score
-            self.oob_score_ = scoring_function(y, np.argmax(self.oob_decision_function_, axis=1))
+            # Scored on the class labels, as scikit-learn's forests do, not on their 0/1 encoding.
+            y_pred = np.argmax(self.oob_decision_function_, axis=1)
+            self.oob_score_ = scoring_function(self.classes_.take(y), self.classes_.take(y_pred))
 
     def _validate_X_predict(self, X: FloatArrayLike) -> FloatNDArray:
         check_is_fitted(self)

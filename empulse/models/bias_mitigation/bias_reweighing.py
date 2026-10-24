@@ -1,3 +1,4 @@
+import warnings
 from itertools import product
 from typing import Any, ClassVar
 
@@ -25,6 +26,13 @@ def _to_sample_weights(
 
 
 def _independent_sample_weights(y_true: FloatNDArray, sensitive_feature: IntNDArray) -> FloatNDArray:
+    if np.unique(sensitive_feature).size < 2:
+        warnings.warn(
+            'sensitive_feature only contains one class, no reweighing is performed.',
+            UserWarning,
+            stacklevel=5,  # the caller of BiasReweighingClassifier.fit, through its fit-context wrapper
+        )
+        return np.ones(len(y_true))
     group_weights = _independent_weights(y_true, sensitive_feature)
     return _to_sample_weights(group_weights, y_true, sensitive_feature)
 

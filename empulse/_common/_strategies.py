@@ -25,13 +25,17 @@ def _independent_weights(y_true: FloatNDArray, protected_attr: IntNDArray) -> Fl
     group_weights : np.ndarray of shape (n_samples,)
         Weights for each y_true and protected_attr pair.
     """
+    y_true = np.asarray(y_true).reshape(-1)
+    protected_attr = np.asarray(protected_attr).reshape(-1)
     prob_protected_attr = protected_attr.mean()
     prob_y = y_true.mean()
     prior_protected_attr = np.array([1 - prob_protected_attr, prob_protected_attr]).reshape((1, 2))
     prior_y = np.array([1 - prob_y, prob_y]).reshape((2, 1))
-    if protected_attr.ndim == 2:
-        protected_attr = protected_attr.reshape(-1)
-    joint_prob = np.histogram2d(y_true, protected_attr, bins=(2, 2))[0] / len(y_true)  # type: ignore[type-var]
+    # Counted per (label, group) pair rather than with two histogram bins, whose edges follow the data:
+    # a feature with a single value put all of its samples in the other group's bin.
+    joint_prob = np.array([
+        [np.mean((y_true == label) & (protected_attr == group)) for group in (0, 1)] for label in (0, 1)
+    ])
     epsilon: np.floating[Any] = np.finfo(float).eps  # to avoid division by zero
     weights: FloatNDArray = (1 / (joint_prob + epsilon)) * prior_protected_attr * prior_y
     return weights
