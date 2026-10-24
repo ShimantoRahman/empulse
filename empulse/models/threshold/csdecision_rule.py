@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal, Self
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn import clone, get_config
-from sklearn.base import BaseEstimator, MetaEstimatorMixin
+from sklearn.base import BaseEstimator
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import StratifiedKFold, check_cv, cross_val_predict
@@ -18,11 +18,12 @@ from sklearn.utils.validation import check_is_fitted, has_fit_parameter, indexab
 from ..._common import Parameter
 from ..._common._cost_routing import _all_costs_zero
 from ..._common._metaestimators import estimator_has
-from ..._common._sklearn_compat import Tags, get_tags, sklearn_version
+from ..._common._sklearn_compat import sklearn_version
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, CostMatrix, Metric
 from ...metrics.metric.prebuilt_metrics import make_generic_cost_metric
 from .._base.cost_sensitive import CostSensitiveClassifier
+from .._base.wrapper import ClassesFromEstimator, PassesXThrough
 
 
 def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
@@ -76,7 +77,7 @@ def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, 
     return loss_params
 
 
-class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # type: ignore[misc]
+class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensitiveClassifier):  # type: ignore[misc]
     """
     Base class for cost-sensitive binary classifiers.
 
@@ -117,26 +118,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         self.pos_label = pos_label
         self.cv = cv
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
-
-    @property
-    def classes_(self) -> NDArray[Any]:
-        """The class labels, taken from the wrapped estimator."""
-        if estimator := getattr(self, 'estimator_', None):
-            classes: NDArray[Any] = estimator.classes_
-            return classes
-        try:
-            check_is_fitted(self.estimator)
-            classes: NDArray[Any] = self.estimator.classes_  # type: ignore[no-redef]
-            return classes
-        except NotFittedError:
-            raise AttributeError('The underlying estimator is not fitted yet.') from NotFittedError
-
-    @classes_.setter
-    def classes_(self, value: NDArray[Any]) -> None:
-        if estimator := getattr(self, 'estimator_', None):
-            estimator.classes_ = value
-        else:
-            raise AttributeError('The underlying estimator is not fitted yet.')
 
     def _get_loss_or_default(self) -> BaseMetric:
         """Return the configured loss or a generic cost metric."""
@@ -186,14 +167,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""
         return 'estimator', clone(self.estimator)
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        # X goes to the wrapped estimator as given, so it decides what X may contain.
-        estimator_tags = get_tags(self.estimator)
-        tags.input_tags.sparse = estimator_tags.input_tags.sparse
-        tags.input_tags.allow_nan = estimator_tags.input_tags.allow_nan
-        return tags
 
     def _child_fit_params(
         self,
@@ -382,10 +355,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             y_binary = np.where(np.asarray(y) == self.classes_[positive_index], 1, 0)
             self.decision_ = self._compute_decision(loss, y_binary, y_proba[:, positive_index], loss_params)
 
-        if hasattr(self.estimator_, 'n_features_in_'):
-            self.n_features_in_ = self.estimator_.n_features_in_
-        if hasattr(self.estimator_, 'feature_names_in_'):
-            self.feature_names_in_ = self.estimator_.feature_names_in_
+        self._copy_feature_attributes()
 
         return self
 

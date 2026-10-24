@@ -10,10 +10,11 @@ from sklearn.utils.validation import column_or_1d, indexable
 
 from ..._common import Parameter
 from ..._common._cost_routing import RoutesLossParameters
-from ..._common._sklearn_compat import Tags, get_tags, type_of_target, validate_data
+from ..._common._sklearn_compat import get_tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, Cost, MetricStrategy
 from ...metrics.metric.prebuilt_metrics import make_generic_metric
+from .wrapper import BinaryClassifierTags, check_binary_target
 
 
 def subset_loss_params(loss_params: dict[str, Any], index: Any, n_samples: int) -> dict[str, Any]:
@@ -57,7 +58,7 @@ class MetricStrategyFactory(Protocol):
         """Instantiate a MetricStrategy object."""
 
 
-class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEstimator):
+class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, ClassifierMixin, BaseEstimator):
     """Base class for cost-sensitive classifiers."""
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -71,18 +72,6 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
     # Keyword arguments of ``fit`` that ``_fit`` consumes besides the loss's parameters. ``None``
     # means ``_fit`` forwards any keyword argument, so none is rejected.
     _extra_fit_params: ClassVar[frozenset[str] | None] = frozenset()
-
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
-    def __sklearn_tags__(self) -> Tags:
-        tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        return tags
 
     def __init__(
         self,
@@ -159,11 +148,7 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
                 self, X, y, ensure_all_finite='allow-nan' if get_tags(self).input_tags.allow_nan else True
             )
         X, y = X_checked, y_checked
-        y_type = type_of_target(y, input_name='y', raise_unknown=True)
-        if y_type != 'binary':
-            raise ValueError(
-                f'Unknown label type: Only binary classification is supported. The type of the target is {y_type}.'
-            )
+        check_binary_target(y)
         if not isinstance(self, MetaEstimatorMixin):
             self.classes_ = np.unique(y)
             if len(self.classes_) == 1:

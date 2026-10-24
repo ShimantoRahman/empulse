@@ -3,14 +3,13 @@ from itertools import product
 from typing import Any, ClassVar
 
 import numpy as np
-from sklearn import get_config
 from sklearn.base import clone
-from sklearn.pipeline import Pipeline
 
 from ..._common._bias_sampling import _check_sensitive_feature
 from ..._common._strategies import StrategyFn, _independent_weights
 from ..._types import FloatNDArray, IntNDArray
 from .._base.bias import BaseBiasMitigationClassifier
+from .._base.wrapper import fit_parameter_name
 
 
 def _to_sample_weights(
@@ -25,19 +24,6 @@ def _to_sample_weights(
         idx_class_sensitive = np.intersect1d(idx_class, idx_sensitive_feature)
         sample_weight[idx_class_sensitive] = group_weights[target_class, sensitive_val]
     return sample_weight / np.max(sample_weight)
-
-
-def _sample_weight_parameter(estimator: Any) -> str:
-    """
-    Return the fit parameter that gives *estimator* its sample weights.
-
-    Without metadata routing a pipeline takes them as its last step's ``<step>__sample_weight``; with it,
-    as ``sample_weight``, routed to the steps that request them.
-    """
-    if isinstance(estimator, Pipeline) and not get_config()['enable_metadata_routing']:
-        name, step = estimator.steps[-1]
-        return f'{name}__{_sample_weight_parameter(step)}'
-    return 'sample_weight'
 
 
 def _independent_sample_weights(y_true: FloatNDArray, sensitive_feature: IntNDArray) -> FloatNDArray:
@@ -203,7 +189,7 @@ class BiasReweighingClassifier(BaseBiasMitigationClassifier):
         # The strategy works on the 0/1-encoded target; the estimator is fitted on the original labels.
         y_binary = np.where(y == self.classes_[1], 1, 0)
         sample_weights = strategy_fn(y_binary, sensitive_feature)
-        parameter = _sample_weight_parameter(self.estimator)
+        parameter = fit_parameter_name(self.estimator, 'sample_weight')
         if parameter in fit_params:
             raise TypeError(
                 f'{type(self).__name__}.fit() does not take {parameter}: it passes its own to the estimator.'

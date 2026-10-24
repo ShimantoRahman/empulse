@@ -3,7 +3,7 @@ from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, check_is_fitted, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, check_is_fitted, clone
 from sklearn.linear_model import HuberRegressor
 from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
@@ -17,6 +17,11 @@ from ..._common._sklearn_compat import Tags, get_tags
 from ..._types import FloatArrayLike, FloatNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_sensitive import CostSensitiveClassifier
+from .._base.wrapper import (
+    BinaryClassifierTags,
+    ClassesFromEstimator,
+    PassesXThrough,
+)
 
 CostStr = Literal['tp_cost', 'tn_cost', 'fn_cost', 'fp_cost']
 # The costs that describe positive samples, whose outliers are detected on those samples only.
@@ -25,7 +30,9 @@ CSCLASSIFIER_PARAMS = CostSensitiveClassifier._parameter_constraints.copy()
 CSCLASSIFIER_PARAMS.pop('loss')
 
 
-class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class RobustCSClassifier(  # type: ignore[misc]
+    RoutesLossParameters, PassesXThrough, ClassesFromEstimator, BinaryClassifierTags, ClassifierMixin, BaseEstimator
+):
     """
     Cost-sensitive classifier that is robust to outliers in the instance-dependent costs.
 
@@ -253,24 +260,11 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         'detect_outliers_for': [StrOptions({'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}), list],
     }
 
-    def _more_tags(self) -> dict[str, bool]:
-        return {
-            'binary_only': True,
-            'poor_score': True,
-        }
-
     def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
-        tags.classifier_tags.multi_class = False
-        tags.classifier_tags.poor_score = True
-        # X goes to the wrapped estimator as given, so it decides what X may contain. The outlier
-        # estimator is fit on X too, so X may only hold missing values if both accept them.
-        estimator_tags = get_tags(self.estimator)
+        # The outlier estimator is fit on X too, so X may only hold missing values if both accept them.
         outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
-        tags.input_tags.sparse = estimator_tags.input_tags.sparse
-        tags.input_tags.allow_nan = (
-            estimator_tags.input_tags.allow_nan and get_tags(outlier_estimator).input_tags.allow_nan
-        )
+        tags.input_tags.allow_nan = tags.input_tags.allow_nan and get_tags(outlier_estimator).input_tags.allow_nan
         return tags
 
     def _get_metric_loss(self) -> BaseMetric | None:
@@ -377,12 +371,7 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
             estimator_params = {**fit_params, **self.costs_}
 
         self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
-
-        if hasattr(self.estimator_, 'n_features_in_'):
-            self.n_features_in_ = self.estimator_.n_features_in_
-        if hasattr(self.estimator_, 'feature_names_in_'):
-            self.feature_names_in_ = self.estimator_.feature_names_in_
-
+        self._copy_feature_attributes()
         return self
 
     def _costs_with_estimator_fallback(self, **costs: Any) -> dict[str, Any]:
@@ -537,17 +526,3 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         check_is_fitted(self, 'estimator_')
         y_score: FloatNDArray = self.estimator_.decision_function(X)
         return y_score
-
-    @property
-    def classes_(self) -> NDArray[Any]:
-        """The class labels, taken from the fitted estimator."""
-        check_is_fitted(self)
-        classes: NDArray[Any] = self.estimator_.classes_
-        return classes
-
-    @classes_.setter
-    def classes_(self, value: NDArray[Any]) -> None:
-        if estimator := getattr(self, 'estimator_', None):
-            estimator.classes_ = value
-        else:
-            raise AttributeError('The underlying estimator is not fitted yet.')
