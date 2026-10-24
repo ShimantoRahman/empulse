@@ -338,6 +338,17 @@ class Metric(BaseMetric):
     def _is_unitless(self) -> bool:
         return self.strategy._unitless_score
 
+    @property
+    def _label_dependent_cost_weight(self) -> bool:
+        return self.strategy._label_dependent_cost_weight
+
+    def _cost_weight(self, y_true: FloatNDArray, **parameters: Any) -> float:
+        if not self._label_dependent_cost_weight:
+            return 1.0
+        y_true = np.asarray(y_true).reshape(-1)
+        prepared = self._prepare_parameters(n_samples=y_true.size, validate=False, **parameters)
+        return self.strategy._cost_weight(y_true, **prepared)
+
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:
         """Return the required symbol names not covered by *supplied* (aliases resolved)."""
         resolved_supplied = {self._cost_matrix._symbol_name(key) for key in supplied}

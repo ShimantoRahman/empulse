@@ -4,6 +4,20 @@
 Metrics
 -------
 
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
+  decides and trains on the weighted sum of their savings. Each savings divides its component's cost by
+  the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the
+  component with the largest costs decided: in one example the threshold was 0.78 instead of 0.46,
+  which cut the savings from -0.50 to -1.33. The ``optimal_threshold``, ``optimal_rate``,
+  training objectives and :class:`~empulse.models.CSThresholdClassifier` now weigh each component by
+  its mixture weight over its baseline's cost. That weight depends on the labels, so such a mixture no
+  longer has ``Capability.COST_ONLY_DECISION`` (it cannot decide from costs passed to ``predict``) or
+  ``Capability.EXPECTED_COST``.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` without ``Capability.OPTIMAL_RATE`` or
+  ``Capability.OPTIMAL_THRESHOLD``, such as one of a :class:`~empulse.metrics.Profit` and a
+  :class:`~empulse.metrics.Savings` component, raises a ``ValueError`` from ``optimal_rate`` and
+  ``optimal_threshold``. It returned the average of its components' rates, which is no decision of the
+  mixture.
 - |API| :attr:`~empulse.metrics.Metric.parameter_names` lists the names a caller can pass, under
   each spelling, and no longer a stochastic variable, which is drawn rather than passed and warned
   about as unknown when passed. The parameters of its distribution are listed instead. A model's

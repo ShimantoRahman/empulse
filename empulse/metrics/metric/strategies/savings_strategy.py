@@ -21,11 +21,26 @@ class Savings(Cost):
 
     _name: str = 'savings'
     _direction: Direction = Direction.MAXIMIZE
+    _label_dependent_cost_weight = True
 
     @property
     def _extra_kwargs(self) -> set[str]:
         # 'baseline' is consumed by Savings.score and is not a cost-matrix symbol.
         return {'baseline'}
+
+    def _cost_weight(
+        self,
+        y_true: IntNDArray | FloatNDArray,
+        baseline: Literal['zero_one', 'zero', 'one', 'prior'] | FloatArrayLike = 'zero_one',
+        **parameters: Any,
+    ) -> float:
+        """
+        Return one over the magnitude of the baseline's cost, which the savings divide the cost by.
+
+        Infinite when the baseline costs nothing, for then the savings are undefined.
+        """
+        cost_base = self._score_function.baseline_cost(y_true, baseline, **parameters)  # type: ignore[attr-defined]
+        return float('inf') if cost_base == 0.0 else 1.0 / abs(cost_base)
 
     def build(
         self,
@@ -127,6 +142,17 @@ class SavingsScore:
         **kwargs: Any,
     ) -> float:
         """Compute the savings score."""
+        cost_base = self.baseline_cost(y_true, baseline, **kwargs)
+        cost = float(np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=y_score, **kwargs)))
+        return _relative_savings(cost, cost_base)
+
+    def baseline_cost(
+        self,
+        y_true: IntNDArray | FloatNDArray,
+        baseline: FloatArrayLike | Literal['zero_one', 'zero', 'one', 'prior'],
+        **kwargs: Any,
+    ) -> float:
+        """Compute the average cost of the *baseline* classifier, which the savings are relative to."""
         all_symbols = (
             self.cost_equation.free_symbols | self.all_zero_equation.free_symbols | self.all_one_equation.free_symbols
         )
@@ -160,9 +186,7 @@ class SavingsScore:
             )
         else:
             raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', 'prior', or an array-like.")
-
-        cost = float(np.mean(_safe_run_lambda(self.cost_func, self.cost_equation, y=y_true, s=y_score, **kwargs)))
-        return _relative_savings(cost, cost_base)
+        return cost_base
 
 
 def _relative_savings(cost: float, cost_base: float) -> float:

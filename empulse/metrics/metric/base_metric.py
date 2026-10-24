@@ -59,7 +59,10 @@ class BaseMetric(ABC):
     :meth:`_loss`, not equal to it: they must have the same minimizer, but may differ by an
     increasing transformation. :class:`~empulse.metrics.Savings` is the standing example -- it is
     maximized, but reuses :class:`~empulse.metrics.Cost`'s objectives, and minimizing expected cost
-    is equivalent to maximizing savings because savings is a decreasing affine map of cost.
+    is equivalent to maximizing savings because savings is a decreasing affine map of cost. That map
+    divides by the baseline's cost, which differs between cost matrices, so a
+    :class:`~empulse.metrics.MixtureMetric` weighs each component's objective by its
+    :meth:`_cost_weight` to keep the sum of the objectives equivalent to the sum of the scores.
     """
 
     @property
@@ -154,6 +157,46 @@ class BaseMetric(ABC):
     def _is_unitless(self) -> bool:
         """Whether the metric's value is a pure number, like a ratio of profits, rather than an amount of money."""
         return False
+
+    @property
+    def _label_dependent_cost_weight(self) -> bool:
+        """Whether :meth:`_cost_weight` depends on the labels, as it does for :class:`~empulse.metrics.Savings`."""
+        return False
+
+    def _cost_weight(self, y_true: FloatNDArray, **parameters: Any) -> float:
+        """
+        Return how much the metric's value changes per unit of the expected cost its decision and training minimize.
+
+        See :meth:`MetricStrategy._cost_weight`. One unless :attr:`_label_dependent_cost_weight`.
+        """
+        return 1.0
+
+    @property
+    def _decides_from_costs(self) -> bool:
+        """
+        Whether the optimal decision is the one that minimizes the expected cost of :meth:`_decision_costs`.
+
+        So it is for a metric with ``Capability.COST_ONLY_DECISION``, and for a
+        :class:`~empulse.metrics.MixtureMetric` of such metrics, which lacks that capability when the
+        labels weigh its components' costs.
+        """
+        return Capability.COST_ONLY_DECISION in self.capabilities
+
+    def _decision_costs(
+        self, y_true: FloatNDArray, **parameters: Any
+    ) -> tuple[
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+    ]:
+        """
+        Return the ``(fp, fn, tp, tn)`` costs that the metric's decision and training minimize the expected cost of.
+
+        Its :meth:`_evaluate_costs`, with stochastic costs replaced by their mean, except for a
+        :class:`~empulse.metrics.MixtureMetric` whose components' costs the labels *y_true* weigh.
+        """
+        return self._evaluate_costs(replace_stochastic=True, **parameters)
 
     @abstractmethod
     def _missing_parameters(self, supplied: Iterable[str]) -> set[str]:

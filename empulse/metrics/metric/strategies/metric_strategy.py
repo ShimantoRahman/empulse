@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 
 import sympy
 
@@ -71,6 +71,9 @@ class MetricStrategy(ABC):
     #: units of the costs. Models then measure their penalties and tolerances against 1 instead of
     #: against the costs.
     _unitless_score: ClassVar[bool] = False
+    #: Whether :meth:`score` weighs the expected cost by a factor that depends on the labels, as
+    #: :class:`~empulse.metrics.Savings` divides it by the baseline's cost. See :meth:`_cost_weight`.
+    _label_dependent_cost_weight: ClassVar[bool] = False
 
     def __init__(self, name: str, direction: Direction):
         self.name = name
@@ -101,6 +104,17 @@ class MetricStrategy(ABC):
         warning raised by :class:`~empulse.metrics.Metric`.
         """
         return set()
+
+    def _cost_weight(self, y_true: IntNDArray | FloatNDArray, **parameters: Any) -> float:
+        """
+        Return how much :meth:`score` changes per unit of the expected cost its decision and training minimize.
+
+        One for a strategy whose score is the expected cost or its negation. A
+        :class:`~empulse.metrics.MixtureMetric` weighs each component's costs and training objective by
+        it, so that it decides and trains on the weighted sum of the components' scores, not of their
+        costs. Only a strategy with :attr:`_label_dependent_cost_weight` needs to override it.
+        """
+        return 1.0
 
     @abstractmethod
     def build(

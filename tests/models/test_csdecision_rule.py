@@ -19,6 +19,7 @@ from empulse.metrics import (
     Metric,
     MixtureComponent,
     MixtureMetric,
+    Savings,
 )
 from empulse.metrics.metric.cost_matrix import _symbol_names
 from empulse.models import CSLogitClassifier, CSRateClassifier, CSThresholdClassifier
@@ -299,6 +300,35 @@ def test_threshold_of_a_cost_mixture_matches_its_combined_metric(data):
 
     assert mixed.threshold_ == pytest.approx(combined.threshold_)
     np.testing.assert_array_equal(mixed.predict(X), combined.predict(X))
+
+
+class TestSavingsMixture:
+    """Savings divide each component's cost by its baseline's, so the threshold weighs the costs alike."""
+
+    a, b = sympy.symbols('a b')
+
+    @pytest.fixture
+    def mixture(self):
+        metric = Metric(CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b), Savings())
+        return MixtureMetric([MixtureComponent(0.5, metric, {'a': 1.0}), MixtureComponent(0.5, metric, {'a': 400.0})])
+
+    def test_instance_dependent_costs_reduce_to_their_weighted_average(self, data, mixture):
+        X, y = data
+        b_values = np.linspace(1.0, 50.0, len(y))
+
+        clf = CSThresholdClassifier(LogisticRegression(), loss=mixture, calibrator=None).fit(X, y, b=b_values)
+
+        weights = [0.5 / min(np.mean(y * b_values), np.mean(1 - y) * a) for a in (1.0, 400.0)]
+        fp_cost = weights[0] * 1.0 + weights[1] * 400.0
+        fn_cost = (weights[0] + weights[1]) * np.mean(b_values)
+        assert clf.threshold_ == pytest.approx(fp_cost / (fp_cost + fn_cost))
+
+    def test_costs_at_predict_time_raise(self, data, mixture):
+        """The weights need the labels, which predict does not have."""
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), loss=mixture, calibrator=None).fit(X, y, b=5.0)
+        with pytest.raises(ValueError, match='scores or labels'):
+            clf.predict(X, b=10.0)
 
 
 class TestSkipCostSensitiveFit:

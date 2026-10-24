@@ -43,19 +43,20 @@ _COSTS_FOR_OTHER_POSITIVE_CLASS = {
 }
 
 
-def _class_dependent_metric(loss: BaseMetric, loss_params: dict[str, Any]) -> Metric | None:
+def _class_dependent_metric(loss: BaseMetric, y: IntNDArray, loss_params: dict[str, Any]) -> Metric | None:
     """
     Return the metric with each cost replaced by its average over the samples, when a parameter is an array.
 
     Averaging the costs, rather than the parameters they are computed from, is what makes a cost such
     as the product of two instance-dependent parameters come out right. Only for a metric whose
-    decision depends on nothing but the costs; ``None`` otherwise.
+    decision depends on nothing but the costs, which for a mixture of savings the labels *y* weigh;
+    ``None`` otherwise.
     """
-    if Capability.COST_ONLY_DECISION not in loss.capabilities:
+    if not loss._decides_from_costs:
         return None
     if not any(isinstance(value, np.ndarray) and value.size > 1 for value in loss_params.values()):
         return None
-    fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+    fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
     cost_matrix = (
         CostMatrix()
         .add_tp_cost(float(np.mean(tp_cost)))
@@ -488,7 +489,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             if Capability.COST_ONLY_DECISION not in loss.capabilities:
                 raise ValueError(
                     f'Cannot use {loss.__name__!r} at predict time: its optimal '
-                    'threshold/rate is a function of the observed scores, not of the cost values '
+                    'threshold/rate is a function of the observed scores or labels, not of the cost values '
                     'alone, so it cannot be recomputed from cost parameters passed to predict().'
                 )
 
@@ -787,7 +788,7 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
     ) -> float | FloatNDArray:
         # A single threshold needs class-dependent costs. A loss whose decision depends on the scores
         # reduces instance-dependent parameters itself, from the costs they make up.
-        class_dependent_loss = _class_dependent_metric(loss, loss_params)
+        class_dependent_loss = _class_dependent_metric(loss, y, loss_params)
         if class_dependent_loss is not None:
             return class_dependent_loss.optimal_threshold(y, y_score)
         loss_params = {key: _scalar_if_single(value) for key, value in loss_params.items()}

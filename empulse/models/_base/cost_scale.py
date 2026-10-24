@@ -19,5 +19,5 @@ def decision_cost_scale(loss: BaseMetric, y: IntNDArray, **loss_params: Any) -> 
     """
     if loss._is_unitless:
         return 1.0
-    fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+    fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
     return objective_scale_from_costs(y, -np.asarray(tp_cost), -np.asarray(tn_cost), fp_cost, fn_cost)

@@ -168,7 +168,13 @@ class MixtureMetric(BaseMetric):
 
     When every component decides from its costs alone (``Capability.COST_ONLY_DECISION``, as for
     :class:`~empulse.metrics.Cost`), the decision is instead that of the weighted combined costs,
-    and the components must share one strategy type for the mixture to offer it.
+    and the components must share one strategy type for the mixture to offer it. A mixture that
+    offers neither raises instead of averaging its components' decisions.
+
+    :class:`~empulse.metrics.Savings` divides each component's cost by the cost of that component's
+    baseline, so a mixture of savings combines the costs, and trains models, with each weight divided
+    by that baseline cost too. That depends on the labels, so such a mixture lacks
+    ``Capability.COST_ONLY_DECISION`` and ``Capability.EXPECTED_COST``.
 
     Read more in the :ref:`User Guide <metric_objects>`.
 
@@ -413,12 +419,20 @@ class MixtureMetric(BaseMetric):
         :class:`MixtureMetric` (e.g. :func:`~empulse.metrics.empcs_score`) does use one strategy
         type throughout, so this agrees with routing through :attr:`strategy` for those.
         """
-        capability_sets = [component.metric.capabilities for component in self.components]
-        capabilities = frozenset.intersection(*capability_sets) if capability_sets else frozenset()
-        if Capability.COST_ONLY_DECISION in capabilities and self._shared_strategy() is None:
+        capabilities = frozenset.intersection(*(component.metric.capabilities for component in self.components))
+        if self._components_decide_from_costs and self._shared_strategy() is None:
             # The decision follows from the combined costs only through one strategy's rule.
             capabilities -= {Capability.COST_ONLY_DECISION, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}
+        if self._label_dependent_cost_weight and len(self.components) > 1:
+            # The labels weigh the components' costs, as the savings divide each by its baseline's cost.
+            # So the decision needs the labels, and the costs summed with the mixture weights alone
+            # are not what the score weighs.
+            capabilities -= {Capability.COST_ONLY_DECISION, Capability.EXPECTED_COST}
         return capabilities
+
+    @property
+    def _components_decide_from_costs(self) -> bool:
+        return all(component.metric._decides_from_costs for component in self.components)
 
     def _shared_strategy(self) -> MetricStrategy | None:
         """Return the strategy every component uses, or ``None`` if they use more than one type."""
@@ -426,6 +440,93 @@ class MixtureMetric(BaseMetric):
             return self.strategy
         except (AttributeError, ValueError):
             return None
+
+    def _combined_decision_strategy(self) -> MetricStrategy | None:
+        """
+        Return the strategy whose rule decides from the combined costs, or ``None`` if there is none.
+
+        There is one when every component decides from its costs alone, by the same strategy's rule.
+        """
+        return self._shared_strategy() if self._components_decide_from_costs else None
+
+    @property
+    def _decides_from_costs(self) -> bool:
+        return self._combined_decision_strategy() is not None
+
+    @property
+    def _label_dependent_cost_weight(self) -> bool:
+        return any(component.metric._label_dependent_cost_weight for component in self.components)
+
+    def _cost_weight(self, y_true: FloatNDArray, **parameters: Any) -> float:
+        """Return the weighted sum of the components' cost weights, which is how much the mixture's value scales."""
+        if not self._label_dependent_cost_weight:
+            return 1.0
+        return float(
+            sum(
+                weight * metric._cost_weight(y_true, **component_parameters)
+                for weight, metric, component_parameters in self._weighted_components(parameters, validate=False)
+            )
+        )
+
+    def _decision_weights(
+        self, y_true: FloatNDArray, parameters: Mapping[str, Any], *, validate: bool
+    ) -> list[tuple[float, BaseMetric, dict[str, Any]]]:
+        """
+        Like :meth:`_weighted_components`, but with the weights that combine the components' costs and objectives.
+
+        These are the mixture weights, each times the component's :meth:`_cost_weight`, normalized to
+        sum to 1. The score adds up :class:`~empulse.metrics.Savings`, for one, each of which divides its
+        component's cost by its baseline's cost, so the decision and training must weigh the costs alike.
+        Without such a component, they are the mixture weights, and so they are for a single component,
+        whose weight normalizes to 1 whatever its labels.
+        """
+        weighted = self._weighted_components(parameters, validate=validate)
+        if not self._label_dependent_cost_weight or len(weighted) == 1:
+            return weighted
+        scaled = [
+            weight * metric._cost_weight(y_true, **component_parameters)
+            for weight, metric, component_parameters in weighted
+        ]
+        total = sum(scaled)
+        if not np.all(np.isfinite(scaled)) or total <= 0:
+            raise ValueError(
+                f'Cannot weigh the components of {self.__name__!r} by their scores: the baseline of a Savings '
+                'component costs nothing on these labels, or there are no labels, so its savings are undefined.'
+            )
+        return [
+            (weight / total, metric, component_parameters)
+            for weight, (_, metric, component_parameters) in zip(scaled, weighted, strict=True)
+        ]
+
+    def _decision_costs(
+        self, y_true: FloatNDArray, **parameters: Any
+    ) -> tuple[
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+        FloatNDArray | float,
+    ]:
+        """Combine the components' decision costs with the :meth:`_decision_weights`."""
+        total_fp: FloatNDArray | float = 0.0
+        total_fn: FloatNDArray | float = 0.0
+        total_tp: FloatNDArray | float = 0.0
+        total_tn: FloatNDArray | float = 0.0
+        for weight, metric, component_parameters in self._decision_weights(y_true, parameters, validate=False):
+            fp_cost, fn_cost, tp_cost, tn_cost = metric._decision_costs(y_true, **component_parameters)
+            total_fp = total_fp + weight * fp_cost
+            total_fn = total_fn + weight * fn_cost
+            total_tp = total_tp + weight * tp_cost
+            total_tn = total_tn + weight * tn_cost
+        return total_fp, total_fn, total_tp, total_tn
+
+    def _require_decision(self, capability: Capability) -> None:
+        """Raise if the mixture lacks *capability*, rather than average what its components decide."""
+        if capability not in self.capabilities:
+            raise ValueError(
+                f'{self.__name__!r} does not support {capability.value}: not every component does, or its '
+                'components decide from their costs alone but by the rules of different strategies, which '
+                'do not combine.'
+            )
 
     @property
     def _all_symbols(self) -> set[str]:
@@ -609,8 +710,14 @@ class MixtureMetric(BaseMetric):
         -------
         optimal_rate : float
             The mixture's combined optimal predicted positive rate.
+
+        Raises
+        ------
+        ValueError
+            If the mixture does not support ``Capability.OPTIMAL_RATE``.
         """
-        combined = self._combined_cost_decision(parameters, validate=validate)
+        self._require_decision(Capability.OPTIMAL_RATE)
+        combined = self._combined_cost_decision(y_true, parameters, validate=validate)
         if combined is not None:
             metric, costs = combined
             return metric.optimal_rate(y_true, y_score, validate=validate, **costs)
@@ -650,8 +757,14 @@ class MixtureMetric(BaseMetric):
         -------
         optimal_threshold : float | FloatNDArray
             The optimal classification threshold(s).
+
+        Raises
+        ------
+        ValueError
+            If the mixture does not support ``Capability.OPTIMAL_THRESHOLD``.
         """
-        combined = self._combined_cost_decision(parameters, validate=validate)
+        self._require_decision(Capability.OPTIMAL_THRESHOLD)
+        combined = self._combined_cost_decision(y_true, parameters, validate=validate)
         if combined is not None:
             metric, costs = combined
             return metric.optimal_threshold(y_true, y_score, validate=validate, **costs)
@@ -659,21 +772,23 @@ class MixtureMetric(BaseMetric):
         return classification_threshold(y_true, y_score, rate)  # type: ignore[return-value]
 
     def _combined_cost_decision(
-        self, parameters: dict[str, Any], *, validate: bool
+        self, y_true: FloatArrayLike, parameters: dict[str, Any], *, validate: bool
     ) -> tuple[Metric, dict[str, Any]] | None:
         """
         Return the metric and costs that decide for a mixture of cost-only components, or ``None``.
 
         When every component decides from its costs alone, as :class:`~empulse.metrics.Cost` does,
         the mixture's decision is that of its weighted combined costs: weighting the components'
-        rates instead would average decisions made under each component's costs separately.
+        rates instead would average decisions made under each component's costs separately. The
+        costs are weighted as the score weighs them (see :meth:`_decision_weights`).
         """
-        strategy = self._shared_strategy()
-        if strategy is None or Capability.COST_ONLY_DECISION not in self.capabilities:
+        strategy = self._combined_decision_strategy()
+        if strategy is None:
             return None
         if validate:
             self._validate_parameters(**parameters)
-        fp_cost, fn_cost, tp_cost, tn_cost = self._evaluate_costs(replace_stochastic=True, **parameters)
+        y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
+        fp_cost, fn_cost, tp_cost, tn_cost = self._decision_costs(y_true, **parameters)
         cached = getattr(self, '_combined_cost_metric', None)
         if cached is None or type(cached.strategy) is not type(strategy):
             cost_matrix = CostMatrix().add_tp_cost('tp').add_tn_cost('tn').add_fp_cost('fp').add_fn_cost('fn')
@@ -684,7 +799,7 @@ class MixtureMetric(BaseMetric):
     def _prepare_boost_objective(self, y_true: FloatNDArray, **parameters: Any) -> FloatNDArray:
         total: FloatNDArray = sum(  # type: ignore[assignment]
             weight * metric._prepare_boost_objective(y_true, **component_parameters)
-            for weight, metric, component_parameters in self._weighted_components(parameters, validate=False)
+            for weight, metric, component_parameters in self._decision_weights(y_true, parameters, validate=False)
         )
         return total
 
@@ -693,7 +808,7 @@ class MixtureMetric(BaseMetric):
     ) -> tuple[FloatNDArray, FloatNDArray]:
         total_gradient: Any = 0.0
         total_hessian: Any = 0.0
-        for weight, metric, component_parameters in self._weighted_components(parameters, validate=False):
+        for weight, metric, component_parameters in self._decision_weights(y_true, parameters, validate=False):
             gradient, hessian = metric._gradient_boost_objective(y_true, y_score, **component_parameters)
             total_gradient = total_gradient + weight * gradient
             total_hessian = total_hessian + weight * hessian
@@ -738,7 +853,7 @@ class MixtureMetric(BaseMetric):
     ) -> LogitObjective:
         """Combine the components' logit objectives, full or value-only as *kind* says."""
         weighted_objectives = []
-        for weight, metric, component_parameters in self._weighted_components(parameters, validate=False):
+        for weight, metric, component_parameters in self._decision_weights(y_true, parameters, validate=False):
             build = metric._logit_objective if kind == 'objective' else metric._logit_value_objective
             objective = build(
                 features=features,

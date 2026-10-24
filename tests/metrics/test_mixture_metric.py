@@ -19,6 +19,7 @@ from empulse.metrics import (
     MixtureComponent,
     MixtureMetric,
     Profit,
+    Savings,
     classification_threshold,
     empcs_score,
     mpcs_score,
@@ -624,6 +625,141 @@ class TestCostOnlyComponents:
         mixture = MixtureMetric([MixtureComponent(0.5, metric, {}), MixtureComponent(0.5, log_metric, {})])
         assert Capability.COST_ONLY_DECISION not in mixture.capabilities
         assert Capability.OPTIMAL_THRESHOLD not in mixture.capabilities
+
+    @pytest.mark.parametrize('method', ['optimal_threshold', 'optimal_rate'])
+    def test_a_decision_it_does_not_support_raises_rather_than_average_the_components(self, method):
+        """Averaging the rates of Profit and Savings, which decide by their own costs, is no decision of the mixture."""
+        cost_matrix = CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b)
+        mixture = MixtureMetric([
+            MixtureComponent(0.5, Metric(cost_matrix, Profit()), {'a': 1.0, 'b': 9.0}),
+            MixtureComponent(0.5, Metric(cost_matrix, Savings()), {'a': 9.0, 'b': 1.0}),
+        ])
+        assert Capability.OPTIMAL_RATE not in mixture.capabilities
+        with pytest.raises(ValueError, match=f'does not support {method}'):
+            getattr(mixture, method)(Y_TRUE, Y_SCORE)
+
+
+CHEAP_COSTS = {'a': 1.0, 'b': 10.0}
+COSTLY_COSTS = {'a': 400.0, 'b': 100.0}
+
+
+class TestSavingsComponents:
+    """
+    Savings divide each component's cost by its baseline's cost, so the mixture weighs the costs alike.
+
+    Combining the costs with the mixture weights alone let the component with the largest costs decide.
+    """
+
+    a, b = sympy.symbols('a b')
+
+    @pytest.fixture
+    def metric(self):
+        return Metric(CostMatrix().add_fp_cost(self.a).add_fn_cost(self.b), Savings())
+
+    @pytest.fixture
+    def mixture(self, metric):
+        return MixtureMetric([MixtureComponent(0.5, metric, CHEAP_COSTS), MixtureComponent(0.5, metric, COSTLY_COSTS)])
+
+    @pytest.fixture
+    def calibrated(self, seeded_rng):
+        y_score = seeded_rng.beta(2, 3, 20_000)
+        return (seeded_rng.random(y_score.size) < y_score).astype(int), y_score
+
+    @staticmethod
+    def _baseline_cost(y_true, costs, baseline='zero_one'):
+        all_zero, all_one = np.mean(y_true * costs['b']), np.mean((1 - y_true) * costs['a'])
+        return {'zero_one': min(all_zero, all_one), 'zero': all_zero, 'one': all_one}[baseline]
+
+    def _threshold(self, y_true, components, baseline='zero_one'):
+        """The cost-optimal threshold of the costs weighted by the mixture weight over the baseline's cost."""
+        weights = [weight / self._baseline_cost(y_true, costs, baseline) for weight, costs in components]
+        fp_cost = sum(weight * costs['a'] for weight, (_, costs) in zip(weights, components, strict=True))
+        fn_cost = sum(weight * costs['b'] for weight, (_, costs) in zip(weights, components, strict=True))
+        return fp_cost / (fp_cost + fn_cost)
+
+    def test_threshold_weighs_each_component_by_its_baseline(self, mixture, calibrated):
+        y_true, y_score = calibrated
+        threshold = mixture.optimal_threshold(y_true, y_score)
+
+        assert threshold == pytest.approx(self._threshold(y_true, [(0.5, CHEAP_COSTS), (0.5, COSTLY_COSTS)]))
+        weighted_by_the_mixture_weights_alone = (1 + 400) / (1 + 400 + 10 + 100)
+        assert mixture(y_true, (y_score >= threshold).astype(float)) > mixture(
+            y_true, (y_score >= weighted_by_the_mixture_weights_alone).astype(float)
+        )
+
+    @pytest.mark.parametrize('baseline', ['zero', 'one'])
+    def test_the_baseline_passed_sets_the_weights(self, mixture, calibrated, baseline):
+        y_true, y_score = calibrated
+        expected = self._threshold(y_true, [(0.5, CHEAP_COSTS), (0.5, COSTLY_COSTS)], baseline)
+        assert mixture.optimal_threshold(y_true, y_score, baseline=baseline) == pytest.approx(expected)
+
+    def test_rate_is_the_share_of_scores_at_or_above_the_threshold(self, mixture, calibrated):
+        y_true, y_score = calibrated
+        threshold = mixture.optimal_threshold(y_true, y_score)
+        assert mixture.optimal_rate(y_true, y_score) == pytest.approx(np.mean(y_score >= threshold))
+
+    def test_instance_dependent_costs_get_a_threshold_per_sample(self, metric, calibrated):
+        y_true, y_score = calibrated
+        b_values = np.linspace(1.0, 50.0, y_true.size)
+        mixture = MixtureMetric([
+            MixtureComponent(0.5, metric, {'a': 1.0}),
+            MixtureComponent(0.5, metric, {'a': 400.0}),
+        ])
+
+        weights = [0.5 / min(np.mean(y_true * b_values), np.mean(1 - y_true) * a) for a in (1.0, 400.0)]
+        fp_cost = weights[0] * 1.0 + weights[1] * 400.0
+        fn_cost = (weights[0] + weights[1]) * b_values
+
+        np.testing.assert_allclose(
+            mixture.optimal_threshold(y_true, y_score, b=b_values), fp_cost / (fp_cost + fn_cost)
+        )
+
+    def test_the_decision_needs_the_labels(self, mixture, metric):
+        assert Capability.COST_ONLY_DECISION not in mixture.capabilities
+        assert Capability.EXPECTED_COST not in mixture.capabilities
+        assert {Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE} <= mixture.capabilities
+        # One component weighs nothing against another, so its decision is the component's own.
+        assert Capability.COST_ONLY_DECISION in MixtureMetric([MixtureComponent(1.0, metric, {})]).capabilities
+
+    def test_a_single_component_still_decides_without_labels(self, metric):
+        mixture = MixtureMetric([MixtureComponent(1.0, metric, {'a': 1.0})])
+        assert mixture.optimal_threshold(np.array([]), np.array([]), b=4.0) == pytest.approx(0.2)
+        assert mixture.optimal_rate(np.array([]), np.array([0.1, 0.9]), b=4.0) == pytest.approx(0.5)
+
+    def test_a_baseline_that_costs_nothing_raises(self, mixture):
+        with pytest.raises(ValueError, match='the baseline of a Savings component costs nothing'):
+            mixture.optimal_threshold(np.zeros(4), np.full(4, 0.5))
+
+    def test_a_nested_mixture_weighs_like_the_flat_one(self, metric, mixture, calibrated):
+        y_true, y_score = calibrated
+        nested = MixtureMetric([MixtureComponent(0.5, mixture, {}), MixtureComponent(0.5, metric, CHEAP_COSTS)])
+        flat = MixtureMetric([
+            MixtureComponent(0.75, metric, CHEAP_COSTS),
+            MixtureComponent(0.25, metric, COSTLY_COSTS),
+        ])
+        assert nested.optimal_threshold(y_true, y_score) == pytest.approx(flat.optimal_threshold(y_true, y_score))
+
+    def test_training_objectives_weigh_each_component_by_its_baseline(self, metric, mixture):
+        X_raw, y = make_classification(n_samples=200, n_features=4, random_state=0)
+        X = _with_intercept(X_raw)
+        weights = [0.5 / self._baseline_cost(y, costs) for costs in (CHEAP_COSTS, COSTLY_COSTS)]
+        weights = [weight / sum(weights) for weight in weights]
+
+        boost = mixture._prepare_boost_objective(y)
+        expected_boost = sum(
+            weight * metric._prepare_boost_objective(y, **costs)
+            for weight, costs in zip(weights, (CHEAP_COSTS, COSTLY_COSTS), strict=True)
+        )
+        np.testing.assert_allclose(boost, expected_boost)
+
+        logit_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
+        coefficients = np.linspace(-0.5, 0.5, X.shape[1])
+        loss = mixture._logit_objective(features=X, y_true=y, **logit_kwargs).data_loss(coefficients)
+        expected_loss = sum(
+            weight * metric._logit_objective(features=X, y_true=y, **logit_kwargs, **costs).data_loss(coefficients)
+            for weight, costs in zip(weights, (CHEAP_COSTS, COSTLY_COSTS), strict=True)
+        )
+        assert loss == pytest.approx(expected_loss)
 
 
 class TestAliasedOverrides:
